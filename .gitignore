@@ -1,0 +1,18 @@
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Node
+node_modules/
+dist/
+
+# Rust
+target/
+Cargo.lock
+
+# TraceLean runtime
+.tracelean/
