@@ -1,0 +1,17 @@
+[package]
+name = "tracelean-tests"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[lib]
+path = "lib.rs"  # empty lib, tests-only crate
+
+[[test]]
+name = "unit"
+path = "unit.rs"
+
+[dev-dependencies]
+tracelean_lib = { path = "../src-tauri", package = "tracelean" }
+tempfile = "3"
+chrono = { version = "0.4", features = ["serde"] }
