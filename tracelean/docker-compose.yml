@@ -1,0 +1,29 @@
+version: "3.9"
+
+services:
+  # Development container - build and check code
+  dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    volumes:
+      - .:/app
+      - cargo-cache:/usr/local/cargo/registry
+      - cargo-git:/usr/local/cargo/git
+      - target-cache:/app/src-tauri/target
+    working_dir: /app
+    command: bash -c "npm install && cargo check --workspace"
+    environment:
+      - CARGO_HOME=/usr/local/cargo
+
+  # Full build (produces binary)
+  build:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: tracelean:latest
+
+volumes:
+  cargo-cache:
+  cargo-git:
+  target-cache:

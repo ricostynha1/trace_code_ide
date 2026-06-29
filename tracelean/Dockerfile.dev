@@ -1,0 +1,32 @@
+# TraceLean IDE - Development Container
+# For building and testing without local toolchain
+
+FROM rust:1.82-bookworm
+
+# Install system deps for Tauri (Linux)
+RUN apt-get update && apt-get install -y \
+    libwebkit2gtk-4.1-dev \
+    libgtk-3-dev \
+    librsvg2-dev \
+    libsoup-3.0-dev \
+    libjavascriptcoregtk-4.1-dev \
+    libdbus-1-dev \
+    libssl-dev \
+    pkg-config \
+    curl \
+    wget \
+    file \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Node.js 22
+RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
+    && apt-get install -y nodejs \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install tauri-cli
+RUN cargo install tauri-cli --version "^2"
+
+WORKDIR /app
+
+# Default: keep container alive for exec
+CMD ["bash"]
