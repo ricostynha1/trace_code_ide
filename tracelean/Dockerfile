@@ -1,9 +1,9 @@
 # TraceLean IDE - Development Build Container
 # Multi-stage: builds both Rust backend and React frontend
 
-FROM rust:1.82-bookworm AS builder
+FROM rust:1.88-bookworm AS builder
 
-# Install system deps for Tauri (Linux)
+# Install system deps for Tauri (Linux) and tree-sitter-lean4 build (cc)
 RUN apt-get update && apt-get install -y \
     libwebkit2gtk-4.1-dev \
     libgtk-3-dev \
@@ -13,6 +13,7 @@ RUN apt-get update && apt-get install -y \
     libdbus-1-dev \
     libssl-dev \
     pkg-config \
+    build-essential \
     curl \
     wget \
     file \
@@ -29,14 +30,20 @@ WORKDIR /app
 COPY package.json package-lock.json* ./
 RUN npm install
 
+# Install tauri-cli for proper release build with embedded frontend
+RUN cargo install tauri-cli --version "^2"
+
 # Copy Rust manifest for dep caching
+COPY Cargo.toml Cargo.lock* ./
 COPY src-tauri/Cargo.toml src-tauri/Cargo.lock* src-tauri/
+COPY tests/Cargo.toml tests/
 COPY src-tauri/build.rs src-tauri/
 # Create dummy src to cache deps
 RUN mkdir -p src-tauri/src && \
     echo 'fn main() {}' > src-tauri/src/main.rs && \
     echo 'pub fn run() {}' > src-tauri/src/lib.rs && \
-    cd src-tauri && cargo fetch
+    mkdir -p tests/unit && touch tests/lib.rs && \
+    cargo fetch
 
 # Copy full source
 COPY . .
@@ -44,8 +51,8 @@ COPY . .
 # Build frontend
 RUN npm run build
 
-# Build Rust backend
-RUN cd src-tauri && cargo build --release
+# Build Rust backend with Tauri (embeds frontend, no bundle)
+RUN cargo tauri build --no-bundle
 
 # --- Runtime stage ---
 FROM debian:bookworm-slim AS runtime
@@ -57,8 +64,22 @@ RUN apt-get update && apt-get install -y \
     libsoup-3.0-0 \
     libjavascriptcoregtk-4.1-0 \
     libdbus-1-3 \
+    libgl1-mesa-dri \
+    libglx-mesa0 \
+    libegl-mesa0 \
+    dbus-x11 \
     && rm -rf /var/lib/apt/lists/*
 
-COPY --from=builder /app/src-tauri/target/release/tracelean /usr/local/bin/tracelean
+# Force software GL + disable WebKit DMABUF/compositing (no GPU in container)
+ENV LIBGL_ALWAYS_SOFTWARE=1 \
+    GALLIUM_DRIVER=llvmpipe \
+    WEBKIT_DISABLE_COMPOSITING_MODE=1 \
+    WEBKIT_DISABLE_DMABUF_RENDERER=1
+
+# Install elan (Lean 4 toolchain manager) for spec type-checking
+RUN curl -sSf https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y --default-toolchain leanprover/lean4:stable
+ENV PATH="/root/.elan/bin:${PATH}"
+
+COPY --from=builder /app/target/release/tracelean /usr/local/bin/tracelean
 
 ENTRYPOINT ["tracelean"]

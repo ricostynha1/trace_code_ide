@@ -1,6 +1,17 @@
 # TraceLean IDE — Docker Usage
 
-All dependencies (Rust toolchain, Node.js, system libs for Tauri) are bundled in containers. No local toolchain needed.
+All dependencies (Rust, Node.js, system libs) are bundled in containers. No local toolchain needed.
+
+---
+
+## Architecture
+
+`docker-compose.yml` defines two services. You interact with **services**, not Dockerfiles directly.
+
+| Service | Dockerfile | Purpose |
+|---------|------------|---------|
+| `dev` | `Dockerfile.dev` | Dev environment: check, test, shell. Source mounted live. |
+| `build` | `Dockerfile` | Multi-stage release → `tracelean:latest` image with GUI binary. |
 
 ---
 
@@ -8,68 +19,80 @@ All dependencies (Rust toolchain, Node.js, system libs for Tauri) are bundled in
 
 | Command | What it does |
 |---------|-------------|
-| `make check` | Build dev container, install deps, run `cargo check` |
-| `make test` | Run all Rust tests in container |
+| `make check` | Build dev image + `cargo check --workspace` |
+| `make test` | Run all workspace tests |
+| `make test-unit` | Run unit tests only (`tracelean-tests` package) |
 | `make shell` | Interactive bash inside dev container |
-| `make build` | Build release binary (multi-stage, produces `tracelean:latest` image) |
-| `make clean` | Remove containers, volumes, local build artifacts |
+| `make build` | Build release image → `tracelean:latest` |
+| `make clean` | Remove containers, volumes, local artifacts |
 
 ---
 
-## Development Container (`Dockerfile.dev`)
+## Dev Container (service `dev`)
 
-Full development environment. Source mounted as volume — edits on host reflect immediately inside container.
+Full development environment. Source is volume-mounted — edits on host reflect immediately.
 
 ### What's included
-- Rust 1.82 (stable) + cargo
+- Rust 1.88 + cargo
 - Node.js 22 + npm
 - All Tauri Linux system deps (webkit2gtk, gtk3, dbus, etc.)
-- `tauri-cli` pre-installed
+- `tauri-cli`
+- `elan` (Lean 4 toolchain manager)
 
-### Usage
+### Build / rebuild
 
 ```bash
-# Check that everything compiles
-make check
-
-# Run tests
-make test
-
-# Interactive shell (explore, run arbitrary commands)
-make shell
-
-# Inside shell:
-cd src-tauri && cargo test
-npm run build
-cargo tauri build
+docker compose build dev            # build image
+docker compose build --no-cache dev # clean rebuild
 ```
 
+Builds automatically on first `make check`/`make shell`/`make test`.
+
+### Use it
+
+```bash
+make shell   # interactive bash
+make check   # cargo check --workspace
+make test    # cargo test --workspace
+```
+
+Inside the shell:
+
+```bash
+cargo check          # fast incremental
+cargo test           # run tests
+npm run build        # build frontend
+cargo build --release --bin tracelean   # build backend binary only
+```
+
+> `cargo tauri build` also bundles an AppImage/`.deb`. It needs `xdg-utils` (now in the image — rebuild with `docker compose build --no-cache dev` if you hit `xdg-open not found`). For dev you rarely need the bundle; `cargo build` produces the binary at `target/release/tracelean`.
+
 ### Volume mounts
-- `.:/app` — your source code (live)
-- `cargo-cache` — cargo registry (persists across runs)
+- `.:/app` — source code (live)
+- `cargo-cache` — cargo registry (persists)
 - `cargo-git` — git deps (persists)
-- `target-cache` — compiled artifacts (persists, speeds up rebuilds)
+- `target-cache` — compiled artifacts (persists, fast rebuilds)
 
 ---
 
-## Production Build (`Dockerfile`)
+## Release Image & Launching the GUI (service `build`)
 
-Multi-stage build. Produces a minimal runtime image with just the compiled binary.
+Produces a minimal runtime image with the compiled binary and Mesa software-GL drivers.
 
-### Stages
-1. **Builder** — installs all deps, compiles frontend + backend
-2. **Runtime** — slim Debian with only runtime libs + the binary
-
-### Usage
+### Build it
 
 ```bash
-# Build the release image
 make build
+# or: docker compose build build
+```
 
-# Or directly:
-docker compose build build
+### Launch the GUI
 
-# Run it (note: GUI app, needs display forwarding)
+```bash
+# 1. Allow container to reach your X server
+xhost +local:docker
+
+# 2. Run TraceLean (opens GUI window on your desktop)
 docker run --rm \
   -e DISPLAY=$DISPLAY \
   -v /tmp/.X11-unix:/tmp/.X11-unix \
@@ -77,40 +100,46 @@ docker run --rm \
   tracelean:latest
 ```
 
-### Note on GUI
-TraceLean is a desktop app (Tauri/WebKit). Running the production container requires X11/Wayland forwarding. For headless CI, use the dev container with `cargo check` / `cargo test` instead.
+That's it. The image bakes in software-GL fallback env vars — no extra flags needed.
 
----
+### Optional GPU passthrough
 
-## docker-compose.yml Services
+```bash
+docker run --rm \
+  -e DISPLAY=$DISPLAY \
+  -v /tmp/.X11-unix:/tmp/.X11-unix \
+  --device /dev/dri \
+  -v $(pwd)/my-project:/project \
+  tracelean:latest
+```
 
-| Service | Dockerfile | Purpose |
-|---------|-----------|---------|
-| `dev` | `Dockerfile.dev` | Development: check, test, build |
-| `build` | `Dockerfile` | Produce release image |
+### Wayland
+
+Replace `-e DISPLAY` with `-e WAYLAND_DISPLAY=$WAYLAND_DISPLAY` and mount the Wayland socket.
+
+### Headless CI
+
+Don't run the GUI. Use the dev service:
+
+```bash
+docker compose run --rm dev bash -c "npm install && cargo test --workspace"
+```
 
 ---
 
 ## Common Workflows
 
-### First time setup
+### First time
 ```bash
-# Just run check — pulls image, installs everything
-make check
+make check   # pulls/builds image, installs deps, checks code
 ```
 
-### Iterate on Rust code
+### Iterate on Rust
 ```bash
-# Shell keeps running, cargo uses cached target
 make shell
 # inside:
 cargo check   # fast incremental
-cargo test    # run tests
-```
-
-### CI pipeline
-```bash
-docker compose run --rm dev bash -c "npm install && cd src-tauri && cargo test"
+cargo test
 ```
 
 ### Reset everything
@@ -123,45 +152,80 @@ make clean
 
 ## Test Convention
 
-Tests live in a separate `tests/` directory mirroring source structure:
+Tests live in a separate `tests/` crate, not inline `#[cfg(test)]` modules:
 
 ```
-src-tauri/
-├── src/
-│   ├── commands.rs
-│   ├── state.rs
-│   ├── undo_tree.rs
-│   └── persistence.rs
-└── tests/
-    └── unit/
-        ├── test_commands.rs
-        ├── test_state.rs
-        ├── test_undo_tree.rs
-        └── test_persistence.rs
+tests/
+├── unit.rs
+└── unit/
+    ├── test_commands.rs
+    ├── test_state.rs
+    ├── test_undo_tree.rs
+    └── test_persistence.rs
 ```
 
-**Not** inline `#[cfg(test)]` modules. Separate files, named `test_{source_file}.rs`.
-
-This mirrors the TraceLean project convention for user projects too:
-```
-project/
-├── src/
-│   └── parser/
-│       └── lexer.rs
-└── tests/
-    └── unit/
-        └── parser/
-            └── test_lexer.rs
-```
-
-Integration tests go in `tests/integration/` named by requirement ID.
+Files named `test_{source_file}.rs`. Integration tests go in `tests/integration/` named by requirement ID.
 
 ---
 
 ## Troubleshooting
 
-**Build fails on system deps**: The Dockerfile pins all required packages. If you see pkg-config errors, you're probably running outside Docker — use `make check` instead.
+| Problem | Fix |
+|---------|-----|
+| pkg-config errors | You're running outside Docker. Use `make check`. |
+| Slow first build | Normal — initial `cargo fetch` + compile. Cached after. |
+| GUI won't open | Run `xhost +local:docker` first. Check `echo $DISPLAY`. |
+| GL/Mesa errors | Image has software-GL baked in. Try `--device /dev/dri` for host GPU. |
+| "connection refused" on DISPLAY | Ensure X server is running and `/tmp/.X11-unix` is mounted. |
+| `cargo tauri build`: `xdg-open not found` | Rebuild dev image: `docker compose build --no-cache dev`. |
 
-**Slow first build**: Initial `cargo fetch` + compile takes a few minutes. Subsequent builds use cached volumes.
+---
 
-**Display issues with production image**: You need X11 forwarding. On Wayland, try `WAYLAND_DISPLAY` passthrough instead.
+## Running Locally (without Docker)
+
+If you have the toolchain installed on your host, you can skip Docker entirely.
+
+### Prerequisites
+
+- Rust 1.88+ (`rustup update stable`)
+- Node.js 22+ and npm
+- System libs (Debian/Ubuntu):
+  ```bash
+  sudo apt install libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev \
+    libsoup-3.0-dev libjavascriptcoregtk-4.1-dev libdbus-1-dev \
+    libssl-dev pkg-config build-essential curl wget file
+  ```
+- Tauri CLI:
+  ```bash
+  cargo install tauri-cli --version "^2"
+  ```
+- (Optional) Lean 4 via [elan](https://github.com/leanprover/elan) for spec type-checking
+
+### Build & run
+
+```bash
+# Install frontend deps
+npm install
+
+# Dev mode (hot-reload frontend + Rust backend)
+cargo tauri dev
+
+# Release build (binary at target/release/tracelean)
+npm run build
+cargo tauri build --no-bundle
+
+# Run the release binary directly
+./target/release/tracelean
+```
+
+### Run tests
+
+```bash
+cargo test --workspace
+```
+
+### Notes
+
+- `cargo tauri dev` starts both Vite (frontend) and the Rust backend with hot-reload.
+- `cargo tauri build --no-bundle` produces just the binary (no AppImage/deb). Add `--bundles deb` or `--bundles appimage` if you want packages.
+- The File → Open Folder dialog works normally on the host (no oversized window issue).
