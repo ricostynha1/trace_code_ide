@@ -8,6 +8,7 @@ import { javascript } from "@codemirror/lang-javascript";
 import { python } from "@codemirror/lang-python";
 import { rust } from "@codemirror/lang-rust";
 import { cpp } from "@codemirror/lang-cpp";
+import { markdown } from "@codemirror/lang-markdown";
 import { searchKeymap, highlightSelectionMatches } from "@codemirror/search";
 
 interface EditorProps {
@@ -21,6 +22,28 @@ interface SymbolInfo {
   start_line: number;
   end_line: number;
   start_col: number;
+}
+
+interface LeanCheckResult {
+  success: boolean;
+  errors: LeanDiagnostic[];
+  warnings: LeanDiagnostic[];
+}
+
+interface LeanDiagnostic {
+  file: string;
+  line: number;
+  col: number;
+  message: string;
+  severity: string;
+}
+
+type EditorMode = "code" | "lean" | "requirement";
+
+function getEditorMode(path: string): EditorMode {
+  if (path.endsWith(".lean")) return "lean";
+  if (path.startsWith("reqs/") && path.endsWith(".md")) return "requirement";
+  return "code";
 }
 
 function getLanguageExtension(path: string) {
@@ -41,33 +64,50 @@ function getLanguageExtension(path: string) {
     case "h":
     case "hpp":
       return cpp();
+    case "md":
+      return markdown();
+    case "lean":
+      // No dedicated Lean CM extension yet — use plain text with custom highlighting
+      return [];
     default:
       return [];
+  }
+}
+
+function modeLabel(mode: EditorMode): string {
+  switch (mode) {
+    case "lean": return "Lean Spec";
+    case "requirement": return "Requirement";
+    case "code": return "Code";
+  }
+}
+
+function modeColor(mode: EditorMode): string {
+  switch (mode) {
+    case "lean": return "#c678dd";
+    case "requirement": return "#d19a66";
+    case "code": return "#61afef";
   }
 }
 
 /** Hover tooltip that shows tree-sitter symbol info */
 function symbolHoverTooltip(filePath: string) {
   return hoverTooltip(async (view, pos): Promise<Tooltip | null> => {
-    // Get the line number at cursor position
     const line = view.state.doc.lineAt(pos);
-    const lineNum = line.number - 1; // 0-indexed
+    const lineNum = line.number - 1;
 
     try {
       const symbols = await invoke<SymbolInfo[]>("get_file_symbols", { path: filePath });
-      // Find symbol that contains this line
       const symbol = symbols.find(
         (s) => lineNum >= s.start_line && lineNum <= s.end_line
       );
 
       if (!symbol) return null;
 
-      // Get the word at position to check if it's the symbol name
       const wordAt = view.state.wordAt(pos);
       if (!wordAt) return null;
       const word = view.state.doc.sliceString(wordAt.from, wordAt.to);
 
-      // Show tooltip if hovering the symbol name or if on definition line
       if (word !== symbol.name && lineNum !== symbol.start_line) return null;
 
       return {
@@ -91,8 +131,26 @@ export function Editor({ filePath }: EditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const [status, setStatus] = useState("");
-  // Flag: when true, suppress sending changes to backend (we're syncing FROM backend)
+  const [leanDiagnostics, setLeanDiagnostics] = useState<LeanDiagnostic[]>([]);
+  const [traceLink, setTraceLink] = useState<string | null>(null);
   const syncingFromBackend = useRef(false);
+
+  const mode = getEditorMode(filePath);
+
+  // Check for trace navigation link
+  useEffect(() => {
+    const checkLink = async () => {
+      try {
+        const target = await invoke<string | null>("navigate_trace_link", {
+          fromPath: filePath,
+        });
+        setTraceLink(target);
+      } catch {
+        setTraceLink(null);
+      }
+    };
+    checkLink();
+  }, [filePath]);
 
   useEffect(() => {
     if (!editorRef.current) return;
@@ -116,10 +174,9 @@ export function Editor({ filePath }: EditorProps) {
             lineNumbers(),
             highlightActiveLine(),
             highlightSelectionMatches(),
-            // NO CodeMirror history() — we use our own undo-tree
             oneDark,
             ...(Array.isArray(langExt) ? langExt : [langExt]),
-            symbolHoverTooltip(filePath),
+            ...(mode === "code" ? [symbolHoverTooltip(filePath)] : []),
             keymap.of([
               ...defaultKeymap.filter(
                 (k) => k.key !== "Mod-z" && k.key !== "Mod-y" && k.key !== "Mod-Shift-z"
@@ -223,7 +280,6 @@ export function Editor({ filePath }: EditorProps) {
     );
   };
 
-  /** Sync editor content from backend state (suppresses command emission) */
   const syncFromBackend = async () => {
     const content = await invoke<string>("get_file_content", { path: filePath });
     if (content !== null && viewRef.current) {
@@ -269,6 +325,12 @@ export function Editor({ filePath }: EditorProps) {
     try {
       await invoke("save_file", { path: filePath });
       setStatus(`${filePath} — saved`);
+
+      // If Lean file, type-check on save
+      if (mode === "lean") {
+        checkLean();
+      }
+
       setTimeout(() => setStatus(filePath), 2000);
     } catch (e) {
       console.error("Save failed:", e);
@@ -276,10 +338,58 @@ export function Editor({ filePath }: EditorProps) {
     }
   };
 
+  const checkLean = async () => {
+    try {
+      setStatus(`${filePath} — checking...`);
+      const result = await invoke<LeanCheckResult>("check_lean_spec", {
+        path: filePath,
+      });
+      if (result.success) {
+        setStatus(`${filePath} — ✓ type-checked`);
+        setLeanDiagnostics(result.warnings);
+      } else {
+        setStatus(`${filePath} — ✗ errors`);
+        setLeanDiagnostics([...result.errors, ...result.warnings]);
+      }
+    } catch (e) {
+      setStatus(`${filePath} — lean not available`);
+      setLeanDiagnostics([]);
+    }
+  };
+
+  const handleNavigate = async () => {
+    if (!traceLink) return;
+    // This triggers file open in parent — we'll use a custom event or prop
+    // For now, set window location hash as a signal
+    window.dispatchEvent(
+      new CustomEvent("tracelean-navigate", { detail: { path: traceLink } })
+    );
+  };
+
   return (
     <div className="editor-container">
-      <div className="editor-tab">{filePath.split("/").pop()}</div>
+      <div className="editor-tab">
+        <span className="editor-mode-badge" style={{ color: modeColor(mode) }}>
+          {modeLabel(mode)}
+        </span>
+        <span className="editor-filename">{filePath.split("/").pop()}</span>
+        {traceLink && (
+          <button className="trace-link-btn" onClick={handleNavigate} title={`Go to ${traceLink}`}>
+            {mode === "lean" ? "← Req" : mode === "requirement" ? "Spec →" : ""}
+          </button>
+        )}
+      </div>
       <div className="editor-content" ref={editorRef} />
+      {leanDiagnostics.length > 0 && (
+        <div className="lean-diagnostics">
+          {leanDiagnostics.map((d, i) => (
+            <div key={i} className={`diagnostic ${d.severity}`}>
+              <span className="diag-loc">:{d.line}:{d.col}</span>
+              <span className="diag-msg">{d.message}</span>
+            </div>
+          ))}
+        </div>
+      )}
       <div className="status-bar">{status}</div>
     </div>
   );

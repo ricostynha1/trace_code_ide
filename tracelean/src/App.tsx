@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { invoke } from "@tauri-apps/api/core";
 import { FileTree } from "./components/FileTree";
 import { Editor } from "./components/Editor";
 import { MenuBar } from "./components/MenuBar";
 import { UndoTreePanel } from "./components/UndoTreePanel";
+import { RequirementsPanel } from "./components/RequirementsPanel";
 import "./App.css";
 
 function App() {
@@ -10,8 +12,32 @@ function App() {
   const [currentFile, setCurrentFile] = useState<string | null>(null);
   const [projectRoot, setProjectRoot] = useState<string>("");
   const [undoTreeVisible, setUndoTreeVisible] = useState(false);
+  const [reqsPanelVisible, setReqsPanelVisible] = useState(false);
   // Key to force editor remount on undo-tree jump
   const [editorKey, setEditorKey] = useState(0);
+
+  // Auto-open /project if mounted (Docker usage)
+  useEffect(() => {
+    invoke<string | null>("get_initial_project").then(async (path) => {
+      if (path) {
+        await invoke("open_project", { path });
+        setProjectRoot(path);
+        setProjectOpen(true);
+      }
+    }).catch(() => {});
+  }, []);
+
+  // Listen for trace navigation events from Editor
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail?.path) {
+        setCurrentFile(detail.path);
+      }
+    };
+    window.addEventListener("tracelean-navigate", handler);
+    return () => window.removeEventListener("tracelean-navigate", handler);
+  }, []);
 
   const handleProjectOpened = (root: string) => {
     setProjectRoot(root);
@@ -33,6 +59,8 @@ function App() {
         onProjectOpened={handleProjectOpened}
         onToggleUndoTree={() => setUndoTreeVisible((v) => !v)}
         undoTreeVisible={undoTreeVisible}
+        onToggleRequirements={() => setReqsPanelVisible((v) => !v)}
+        reqsPanelVisible={reqsPanelVisible}
       />
       <div className="main-content">
         {projectOpen && (
@@ -52,6 +80,11 @@ function App() {
             </div>
           )}
         </div>
+        <RequirementsPanel
+          visible={reqsPanelVisible}
+          onClose={() => setReqsPanelVisible(false)}
+          onFileSelect={handleFileSelect}
+        />
         <UndoTreePanel
           visible={undoTreeVisible}
           onClose={() => setUndoTreeVisible(false)}

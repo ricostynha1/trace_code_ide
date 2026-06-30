@@ -22,6 +22,7 @@
     "@codemirror/lang-python": "^6.1.0",
     "@codemirror/lang-rust": "^6.0.1",
     "@codemirror/lang-cpp": "^6.0.2",
+    "@codemirror/lang-markdown": "^6.2.0",
     "@codemirror/theme-one-dark": "^6.1.0",
     "@codemirror/autocomplete": "^6.16.0",
     "@codemirror/search": "^6.5.0",

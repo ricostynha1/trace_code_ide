@@ -62,7 +62,6 @@ export function FileTree({ projectRoot, onFileSelect, selectedFile }: FileTreePr
   };
 
   // Build tree view from flat entries
-  const getDepth = (path: string) => path.split("/").length - 1;
   const rootEntries = entries.filter((e) => !e.path.includes("/"));
   const getChildren = (dirPath: string) =>
     entries.filter((e) => {

@@ -4,9 +4,17 @@ interface MenuBarProps {
   onProjectOpened: (root: string) => void;
   onToggleUndoTree: () => void;
   undoTreeVisible: boolean;
+  onToggleRequirements: () => void;
+  reqsPanelVisible: boolean;
 }
 
-export function MenuBar({ onProjectOpened, onToggleUndoTree, undoTreeVisible }: MenuBarProps) {
+export function MenuBar({
+  onProjectOpened,
+  onToggleUndoTree,
+  undoTreeVisible,
+  onToggleRequirements,
+  reqsPanelVisible,
+}: MenuBarProps) {
   const handleOpenFolder = async () => {
     try {
       const { open } = await import("@tauri-apps/plugin-dialog");
@@ -36,6 +44,12 @@ export function MenuBar({ onProjectOpened, onToggleUndoTree, undoTreeVisible }: 
     <div className="menu-bar">
       <button onClick={handleOpenFolder}>File → Open Folder</button>
       <button onClick={handleSave}>Save Checkpoint</button>
+      <button
+        onClick={onToggleRequirements}
+        className={reqsPanelVisible ? "active" : ""}
+      >
+        Requirements
+      </button>
       <button
         onClick={onToggleUndoTree}
         className={undoTreeVisible ? "active" : ""}
