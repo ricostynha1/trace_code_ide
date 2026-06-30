@@ -24,11 +24,13 @@ tokio = { version = "1", features = ["full"] }
 notify = "6"
 bincode = "1"
 thiserror = "1"
+petgraph = "0.6"
 rayon = "1"
-tree-sitter = "0.24"
-tree-sitter-rust = "0.23"
-tree-sitter-python = "0.23"
+tree-sitter = "0.25"
+tree-sitter-rust = "0.24"
+tree-sitter-python = "0.25"
 tree-sitter-cpp = "0.23"
+tree-sitter-lean4 = "0.3"
 
 [dev-dependencies]
 tempfile = "3"

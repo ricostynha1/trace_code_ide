@@ -13,6 +13,7 @@ pub enum Lang {
     Rust,
     Python,
     Cpp,
+    Lean,
 }
 
 impl Lang {
@@ -21,6 +22,7 @@ impl Lang {
             "rs" => Some(Lang::Rust),
             "py" => Some(Lang::Python),
             "c" | "cpp" | "cc" | "cxx" | "h" | "hpp" => Some(Lang::Cpp),
+            "lean" => Some(Lang::Lean),
             _ => None,
         }
     }
@@ -30,6 +32,7 @@ impl Lang {
             Lang::Rust => tree_sitter_rust::LANGUAGE.into(),
             Lang::Python => tree_sitter_python::LANGUAGE.into(),
             Lang::Cpp => tree_sitter_cpp::LANGUAGE.into(),
+            Lang::Lean => tree_sitter_lean4::language().into(),
         }
     }
 }
@@ -145,6 +148,7 @@ fn extract_symbols(tree: &Tree, source: &str, path: &Path, lang: Lang) -> Vec<Sy
                 Lang::Rust => extract_rust_symbol(kind, &node, source, path),
                 Lang::Python => extract_python_symbol(kind, &node, source, path),
                 Lang::Cpp => extract_cpp_symbol(kind, &node, source, path),
+                Lang::Lean => extract_lean_symbol(kind, &node, source, path),
             };
 
             if let Some(sym) = symbol {
@@ -256,6 +260,60 @@ fn find_identifier(node: tree_sitter::Node, source: &str) -> Option<String> {
         loop {
             if let Some(name) = find_identifier(cursor.node(), source) {
                 return Some(name);
+            }
+            if !cursor.goto_next_sibling() {
+                break;
+            }
+        }
+    }
+    None
+}
+
+fn extract_lean_symbol(
+    kind: &str,
+    node: &tree_sitter::Node,
+    source: &str,
+    path: &Path,
+) -> Option<Symbol> {
+    // Lean 4 tree-sitter node kinds for definitions
+    let sym_kind = match kind {
+        "definition" | "def" => SymbolKind::Function,
+        "theorem" => SymbolKind::Function,
+        "structure" => SymbolKind::Struct,
+        "inductive" => SymbolKind::Enum,
+        "class" => SymbolKind::Class,
+        "instance" => SymbolKind::Impl,
+        "namespace" => SymbolKind::Module,
+        _ => return None,
+    };
+
+    // Try to find the name — look for first identifier-like child
+    let name = find_lean_name(node, source)?;
+
+    Some(Symbol {
+        name,
+        kind: sym_kind,
+        file: path.to_path_buf(),
+        start_line: node.start_position().row as u32,
+        end_line: node.end_position().row as u32,
+        start_col: node.start_position().column as u32,
+    })
+}
+
+/// Find the name of a Lean definition (first identifier after the keyword)
+fn find_lean_name(node: &tree_sitter::Node, source: &str) -> Option<String> {
+    let mut cursor = node.walk();
+    if cursor.goto_first_child() {
+        loop {
+            let child = cursor.node();
+            let ck = child.kind();
+            // Look for identifier or name nodes
+            if ck == "identifier" || ck == "name" || ck == "ident" {
+                return child.utf8_text(source.as_bytes()).ok().map(|s| s.to_string());
+            }
+            // Check field "name" if grammar uses it
+            if let Some(name_node) = node.child_by_field_name("name") {
+                return name_node.utf8_text(source.as_bytes()).ok().map(|s| s.to_string());
             }
             if !cursor.goto_next_sibling() {
                 break;

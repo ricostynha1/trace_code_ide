@@ -34,6 +34,7 @@ pub enum Command {
         len: usize,
         deleted_text: String,
     },
+    // TO EVALUATE is this necessary? this is equal to a delete forllowing a insert
     Replace {
         file: PathBuf,
         offset: usize,
