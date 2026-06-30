@@ -51,17 +51,17 @@ Incremental delivery. Each MVP is usable on its own. Later MVPs build on earlier
 
 ### Tasks
 
-- [ ] 2.1 — Define graph node types: Requirement, Spec, CodeElement, Test
-- [ ] 2.2 — Implement petgraph-based trace graph (directed edges, typed nodes)
-- [ ] 2.3 — Define file format for requirements (markdown with IDs, stored in `reqs/`)
-- [ ] 2.4 — Define file convention for Lean specs (path derived from requirement ID)
-- [ ] 2.5 — On startup: scan `reqs/`, `specs/`, `src/`, `tests/` → build graph
-- [ ] 2.6 — Link requirements → specs by file naming convention
-- [ ] 2.7 — Link specs → code elements by annotation comments or config mapping
-- [ ] 2.8 — Link code elements → tests by `tests/unit/` and `tests/integration/` path conventions
-- [ ] 2.9 — Query API: given a requirement ID, return linked specs, code, tests
-- [ ] 2.10 — Query API: given a code element, return linked requirement(s) and spec(s)
-- [ ] 2.11 — Graph update on file change (re-parse changed file, update affected edges)
+- [x] 2.1 — Define graph node types: Requirement, Spec, CodeElement, Test
+- [x] 2.2 — Implement petgraph-based trace graph (directed edges, typed nodes)
+- [x] 2.3 — Define file format for requirements (markdown with IDs, stored in `reqs/`)
+- [x] 2.4 — Define file convention for Lean specs (path derived from requirement ID)
+- [x] 2.5 — On startup: scan `reqs/`, `specs/`, `src/`, `tests/` → build graph
+- [x] 2.6 — Link requirements → specs by file naming convention
+- [x] 2.7 — Link specs → code elements by annotation comments or config mapping
+- [x] 2.8 — Link code elements → tests by `tests/unit/` and `tests/integration/` path conventions
+- [x] 2.9 — Query API: given a requirement ID, return linked specs, code, tests
+- [x] 2.10 — Query API: given a code element, return linked requirement(s) and spec(s)
+- [x] 2.11 — Graph update on file change (re-parse changed file, update affected edges)
 
 **Deliverable**: Backend can answer "what code implements this requirement?" and "what tests cover this code?"
 
@@ -73,15 +73,15 @@ Incremental delivery. Each MVP is usable on its own. Later MVPs build on earlier
 
 ### Tasks
 
-- [ ] 3.1 — Editor mode switcher: Code / Lean Spec / Natural Language (different syntax highlighting per mode)
-- [ ] 3.2 — Requirements panel: list all requirements from `reqs/` folder, show status
-- [ ] 3.3 — Create/edit requirement (produces Commands like any edit)
-- [ ] 3.4 — Requirement status workflow: draft → approved → linked
-- [ ] 3.5 — Lean spec file auto-creation when requirement is approved (path from REQ ID)
-- [ ] 3.6 — Lean 4 syntax highlighting via tree-sitter WASM grammar
-- [ ] 3.7 — Lean compiler integration: on spec save, invoke `lean` subprocess to type-check
-- [ ] 3.8 — Display Lean compiler errors inline in editor
-- [ ] 3.9 — Bi-directional navigation: click requirement → opens spec file; click spec → shows requirement
+- [x] 3.1 — Editor mode switcher: Code / Lean Spec / Natural Language (different syntax highlighting per mode)
+- [x] 3.2 — Requirements panel: list all requirements from `reqs/` folder, show status
+- [x] 3.3 — Create/edit requirement (produces Commands like any edit)
+- [x] 3.4 — Requirement status workflow: draft → approved → linked
+- [x] 3.5 — Lean spec file auto-creation when requirement is approved (path from REQ ID)
+- [x] 3.6 — Lean 4 syntax highlighting via tree-sitter WASM grammar
+- [x] 3.7 — Lean compiler integration: on spec save, invoke `lean` subprocess to type-check
+- [x] 3.8 — Display Lean compiler errors inline in editor
+- [x] 3.9 — Bi-directional navigation: click requirement → opens spec file; click spec → shows requirement
 
 **Deliverable**: You can write requirements, formalise them in Lean, and navigate between them.
 
