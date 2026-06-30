@@ -1,14 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { EditorState } from "@codemirror/state";
-import { EditorView, keymap, lineNumbers, highlightActiveLine, hoverTooltip, Tooltip } from "@codemirror/view";
+import { EditorState, StateField, StateEffect, RangeSet } from "@codemirror/state";
+import { EditorView, keymap, lineNumbers, highlightActiveLine, hoverTooltip, Tooltip, Decoration, DecorationSet } from "@codemirror/view";
 import { defaultKeymap } from "@codemirror/commands";
 import { oneDark } from "@codemirror/theme-one-dark";
-import { javascript } from "@codemirror/lang-javascript";
-import { python } from "@codemirror/lang-python";
-import { rust } from "@codemirror/lang-rust";
-import { cpp } from "@codemirror/lang-cpp";
-import { markdown } from "@codemirror/lang-markdown";
 import { searchKeymap, highlightSelectionMatches } from "@codemirror/search";
 
 interface EditorProps {
@@ -22,6 +17,12 @@ interface SymbolInfo {
   start_line: number;
   end_line: number;
   start_col: number;
+}
+
+interface HighlightSpan {
+  from: number;
+  to: number;
+  category: string;
 }
 
 interface LeanCheckResult {
@@ -46,34 +47,6 @@ function getEditorMode(path: string): EditorMode {
   return "code";
 }
 
-function getLanguageExtension(path: string) {
-  const ext = path.split(".").pop()?.toLowerCase();
-  switch (ext) {
-    case "js":
-    case "jsx":
-    case "ts":
-    case "tsx":
-      return javascript({ jsx: true, typescript: ext.includes("t") });
-    case "py":
-      return python();
-    case "rs":
-      return rust();
-    case "c":
-    case "cpp":
-    case "cc":
-    case "h":
-    case "hpp":
-      return cpp();
-    case "md":
-      return markdown();
-    case "lean":
-      // No dedicated Lean CM extension yet — use plain text with custom highlighting
-      return [];
-    default:
-      return [];
-  }
-}
-
 function modeLabel(mode: EditorMode): string {
   switch (mode) {
     case "lean": return "Lean Spec";
@@ -90,7 +63,45 @@ function modeColor(mode: EditorMode): string {
   }
 }
 
-/** Hover tooltip that shows tree-sitter symbol info */
+// --- Tree-sitter highlight decorations ---
+
+const setHighlights = StateEffect.define<DecorationSet>();
+
+const highlightField = StateField.define<DecorationSet>({
+  create() { return Decoration.none; },
+  update(value, tr) {
+    for (const e of tr.effects) {
+      if (e.is(setHighlights)) return e.value;
+    }
+    // Map through doc changes so positions stay correct
+    if (tr.docChanged) return value.map(tr.changes);
+    return value;
+  },
+  provide: (f) => EditorView.decorations.from(f),
+});
+
+// CSS class decorations for each category
+const decoCache: Record<string, Decoration> = {};
+function getDeco(category: string): Decoration {
+  if (!decoCache[category]) {
+    decoCache[category] = Decoration.mark({ class: `hl-${category}` });
+  }
+  return decoCache[category];
+}
+
+function buildDecorations(spans: HighlightSpan[], docLen: number): DecorationSet {
+  const builder: { from: number; to: number; value: Decoration }[] = [];
+  for (const span of spans) {
+    if (span.from >= span.to || span.to > docLen) continue;
+    builder.push({ from: span.from, to: span.to, value: getDeco(span.category) });
+  }
+  // RangeSet requires sorted, non-overlapping
+  builder.sort((a, b) => a.from - b.from || a.to - b.to);
+  return RangeSet.of(builder);
+}
+
+// --- Symbol hover tooltip ---
+
 function symbolHoverTooltip(filePath: string) {
   return hoverTooltip(async (view, pos): Promise<Tooltip | null> => {
     const line = view.state.doc.lineAt(pos);
@@ -134,8 +145,26 @@ export function Editor({ filePath }: EditorProps) {
   const [leanDiagnostics, setLeanDiagnostics] = useState<LeanDiagnostic[]>([]);
   const [traceLink, setTraceLink] = useState<string | null>(null);
   const syncingFromBackend = useRef(false);
+  const highlightTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const mode = getEditorMode(filePath);
+
+  // Fetch highlights from backend tree-sitter and apply as decorations
+  const applyHighlights = async (view: EditorView) => {
+    try {
+      const spans = await invoke<HighlightSpan[]>("get_highlights", { path: filePath });
+      const decos = buildDecorations(spans, view.state.doc.length);
+      view.dispatch({ effects: setHighlights.of(decos) });
+    } catch (e) {
+      console.error("Highlight fetch failed:", e);
+    }
+  };
+
+  // Debounced highlight refresh (after edits)
+  const scheduleHighlights = (view: EditorView) => {
+    if (highlightTimer.current) clearTimeout(highlightTimer.current);
+    highlightTimer.current = setTimeout(() => applyHighlights(view), 150);
+  };
 
   // Check for trace navigation link
   useEffect(() => {
@@ -166,8 +195,6 @@ export function Editor({ filePath }: EditorProps) {
           viewRef.current.destroy();
         }
 
-        const langExt = getLanguageExtension(filePath);
-
         const state = EditorState.create({
           doc: content,
           extensions: [
@@ -175,8 +202,8 @@ export function Editor({ filePath }: EditorProps) {
             highlightActiveLine(),
             highlightSelectionMatches(),
             oneDark,
-            ...(Array.isArray(langExt) ? langExt : [langExt]),
-            ...(mode === "code" ? [symbolHoverTooltip(filePath)] : []),
+            highlightField,
+            symbolHoverTooltip(filePath),
             keymap.of([
               ...defaultKeymap.filter(
                 (k) => k.key !== "Mod-z" && k.key !== "Mod-y" && k.key !== "Mod-Shift-z"
@@ -202,6 +229,7 @@ export function Editor({ filePath }: EditorProps) {
             EditorView.updateListener.of((update) => {
               if (update.docChanged && !syncingFromBackend.current) {
                 sendChangesAsCommands(update);
+                scheduleHighlights(update.view);
               }
             }),
           ],
@@ -214,6 +242,9 @@ export function Editor({ filePath }: EditorProps) {
 
         viewRef.current = view;
         setStatus(`${filePath}`);
+
+        // Initial highlights
+        applyHighlights(view);
       } catch (e) {
         console.error("Failed to open file:", e);
         setStatus(`Error: ${e}`);
@@ -224,6 +255,7 @@ export function Editor({ filePath }: EditorProps) {
 
     return () => {
       destroyed = true;
+      if (highlightTimer.current) clearTimeout(highlightTimer.current);
       if (viewRef.current) {
         viewRef.current.destroy();
         viewRef.current = null;
@@ -232,52 +264,56 @@ export function Editor({ filePath }: EditorProps) {
   }, [filePath]);
 
   const sendChangesAsCommands = async (update: any) => {
+    // Collect all changes and send them — avoids sequential IPC round-trips
+    const commands: any[] = [];
     update.changes.iterChanges(
-      async (fromA: number, toA: number, _fromB: number, _toB: number, inserted: any) => {
+      (fromA: number, toA: number, _fromB: number, _toB: number, inserted: any) => {
         const insertedText = inserted.toString();
         const deletedLen = toA - fromA;
 
-        try {
-          if (deletedLen > 0 && insertedText.length > 0) {
-            const oldText = update.startState.doc.sliceString(fromA, toA);
-            await invoke("apply_command", {
-              command: {
-                Replace: {
-                  file: filePath,
-                  offset: fromA,
-                  old_text: oldText,
-                  new_text: insertedText,
-                },
-              },
-            });
-          } else if (deletedLen > 0) {
-            const deletedText = update.startState.doc.sliceString(fromA, toA);
-            await invoke("apply_command", {
-              command: {
-                Delete: {
-                  file: filePath,
-                  offset: fromA,
-                  len: deletedLen,
-                  deleted_text: deletedText,
-                },
-              },
-            });
-          } else if (insertedText.length > 0) {
-            await invoke("apply_command", {
-              command: {
-                Insert: {
-                  file: filePath,
-                  offset: fromA,
-                  text: insertedText,
-                },
-              },
-            });
-          }
-        } catch (e) {
-          console.error("Failed to send command:", e);
+        if (deletedLen > 0 && insertedText.length > 0) {
+          const oldText = update.startState.doc.sliceString(fromA, toA);
+          commands.push({
+            Replace: {
+              file: filePath,
+              offset: fromA,
+              old_text: oldText,
+              new_text: insertedText,
+            },
+          });
+        } else if (deletedLen > 0) {
+          const deletedText = update.startState.doc.sliceString(fromA, toA);
+          commands.push({
+            Delete: {
+              file: filePath,
+              offset: fromA,
+              len: deletedLen,
+              deleted_text: deletedText,
+            },
+          });
+        } else if (insertedText.length > 0) {
+          commands.push({
+            Insert: {
+              file: filePath,
+              offset: fromA,
+              text: insertedText,
+            },
+          });
         }
       }
     );
+
+    // Send as batch if multiple, else single
+    if (commands.length === 0) return;
+    try {
+      if (commands.length === 1) {
+        await invoke("apply_command", { command: commands[0] });
+      } else {
+        await invoke("apply_command", { command: { Batch: { commands } } });
+      }
+    } catch (e) {
+      console.error("Failed to send command:", e);
+    }
   };
 
   const syncFromBackend = async () => {
@@ -295,6 +331,7 @@ export function Editor({ filePath }: EditorProps) {
           },
         });
         syncingFromBackend.current = false;
+        applyHighlights(view);
       }
     }
   };
@@ -326,7 +363,6 @@ export function Editor({ filePath }: EditorProps) {
       await invoke("save_file", { path: filePath });
       setStatus(`${filePath} — saved`);
 
-      // If Lean file, type-check on save
       if (mode === "lean") {
         checkLean();
       }
@@ -359,8 +395,6 @@ export function Editor({ filePath }: EditorProps) {
 
   const handleNavigate = async () => {
     if (!traceLink) return;
-    // This triggers file open in parent — we'll use a custom event or prop
-    // For now, set window location hash as a signal
     window.dispatchEvent(
       new CustomEvent("tracelean-navigate", { detail: { path: traceLink } })
     );

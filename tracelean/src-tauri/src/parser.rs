@@ -322,3 +322,233 @@ fn find_lean_name(node: &tree_sitter::Node, source: &str) -> Option<String> {
     }
     None
 }
+
+// --- Syntax Highlighting via Tree-Sitter ---
+
+/// A highlight span: byte range + category.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HighlightSpan {
+    pub from: usize,
+    pub to: usize,
+    /// Category: "keyword", "string", "comment", "number", "type", "function",
+    /// "operator", "variable", "property", "punctuation"
+    pub category: &'static str,
+}
+
+/// Parse a file and return highlight spans for the frontend.
+pub fn get_highlights(path: &Path, content: &str) -> Vec<HighlightSpan> {
+    let ext = match path.extension().and_then(|e| e.to_str()) {
+        Some(e) => e,
+        None => return Vec::new(),
+    };
+    let lang = match Lang::from_extension(ext) {
+        Some(l) => l,
+        None => return Vec::new(),
+    };
+
+    let mut parser = Parser::new();
+    if parser.set_language(&lang.tree_sitter_language()).is_err() {
+        return Vec::new();
+    }
+    let tree = match parser.parse(content, None) {
+        Some(t) => t,
+        None => return Vec::new(),
+    };
+
+    let mut spans = Vec::new();
+    collect_highlight_spans(&tree.root_node(), content, lang, &mut spans);
+    // Sort by start position for frontend consumption
+    spans.sort_by_key(|s| s.from);
+    spans
+}
+
+fn collect_highlight_spans(
+    node: &tree_sitter::Node,
+    source: &str,
+    lang: Lang,
+    spans: &mut Vec<HighlightSpan>,
+) {
+    let kind = node.kind();
+    let from = node.start_byte();
+    let to = node.end_byte();
+
+    // If this node maps to a highlight category and is a leaf (or token-like), emit it
+    if let Some(cat) = classify_node(kind, node, source, lang) {
+        // Only emit for leaf-ish nodes (no children or token nodes)
+        if node.child_count() == 0 || is_token_node(kind, lang) {
+            spans.push(HighlightSpan { from, to, category: cat });
+            return; // Don't recurse into children of token nodes
+        }
+    }
+
+    // Recurse into children
+    let mut cursor = node.walk();
+    if cursor.goto_first_child() {
+        loop {
+            collect_highlight_spans(&cursor.node(), source, lang, spans);
+            if !cursor.goto_next_sibling() {
+                break;
+            }
+        }
+    }
+}
+
+/// Returns true for node kinds that are complete tokens (shouldn't recurse into)
+fn is_token_node(kind: &str, _lang: Lang) -> bool {
+    matches!(kind,
+        "string_literal" | "string" | "raw_string_literal" |
+        "line_comment" | "block_comment" | "comment" |
+        "integer_literal" | "float_literal" | "number" |
+        "char_literal" | "string_content"
+    )
+}
+
+/// Map a tree-sitter node kind to a highlight category.
+fn classify_node(kind: &str, node: &tree_sitter::Node, source: &str, lang: Lang) -> Option<&'static str> {
+    // Universal patterns first
+    match kind {
+        // Comments
+        "line_comment" | "block_comment" | "comment" => return Some("comment"),
+        // Strings
+        "string_literal" | "string" | "raw_string_literal" | "char_literal" |
+        "string_content" | "escape_sequence" => return Some("string"),
+        // Numbers
+        "integer_literal" | "float_literal" | "number" | "number_literal" => return Some("number"),
+        // Operators
+        "!" | "!=" | "%" | "&" | "&&" | "*" | "+" | "-" | "/" |
+        "<" | "<=" | "=" | "==" | ">" | ">=" | "|" | "||" | "^" |
+        "+=" | "-=" | "*=" | "/=" | "<<" | ">>" | ".." | "..=" |
+        "=>" | "->" | "<-" | ":=" => return Some("operator"),
+        // Punctuation
+        "(" | ")" | "[" | "]" | "{" | "}" | ";" | "," | "." | "::" | ":" => return Some("punctuation"),
+        _ => {}
+    }
+
+    // Language-specific classification
+    match lang {
+        Lang::Rust => classify_rust_node(kind, node, source),
+        Lang::Python => classify_python_node(kind, node, source),
+        Lang::Cpp => classify_cpp_node(kind, node, source),
+        Lang::Lean => classify_lean_node(kind, node, source),
+    }
+}
+
+fn classify_rust_node(kind: &str, node: &tree_sitter::Node, _source: &str) -> Option<&'static str> {
+    match kind {
+        // Keywords
+        "let" | "mut" | "fn" | "pub" | "struct" | "enum" | "impl" | "trait" |
+        "use" | "mod" | "crate" | "self" | "super" | "where" | "as" | "in" |
+        "for" | "while" | "loop" | "if" | "else" | "match" | "return" |
+        "break" | "continue" | "async" | "await" | "move" | "ref" | "type" |
+        "const" | "static" | "unsafe" | "extern" | "dyn" | "macro_rules!" => Some("keyword"),
+        "true" | "false" => Some("number"), // bool literals
+        // Type identifiers
+        "type_identifier" | "primitive_type" => Some("type"),
+        // Function calls
+        "identifier" => {
+            let parent = node.parent()?;
+            match parent.kind() {
+                "function_item" => Some("function"),
+                "call_expression" => Some("function"),
+                _ => None,
+            }
+        }
+        "field_identifier" => Some("property"),
+        "attribute_item" | "attribute" => Some("keyword"),
+        "mutable_specifier" => Some("keyword"),
+        _ => None,
+    }
+}
+
+fn classify_python_node(kind: &str, node: &tree_sitter::Node, source: &str) -> Option<&'static str> {
+    match kind {
+        "def" | "class" | "return" | "if" | "elif" | "else" | "for" | "while" |
+        "import" | "from" | "as" | "with" | "try" | "except" | "finally" |
+        "raise" | "pass" | "break" | "continue" | "and" | "or" | "not" |
+        "in" | "is" | "lambda" | "yield" | "global" | "nonlocal" | "assert" |
+        "del" | "async" | "await" => Some("keyword"),
+        "true" | "false" | "True" | "False" | "None" => Some("number"),
+        "identifier" => {
+            let parent = node.parent()?;
+            match parent.kind() {
+                "function_definition" => Some("function"),
+                "class_definition" => Some("type"),
+                "call" if node.start_byte() == parent.start_byte() => Some("function"),
+                "decorator" => Some("keyword"),
+                _ => {
+                    // Check if it looks like a type (PascalCase)
+                    let text = node.utf8_text(source.as_bytes()).ok()?;
+                    if text.len() > 1 && text.chars().next()?.is_uppercase() {
+                        Some("type")
+                    } else {
+                        None
+                    }
+                }
+            }
+        }
+        "decorator" => Some("keyword"),
+        _ => None,
+    }
+}
+
+fn classify_cpp_node(kind: &str, node: &tree_sitter::Node, _source: &str) -> Option<&'static str> {
+    match kind {
+        "if" | "else" | "for" | "while" | "do" | "switch" | "case" | "break" |
+        "continue" | "return" | "goto" | "typedef" | "struct" | "union" | "enum" |
+        "class" | "public" | "private" | "protected" | "virtual" | "override" |
+        "const" | "static" | "extern" | "inline" | "volatile" | "register" |
+        "auto" | "template" | "typename" | "namespace" | "using" | "new" | "delete" |
+        "throw" | "try" | "catch" | "sizeof" | "nullptr" | "#include" | "#define" |
+        "#ifdef" | "#ifndef" | "#endif" | "#if" | "#else" => Some("keyword"),
+        "true" | "false" | "NULL" => Some("number"),
+        "type_identifier" | "primitive_type" | "sized_type_specifier" => Some("type"),
+        "identifier" => {
+            let parent = node.parent()?;
+            match parent.kind() {
+                "function_declarator" | "call_expression" => Some("function"),
+                _ => None,
+            }
+        }
+        "field_identifier" => Some("property"),
+        "preproc_include" | "preproc_def" | "preproc_ifdef" => Some("keyword"),
+        _ => None,
+    }
+}
+
+fn classify_lean_node(kind: &str, node: &tree_sitter::Node, source: &str) -> Option<&'static str> {
+    match kind {
+        "def" | "theorem" | "lemma" | "example" | "structure" | "class" |
+        "instance" | "inductive" | "namespace" | "section" | "open" | "variable" |
+        "axiom" | "noncomputable" | "private" | "protected" | "partial" | "unsafe" |
+        "where" | "with" | "match" | "do" | "let" | "have" | "show" | "if" |
+        "then" | "else" | "for" | "in" | "return" | "import" | "prelude" |
+        "universe" | "set_option" | "attribute" | "deriving" | "extends" |
+        "abbrev" | "opaque" | "mutual" | "end" | "macro" | "syntax" | "elab" |
+        "notation" | "by" | "fun" | "sorry" | "admit" => Some("keyword"),
+        "Type" | "Prop" | "Sort" => Some("type"),
+        "ident" | "identifier" | "name" => {
+            let text = node.utf8_text(source.as_bytes()).ok()?;
+            // Keywords that appear as identifiers in some grammars
+            match text {
+                "def" | "theorem" | "lemma" | "structure" | "class" | "instance" |
+                "where" | "with" | "do" | "let" | "have" | "if" | "then" | "else" |
+                "match" | "fun" | "by" | "sorry" | "import" | "open" | "namespace" |
+                "end" | "return" | "for" | "in" => Some("keyword"),
+                "Type" | "Prop" | "Sort" | "Nat" | "Int" | "Bool" | "String" |
+                "Unit" | "Option" | "List" | "Array" | "IO" | "True" | "False" => Some("type"),
+                _ => {
+                    if text.len() > 1 && text.chars().next()?.is_uppercase() {
+                        Some("type")
+                    } else {
+                        let parent = node.parent()?;
+                        match parent.kind() {
+                            "definition" | "def" | "theorem" | "lemma" => Some("function"),
+                            _ => None,
+                        }
+                    }
+                }
+            }
+        }
+        _ => None,
+    }
+}

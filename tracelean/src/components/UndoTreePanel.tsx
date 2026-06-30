@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 
 interface UndoNodeView {
   id: string;
@@ -234,8 +235,11 @@ export function UndoTreePanel({ visible, onClose, onNodeJump, onFileSelect, curr
   useEffect(() => {
     if (visible) {
       refresh();
-      const interval = setInterval(refresh, 2000);
-      return () => clearInterval(interval);
+      // Listen for backend events instead of polling
+      const unlisten = listen("undo-tree-changed", () => {
+        refresh();
+      });
+      return () => { unlisten.then((fn) => fn()); };
     }
   }, [visible, refresh]);
 

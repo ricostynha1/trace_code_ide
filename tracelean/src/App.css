@@ -305,3 +305,46 @@ html, body, #root {
 .diag-msg {
   flex: 1;
 }
+
+/* --- Tree-sitter Syntax Highlighting (One Dark palette) --- */
+
+.hl-keyword {
+  color: #c678dd;
+}
+
+.hl-string {
+  color: #98c379;
+}
+
+.hl-comment {
+  color: #5c6370;
+  font-style: italic;
+}
+
+.hl-number {
+  color: #d19a66;
+}
+
+.hl-type {
+  color: #e5c07b;
+}
+
+.hl-function {
+  color: #61afef;
+}
+
+.hl-operator {
+  color: #56b6c2;
+}
+
+.hl-variable {
+  color: #e06c75;
+}
+
+.hl-property {
+  color: #e06c75;
+}
+
+.hl-punctuation {
+  color: #abb2bf;
+}

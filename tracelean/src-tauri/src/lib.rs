@@ -18,6 +18,7 @@ use trace_graph::{TraceGraph, RequirementTraceOwned, CodeElementTraceOwned};
 use std::path::PathBuf;
 use std::sync::Mutex;
 use tauri::State;
+use tauri::{Emitter, AppHandle};
 
 // --- Shared State Wrappers ---
 
@@ -25,25 +26,75 @@ pub struct AppStateWrapper(pub Mutex<AppState>);
 pub struct SymbolTableWrapper(pub Mutex<SymbolTable>);
 pub struct TraceGraphWrapper(pub Mutex<TraceGraph>);
 
+/// Cached undo tree view — only rebuilt when tree_version changes.
+pub struct UndoTreeCache {
+    pub version: u64,
+    pub view: Option<UndoTreeView>,
+    pub file_filter: Option<String>,
+}
+
+impl UndoTreeCache {
+    pub fn new() -> Self {
+        Self { version: 0, view: None, file_filter: None }
+    }
+}
+
+pub struct UndoTreeCacheWrapper(pub Mutex<UndoTreeCache>);
+
 // --- Tauri IPC Commands (thin dispatch) ---
 
 #[tauri::command]
-fn apply_command(state: State<'_, AppStateWrapper>, command: Command) -> Result<String, String> {
-    let mut s = state.0.lock().map_err(|e| e.to_string())?;
-    service::apply_command(&mut s, command);
+fn apply_command(
+    app: AppHandle,
+    state: State<'_, AppStateWrapper>,
+    cache: State<'_, UndoTreeCacheWrapper>,
+    command: Command,
+) -> Result<String, String> {
+    let checkpoint_info = {
+        let mut s = state.0.lock().map_err(|e| e.to_string())?;
+        service::apply_command(&mut s, command)
+    };
+    // Invalidate cache and notify frontend (outside the lock)
+    invalidate_undo_cache(&cache);
+    let _ = app.emit("undo-tree-changed", ());
+
+    // Persistence work outside the lock to avoid blocking other commands
+    if let Some((root, _)) = checkpoint_info {
+        let s = state.0.lock().map_err(|e| e.to_string())?;
+        let _ = persistence::save_checkpoint(&root, &s);
+        let _ = persistence::save_command_log(&root, s.command_log());
+    }
     Ok("ok".into())
 }
 
 #[tauri::command]
-fn undo(state: State<'_, AppStateWrapper>) -> Result<bool, String> {
+fn undo(
+    app: AppHandle,
+    state: State<'_, AppStateWrapper>,
+    cache: State<'_, UndoTreeCacheWrapper>,
+) -> Result<bool, String> {
     let mut s = state.0.lock().map_err(|e| e.to_string())?;
-    Ok(s.undo())
+    let result = s.undo();
+    if result {
+        invalidate_undo_cache(&cache);
+        let _ = app.emit("undo-tree-changed", ());
+    }
+    Ok(result)
 }
 
 #[tauri::command]
-fn redo(state: State<'_, AppStateWrapper>) -> Result<bool, String> {
+fn redo(
+    app: AppHandle,
+    state: State<'_, AppStateWrapper>,
+    cache: State<'_, UndoTreeCacheWrapper>,
+) -> Result<bool, String> {
     let mut s = state.0.lock().map_err(|e| e.to_string())?;
-    Ok(s.redo())
+    let result = s.redo();
+    if result {
+        invalidate_undo_cache(&cache);
+        let _ = app.emit("undo-tree-changed", ());
+    }
+    Ok(result)
 }
 
 #[tauri::command]
@@ -97,9 +148,21 @@ fn save_checkpoint(state: State<'_, AppStateWrapper>) -> Result<(), String> {
 #[tauri::command]
 fn get_undo_tree(
     state: State<'_, AppStateWrapper>,
+    cache: State<'_, UndoTreeCacheWrapper>,
     file_filter: Option<String>,
 ) -> Result<UndoTreeView, String> {
+    let mut c = cache.0.lock().map_err(|e| e.to_string())?;
     let s = state.0.lock().map_err(|e| e.to_string())?;
+    let tree_version = s.undo_tree().len() as u64;
+
+    // Return cached if version & filter match
+    if c.version == tree_version && c.file_filter == file_filter {
+        if let Some(ref view) = c.view {
+            return Ok(view.clone());
+        }
+    }
+
+    // Rebuild
     let tree = s.undo_tree();
     let current_id = tree.current_node().map(|n| n.id.to_string());
 
@@ -116,11 +179,15 @@ fn get_undo_tree(
             file: command_file(&node.command),
             timestamp: node.timestamp.to_rfc3339(),
             is_commit_point: node.commit_point.is_some(),
-            commit_name: node.commit_point.as_ref().map(|c| c.name.clone()),
+            commit_name: node.commit_point.as_ref().map(|cp| cp.name.clone()),
         })
         .collect();
 
-    Ok(UndoTreeView { nodes, current_id })
+    let view = UndoTreeView { nodes, current_id };
+    c.version = tree_version;
+    c.file_filter = file_filter;
+    c.view = Some(view.clone());
+    Ok(view)
 }
 
 #[tauri::command]
@@ -140,13 +207,20 @@ fn get_command_log(
 }
 
 #[tauri::command]
-fn jump_to_node(state: State<'_, AppStateWrapper>, node_id: String) -> Result<bool, String> {
+fn jump_to_node(
+    app: AppHandle,
+    state: State<'_, AppStateWrapper>,
+    cache: State<'_, UndoTreeCacheWrapper>,
+    node_id: String,
+) -> Result<bool, String> {
     let mut s = state.0.lock().map_err(|e| e.to_string())?;
     let id = uuid::Uuid::parse_str(&node_id).map_err(|e| e.to_string())?;
     if let Some(commands) = s.jump_to_node(id) {
         for cmd in commands {
             s.execute_raw(&cmd);
         }
+        invalidate_undo_cache(&cache);
+        let _ = app.emit("undo-tree-changed", ());
         Ok(true)
     } else {
         Ok(false)
@@ -154,13 +228,19 @@ fn jump_to_node(state: State<'_, AppStateWrapper>, node_id: String) -> Result<bo
 }
 
 #[tauri::command]
-fn clear_undo_tree(state: State<'_, AppStateWrapper>) -> Result<(), String> {
+fn clear_undo_tree(
+    app: AppHandle,
+    state: State<'_, AppStateWrapper>,
+    cache: State<'_, UndoTreeCacheWrapper>,
+) -> Result<(), String> {
     let mut s = state.0.lock().map_err(|e| e.to_string())?;
     s.clear_history();
     if let Some(root) = s.project_root().cloned() {
         let _ = persistence::save_command_log(&root, &[]);
         let _ = std::fs::remove_file(persistence::commands_dir(&root).join("checkpoint.json"));
     }
+    invalidate_undo_cache(&cache);
+    let _ = app.emit("undo-tree-changed", ());
     Ok(())
 }
 
@@ -179,6 +259,26 @@ fn parse_file_symbols(
 fn get_file_symbols(symbols_state: State<'_, SymbolTableWrapper>, path: String) -> Result<Vec<Symbol>, String> {
     let sym = symbols_state.0.lock().map_err(|e| e.to_string())?;
     Ok(sym.get_symbols(&PathBuf::from(&path)).cloned().unwrap_or_default())
+}
+
+#[tauri::command]
+fn get_highlights(
+    state: State<'_, AppStateWrapper>,
+    path: String,
+) -> Result<Vec<parser::HighlightSpan>, String> {
+    let s = state.0.lock().map_err(|e| e.to_string())?;
+    let rel_path = PathBuf::from(&path);
+
+    // Use buffer content if available, else read from disk
+    let content = if let Some(c) = s.get_content(&rel_path) {
+        c.to_string()
+    } else {
+        let root = s.project_root().cloned().unwrap_or_default();
+        std::fs::read_to_string(root.join(&path))
+            .map_err(|e| format!("Read error: {}", e))?
+    };
+
+    Ok(parser::get_highlights(&rel_path, &content))
 }
 
 #[tauri::command]
@@ -330,6 +430,12 @@ struct CommandLogEntry {
 
 // --- Command Helpers (presentation logic, OK to live here) ---
 
+fn invalidate_undo_cache(cache: &State<'_, UndoTreeCacheWrapper>) {
+    if let Ok(mut c) = cache.0.lock() {
+        c.view = None;
+    }
+}
+
 fn command_summary(cmd: &Command) -> String {
     match cmd {
         Command::Insert { file, text, offset, .. } => {
@@ -389,6 +495,7 @@ pub fn run() {
         .manage(AppStateWrapper(Mutex::new(AppState::new())))
         .manage(SymbolTableWrapper(Mutex::new(SymbolTable::new())))
         .manage(TraceGraphWrapper(Mutex::new(TraceGraph::new())))
+        .manage(UndoTreeCacheWrapper(Mutex::new(UndoTreeCache::new())))
         .invoke_handler(tauri::generate_handler![
             apply_command,
             undo,
@@ -405,6 +512,7 @@ pub fn run() {
             clear_undo_tree,
             parse_file_symbols,
             get_file_symbols,
+            get_highlights,
             parse_project,
             build_trace_graph,
             query_requirement_trace,

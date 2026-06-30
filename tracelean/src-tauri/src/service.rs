@@ -16,16 +16,17 @@ const CHECKPOINT_INTERVAL: usize = 100;
 // --- Core Editor Operations ---
 
 /// Apply a command, auto-checkpoint if needed.
-pub fn apply_command(state: &mut AppState, command: Command) {
+/// Returns checkpoint info if a checkpoint should be saved (caller handles async).
+pub fn apply_command(state: &mut AppState, command: Command) -> Option<(PathBuf, usize)> {
     state.apply(command);
 
     let log_len = state.command_log().len();
     if log_len > 0 && log_len % CHECKPOINT_INTERVAL == 0 {
         if let Some(root) = state.project_root().cloned() {
-            let _ = persistence::save_checkpoint(&root, state);
-            let _ = persistence::save_command_log(&root, state.command_log());
+            return Some((root, log_len));
         }
     }
+    None
 }
 
 /// Open a project: restore state, parse files, return file listing.

@@ -178,9 +178,11 @@ pub struct LeanDiagnostic {
 }
 
 /// Run Lean 4 type checker on a file.
-/// Requires `lean` binary in PATH.
+/// Requires `lean` binary in PATH or installed via elan.
 pub fn check_lean_file(file_path: &Path) -> LeanCheckResult {
-    let output = ProcessCommand::new("lean")
+    let lean_bin = find_lean_binary();
+
+    let output = ProcessCommand::new(&lean_bin)
         .arg(file_path)
         .arg("--run")
         .output();
@@ -210,12 +212,37 @@ pub fn check_lean_file(file_path: &Path) -> LeanCheckResult {
                 file: file_path.to_string_lossy().to_string(),
                 line: 0,
                 col: 0,
-                message: format!("Failed to run lean: {}", e),
+                message: format!("Failed to run lean ({}): {}", lean_bin, e),
                 severity: "error".into(),
             }],
             warnings: Vec::new(),
         },
     }
+}
+
+/// Find the lean binary: check elan paths, then fall back to PATH.
+fn find_lean_binary() -> String {
+    // Check common elan install locations
+    let candidates = [
+        // Linux/macOS standard elan
+        dirs_home().map(|h| format!("{}/.elan/bin/lean", h)),
+        // Also try /root for Docker containers
+        Some("/root/.elan/bin/lean".to_string()),
+    ];
+
+    for candidate in candidates.into_iter().flatten() {
+        if std::path::Path::new(&candidate).exists() {
+            return candidate;
+        }
+    }
+
+    // Fall back to bare name (relies on PATH)
+    "lean".to_string()
+}
+
+fn dirs_home() -> Option<String> {
+    std::env::var("HOME").ok()
+        .or_else(|| std::env::var("USERPROFILE").ok())
 }
 
 /// Parse Lean compiler output into diagnostics.
