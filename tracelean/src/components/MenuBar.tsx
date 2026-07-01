@@ -6,6 +6,10 @@ interface MenuBarProps {
   undoTreeVisible: boolean;
   onToggleRequirements: () => void;
   reqsPanelVisible: boolean;
+  onToggleAiChat: () => void;
+  aiChatVisible: boolean;
+  onToggleTraceDashboard: () => void;
+  traceDashVisible: boolean;
 }
 
 export function MenuBar({
@@ -14,6 +18,10 @@ export function MenuBar({
   undoTreeVisible,
   onToggleRequirements,
   reqsPanelVisible,
+  onToggleAiChat,
+  aiChatVisible,
+  onToggleTraceDashboard,
+  traceDashVisible,
 }: MenuBarProps) {
   const handleOpenFolder = async () => {
     try {
@@ -55,6 +63,18 @@ export function MenuBar({
         className={undoTreeVisible ? "active" : ""}
       >
         Undo Tree
+      </button>
+      <button
+        onClick={onToggleTraceDashboard}
+        className={traceDashVisible ? "active" : ""}
+      >
+        Trace Graph
+      </button>
+      <button
+        onClick={onToggleAiChat}
+        className={aiChatVisible ? "active" : ""}
+      >
+        AI Chat
       </button>
       <span className="title">TraceLean IDE</span>
     </div>

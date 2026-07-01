@@ -41,6 +41,8 @@ Incremental delivery. Each MVP is usable on its own. Later MVPs build on earlier
 - [x] 1.6 — Parallel parsing with Rayon on startup (scan all project files)
 - [x] 1.7 — Incremental re-parse on file change (only changed file, triggered by file watcher)
 
+- [ ] 1.8 — Adopt tree-sitter highlight queries (`.scm` files) for proper token-level highlighting instead of ad-hoc node-kind→color JSON approach. Current approach fails for markdown headings and other complex node structures where color must propagate through nested nodes.
+
 **Deliverable**: Editor with fast syntax highlighting and a backend that understands code structure.
 
 ---
@@ -87,134 +89,118 @@ Incremental delivery. Each MVP is usable on its own. Later MVPs build on earlier
 
 ---
 
-## MVP 4 — Background Agent & Conformance Checking
+## MVP 4 — AI Integration
 
-**Goal**: Automatic validation of code against specs on every edit.
-
-### Tasks
-
-- [ ] 4.1 — Background agent: long-lived Tokio task, listens to file watcher events
-- [ ] 4.2 — On file save: agent queries trace graph for associated Lean spec(s)
-- [ ] 4.3 — Property extraction: parse Lean spec → extract testable properties (pre/post conditions)
-- [ ] 4.4 — Property-based test generation: convert properties to executable tests
-- [ ] 4.5 — Run generated property tests against saved code
-- [ ] 4.6 — Report results: pass/fail per property, with counterexample on failure
-- [ ] 4.7 — Strict mode: block save (reject Command) if validation fails
-- [ ] 4.8 — Suggestion mode: allow save, show violation notification with options
-- [ ] 4.9 — User setting toggle: strict vs suggestion mode
-- [ ] 4.10 — Shadow state: agent keeps last-known-good version per file
-- [ ] 4.11 — Commit points: auto-create after successful validation pass
-
-**Deliverable**: Code is validated against its Lean spec on every save. Violations are caught.
-
----
-
-## MVP 5 — Testing & Coverage
-
-**Goal**: Test execution, coverage measurement, enforcement.
+**Goal**: AI assists in writing requirements, specs, and code. Custom harness tightly coupled to command system and trace graph. MCP for external tool extensibility.
 
 ### Tasks
 
-- [ ] 5.1 — Define `CoverageProvider` trait (common interface across languages)
-- [ ] 5.2 — Implement CoverageProvider for Python (coverage.py)
-- [ ] 5.3 — Implement CoverageProvider for Rust (tarpaulin)
-- [ ] 5.4 — Implement CoverageProvider for C++ (gcov)
-- [ ] 5.5 — Integration test runner: discover tests in `tests/integration/`, run by requirement ID
-- [ ] 5.6 — Unit test runner: discover tests in `tests/unit/`, run matching source structure
-- [ ] 5.7 — Auto-run tests on save/commit
-- [ ] 5.8 — Coverage report: which lines are covered, which are not
-- [ ] 5.9 — Coverage enforcement: warn/block if integration test coverage < 100%
-- [ ] 5.10 — Display coverage in editor (gutter annotations)
-- [ ] 5.11 — Link coverage data into trace graph (CodeElement → coverage %)
-- [ ] 5.12 — Commit points: store coverage and test results in metadata
+- [x] 4.1 — Provider-agnostic AI client trait + OpenRouter, Bedrock, Mock implementations (async, retries, timeout, live model listing from provider APIs)
+- [x] 4.2 — Transparency layer: token counts (input/thinking/output/cached), per-request and cumulative cost, raw request/response inspection
+- [x] 4.3 — Model selection UI: settings panel, live provider query, parameter tuning per model
+- [x] 4.4 — AI chat panel (right side): conversational interface with session history
+- [x] 4.5 — Interaction log: all prompts/responses stored, browsable, inspectable (full context visible)
+- [x] 4.6 — Context assembler: pulls from trace graph (requirement → spec → code → tests for a given target), respects token budget, ranks relevance
+- [x] 4.7 — Prompt template engine: variable substitution, system/user separation, response format hints, composable partials
+- [x] 4.8 — Response parser: extract code blocks by language, extract structured JSON, handle truncation/continuation
+- [x] 4.9 — AI → shadow buffer → diff pipeline: AI output lands in temp buffer, user sees diff view, accept/reject per-hunk
+- [x] 4.10 — Accepted hunks emitted as individual Commands (undoable in tree, attributed to AI agent)
+- [x] 4.11 — Elicitation agent: user describes goal → AI suggests structured requirements (writes to `reqs/`) [button press]
+- [x] 4.12 — Formalisation agent: requirement → Lean spec draft (data types + correctness theorems) [button press on Req → generate formal spec]
+- [x] 4.13 — Implementation agent: Lean spec + language → code (respects existing conventions via context) [button press on spec → generate implementation]
+- [x] 4.14 — Repair agent: given violation → suggests code fix or spec update, shows diff [button press, user-facing only]
+- [x] 4.14a — Agent tool definitions: builtin tools (read_file, write_file, list_files, emit_command, query_trace_graph, query_code_element, list_requirements, get_symbols, run_shell, search_files) defined and injected into agent system prompts so agents can interact with the environment
+- [x] 4.14b — Tool executor: executes tool calls from agents against the project (respects permission model)
+- [x] 4.15 — MCP tool host: expose TraceLean internals (trace graph queries, file read/write, command emit) as MCP tools via JSON-RPC 2.0. External agents/plugins can interact via `initialize`, `tools/list`, `tools/call`.
+- [x] 4.16 — MCP client: connect to user-configured external MCP servers (`.tracelean/mcp.json`). Discovers remote tools, makes them available to agents. stdio JSON-RPC transport.
+- [x] 4.17 — Agent permission model: `AgentPermissions` struct controls allowed/denied tools, readable/writable path globs, shell access. Configurable per-agent via Tauri IPC.
+- [x] 4.18 — Streaming response support: `ai-stream-start` and `ai-stream-token` Tauri events push partial tokens to frontend. `ai_chat_stream` command with chunked emission.
 
-**Deliverable**: Tests run automatically, coverage is measured and enforced, results visible in editor and graph.
-
----
-
-## MVP 6 — AI Integration
-
-**Goal**: AI assists in writing requirements, specs, and code.
-
-### Tasks
-
-- [ ] 6.1 — OpenRouter HTTP client in Rust (async, retries, timeout handling)
-- [ ] 6.2 — Model selection UI: settings panel to choose model
-- [ ] 6.3 — Code harness: prompt template system, context assembly, response parsing
-- [ ] 6.4 — AI chat panel (right side): conversational interface
-- [ ] 6.5 — Elicitation agent: user describes goal → AI suggests structured requirements
-- [ ] 6.6 — Formalisation agent: given requirement → AI produces Lean spec draft
-- [ ] 6.7 — Implementation agent: given Lean spec + language → AI produces code
-- [ ] 6.8 — Repair agent: given violation → AI suggests code fix or spec update
-- [ ] 6.9 — AI → shadow buffer → diff → Commands pipeline (AI never writes directly)
-- [ ] 6.10 — AI edits as Batch command (single undo node for entire AI action)
-- [ ] 6.11 — AI interaction log: all prompts/responses stored, browsable
-- [ ] 6.12 — Undo AI action: single Ctrl+Z reverts entire AI edit
-
-**Deliverable**: AI assists at every stage. All AI edits are reversible. User stays in control.
+**Deliverable**: AI assists at every stage. All AI edits are reversible, diffable, and individually undoable. Full transparency on what context goes to the model and what it costs. MCP for extensibility.
 
 ---
 
-## MVP 7 — Traceability Dashboard
+## MVP 5 — Traceability Dashboard
 
 **Goal**: Visual navigation of the full requirement→spec→code→test graph.
 
 ### Tasks
 
-- [ ] 7.1 — Traceability window: opens from menu bar as separate window
-- [ ] 7.2 — D3.js graph rendering: nodes = requirements/specs/code/tests, edges = relationships
-- [ ] 7.3 — Click node → navigate to file/line in editor
-- [ ] 7.4 — Filter by requirement, by status, by coverage
-- [ ] 7.5 — Call-graph / dependency graph view (function-level dependencies)
-- [ ] 7.6 — Search: find requirement/spec/code by text
-- [ ] 7.7 — Live update: graph refreshes on file changes
-- [ ] 7.8 — Agent activity feedback: show what agent is doing in chat panel with graph references
-- [ ] 7.9 — Color coding: green = passing, red = violation, grey = untested
+- [x] 5.1 — Traceability window: opens from menu bar as separate window
+- [x] 5.2 — D3.js graph rendering: nodes = requirements/specs/code/tests, edges = relationships
+- [x] 5.3 — Click node → navigate to file/line in editor
+- [x] 5.4 — Filter by requirement, by status, by coverage
+- [ ] 5.5 — Call-graph / dependency graph view (function-level dependencies)
+- [x] 5.6 — Search: find requirement/spec/code by text
+- [x] 5.7 — Live update: graph refreshes on file changes
+- [ ] 5.8 — Agent activity feedback: show what agent is doing in chat panel with graph references
+- [x] 5.9 — Color coding: green = passing, red = violation, grey = untested
 
 **Deliverable**: Full visual traceability. Click through from requirements to code to tests.
 
 ---
 
-## MVP 8 — Undo-Tree Visualization
+## MVP 6 — Undo-Tree Visualization
 
 **Goal**: Visual browsing and navigation of the full undo history.
 
 ### Tasks
 
-- [ ] 8.1 — Undo-tree panel: visual tree of all commands/branches
-- [ ] 8.2 — Click any node → jump to that state (replay commands)
-- [ ] 8.3 — Commit points highlighted and labelled
-- [ ] 8.4 — Branch labels: show where branches diverge
-- [ ] 8.5 — Filter: show only commit points, or only current branch
-- [ ] 8.6 — Per-file view: show undo-tree for a single file
-- [ ] 8.7 — Multi-file view: show cross-file Batch nodes
-- [ ] 8.8 — Diff preview: hover a node → see what changed
+- [x] 6.1 — Undo-tree panel: visual tree of all commands/branches
+- [x] 6.2 — Click any node → jump to that state (replay commands)
+- [x] 6.3 — Commit points highlighted and labelled
+- [x] 6.4 — Branch labels: show where branches diverge
+- [x] 6.5 — Filter: show only commit points, or only current branch
+- [x] 6.6 — Per-file view: show undo-tree for a single file
+- [x] 6.7 — Multi-file view: show cross-file Batch nodes
+- [x] 6.8 — Diff preview: hover a node → see what changed
 
 **Deliverable**: Time-travel through project history. Jump to any state. See all branches.
 
 ---
 
-## MVP 9 — Remote Execution & Collaboration
+## MVP 8 — Remote Execution & Collaboration
 
 **Goal**: Offload compute to remote servers. Multiple users edit simultaneously.
 
 ### Tasks
 
-- [ ] 9.1 — Command stream serialization protocol (binary, compact)
-- [ ] 9.2 — WebSocket transport: local ↔ remote command streaming
-- [ ] 9.3 — Remote AppState: remote machine replays command stream → identical state
-- [ ] 9.4 — Task routing: local agent dispatches heavy tasks to remote
-- [ ] 9.5 — Remote Lean compilation: send commands, get SetCompileOutput back
-- [ ] 9.6 — Remote test execution: send commands, get SetTestResults back
-- [ ] 9.7 — Graceful degradation: buffer commands on disconnect, sync on reconnect
-- [ ] 9.8 — Multi-user: bidirectional command stream between peers
-- [ ] 9.9 — Conflict ordering: deterministic `(timestamp, user_id)` rule
-- [ ] 9.10 — Per-user undo: undo only your own commands
-- [ ] 9.11 — Presence: cursor/selection commands from other users displayed in editor
-- [ ] 9.12 — Hub relay container: rebroadcast commands for NAT traversal / teams
-- [ ] 9.13 — Authentication: SSH/TLS for remote, token-based for collaboration
+- [ ] 8.1 — Command stream serialization protocol (binary, compact)
+- [ ] 8.2 — WebSocket transport: local ↔ remote command streaming
+- [ ] 8.3 — Remote AppState: remote machine replays command stream → identical state
+- [ ] 8.4 — Task routing: local agent dispatches heavy tasks to remote
+- [ ] 8.5 — Remote Lean compilation: send commands, get SetCompileOutput back
+- [ ] 8.6 — Remote test execution: send commands, get SetTestResults back
+- [ ] 8.7 — Graceful degradation: buffer commands on disconnect, sync on reconnect
+- [ ] 8.8 — Multi-user: bidirectional command stream between peers
+- [ ] 8.9 — Conflict ordering: deterministic `(timestamp, user_id)` rule
+- [ ] 8.10 — Per-user undo: undo only your own commands
+- [ ] 8.11 — Presence: cursor/selection commands from other users displayed in editor
+- [ ] 8.12 — Hub relay container: rebroadcast commands for NAT traversal / teams
+- [ ] 8.13 — Authentication: SSH/TLS for remote, token-based for collaboration
 
 **Deliverable**: Edit locally, compute remotely. Multiple users can work on same project in real-time.
+
+
+## MVP 9 — Testing & Coverage
+
+**Goal**: Test execution, coverage measurement, enforcement.
+
+### Tasks
+
+- [ ] 9.1 — Define `CoverageProvider` trait (common interface across languages)
+- [ ] 9.2 — Implement CoverageProvider for Python (coverage.py)
+- [ ] 9.3 — Implement CoverageProvider for Rust (tarpaulin)
+- [ ] 9.5 — Integration test runner: discover tests in `tests/integration/`, run by requirement ID
+- [ ] 9.6 — Unit test runner: discover tests in `tests/unit/`, run matching source structure
+- [ ] 9.7 — Auto-run tests on save/commit
+- [ ] 9.8 — Coverage report: which lines are covered, which are not
+- [ ] 9.9 — Coverage enforcement: warn/block if integration test coverage < 100%
+- [ ] 9.10 — Display coverage in editor (gutter annotations)
+- [ ] 9.11 — Link coverage data into trace graph (CodeElement → coverage %)
+- [ ] 9.12 — Commit points: store coverage and test results in metadata
+
+**Deliverable**: Tests run automatically, coverage is measured and enforced, results visible in editor and graph.
 
 ---
 
@@ -239,22 +225,3 @@ Incremental delivery. Each MVP is usable on its own. Later MVPs build on earlier
 
 **Deliverable**: Ship-ready product. Installs via Docker, works cross-platform, supports plugins.
 
----
-
-## Dependency Graph
-
-```
-MVP 0 (Command Shell)
-  └→ MVP 1 (Tree-sitter)
-       └→ MVP 2 (Trace Graph)
-            ├→ MVP 3 (Requirements & Specs)
-            │    └→ MVP 4 (Background Agent)
-            │         └→ MVP 5 (Testing & Coverage)
-            │              └→ MVP 7 (Traceability Dashboard)
-            └→ MVP 6 (AI Integration)
-  └→ MVP 8 (Undo-Tree Visualization)
-  └→ MVP 9 (Remote & Collaboration)
-  └→ MVP 10 (Docker, LSP, Polish)
-```
-
-MVP 0 is the hard prerequisite for everything. MVP 1 and 2 are sequential foundations. After that, MVPs 3-7 form the core feature chain. MVPs 8, 9, 10 can be parallelized once MVP 0 is solid.

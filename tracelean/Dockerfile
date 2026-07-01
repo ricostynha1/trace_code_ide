@@ -81,5 +81,6 @@ RUN curl -sSf https://raw.githubusercontent.com/leanprover/elan/master/elan-init
 ENV PATH="/root/.elan/bin:${PATH}"
 
 COPY --from=builder /app/target/release/tracelean /usr/local/bin/tracelean
+COPY --from=builder /app/ui_settings /usr/local/bin/ui_settings
 
 ENTRYPOINT ["tracelean"]

@@ -36,3 +36,6 @@ mod tests {
         assert!(results[0].relevance >= results[1].relevance);
     }
 }
+
+
+And lets go

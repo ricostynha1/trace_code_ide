@@ -96,22 +96,11 @@ xhost +local:docker
 docker run --rm \
   -e DISPLAY=$DISPLAY \
   -v /tmp/.X11-unix:/tmp/.X11-unix \
-  -v $(pwd)/my-project:/project \
+  -v $(pwd)/example:/project \
   tracelean:latest
 ```
 
 That's it. The image bakes in software-GL fallback env vars — no extra flags needed.
-
-### Optional GPU passthrough
-
-```bash
-docker run --rm \
-  -e DISPLAY=$DISPLAY \
-  -v /tmp/.X11-unix:/tmp/.X11-unix \
-  --device /dev/dri \
-  -v $(pwd)/my-project:/project \
-  tracelean:latest
-```
 
 ### Wayland
 
@@ -133,6 +122,25 @@ docker compose run --rm dev bash -c "npm install && cargo test --workspace"
 ```bash
 make check   # pulls/builds image, installs deps, checks code
 ```
+
+### See the AI Chat panel
+The AI Chat button appears in the top menu bar. If you don't see it after pulling new code:
+```bash
+# Dev mode (rebuilds frontend automatically):
+cargo tauri dev
+
+# Or via Docker — rebuild from scratch:
+docker compose build --no-cache dev
+make shell
+# inside:
+npm install
+npm run build
+cargo build --release --bin tracelean
+```
+
+The panel has 4 tabs: **Chat**, **Settings** (provider/model config), **Log** (full prompt/response history), **Stats** (token usage & cost).
+
+Configure a provider in Settings before chatting. The **Mock** provider is always available — it shows the exact prompt and lets you paste a response manually (useful for debugging prompts without spending tokens).
 
 ### Iterate on Rust
 ```bash
@@ -189,33 +197,39 @@ If you have the toolchain installed on your host, you can skip Docker entirely.
 
 - Rust 1.88+ (`rustup update stable`)
 - Node.js 22+ and npm
-- System libs (Debian/Ubuntu):
-  ```bash
-  sudo apt install libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev \
-    libsoup-3.0-dev libjavascriptcoregtk-4.1-dev libdbus-1-dev \
-    libssl-dev pkg-config build-essential curl wget file
-  ```
 - Tauri CLI:
   ```bash
   cargo install tauri-cli --version "^2"
+  ```
+- System libs (Debian/Ubuntu/Fedora):
+  ```bash
+  # Debian/Ubuntu:
+  sudo apt install libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev \
+    libsoup-3.0-dev libjavascriptcoregtk-4.1-dev libdbus-1-dev \
+    libssl-dev pkg-config build-essential curl wget file
+
+  # Fedora:
+  sudo dnf install webkit2gtk4.1-devel gtk3-devel librsvg2-devel \
+    libsoup3-devel javascriptcoregtk4.1-devel dbus-devel \
+    openssl-devel pkg-config gcc
   ```
 - (Optional) Lean 4 via [elan](https://github.com/leanprover/elan) for spec type-checking
 
 ### Build & run
 
 ```bash
-# Install frontend deps
+cd tracelean
 npm install
+cargo tauri dev     # hot-reload frontend + Rust backend
+```
 
-# Dev mode (hot-reload frontend + Rust backend)
-cargo tauri dev
+This opens the GUI window. The **AI Chat** button is in the top menu bar.
 
-# Release build (binary at target/release/tracelean)
+### Release build
+
+```bash
 npm run build
-cargo tauri build --no-bundle
-
-# Run the release binary directly
-./target/release/tracelean
+cargo tauri build --no-bundle   # binary at src-tauri/target/release/tracelean
 ```
 
 ### Run tests
@@ -223,9 +237,3 @@ cargo tauri build --no-bundle
 ```bash
 cargo test --workspace
 ```
-
-### Notes
-
-- `cargo tauri dev` starts both Vite (frontend) and the Rust backend with hot-reload.
-- `cargo tauri build --no-bundle` produces just the binary (no AppImage/deb). Add `--bundles deb` or `--bundles appimage` if you want packages.
-- The File → Open Folder dialog works normally on the host (no oversized window issue).

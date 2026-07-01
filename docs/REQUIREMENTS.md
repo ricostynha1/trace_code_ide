@@ -79,6 +79,12 @@ This is the foundational design constraint. The entire application is built arou
 | REQ-30 | AI assists: requirement generation, Lean formalisation, code implementation, violation repair. |
 | REQ-31 | All AI interactions logged and undoable. |
 | REQ-32 | Code harness manages API calls, prompt engineering, context, response parsing. |
+| REQ-32a | Agents are provided tool definitions (read_file, write_file, list_files, emit_command, query_trace_graph, search_files, run_shell, get_symbols) in their system prompt so they can interact with the project environment. |
+| REQ-32b | A tool executor runs tool calls from agent responses against the project, respecting permissions. |
+| REQ-32c | MCP tool host exposes TraceLean internals via JSON-RPC 2.0 so external agents/plugins can interact. |
+| REQ-32d | MCP client connects to user-configured external MCP servers, making their tools available to agents. |
+| REQ-32e | Agent permission model controls which files/commands each agent can touch, configurable per-agent. |
+| REQ-32f | Streaming response support: tokens emitted to UI as they arrive for real-time display. |
 
 ## 7. Background Agent
 

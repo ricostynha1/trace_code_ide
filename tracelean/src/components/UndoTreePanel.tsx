@@ -31,6 +31,8 @@ interface UndoTreePanelProps {
   currentFile: string | null;
 }
 
+type FilterMode = "global" | "file" | "commits" | "batch";
+
 function cmdMarker(summary: string): string {
   if (summary.startsWith("Insert")) return "I";
   if (summary.startsWith("Delete @") && !summary.startsWith("Delete file")) return "D";
@@ -216,7 +218,9 @@ export function UndoTreePanel({ visible, onClose, onNodeJump, onFileSelect, curr
   const [treeData, setTreeData] = useState<UndoTreeData | null>(null);
   const [commandLog, setCommandLog] = useState<CommandLogEntry[]>([]);
   const [activeTab, setActiveTab] = useState<"tree" | "log">("tree");
-  const [filterMode, setFilterMode] = useState<"global" | "file">("global");
+  const [filterMode, setFilterMode] = useState<FilterMode>("global");
+  const [diffPreview, setDiffPreview] = useState<string | null>(null);
+  const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     try {
@@ -235,7 +239,6 @@ export function UndoTreePanel({ visible, onClose, onNodeJump, onFileSelect, curr
   useEffect(() => {
     if (visible) {
       refresh();
-      // Listen for backend events instead of polling
       const unlisten = listen("undo-tree-changed", () => {
         refresh();
       });
@@ -256,10 +259,41 @@ export function UndoTreePanel({ visible, onClose, onNodeJump, onFileSelect, curr
     }
   };
 
+  const handleHover = async (nodeId: string | null) => {
+    setHoveredNodeId(nodeId);
+    if (nodeId) {
+      try {
+        const diff = await invoke<string>("get_undo_node_diff", { nodeId });
+        setDiffPreview(diff);
+      } catch {
+        setDiffPreview(null);
+      }
+    } else {
+      setDiffPreview(null);
+    }
+  };
+
   if (!visible) return null;
 
-  const fileFilter = filterMode === "file" ? currentFile : null;
-  const layout = treeData ? layoutTree(treeData, fileFilter) : { nodes: [], edges: [], width: 0, height: 0 };
+  // Apply filter modes
+  let fileFilter: string | null = null;
+  let filteredData = treeData;
+
+  if (filterMode === "file") {
+    fileFilter = currentFile;
+  } else if (filterMode === "commits" && treeData) {
+    filteredData = {
+      ...treeData,
+      nodes: treeData.nodes.filter((n) => n.is_commit_point),
+    };
+  } else if (filterMode === "batch" && treeData) {
+    filteredData = {
+      ...treeData,
+      nodes: treeData.nodes.filter((n) => n.command_summary.startsWith("Batch")),
+    };
+  }
+
+  const layout = filteredData ? layoutTree(filteredData, fileFilter) : { nodes: [], edges: [], width: 0, height: 0 };
 
   return (
     <div className="undo-tree-panel">
@@ -280,6 +314,10 @@ export function UndoTreePanel({ visible, onClose, onNodeJump, onFileSelect, curr
           <button className={filterMode === "file" ? "active" : ""}
             onClick={() => setFilterMode("file")}
             disabled={!currentFile}>File</button>
+          <button className={filterMode === "commits" ? "active" : ""}
+            onClick={() => setFilterMode("commits")}>Commits</button>
+          <button className={filterMode === "batch" ? "active" : ""}
+            onClick={() => setFilterMode("batch")}>Batch</button>
           <button className="clear-btn" onClick={async () => {
             try {
               await invoke("clear_undo_tree");
@@ -292,7 +330,14 @@ export function UndoTreePanel({ visible, onClose, onNodeJump, onFileSelect, curr
 
       <div className="panel-content">
         {activeTab === "tree" ? (
-          <TreeGraph layout={layout} onJump={handleJump} filterMode={filterMode} />
+          <>
+            <TreeGraph layout={layout} onJump={handleJump} onHover={handleHover} filterMode={filterMode} />
+            {diffPreview && hoveredNodeId && (
+              <div className="diff-preview">
+                <pre>{diffPreview}</pre>
+              </div>
+            )}
+          </>
         ) : (
           <LogView entries={commandLog} />
         )}
@@ -304,15 +349,24 @@ export function UndoTreePanel({ visible, onClose, onNodeJump, onFileSelect, curr
 function TreeGraph({
   layout,
   onJump,
+  onHover,
   filterMode,
 }: {
   layout: { nodes: LayoutNode[]; edges: LayoutEdge[]; width: number; height: number };
   onJump: (id: string, file: string | null) => void;
+  onHover: (id: string | null) => void;
   filterMode: string;
 }) {
   if (layout.nodes.length === 0) {
     return <div className="empty-state">No history yet.</div>;
   }
+
+  // Detect branch points (nodes with >1 child in the layout)
+  const parentEdges = new Map<string, number>();
+  layout.edges.forEach((e) => {
+    const key = `${e.x1},${e.y1}`;
+    parentEdges.set(key, (parentEdges.get(key) || 0) + 1);
+  });
 
   return (
     <div className="tree-graph">
@@ -325,7 +379,7 @@ function TreeGraph({
             const midY = (e.y1 + e.y2) / 2;
             return <path key={i}
               d={`M${e.x1},${e.y1} L${e.x1},${midY} L${e.x2},${midY} L${e.x2},${e.y2}`}
-              fill="none" stroke="#444" strokeWidth={1.5} />;
+              fill="none" stroke="#e5c07b" strokeWidth={1.5} strokeDasharray="3,2" />;
           }
         })}
 
@@ -350,7 +404,9 @@ function TreeGraph({
 
           return (
             <g key={node.id} style={{ cursor: "pointer" }}
-              onClick={() => onJump(node.id, node.file)}>
+              onClick={() => onJump(node.id, node.file)}
+              onMouseEnter={() => onHover(node.id)}
+              onMouseLeave={() => onHover(null)}>
               <title>{shortTooltip(node.summary)}</title>
               <circle cx={x} cy={y} r={NODE_R}
                 fill={fill} stroke={stroke} strokeWidth={1.5} />
@@ -359,6 +415,13 @@ function TreeGraph({
                 style={{ pointerEvents: "none", userSelect: "none" }}>
                 {node.marker}
               </text>
+              {/* Commit point label */}
+              {node.isCommitPoint && (
+                <text x={x + NODE_R + 4} y={y + 3} fontSize={8} fill="#4ec9b0"
+                  style={{ pointerEvents: "none" }}>
+                  ●
+                </text>
+              )}
             </g>
           );
         })}

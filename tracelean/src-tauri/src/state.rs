@@ -210,6 +210,43 @@ impl AppState {
             .entry(path.clone())
             .or_insert_with(FileBuffer::empty)
     }
+
+    /// Return a human-readable diff summary for a given undo node.
+    pub fn node_diff_summary(&self, node_id: NodeId) -> String {
+        if let Some(node) = self.undo_tree.get_node(node_id) {
+            Self::command_diff_text(&node.command)
+        } else {
+            String::from("(node not found)")
+        }
+    }
+
+    fn command_diff_text(cmd: &Command) -> String {
+        match cmd {
+            Command::Insert { file, offset, text } => {
+                let preview = if text.len() > 80 { &text[..80] } else { text };
+                format!("+ {} @{}: \"{}\"", file.display(), offset, preview)
+            }
+            Command::Delete { file, offset, deleted_text, .. } => {
+                let preview = if deleted_text.len() > 80 { &deleted_text[..80] } else { deleted_text };
+                format!("- {} @{}: \"{}\"", file.display(), offset, preview)
+            }
+            Command::Replace { file, offset, old_text, new_text } => {
+                let old_p = if old_text.len() > 40 { &old_text[..40] } else { old_text };
+                let new_p = if new_text.len() > 40 { &new_text[..40] } else { new_text };
+                format!("~ {} @{}: \"{}\" → \"{}\"", file.display(), offset, old_p, new_p)
+            }
+            Command::CreateFile { path } => format!("+ new file: {}", path.display()),
+            Command::DeleteFile { path, .. } => format!("- del file: {}", path.display()),
+            Command::RenameFile { from, to } => format!("→ rename: {} → {}", from.display(), to.display()),
+            Command::SetCursor { file, new_pos, .. } => format!("cursor {} L{}:C{}", file.display(), new_pos.line, new_pos.col),
+            Command::SetSelection { file, new_range, .. } => format!("select {} L{}:C{}-L{}:C{}", file.display(), new_range.start.line, new_range.start.col, new_range.end.line, new_range.end.col),
+            Command::Batch { commands } => {
+                let summaries: Vec<String> = commands.iter().take(5).map(|c| Self::command_diff_text(c)).collect();
+                let suffix = if commands.len() > 5 { format!(" (+{} more)", commands.len() - 5) } else { String::new() };
+                format!("batch[{}]:{}{}", commands.len(), summaries.join("; "), suffix)
+            }
+        }
+    }
 }
 
 impl Default for AppState {

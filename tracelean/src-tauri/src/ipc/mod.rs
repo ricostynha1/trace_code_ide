@@ -1,0 +1,7 @@
+//! Tauri IPC command modules — split by domain.
+//! Each module contains thin dispatch functions (no business logic).
+
+pub mod editor;
+pub mod trace;
+pub mod ai_commands;
+pub mod mcp_commands;

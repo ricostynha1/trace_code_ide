@@ -1,7 +1,11 @@
 //! TraceLean IDE - Rust backend
-//! Tauri IPC layer: thin dispatch to service module. No business logic here.
+//! Thin orchestrator: module declarations, shared state, and app entry point.
+//! IPC commands live in `ipc/` submodules.
 
+pub mod ai;
 pub mod commands;
+pub mod debug_nodes;
+pub mod ipc;
 pub mod parser;
 pub mod persistence;
 pub mod requirements;
@@ -11,22 +15,20 @@ pub mod trace_graph;
 pub mod undo_tree;
 
 use commands::Command;
-use parser::{Symbol, SymbolTable};
+use parser::SymbolTable;
 use serde::{Deserialize, Serialize};
 use state::AppState;
-use trace_graph::{TraceGraph, RequirementTraceOwned, CodeElementTraceOwned};
-use std::path::PathBuf;
+use trace_graph::TraceGraph;
+use ai::{InteractionLog, tracking::SessionStats};
+use std::collections::HashMap;
 use std::sync::Mutex;
-use tauri::State;
-use tauri::{Emitter, AppHandle};
 
-// --- Shared State Wrappers ---
+// ─── Shared State Wrappers ───────────────────────────────────────────────────
 
 pub struct AppStateWrapper(pub Mutex<AppState>);
 pub struct SymbolTableWrapper(pub Mutex<SymbolTable>);
 pub struct TraceGraphWrapper(pub Mutex<TraceGraph>);
 
-/// Cached undo tree view — only rebuilt when tree_version changes.
 pub struct UndoTreeCache {
     pub version: u64,
     pub view: Option<UndoTreeView>,
@@ -41,355 +43,45 @@ impl UndoTreeCache {
 
 pub struct UndoTreeCacheWrapper(pub Mutex<UndoTreeCache>);
 
-// --- Tauri IPC Commands (thin dispatch) ---
+// ─── AI State ────────────────────────────────────────────────────────────────
 
-#[tauri::command]
-fn apply_command(
-    app: AppHandle,
-    state: State<'_, AppStateWrapper>,
-    cache: State<'_, UndoTreeCacheWrapper>,
-    command: Command,
-) -> Result<String, String> {
-    let checkpoint_info = {
-        let mut s = state.0.lock().map_err(|e| e.to_string())?;
-        service::apply_command(&mut s, command)
-    };
-    // Invalidate cache and notify frontend (outside the lock)
-    invalidate_undo_cache(&cache);
-    let _ = app.emit("undo-tree-changed", ());
-
-    // Persistence work outside the lock to avoid blocking other commands
-    if let Some((root, _)) = checkpoint_info {
-        let s = state.0.lock().map_err(|e| e.to_string())?;
-        let _ = persistence::save_checkpoint(&root, &s);
-        let _ = persistence::save_command_log(&root, s.command_log());
-    }
-    Ok("ok".into())
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AiSettings {
+    pub active_provider: ai::ProviderKind,
+    pub openrouter_api_key: Option<String>,
+    pub bedrock_access_key: Option<String>,
+    pub bedrock_secret_key: Option<String>,
+    pub bedrock_region: Option<String>,
+    pub selected_model: Option<ai::ModelConfig>,
 }
 
-#[tauri::command]
-fn undo(
-    app: AppHandle,
-    state: State<'_, AppStateWrapper>,
-    cache: State<'_, UndoTreeCacheWrapper>,
-) -> Result<bool, String> {
-    let mut s = state.0.lock().map_err(|e| e.to_string())?;
-    let result = s.undo();
-    if result {
-        invalidate_undo_cache(&cache);
-        let _ = app.emit("undo-tree-changed", ());
-    }
-    Ok(result)
-}
-
-#[tauri::command]
-fn redo(
-    app: AppHandle,
-    state: State<'_, AppStateWrapper>,
-    cache: State<'_, UndoTreeCacheWrapper>,
-) -> Result<bool, String> {
-    let mut s = state.0.lock().map_err(|e| e.to_string())?;
-    let result = s.redo();
-    if result {
-        invalidate_undo_cache(&cache);
-        let _ = app.emit("undo-tree-changed", ());
-    }
-    Ok(result)
-}
-
-#[tauri::command]
-fn get_file_content(state: State<'_, AppStateWrapper>, path: String) -> Result<Option<String>, String> {
-    let s = state.0.lock().map_err(|e| e.to_string())?;
-    Ok(s.get_content(&PathBuf::from(&path)).map(|c| c.to_string()))
-}
-
-#[tauri::command]
-fn open_project(
-    state: State<'_, AppStateWrapper>,
-    symbols_state: State<'_, SymbolTableWrapper>,
-    path: String,
-) -> Result<Vec<String>, String> {
-    let mut s = state.0.lock().map_err(|e| e.to_string())?;
-    let mut sym = symbols_state.0.lock().map_err(|e| e.to_string())?;
-    service::open_project(&mut s, &mut sym, &path)
-}
-
-#[tauri::command]
-fn list_files(state: State<'_, AppStateWrapper>, path: String) -> Result<Vec<FileEntry>, String> {
-    let s = state.0.lock().map_err(|e| e.to_string())?;
-    let root = s.project_root().cloned().unwrap_or_default();
-    Ok(service::list_directory_files(&root, &path))
-}
-
-#[tauri::command]
-fn open_file(state: State<'_, AppStateWrapper>, path: String) -> Result<String, String> {
-    let mut s = state.0.lock().map_err(|e| e.to_string())?;
-    service::open_file(&mut s, &path)
-}
-
-#[tauri::command]
-fn save_file(
-    state: State<'_, AppStateWrapper>,
-    symbols_state: State<'_, SymbolTableWrapper>,
-    path: String,
-) -> Result<(), String> {
-    let s = state.0.lock().map_err(|e| e.to_string())?;
-    let mut sym = symbols_state.0.lock().map_err(|e| e.to_string())?;
-    service::save_file(&s, &mut sym, &path)
-}
-
-#[tauri::command]
-fn save_checkpoint(state: State<'_, AppStateWrapper>) -> Result<(), String> {
-    let s = state.0.lock().map_err(|e| e.to_string())?;
-    let root = s.project_root().cloned().ok_or("No project open")?;
-    persistence::save_checkpoint(&root, &s).map_err(|e| e.to_string())
-}
-
-#[tauri::command]
-fn get_undo_tree(
-    state: State<'_, AppStateWrapper>,
-    cache: State<'_, UndoTreeCacheWrapper>,
-    file_filter: Option<String>,
-) -> Result<UndoTreeView, String> {
-    let mut c = cache.0.lock().map_err(|e| e.to_string())?;
-    let s = state.0.lock().map_err(|e| e.to_string())?;
-    let tree_version = s.undo_tree().len() as u64;
-
-    // Return cached if version & filter match
-    if c.version == tree_version && c.file_filter == file_filter {
-        if let Some(ref view) = c.view {
-            return Ok(view.clone());
+impl Default for AiSettings {
+    fn default() -> Self {
+        Self {
+            active_provider: ai::ProviderKind::Mock,
+            openrouter_api_key: None,
+            bedrock_access_key: None,
+            bedrock_secret_key: None,
+            bedrock_region: None,
+            selected_model: None,
         }
     }
-
-    // Rebuild
-    let tree = s.undo_tree();
-    let current_id = tree.current_node().map(|n| n.id.to_string());
-
-    let nodes: Vec<UndoNodeView> = tree.nodes().iter()
-        .filter(|node| match &file_filter {
-            None => true,
-            Some(f) => command_affects_file(&node.command, f),
-        })
-        .map(|node| UndoNodeView {
-            id: node.id.to_string(),
-            parent: node.parent.map(|p| p.to_string()),
-            children: node.children.iter().map(|c| c.to_string()).collect(),
-            command_summary: command_summary(&node.command),
-            file: command_file(&node.command),
-            timestamp: node.timestamp.to_rfc3339(),
-            is_commit_point: node.commit_point.is_some(),
-            commit_name: node.commit_point.as_ref().map(|cp| cp.name.clone()),
-        })
-        .collect();
-
-    let view = UndoTreeView { nodes, current_id };
-    c.version = tree_version;
-    c.file_filter = file_filter;
-    c.view = Some(view.clone());
-    Ok(view)
 }
 
-#[tauri::command]
-fn get_command_log(
-    state: State<'_, AppStateWrapper>,
-    limit: Option<usize>,
-) -> Result<Vec<CommandLogEntry>, String> {
-    let s = state.0.lock().map_err(|e| e.to_string())?;
-    let log = s.command_log();
-    let n = limit.unwrap_or(50).min(log.len());
-    Ok(log.iter().rev().take(n).enumerate()
-        .map(|(i, cmd)| CommandLogEntry {
-            index: log.len() - 1 - i,
-            summary: command_summary(cmd),
-        })
-        .collect())
-}
+pub struct AiSettingsWrapper(pub Mutex<AiSettings>);
+pub struct AiLogWrapper(pub Mutex<InteractionLog>);
+pub struct AiSessionStatsWrapper(pub Mutex<SessionStats>);
+pub struct MockPendingWrapper(pub Mutex<Vec<ai::mock::MockPendingRequest>>);
+pub struct MockProviderWrapper(pub std::sync::Arc<tokio::sync::Mutex<Option<std::sync::Arc<ai::mock::MockProvider>>>>);
+pub struct PendingDiffsWrapper(pub Mutex<Vec<ai::diff_pipeline::PendingDiff>>);
 
-#[tauri::command]
-fn jump_to_node(
-    app: AppHandle,
-    state: State<'_, AppStateWrapper>,
-    cache: State<'_, UndoTreeCacheWrapper>,
-    node_id: String,
-) -> Result<bool, String> {
-    let mut s = state.0.lock().map_err(|e| e.to_string())?;
-    let id = uuid::Uuid::parse_str(&node_id).map_err(|e| e.to_string())?;
-    if let Some(commands) = s.jump_to_node(id) {
-        for cmd in commands {
-            s.execute_raw(&cmd);
-        }
-        invalidate_undo_cache(&cache);
-        let _ = app.emit("undo-tree-changed", ());
-        Ok(true)
-    } else {
-        Ok(false)
-    }
-}
+// ─── MCP & Permissions State ─────────────────────────────────────────────────
 
-#[tauri::command]
-fn clear_undo_tree(
-    app: AppHandle,
-    state: State<'_, AppStateWrapper>,
-    cache: State<'_, UndoTreeCacheWrapper>,
-) -> Result<(), String> {
-    let mut s = state.0.lock().map_err(|e| e.to_string())?;
-    s.clear_history();
-    if let Some(root) = s.project_root().cloned() {
-        let _ = persistence::save_command_log(&root, &[]);
-        let _ = std::fs::remove_file(persistence::commands_dir(&root).join("checkpoint.json"));
-    }
-    invalidate_undo_cache(&cache);
-    let _ = app.emit("undo-tree-changed", ());
-    Ok(())
-}
+pub struct McpHostPermissionsWrapper(pub Mutex<ai::AgentPermissions>);
+pub struct McpClientWrapper(pub tokio::sync::Mutex<ai::mcp_client::McpClientManager>);
+pub struct AgentPermissionsStore(pub Mutex<HashMap<String, ai::AgentPermissions>>);
 
-#[tauri::command]
-fn parse_file_symbols(
-    state: State<'_, AppStateWrapper>,
-    symbols_state: State<'_, SymbolTableWrapper>,
-    path: String,
-) -> Result<Vec<Symbol>, String> {
-    let s = state.0.lock().map_err(|e| e.to_string())?;
-    let mut sym = symbols_state.0.lock().map_err(|e| e.to_string())?;
-    service::parse_file_symbols(&s, &mut sym, &path)
-}
-
-#[tauri::command]
-fn get_file_symbols(symbols_state: State<'_, SymbolTableWrapper>, path: String) -> Result<Vec<Symbol>, String> {
-    let sym = symbols_state.0.lock().map_err(|e| e.to_string())?;
-    Ok(sym.get_symbols(&PathBuf::from(&path)).cloned().unwrap_or_default())
-}
-
-#[tauri::command]
-fn get_highlights(
-    state: State<'_, AppStateWrapper>,
-    path: String,
-) -> Result<Vec<parser::HighlightSpan>, String> {
-    let s = state.0.lock().map_err(|e| e.to_string())?;
-    let rel_path = PathBuf::from(&path);
-
-    // Use buffer content if available, else read from disk
-    let content = if let Some(c) = s.get_content(&rel_path) {
-        c.to_string()
-    } else {
-        let root = s.project_root().cloned().unwrap_or_default();
-        std::fs::read_to_string(root.join(&path))
-            .map_err(|e| format!("Read error: {}", e))?
-    };
-
-    Ok(parser::get_highlights(&rel_path, &content))
-}
-
-#[tauri::command]
-fn parse_project(
-    state: State<'_, AppStateWrapper>,
-    symbols_state: State<'_, SymbolTableWrapper>,
-) -> Result<usize, String> {
-    let s = state.0.lock().map_err(|e| e.to_string())?;
-    let mut sym = symbols_state.0.lock().map_err(|e| e.to_string())?;
-    service::parse_project(&s, &mut sym)
-}
-
-// --- Trace Graph ---
-
-#[tauri::command]
-fn build_trace_graph(
-    state: State<'_, AppStateWrapper>,
-    symbols_state: State<'_, SymbolTableWrapper>,
-    graph_state: State<'_, TraceGraphWrapper>,
-) -> Result<TraceGraphStats, String> {
-    let s = state.0.lock().map_err(|e| e.to_string())?;
-    let sym = symbols_state.0.lock().map_err(|e| e.to_string())?;
-    let mut g = graph_state.0.lock().map_err(|e| e.to_string())?;
-    let (nodes, edges) = service::build_trace_graph(&s, &sym, &mut g)?;
-    Ok(TraceGraphStats { nodes, edges })
-}
-
-#[tauri::command]
-fn query_requirement_trace(
-    graph_state: State<'_, TraceGraphWrapper>,
-    req_id: String,
-) -> Result<Option<RequirementTraceOwned>, String> {
-    let g = graph_state.0.lock().map_err(|e| e.to_string())?;
-    Ok(g.query_requirement_owned(&req_id))
-}
-
-#[tauri::command]
-fn query_code_trace(
-    graph_state: State<'_, TraceGraphWrapper>,
-    file: String,
-    name: String,
-) -> Result<Option<CodeElementTraceOwned>, String> {
-    let g = graph_state.0.lock().map_err(|e| e.to_string())?;
-    Ok(g.query_code_element_owned(&PathBuf::from(&file), &name))
-}
-
-#[tauri::command]
-fn update_trace_graph_file(
-    state: State<'_, AppStateWrapper>,
-    symbols_state: State<'_, SymbolTableWrapper>,
-    graph_state: State<'_, TraceGraphWrapper>,
-    path: String,
-) -> Result<bool, String> {
-    let s = state.0.lock().map_err(|e| e.to_string())?;
-    let sym = symbols_state.0.lock().map_err(|e| e.to_string())?;
-    let mut g = graph_state.0.lock().map_err(|e| e.to_string())?;
-    service::update_trace_graph_file(&s, &sym, &mut g, &path)
-}
-
-#[tauri::command]
-fn get_trace_graph_stats(graph_state: State<'_, TraceGraphWrapper>) -> Result<TraceGraphStats, String> {
-    let g = graph_state.0.lock().map_err(|e| e.to_string())?;
-    Ok(TraceGraphStats { nodes: g.node_count(), edges: g.edge_count() })
-}
-
-// --- Requirements ---
-
-#[tauri::command]
-fn list_requirements(state: State<'_, AppStateWrapper>) -> Result<Vec<requirements::RequirementInfo>, String> {
-    let s = state.0.lock().map_err(|e| e.to_string())?;
-    service::list_requirements(&s)
-}
-
-#[tauri::command]
-fn update_requirement_status(
-    state: State<'_, AppStateWrapper>,
-    req_id: String,
-    new_status: String,
-) -> Result<String, String> {
-    let mut s = state.0.lock().map_err(|e| e.to_string())?;
-    service::update_requirement_status(&mut s, &req_id, &new_status)
-}
-
-#[tauri::command]
-fn create_requirement(
-    state: State<'_, AppStateWrapper>,
-    req_id: String,
-    title: String,
-) -> Result<String, String> {
-    let mut s = state.0.lock().map_err(|e| e.to_string())?;
-    service::create_requirement(&mut s, &req_id, &title)
-}
-
-#[tauri::command]
-fn check_lean_spec(state: State<'_, AppStateWrapper>, path: String) -> Result<requirements::LeanCheckResult, String> {
-    let s = state.0.lock().map_err(|e| e.to_string())?;
-    service::check_lean_spec(&s, &path)
-}
-
-#[tauri::command]
-fn get_editor_mode(path: String) -> String {
-    service::get_editor_mode(&path).to_string()
-}
-
-#[tauri::command]
-fn navigate_trace_link(state: State<'_, AppStateWrapper>, from_path: String) -> Result<Option<String>, String> {
-    let s = state.0.lock().map_err(|e| e.to_string())?;
-    service::navigate_trace_link(&s, &from_path)
-}
-
-// --- Shared Types (for IPC serialization) ---
+// ─── Shared IPC Types ────────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FileEntry {
@@ -399,44 +91,44 @@ pub struct FileEntry {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-struct TraceGraphStats {
-    nodes: usize,
-    edges: usize,
+pub struct TraceGraphStats {
+    pub nodes: usize,
+    pub edges: usize,
 }
 
 #[derive(Debug, Clone, Serialize)]
-struct UndoTreeView {
-    nodes: Vec<UndoNodeView>,
-    current_id: Option<String>,
+pub struct UndoTreeView {
+    pub nodes: Vec<UndoNodeView>,
+    pub current_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
-struct UndoNodeView {
-    id: String,
-    parent: Option<String>,
-    children: Vec<String>,
-    command_summary: String,
-    file: Option<String>,
-    timestamp: String,
-    is_commit_point: bool,
-    commit_name: Option<String>,
+pub struct UndoNodeView {
+    pub id: String,
+    pub parent: Option<String>,
+    pub children: Vec<String>,
+    pub command_summary: String,
+    pub file: Option<String>,
+    pub timestamp: String,
+    pub is_commit_point: bool,
+    pub commit_name: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
-struct CommandLogEntry {
-    index: usize,
-    summary: String,
+pub struct CommandLogEntry {
+    pub index: usize,
+    pub summary: String,
 }
 
-// --- Command Helpers (presentation logic, OK to live here) ---
+// ─── Helpers (used by IPC modules) ──────────────────────────────────────────
 
-fn invalidate_undo_cache(cache: &State<'_, UndoTreeCacheWrapper>) {
+pub fn invalidate_undo_cache(cache: &tauri::State<'_, UndoTreeCacheWrapper>) {
     if let Ok(mut c) = cache.0.lock() {
         c.view = None;
     }
 }
 
-fn command_summary(cmd: &Command) -> String {
+pub fn command_summary(cmd: &Command) -> String {
     match cmd {
         Command::Insert { file, text, offset, .. } => {
             let preview = if text.len() > 20 { format!("{}...", &text[..20]) } else { text.clone() };
@@ -453,7 +145,7 @@ fn command_summary(cmd: &Command) -> String {
     }
 }
 
-fn command_file(cmd: &Command) -> Option<String> {
+pub fn command_file(cmd: &Command) -> Option<String> {
     match cmd {
         Command::Insert { file, .. } | Command::Delete { file, .. }
         | Command::Replace { file, .. } | Command::SetCursor { file, .. }
@@ -464,7 +156,7 @@ fn command_file(cmd: &Command) -> Option<String> {
     }
 }
 
-fn command_affects_file(cmd: &Command, filter: &str) -> bool {
+pub fn command_affects_file(cmd: &Command, filter: &str) -> bool {
     match cmd {
         Command::Insert { file, .. } | Command::Delete { file, .. }
         | Command::Replace { file, .. } | Command::SetCursor { file, .. }
@@ -475,17 +167,82 @@ fn command_affects_file(cmd: &Command, filter: &str) -> bool {
     }
 }
 
-// --- App Entry Point ---
+/// Helper: get a boxed AI provider based on current settings.
+pub async fn get_provider(
+    settings: &tauri::State<'_, AiSettingsWrapper>,
+    mock_provider: &tauri::State<'_, MockProviderWrapper>,
+) -> Result<Box<dyn ai::provider::AiProvider + Send + Sync>, String> {
+    let (provider_kind, or_key, br_access, br_secret, br_region) = {
+        let s = settings.0.lock().map_err(|e| e.to_string())?;
+        (
+            s.active_provider.clone(),
+            s.openrouter_api_key.clone(),
+            s.bedrock_access_key.clone(),
+            s.bedrock_secret_key.clone(),
+            s.bedrock_region.clone(),
+        )
+    };
 
-#[tauri::command]
-fn get_initial_project() -> Option<String> {
-    let p = std::path::Path::new("/project");
-    if p.is_dir() {
-        Some("/project".to_string())
-    } else {
-        None
+    match provider_kind {
+        ai::ProviderKind::OpenRouter => {
+            let key = or_key.ok_or("OpenRouter API key not set")?;
+            Ok(Box::new(ai::openrouter::OpenRouterProvider::new(key)))
+        }
+        ai::ProviderKind::Bedrock => {
+            let access = br_access.ok_or("Bedrock access key not set")?;
+            let secret = br_secret.ok_or("Bedrock secret key not set")?;
+            let region = br_region.unwrap_or_else(|| "us-east-1".into());
+            Ok(Box::new(ai::bedrock::BedrockProvider::new(access, secret, region)))
+        }
+        ai::ProviderKind::Mock => {
+            let mut guard = mock_provider.0.lock().await;
+            if guard.is_none() {
+                let (p, _rx) = ai::mock::MockProvider::new();
+                *guard = Some(std::sync::Arc::new(p));
+            }
+            drop(guard);
+            Ok(Box::new(SharedMockProvider { inner: mock_provider.0.clone() }))
+        }
     }
 }
+
+/// Thin wrapper around the shared MockProvider Arc.
+struct SharedMockProvider {
+    inner: std::sync::Arc<tokio::sync::Mutex<Option<std::sync::Arc<ai::mock::MockProvider>>>>,
+}
+
+#[async_trait::async_trait]
+impl ai::provider::AiProvider for SharedMockProvider {
+    async fn complete(&self, request: &ai::AiRequest) -> Result<ai::AiResponse, ai::provider::AiError> {
+        let provider = {
+            let guard = self.inner.lock().await;
+            guard.as_ref().ok_or_else(|| ai::provider::AiError {
+                kind: ai::provider::AiErrorKind::ProviderError,
+                message: "Mock provider not initialized".into(),
+                retryable: false,
+            })?.clone()
+        };
+        provider.complete(request).await
+    }
+
+    fn name(&self) -> &str { "Mock (Debug)" }
+
+    async fn list_models(&self) -> Result<Vec<ai::ModelConfig>, ai::provider::AiError> {
+        Ok(vec![ai::ModelConfig {
+            provider: ai::ProviderKind::Mock,
+            model_id: "mock-debug".into(),
+            display_name: "Mock Agent (Debug)".into(),
+            max_tokens: 99999,
+            temperature: 0.0,
+            input_cost_per_m: 0.0,
+            output_cost_per_m: 0.0,
+            cached_input_cost_per_m: 0.0,
+            extra_params: None,
+        }])
+    }
+}
+
+// ─── App Entry Point ─────────────────────────────────────────────────────────
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -496,36 +253,86 @@ pub fn run() {
         .manage(SymbolTableWrapper(Mutex::new(SymbolTable::new())))
         .manage(TraceGraphWrapper(Mutex::new(TraceGraph::new())))
         .manage(UndoTreeCacheWrapper(Mutex::new(UndoTreeCache::new())))
+        .manage(AiSettingsWrapper(Mutex::new(AiSettings::default())))
+        .manage(AiLogWrapper(Mutex::new(InteractionLog::new())))
+        .manage(AiSessionStatsWrapper(Mutex::new(SessionStats::default())))
+        .manage(MockPendingWrapper(Mutex::new(Vec::new())))
+        .manage(MockProviderWrapper(std::sync::Arc::new(tokio::sync::Mutex::new(None))))
+        .manage(PendingDiffsWrapper(Mutex::new(Vec::new())))
+        .manage(McpHostPermissionsWrapper(Mutex::new(ai::AgentPermissions::full_access("mcp-host"))))
+        .manage(McpClientWrapper(tokio::sync::Mutex::new(ai::mcp_client::McpClientManager::new())))
+        .manage(AgentPermissionsStore(Mutex::new(HashMap::new())))
         .invoke_handler(tauri::generate_handler![
-            apply_command,
-            undo,
-            redo,
-            get_file_content,
-            open_project,
-            list_files,
-            open_file,
-            save_file,
-            save_checkpoint,
-            get_undo_tree,
-            get_command_log,
-            jump_to_node,
-            clear_undo_tree,
-            parse_file_symbols,
-            get_file_symbols,
-            get_highlights,
-            parse_project,
-            build_trace_graph,
-            query_requirement_trace,
-            query_code_trace,
-            update_trace_graph_file,
-            get_trace_graph_stats,
-            list_requirements,
-            update_requirement_status,
-            create_requirement,
-            check_lean_spec,
-            get_editor_mode,
-            navigate_trace_link,
-            get_initial_project,
+            // Editor
+            ipc::editor::apply_command,
+            ipc::editor::undo,
+            ipc::editor::redo,
+            ipc::editor::get_file_content,
+            ipc::editor::open_project,
+            ipc::editor::list_files,
+            ipc::editor::open_file,
+            ipc::editor::save_file,
+            ipc::editor::save_checkpoint,
+            ipc::editor::get_undo_tree,
+            ipc::editor::get_command_log,
+            ipc::editor::jump_to_node,
+            ipc::editor::clear_undo_tree,
+            ipc::editor::get_undo_node_diff,
+            ipc::editor::parse_file_symbols,
+            ipc::editor::get_file_symbols,
+            ipc::editor::get_highlights,
+            ipc::editor::parse_project,
+            ipc::editor::get_initial_project,
+            // Trace & Requirements
+            ipc::trace::build_trace_graph,
+            ipc::trace::query_requirement_trace,
+            ipc::trace::query_code_trace,
+            ipc::trace::update_trace_graph_file,
+            ipc::trace::get_trace_graph_stats,
+            ipc::trace::get_full_trace_graph,
+            ipc::trace::list_requirements,
+            ipc::trace::update_requirement_status,
+            ipc::trace::create_requirement,
+            ipc::trace::check_lean_spec,
+            ipc::trace::get_editor_mode,
+            ipc::trace::navigate_trace_link,
+            // AI
+            ipc::ai_commands::get_ai_settings,
+            ipc::ai_commands::update_ai_settings,
+            ipc::ai_commands::get_ai_models,
+            ipc::ai_commands::get_ai_session_stats,
+            ipc::ai_commands::get_ai_interaction_log,
+            ipc::ai_commands::get_ai_interaction_detail,
+            ipc::ai_commands::get_mock_pending,
+            ipc::ai_commands::mock_submit_response,
+            ipc::ai_commands::ai_chat,
+            ipc::ai_commands::get_prompt_templates,
+            ipc::ai_commands::assemble_context_for_requirement,
+            ipc::ai_commands::assemble_context_for_file,
+            ipc::ai_commands::run_agent_elicitation,
+            ipc::ai_commands::run_agent_formalisation,
+            ipc::ai_commands::run_agent_implementation,
+            ipc::ai_commands::run_agent_repair,
+            ipc::ai_commands::get_pending_diffs,
+            ipc::ai_commands::accept_diff_hunk,
+            ipc::ai_commands::reject_diff_hunk,
+            ipc::ai_commands::apply_accepted_hunks,
+            ipc::ai_commands::discard_pending_diff,
+            // MCP & Permissions & Streaming
+            ipc::mcp_commands::mcp_list_tools,
+            ipc::mcp_commands::mcp_call_tool,
+            ipc::mcp_commands::mcp_handle_jsonrpc,
+            ipc::mcp_commands::mcp_client_connect,
+            ipc::mcp_commands::mcp_client_list_tools,
+            ipc::mcp_commands::mcp_client_call_tool,
+            ipc::mcp_commands::mcp_client_disconnect,
+            ipc::mcp_commands::mcp_client_status,
+            ipc::mcp_commands::get_agent_permissions,
+            ipc::mcp_commands::set_agent_permissions,
+            ipc::mcp_commands::list_agent_permissions,
+            ipc::mcp_commands::ai_chat_stream,
+            ipc::mcp_commands::get_agent_tools,
+            ipc::mcp_commands::get_agent_tools_prompt,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

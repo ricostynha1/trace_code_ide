@@ -39,5 +39,6 @@ theorem size_limit_enforced :
 theorem saved_path_within_workspace :
   ∀ (req : UploadRequest) (workspace : String) (f : UploadFn) (result : UploadResult),
     f req workspace = Except.ok result →
-    result.savedPath.startsWith workspace := by
+    result.savedPathstartsWith worksp
+ace := by
   sorry

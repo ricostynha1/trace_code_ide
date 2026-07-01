@@ -1,0 +1,15 @@
+{
+  "string": "#98c379",
+  "string_content": "#98c379",
+  "number": "#d19a66",
+  "true": "#d19a66",
+  "false": "#d19a66",
+  "null": "#d19a66",
+  "{": "#abb2bf",
+  "}": "#abb2bf",
+  "[": "#abb2bf",
+  "]": "#abb2bf",
+  ":": "#abb2bf",
+  ",": "#abb2bf",
+  "comment": "#5c6370"
+}

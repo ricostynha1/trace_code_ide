@@ -434,3 +434,83 @@ Custom LSP server exposing:
 - Standard LSP features delegated to language servers
 
 Enables other editors (VS Code, Neovim) to use traceability features.
+
+## 14. Agent Tool System
+
+Agents interact with the project via a defined set of tools. All file writes go through the command system (fully reversible).
+
+### Built-in Tools
+
+| Tool | Description |
+|------|-------------|
+| `read_file` | Read file content (relative path) |
+| `write_file` | Write file (emits Replace command, reversible) |
+| `list_files` | List directory contents |
+| `emit_command` | Emit raw Command into command system |
+| `query_trace_graph` | Query traceability by requirement ID |
+| `query_code_element` | Query trace for a code symbol |
+| `list_requirements` | List all requirements with status |
+| `get_symbols` | Get parsed symbols from a file |
+| `run_shell` | Execute shell command in project dir |
+| `search_files` | Grep-like search across project |
+
+### Tool Prompt Injection
+
+Tool definitions are formatted and injected into agent system prompts via `{{tools_prompt}}`. Agents respond with `tool_call` blocks to invoke tools.
+
+### Permission Model
+
+```rust
+struct AgentPermissions {
+    agent_id: String,
+    allowed_tools: Vec<String>,     // empty = all allowed
+    denied_tools: Vec<String>,      // takes precedence
+    readable_paths: Vec<String>,    // glob patterns
+    writable_paths: Vec<String>,    // glob patterns
+    allow_shell: bool,
+    max_shell_timeout: u64,
+}
+```
+
+Default: full access for internal agents. Configurable per-agent via UI.
+
+## 15. MCP Integration
+
+### MCP Host (Server)
+
+TraceLean exposes its tools via the Model Context Protocol (JSON-RPC 2.0 over stdio):
+
+- `initialize` — handshake, capabilities exchange
+- `tools/list` — returns all builtin tools with JSON Schema input specs
+- `tools/call` — execute a tool, returns content + isError
+
+External agents (VS Code extensions, CLI tools, other IDEs) can connect as MCP clients.
+
+### MCP Client
+
+TraceLean connects to user-configured external MCP servers (configured in `.tracelean/mcp.json`):
+
+```json
+{
+  "servers": [
+    { "name": "my-server", "command": "uvx", "args": ["my-mcp-pkg"], "env": {} }
+  ]
+}
+```
+
+External tools are discovered via `tools/list` and made available to agents alongside builtin tools.
+
+### Transport
+
+stdio: one JSON object per line. Server subprocess spawned and managed by TraceLean.
+
+## 16. Streaming Responses
+
+Token-by-token display in the chat panel:
+
+- Backend emits `ai-stream-start` event (stream_id)
+- Backend emits `ai-stream-token` events (token, accumulated, done)
+- Frontend appends tokens incrementally with cursor indicator
+- Final `done=true` event completes the message
+
+For OpenRouter: SSE parsing via `parse_sse_delta`. For other providers: chunked emission of complete response for visual streaming effect.

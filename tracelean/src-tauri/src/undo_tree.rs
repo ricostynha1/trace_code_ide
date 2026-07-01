@@ -146,6 +146,11 @@ impl UndoTree {
         &self.nodes
     }
 
+    /// Get a specific node by ID
+    pub fn get_node(&self, id: NodeId) -> Option<&UndoNode> {
+        self.id_to_index.get(&id).map(|&idx| &self.nodes[idx])
+    }
+
     /// Jump to a specific node by ID. Returns commands needed to get there.
     /// This is for time-travel: find path from current to target.
     pub fn jump_to(&mut self, target: NodeId) -> Option<Vec<Command>> {

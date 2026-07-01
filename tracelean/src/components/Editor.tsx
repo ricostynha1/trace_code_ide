@@ -22,7 +22,7 @@ interface SymbolInfo {
 interface HighlightSpan {
   from: number;
   to: number;
-  category: string;
+  color: string;
 }
 
 interface LeanCheckResult {
@@ -73,29 +73,30 @@ const highlightField = StateField.define<DecorationSet>({
     for (const e of tr.effects) {
       if (e.is(setHighlights)) return e.value;
     }
-    // Map through doc changes so positions stay correct
     if (tr.docChanged) return value.map(tr.changes);
     return value;
   },
   provide: (f) => EditorView.decorations.from(f),
 });
 
-// CSS class decorations for each category
-const decoCache: Record<string, Decoration> = {};
-function getDeco(category: string): Decoration {
-  if (!decoCache[category]) {
-    decoCache[category] = Decoration.mark({ class: `hl-${category}` });
+// Cache: color hex → Decoration with inline style
+const decoCache: Map<string, Decoration> = new Map();
+
+function getDecoration(color: string): Decoration {
+  let deco = decoCache.get(color);
+  if (!deco) {
+    deco = Decoration.mark({ attributes: { style: `color: ${color}` } });
+    decoCache.set(color, deco);
   }
-  return decoCache[category];
+  return deco;
 }
 
 function buildDecorations(spans: HighlightSpan[], docLen: number): DecorationSet {
   const builder: { from: number; to: number; value: Decoration }[] = [];
   for (const span of spans) {
     if (span.from >= span.to || span.to > docLen) continue;
-    builder.push({ from: span.from, to: span.to, value: getDeco(span.category) });
+    builder.push({ from: span.from, to: span.to, value: getDecoration(span.color) });
   }
-  // RangeSet requires sorted, non-overlapping
   builder.sort((a, b) => a.from - b.from || a.to - b.to);
   return RangeSet.of(builder);
 }

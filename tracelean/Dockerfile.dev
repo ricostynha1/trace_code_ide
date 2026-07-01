@@ -32,6 +32,7 @@ ENV PATH="/root/.elan/bin:${PATH}"
 # Install tauri-cli
 RUN cargo install tauri-cli --version "^2"
 
+
 WORKDIR /app
 
 # Default: keep container alive for exec
