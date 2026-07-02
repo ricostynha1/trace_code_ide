@@ -7,7 +7,7 @@
 //!   - tools/call → execute a tool call, returns result
 //!   - initialize → handshake (client sends capabilities)
 
-use super::tools::{ToolDefinition, ToolCall, ToolResult, builtin_tool_definitions};
+use super::tools::{ToolCall, builtin_tool_definitions};
 use super::tool_executor::{self, AgentPermissions};
 use crate::parser::SymbolTable;
 use crate::state::AppState;

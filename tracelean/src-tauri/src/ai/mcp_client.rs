@@ -10,15 +10,14 @@
 //! }
 //! ```
 
-use super::tools::{ToolDefinition, ToolParam, ParamType, ToolCall, ToolResult};
-use super::mcp_host::{JsonRpcRequest, JsonRpcResponse};
+use super::tools::{ToolDefinition, ToolParam, ParamType, ToolResult};
+use super::mcp_host::JsonRpcResponse;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::Path;
 use std::process::Stdio;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::process::{Child, Command as TokioCommand};
-use tokio::sync::Mutex;
 
 /// MCP server configuration (from .tracelean/mcp.json).
 #[derive(Debug, Clone, Serialize, Deserialize)]

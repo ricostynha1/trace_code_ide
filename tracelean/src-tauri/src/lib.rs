@@ -281,6 +281,7 @@ pub fn run() {
             ipc::editor::parse_file_symbols,
             ipc::editor::get_file_symbols,
             ipc::editor::get_highlights,
+            ipc::editor::get_highlights_legacy,
             ipc::editor::parse_project,
             ipc::editor::get_initial_project,
             // Trace & Requirements

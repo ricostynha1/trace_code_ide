@@ -35,5 +35,19 @@ RUN cargo install tauri-cli --version "^2"
 
 WORKDIR /app
 
-# Default: keep container alive for exec
+# Create non-root user
+RUN useradd -m -u 10001 tracelean
+
+# Move elan to user home and fix ownership
+RUN mv /root/.elan /home/tracelean/.elan \
+    && chown -R tracelean:tracelean /home/tracelean/.elan
+
+ENV PATH="/home/tracelean/.elan/bin:${PATH}"
+
+# Chown workdir to non-root user
+RUN chown -R tracelean:tracelean /app
+
+# Note: UID 10001 used for predictability with host bind-mounts.
+# Host UID/GID mismatches may require adjusting this value.
+USER tracelean
 CMD ["bash"]

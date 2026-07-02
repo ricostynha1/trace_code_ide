@@ -41,7 +41,7 @@ Incremental delivery. Each MVP is usable on its own. Later MVPs build on earlier
 - [x] 1.6 — Parallel parsing with Rayon on startup (scan all project files)
 - [x] 1.7 — Incremental re-parse on file change (only changed file, triggered by file watcher)
 
-- [ ] 1.8 — Adopt tree-sitter highlight queries (`.scm` files) for proper token-level highlighting instead of ad-hoc node-kind→color JSON approach. Current approach fails for markdown headings and other complex node structures where color must propagate through nested nodes.
+- [x] 1.8 — Adopt tree-sitter highlight queries (`.scm` files) for proper token-level highlighting instead of ad-hoc node-kind→color JSON approach. Current approach fails for markdown headings and other complex node structures where color must propagate through nested nodes.
 
 **Deliverable**: Editor with fast syntax highlighting and a backend that understands code structure.
 

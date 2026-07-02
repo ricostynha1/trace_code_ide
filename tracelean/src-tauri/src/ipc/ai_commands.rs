@@ -349,12 +349,12 @@ async fn get_mcp_client_tools(client: &tauri::State<'_, McpClientWrapper>) -> Ve
 
 #[tauri::command]
 pub async fn run_agent_elicitation(
-    app: AppHandle,
+    _app: AppHandle,
     state: State<'_, AppStateWrapper>,
-    graph_state: State<'_, TraceGraphWrapper>,
+    _graph_state: State<'_, TraceGraphWrapper>,
     settings: State<'_, AiSettingsWrapper>,
     mock_provider: State<'_, MockProviderWrapper>,
-    log_state: State<'_, AiLogWrapper>,
+    _log_state: State<'_, AiLogWrapper>,
     mcp_client: State<'_, McpClientWrapper>,
     user_goal: String,
 ) -> Result<ai::agents::AgentResult, String> {
@@ -369,9 +369,9 @@ pub async fn run_agent_elicitation(
 
 #[tauri::command]
 pub async fn run_agent_formalisation(
-    app: AppHandle,
+    _app: AppHandle,
     state: State<'_, AppStateWrapper>,
-    graph_state: State<'_, TraceGraphWrapper>,
+    _graph_state: State<'_, TraceGraphWrapper>,
     settings: State<'_, AiSettingsWrapper>,
     mock_provider: State<'_, MockProviderWrapper>,
     mcp_client: State<'_, McpClientWrapper>,
@@ -388,9 +388,9 @@ pub async fn run_agent_formalisation(
 
 #[tauri::command]
 pub async fn run_agent_implementation(
-    app: AppHandle,
+    _app: AppHandle,
     state: State<'_, AppStateWrapper>,
-    graph_state: State<'_, TraceGraphWrapper>,
+    _graph_state: State<'_, TraceGraphWrapper>,
     settings: State<'_, AiSettingsWrapper>,
     mock_provider: State<'_, MockProviderWrapper>,
     mcp_client: State<'_, McpClientWrapper>,
@@ -408,9 +408,9 @@ pub async fn run_agent_implementation(
 
 #[tauri::command]
 pub async fn run_agent_repair(
-    app: AppHandle,
+    _app: AppHandle,
     state: State<'_, AppStateWrapper>,
-    graph_state: State<'_, TraceGraphWrapper>,
+    _graph_state: State<'_, TraceGraphWrapper>,
     settings: State<'_, AiSettingsWrapper>,
     mock_provider: State<'_, MockProviderWrapper>,
     mcp_client: State<'_, McpClientWrapper>,

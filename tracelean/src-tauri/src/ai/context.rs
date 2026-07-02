@@ -3,7 +3,7 @@
 
 use crate::state::AppState;
 use crate::trace_graph::TraceGraph;
-use super::templates::{AssembledContext, ContextFile};
+use super::templates::AssembledContext;
 use std::path::{Path, PathBuf};
 
 /// Default token budget (characters / 4 estimate).

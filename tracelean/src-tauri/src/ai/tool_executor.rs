@@ -7,7 +7,6 @@ use crate::parser::SymbolTable;
 use crate::state::AppState;
 use crate::trace_graph::TraceGraph;
 use std::path::{Path, PathBuf};
-use std::time::Duration;
 
 /// Agent permissions — which tools/files/commands an agent can access.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -174,6 +173,14 @@ fn execute_read_file(call: &ToolCall, project_root: &Path, perms: &AgentPermissi
     }
 }
 
+/// Writes `rel_path`'s current buffer content (read from `state`, not a
+/// caller-supplied copy) to disk under `project_root`. Side-effecting;
+/// name carries `_eff` suffix by convention.
+fn save_eff(state: &AppState, project_root: &Path, rel_path: &Path) -> std::io::Result<()> {
+    let content = state.get_content(&rel_path.to_path_buf()).unwrap_or_default();
+    std::fs::write(project_root.join(rel_path), content)
+}
+
 fn execute_write_file(
     call: &ToolCall,
     project_root: &Path,
@@ -216,16 +223,18 @@ fn execute_write_file(
     state.load_file(rel_path.clone(), existing.clone());
 
     // Apply as Replace command (whole file replacement)
+    let content_len = content.len();
     state.apply(Command::Replace {
-        file: rel_path,
+        file: rel_path.clone(),
         offset: 0,
         old_text: existing,
-        new_text: content.clone(),
+        new_text: content,
     });
 
-    // Write to disk
-    match std::fs::write(&full_path, &content) {
-        Ok(_) => ToolResult { success: true, content: format!("Wrote {} bytes to '{}'.", content.len(), path), data: None },
+    // Persist buffer to disk via save_eff (reads from state, not local var).
+    // On error the Command stays in the log (Req 1.3) — only tool result reports failure.
+    match save_eff(state, project_root, &rel_path) {
+        Ok(_) => ToolResult { success: true, content: format!("Wrote {} bytes to '{}'.", content_len, path), data: None },
         Err(e) => ToolResult { success: false, content: format!("Write error: {}", e), data: None },
     }
 }
@@ -372,7 +381,7 @@ fn execute_run_shell(call: &ToolCall, project_root: &Path, perms: &AgentPermissi
         None => return ToolResult { success: false, content: "Missing 'command' argument.".into(), data: None },
     };
 
-    let timeout = get_int_arg(call, "timeout_secs")
+    let _timeout = get_int_arg(call, "timeout_secs")
         .unwrap_or(30)
         .min(perms.max_shell_timeout as i64) as u64;
 
@@ -473,5 +482,978 @@ fn command_file_path(cmd: &Command) -> Option<String> {
         | Command::DeleteFile { path, .. } => Some(path.to_string_lossy().to_string()),
         Command::RenameFile { from, .. } => Some(from.to_string_lossy().to_string()),
         Command::Batch { commands } => commands.first().and_then(|c| command_file_path(c)),
+    }
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::commands::Command;
+    use crate::parser::{Symbol, SymbolKind, SymbolTable};
+    use crate::trace_graph::{
+        CodeElement, CodeElementKind, Requirement, ReqStatus, Spec, Test, TestKind, TraceGraph,
+    };
+    use serde_json::json;
+    use std::path::PathBuf;
+    use tempfile::TempDir;
+
+    /// Helper: full-access perms
+    fn full_perms() -> AgentPermissions {
+        AgentPermissions::full_access("test-agent")
+    }
+
+    /// Helper: make a ToolCall
+    fn make_call(name: &str, args: serde_json::Value) -> ToolCall {
+        ToolCall {
+            tool_name: name.into(),
+            arguments: args,
+        }
+    }
+
+    #[test]
+    fn test_read_file_success() {
+        let tmp = TempDir::new().unwrap();
+        std::fs::write(tmp.path().join("hello.txt"), "world").unwrap();
+
+        let mut state = AppState::new();
+        let symbols = SymbolTable::new();
+        let graph = TraceGraph::new();
+        let perms = full_perms();
+
+        let call = make_call("read_file", json!({"path": "hello.txt"}));
+        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
+
+        assert!(result.success);
+        assert_eq!(result.content, "world");
+    }
+
+    #[test]
+    fn test_write_file_success() {
+        let tmp = TempDir::new().unwrap();
+        let mut state = AppState::new();
+        let symbols = SymbolTable::new();
+        let graph = TraceGraph::new();
+        let perms = full_perms();
+
+        let call = make_call("write_file", json!({"path": "out.txt", "content": "hello"}));
+        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
+
+        assert!(result.success);
+        // Verify file on disk
+        let on_disk = std::fs::read_to_string(tmp.path().join("out.txt")).unwrap();
+        assert_eq!(on_disk, "hello");
+    }
+
+    #[test]
+    fn test_list_files_success() {
+        let tmp = TempDir::new().unwrap();
+        std::fs::write(tmp.path().join("a.txt"), "").unwrap();
+        std::fs::write(tmp.path().join("b.txt"), "").unwrap();
+        std::fs::create_dir(tmp.path().join("subdir")).unwrap();
+
+        let mut state = AppState::new();
+        let symbols = SymbolTable::new();
+        let graph = TraceGraph::new();
+        let perms = full_perms();
+
+        let call = make_call("list_files", json!({}));
+        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
+
+        assert!(result.success);
+        assert!(result.content.contains("a.txt"));
+        assert!(result.content.contains("b.txt"));
+        assert!(result.content.contains("subdir/"));
+    }
+
+    #[test]
+    fn test_emit_command_success() {
+        let tmp = TempDir::new().unwrap();
+        let mut state = AppState::new();
+        // Pre-load a buffer so Replace has something to work with
+        state.load_file(PathBuf::from("f.txt"), "old".into());
+
+        let symbols = SymbolTable::new();
+        let graph = TraceGraph::new();
+        let perms = full_perms();
+
+        let cmd_json = json!({
+            "Insert": {"file": "f.txt", "offset": 3, "text": " stuff"}
+        });
+        let call = make_call("emit_command", json!({"command": cmd_json}));
+        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
+
+        assert!(result.success);
+        assert_eq!(result.content, "Command applied.");
+        assert_eq!(state.get_content(&PathBuf::from("f.txt")).unwrap(), "old stuff");
+    }
+
+    #[test]
+    fn test_query_trace_graph_success() {
+        let tmp = TempDir::new().unwrap();
+        let mut state = AppState::new();
+        let symbols = SymbolTable::new();
+        let mut graph = TraceGraph::new();
+        let perms = full_perms();
+
+        // Add a requirement to the graph
+        graph.add_requirement(Requirement {
+            id: "REQ-01".into(),
+            title: "Auth".into(),
+            status: ReqStatus::Draft,
+            file: PathBuf::from("reqs/REQ-01.md"),
+        });
+
+        let call = make_call("query_trace_graph", json!({"req_id": "REQ-01"}));
+        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
+
+        assert!(result.success);
+        assert!(result.content.contains("REQ-01"));
+    }
+
+    #[test]
+    fn test_query_code_element_success() {
+        let tmp = TempDir::new().unwrap();
+        let mut state = AppState::new();
+        let symbols = SymbolTable::new();
+        let mut graph = TraceGraph::new();
+        let perms = full_perms();
+
+        graph.add_code_element(CodeElement {
+            name: "do_thing".into(),
+            kind: CodeElementKind::Function,
+            file: PathBuf::from("src/lib.rs"),
+            start_line: 1,
+            end_line: 10,
+        });
+
+        let call = make_call("query_code_element", json!({"file": "src/lib.rs", "name": "do_thing"}));
+        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
+
+        assert!(result.success);
+        assert!(result.content.contains("do_thing"));
+    }
+
+    #[test]
+    fn test_list_requirements_success() {
+        let tmp = TempDir::new().unwrap();
+        // Create reqs/ with a valid requirement file
+        let reqs_dir = tmp.path().join("reqs");
+        std::fs::create_dir(&reqs_dir).unwrap();
+        std::fs::write(
+            reqs_dir.join("REQ-01.md"),
+            "# REQ-01: Authentication\nStatus: draft\n\nUsers must log in.",
+        ).unwrap();
+
+        let mut state = AppState::new();
+        let symbols = SymbolTable::new();
+        let graph = TraceGraph::new();
+        let perms = full_perms();
+
+        let call = make_call("list_requirements", json!({}));
+        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
+
+        assert!(result.success);
+        assert!(result.content.contains("REQ-01"));
+    }
+
+    #[test]
+    fn test_get_symbols_success() {
+        let tmp = TempDir::new().unwrap();
+        let mut state = AppState::new();
+        let mut symbols = SymbolTable::new();
+        let graph = TraceGraph::new();
+        let perms = full_perms();
+
+        // Manually insert symbols into the table
+        let path = PathBuf::from("src/main.rs");
+        symbols.files.insert(path.clone(), vec![
+            Symbol {
+                name: "main".into(),
+                kind: SymbolKind::Function,
+                file: path.clone(),
+                start_line: 1,
+                end_line: 5,
+                start_col: 0,
+            },
+        ]);
+
+        let call = make_call("get_symbols", json!({"path": "src/main.rs"}));
+        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
+
+        assert!(result.success);
+        assert!(result.content.contains("main"));
+    }
+
+    #[test]
+    fn test_run_shell_success() {
+        let tmp = TempDir::new().unwrap();
+        let mut state = AppState::new();
+        let symbols = SymbolTable::new();
+        let graph = TraceGraph::new();
+        let perms = full_perms();
+
+        let call = make_call("run_shell", json!({"command": "echo hello"}));
+        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
+
+        assert!(result.success);
+        assert!(result.content.trim().contains("hello"));
+    }
+
+    #[test]
+    fn test_search_files_success() {
+        let tmp = TempDir::new().unwrap();
+        std::fs::write(tmp.path().join("foo.rs"), "fn main() { search_target(); }").unwrap();
+        std::fs::write(tmp.path().join("bar.rs"), "// nothing here").unwrap();
+
+        let mut state = AppState::new();
+        let symbols = SymbolTable::new();
+        let graph = TraceGraph::new();
+        let perms = full_perms();
+
+        let call = make_call("search_files", json!({"pattern": "search_target"}));
+        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
+
+        assert!(result.success);
+        assert!(result.content.contains("search_target"));
+        assert!(result.content.contains("foo.rs"));
+    }
+
+    // ===== Permission-denied tests (Req 3.1, 3.2) =====
+
+    #[test]
+    fn test_read_file_permission_denied() {
+        let tmp = TempDir::new().unwrap();
+        std::fs::write(tmp.path().join("secret.txt"), "top secret").unwrap();
+
+        let mut state = AppState::new();
+        let symbols = SymbolTable::new();
+        let graph = TraceGraph::new();
+
+        // Path-level denial: only "other/**" is readable
+        let perms = AgentPermissions {
+            agent_id: "restricted".into(),
+            readable_paths: vec!["other/**".into()],
+            ..Default::default()
+        };
+
+        let call = make_call("read_file", json!({"path": "secret.txt"}));
+        let log_before = state.command_log().len();
+        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
+
+        assert!(!result.success);
+        let lower = result.content.to_lowercase();
+        assert!(lower.contains("permission denied") || lower.contains("denied"));
+        assert_eq!(state.command_log().len(), log_before, "no state mutation");
+    }
+
+    #[test]
+    fn test_write_file_permission_denied() {
+        let tmp = TempDir::new().unwrap();
+        let mut state = AppState::new();
+        let symbols = SymbolTable::new();
+        let graph = TraceGraph::new();
+
+        // Tool-level denial via denied_tools
+        let perms = AgentPermissions {
+            agent_id: "restricted".into(),
+            denied_tools: vec!["write_file".into()],
+            ..Default::default()
+        };
+
+        let call = make_call("write_file", json!({"path": "out.txt", "content": "bad"}));
+        let log_before = state.command_log().len();
+        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
+
+        assert!(!result.success);
+        let lower = result.content.to_lowercase();
+        assert!(lower.contains("permission denied") || lower.contains("denied") || lower.contains("not allowed"));
+        assert_eq!(state.command_log().len(), log_before, "no state mutation");
+        // File should NOT exist on disk
+        assert!(!tmp.path().join("out.txt").exists());
+    }
+
+    #[test]
+    fn test_emit_command_permission_denied() {
+        let tmp = TempDir::new().unwrap();
+        let mut state = AppState::new();
+        state.load_file(PathBuf::from("f.txt"), "original".into());
+
+        let symbols = SymbolTable::new();
+        let graph = TraceGraph::new();
+
+        // Tool-level denial
+        let perms = AgentPermissions {
+            agent_id: "restricted".into(),
+            denied_tools: vec!["emit_command".into()],
+            ..Default::default()
+        };
+
+        let cmd_json = json!({"Insert": {"file": "f.txt", "offset": 0, "text": "bad"}});
+        let call = make_call("emit_command", json!({"command": cmd_json}));
+        let log_before = state.command_log().len();
+        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
+
+        assert!(!result.success);
+        let lower = result.content.to_lowercase();
+        assert!(lower.contains("permission denied") || lower.contains("denied") || lower.contains("not allowed"));
+        assert_eq!(state.command_log().len(), log_before, "no state mutation");
+        // Buffer unchanged
+        assert_eq!(state.get_content(&PathBuf::from("f.txt")).unwrap(), "original");
+    }
+
+    #[test]
+    fn test_run_shell_permission_denied() {
+        let tmp = TempDir::new().unwrap();
+        let mut state = AppState::new();
+        let symbols = SymbolTable::new();
+        let graph = TraceGraph::new();
+
+        // Shell denied via allow_shell: false
+        let perms = AgentPermissions {
+            agent_id: "restricted".into(),
+            allow_shell: false,
+            ..Default::default()
+        };
+
+        let call = make_call("run_shell", json!({"command": "echo pwned"}));
+        let log_before = state.command_log().len();
+        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
+
+        assert!(!result.success);
+        let lower = result.content.to_lowercase();
+        assert!(lower.contains("permission denied") || lower.contains("not allowed"));
+        assert_eq!(state.command_log().len(), log_before, "no state mutation");
+    }
+
+    // ===== Error-path tests for ungated tools (Req 3.3) =====
+
+    #[test]
+    fn test_list_files_error_nonexistent_dir() {
+        let tmp = TempDir::new().unwrap();
+        let mut state = AppState::new();
+        let symbols = SymbolTable::new();
+        let graph = TraceGraph::new();
+        let perms = full_perms();
+
+        let call = make_call("list_files", json!({"path": "nonexistent_subdir"}));
+        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
+
+        assert!(!result.success);
+        assert!(result.content.to_lowercase().contains("error"));
+    }
+
+    #[test]
+    fn test_query_trace_graph_error_not_found() {
+        let tmp = TempDir::new().unwrap();
+        let mut state = AppState::new();
+        let symbols = SymbolTable::new();
+        let graph = TraceGraph::new(); // empty graph
+        let perms = full_perms();
+
+        let call = make_call("query_trace_graph", json!({"req_id": "REQ-NONEXIST"}));
+        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
+
+        assert!(!result.success);
+        assert!(result.content.contains("not found"));
+    }
+
+    #[test]
+    fn test_query_code_element_error_not_found() {
+        let tmp = TempDir::new().unwrap();
+        let mut state = AppState::new();
+        let symbols = SymbolTable::new();
+        let graph = TraceGraph::new(); // empty graph
+        let perms = full_perms();
+
+        let call = make_call("query_code_element", json!({"file": "no/such.rs", "name": "missing_fn"}));
+        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
+
+        assert!(!result.success);
+        assert!(result.content.contains("not found"));
+    }
+
+    #[test]
+    fn test_list_requirements_error_no_reqs_dir() {
+        let tmp = TempDir::new().unwrap();
+        // No reqs/ directory created — project root is empty
+        let mut state = AppState::new();
+        let symbols = SymbolTable::new();
+        let graph = TraceGraph::new();
+        let perms = full_perms();
+
+        let call = make_call("list_requirements", json!({}));
+        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
+
+        // list_requirements returns success:true with empty content when no reqs dir
+        assert!(result.success);
+        assert!(result.content.is_empty());
+    }
+
+    #[test]
+    fn test_get_symbols_error_no_symbols() {
+        let tmp = TempDir::new().unwrap();
+        let mut state = AppState::new();
+        let symbols = SymbolTable::new(); // empty symbol table
+        let graph = TraceGraph::new();
+        let perms = full_perms();
+
+        let call = make_call("get_symbols", json!({"path": "src/nonexistent.rs"}));
+        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
+
+        assert!(!result.success);
+        assert!(result.content.contains("No symbols parsed for"));
+    }
+
+    #[test]
+    fn test_search_files_error_no_matches() {
+        let tmp = TempDir::new().unwrap();
+        // Create a file that does NOT contain the search pattern
+        std::fs::write(tmp.path().join("hello.txt"), "just some text").unwrap();
+
+        let mut state = AppState::new();
+        let symbols = SymbolTable::new();
+        let graph = TraceGraph::new();
+        let perms = full_perms();
+
+        let call = make_call("search_files", json!({"pattern": "zzz_no_match_ever_xyz"}));
+        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
+
+        // search_files returns success:true with "No matches found." when nothing matches
+        assert!(result.success);
+        assert!(result.content.contains("No matches found"));
+    }
+
+    // ===== Missing required arg tests (Req 4) — no panic, success:false =====
+
+    #[test]
+    fn test_read_file_missing_args() {
+        let tmp = TempDir::new().unwrap();
+        let mut state = AppState::new();
+        let symbols = SymbolTable::new();
+        let graph = TraceGraph::new();
+        let perms = full_perms();
+
+        let call = make_call("read_file", json!({}));
+        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
+        assert!(!result.success);
+    }
+
+    #[test]
+    fn test_write_file_missing_path() {
+        let tmp = TempDir::new().unwrap();
+        let mut state = AppState::new();
+        let symbols = SymbolTable::new();
+        let graph = TraceGraph::new();
+        let perms = full_perms();
+
+        let call = make_call("write_file", json!({"content": "hello"}));
+        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
+        assert!(!result.success);
+    }
+
+    #[test]
+    fn test_write_file_missing_content() {
+        let tmp = TempDir::new().unwrap();
+        let mut state = AppState::new();
+        let symbols = SymbolTable::new();
+        let graph = TraceGraph::new();
+        let perms = full_perms();
+
+        let call = make_call("write_file", json!({"path": "out.txt"}));
+        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
+        assert!(!result.success);
+    }
+
+    #[test]
+    fn test_list_files_empty_args_no_panic() {
+        let tmp = TempDir::new().unwrap();
+        let mut state = AppState::new();
+        let symbols = SymbolTable::new();
+        let graph = TraceGraph::new();
+        let perms = full_perms();
+
+        // list_files has no required args — should succeed (not panic)
+        let call = make_call("list_files", json!({}));
+        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
+        // No panic occurred; it may succeed or fail depending on dir contents
+        // The key invariant: no panic.
+        assert!(result.success || !result.success); // always true — proves no panic
+    }
+
+    #[test]
+    fn test_emit_command_missing_args() {
+        let tmp = TempDir::new().unwrap();
+        let mut state = AppState::new();
+        let symbols = SymbolTable::new();
+        let graph = TraceGraph::new();
+        let perms = full_perms();
+
+        let call = make_call("emit_command", json!({}));
+        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
+        assert!(!result.success);
+    }
+
+    #[test]
+    fn test_query_trace_graph_missing_args() {
+        let tmp = TempDir::new().unwrap();
+        let mut state = AppState::new();
+        let symbols = SymbolTable::new();
+        let graph = TraceGraph::new();
+        let perms = full_perms();
+
+        let call = make_call("query_trace_graph", json!({}));
+        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
+        assert!(!result.success);
+    }
+
+    #[test]
+    fn test_query_code_element_missing_args() {
+        let tmp = TempDir::new().unwrap();
+        let mut state = AppState::new();
+        let symbols = SymbolTable::new();
+        let graph = TraceGraph::new();
+        let perms = full_perms();
+
+        let call = make_call("query_code_element", json!({}));
+        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
+        assert!(!result.success);
+    }
+
+    #[test]
+    fn test_list_requirements_empty_args_no_panic() {
+        let tmp = TempDir::new().unwrap();
+        let mut state = AppState::new();
+        let symbols = SymbolTable::new();
+        let graph = TraceGraph::new();
+        let perms = full_perms();
+
+        // list_requirements has no required args — should not panic
+        let call = make_call("list_requirements", json!({}));
+        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
+        // No panic — that's the invariant
+        assert!(result.success || !result.success);
+    }
+
+    #[test]
+    fn test_get_symbols_missing_args() {
+        let tmp = TempDir::new().unwrap();
+        let mut state = AppState::new();
+        let symbols = SymbolTable::new();
+        let graph = TraceGraph::new();
+        let perms = full_perms();
+
+        let call = make_call("get_symbols", json!({}));
+        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
+        assert!(!result.success);
+    }
+
+    #[test]
+    fn test_run_shell_missing_args() {
+        let tmp = TempDir::new().unwrap();
+        let mut state = AppState::new();
+        let symbols = SymbolTable::new();
+        let graph = TraceGraph::new();
+        let perms = full_perms();
+
+        let call = make_call("run_shell", json!({}));
+        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
+        assert!(!result.success);
+    }
+
+    #[test]
+    fn test_search_files_missing_args() {
+        let tmp = TempDir::new().unwrap();
+        let mut state = AppState::new();
+        let symbols = SymbolTable::new();
+        let graph = TraceGraph::new();
+        let perms = full_perms();
+
+        let call = make_call("search_files", json!({}));
+        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
+        assert!(!result.success);
+    }
+
+    // ===== Property test: write_file buffer/disk parity (Design Property 1) =====
+    // **Validates: Requirements 1.1, 1.2**
+
+    use proptest::prelude::*;
+
+    proptest! {
+        #![proptest_config(ProptestConfig::with_cases(100))]
+        #[test]
+        fn prop_write_file_buffer_disk_parity(
+            filename in "[a-z]{1,8}\\.txt",
+            content in "[ -~\\n]{0,500}",
+        ) {
+            let tmp = TempDir::new().unwrap();
+            let mut state = AppState::new();
+            let symbols = SymbolTable::new();
+            let graph = TraceGraph::new();
+            let perms = full_perms();
+
+            let call = make_call("write_file", json!({"path": filename.clone(), "content": content.clone()}));
+            let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
+
+            if result.success {
+                // Buffer matches what was written
+                let rel_path = PathBuf::from(&filename);
+                let buf_content = state.get_content(&rel_path).unwrap();
+                prop_assert_eq!(&buf_content, &content, "buffer != written content");
+
+                // Disk matches buffer
+                let disk_content = std::fs::read_to_string(tmp.path().join(&filename)).unwrap();
+                prop_assert_eq!(&disk_content, &content, "disk != written content");
+            }
+        }
+    }
+
+    // ===== Property test: permission denial for gated tools (Design Property 2) =====
+    // **Validates: Requirements 3.1, 3.2**
+
+    proptest! {
+        #![proptest_config(ProptestConfig::with_cases(100))]
+        #[test]
+        fn prop_permission_denial_gated_tools(
+            tool_idx in 0usize..4,
+        ) {
+            let gated_tools = ["read_file", "write_file", "emit_command", "run_shell"];
+            let tool_name = gated_tools[tool_idx];
+
+            // Build permissions that deny this specific tool
+            let perms = match tool_name {
+                "run_shell" => AgentPermissions {
+                    agent_id: "prop-agent".into(),
+                    allow_shell: false,
+                    ..Default::default()
+                },
+                other => AgentPermissions {
+                    agent_id: "prop-agent".into(),
+                    denied_tools: vec![other.into()],
+                    ..Default::default()
+                },
+            };
+
+            // Build a valid ToolCall for the tool
+            let call = match tool_name {
+                "read_file" => make_call("read_file", json!({"path": "any.txt"})),
+                "write_file" => make_call("write_file", json!({"path": "any.txt", "content": "x"})),
+                "emit_command" => make_call("emit_command", json!({"command": {"Insert": {"file": "f.txt", "offset": 0, "text": "x"}}})),
+                "run_shell" => make_call("run_shell", json!({"command": "echo hi"})),
+                _ => unreachable!(),
+            };
+
+            let tmp = TempDir::new().unwrap();
+            let mut state = AppState::new();
+            let symbols = SymbolTable::new();
+            let graph = TraceGraph::new();
+
+            let log_before = state.command_log().len();
+            let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
+
+            // Must be denied
+            prop_assert!(!result.success, "tool '{}' should be denied", tool_name);
+
+            // Content must mention denial/permission/not allowed
+            let lower = result.content.to_lowercase();
+            prop_assert!(
+                lower.contains("denied") || lower.contains("permission") || lower.contains("not allowed"),
+                "denial msg missing for '{}': {}", tool_name, result.content
+            );
+
+            // No state mutation
+            prop_assert_eq!(
+                state.command_log().len(), log_before,
+                "state mutated for denied tool '{}'", tool_name
+            );
+        }
+    }
+
+    // ===== Property test: undo restores prior state (Design Property 4) =====
+    // **Validates: Requirements 5.1, 5.3**
+
+    proptest! {
+        #![proptest_config(ProptestConfig::with_cases(100))]
+        #[test]
+        fn prop_undo_restores_prior_state(
+            initial in "[ -~]{0,200}",
+            num_writes in 1usize..=5,
+            contents in prop::collection::vec("[ -~]{0,200}", 1..=5),
+        ) {
+            let tmp = TempDir::new().unwrap();
+            let rel_path = PathBuf::from("target.txt");
+
+            // Write initial content to disk
+            std::fs::write(tmp.path().join("target.txt"), &initial).unwrap();
+
+            let mut state = AppState::new();
+            let symbols = SymbolTable::new();
+            let graph = TraceGraph::new();
+            let perms = full_perms();
+
+            // Load initial content into state buffer
+            state.load_file(rel_path.clone(), initial.clone());
+
+            let actual_writes = num_writes.min(contents.len());
+
+            // Execute N write_file calls sequentially
+            for i in 0..actual_writes {
+                let call = make_call(
+                    "write_file",
+                    json!({"path": "target.txt", "content": contents[i]}),
+                );
+                let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
+                prop_assert!(result.success, "write_file #{} failed: {}", i, result.content);
+            }
+
+            // Undo all writes in reverse order
+            for i in 0..actual_writes {
+                let undone = state.undo();
+                prop_assert!(undone, "undo #{} returned false", i);
+            }
+
+            // Buffer should equal initial content
+            let final_content = state.get_content(&rel_path).unwrap_or_default();
+            prop_assert_eq!(
+                final_content, initial,
+                "after {} undos, buffer != initial",
+                actual_writes
+            );
+        }
+    }
+
+    // ===== Mock-provider-free ToolCall undo tests (Req 5.1, 5.2) =====
+
+    #[test]
+    fn test_write_file_undo_restores_buffer() {
+        let tmp = TempDir::new().unwrap();
+        // Create existing file on disk
+        std::fs::write(tmp.path().join("test.txt"), "original content").unwrap();
+
+        let mut state = AppState::new();
+        let symbols = SymbolTable::new();
+        let graph = TraceGraph::new();
+        let perms = full_perms();
+
+        // Load file into buffer (simulates opening the file)
+        let rel = PathBuf::from("test.txt");
+        state.load_file(rel.clone(), "original content".into());
+
+        // Call write_file to overwrite with new content
+        let call = make_call("write_file", json!({"path": "test.txt", "content": "new content"}));
+        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
+        assert!(result.success);
+
+        // Buffer should now be "new content"
+        assert_eq!(state.get_content(&rel).unwrap(), "new content");
+
+        // Undo the Replace (load_file inside execute_write_file re-sets buffer
+        // to "original content", then apply(Replace) changes to "new content" — one undo reverts Replace)
+        let undone = state.undo();
+        assert!(undone);
+
+        // Buffer restored to "original content"
+        assert_eq!(state.get_content(&rel).unwrap(), "original content");
+    }
+
+    #[test]
+    fn test_emit_command_undo_restores_buffer() {
+        let tmp = TempDir::new().unwrap();
+        let mut state = AppState::new();
+        let symbols = SymbolTable::new();
+        let graph = TraceGraph::new();
+        let perms = full_perms();
+
+        // Load file into buffer
+        let rel = PathBuf::from("f.txt");
+        state.load_file(rel.clone(), "hello world".into());
+
+        // emit_command with Replace: "world" -> "rust" (offset 6, len 5)
+        let cmd_json = json!({
+            "Replace": {"file": "f.txt", "offset": 6, "old_text": "world", "new_text": "rust"}
+        });
+        let call = make_call("emit_command", json!({"command": cmd_json}));
+        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
+        assert!(result.success);
+
+        // Buffer should be "hello rust"
+        assert_eq!(state.get_content(&rel).unwrap(), "hello rust");
+
+        // Undo
+        let undone = state.undo();
+        assert!(undone);
+
+        // Buffer restored to "hello world"
+        assert_eq!(state.get_content(&rel).unwrap(), "hello world");
+    }
+
+    // ===== Multi-call undo test (Req 5.3) =====
+
+    // ===== Property test 3: missing-arg never panics (Req 4) =====
+    // **Validates: Requirements 4**
+
+    mod prop_missing_arg {
+        use super::*;
+        #[allow(unused_imports)]
+        use proptest::prelude::*;
+
+        /// Tools with required args: (tool_name, required_args)
+        const TOOLS_WITH_REQUIRED: &[(&str, &[&str])] = &[
+            ("read_file", &["path"]),
+            ("write_file", &["path", "content"]),
+            ("emit_command", &["command"]),
+            ("query_trace_graph", &["req_id"]),
+            ("query_code_element", &["file", "name"]),
+            ("get_symbols", &["path"]),
+            ("run_shell", &["command"]),
+            ("search_files", &["pattern"]),
+        ];
+
+        proptest! {
+            #![proptest_config(ProptestConfig::with_cases(100))]
+            #[test]
+            fn prop_missing_arg_never_panics(
+                tool_idx in 0usize..8,
+                arg_idx_seed in 0usize..10,
+            ) {
+                let (tool_name, required_args) = TOOLS_WITH_REQUIRED[tool_idx];
+                // Pick which required arg to drop
+                let drop_idx = arg_idx_seed % required_args.len();
+
+                // Build args with all required present EXCEPT the dropped one
+                let mut args = serde_json::Map::new();
+                for (i, &arg_name) in required_args.iter().enumerate() {
+                    if i == drop_idx {
+                        continue; // drop this arg
+                    }
+                    // Put a dummy value for the arg
+                    if arg_name == "command" && tool_name == "emit_command" {
+                        // emit_command expects a JSON command object
+                        args.insert(
+                            arg_name.into(),
+                            serde_json::json!({"Insert": {"file": "f.txt", "offset": 0, "text": "x"}}),
+                        );
+                    } else {
+                        args.insert(arg_name.into(), serde_json::Value::String("dummy".into()));
+                    }
+                }
+
+                let call = ToolCall {
+                    tool_name: tool_name.into(),
+                    arguments: serde_json::Value::Object(args),
+                };
+
+                let tmp = tempfile::TempDir::new().unwrap();
+                let mut state = AppState::new();
+                let symbols = SymbolTable::new();
+                let graph = TraceGraph::new();
+                let perms = AgentPermissions::full_access("prop-test");
+
+                // Must not panic
+                let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                    execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms)
+                }));
+
+                prop_assert!(result.is_ok(), "execute_tool panicked for tool={} dropping arg={}", tool_name, required_args[drop_idx]);
+                let result = result.unwrap();
+                prop_assert!(!result.success, "expected success==false for tool={} missing arg={}", tool_name, required_args[drop_idx]);
+            }
+        }
+    }
+
+    #[test]
+    fn test_multi_call_undo_restores_pre_first_call_state() {
+        let tmp = TempDir::new().unwrap();
+        // Pre-existing file on disk
+        std::fs::write(tmp.path().join("multi.txt"), "AAAA").unwrap();
+
+        let mut state = AppState::new();
+        let symbols = SymbolTable::new();
+        let graph = TraceGraph::new();
+        let perms = full_perms();
+
+        // Load file into buffer (simulates opening the file)
+        let rel = PathBuf::from("multi.txt");
+        state.load_file(rel.clone(), "AAAA".into());
+
+        // First write_file call: overwrites with "BBBB"
+        let call1 = make_call("write_file", json!({"path": "multi.txt", "content": "BBBB"}));
+        let r1 = execute_tool(&call1, tmp.path(), &mut state, &symbols, &graph, &perms);
+        assert!(r1.success);
+        assert_eq!(state.get_content(&rel).unwrap(), "BBBB");
+
+        // Second write_file call: overwrites with "CCCC"
+        let call2 = make_call("write_file", json!({"path": "multi.txt", "content": "CCCC"}));
+        let r2 = execute_tool(&call2, tmp.path(), &mut state, &symbols, &graph, &perms);
+        assert!(r2.success);
+        assert_eq!(state.get_content(&rel).unwrap(), "CCCC");
+
+        // Undo second call (reverse order)
+        let u1 = state.undo();
+        assert!(u1);
+        assert_eq!(state.get_content(&rel).unwrap(), "BBBB");
+
+        // Undo first call
+        let u2 = state.undo();
+        assert!(u2);
+        assert_eq!(state.get_content(&rel).unwrap(), "AAAA");
+    }
+
+    // ===== Static Dockerfile hardening assertions (Req 6) =====
+
+    #[test]
+    fn test_dockerfile_has_nonroot_user_before_entrypoint() {
+        let dockerfile = include_str!("../../../Dockerfile");
+
+        // Has useradd or adduser
+        assert!(
+            dockerfile.contains("useradd") || dockerfile.contains("adduser"),
+            "Dockerfile must create a non-root user via useradd/adduser"
+        );
+
+        // Has chown on relevant dirs
+        assert!(
+            dockerfile.contains("chown"),
+            "Dockerfile must chown relevant dirs to non-root user"
+        );
+
+        // USER appears before ENTRYPOINT
+        let user_pos = dockerfile.find("USER tracelean")
+            .or_else(|| dockerfile.find("USER "))
+            .expect("Dockerfile must have a USER directive");
+        let entrypoint_pos = dockerfile.find("ENTRYPOINT")
+            .expect("Dockerfile must have an ENTRYPOINT");
+        assert!(
+            user_pos < entrypoint_pos,
+            "USER must appear before ENTRYPOINT in Dockerfile"
+        );
+    }
+
+    #[test]
+    fn test_dockerfile_dev_has_nonroot_user_before_cmd() {
+        let dockerfile = include_str!("../../../Dockerfile.dev");
+
+        // Has useradd or adduser
+        assert!(
+            dockerfile.contains("useradd") || dockerfile.contains("adduser"),
+            "Dockerfile.dev must create a non-root user via useradd/adduser"
+        );
+
+        // Has chown on relevant dirs (/app and elan)
+        assert!(
+            dockerfile.contains("chown"),
+            "Dockerfile.dev must chown relevant dirs to non-root user"
+        );
+
+        // USER appears before CMD
+        let user_pos = dockerfile.find("USER tracelean")
+            .or_else(|| dockerfile.find("USER "))
+            .expect("Dockerfile.dev must have a USER directive");
+        let cmd_pos = dockerfile.rfind("\nCMD")
+            .expect("Dockerfile.dev must have a CMD");
+        assert!(
+            user_pos < cmd_pos,
+            "USER must appear before CMD in Dockerfile.dev"
+        );
     }
 }

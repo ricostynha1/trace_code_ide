@@ -2,13 +2,11 @@
 
 use crate::ai;
 use crate::ai::streaming::StreamSession;
-use crate::ai::tracking::SessionStats;
 use crate::{
     AppStateWrapper, AiSettingsWrapper, AiLogWrapper, AiSessionStatsWrapper,
     MockProviderWrapper, SymbolTableWrapper, TraceGraphWrapper,
     McpHostPermissionsWrapper, McpClientWrapper, AgentPermissionsStore,
 };
-use std::collections::HashMap;
 use tauri::{AppHandle, Emitter, State};
 
 // --- MCP Host (4.15) ---

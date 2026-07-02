@@ -8,4 +8,5 @@ mod unit {
     mod test_persistence;
     mod test_trace_graph;
     mod test_requirements;
+    mod test_highlight_queries;
 }

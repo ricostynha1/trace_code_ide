@@ -6,7 +6,9 @@ use super::tracking::TokenUsage;
 use serde::{Deserialize, Serialize};
 
 pub struct BedrockProvider {
+    #[allow(dead_code)]
     access_key: String,
+    #[allow(dead_code)]
     secret_key: String,
     region: String,
     client: reqwest::Client,

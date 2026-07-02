@@ -78,9 +78,17 @@ ENV LIBGL_ALWAYS_SOFTWARE=1 \
 
 # Install elan (Lean 4 toolchain manager) for spec type-checking
 RUN curl -sSf https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y --default-toolchain leanprover/lean4:stable
-ENV PATH="/root/.elan/bin:${PATH}"
 
 COPY --from=builder /app/target/release/tracelean /usr/local/bin/tracelean
 COPY --from=builder /app/ui_settings /usr/local/bin/ui_settings
 
+# Create non-root user and grant ownership of app/toolchain dirs
+RUN useradd -m -u 10001 tracelean \
+    && mv /root/.elan /home/tracelean/.elan \
+    && chown -R tracelean:tracelean /home/tracelean/.elan \
+    && chown tracelean:tracelean /usr/local/bin/tracelean /usr/local/bin/ui_settings
+
+ENV PATH="/home/tracelean/.elan/bin:${PATH}"
+
+USER tracelean
 ENTRYPOINT ["tracelean"]

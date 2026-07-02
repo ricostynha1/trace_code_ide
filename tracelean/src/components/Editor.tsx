@@ -156,6 +156,17 @@ export function Editor({ filePath }: EditorProps) {
       const spans = await invoke<HighlightSpan[]>("get_highlights", { path: filePath });
       const decos = buildDecorations(spans, view.state.doc.length);
       view.dispatch({ effects: setHighlights.of(decos) });
+
+      // DEV feature-flag: log legacy vs query-based for comparison
+      if (import.meta.env.DEV) {
+        try {
+          const legacySpans = await invoke<HighlightSpan[]>("get_highlights_legacy", { path: filePath });
+          const diff = spans.length - legacySpans.length;
+          if (diff !== 0) {
+            console.debug(`[highlight-compare] query=${spans.length} legacy=${legacySpans.length} diff=${diff} file=${filePath}`);
+          }
+        } catch { /* legacy compare optional */ }
+      }
     } catch (e) {
       console.error("Highlight fetch failed:", e);
     }
