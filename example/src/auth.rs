@@ -24,3 +24,5 @@ pub enum AuthError {
     WeakPassword,
     InvalidCredentials,
 }
+
+Vamos la Mesmo

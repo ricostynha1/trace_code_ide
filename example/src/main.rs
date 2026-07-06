@@ -5,6 +5,3 @@ mod search;
 fn main() {
     println!("Example project for TraceLean IDE");
 }
-
-
-SoethHappen in the workd
