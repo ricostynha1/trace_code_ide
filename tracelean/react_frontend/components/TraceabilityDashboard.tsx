@@ -76,6 +76,8 @@ export function TraceabilityDashboard({ visible, onClose, onNavigate }: Traceabi
 
   const loadGraph = useCallback(async () => {
     try {
+      // Build/rebuild the trace graph from project files first
+      await invoke("build_trace_graph");
       const data = await invoke<FullTraceGraph>("get_full_trace_graph");
       setGraphData(data);
     } catch (e) {

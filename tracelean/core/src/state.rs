@@ -81,19 +81,6 @@ impl AppState {
                     buffer.content.drain(*offset..end);
                 }
             }
-            Command::Replace {
-                file,
-                offset,
-                old_text,
-                new_text,
-            } => {
-                let buffer = self.get_or_create_buffer(file);
-                let end = (*offset + old_text.len()).min(buffer.content.len());
-                if *offset <= buffer.content.len() {
-                    buffer.content.drain(*offset..end);
-                    buffer.content.insert_str(*offset, new_text);
-                }
-            }
             Command::SetCursor { file, new_pos, .. } => {
                 let buffer = self.get_or_create_buffer(file);
                 buffer.cursor = new_pos.clone();
@@ -229,11 +216,6 @@ impl AppState {
             Command::Delete { file, offset, deleted_text, .. } => {
                 let preview = if deleted_text.len() > 80 { &deleted_text[..80] } else { deleted_text };
                 format!("- {} @{}: \"{}\"", file.display(), offset, preview)
-            }
-            Command::Replace { file, offset, old_text, new_text } => {
-                let old_p = if old_text.len() > 40 { &old_text[..40] } else { old_text };
-                let new_p = if new_text.len() > 40 { &new_text[..40] } else { new_text };
-                format!("~ {} @{}: \"{}\" → \"{}\"", file.display(), offset, old_p, new_p)
             }
             Command::CreateFile { path } => format!("+ new file: {}", path.display()),
             Command::DeleteFile { path, .. } => format!("- del file: {}", path.display()),

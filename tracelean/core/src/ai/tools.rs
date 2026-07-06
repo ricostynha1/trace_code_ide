@@ -43,11 +43,54 @@ pub struct ToolResult {
     pub data: Option<serde_json::Value>,
 }
 
-/// A tool call request from an agent.
+/// A tool call request from an agent (MCP protocol 2024-11-05).
+/// This is the wire format sent to MCP servers.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ToolCall {
-    pub tool_name: String,
+    pub name: String,
     pub arguments: serde_json::Value,
+}
+
+/// UI/tracing metadata attached to a tool call by the agent.
+/// Not sent to MCP servers — purely for display and observability.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct ToolCallMeta {
+    /// Why the agent is calling this tool.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reason: Option<String>,
+    /// High-level goal this call is part of.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub goal: Option<String>,
+    /// Step number within the current plan.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub step: Option<u32>,
+}
+
+/// Agent-side tool call: MCP-compliant call + UI metadata envelope.
+/// The agent emits this; the executor strips `ui` before sending to MCP.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AgentToolCall {
+    /// MCP tool name.
+    pub name: String,
+    pub arguments: serde_json::Value,
+    /// UI/tracing metadata (not sent to tool servers).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ui: Option<ToolCallMeta>,
+}
+
+impl AgentToolCall {
+    /// Strip metadata, return MCP-pure ToolCall for execution.
+    pub fn to_mcp_call(&self) -> ToolCall {
+        ToolCall {
+            name: self.name.clone(),
+            arguments: self.arguments.clone(),
+        }
+    }
+
+    /// Extract reason for UI display.
+    pub fn reason(&self) -> Option<&str> {
+        self.ui.as_ref().and_then(|m| m.reason.as_deref())
+    }
 }
 
 /// All built-in tools available to agents.
@@ -77,6 +120,54 @@ pub fn builtin_tool_definitions() -> Vec<ToolDefinition> {
                     name: "content".into(),
                     param_type: ParamType::String,
                     description: "New file content.".into(),
+                    required: true,
+                },
+            ],
+        },
+        ToolDefinition {
+            name: "str_replace".into(),
+            description: "Replace a specific string in a file. Use this for surgical edits instead of rewriting the whole file. The old_str must match exactly (including whitespace).".into(),
+            parameters: vec![
+                ToolParam {
+                    name: "path".into(),
+                    param_type: ParamType::String,
+                    description: "Relative file path.".into(),
+                    required: true,
+                },
+                ToolParam {
+                    name: "old_str".into(),
+                    param_type: ParamType::String,
+                    description: "Exact string to find and replace (must match uniquely).".into(),
+                    required: true,
+                },
+                ToolParam {
+                    name: "new_str".into(),
+                    param_type: ParamType::String,
+                    description: "Replacement string.".into(),
+                    required: true,
+                },
+            ],
+        },
+        ToolDefinition {
+            name: "insert_lines".into(),
+            description: "Insert text at a specific line number in a file. Line 0 = beginning of file.".into(),
+            parameters: vec![
+                ToolParam {
+                    name: "path".into(),
+                    param_type: ParamType::String,
+                    description: "Relative file path.".into(),
+                    required: true,
+                },
+                ToolParam {
+                    name: "line".into(),
+                    param_type: ParamType::Integer,
+                    description: "Line number to insert before (0-indexed).".into(),
+                    required: true,
+                },
+                ToolParam {
+                    name: "text".into(),
+                    param_type: ParamType::String,
+                    description: "Text to insert.".into(),
                     required: true,
                 },
             ],
@@ -200,8 +291,9 @@ pub fn tools_as_system_prompt(tools: &[ToolDefinition]) -> String {
     out.push_str(
         "To call a tool, respond with a JSON block like:\n\
          ```tool_call\n\
-         {\"tool_name\": \"read_file\", \"arguments\": {\"path\": \"src/main.rs\"}}\n\
+         {\"name\": \"read_file\", \"arguments\": {\"path\": \"src/main.rs\"}, \"ui\": {\"reason\": \"Inspect entry point before editing\"}}\n\
          ```\n\n\
+         The `ui` field is optional metadata for the user. It is never sent to the tool server.\n\
          You may call multiple tools in sequence. After each tool call, you will receive the result \
          before continuing. When done, provide your final answer without a tool_call block.\n"
     );

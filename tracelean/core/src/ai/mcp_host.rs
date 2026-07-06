@@ -140,7 +140,7 @@ fn handle_tools_call(
         .unwrap_or(serde_json::json!({}));
 
     let call = ToolCall {
-        tool_name: tool_name.to_string(),
+        name: tool_name.to_string(),
         arguments,
     };
 

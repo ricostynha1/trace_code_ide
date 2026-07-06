@@ -31,7 +31,7 @@ pub fn mcp_call_tool(
     let perms = mcp_perms.0.lock().map_err(|e| e.to_string())?;
     let root = s.project_root().cloned().unwrap_or_default();
 
-    let call = ai::ToolCall { tool_name, arguments };
+    let call = ai::ToolCall { name: tool_name, arguments };
     Ok(ai::tool_executor::execute_tool(&call, &root, &mut s, &sym, &g, &perms))
 }
 
@@ -301,20 +301,21 @@ pub async fn ai_chat_stream(
 
                 let mut tool_results = String::new();
                 for tc in &tool_calls {
+                    let mcp_call = tc.to_mcp_call();
                     let result = {
                         let mut s = state.0.lock().map_err(|e| e.to_string())?;
                         let sym = symbols_state.0.lock().map_err(|e| e.to_string())?;
                         let g = graph_state.0.lock().map_err(|e| e.to_string())?;
                         let root = s.project_root().cloned().unwrap_or_default();
                         let perms = ai::tool_executor::AgentPermissions::full_access("chat");
-                        ai::tool_executor::execute_tool(tc, &root, &mut s, &sym, &g, &perms)
+                        ai::tool_executor::execute_tool(&mcp_call, &root, &mut s, &sym, &g, &perms)
                     };
                     tool_results.push_str(&format!(
                         "Tool `{}` result (success={}):\n{}\n\n",
-                        tc.tool_name, result.success, result.content
+                        mcp_call.name, result.success, result.content
                     ));
                     // Stream tool result to UI
-                    let tool_msg = format!("\n\n[Tool: {} → {}]\n", tc.tool_name, if result.success { "ok" } else { "error" });
+                    let tool_msg = format!("\n\n[Tool: {} → {}]\n", mcp_call.name, if result.success { "ok" } else { "error" });
                     let token_event = session.push_token(&tool_msg);
                     let _ = app.emit("ai-stream-token", &token_event);
                 }
@@ -340,12 +341,12 @@ pub async fn ai_chat_stream(
 
 /// Parse tool_call code blocks from an AI response.
 /// Only recognizes properly fenced ```tool_call blocks.
-fn extract_tool_calls_from_response(content: &str) -> Vec<ai::tools::ToolCall> {
+fn extract_tool_calls_from_response(content: &str) -> Vec<ai::tools::AgentToolCall> {
     let mut calls = Vec::new();
     let blocks = ai::templates::extract_code_blocks(content);
     for block in &blocks {
         if block.language == "tool_call" {
-            if let Ok(tc) = serde_json::from_str::<ai::tools::ToolCall>(&block.content) {
+            if let Ok(tc) = serde_json::from_str::<ai::tools::AgentToolCall>(&block.content) {
                 calls.push(tc);
             }
         }

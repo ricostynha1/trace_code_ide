@@ -684,7 +684,7 @@ pub struct CodeElementTrace<'a> {
 // --- File parsing helpers ---
 
 /// Parse a requirement markdown file. Expected format:
-/// ```
+/// ```text
 /// # REQ-001: Title here
 /// Status: draft|approved|linked
 ///

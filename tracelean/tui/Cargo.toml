@@ -1,0 +1,17 @@
+[package]
+name = "tracelean-tui"
+version = "0.1.0"
+description = "TraceLean TUI — terminal interface powered by Ratatui"
+authors = ["TraceLean"]
+edition = "2021"
+
+[[bin]]
+name = "tracelean-tui"
+path = "src/main.rs"
+
+[dependencies]
+tracelean-core = { path = "../core" }
+ratatui = "0.28"
+crossterm = "0.28"
+tokio = { version = "1", features = ["full"] }
+anyhow = "1"

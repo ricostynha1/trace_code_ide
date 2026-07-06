@@ -248,12 +248,7 @@ pub fn update_requirement_status(
     }
 
     // Apply as command
-    state.apply(Command::Replace {
-        file: rel_path.clone(),
-        offset: 0,
-        old_text: content,
-        new_text: new_content.clone(),
-    });
+    state.apply(Command::replace(rel_path.clone(), 0, content, new_content.clone()));
 
     // Write to disk
     std::fs::write(&req_file, &new_content)

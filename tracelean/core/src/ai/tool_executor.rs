@@ -54,7 +54,7 @@ impl AgentPermissions {
     pub fn read_only(agent_id: &str) -> Self {
         Self {
             agent_id: agent_id.into(),
-            denied_tools: vec!["write_file".into(), "emit_command".into(), "run_shell".into()],
+            denied_tools: vec!["write_file".into(), "str_replace".into(), "insert_lines".into(), "emit_command".into(), "run_shell".into()],
             allow_shell: false,
             ..Default::default()
         }
@@ -116,18 +116,20 @@ pub fn execute_tool(
     permissions: &AgentPermissions,
 ) -> ToolResult {
     // Permission check
-    if !permissions.is_tool_allowed(&call.tool_name) {
+    if !permissions.is_tool_allowed(&call.name) {
         return ToolResult {
             success: false,
             content: format!("Permission denied: tool '{}' not allowed for agent '{}'.",
-                call.tool_name, permissions.agent_id),
+                call.name, permissions.agent_id),
             data: None,
         };
     }
 
-    match call.tool_name.as_str() {
+    match call.name.as_str() {
         "read_file" => execute_read_file(call, project_root, permissions),
         "write_file" => execute_write_file(call, project_root, state, permissions),
+        "str_replace" => execute_str_replace(call, project_root, state, permissions),
+        "insert_lines" => execute_insert_lines(call, project_root, state, permissions),
         "list_files" => execute_list_files(call, project_root),
         "emit_command" => execute_emit_command(call, state, permissions),
         "query_trace_graph" => execute_query_trace(call, graph),
@@ -138,7 +140,7 @@ pub fn execute_tool(
         "search_files" => execute_search_files(call, project_root),
         _ => ToolResult {
             success: false,
-            content: format!("Unknown tool: {}", call.tool_name),
+            content: format!("Unknown tool: {}", call.name),
             data: None,
         },
     }
@@ -207,9 +209,13 @@ fn execute_write_file(
     let rel_path = PathBuf::from(&path);
     let full_path = project_root.join(&path);
 
-    // Read existing content (for Replace command) or create
-    let existing = std::fs::read_to_string(&full_path).unwrap_or_default();
-    let file_exists = full_path.exists();
+    // Use buffer if loaded (preserves undo chain), otherwise read from disk
+    let existing = if let Some(buf_content) = state.get_content(&rel_path) {
+        buf_content.to_string()
+    } else {
+        std::fs::read_to_string(&full_path).unwrap_or_default()
+    };
+    let file_exists = full_path.exists() || state.get_content(&rel_path).is_some();
 
     if !file_exists {
         // Ensure parent dir exists
@@ -219,22 +225,154 @@ fn execute_write_file(
         state.apply(Command::CreateFile { path: rel_path.clone() });
     }
 
-    // Load into buffer
-    state.load_file(rel_path.clone(), existing.clone());
+    // Load into buffer only if not already there
+    if state.get_content(&rel_path).is_none() {
+        state.load_file(rel_path.clone(), existing.clone());
+    }
 
-    // Apply as Replace command (whole file replacement)
+    // Apply as Delete+Insert batch (whole file replacement)
     let content_len = content.len();
-    state.apply(Command::Replace {
-        file: rel_path.clone(),
-        offset: 0,
-        old_text: existing,
-        new_text: content,
-    });
+    state.apply(Command::replace(rel_path.clone(), 0, existing, content));
 
     // Persist buffer to disk via save_eff (reads from state, not local var).
     // On error the Command stays in the log (Req 1.3) — only tool result reports failure.
     match save_eff(state, project_root, &rel_path) {
         Ok(_) => ToolResult { success: true, content: format!("Wrote {} bytes to '{}'.", content_len, path), data: None },
+        Err(e) => ToolResult { success: false, content: format!("Write error: {}", e), data: None },
+    }
+}
+
+fn execute_str_replace(
+    call: &ToolCall,
+    project_root: &Path,
+    state: &mut AppState,
+    perms: &AgentPermissions,
+) -> ToolResult {
+    let path = match get_str_arg(call, "path") {
+        Some(p) => p,
+        None => return ToolResult { success: false, content: "Missing 'path' argument.".into(), data: None },
+    };
+    let old_str = match get_str_arg(call, "old_str") {
+        Some(s) => s,
+        None => return ToolResult { success: false, content: "Missing 'old_str' argument.".into(), data: None },
+    };
+    let new_str = match get_str_arg(call, "new_str") {
+        Some(s) => s,
+        None => return ToolResult { success: false, content: "Missing 'new_str' argument.".into(), data: None },
+    };
+
+    if !perms.can_write(&path) {
+        return ToolResult { success: false, content: format!("Permission denied: cannot write '{}'.", path), data: None };
+    }
+
+    let rel_path = PathBuf::from(&path);
+    let full_path = project_root.join(&path);
+
+    // Use buffer content if loaded, otherwise read from disk
+    let content = if let Some(existing) = state.get_content(&rel_path) {
+        existing.to_string()
+    } else {
+        match std::fs::read_to_string(&full_path) {
+            Ok(c) => {
+                state.load_file(rel_path.clone(), c.clone());
+                c
+            }
+            Err(e) => return ToolResult { success: false, content: format!("Cannot read '{}': {}", path, e), data: None },
+        }
+    };
+
+    // Find the occurrence — must be unique
+    let matches: Vec<_> = content.match_indices(&old_str).collect();
+    if matches.is_empty() {
+        return ToolResult { success: false, content: "old_str not found in file.".into(), data: None };
+    }
+    if matches.len() > 1 {
+        return ToolResult {
+            success: false,
+            content: format!("old_str matches {} times — must be unique. Add more context.", matches.len()),
+            data: None,
+        };
+    }
+
+    let offset = matches[0].0;
+    state.apply(Command::replace(rel_path.clone(), offset, old_str.clone(), new_str.clone()));
+
+    match save_eff(state, project_root, &rel_path) {
+        Ok(_) => ToolResult {
+            success: true,
+            content: format!("Replaced {} chars at offset {} in '{}'.", old_str.len(), offset, path),
+            data: None,
+        },
+        Err(e) => ToolResult { success: false, content: format!("Write error: {}", e), data: None },
+    }
+}
+
+fn execute_insert_lines(
+    call: &ToolCall,
+    project_root: &Path,
+    state: &mut AppState,
+    perms: &AgentPermissions,
+) -> ToolResult {
+    let path = match get_str_arg(call, "path") {
+        Some(p) => p,
+        None => return ToolResult { success: false, content: "Missing 'path' argument.".into(), data: None },
+    };
+    let line = match get_int_arg(call, "line") {
+        Some(l) => l as usize,
+        None => return ToolResult { success: false, content: "Missing 'line' argument.".into(), data: None },
+    };
+    let text = match get_str_arg(call, "text") {
+        Some(t) => t,
+        None => return ToolResult { success: false, content: "Missing 'text' argument.".into(), data: None },
+    };
+
+    if !perms.can_write(&path) {
+        return ToolResult { success: false, content: format!("Permission denied: cannot write '{}'.", path), data: None };
+    }
+
+    let rel_path = PathBuf::from(&path);
+    let full_path = project_root.join(&path);
+
+    // Use buffer content if loaded, otherwise read from disk
+    let content = if let Some(existing) = state.get_content(&rel_path) {
+        existing.to_string()
+    } else {
+        match std::fs::read_to_string(&full_path) {
+            Ok(c) => {
+                state.load_file(rel_path.clone(), c.clone());
+                c
+            }
+            Err(e) => return ToolResult { success: false, content: format!("Cannot read '{}': {}", path, e), data: None },
+        }
+    };
+
+    // Find byte offset of the target line
+    let mut offset = 0;
+    for (i, line_content) in content.split('\n').enumerate() {
+        if i == line {
+            break;
+        }
+        offset += line_content.len() + 1; // +1 for '\n'
+    }
+    // Clamp to end
+    if offset > content.len() {
+        offset = content.len();
+    }
+
+    let insert_text = if text.ends_with('\n') { text.clone() } else { format!("{}\n", text) };
+
+    state.apply(Command::Insert {
+        file: rel_path.clone(),
+        offset,
+        text: insert_text.clone(),
+    });
+
+    match save_eff(state, project_root, &rel_path) {
+        Ok(_) => ToolResult {
+            success: true,
+            content: format!("Inserted {} chars at line {} in '{}'.", insert_text.len(), line, path),
+            data: None,
+        },
         Err(e) => ToolResult { success: false, content: format!("Write error: {}", e), data: None },
     }
 }
@@ -475,7 +613,6 @@ fn command_file_path(cmd: &Command) -> Option<String> {
     match cmd {
         Command::Insert { file, .. }
         | Command::Delete { file, .. }
-        | Command::Replace { file, .. }
         | Command::SetCursor { file, .. }
         | Command::SetSelection { file, .. } => Some(file.to_string_lossy().to_string()),
         Command::CreateFile { path }
@@ -506,7 +643,7 @@ mod tests {
     /// Helper: make a ToolCall
     fn make_call(name: &str, args: serde_json::Value) -> ToolCall {
         ToolCall {
-            tool_name: name.into(),
+            name: name.into(),
             arguments: args,
         }
     }
@@ -1268,9 +1405,12 @@ mod tests {
         let rel = PathBuf::from("f.txt");
         state.load_file(rel.clone(), "hello world".into());
 
-        // emit_command with Replace: "world" -> "rust" (offset 6, len 5)
+        // emit_command with Batch{Delete, Insert} to replace "world" -> "rust"
         let cmd_json = json!({
-            "Replace": {"file": "f.txt", "offset": 6, "old_text": "world", "new_text": "rust"}
+            "Batch": {"commands": [
+                {"Delete": {"file": "f.txt", "offset": 6, "len": 5, "deleted_text": "world"}},
+                {"Insert": {"file": "f.txt", "offset": 6, "text": "rust"}}
+            ]}
         });
         let call = make_call("emit_command", json!({"command": cmd_json}));
         let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
@@ -1301,6 +1441,8 @@ mod tests {
         const TOOLS_WITH_REQUIRED: &[(&str, &[&str])] = &[
             ("read_file", &["path"]),
             ("write_file", &["path", "content"]),
+            ("str_replace", &["path", "old_str", "new_str"]),
+            ("insert_lines", &["path", "line", "text"]),
             ("emit_command", &["command"]),
             ("query_trace_graph", &["req_id"]),
             ("query_code_element", &["file", "name"]),
@@ -1313,7 +1455,7 @@ mod tests {
             #![proptest_config(ProptestConfig::with_cases(100))]
             #[test]
             fn prop_missing_arg_never_panics(
-                tool_idx in 0usize..8,
+                tool_idx in 0usize..10,
                 arg_idx_seed in 0usize..10,
             ) {
                 let (tool_name, required_args) = TOOLS_WITH_REQUIRED[tool_idx];
@@ -1339,7 +1481,7 @@ mod tests {
                 }
 
                 let call = ToolCall {
-                    tool_name: tool_name.into(),
+                    name: tool_name.into(),
                     arguments: serde_json::Value::Object(args),
                 };
 
@@ -1397,6 +1539,250 @@ mod tests {
         let u2 = state.undo();
         assert!(u2);
         assert_eq!(state.get_content(&rel).unwrap(), "AAAA");
+    }
+
+    // ===== Undo tests for all agent tool operations =====
+
+    #[test]
+    fn test_str_replace_undo_restores_buffer() {
+        let tmp = TempDir::new().unwrap();
+        std::fs::write(tmp.path().join("code.rs"), "fn main() {\n    println!(\"hello\");\n}\n").unwrap();
+
+        let mut state = AppState::new();
+        let symbols = SymbolTable::new();
+        let graph = TraceGraph::new();
+        let perms = full_perms();
+
+        let rel = PathBuf::from("code.rs");
+        let original = "fn main() {\n    println!(\"hello\");\n}\n";
+        state.load_file(rel.clone(), original.into());
+
+        let call = make_call("str_replace", json!({
+            "path": "code.rs",
+            "old_str": "println!(\"hello\")",
+            "new_str": "println!(\"world\")"
+        }));
+        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
+        assert!(result.success, "str_replace failed: {}", result.content);
+
+        assert_eq!(state.get_content(&rel).unwrap(), "fn main() {\n    println!(\"world\");\n}\n");
+
+        // Undo should restore original
+        let undone = state.undo();
+        assert!(undone);
+        assert_eq!(state.get_content(&rel).unwrap(), original);
+    }
+
+    #[test]
+    fn test_str_replace_multiple_undo_redo() {
+        let tmp = TempDir::new().unwrap();
+        std::fs::write(tmp.path().join("f.txt"), "aaa bbb ccc").unwrap();
+
+        let mut state = AppState::new();
+        let symbols = SymbolTable::new();
+        let graph = TraceGraph::new();
+        let perms = full_perms();
+
+        let rel = PathBuf::from("f.txt");
+        state.load_file(rel.clone(), "aaa bbb ccc".into());
+
+        // First replace
+        let call1 = make_call("str_replace", json!({"path": "f.txt", "old_str": "aaa", "new_str": "xxx"}));
+        let r1 = execute_tool(&call1, tmp.path(), &mut state, &symbols, &graph, &perms);
+        assert!(r1.success);
+        assert_eq!(state.get_content(&rel).unwrap(), "xxx bbb ccc");
+
+        // Second replace
+        let call2 = make_call("str_replace", json!({"path": "f.txt", "old_str": "bbb", "new_str": "yyy"}));
+        let r2 = execute_tool(&call2, tmp.path(), &mut state, &symbols, &graph, &perms);
+        assert!(r2.success);
+        assert_eq!(state.get_content(&rel).unwrap(), "xxx yyy ccc");
+
+        // Undo second
+        assert!(state.undo());
+        assert_eq!(state.get_content(&rel).unwrap(), "xxx bbb ccc");
+
+        // Undo first
+        assert!(state.undo());
+        assert_eq!(state.get_content(&rel).unwrap(), "aaa bbb ccc");
+
+        // Redo first
+        assert!(state.redo());
+        assert_eq!(state.get_content(&rel).unwrap(), "xxx bbb ccc");
+
+        // Redo second
+        assert!(state.redo());
+        assert_eq!(state.get_content(&rel).unwrap(), "xxx yyy ccc");
+    }
+
+    #[test]
+    fn test_str_replace_nonunique_fails() {
+        let tmp = TempDir::new().unwrap();
+        std::fs::write(tmp.path().join("f.txt"), "foo foo foo").unwrap();
+
+        let mut state = AppState::new();
+        let symbols = SymbolTable::new();
+        let graph = TraceGraph::new();
+        let perms = full_perms();
+
+        state.load_file(PathBuf::from("f.txt"), "foo foo foo".into());
+
+        let call = make_call("str_replace", json!({"path": "f.txt", "old_str": "foo", "new_str": "bar"}));
+        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
+        assert!(!result.success);
+        assert!(result.content.contains("3 times"));
+    }
+
+    #[test]
+    fn test_str_replace_not_found_fails() {
+        let tmp = TempDir::new().unwrap();
+        std::fs::write(tmp.path().join("f.txt"), "hello world").unwrap();
+
+        let mut state = AppState::new();
+        let symbols = SymbolTable::new();
+        let graph = TraceGraph::new();
+        let perms = full_perms();
+
+        state.load_file(PathBuf::from("f.txt"), "hello world".into());
+
+        let call = make_call("str_replace", json!({"path": "f.txt", "old_str": "xyz", "new_str": "abc"}));
+        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
+        assert!(!result.success);
+        assert!(result.content.contains("not found"));
+    }
+
+    #[test]
+    fn test_insert_lines_undo_restores_buffer() {
+        let tmp = TempDir::new().unwrap();
+        std::fs::write(tmp.path().join("f.txt"), "line1\nline2\nline3\n").unwrap();
+
+        let mut state = AppState::new();
+        let symbols = SymbolTable::new();
+        let graph = TraceGraph::new();
+        let perms = full_perms();
+
+        let rel = PathBuf::from("f.txt");
+        let original = "line1\nline2\nline3\n";
+        state.load_file(rel.clone(), original.into());
+
+        // Insert at line 1 (between line1 and line2)
+        let call = make_call("insert_lines", json!({"path": "f.txt", "line": 1, "text": "inserted"}));
+        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
+        assert!(result.success, "insert_lines failed: {}", result.content);
+
+        assert_eq!(state.get_content(&rel).unwrap(), "line1\ninserted\nline2\nline3\n");
+
+        // Undo should restore original
+        let undone = state.undo();
+        assert!(undone);
+        assert_eq!(state.get_content(&rel).unwrap(), original);
+    }
+
+    #[test]
+    fn test_insert_lines_at_beginning() {
+        let tmp = TempDir::new().unwrap();
+        std::fs::write(tmp.path().join("f.txt"), "existing\n").unwrap();
+
+        let mut state = AppState::new();
+        let symbols = SymbolTable::new();
+        let graph = TraceGraph::new();
+        let perms = full_perms();
+
+        let rel = PathBuf::from("f.txt");
+        state.load_file(rel.clone(), "existing\n".into());
+
+        let call = make_call("insert_lines", json!({"path": "f.txt", "line": 0, "text": "header"}));
+        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
+        assert!(result.success);
+        assert_eq!(state.get_content(&rel).unwrap(), "header\nexisting\n");
+
+        assert!(state.undo());
+        assert_eq!(state.get_content(&rel).unwrap(), "existing\n");
+    }
+
+    #[test]
+    fn test_write_file_then_str_replace_undo_chain() {
+        let tmp = TempDir::new().unwrap();
+        std::fs::write(tmp.path().join("f.txt"), "ORIGINAL").unwrap();
+
+        let mut state = AppState::new();
+        let symbols = SymbolTable::new();
+        let graph = TraceGraph::new();
+        let perms = full_perms();
+
+        let rel = PathBuf::from("f.txt");
+        state.load_file(rel.clone(), "ORIGINAL".into());
+
+        // write_file replaces whole content
+        let call1 = make_call("write_file", json!({"path": "f.txt", "content": "AAA BBB CCC"}));
+        let r1 = execute_tool(&call1, tmp.path(), &mut state, &symbols, &graph, &perms);
+        assert!(r1.success);
+        assert_eq!(state.get_content(&rel).unwrap(), "AAA BBB CCC");
+
+        // str_replace does a surgical edit
+        let call2 = make_call("str_replace", json!({"path": "f.txt", "old_str": "BBB", "new_str": "XXX"}));
+        let r2 = execute_tool(&call2, tmp.path(), &mut state, &symbols, &graph, &perms);
+        assert!(r2.success);
+        assert_eq!(state.get_content(&rel).unwrap(), "AAA XXX CCC");
+
+        // Undo str_replace
+        assert!(state.undo());
+        assert_eq!(state.get_content(&rel).unwrap(), "AAA BBB CCC");
+
+        // Undo write_file
+        assert!(state.undo());
+        assert_eq!(state.get_content(&rel).unwrap(), "ORIGINAL");
+    }
+
+    #[test]
+    fn test_all_tools_undo_full_chain() {
+        let tmp = TempDir::new().unwrap();
+        std::fs::write(tmp.path().join("chain.txt"), "start content").unwrap();
+
+        let mut state = AppState::new();
+        let symbols = SymbolTable::new();
+        let graph = TraceGraph::new();
+        let perms = full_perms();
+
+        let rel = PathBuf::from("chain.txt");
+        state.load_file(rel.clone(), "start content".into());
+
+        // 1. write_file → complete overwrite
+        let c1 = make_call("write_file", json!({"path": "chain.txt", "content": "alpha beta gamma"}));
+        assert!(execute_tool(&c1, tmp.path(), &mut state, &symbols, &graph, &perms).success);
+        assert_eq!(state.get_content(&rel).unwrap(), "alpha beta gamma");
+
+        // 2. str_replace → surgical patch
+        let c2 = make_call("str_replace", json!({"path": "chain.txt", "old_str": "beta", "new_str": "BETA"}));
+        assert!(execute_tool(&c2, tmp.path(), &mut state, &symbols, &graph, &perms).success);
+        assert_eq!(state.get_content(&rel).unwrap(), "alpha BETA gamma");
+
+        // 3. insert_lines → insert at line 0
+        let c3 = make_call("insert_lines", json!({"path": "chain.txt", "line": 0, "text": "// header"}));
+        assert!(execute_tool(&c3, tmp.path(), &mut state, &symbols, &graph, &perms).success);
+        assert_eq!(state.get_content(&rel).unwrap(), "// header\nalpha BETA gamma");
+
+        // 4. emit_command → raw Insert
+        let cmd_json = json!({"Insert": {"file": "chain.txt", "offset": 0, "text": "!"}});
+        let c4 = make_call("emit_command", json!({"command": cmd_json}));
+        assert!(execute_tool(&c4, tmp.path(), &mut state, &symbols, &graph, &perms).success);
+        assert_eq!(state.get_content(&rel).unwrap(), "!// header\nalpha BETA gamma");
+
+        // Undo all in reverse order
+        assert!(state.undo()); // undo emit_command
+        assert_eq!(state.get_content(&rel).unwrap(), "// header\nalpha BETA gamma");
+
+        assert!(state.undo()); // undo insert_lines
+        assert_eq!(state.get_content(&rel).unwrap(), "alpha BETA gamma");
+
+        assert!(state.undo()); // undo str_replace
+        assert_eq!(state.get_content(&rel).unwrap(), "alpha beta gamma");
+
+        assert!(state.undo()); // undo write_file
+        assert_eq!(state.get_content(&rel).unwrap(), "start content");
+
+        // No more undos
+        assert!(!state.undo());
     }
 
     // ===== Static Dockerfile hardening assertions (Req 6) =====

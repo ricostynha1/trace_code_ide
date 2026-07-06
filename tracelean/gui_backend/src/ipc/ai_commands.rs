@@ -7,6 +7,7 @@ use crate::{
     AppStateWrapper, AiSettingsWrapper, AiLogWrapper, AiSessionStatsWrapper,
     MockProviderWrapper, PendingDiffsWrapper, TraceGraphWrapper, UndoTreeCacheWrapper,
     SymbolTableWrapper, AiSettings, McpClientWrapper, invalidate_undo_cache, get_provider,
+    ToolCallEvent, ToolCallStatus,
 };
 use tauri::{AppHandle, Emitter, State};
 
@@ -158,13 +159,13 @@ async fn inject_tools_system_prompt(
 }
 
 /// Parse tool_call code blocks from an AI response.
-/// Only recognizes properly fenced ```tool_call blocks.
-fn extract_tool_calls(content: &str) -> Vec<ai::tools::ToolCall> {
+/// Parses AgentToolCall (MCP call + optional ui metadata).
+fn extract_tool_calls(content: &str) -> Vec<ai::tools::AgentToolCall> {
     let mut calls = Vec::new();
     let blocks = ai::templates::extract_code_blocks(content);
     for block in &blocks {
         if block.language == "tool_call" {
-            if let Ok(tc) = serde_json::from_str::<ai::tools::ToolCall>(&block.content) {
+            if let Ok(tc) = serde_json::from_str::<ai::tools::AgentToolCall>(&block.content) {
                 calls.push(tc);
             }
         }
@@ -174,6 +175,7 @@ fn extract_tool_calls(content: &str) -> Vec<ai::tools::ToolCall> {
 
 #[tauri::command]
 pub async fn ai_chat(
+    app: AppHandle,
     settings: State<'_, AiSettingsWrapper>,
     log_state: State<'_, AiLogWrapper>,
     stats: State<'_, AiSessionStatsWrapper>,
@@ -272,17 +274,46 @@ pub async fn ai_chat(
 
                 let mut tool_results = String::new();
                 for tc in &tool_calls {
+                    let reason = tc.reason().map(|s| s.to_string());
+                    let mcp_call = tc.to_mcp_call();
+
+                    // Emit "running" event
+                    let _ = app.emit("tool-call", ToolCallEvent {
+                        tool_name: mcp_call.name.clone(),
+                        status: ToolCallStatus::Running,
+                        duration_ms: None,
+                        depth: 0,
+                        reason: reason.clone(),
+                    });
+
+                    let start_tool = std::time::Instant::now();
                     let result = {
                         let mut s = state.0.lock().map_err(|e| e.to_string())?;
                         let sym = symbols_state.0.lock().map_err(|e| e.to_string())?;
                         let g = graph_state.0.lock().map_err(|e| e.to_string())?;
                         let root = s.project_root().cloned().unwrap_or_default();
                         let perms = ai::tool_executor::AgentPermissions::full_access("chat");
-                        ai::tool_executor::execute_tool(tc, &root, &mut s, &sym, &g, &perms)
+                        ai::tool_executor::execute_tool(&mcp_call, &root, &mut s, &sym, &g, &perms)
                     };
+                    let tool_duration = start_tool.elapsed().as_millis() as u64;
+
+                    // Emit "completed" or "failed" event
+                    let status = if result.success {
+                        ToolCallStatus::Completed
+                    } else {
+                        ToolCallStatus::Failed { error: result.content.clone() }
+                    };
+                    let _ = app.emit("tool-call", ToolCallEvent {
+                        tool_name: mcp_call.name.clone(),
+                        status,
+                        duration_ms: Some(tool_duration),
+                        depth: 0,
+                        reason,
+                    });
+
                     tool_results.push_str(&format!(
                         "Tool `{}` result (success={}):\n{}\n\n",
-                        tc.tool_name, result.success, result.content
+                        mcp_call.name, result.success, result.content
                     ));
                 }
 

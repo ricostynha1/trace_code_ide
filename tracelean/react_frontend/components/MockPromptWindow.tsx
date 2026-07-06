@@ -85,6 +85,13 @@ export function MockPromptWindow() {
     navigator.clipboard.writeText(text);
   };
 
+  // Copy only the last user message (most common use case for external AI)
+  const copyLastMessage = () => {
+    if (!pending || pending.messages.length === 0) return;
+    const last = pending.messages[pending.messages.length - 1];
+    navigator.clipboard.writeText(last.content);
+  };
+
   if (!pending) return null;
 
   return (
@@ -95,8 +102,11 @@ export function MockPromptWindow() {
           <span className="mock-prompt-meta">
             Model: {pending.model.display_name} | {new Date(pending.timestamp).toLocaleTimeString()}
           </span>
-          <button className="mock-copy-btn" onClick={copyPrompt} title="Copy prompt to clipboard">
-            📋 Copy Prompt
+          <button className="mock-copy-btn" onClick={copyPrompt} title="Copy full prompt to clipboard">
+            📋 Copy Full Prompt
+          </button>
+          <button className="mock-copy-btn" onClick={copyLastMessage} title="Copy last message only">
+            📄 Copy Last Message
           </button>
         </div>
 

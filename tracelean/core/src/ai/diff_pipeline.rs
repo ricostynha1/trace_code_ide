@@ -157,13 +157,8 @@ pub fn accepted_hunks_to_commands(diff: &PendingDiff) -> Vec<Command> {
 
     let new_content = result_lines.join("\n");
 
-    // Emit as a single Replace command (attributed to AI agent)
-    vec![Command::Replace {
-        file: file_path,
-        offset: 0,
-        old_text: diff.original.clone(),
-        new_text: new_content,
-    }]
+    // Emit as a Delete+Insert batch (attributed to AI agent)
+    vec![Command::replace(file_path, 0, diff.original.clone(), new_content)]
 }
 
 /// Simple LCS for line-based diff.

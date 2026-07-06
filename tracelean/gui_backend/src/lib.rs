@@ -1,29 +1,25 @@
-//! TraceLean IDE - Rust backend
-//! Thin orchestrator: module declarations, shared state, and app entry point.
-//! IPC commands live in `ipc/` submodules.
+//! TraceLean IDE — Tauri GUI backend.
+//! Thin shell: state wrappers, IPC dispatch, Tauri app entry point.
+//! All domain logic lives in `tracelean_core`.
 
-pub mod ai;
-pub mod commands;
-pub mod debug_nodes;
 pub mod ipc;
-pub mod parser;
-pub mod persistence;
-pub mod requirements;
-pub mod service;
-pub mod state;
-pub mod trace_graph;
-pub mod undo_tree;
 
-use commands::Command;
-use parser::SymbolTable;
-use serde::{Deserialize, Serialize};
-use state::AppState;
-use trace_graph::TraceGraph;
-use ai::{InteractionLog, tracking::SessionStats};
-use std::collections::HashMap;
-use std::sync::Mutex;
+// Re-export core for IPC modules to use
+pub use tracelean_core as core;
+pub use tracelean_core::{
+    ai, commands, parser, persistence, requirements, service, state, surgical_edit, trace_graph, undo_tree,
+    Command, AppState, SymbolTable, TraceGraph,
+    AiSettings, InteractionLog, SessionStats, PendingDiff, McpClientManager, AgentPermissions,
+    FileEntry, TraceGraphStats, UndoTreeView, UndoNodeView, CommandLogEntry,
+    ToolCallEvent, ToolCallStatus,
+    command_summary, command_file, command_affects_file,
+    SharedApp, EventSink,
+};
 
-// ─── Shared State Wrappers ───────────────────────────────────────────────────
+use std::sync::{Arc, Mutex};
+
+// ─── Tauri State Wrappers ────────────────────────────────────────────────────
+// These wrap the core types for Tauri's managed state system.
 
 pub struct AppStateWrapper(pub Mutex<AppState>);
 pub struct SymbolTableWrapper(pub Mutex<SymbolTable>);
@@ -43,127 +39,39 @@ impl UndoTreeCache {
 
 pub struct UndoTreeCacheWrapper(pub Mutex<UndoTreeCache>);
 
-// ─── AI State ────────────────────────────────────────────────────────────────
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AiSettings {
-    pub active_provider: ai::ProviderKind,
-    pub openrouter_api_key: Option<String>,
-    pub bedrock_access_key: Option<String>,
-    pub bedrock_secret_key: Option<String>,
-    pub bedrock_region: Option<String>,
-    pub selected_model: Option<ai::ModelConfig>,
-}
-
-impl Default for AiSettings {
-    fn default() -> Self {
-        Self {
-            active_provider: ai::ProviderKind::Mock,
-            openrouter_api_key: None,
-            bedrock_access_key: None,
-            bedrock_secret_key: None,
-            bedrock_region: None,
-            selected_model: None,
-        }
-    }
-}
+// ─── AI Tauri State Wrappers ─────────────────────────────────────────────────
 
 pub struct AiSettingsWrapper(pub Mutex<AiSettings>);
 pub struct AiLogWrapper(pub Mutex<InteractionLog>);
 pub struct AiSessionStatsWrapper(pub Mutex<SessionStats>);
 pub struct MockPendingWrapper(pub Mutex<Vec<ai::mock::MockPendingRequest>>);
-pub struct MockProviderWrapper(pub std::sync::Arc<tokio::sync::Mutex<Option<std::sync::Arc<ai::mock::MockProvider>>>>);
-pub struct PendingDiffsWrapper(pub Mutex<Vec<ai::diff_pipeline::PendingDiff>>);
+pub struct MockProviderWrapper(pub Arc<tokio::sync::Mutex<Option<Arc<ai::mock::MockProvider>>>>);
+pub struct PendingDiffsWrapper(pub Mutex<Vec<PendingDiff>>);
 
 // ─── MCP & Permissions State ─────────────────────────────────────────────────
 
-pub struct McpHostPermissionsWrapper(pub Mutex<ai::AgentPermissions>);
-pub struct McpClientWrapper(pub tokio::sync::Mutex<ai::mcp_client::McpClientManager>);
-pub struct AgentPermissionsStore(pub Mutex<HashMap<String, ai::AgentPermissions>>);
+pub struct McpHostPermissionsWrapper(pub Mutex<AgentPermissions>);
+pub struct McpClientWrapper(pub tokio::sync::Mutex<McpClientManager>);
+pub struct AgentPermissionsStore(pub Mutex<std::collections::HashMap<String, AgentPermissions>>);
 
-// ─── Shared IPC Types ────────────────────────────────────────────────────────
+// ─── Tauri EventSink Implementation ─────────────────────────────────────────
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct FileEntry {
-    pub name: String,
-    pub path: String,
-    pub is_dir: bool,
+pub struct TauriEventSink {
+    pub app_handle: tauri::AppHandle,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TraceGraphStats {
-    pub nodes: usize,
-    pub edges: usize,
+impl EventSink for TauriEventSink {
+    fn emit(&self, event: &str, payload: &str) {
+        use tauri::Emitter;
+        let _ = self.app_handle.emit(event, payload);
+    }
 }
 
-#[derive(Debug, Clone, Serialize)]
-pub struct UndoTreeView {
-    pub nodes: Vec<UndoNodeView>,
-    pub current_id: Option<String>,
-}
-
-#[derive(Debug, Clone, Serialize)]
-pub struct UndoNodeView {
-    pub id: String,
-    pub parent: Option<String>,
-    pub children: Vec<String>,
-    pub command_summary: String,
-    pub file: Option<String>,
-    pub timestamp: String,
-    pub is_commit_point: bool,
-    pub commit_name: Option<String>,
-}
-
-#[derive(Debug, Clone, Serialize)]
-pub struct CommandLogEntry {
-    pub index: usize,
-    pub summary: String,
-}
-
-// ─── Helpers (used by IPC modules) ──────────────────────────────────────────
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
 pub fn invalidate_undo_cache(cache: &tauri::State<'_, UndoTreeCacheWrapper>) {
     if let Ok(mut c) = cache.0.lock() {
         c.view = None;
-    }
-}
-
-pub fn command_summary(cmd: &Command) -> String {
-    match cmd {
-        Command::Insert { file, text, offset, .. } => {
-            let preview = if text.len() > 20 { format!("{}...", &text[..20]) } else { text.clone() };
-            format!("Insert @{}:{} \"{}\"", file.display(), offset, preview)
-        }
-        Command::Delete { file, offset, len, .. } => format!("Delete @{}:{} len={}", file.display(), offset, len),
-        Command::Replace { file, offset, .. } => format!("Replace @{}:{}", file.display(), offset),
-        Command::SetCursor { file, new_pos, .. } => format!("Cursor @{}:{}:{}", file.display(), new_pos.line, new_pos.col),
-        Command::SetSelection { file, .. } => format!("Select @{}", file.display()),
-        Command::CreateFile { path } => format!("Create {}", path.display()),
-        Command::DeleteFile { path, .. } => format!("Delete file {}", path.display()),
-        Command::RenameFile { from, to } => format!("Rename {} → {}", from.display(), to.display()),
-        Command::Batch { commands } => format!("Batch ({} cmds)", commands.len()),
-    }
-}
-
-pub fn command_file(cmd: &Command) -> Option<String> {
-    match cmd {
-        Command::Insert { file, .. } | Command::Delete { file, .. }
-        | Command::Replace { file, .. } | Command::SetCursor { file, .. }
-        | Command::SetSelection { file, .. } => Some(file.to_string_lossy().to_string()),
-        Command::CreateFile { path } | Command::DeleteFile { path, .. } => Some(path.to_string_lossy().to_string()),
-        Command::RenameFile { from, .. } => Some(from.to_string_lossy().to_string()),
-        Command::Batch { .. } => None,
-    }
-}
-
-pub fn command_affects_file(cmd: &Command, filter: &str) -> bool {
-    match cmd {
-        Command::Insert { file, .. } | Command::Delete { file, .. }
-        | Command::Replace { file, .. } | Command::SetCursor { file, .. }
-        | Command::SetSelection { file, .. } => file.to_string_lossy() == filter,
-        Command::CreateFile { path } | Command::DeleteFile { path, .. } => path.to_string_lossy() == filter,
-        Command::RenameFile { from, to } => from.to_string_lossy() == filter || to.to_string_lossy() == filter,
-        Command::Batch { commands } => commands.iter().any(|c| command_affects_file(c, filter)),
     }
 }
 
@@ -198,7 +106,7 @@ pub async fn get_provider(
             let mut guard = mock_provider.0.lock().await;
             if guard.is_none() {
                 let (p, _rx) = ai::mock::MockProvider::new();
-                *guard = Some(std::sync::Arc::new(p));
+                *guard = Some(Arc::new(p));
             }
             drop(guard);
             Ok(Box::new(SharedMockProvider { inner: mock_provider.0.clone() }))
@@ -208,7 +116,7 @@ pub async fn get_provider(
 
 /// Thin wrapper around the shared MockProvider Arc.
 struct SharedMockProvider {
-    inner: std::sync::Arc<tokio::sync::Mutex<Option<std::sync::Arc<ai::mock::MockProvider>>>>,
+    inner: Arc<tokio::sync::Mutex<Option<Arc<ai::mock::MockProvider>>>>,
 }
 
 #[async_trait::async_trait]
@@ -257,11 +165,11 @@ pub fn run() {
         .manage(AiLogWrapper(Mutex::new(InteractionLog::new())))
         .manage(AiSessionStatsWrapper(Mutex::new(SessionStats::default())))
         .manage(MockPendingWrapper(Mutex::new(Vec::new())))
-        .manage(MockProviderWrapper(std::sync::Arc::new(tokio::sync::Mutex::new(None))))
+        .manage(MockProviderWrapper(Arc::new(tokio::sync::Mutex::new(None))))
         .manage(PendingDiffsWrapper(Mutex::new(Vec::new())))
-        .manage(McpHostPermissionsWrapper(Mutex::new(ai::AgentPermissions::full_access("mcp-host"))))
-        .manage(McpClientWrapper(tokio::sync::Mutex::new(ai::mcp_client::McpClientManager::new())))
-        .manage(AgentPermissionsStore(Mutex::new(HashMap::new())))
+        .manage(McpHostPermissionsWrapper(Mutex::new(AgentPermissions::full_access("mcp-host"))))
+        .manage(McpClientWrapper(tokio::sync::Mutex::new(McpClientManager::new())))
+        .manage(AgentPermissionsStore(Mutex::new(std::collections::HashMap::new())))
         .invoke_handler(tauri::generate_handler![
             // Editor
             ipc::editor::apply_command,

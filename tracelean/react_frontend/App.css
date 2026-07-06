@@ -479,6 +479,74 @@ html, body, #root {
   margin: 0;
 }
 
+/* Tool Call Messages — visually distinct from regular chat */
+.ai-tool-calls {
+  margin: 4px 0;
+  padding: 4px 8px;
+  border-left: 3px solid #d97706;
+  background: #1a1a2e;
+  border-radius: 4px;
+}
+
+.ai-tool-call {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 0;
+  font-size: 11px;
+  font-family: 'Courier New', monospace;
+  color: #b8b8b8;
+}
+
+.ai-tool-call + .ai-tool-call {
+  border-top: 1px solid #2a2a3e;
+}
+
+.ai-tool-icon {
+  flex-shrink: 0;
+  width: 16px;
+  text-align: center;
+}
+
+.ai-tool-call-running .ai-tool-icon {
+  animation: pulse 1s infinite;
+}
+
+.ai-tool-call-completed .ai-tool-icon {
+  color: #4ec9b0;
+}
+
+.ai-tool-call-failed .ai-tool-icon {
+  color: #f44747;
+}
+
+.ai-tool-name {
+  font-weight: 600;
+  color: #d97706;
+}
+
+.ai-tool-reason {
+  color: #9ca3af;
+  font-style: italic;
+  font-family: inherit;
+}
+
+.ai-tool-duration {
+  color: #666;
+  font-size: 10px;
+  margin-left: auto;
+}
+
+.ai-tool-error {
+  color: #f44747;
+  font-size: 10px;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
 .ai-input-area {
   display: flex;
   gap: 4px;

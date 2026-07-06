@@ -1,5 +1,6 @@
 //! Command types — every mutation to AppState is one of these.
 //! Each variant carries enough data to compute its inverse.
+//! Text edits are ONLY Insert and Delete. Replace = Delete + Insert (use Batch).
 
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
@@ -20,9 +21,10 @@ pub struct Range {
 }
 
 /// Every state mutation is a Command. No exceptions.
+/// Text edits: Insert and Delete only. Use Batch{Delete, Insert} for replacement.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Command {
-    // --- Text editing ---
+    // --- Text editing (only two primitives) ---
     Insert {
         file: PathBuf,
         offset: usize,
@@ -33,13 +35,6 @@ pub enum Command {
         offset: usize,
         len: usize,
         deleted_text: String,
-    },
-    // TO EVALUATE is this necessary? this is equal to a delete forllowing a insert
-    Replace {
-        file: PathBuf,
-        offset: usize,
-        old_text: String,
-        new_text: String,
     },
 
     // --- Cursor / selection ---
@@ -67,7 +62,7 @@ pub enum Command {
         to: PathBuf,
     },
 
-    // --- Multi-file atomic group ---
+    // --- Multi-command atomic group ---
     Batch {
         commands: Vec<Command>,
     },
@@ -92,17 +87,6 @@ impl Command {
                 file: file.clone(),
                 offset: *offset,
                 text: deleted_text.clone(),
-            },
-            Command::Replace {
-                file,
-                offset,
-                old_text,
-                new_text,
-            } => Command::Replace {
-                file: file.clone(),
-                offset: *offset,
-                old_text: new_text.clone(),
-                new_text: old_text.clone(),
             },
             Command::SetCursor {
                 file,
@@ -143,6 +127,23 @@ impl Command {
     pub fn id(&self) -> Uuid {
         Uuid::new_v4()
     }
+
+    /// Helper: create a Batch that does Delete then Insert at same offset (replacement).
+    pub fn replace(file: PathBuf, offset: usize, old_text: String, new_text: String) -> Command {
+        Command::Batch {
+            commands: vec![
+                Command::Delete {
+                    file: file.clone(),
+                    offset,
+                    len: old_text.len(),
+                    deleted_text: old_text,
+                },
+                Command::Insert {
+                    file,
+                    offset,
+                    text: new_text,
+                },
+            ],
+        }
+    }
 }
-
-

@@ -77,6 +77,22 @@ interface MockPendingRequest {
   timestamp: string;
 }
 
+interface ToolCallEvent {
+  tool_name: string;
+  reason: string;
+  status: "running" | "completed" | { failed: { error: string } };
+  duration_ms: number | null;
+  depth: number;
+}
+
+interface ToolCallDisplay {
+  tool_name: string;
+  status: "running" | "completed" | "failed";
+  error?: string;
+  duration_ms?: number;
+  reason?: string;
+}
+
 type Tab = "chat" | "settings" | "log" | "stats";
 
 export function AiChatPanel({ visible, onClose }: Props) {
@@ -94,6 +110,7 @@ export function AiChatPanel({ visible, onClose }: Props) {
   const [mockResponse, setMockResponse] = useState("");
   const [streamingContent, setStreamingContent] = useState<string>("");
   const [useStreaming, setUseStreaming] = useState(true);
+  const [toolCalls, setToolCalls] = useState<ToolCallDisplay[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const mockPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -131,6 +148,37 @@ export function AiChatPanel({ visible, onClose }: Props) {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  // Listen for tool-call events from backend
+  useEffect(() => {
+    const unlisten = listen<ToolCallEvent>("tool-call", (event) => {
+      const e = event.payload;
+      const status = typeof e.status === "string" ? e.status : "failed";
+      const error = typeof e.status === "object" && "failed" in e.status ? e.status.failed.error : undefined;
+      const display: ToolCallDisplay = {
+        tool_name: e.tool_name,
+        status: status as "running" | "completed" | "failed",
+        error,
+        duration_ms: e.duration_ms ?? undefined,
+        reason: e.reason ?? undefined,
+      };
+
+      setToolCalls((prev) => {
+        // If this is a completed/failed update for a running tool, replace it
+        const existing = prev.findIndex(
+          (tc) => tc.tool_name === display.tool_name && tc.status === "running"
+        );
+        if (existing >= 0 && display.status !== "running") {
+          const updated = [...prev];
+          updated[existing] = display;
+          return updated;
+        }
+        return [...prev, display];
+      });
+    });
+
+    return () => { unlisten.then((fn) => fn()); };
+  }, []);
 
   const loadSettings = async () => {
     try {
@@ -172,6 +220,7 @@ export function AiChatPanel({ visible, onClose }: Props) {
     setLoading(true);
     setError(null);
     setStreamingContent("");
+    setToolCalls([]);
 
     try {
       if (useStreaming) {
@@ -246,6 +295,23 @@ export function AiChatPanel({ visible, onClose }: Props) {
                 <pre className="ai-msg-content">{m.content}</pre>
               </div>
             ))}
+            {toolCalls.length > 0 && (
+              <div className="ai-tool-calls">
+                {toolCalls.map((tc, i) => (
+                  <div key={i} className={`ai-tool-call ai-tool-call-${tc.status}`}>
+                    <span className="ai-tool-icon">
+                      {tc.status === "running" ? "⏳" : tc.status === "completed" ? "✓" : "✗"}
+                    </span>
+                    <span className="ai-tool-name">{tc.tool_name}</span>
+                    {tc.reason && <span className="ai-tool-reason">{tc.reason}</span>}
+                    {tc.duration_ms != null && (
+                      <span className="ai-tool-duration">{tc.duration_ms}ms</span>
+                    )}
+                    {tc.error && <span className="ai-tool-error">{tc.error}</span>}
+                  </div>
+                ))}
+              </div>
+            )}
             {loading && mockPending.length === 0 && !streamingContent && <div className="ai-msg ai-msg-loading">Thinking...</div>}
             {loading && streamingContent && (
               <div className="ai-msg ai-msg-assistant">
