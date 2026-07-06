@@ -61,12 +61,12 @@ fn apply_replace() {
     let file = PathBuf::from("test.rs");
     state.load_file(file.clone(), "hello world".into());
 
-    state.apply(Command::Replace {
-        file: file.clone(),
-        offset: 6,
-        old_text: "world".into(),
-        new_text: "rust".into(),
-    });
+    state.apply(Command::replace(
+        file.clone(),
+        6,
+        "world".into(),
+        "rust".into(),
+    ));
 
     assert_eq!(state.get_content(&file), Some("hello rust"));
 }
@@ -337,12 +337,12 @@ fn undo_replace_restores_old_text() {
     let file = PathBuf::from("test.rs");
     state.load_file(file.clone(), "foo bar".into());
 
-    state.apply(Command::Replace {
-        file: file.clone(),
-        offset: 4,
-        old_text: "bar".into(),
-        new_text: "baz".into(),
-    });
+    state.apply(Command::replace(
+        file.clone(),
+        4,
+        "bar".into(),
+        "baz".into(),
+    ));
     assert_eq!(state.get_content(&file), Some("foo baz"));
 
     state.undo();

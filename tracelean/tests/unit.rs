@@ -9,4 +9,6 @@ mod unit {
     mod test_trace_graph;
     mod test_requirements;
     mod test_highlight_queries;
+    mod test_surgical_edit;
+    mod test_surgical_edit_undo;
 }

@@ -12,7 +12,8 @@ name = "unit"
 path = "unit.rs"
 
 [dev-dependencies]
-tracelean_lib = { path = "../src-tauri", package = "tracelean" }
+tracelean_lib = { path = "../gui_backend", package = "tracelean" }
+tracelean-core = { path = "../core" }
 tempfile = "3"
 chrono = { version = "0.4", features = ["serde"] }
 serde_json = "1"

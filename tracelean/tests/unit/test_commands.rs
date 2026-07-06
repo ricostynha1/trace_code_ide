@@ -47,26 +47,66 @@ fn delete_inverse_is_insert() {
 }
 
 #[test]
-fn replace_inverse_swaps_old_new() {
-    let cmd = Command::Replace {
-        file: PathBuf::from("test.rs"),
-        offset: 5,
-        old_text: "foo".into(),
-        new_text: "bar".into(),
-    };
-    let inv = cmd.inverse();
-    match inv {
-        Command::Replace {
-            offset,
-            old_text,
-            new_text,
-            ..
-        } => {
-            assert_eq!(offset, 5);
-            assert_eq!(old_text, "bar");
-            assert_eq!(new_text, "foo");
+fn replace_helper_produces_batch_delete_insert() {
+    let cmd = Command::replace(
+        PathBuf::from("test.rs"),
+        5,
+        "foo".into(),
+        "bar".into(),
+    );
+    match cmd {
+        Command::Batch { commands } => {
+            assert_eq!(commands.len(), 2);
+            match &commands[0] {
+                Command::Delete { offset, len, deleted_text, .. } => {
+                    assert_eq!(*offset, 5);
+                    assert_eq!(*len, 3);
+                    assert_eq!(deleted_text, "foo");
+                }
+                _ => panic!("Expected Delete"),
+            }
+            match &commands[1] {
+                Command::Insert { offset, text, .. } => {
+                    assert_eq!(*offset, 5);
+                    assert_eq!(text, "bar");
+                }
+                _ => panic!("Expected Insert"),
+            }
         }
-        _ => panic!("Expected Replace"),
+        _ => panic!("Expected Batch"),
+    }
+}
+
+#[test]
+fn replace_helper_inverse_is_batch_delete_insert_swapped() {
+    let cmd = Command::replace(
+        PathBuf::from("test.rs"),
+        5,
+        "foo".into(),
+        "bar".into(),
+    );
+    let inv = cmd.inverse();
+    // Inverse of Batch{Delete("foo"), Insert("bar")} = Batch{Delete("bar"), Insert("foo")}
+    match inv {
+        Command::Batch { commands } => {
+            assert_eq!(commands.len(), 2);
+            // Reversed order: inverse of Insert("bar") first, then inverse of Delete("foo")
+            match &commands[0] {
+                Command::Delete { offset, deleted_text, .. } => {
+                    assert_eq!(*offset, 5);
+                    assert_eq!(deleted_text, "bar");
+                }
+                _ => panic!("Expected Delete"),
+            }
+            match &commands[1] {
+                Command::Insert { offset, text, .. } => {
+                    assert_eq!(*offset, 5);
+                    assert_eq!(text, "foo");
+                }
+                _ => panic!("Expected Insert"),
+            }
+        }
+        _ => panic!("Expected Batch"),
     }
 }
 
