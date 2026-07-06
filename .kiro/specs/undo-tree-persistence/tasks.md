@@ -1,0 +1,18 @@
+# Tasks — Undo Tree, Snapshots, Persistence
+
+- [-] 1. Remove `Command::Batch` variant + its `inverse()` arm from `commands.rs`. (Req 1.1)
+- [~] 2. Add `group: Option<Uuid>` to `UndoNode`; add `UndoTree::push_group(Vec<(Command, Command)>) -> Vec<NodeId>`; teach `undo()`/`redo()` to step through a group as one user-facing action. (Req 1.2, 1.3)
+- [~] 3. Migrate existing `Command::Batch` call sites to `push_group`. (Req 1.4)
+- [~] 4. Rename `CommitPoint` → `Snapshot`; add fields `label`, `touched_files: Vec<PathBuf>`, `validation: ValidationResult` (keep `timestamp`). Rename `UndoNode.commit_point` → `snapshot`, add `is_snapshot()`. (Req 2.1, 2.2, 2.3)
+- [~] 5. Rename `UndoTree::set_commit_point` → `set_snapshot`; add `UndoTree::snapshots() -> impl Iterator<Item = &UndoNode>`. Update undo-tree UI panel to list snapshots via this API, label "Snapshots". (Req 2.4)
+- [~] 6. Add explicit user-triggered `create_snapshot` command/IPC handler (button press only, no auto-trigger). Compute `touched_files` by walking nodes back to previous snapshot or root. (Req 3.1, 3.2)
+- [~] 7. Add `ValidationResult`, `ValidationStatus`, `ValidationStage` trait, `StubValidation` returning `{tests_passed: 0, tests_total: 0, status: Pass}`. Wire `create_snapshot` to call it and store result on `Snapshot.validation`; stub test-results field also stored as `0 tests passed`. (Req 3.3, 4.1, 4.2, 4.3, 4.4)
+- [~] 8. Implement `UndoTree::try_merge` for adjacent same-file `Insert`/`Delete`; call from `push` before creating a new node; skip merge if current node `is_snapshot()` or has a `group`; recompute `inverse` on merge. (Req 5.1-5.5)
+- [~] 9. Propose compact persistence protocol to user (design.md section 5 questions: bincode vs JSON, file_id interning lifetime) — get sign-off before coding. (Req 6.3)
+- [~] 10. Implement compact persistence: `files.json` (path interning), `tree.bin` (compact non-snapshot nodes, no stored inverse), `snapshots.json` (full `SnapshotRecord` incl. `AppState`), `meta.json` (current node id). Replace `save_checkpoint`/flat log approach. (Req 6.1, 6.2, 6.4)
+- [~] 11. Implement load path: rebuild `UndoTree` from `files.json` + `tree.bin` + `snapshots.json` + `meta.json`, recomputing inverses, identical to saved tree. (Req 6.5)
+- [~] 12. Tests: insert/delete compaction (adjacent merges; non-adjacent/cross-file/cross-snapshot don't). (Req 7.1)
+- [~] 13. Tests: branching — undo + new edit creates sibling branch, original branch still reachable via `jump_to`. (Req 7.2)
+- [~] 14. Tests: snapshot creation stores correct metadata, validation stage invoked exactly once. (Req 7.3)
+- [~] 15. Tests: persistence round-trip — save tree (with branches, snapshots, compacted nodes) → reload → identical nodes/links/current/snapshot metadata. (Req 7.4)
+- [~] 16. Tests: mock-agent-driven edits (constructed `ToolCall`s, no real provider) undoable deterministically. (Req 7.5)

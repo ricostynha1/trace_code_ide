@@ -1,0 +1,83 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1. Add `.scm` highlight query files for Python, Rust, C++, Lean 4, Markdown (reuse community queries where license-compatible, adapt otherwise).": [
+      {
+        "executionId": "5727bed8-1d35-44aa-a6fa-aec6303b0f85",
+        "chatSessionId": "sess_6207ee7e-aadc-4eee-948a-2f0a6aa1d7aa",
+        "timestamp": 1783022534409
+      },
+      {
+        "executionId": "5727bed8-1d35-44aa-a6fa-aec6303b0f85",
+        "chatSessionId": "sess_6207ee7e-aadc-4eee-948a-2f0a6aa1d7aa",
+        "timestamp": 1783022596008
+      },
+      {
+        "executionId": "5727bed8-1d35-44aa-a6fa-aec6303b0f85",
+        "chatSessionId": "sess_6207ee7e-aadc-4eee-948a-2f0a6aa1d7aa",
+        "timestamp": 1783022825064
+      }
+    ],
+    "2. Wire tree-sitter WASM query execution in webview: run query per visible range, return (capture, range)[].": [
+      {
+        "executionId": "5727bed8-1d35-44aa-a6fa-aec6303b0f85",
+        "chatSessionId": "sess_6207ee7e-aadc-4eee-948a-2f0a6aa1d7aa",
+        "timestamp": 1783022534849
+      },
+      {
+        "executionId": "5727bed8-1d35-44aa-a6fa-aec6303b0f85",
+        "chatSessionId": "sess_6207ee7e-aadc-4eee-948a-2f0a6aa1d7aa",
+        "timestamp": 1783022831813
+      }
+    ],
+    "3. Implement capture-name → color theme map with longest-prefix fallback.": [
+      {
+        "executionId": "5727bed8-1d35-44aa-a6fa-aec6303b0f85",
+        "chatSessionId": "sess_6207ee7e-aadc-4eee-948a-2f0a6aa1d7aa",
+        "timestamp": 1783022535163
+      }
+    ],
+    "4. Replace CodeMirror decoration builder to consume query captures instead of node-kind JSON map.": [
+      {
+        "executionId": "5727bed8-1d35-44aa-a6fa-aec6303b0f85",
+        "chatSessionId": "sess_6207ee7e-aadc-4eee-948a-2f0a6aa1d7aa",
+        "timestamp": 1783022535352
+      }
+    ],
+    "5. Fix markdown heading case specifically: verify `@markup.heading` + marker sub-captures render full-span color.": [
+      {
+        "executionId": "5727bed8-1d35-44aa-a6fa-aec6303b0f85",
+        "chatSessionId": "sess_6207ee7e-aadc-4eee-948a-2f0a6aa1d7aa",
+        "timestamp": 1783022535570
+      }
+    ],
+    "6. Feature-flag old highlighter; run both side-by-side in dev to compare output on existing test files.": [
+      {
+        "executionId": "5727bed8-1d35-44aa-a6fa-aec6303b0f85",
+        "chatSessionId": "sess_6207ee7e-aadc-4eee-948a-2f0a6aa1d7aa",
+        "timestamp": 1783022535766
+      }
+    ],
+    "7. Tests: snapshot test per language — known source file → expected capture list.": [
+      {
+        "executionId": "5727bed8-1d35-44aa-a6fa-aec6303b0f85",
+        "chatSessionId": "sess_6207ee7e-aadc-4eee-948a-2f0a6aa1d7aa",
+        "timestamp": 1783022535984
+      }
+    ],
+    "8. Remove old node-kind JSON highlighter once parity confirmed for all languages.": [
+      {
+        "executionId": "5727bed8-1d35-44aa-a6fa-aec6303b0f85",
+        "chatSessionId": "sess_6207ee7e-aadc-4eee-948a-2f0a6aa1d7aa",
+        "timestamp": 1783022536175
+      }
+    ],
+    "9. Update docs/IMPLEMENTATION.md: mark 1.8 done.": [
+      {
+        "executionId": "5727bed8-1d35-44aa-a6fa-aec6303b0f85",
+        "chatSessionId": "sess_6207ee7e-aadc-4eee-948a-2f0a6aa1d7aa",
+        "timestamp": 1783022536341
+      }
+    ]
+  }
+}
