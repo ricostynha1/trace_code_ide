@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import { FileTree } from "./components/FileTree";
 import { Editor } from "./components/Editor";
 import { MenuBar } from "./components/MenuBar";
@@ -20,6 +21,8 @@ function App() {
   const [traceDashVisible, setTraceDashVisible] = useState(false);
   // Key to force editor remount on undo-tree jump
   const [editorKey, setEditorKey] = useState(0);
+  // Track whether AI is actively running — prevent file switching during AI edits
+  const aiActiveRef = useRef(false);
 
   // Auto-open /project if mounted (Docker usage)
   useEffect(() => {
@@ -30,6 +33,15 @@ function App() {
         setProjectOpen(true);
       }
     }).catch(() => {});
+  }, []);
+
+  // Track AI activity to prevent unwanted file switching during AI edits
+  useEffect(() => {
+    const unlistenStart = listen("tool-call", (event: any) => {
+      if (event.payload?.status === "running") aiActiveRef.current = true;
+      else aiActiveRef.current = false;
+    });
+    return () => { unlistenStart.then((fn) => fn()); };
   }, []);
 
   // Listen for trace navigation events from Editor
@@ -50,6 +62,13 @@ function App() {
   };
 
   const handleFileSelect = (path: string) => {
+    // Don't switch files while AI is actively executing tools
+    if (aiActiveRef.current) return;
+    setCurrentFile(path);
+  };
+
+  // Direct file select — always works, used for explicit user navigation
+  const handleFileSelectDirect = (path: string) => {
     setCurrentFile(path);
   };
 
@@ -75,7 +94,7 @@ function App() {
         {projectOpen && (
           <FileTree
             projectRoot={projectRoot}
-            onFileSelect={handleFileSelect}
+            onFileSelect={handleFileSelectDirect}
             selectedFile={currentFile}
           />
         )}
@@ -110,7 +129,7 @@ function App() {
           visible={traceDashVisible}
           onClose={() => setTraceDashVisible(false)}
           onNavigate={(file, _line) => {
-            setCurrentFile(file);
+            handleFileSelectDirect(file);
             // Could also navigate to line in future
           }}
         />

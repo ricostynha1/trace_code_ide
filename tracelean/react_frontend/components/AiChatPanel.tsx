@@ -77,23 +77,14 @@ interface MockPendingRequest {
   timestamp: string;
 }
 
-interface ToolCallEvent {
-  tool_name: string;
-  reason: string;
-  status: "running" | "completed" | { failed: { error: string } };
-  duration_ms: number | null;
-  depth: number;
-}
-
-interface ToolCallDisplay {
-  tool_name: string;
-  status: "running" | "completed" | "failed";
-  error?: string;
-  duration_ms?: number;
-  reason?: string;
-}
-
 type Tab = "chat" | "settings" | "log" | "stats";
+
+/** Format token count compactly: 1234 -> '1.2k', 1234567 -> '1.2M' */
+function compactNum(n: number): string {
+  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + "M";
+  if (n >= 1_000) return (n / 1_000).toFixed(n >= 10_000 ? 0 : 1) + "k";
+  return String(n);
+}
 
 export function AiChatPanel({ visible, onClose }: Props) {
   const [tab, setTab] = useState<Tab>("chat");
@@ -110,7 +101,6 @@ export function AiChatPanel({ visible, onClose }: Props) {
   const [mockResponse, setMockResponse] = useState("");
   const [streamingContent, setStreamingContent] = useState<string>("");
   const [useStreaming, setUseStreaming] = useState(true);
-  const [toolCalls, setToolCalls] = useState<ToolCallDisplay[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const mockPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -149,34 +139,12 @@ export function AiChatPanel({ visible, onClose }: Props) {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Listen for tool-call events from backend
+  // Listen for intermediate chat messages (tool calls, tool responses) from backend
   useEffect(() => {
-    const unlisten = listen<ToolCallEvent>("tool-call", (event) => {
-      const e = event.payload;
-      const status = typeof e.status === "string" ? e.status : "failed";
-      const error = typeof e.status === "object" && "failed" in e.status ? e.status.failed.error : undefined;
-      const display: ToolCallDisplay = {
-        tool_name: e.tool_name,
-        status: status as "running" | "completed" | "failed",
-        error,
-        duration_ms: e.duration_ms ?? undefined,
-        reason: e.reason ?? undefined,
-      };
-
-      setToolCalls((prev) => {
-        // If this is a completed/failed update for a running tool, replace it
-        const existing = prev.findIndex(
-          (tc) => tc.tool_name === display.tool_name && tc.status === "running"
-        );
-        if (existing >= 0 && display.status !== "running") {
-          const updated = [...prev];
-          updated[existing] = display;
-          return updated;
-        }
-        return [...prev, display];
-      });
+    const unlisten = listen<{ role: string; content: string }>("ai-chat-message", (event) => {
+      const { role, content } = event.payload;
+      setMessages((prev) => [...prev, { role: role as "system" | "user" | "assistant", content }]);
     });
-
     return () => { unlisten.then((fn) => fn()); };
   }, []);
 
@@ -220,7 +188,9 @@ export function AiChatPanel({ visible, onClose }: Props) {
     setLoading(true);
     setError(null);
     setStreamingContent("");
-    setToolCalls([]);
+
+    // Filter out synthetic system messages (tool calls/responses) before sending to backend
+    const apiMessages = newMessages.filter((m) => m.role !== "system");
 
     try {
       if (useStreaming) {
@@ -234,15 +204,15 @@ export function AiChatPanel({ visible, onClose }: Props) {
           }
         );
 
-        const response = await invoke<AiResponse>("ai_chat_stream", { messages: newMessages });
+        const response = await invoke<AiResponse>("ai_chat_stream", { messages: apiMessages });
         unlisten();
         const assistantMsg: ChatMessage = { role: "assistant", content: response.content };
-        setMessages([...newMessages, assistantMsg]);
+        setMessages((prev) => [...prev, assistantMsg]);
         setStreamingContent("");
       } else {
-        const response = await invoke<AiResponse>("ai_chat", { messages: newMessages });
+        const response = await invoke<AiResponse>("ai_chat", { messages: apiMessages });
         const assistantMsg: ChatMessage = { role: "assistant", content: response.content };
-        setMessages([...newMessages, assistantMsg]);
+        setMessages((prev) => [...prev, assistantMsg]);
       }
       loadStats();
     } catch (e) {
@@ -291,27 +261,16 @@ export function AiChatPanel({ visible, onClose }: Props) {
           <div className="ai-messages">
             {messages.map((m, i) => (
               <div key={i} className={`ai-msg ai-msg-${m.role}`}>
-                <span className="ai-msg-role">{m.role}</span>
-                <pre className="ai-msg-content">{m.content}</pre>
+                {m.role === "system" ? (
+                  <span className="ai-msg-tool-call">{m.content}</span>
+                ) : (
+                  <>
+                    <span className="ai-msg-role">{m.role}</span>
+                    <pre className="ai-msg-content">{m.content}</pre>
+                  </>
+                )}
               </div>
             ))}
-            {toolCalls.length > 0 && (
-              <div className="ai-tool-calls">
-                {toolCalls.map((tc, i) => (
-                  <div key={i} className={`ai-tool-call ai-tool-call-${tc.status}`}>
-                    <span className="ai-tool-icon">
-                      {tc.status === "running" ? "⏳" : tc.status === "completed" ? "✓" : "✗"}
-                    </span>
-                    <span className="ai-tool-name">{tc.tool_name}</span>
-                    {tc.reason && <span className="ai-tool-reason">{tc.reason}</span>}
-                    {tc.duration_ms != null && (
-                      <span className="ai-tool-duration">{tc.duration_ms}ms</span>
-                    )}
-                    {tc.error && <span className="ai-tool-error">{tc.error}</span>}
-                  </div>
-                ))}
-              </div>
-            )}
             {loading && mockPending.length === 0 && !streamingContent && <div className="ai-msg ai-msg-loading">Thinking...</div>}
             {loading && streamingContent && (
               <div className="ai-msg ai-msg-assistant">
@@ -337,6 +296,14 @@ export function AiChatPanel({ visible, onClose }: Props) {
             />
             <button onClick={sendMessage} disabled={loading || !input.trim()}>Send</button>
           </div>
+          {stats && (
+            <div className="ai-cost-bar">
+              <span className="ai-cost-label">Session: ${stats.total_cost_usd.toFixed(4)}</span>
+              <span className="ai-cost-tokens">
+                I{compactNum(stats.total_input_tokens)} O{compactNum(stats.total_output_tokens)} T{compactNum(stats.total_thinking_tokens)}
+              </span>
+            </div>
+          )}
         </div>
       )}
 

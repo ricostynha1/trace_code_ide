@@ -463,6 +463,19 @@ html, body, #root {
   border: 1px solid #f4474744;
 }
 
+.ai-msg-system {
+  padding: 2px 8px;
+  border-left: 3px solid #e06c75;
+  background: rgba(224, 108, 117, 0.05);
+}
+
+.ai-msg-tool-call {
+  color: #e06c75;
+  font-size: 12px;
+  font-family: monospace;
+  font-weight: bold;
+}
+
 .ai-msg-role {
   display: block;
   font-size: 9px;
@@ -1336,4 +1349,75 @@ html, body, #root {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* P3-T4: Tool call visual styles */
+.ai-tool-calls {
+  padding: 4px 8px;
+  border-left: 3px solid #e06c75;
+  margin: 4px 0;
+  background: rgba(224, 108, 117, 0.05);
+}
+
+.ai-tool-call {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 0;
+  font-size: 12px;
+  font-family: monospace;
+  color: #e06c75;
+}
+
+.ai-tool-call-completed {
+  color: #98c379;
+}
+
+.ai-tool-call-failed {
+  color: #e06c75;
+}
+
+.ai-tool-call-running {
+  color: #e5c07b;
+}
+
+.ai-tool-icon {
+  font-size: 11px;
+}
+
+.ai-tool-name {
+  font-weight: bold;
+}
+
+.ai-tool-reason {
+  color: #5c6370;
+  font-style: italic;
+}
+
+.ai-tool-duration {
+  color: #5c6370;
+  font-size: 11px;
+}
+
+.ai-tool-error {
+  color: #e06c75;
+  font-size: 11px;
+}
+
+.ai-cost-bar {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 8px;
+  font-size: 11px;
+  color: #5c6370;
+  border-top: 1px solid #333;
+  background: #1e1e1e;
+}
+
+.ai-cost-label {
+  color: #e5c07b;
+}
+
+.ai-cost-tokens {
+  color: #5c6370;
 }

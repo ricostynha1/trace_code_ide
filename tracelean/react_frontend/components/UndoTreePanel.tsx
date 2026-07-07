@@ -35,6 +35,7 @@ type FilterMode = "global" | "file" | "commits" | "batch";
 
 function cmdMarker(summary: string): string {
   if (summary.startsWith("Insert")) return "I";
+  if (summary.startsWith("Initial")) return "In";
   if (summary.startsWith("Delete @") && !summary.startsWith("Delete file")) return "D";
   if (summary.startsWith("Replace")) return "R";
   if (summary.startsWith("Cursor")) return "C";
@@ -250,7 +251,8 @@ export function UndoTreePanel({ visible, onClose, onNodeJump, onFileSelect, curr
     try {
       const success = await invoke<boolean>("jump_to_node", { nodeId });
       if (success) {
-        if (file) onFileSelect(file);
+        // Only switch file if the jump target is a different file than currently active
+        if (file && file !== currentFile) onFileSelect(file);
         await refresh();
         onNodeJump();
       }
