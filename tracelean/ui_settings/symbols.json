@@ -1,0 +1,21 @@
+{
+  "function_item": "Function",
+  "struct_item": "Struct",
+  "enum_item": "Enum",
+  "trait_item": "Trait",
+  "impl_item": "Impl",
+  "mod_item": "Module",
+  "function_definition": "Function",
+  "class_definition": "Class",
+  "class_specifier": "Class",
+  "struct_specifier": "Struct",
+  "enum_specifier": "Enum",
+  "definition": "Function",
+  "def": "Function",
+  "theorem": "Function",
+  "structure": "Struct",
+  "inductive": "Enum",
+  "instance": "Impl",
+  "function_declaration": "Function",
+  "method_definition": "Method"
+}
