@@ -22,19 +22,19 @@ fn highlights_for(ext: &str, source: &str) -> Vec<tracelean_lib::parser::Highlig
 
 #[test]
 fn theme_map_exact_match() {
-    assert_eq!(resolve_capture_color("keyword"), Some("#c678dd"));
-    assert_eq!(resolve_capture_color("string"), Some("#98c379"));
-    assert_eq!(resolve_capture_color("comment"), Some("#5c6370"));
+    assert_eq!(resolve_capture_color("keyword"), Some("#c678dd".to_string()));
+    assert_eq!(resolve_capture_color("string"), Some("#98c379".to_string()));
+    assert_eq!(resolve_capture_color("comment"), Some("#5c6370".to_string()));
 }
 
 #[test]
 fn theme_map_prefix_fallback() {
     // "function.call" matches exactly
-    assert_eq!(resolve_capture_color("function.call"), Some("#61afef"));
+    assert_eq!(resolve_capture_color("function.call"), Some("#61afef".to_string()));
     // "function.unknown" falls back to "function"
-    assert_eq!(resolve_capture_color("function.unknown"), Some("#61afef"));
+    assert_eq!(resolve_capture_color("function.unknown"), Some("#61afef".to_string()));
     // "string.escape" matches exactly
-    assert_eq!(resolve_capture_color("string.escape"), Some("#56b6c2"));
+    assert_eq!(resolve_capture_color("string.escape"), Some("#56b6c2".to_string()));
 }
 
 #[test]
