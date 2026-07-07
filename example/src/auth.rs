@@ -24,5 +24,8 @@ pub enum AuthError {
     WeakPassword,
     InvalidCredentials,
 }
-
-Vamos la Mesmo
+I was edited
+I was edited
+I was edited
+Wil i
+I was edited

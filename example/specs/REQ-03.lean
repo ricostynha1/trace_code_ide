@@ -40,5 +40,6 @@ theorem results_sorted :
   ∀ (results : List SearchResult),
     results.length > 1 →
     ∀ (i : Nat), i + 1 < results.length →
-      (results.get ⟨i, by omega⟩).relevance ≥ (results.get ⟨i+1, by omega⟩).relevance := by
+      (results.get ⟨i, by omega⟩).relevance ≥(results.get ⟨i+1, by omega⟩).relev
+ance := by
   sorry -- impl must satisfy
