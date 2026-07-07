@@ -184,6 +184,7 @@ pub async fn ai_chat(
     state: State<'_, AppStateWrapper>,
     symbols_state: State<'_, SymbolTableWrapper>,
     graph_state: State<'_, TraceGraphWrapper>,
+    cache: State<'_, UndoTreeCacheWrapper>,
     messages: Vec<ai::provider::ChatMessage>,
 ) -> Result<ai::AiResponse, String> {
     use ai::provider::{AiProvider, MessageRole};
@@ -205,6 +206,7 @@ pub async fn ai_chat(
     let mut messages = inject_tools_system_prompt(messages, &mcp_client).await;
 
     let max_tool_loops = 10;
+    let mut consecutive_failures: u32 = 0;
 
     for _loop_i in 0..max_tool_loops {
         let request = ai::AiRequest {
@@ -277,6 +279,13 @@ pub async fn ai_chat(
                     let reason = tc.reason().map(|s| s.to_string());
                     let mcp_call = tc.to_mcp_call();
 
+                    // Emit tool call message to frontend chat
+                    let reason_text = reason.as_deref().unwrap_or("");
+                    let _ = app.emit("ai-chat-message", serde_json::json!({
+                        "role": "system",
+                        "content": format!("call {} {}", mcp_call.name, reason_text)
+                    }));
+
                     // Emit "running" event
                     let _ = app.emit("tool-call", ToolCallEvent {
                         tool_name: mcp_call.name.clone(),
@@ -297,6 +306,12 @@ pub async fn ai_chat(
                     };
                     let tool_duration = start_tool.elapsed().as_millis() as u64;
 
+                    // Emit tool response message to frontend chat
+                    let _ = app.emit("ai-chat-message", serde_json::json!({
+                        "role": "system",
+                        "content": format!("rsp {}", mcp_call.name)
+                    }));
+
                     // Emit "completed" or "failed" event
                     let status = if result.success {
                         ToolCallStatus::Completed
@@ -311,15 +326,51 @@ pub async fn ai_chat(
                         reason,
                     });
 
-                    tool_results.push_str(&format!(
-                        "Tool `{}` result (success={}):\n{}\n\n",
-                        mcp_call.name, result.success, result.content
-                    ));
+                    // P3-T1: MCP-standard JSON tool response
+                    let tool_response = serde_json::json!({
+                        "type": "tool_result",
+                        "tool_name": mcp_call.name,
+                        "is_error": !result.success,
+                        "content": [{
+                            "type": "text",
+                            "text": result.content
+                        }]
+                    });
+                    tool_results.push_str(&serde_json::to_string(&tool_response).unwrap_or_default());
+                    tool_results.push_str("\n");
+
+                    // P3-T2: Track consecutive failures
+                    if result.success {
+                        consecutive_failures = 0;
+                    } else {
+                        consecutive_failures += 1;
+                    }
+                    if consecutive_failures >= 6 {
+                        break;
+                    }
                 }
+
+                // P3-T2: Stop if too many consecutive failures
+                if consecutive_failures >= 6 {
+                    let failure_msg = format!(
+                        "{}\n\n[Tool execution stopped: {} consecutive failures. Please provide additional guidance.]",
+                        response.content, consecutive_failures
+                    );
+                    return Ok(ai::AiResponse {
+                        content: failure_msg,
+                        usage: response.usage.clone(),
+                        raw_response: response.raw_response.clone(),
+                        truncated: response.truncated,
+                    });
+                }
+
+                // Invalidate undo cache and notify frontend after tool execution
+                invalidate_undo_cache(&cache);
+                let _ = app.emit("undo-tree-changed", ());
 
                 messages.push(ai::provider::ChatMessage {
                     role: MessageRole::User,
-                    content: format!("Tool execution results:\n\n{}", tool_results),
+                    content: tool_results.clone(),
                 });
                 // Loop to send results back to AI
             }
