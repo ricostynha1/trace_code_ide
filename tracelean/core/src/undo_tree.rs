@@ -48,6 +48,26 @@ impl UndoTree {
         }
     }
 
+    /// Push an initial (base-state) node for a newly opened file.
+    /// Uses a no-op Batch as the command. Only call when tree is empty.
+    pub fn push_initial(&mut self) -> NodeId {
+        let id = Uuid::new_v4();
+        let node = UndoNode {
+            id,
+            command: Command::Batch { commands: vec![] },
+            inverse: Command::Batch { commands: vec![] },
+            parent: None,
+            children: Vec::new(),
+            timestamp: Utc::now(),
+            commit_point: None,
+        };
+        let new_index = self.nodes.len();
+        self.nodes.push(node);
+        self.id_to_index.insert(id, new_index);
+        self.current = Some(new_index);
+        id
+    }
+
     /// Push a new command. Creates child of current node (or root if empty).
     /// Returns the new node's ID.
     pub fn push(&mut self, command: Command, inverse: Command) -> NodeId {

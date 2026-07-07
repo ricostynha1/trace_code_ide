@@ -102,34 +102,38 @@ pub struct HighlightCapture {
 /// Load the .scm query source for a language.
 /// Searches same candidate paths as load_color_config.
 fn load_query_source(lang_name: &str) -> Option<String> {
-    // markdown_inline has its own .scm file
-    let filename = if lang_name == "markdown_inline" {
-        "grammars/markdown/highlights_inline.scm".to_string()
+    let (new_path, old_path) = if lang_name == "markdown_inline" {
+        (
+            "ui_settings/languages/markdown/highlights_inline.scm".to_string(),
+            "grammars/markdown/highlights_inline.scm".to_string(),
+        )
     } else {
-        format!("grammars/{}/highlights.scm", lang_name)
+        (
+            format!("ui_settings/languages/{}/highlights.scm", lang_name),
+            format!("grammars/{}/highlights.scm", lang_name),
+        )
     };
 
-    let candidates = [
-        // Next to binary (deployed)
-        std::env::current_exe()
-            .ok()
-            .and_then(|p| p.parent().map(|d| d.join(&filename))),
-        // /app/ (Docker)
-        Some(PathBuf::from("/app").join(&filename)),
-        // CARGO_MANIFEST_DIR parent (dev) → tracelean/grammars/...
-        Some(
-            PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-                .parent()
-                .unwrap_or(Path::new("."))
-                .join(&filename),
-        ),
-        // CWD fallback
-        Some(PathBuf::from(&filename)),
-    ];
+    // Search candidates: new location first, then old for backward compat
+    for filename in &[&new_path, &old_path] {
+        let candidates = [
+            std::env::current_exe()
+                .ok()
+                .and_then(|p| p.parent().map(|d| d.join(filename))),
+            Some(PathBuf::from("/app").join(filename)),
+            Some(
+                PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                    .parent()
+                    .unwrap_or(Path::new("."))
+                    .join(filename),
+            ),
+            Some(PathBuf::from(*filename)),
+        ];
 
-    for candidate in candidates.iter().flatten() {
-        if let Ok(content) = fs::read_to_string(candidate) {
-            return Some(content);
+        for candidate in candidates.iter().flatten() {
+            if let Ok(content) = fs::read_to_string(candidate) {
+                return Some(content);
+            }
         }
     }
     None
@@ -259,50 +263,42 @@ fn get_highlight_captures_markdown(content: &str) -> Vec<HighlightCapture> {
 
 // --- Theme Map: capture-name → color with longest-prefix fallback ---
 
-/// Default One Dark–style capture→color theme.
-/// Sorted longest-prefix-first so lookup finds most specific match.
-fn default_theme_map() -> &'static [(& 'static str, &'static str)] {
-    &[
-        // Specific before general
-        ("constant.builtin", "#d19a66"),
-        ("function.macro", "#61afef"),
-        ("function.call", "#61afef"),
-        ("function", "#61afef"),
-        ("type.builtin", "#e5c07b"),
-        ("type", "#e5c07b"),
-        ("string.escape", "#56b6c2"),
-        ("string", "#98c379"),
-        ("number", "#d19a66"),
-        ("comment", "#5c6370"),
-        ("keyword", "#c678dd"),
-        ("operator", "#56b6c2"),
-        ("variable.parameter", "#e06c75"),
-        ("variable", "#abb2bf"),
-        ("property", "#e06c75"),
-        ("punctuation.bracket", "#abb2bf"),
-        ("punctuation.delimiter", "#abb2bf"),
-        ("punctuation", "#abb2bf"),
-        ("markup.heading.marker", "#e06c75"),
-        ("markup.heading", "#e06c75"),
-        ("markup.italic", "#56b6c2"),
-        ("markup.bold", "#d19a66"),
-        ("markup.link", "#61afef"),
-    ]
+static THEME_MAP: OnceLock<HashMap<String, String>> = OnceLock::new();
+
+fn load_theme_map() -> HashMap<String, String> {
+    let filename = "ui_settings/theme.json";
+    let candidates = [
+        std::env::current_exe().ok().and_then(|p| p.parent().map(|d| d.join(filename))),
+        Some(PathBuf::from("/app").join(filename)),
+        Some(PathBuf::from(env!("CARGO_MANIFEST_DIR")).parent().unwrap_or(Path::new(".")).join(filename)),
+        Some(PathBuf::from(filename)),
+    ];
+    for candidate in candidates.iter().flatten() {
+        if let Ok(content) = fs::read_to_string(candidate) {
+            if let Ok(map) = serde_json::from_str::<HashMap<String, String>>(&content) {
+                return map;
+            }
+        }
+    }
+    HashMap::new()
+}
+
+fn get_theme_map() -> &'static HashMap<String, String> {
+    THEME_MAP.get_or_init(load_theme_map)
 }
 
 /// Resolve a capture name to a color using longest-prefix match.
 /// E.g. "function.call" matches "function.call" > "function" > (none).
-pub fn resolve_capture_color(capture_name: &str) -> Option<&'static str> {
-    let theme = default_theme_map();
-    // Try exact match first, then progressively shorter prefixes
+pub fn resolve_capture_color(capture_name: &str) -> Option<String> {
+    let theme = get_theme_map();
+    if theme.is_empty() {
+        return None;
+    }
     let mut name = capture_name;
     loop {
-        for &(prefix, color) in theme {
-            if name == prefix {
-                return Some(color);
-            }
+        if let Some(color) = theme.get(name) {
+            return Some(color.clone());
         }
-        // Shorten: "function.call" → "function"
         match name.rfind('.') {
             Some(pos) => name = &name[..pos],
             None => return None,
@@ -330,7 +326,7 @@ pub fn get_highlights_query(path: &Path, content: &str) -> Vec<HighlightSpan> {
             if to > content_len_chars { to = content_len_chars; }
             if from > to { from = to; }
             if from >= to { return None; }
-            Some(HighlightSpan { from, to, color: color.to_string() })
+            Some(HighlightSpan { from, to, color })
         })
         .collect();
 
@@ -451,43 +447,28 @@ fn extract_symbols(tree: &Tree, source: &str, path: &Path) -> Vec<Symbol> {
     symbols
 }
 
-/// Try to extract a symbol from a node using common tree-sitter patterns.
-/// Works across languages by checking known definition node kinds.
+/// Try to extract a symbol from a node using config-driven symbol map.
+/// Works across languages by checking node kinds against symbols.json.
 fn try_extract_symbol(
     node: &tree_sitter::Node,
     source: &str,
     path: &Path,
 ) -> Option<Symbol> {
     let kind = node.kind();
+    let map = get_symbol_map();
 
-    let sym_kind = match kind {
-        // Rust
-        "function_item" => SymbolKind::Function,
-        "struct_item" => SymbolKind::Struct,
-        "enum_item" => SymbolKind::Enum,
-        "trait_item" => SymbolKind::Trait,
-        "impl_item" => SymbolKind::Impl,
-        "mod_item" => SymbolKind::Module,
-        // Python
-        "function_definition" => SymbolKind::Function,
-        "class_definition" => SymbolKind::Class,
-        // C++
-        "class_specifier" => SymbolKind::Class,
-        "struct_specifier" => SymbolKind::Struct,
-        "enum_specifier" => SymbolKind::Enum,
-        // Lean
-        "definition" | "def" => SymbolKind::Function,
-        "theorem" => SymbolKind::Function,
-        "structure" => SymbolKind::Struct,
-        "inductive" => SymbolKind::Enum,
-        "instance" => SymbolKind::Impl,
-        // JavaScript
-        "function_declaration" => SymbolKind::Function,
-        "method_definition" => SymbolKind::Method,
+    let sym_kind = match map.get(kind).map(|s| s.as_str()) {
+        Some("Function") => SymbolKind::Function,
+        Some("Method") => SymbolKind::Method,
+        Some("Class") => SymbolKind::Class,
+        Some("Struct") => SymbolKind::Struct,
+        Some("Enum") => SymbolKind::Enum,
+        Some("Module") => SymbolKind::Module,
+        Some("Trait") => SymbolKind::Trait,
+        Some("Impl") => SymbolKind::Impl,
         _ => return None,
     };
 
-    // Try to find name via "name" field, then "declarator", then first identifier child
     let name = find_name(node, source)?;
 
     Some(Symbol {
@@ -498,6 +479,30 @@ fn try_extract_symbol(
         end_line: node.end_position().row as u32,
         start_col: node.start_position().column as u32,
     })
+}
+
+static SYMBOL_MAP: OnceLock<HashMap<String, String>> = OnceLock::new();
+
+fn load_symbol_map() -> HashMap<String, String> {
+    let filename = "ui_settings/symbols.json";
+    let candidates = [
+        std::env::current_exe().ok().and_then(|p| p.parent().map(|d| d.join(filename))),
+        Some(PathBuf::from("/app").join(filename)),
+        Some(PathBuf::from(env!("CARGO_MANIFEST_DIR")).parent().unwrap_or(Path::new(".")).join(filename)),
+        Some(PathBuf::from(filename)),
+    ];
+    for candidate in candidates.iter().flatten() {
+        if let Ok(content) = fs::read_to_string(candidate) {
+            if let Ok(map) = serde_json::from_str::<HashMap<String, String>>(&content) {
+                return map;
+            }
+        }
+    }
+    HashMap::new()
+}
+
+fn get_symbol_map() -> &'static HashMap<String, String> {
+    SYMBOL_MAP.get_or_init(load_symbol_map)
 }
 
 /// Find the name of a definition node. Tries field "name", then "declarator", then first identifier.

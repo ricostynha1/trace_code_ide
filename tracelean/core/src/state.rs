@@ -159,6 +159,13 @@ impl AppState {
         self.buffers.insert(path, FileBuffer::new(content));
     }
 
+    /// Record that a file was opened. Creates initial base-state node if tree is empty.
+    pub fn record_file_open(&mut self) {
+        if self.undo_tree.is_empty() {
+            self.undo_tree.push_initial();
+        }
+    }
+
     /// Get the undo tree (read-only, for visualization)
     pub fn undo_tree(&self) -> &UndoTree {
         &self.undo_tree
@@ -210,22 +217,44 @@ impl AppState {
     fn command_diff_text(cmd: &Command) -> String {
         match cmd {
             Command::Insert { file, offset, text } => {
-                let preview = if text.len() > 80 { &text[..80] } else { text };
-                format!("+ {} @{}: \"{}\"", file.display(), offset, preview)
+                let lines: Vec<&str> = text.lines().take(15).collect();
+                let mut out = format!("--- {}\n+++ {} @offset {}\n", file.display(), file.display(), offset);
+                for line in &lines {
+                    out.push_str(&format!("+{}\n", line));
+                }
+                if text.lines().count() > 15 {
+                    out.push_str(&format!("... (+{} more lines)\n", text.lines().count() - 15));
+                }
+                out
             }
             Command::Delete { file, offset, deleted_text, .. } => {
-                let preview = if deleted_text.len() > 80 { &deleted_text[..80] } else { deleted_text };
-                format!("- {} @{}: \"{}\"", file.display(), offset, preview)
+                let lines: Vec<&str> = deleted_text.lines().take(15).collect();
+                let mut out = format!("--- {} @offset {}\n", file.display(), offset);
+                for line in &lines {
+                    out.push_str(&format!("-{}\n", line));
+                }
+                if deleted_text.lines().count() > 15 {
+                    out.push_str(&format!("... (-{} more lines)\n", deleted_text.lines().count() - 15));
+                }
+                out
             }
-            Command::CreateFile { path } => format!("+ new file: {}", path.display()),
-            Command::DeleteFile { path, .. } => format!("- del file: {}", path.display()),
-            Command::RenameFile { from, to } => format!("→ rename: {} → {}", from.display(), to.display()),
-            Command::SetCursor { file, new_pos, .. } => format!("cursor {} L{}:C{}", file.display(), new_pos.line, new_pos.col),
-            Command::SetSelection { file, new_range, .. } => format!("select {} L{}:C{}-L{}:C{}", file.display(), new_range.start.line, new_range.start.col, new_range.end.line, new_range.end.col),
+            Command::CreateFile { path } => format!("+++ new file: {}\n", path.display()),
+            Command::DeleteFile { path, .. } => format!("--- deleted: {}\n", path.display()),
+            Command::RenameFile { from, to } => format!("rename: {} → {}\n", from.display(), to.display()),
+            Command::SetCursor { .. } | Command::SetSelection { .. } => String::new(),
             Command::Batch { commands } => {
-                let summaries: Vec<String> = commands.iter().take(5).map(|c| Self::command_diff_text(c)).collect();
-                let suffix = if commands.len() > 5 { format!(" (+{} more)", commands.len() - 5) } else { String::new() };
-                format!("batch[{}]:{}{}", commands.len(), summaries.join("; "), suffix)
+                let mut out = String::new();
+                for (i, c) in commands.iter().take(10).enumerate() {
+                    let sub = Self::command_diff_text(c);
+                    if !sub.is_empty() {
+                        if i > 0 { out.push_str("\n"); }
+                        out.push_str(&sub);
+                    }
+                }
+                if commands.len() > 10 {
+                    out.push_str(&format!("\n... (+{} more operations)\n", commands.len() - 10));
+                }
+                out
             }
         }
     }

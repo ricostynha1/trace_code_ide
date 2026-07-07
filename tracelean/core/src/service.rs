@@ -75,7 +75,8 @@ pub fn open_file(state: &mut AppState, path: &str) -> Result<String, String> {
 
     let content = std::fs::read_to_string(&full_path)
         .map_err(|e| format!("Failed to read {}: {}", path, e))?;
-    state.load_file(rel_path, content.clone());
+    state.load_file(rel_path.clone(), content.clone());
+    state.record_file_open();
     Ok(content)
 }
 

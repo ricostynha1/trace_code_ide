@@ -183,7 +183,13 @@ pub fn command_summary(cmd: &Command) -> String {
         Command::CreateFile { path } => format!("Create {}", path.display()),
         Command::DeleteFile { path, .. } => format!("Delete file {}", path.display()),
         Command::RenameFile { from, to } => format!("Rename {} → {}", from.display(), to.display()),
-        Command::Batch { commands } => format!("Batch ({} cmds)", commands.len()),
+        Command::Batch { commands } => {
+            if commands.is_empty() {
+                "Initial".to_string()
+            } else {
+                format!("Batch ({} cmds)", commands.len())
+            }
+        }
     }
 }
 

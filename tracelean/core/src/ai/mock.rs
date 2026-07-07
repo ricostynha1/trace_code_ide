@@ -133,9 +133,9 @@ impl AiProvider for MockProvider {
             display_name: "Mock Agent (Debug)".into(),
             max_tokens: 99999,
             temperature: 0.0,
-            input_cost_per_m: 0.0,
-            output_cost_per_m: 0.0,
-            cached_input_cost_per_m: 0.0,
+            input_cost_per_m: 15.0,
+            output_cost_per_m: 75.0,
+            cached_input_cost_per_m: 1.875,
             extra_params: None,
         }])
     }
