@@ -52,12 +52,16 @@ struct OrRequest {
     temperature: f32,
     #[serde(skip_serializing_if = "Option::is_none")]
     stop: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    tools: Option<Vec<super::provider::ToolSchema>>,
 }
 
 #[derive(Serialize)]
 struct OrMessage {
     role: String,
     content: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    tool_call_id: Option<String>,
 }
 
 /// OpenRouter response body.
@@ -76,6 +80,23 @@ struct OrChoice {
 #[derive(Deserialize)]
 struct OrChoiceMessage {
     content: Option<String>,
+    #[serde(default)]
+    tool_calls: Option<Vec<OrToolCall>>,
+}
+
+/// Tool call in OpenAI-compatible response.
+#[derive(Deserialize)]
+struct OrToolCall {
+    id: Option<String>,
+    #[serde(rename = "type")]
+    call_type: Option<String>,
+    function: Option<OrToolCallFunction>,
+}
+
+#[derive(Deserialize)]
+struct OrToolCallFunction {
+    name: Option<String>,
+    arguments: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -127,8 +148,10 @@ impl AiProvider for OpenRouterProvider {
                 MessageRole::System => "system".into(),
                 MessageRole::User => "user".into(),
                 MessageRole::Assistant => "assistant".into(),
+                MessageRole::Tool => "tool".into(),
             },
             content: m.content.clone(),
+            tool_call_id: m.tool_call_id.clone(),
         }).collect();
 
         let body = OrRequest {
@@ -137,6 +160,7 @@ impl AiProvider for OpenRouterProvider {
             max_tokens: request.model.max_tokens,
             temperature: request.model.temperature,
             stop: request.stop.clone(),
+            tools: request.tools.clone(),
         };
 
         let mut last_err = None;
@@ -204,6 +228,24 @@ impl AiProvider for OpenRouterProvider {
                     let content = choice.message.content.clone().unwrap_or_default();
                     let truncated = choice.finish_reason.as_deref() == Some("length");
 
+                    // Parse tool_calls from response
+                    let tool_calls: Vec<super::provider::ToolCallResponse> = choice.message.tool_calls
+                        .as_ref()
+                        .map(|calls| {
+                            calls.iter().enumerate().filter_map(|(i, tc)| {
+                                let func = tc.function.as_ref()?;
+                                Some(super::provider::ToolCallResponse {
+                                    id: tc.id.clone().unwrap_or_else(|| format!("call_{}", i)),
+                                    call_type: tc.call_type.clone().unwrap_or_else(|| "function".into()),
+                                    function: super::provider::ToolCallFunction {
+                                        name: func.name.clone().unwrap_or_default(),
+                                        arguments: func.arguments.clone().unwrap_or_else(|| "{}".into()),
+                                    },
+                                })
+                            }).collect()
+                        })
+                        .unwrap_or_default();
+
                     let usage = parsed.usage.as_ref();
                     let token_usage = TokenUsage {
                         input_tokens: usage.and_then(|u| u.prompt_tokens).unwrap_or(0),
@@ -220,6 +262,7 @@ impl AiProvider for OpenRouterProvider {
                         usage: token_usage,
                         raw_response: Some(raw_text),
                         truncated,
+                        tool_calls,
                     });
                 }
                 Err(e) => {

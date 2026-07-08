@@ -28,6 +28,8 @@ pub struct AgentResult {
     pub created_files: Vec<String>,
     /// Raw AI response content.
     pub raw_response: Option<String>,
+    /// Token usage from the AI call (for cost tracking).
+    pub usage: Option<super::tracking::TokenUsage>,
 }
 
 // --- 4.11: Elicitation Agent ---
@@ -83,6 +85,7 @@ pub async fn run_elicitation_standalone(
         pending_diffs: Vec::new(),
         created_files: Vec::new(),
         raw_response: Some(response.content),
+        usage: Some(response.usage),
     })
 }
 
@@ -171,6 +174,7 @@ pub async fn run_formalisation_standalone(
         pending_diffs,
         created_files: Vec::new(),
         raw_response: Some(response.content),
+        usage: Some(response.usage),
     })
 }
 
@@ -249,6 +253,7 @@ pub async fn run_implementation_standalone(
         pending_diffs,
         created_files: Vec::new(),
         raw_response: Some(response.content),
+        usage: Some(response.usage),
     })
 }
 
@@ -315,6 +320,7 @@ pub async fn run_repair_standalone(
         pending_diffs,
         created_files: Vec::new(),
         raw_response: Some(response.content),
+        usage: Some(response.usage),
     })
 }
 
@@ -337,9 +343,10 @@ fn build_request(system_prompt: &str, user_content: &str) -> AiRequest {
     AiRequest {
         model,
         messages: vec![
-            ChatMessage { role: MessageRole::System, content: system_prompt.to_string() },
-            ChatMessage { role: MessageRole::User, content: user_content.to_string() },
+            ChatMessage { role: MessageRole::System, content: system_prompt.to_string(), tool_call_id: None },
+            ChatMessage { role: MessageRole::User, content: user_content.to_string(), tool_call_id: None },
         ],
         stop: None,
+        tools: None,
     }
 }

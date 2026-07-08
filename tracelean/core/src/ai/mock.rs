@@ -1,5 +1,6 @@
-//! Mock AI provider — shows exact prompts, lets user respond manually.
-//! Used for debugging prompt engineering without spending tokens.
+//! Mock AI provider — shows the exact JSON that would be sent to an LLM API.
+//! User inspects the full request (messages + tools) and pastes back the full JSON response.
+//! Used for debugging: copy request to web chat, get response, paste it back.
 
 use super::provider::*;
 use super::tracking::TokenUsage;
@@ -8,12 +9,50 @@ use std::sync::Arc;
 use tokio::sync::{mpsc, oneshot, Mutex};
 
 /// Pending mock request waiting for user response.
+/// Contains the full raw JSON that would be sent to the API.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MockPendingRequest {
     pub id: String,
-    pub messages: Vec<ChatMessage>,
+    /// The full OpenAI-compatible request JSON (messages + tools + model etc.)
+    pub raw_request_json: String,
     pub model: ModelConfig,
     pub timestamp: String,
+}
+
+/// The expected response format (OpenAI-compatible).
+/// User pastes back a JSON response matching this structure.
+#[derive(Debug, Clone, Deserialize)]
+struct MockResponseJson {
+    choices: Option<Vec<MockChoice>>,
+    /// Alternative: just content string for simple responses
+    content: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[allow(dead_code)]
+struct MockChoice {
+    message: Option<MockMessage>,
+    finish_reason: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct MockMessage {
+    content: Option<String>,
+    tool_calls: Option<Vec<MockToolCall>>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct MockToolCall {
+    id: Option<String>,
+    #[serde(rename = "type")]
+    call_type: Option<String>,
+    function: Option<MockToolCallFunction>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct MockToolCallFunction {
+    name: Option<String>,
+    arguments: Option<String>,
 }
 
 /// The mock provider queues requests and waits for manual responses.
@@ -38,6 +77,9 @@ impl MockProvider {
     }
 
     /// Submit a user response to a pending mock request.
+    /// Accepts either:
+    /// 1. Full OpenAI-compatible JSON response
+    /// 2. Plain text (treated as simple content response)
     pub async fn submit_response(&self, request_id: &str, response: String) -> Result<(), String> {
         let mut channels = self.response_channels.lock().await;
         if let Some(tx) = channels.remove(request_id) {
@@ -57,13 +99,96 @@ impl MockProvider {
     }
 }
 
+/// Build the OpenAI-compatible request JSON that would be sent to the API.
+fn build_raw_request_json(request: &AiRequest) -> String {
+    #[derive(Serialize)]
+    struct RawRequest<'a> {
+        model: &'a str,
+        messages: Vec<RawMessage<'a>>,
+        max_tokens: u32,
+        temperature: f32,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        stop: &'a Option<Vec<String>>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        tools: &'a Option<Vec<ToolSchema>>,
+    }
+
+    #[derive(Serialize)]
+    struct RawMessage<'a> {
+        role: &'a str,
+        content: &'a str,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        tool_call_id: Option<&'a str>,
+    }
+
+    let messages: Vec<RawMessage> = request.messages.iter().map(|m| RawMessage {
+        role: match m.role {
+            MessageRole::System => "system",
+            MessageRole::User => "user",
+            MessageRole::Assistant => "assistant",
+            MessageRole::Tool => "tool",
+        },
+        content: &m.content,
+        tool_call_id: m.tool_call_id.as_deref(),
+    }).collect();
+
+    let raw = RawRequest {
+        model: &request.model.model_id,
+        messages,
+        max_tokens: request.model.max_tokens,
+        temperature: request.model.temperature,
+        stop: &request.stop,
+        tools: &request.tools,
+    };
+
+    serde_json::to_string_pretty(&raw).unwrap_or_else(|_| "{}".into())
+}
+
+/// Parse the user's response. Accepts full OpenAI JSON or plain text.
+fn parse_mock_response(raw: &str) -> (String, Vec<ToolCallResponse>) {
+    // Try parsing as full OpenAI response JSON
+    if let Ok(resp) = serde_json::from_str::<MockResponseJson>(raw) {
+        // Full response with choices
+        if let Some(choices) = resp.choices {
+            if let Some(choice) = choices.first() {
+                if let Some(msg) = &choice.message {
+                    let content = msg.content.clone().unwrap_or_default();
+                    let tool_calls: Vec<ToolCallResponse> = msg.tool_calls.as_ref()
+                        .map(|tcs| tcs.iter().enumerate().filter_map(|(i, tc)| {
+                            let func = tc.function.as_ref()?;
+                            Some(ToolCallResponse {
+                                id: tc.id.clone().unwrap_or_else(|| format!("call_{}", i)),
+                                call_type: tc.call_type.clone().unwrap_or_else(|| "function".into()),
+                                function: ToolCallFunction {
+                                    name: func.name.clone().unwrap_or_default(),
+                                    arguments: func.arguments.clone().unwrap_or_else(|| "{}".into()),
+                                },
+                            })
+                        }).collect())
+                        .unwrap_or_default();
+                    return (content, tool_calls);
+                }
+            }
+        }
+        // Simple content field
+        if let Some(content) = resp.content {
+            return (content, Vec::new());
+        }
+    }
+
+    // Fallback: treat as plain text response
+    (raw.to_string(), Vec::new())
+}
+
 #[async_trait::async_trait]
 impl AiProvider for MockProvider {
     async fn complete(&self, request: &AiRequest) -> Result<AiResponse, AiError> {
         let id = uuid::Uuid::new_v4().to_string();
+        let raw_request_json = build_raw_request_json(request);
+
         let pending_req = MockPendingRequest {
             id: id.clone(),
-            messages: request.messages.clone(),
+            raw_request_json: raw_request_json.clone(),
             model: request.model.clone(),
             timestamp: chrono::Utc::now().to_rfc3339(),
         };
@@ -80,14 +205,14 @@ impl AiProvider for MockProvider {
             channels.insert(id.clone(), response_tx);
         }
 
-        // Notify UI via channel (dummy sender, real response comes via submit_response)
+        // Notify UI via channel
         let _ = self.pending_tx.send((pending_req, {
             let (tx, _rx) = oneshot::channel();
             tx
         }));
 
         // Wait for user response (or timeout)
-        let content = tokio::time::timeout(
+        let raw_response = tokio::time::timeout(
             std::time::Duration::from_secs(600), // 10 min timeout
             response_rx,
         )
@@ -103,6 +228,9 @@ impl AiProvider for MockProvider {
             retryable: false,
         })?;
 
+        // Parse the response (full JSON or plain text)
+        let (content, tool_calls) = parse_mock_response(&raw_response);
+
         // Estimate tokens (rough: 4 chars per token)
         let input_tokens: u32 = request.messages.iter()
             .map(|m| m.content.len() as u32 / 4)
@@ -117,8 +245,9 @@ impl AiProvider for MockProvider {
                 thinking_tokens: 0,
                 cached_tokens: 0,
             },
-            raw_response: Some("[mock response — user-provided]".into()),
+            raw_response: Some(raw_response),
             truncated: false,
+            tool_calls,
         })
     }
 

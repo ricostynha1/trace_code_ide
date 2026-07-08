@@ -44,8 +44,7 @@ interface ModelConfig {
 interface AiSettings {
   active_provider: string;
   openrouter_api_key: string | null;
-  bedrock_access_key: string | null;
-  bedrock_secret_key: string | null;
+  bedrock_api_key: string | null;
   bedrock_region: string | null;
   selected_model: ModelConfig | null;
 }
@@ -72,7 +71,7 @@ interface Props {
 
 interface MockPendingRequest {
   id: string;
-  messages: ChatMessage[];
+  raw_request_json: string;
   model: ModelConfig;
   timestamp: string;
 }
@@ -101,6 +100,9 @@ export function AiChatPanel({ visible, onClose }: Props) {
   const [mockResponse, setMockResponse] = useState("");
   const [streamingContent, setStreamingContent] = useState<string>("");
   const [useStreaming, setUseStreaming] = useState(true);
+  const [modelFetchLoading, setModelFetchLoading] = useState(false);
+  const [modelFetchError, setModelFetchError] = useState<string | null>(null);
+  const [envKeys, setEnvKeys] = useState<Record<string, string>>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const mockPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -152,6 +154,8 @@ export function AiChatPanel({ visible, onClose }: Props) {
     try {
       const s = await invoke<AiSettings>("get_ai_settings");
       setSettings(s);
+      const keys = await invoke<Record<string, string>>("detect_env_keys");
+      setEnvKeys(keys);
     } catch {}
   };
 
@@ -326,29 +330,44 @@ export function AiChatPanel({ visible, onClose }: Props) {
             type="password"
             value={settings.openrouter_api_key || ""}
             onChange={(e) => saveSettings({ ...settings, openrouter_api_key: e.target.value || null })}
+            placeholder={envKeys.openrouter ? `Detected from ${envKeys.openrouter}` : ""}
           />
 
-          <label>Bedrock Access Key</label>
+          <label>Bedrock Bearer Token</label>
           <input
             type="password"
-            value={settings.bedrock_access_key || ""}
-            onChange={(e) => saveSettings({ ...settings, bedrock_access_key: e.target.value || null })}
+            value={settings.bedrock_api_key || ""}
+            onChange={(e) => saveSettings({ ...settings, bedrock_api_key: e.target.value || null })}
+            placeholder={envKeys.bedrock ? `Detected from ${envKeys.bedrock}` : ""}
           />
 
-          <label>Bedrock Secret Key</label>
-          <input
-            type="password"
-            value={settings.bedrock_secret_key || ""}
-            onChange={(e) => saveSettings({ ...settings, bedrock_secret_key: e.target.value || null })}
-          />
-
-          <label>Bedrock Region</label>
+          <label>Bedrock Region (default: eu-west-1)</label>
           <input
             value={settings.bedrock_region || ""}
             onChange={(e) => saveSettings({ ...settings, bedrock_region: e.target.value || null })}
+            placeholder="eu-west-1"
           />
 
           <h3>Model Selection</h3>
+
+          <button
+            className="ai-fetch-models-btn"
+            onClick={async () => {
+              setModelFetchError(null);
+              setModelFetchLoading(true);
+              try {
+                const m = await invoke<ModelConfig[]>("get_ai_models");
+                setModels(m);
+              } catch (e) {
+                setModelFetchError(String(e));
+              } finally {
+                setModelFetchLoading(false);
+              }
+            }}
+            disabled={modelFetchLoading}
+          >
+            {modelFetchLoading ? "Fetching models..." : "Fetch Available Models"}
+          </button>
 
           <label>
             <input
@@ -360,7 +379,7 @@ export function AiChatPanel({ visible, onClose }: Props) {
           </label>
 
           {models.length === 0 ? (
-            <p className="ai-hint">Click "Settings" tab to fetch available models from providers.</p>
+            <p className="ai-hint">Click "Fetch Available Models" to query providers.</p>
           ) : (
             <select
               value={settings.selected_model?.model_id || ""}
@@ -376,6 +395,12 @@ export function AiChatPanel({ visible, onClose }: Props) {
                 </option>
               ))}
             </select>
+          )}
+
+          {modelFetchError && (
+            <div className="ai-settings-error">
+              <strong>Error:</strong> {modelFetchError}
+            </div>
           )}
         </div>
       )}

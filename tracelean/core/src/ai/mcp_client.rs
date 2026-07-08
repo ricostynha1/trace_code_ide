@@ -211,6 +211,17 @@ impl McpClientManager {
         tools
     }
 
+    /// Get all tool schemas directly (JSON Schema passthrough, no lossy conversion).
+    pub fn all_tool_schemas(&self) -> Vec<super::provider::ToolSchema> {
+        let mut schemas = Vec::new();
+        for conn in &self.connections {
+            for tool in &conn.tools {
+                schemas.push(tool.to_tool_schema());
+            }
+        }
+        schemas
+    }
+
     /// Call a tool on the appropriate server.
     pub async fn call_tool(&mut self, server_name: &str, tool_name: &str, arguments: serde_json::Value) -> Result<ToolResult, String> {
         for conn in &mut self.connections {
@@ -273,4 +284,26 @@ fn parse_mcp_tool(val: &serde_json::Value) -> Option<ToolDefinition> {
     }
 
     Some(ToolDefinition { name, description, parameters })
+}
+
+/// Parse an MCP tool JSON object directly into a ToolSchema (JSON Schema passthrough).
+/// No lossy conversion — the inputSchema from MCP goes straight to the LLM's native tool calling.
+#[allow(dead_code)]
+fn parse_mcp_tool_schema(val: &serde_json::Value) -> Option<super::provider::ToolSchema> {
+    let name = val.get("name")?.as_str()?.to_string();
+    let description = val.get("description").and_then(|d| d.as_str()).unwrap_or("").to_string();
+
+    // Pass through inputSchema as-is (it's already JSON Schema)
+    let parameters = val.get("inputSchema").cloned().unwrap_or_else(|| {
+        serde_json::json!({"type": "object", "properties": {}})
+    });
+
+    Some(super::provider::ToolSchema {
+        tool_type: "function".into(),
+        function: super::provider::ToolFunction {
+            name,
+            description,
+            parameters,
+        },
+    })
 }

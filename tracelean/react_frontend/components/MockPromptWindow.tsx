@@ -1,23 +1,17 @@
 import { useState, useEffect, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { listen } from "@tauri-apps/api/event";
-
-interface ChatMessage {
-  role: "system" | "user" | "assistant";
-  content: string;
-}
 
 interface MockPendingRequest {
   id: string;
-  messages: ChatMessage[];
+  raw_request_json: string;
   model: { display_name: string };
   timestamp: string;
 }
 
 /**
  * Full-screen modal overlay for mock AI mode.
- * Shows the complete prompt context and lets the user type/paste a response.
- * Appears automatically when mock provider receives a request.
+ * Shows the exact JSON request that would be sent to the LLM API
+ * (messages + tools + model params). User pastes back the full JSON response.
  */
 export function MockPromptWindow() {
   const [pending, setPending] = useState<MockPendingRequest | null>(null);
@@ -76,20 +70,45 @@ export function MockPromptWindow() {
     }
   };
 
-  // Copy all messages as text for pasting into external AI
-  const copyPrompt = () => {
+  // Copy the full raw request JSON for pasting into external AI
+  const copyRawRequest = () => {
     if (!pending) return;
-    const text = pending.messages
-      .map((m) => `[${m.role.toUpperCase()}]\n${m.content}`)
-      .join("\n\n---\n\n");
-    navigator.clipboard.writeText(text);
+    navigator.clipboard.writeText(pending.raw_request_json);
   };
 
-  // Copy only the last user message (most common use case for external AI)
-  const copyLastMessage = () => {
-    if (!pending || pending.messages.length === 0) return;
-    const last = pending.messages[pending.messages.length - 1];
-    navigator.clipboard.writeText(last.content);
+  // Insert a template response with tool_calls for convenience
+  const insertToolCallTemplate = () => {
+    const template = JSON.stringify({
+      choices: [{
+        message: {
+          content: "",
+          tool_calls: [{
+            id: "call_1",
+            type: "function",
+            function: {
+              name: "tool_name",
+              arguments: "{}"
+            }
+          }]
+        },
+        finish_reason: "tool_calls"
+      }]
+    }, null, 2);
+    setResponse(template);
+  };
+
+  // Insert a simple text response template
+  const insertTextTemplate = () => {
+    const template = JSON.stringify({
+      choices: [{
+        message: {
+          content: "Your response here...",
+          tool_calls: null
+        },
+        finish_reason: "stop"
+      }]
+    }, null, 2);
+    setResponse(template);
   };
 
   if (!pending) return null;
@@ -98,35 +117,35 @@ export function MockPromptWindow() {
     <div className="mock-prompt-overlay">
       <div className="mock-prompt-window">
         <div className="mock-prompt-header">
-          <h2>Mock AI — Awaiting Response</h2>
+          <h2>Mock AI — Full API Request</h2>
           <span className="mock-prompt-meta">
             Model: {pending.model.display_name} | {new Date(pending.timestamp).toLocaleTimeString()}
           </span>
-          <button className="mock-copy-btn" onClick={copyPrompt} title="Copy full prompt to clipboard">
-            📋 Copy Full Prompt
+          <button className="mock-copy-btn" onClick={copyRawRequest} title="Copy full API request JSON">
+            📋 Copy Request JSON
           </button>
-          <button className="mock-copy-btn" onClick={copyLastMessage} title="Copy last message only">
-            📄 Copy Last Message
+          <button className="mock-copy-btn" onClick={insertTextTemplate} title="Insert text response template">
+            📝 Text Template
+          </button>
+          <button className="mock-copy-btn" onClick={insertToolCallTemplate} title="Insert tool_call response template">
+            🔧 Tool Call Template
           </button>
         </div>
 
         <div className="mock-prompt-messages">
-          {pending.messages.map((m, i) => (
-            <div key={i} className={`mock-msg mock-msg-${m.role}`}>
-              <div className="mock-msg-role">{m.role}</div>
-              <pre className="mock-msg-content">{m.content}</pre>
-            </div>
-          ))}
+          <pre className="mock-msg-content" style={{ whiteSpace: "pre-wrap", fontSize: "12px", maxHeight: "60vh", overflow: "auto" }}>
+            {pending.raw_request_json}
+          </pre>
         </div>
 
         <div className="mock-prompt-response">
-          <label>Your response (paste AI output or type manually):</label>
+          <label>Paste API response JSON (or plain text for simple responses):</label>
           <textarea
             ref={textareaRef}
             value={response}
             onChange={(e) => setResponse(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Paste the AI response here... (Ctrl+Enter to submit)"
+            placeholder={'Paste full JSON response here...\n\nFormat: {"choices": [{"message": {"content": "...", "tool_calls": [...]}}]}\n\nOr just plain text for simple responses.\n\n(Ctrl+Enter to submit)'}
             disabled={submitting}
           />
           <div className="mock-prompt-actions">

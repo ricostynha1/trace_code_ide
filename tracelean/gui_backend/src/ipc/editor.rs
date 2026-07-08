@@ -216,7 +216,7 @@ pub fn get_undo_node_diff(
 ) -> Result<String, String> {
     let s = state.0.lock().map_err(|e| e.to_string())?;
     let id = uuid::Uuid::parse_str(&node_id).map_err(|e| e.to_string())?;
-    Ok(s.node_diff_summary(id))
+    Ok(s.node_content_diff(id))
 }
 
 #[tauri::command]

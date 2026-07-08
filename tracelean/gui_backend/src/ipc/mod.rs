@@ -5,3 +5,4 @@ pub mod editor;
 pub mod trace;
 pub mod ai_commands;
 pub mod mcp_commands;
+pub mod acp_commands;

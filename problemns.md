@@ -25,6 +25,7 @@
 # Agent Architecture Decision
 
 ## Decision: Implement Zed ACP as our agent interface
+Gathered all context on the internet to implement Zed ACP protocol)
 
 **Why:**
 1. Emerging standard for agent-to-editor communication (JSON-RPC 2.0, "LSP for agents")
@@ -69,6 +70,7 @@ Benefits:
 - Any ACP agent can now connect
 
 ### Phase 2: Built-in Default Agent (Rust)
+(Most of these features are already made, the differnec is now they will be calling thouch the Zed ACP)
 - Turn-based agent loop: prompt → LLM → tool calls → results → loop
 - Steering queue (abort/redirect mid-execution)
 - Context compaction (drop old tool results, truncate long content, respect context window)

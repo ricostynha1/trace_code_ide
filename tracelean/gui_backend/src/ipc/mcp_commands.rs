@@ -166,58 +166,61 @@ pub async fn ai_chat_stream(
 
     let _ = app.emit("ai-stream-start", serde_json::json!({ "stream_id": stream_id }));
 
-    // Inject system prompt with tool definitions if none present
-    let mut messages = {
-        let has_system = messages.iter().any(|m| m.role == MessageRole::System);
-        if has_system {
-            messages
-        } else {
-            let mut tools = ai::tools::builtin_tool_definitions();
-            let mgr = client.0.lock().await;
-            let mcp_tools: Vec<ai::ToolDefinition> = mgr.all_tools().into_iter().map(|(_s, t)| t).collect();
-            tools.extend(mcp_tools);
-            let system_content = format!(
-                "You are an AI assistant inside the TraceLean IDE. You help with requirements engineering, \
-                 formal specification, implementation, and repair.\n\n{}",
-                ai::tools::tools_as_system_prompt(&tools)
-            );
-            let mut msgs = vec![ai::provider::ChatMessage {
-                role: MessageRole::System,
-                content: system_content,
-            }];
-            msgs.extend(messages);
-            msgs
+    // Build tool schemas from builtin + MCP client tools
+    let all_tool_schemas = {
+        let mut schemas = ai::tools::builtin_tool_schemas();
+        let mgr = client.0.lock().await;
+        for (_server, tool) in mgr.all_tools() {
+            schemas.push(tool.to_tool_schema());
         }
+        schemas
     };
 
-    let (model, provider_kind, or_key, br_access, br_secret, br_region) = {
+    // Build tool index for selection
+    let tool_index = ai::ToolIndex::new(&all_tool_schemas);
+
+    // Extract user query for tool selection (last user message)
+    let user_query = messages.iter().rev()
+        .find(|m| m.role == MessageRole::User)
+        .map(|m| m.content.clone())
+        .unwrap_or_default();
+
+    let mut messages = messages;
+
+    let (model, provider_kind, or_key, br_token, br_region) = {
         let s = settings.0.lock().map_err(|e| e.to_string())?;
         let model = s.selected_model.clone().ok_or("No model selected")?;
         (
             model,
             s.active_provider.clone(),
             s.openrouter_api_key.clone(),
-            s.bedrock_access_key.clone(),
-            s.bedrock_secret_key.clone(),
+            s.bedrock_api_key.clone(),
             s.bedrock_region.clone(),
         )
     };
 
     let max_tool_loops = 10;
     let mut consecutive_failures: u32 = 0;
+    let mut previously_called: Vec<String> = Vec::new();
 
     for _loop_i in 0..max_tool_loops {
+        // Select relevant tools for this turn
+        let selected_tools = tool_index.select_with_context(&user_query, &previously_called, None);
+
         let request = ai::AiRequest {
             model: model.clone(),
             messages: messages.clone(),
             stop: None,
+            tools: if selected_tools.is_empty() { None } else { Some(selected_tools) },
         };
 
         let start = std::time::Instant::now();
 
         let result: Result<ai::AiResponse, ai::provider::AiError> = match provider_kind {
             ai::ProviderKind::OpenRouter => {
-                let key = or_key.clone().ok_or("OpenRouter API key not set").map_err(|e| {
+                let key = or_key.clone()
+                    .or_else(|| std::env::var("OPENROUTER_API_KEY").ok())
+                    .ok_or("OpenRouter API key not set").map_err(|e| {
                     let _ = app.emit("ai-stream-token", session.finish());
                     e.to_string()
                 })?;
@@ -236,10 +239,10 @@ pub async fn ai_chat_stream(
                 resp
             }
             ai::ProviderKind::Bedrock => {
-                let access = br_access.clone().ok_or("Bedrock access key not set").map_err(|e| e.to_string())?;
-                let secret = br_secret.clone().ok_or("Bedrock secret key not set").map_err(|e| e.to_string())?;
-                let region = br_region.clone().unwrap_or_else(|| "us-east-1".into());
-                let provider = ai::bedrock::BedrockProvider::new(access, secret, region);
+                let token = br_token.clone()
+                    .or_else(|| std::env::var("AWS_BEARER_TOKEN_BEDROCK").ok())
+                    .ok_or("Bedrock bearer token not set").map_err(|e| e.to_string())?;
+                let provider = ai::bedrock::BedrockProvider::new(token, br_region.clone());
                 let resp = provider.complete(&request).await;
                 if let Ok(ref response) = resp {
                     let content = &response.content;
@@ -289,9 +292,8 @@ pub async fn ai_chat_stream(
                     s.record(&response.usage, &cost);
                 }
 
-                // Check for tool_call blocks in the response
-                let tool_calls = extract_tool_calls_from_response(&response.content);
-                if tool_calls.is_empty() {
+                // Check for tool calls in response (native tool calling)
+                if response.tool_calls.is_empty() {
                     let _ = app.emit("ai-stream-token", session.finish());
                     return Ok(response);
                 }
@@ -300,20 +302,23 @@ pub async fn ai_chat_stream(
                 messages.push(ai::provider::ChatMessage {
                     role: MessageRole::Assistant,
                     content: response.content.clone(),
+                    tool_call_id: None,
                 });
 
-                let mut tool_results = String::new();
-                for tc in &tool_calls {
-                    let mcp_call = tc.to_mcp_call();
-                    let reason = tc.reason().map(|s| s.to_string());
+                for tc in &response.tool_calls {
+                    let tool_name = &tc.function.name;
+                    let arguments: serde_json::Value = serde_json::from_str(&tc.function.arguments)
+                        .unwrap_or(serde_json::Value::Object(serde_json::Map::new()));
+
+                    previously_called.push(tool_name.clone());
 
                     // Emit tool call message to frontend chat
-                    let reason_text = reason.as_deref().unwrap_or("");
                     let _ = app.emit("ai-chat-message", serde_json::json!({
                         "role": "system",
-                        "content": format!("call {} {}", mcp_call.name, reason_text)
+                        "content": format!("call {}", tool_name)
                     }));
 
+                    let mcp_call = ai::ToolCall { name: tool_name.clone(), arguments };
                     let result = {
                         let mut s = state.0.lock().map_err(|e| e.to_string())?;
                         let sym = symbols_state.0.lock().map_err(|e| e.to_string())?;
@@ -326,28 +331,22 @@ pub async fn ai_chat_stream(
                     // Emit tool response message to frontend chat
                     let _ = app.emit("ai-chat-message", serde_json::json!({
                         "role": "system",
-                        "content": format!("rsp {}", mcp_call.name)
+                        "content": format!("rsp {}", tool_name)
                     }));
 
-                    // P3-T1: MCP-standard JSON tool response
-                    let tool_response = serde_json::json!({
-                        "type": "tool_result",
-                        "tool_name": mcp_call.name,
-                        "is_error": !result.success,
-                        "content": [{
-                            "type": "text",
-                            "text": result.content
-                        }]
+                    // Push tool result as proper Tool role message
+                    messages.push(ai::provider::ChatMessage {
+                        role: MessageRole::Tool,
+                        content: result.content.clone(),
+                        tool_call_id: Some(tc.id.clone()),
                     });
-                    tool_results.push_str(&serde_json::to_string(&tool_response).unwrap_or_default());
-                    tool_results.push_str("\n");
 
                     // Stream tool result to UI
-                    let tool_msg = format!("\n\n[Tool: {} → {}]\n", mcp_call.name, if result.success { "ok" } else { "error" });
+                    let tool_msg = format!("\n\n[Tool: {} → {}]\n", tool_name, if result.success { "ok" } else { "error" });
                     let token_event = session.push_token(&tool_msg);
                     let _ = app.emit("ai-stream-token", &token_event);
 
-                    // P3-T2: Track consecutive failures
+                    // Track consecutive failures
                     if result.success {
                         consecutive_failures = 0;
                     } else {
@@ -358,7 +357,7 @@ pub async fn ai_chat_stream(
                     }
                 }
 
-                // P3-T2: Stop if too many consecutive failures
+                // Stop if too many consecutive failures
                 if consecutive_failures >= 6 {
                     let failure_msg = format!(
                         "{}\n\n[Tool execution stopped: {} consecutive failures. Please provide additional guidance.]",
@@ -370,6 +369,7 @@ pub async fn ai_chat_stream(
                         usage: response.usage.clone(),
                         raw_response: response.raw_response.clone(),
                         truncated: response.truncated,
+                        tool_calls: Vec::new(),
                     });
                 }
 
@@ -377,10 +377,6 @@ pub async fn ai_chat_stream(
                 invalidate_undo_cache(&cache);
                 let _ = app.emit("undo-tree-changed", ());
 
-                messages.push(ai::provider::ChatMessage {
-                    role: MessageRole::User,
-                    content: tool_results.clone(),
-                });
                 // Continue loop — will call AI again with results
             }
             Err(e) => {
@@ -394,21 +390,6 @@ pub async fn ai_chat_stream(
 
     let _ = app.emit("ai-stream-token", session.finish());
     Err("Max tool call loops exceeded (10).".into())
-}
-
-/// Parse tool_call code blocks from an AI response.
-/// Only recognizes properly fenced ```tool_call blocks.
-fn extract_tool_calls_from_response(content: &str) -> Vec<ai::tools::AgentToolCall> {
-    let mut calls = Vec::new();
-    let blocks = ai::templates::extract_code_blocks(content);
-    for block in &blocks {
-        if block.language == "tool_call" {
-            if let Ok(tc) = serde_json::from_str::<ai::tools::AgentToolCall>(&block.content) {
-                calls.push(tc);
-            }
-        }
-    }
-    calls
 }
 
 // --- Tool Definitions ---

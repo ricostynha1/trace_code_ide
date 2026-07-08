@@ -23,13 +23,15 @@ pub mod diff_pipeline;
 pub mod agents;
 pub mod tools;
 pub mod tool_executor;
+pub mod tool_selector;
 pub mod mcp_host;
 pub mod mcp_client;
 pub mod streaming;
 
-pub use provider::{AiProvider, AiRequest, AiResponse, ModelConfig, ProviderKind};
+pub use provider::{AiProvider, AiRequest, AiResponse, ModelConfig, ProviderKind, ToolSchema, ToolCallResponse};
 pub use tracking::{TokenUsage, CostEstimate};
 pub use log::{InteractionEntry, InteractionLog};
 pub use tools::{ToolDefinition, ToolCall, ToolResult};
 pub use tool_executor::AgentPermissions;
+pub use tool_selector::ToolIndex;
 pub use streaming::StreamToken;

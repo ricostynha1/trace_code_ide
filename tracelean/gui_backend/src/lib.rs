@@ -54,6 +54,10 @@ pub struct McpHostPermissionsWrapper(pub Mutex<AgentPermissions>);
 pub struct McpClientWrapper(pub tokio::sync::Mutex<McpClientManager>);
 pub struct AgentPermissionsStore(pub Mutex<std::collections::HashMap<String, AgentPermissions>>);
 
+// ─── ACP State ───────────────────────────────────────────────────────────────
+
+pub struct AcpManagerWrapper(pub std::sync::Arc<tracelean_core::acp::AcpClientManager>);
+
 // ─── Tauri EventSink Implementation ─────────────────────────────────────────
 
 pub struct TauriEventSink {
@@ -80,27 +84,28 @@ pub async fn get_provider(
     settings: &tauri::State<'_, AiSettingsWrapper>,
     mock_provider: &tauri::State<'_, MockProviderWrapper>,
 ) -> Result<Box<dyn ai::provider::AiProvider + Send + Sync>, String> {
-    let (provider_kind, or_key, br_access, br_secret, br_region) = {
+    let (provider_kind, or_key, br_token, br_region) = {
         let s = settings.0.lock().map_err(|e| e.to_string())?;
         (
             s.active_provider.clone(),
             s.openrouter_api_key.clone(),
-            s.bedrock_access_key.clone(),
-            s.bedrock_secret_key.clone(),
+            s.bedrock_api_key.clone(),
             s.bedrock_region.clone(),
         )
     };
 
     match provider_kind {
         ai::ProviderKind::OpenRouter => {
-            let key = or_key.ok_or("OpenRouter API key not set")?;
+            let key = or_key
+                .or_else(|| std::env::var("OPENROUTER_API_KEY").ok())
+                .ok_or("OpenRouter API key not set (set in settings or OPENROUTER_API_KEY env var)")?;
             Ok(Box::new(ai::openrouter::OpenRouterProvider::new(key)))
         }
         ai::ProviderKind::Bedrock => {
-            let access = br_access.ok_or("Bedrock access key not set")?;
-            let secret = br_secret.ok_or("Bedrock secret key not set")?;
-            let region = br_region.unwrap_or_else(|| "us-east-1".into());
-            Ok(Box::new(ai::bedrock::BedrockProvider::new(access, secret, region)))
+            let token = br_token
+                .or_else(|| std::env::var("AWS_BEARER_TOKEN_BEDROCK").ok())
+                .ok_or("Bedrock bearer token not set (set in settings or AWS_BEARER_TOKEN_BEDROCK env var)")?;
+            Ok(Box::new(ai::bedrock::BedrockProvider::new(token, br_region)))
         }
         ai::ProviderKind::Mock => {
             let mut guard = mock_provider.0.lock().await;
@@ -170,6 +175,9 @@ pub fn run() {
         .manage(McpHostPermissionsWrapper(Mutex::new(AgentPermissions::full_access("mcp-host"))))
         .manage(McpClientWrapper(tokio::sync::Mutex::new(McpClientManager::new())))
         .manage(AgentPermissionsStore(Mutex::new(std::collections::HashMap::new())))
+        .manage(AcpManagerWrapper(std::sync::Arc::new(
+            tracelean_core::acp::AcpClientManager::new(Arc::new(tracelean_core::SharedApp::new_headless()))
+        )))
         .invoke_handler(tauri::generate_handler![
             // Editor
             ipc::editor::apply_command,
@@ -207,6 +215,7 @@ pub fn run() {
             ipc::trace::navigate_trace_link,
             // AI
             ipc::ai_commands::get_ai_settings,
+            ipc::ai_commands::detect_env_keys,
             ipc::ai_commands::update_ai_settings,
             ipc::ai_commands::get_ai_models,
             ipc::ai_commands::get_ai_session_stats,
@@ -242,6 +251,14 @@ pub fn run() {
             ipc::mcp_commands::ai_chat_stream,
             ipc::mcp_commands::get_agent_tools,
             ipc::mcp_commands::get_agent_tools_prompt,
+            // ACP
+            ipc::acp_commands::acp_connect_agent,
+            ipc::acp_commands::acp_disconnect_agent,
+            ipc::acp_commands::acp_list_agents,
+            ipc::acp_commands::acp_status,
+            ipc::acp_commands::acp_prompt,
+            ipc::acp_commands::acp_cancel,
+            ipc::acp_commands::acp_permission_respond,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -24,7 +24,7 @@ tests/             — unit & integration tests
 # Install frontend deps
 npm install
 
-# Run in development mode (hot-reload)
+# RAlun in development mode (hot-reload)
 cargo tauri dev
 
 # Build release binary

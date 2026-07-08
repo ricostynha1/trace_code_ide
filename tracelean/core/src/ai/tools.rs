@@ -7,6 +7,7 @@
 //! - Agent permission model (4.17): filtered per-agent
 
 use serde::{Deserialize, Serialize};
+use super::provider::{ToolSchema, ToolFunction};
 
 /// A tool callable by an agent.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -32,6 +33,67 @@ pub enum ParamType {
     Boolean,
     Array { item_type: Box<ParamType> },
     Object,
+}
+
+impl ToolDefinition {
+    /// Convert to OpenAI-compatible function calling schema.
+    /// This is the format models were trained on.
+    pub fn to_tool_schema(&self) -> ToolSchema {
+        let mut properties = serde_json::Map::new();
+        let mut required = Vec::new();
+
+        for param in &self.parameters {
+            let type_str = match &param.param_type {
+                ParamType::String => "string",
+                ParamType::Integer => "integer",
+                ParamType::Boolean => "boolean",
+                ParamType::Array { .. } => "array",
+                ParamType::Object => "object",
+            };
+
+            let mut prop = serde_json::Map::new();
+            prop.insert("type".into(), serde_json::Value::String(type_str.into()));
+            prop.insert("description".into(), serde_json::Value::String(param.description.clone()));
+
+            if let ParamType::Array { item_type } = &param.param_type {
+                let item_type_str = match item_type.as_ref() {
+                    ParamType::String => "string",
+                    ParamType::Integer => "integer",
+                    ParamType::Boolean => "boolean",
+                    _ => "string",
+                };
+                let mut items = serde_json::Map::new();
+                items.insert("type".into(), serde_json::Value::String(item_type_str.into()));
+                prop.insert("items".into(), serde_json::Value::Object(items));
+            }
+
+            properties.insert(param.name.clone(), serde_json::Value::Object(prop));
+
+            if param.required {
+                required.push(serde_json::Value::String(param.name.clone()));
+            }
+        }
+
+        let parameters = serde_json::json!({
+            "type": "object",
+            "properties": properties,
+            "required": required,
+        });
+
+        ToolSchema {
+            tool_type: "function".into(),
+            function: ToolFunction {
+                name: self.name.clone(),
+                description: self.description.clone(),
+                parameters,
+            },
+        }
+    }
+}
+
+/// Convert all builtin tool definitions to OpenAI tool schemas.
+pub fn builtin_tool_schemas() -> Vec<ToolSchema> {
+    builtin_tool_definitions().iter().map(|t| t.to_tool_schema()).collect()
 }
 
 /// Result of a tool invocation.

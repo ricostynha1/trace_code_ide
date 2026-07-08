@@ -205,6 +205,49 @@ impl AppState {
             .or_insert_with(FileBuffer::empty)
     }
 
+    /// Return a real unified diff between current state and the state at target node.
+    /// Clone current state, replay jump_to(target) on clone, diff all buffers.
+    pub fn node_content_diff(&self, node_id: NodeId) -> String {
+        // Clone self and jump clone to target
+        let mut clone = self.clone();
+        let commands = match clone.undo_tree.jump_to(node_id) {
+            Some(cmds) => cmds,
+            None => return String::from("(node not found)"),
+        };
+        for cmd in &commands {
+            clone.execute(cmd);
+        }
+
+        // Diff all buffers: current vs target
+        let mut diff_output = String::new();
+        let mut all_paths: Vec<&PathBuf> = self.buffers.keys().collect();
+        for p in clone.buffers.keys() {
+            if !all_paths.contains(&p) {
+                all_paths.push(p);
+            }
+        }
+        all_paths.sort();
+
+        for path in all_paths {
+            let current = self.buffers.get(path).map(|b| b.content.as_str()).unwrap_or("");
+            let target = clone.buffers.get(path).map(|b| b.content.as_str()).unwrap_or("");
+            if current == target {
+                continue;
+            }
+            diff_output.push_str(&format!("--- a/{}\n+++ b/{}\n", path.display(), path.display()));
+            // Simple line-based unified diff
+            let cur_lines: Vec<&str> = current.lines().collect();
+            let tar_lines: Vec<&str> = target.lines().collect();
+            diff_output.push_str(&simple_unified_diff(&cur_lines, &tar_lines));
+        }
+
+        if diff_output.is_empty() {
+            "(no changes)".to_string()
+        } else {
+            diff_output
+        }
+    }
+
     /// Return a human-readable diff summary for a given undo node.
     pub fn node_diff_summary(&self, node_id: NodeId) -> String {
         if let Some(node) = self.undo_tree.get_node(node_id) {
@@ -264,6 +307,126 @@ impl Default for AppState {
     fn default() -> Self {
         Self::new()
     }
+}
+
+/// Simple line-based unified diff (Myers-like LCS approach).
+/// Produces @@ hunks with context lines.
+fn simple_unified_diff(a: &[&str], b: &[&str]) -> String {
+    // LCS-based diff: find longest common subsequence indices
+    let n = a.len();
+    let m = b.len();
+
+    // For small files, use full DP. For large files, just show all changes.
+    if n + m > 10_000 {
+        // Fallback: show everything as remove+add
+        let mut out = String::new();
+        out.push_str(&format!("@@ -1,{} +1,{} @@\n", n, m));
+        for line in a {
+            out.push_str(&format!("-{}\n", line));
+        }
+        for line in b {
+            out.push_str(&format!("+{}\n", line));
+        }
+        return out;
+    }
+
+    // Build edit script via DP
+    let mut dp = vec![vec![0u32; m + 1]; n + 1];
+    for i in (0..n).rev() {
+        for j in (0..m).rev() {
+            if a[i] == b[j] {
+                dp[i][j] = dp[i + 1][j + 1] + 1;
+            } else {
+                dp[i][j] = dp[i + 1][j].max(dp[i][j + 1]);
+            }
+        }
+    }
+
+    // Generate edit operations
+    #[derive(Clone, Copy)]
+    enum Op { Keep, Remove, Add }
+    let mut ops: Vec<(Op, &str)> = Vec::new();
+    let (mut i, mut j) = (0, 0);
+    while i < n || j < m {
+        if i < n && j < m && a[i] == b[j] {
+            ops.push((Op::Keep, a[i]));
+            i += 1;
+            j += 1;
+        } else if j < m && (i >= n || dp[i][j + 1] >= dp[i + 1][j]) {
+            ops.push((Op::Add, b[j]));
+            j += 1;
+        } else {
+            ops.push((Op::Remove, a[i]));
+            i += 1;
+        }
+    }
+
+    // Format as unified diff hunks (3 lines context)
+    let context = 3;
+    let mut out = String::new();
+    let mut idx = 0;
+    while idx < ops.len() {
+        // Find next change
+        let change_start = match ops[idx..].iter().position(|(op, _)| !matches!(op, Op::Keep)) {
+            Some(pos) => idx + pos,
+            None => break,
+        };
+
+        // Hunk start with context
+        let hunk_start = change_start.saturating_sub(context);
+
+        // Find end of this hunk (include trailing context, merge nearby changes)
+        let mut hunk_end = change_start;
+        loop {
+            // Skip past changes
+            while hunk_end < ops.len() && !matches!(ops[hunk_end].0, Op::Keep) {
+                hunk_end += 1;
+            }
+            // Check if next change is within context range
+            let next_change = ops[hunk_end..].iter().position(|(op, _)| !matches!(op, Op::Keep));
+            match next_change {
+                Some(pos) if pos <= context * 2 => {
+                    hunk_end += pos;
+                }
+                _ => break,
+            }
+        }
+        // Add trailing context
+        hunk_end = (hunk_end + context).min(ops.len());
+
+        // Calculate line numbers
+        let mut a_start = 1usize;
+        let mut b_start = 1usize;
+        for op in &ops[..hunk_start] {
+            match op.0 {
+                Op::Keep => { a_start += 1; b_start += 1; }
+                Op::Remove => { a_start += 1; }
+                Op::Add => { b_start += 1; }
+            }
+        }
+        let mut a_count = 0usize;
+        let mut b_count = 0usize;
+        for op in &ops[hunk_start..hunk_end] {
+            match op.0 {
+                Op::Keep => { a_count += 1; b_count += 1; }
+                Op::Remove => { a_count += 1; }
+                Op::Add => { b_count += 1; }
+            }
+        }
+
+        out.push_str(&format!("@@ -{},{} +{},{} @@\n", a_start, a_count, b_start, b_count));
+        for &(op, line) in &ops[hunk_start..hunk_end] {
+            match op {
+                Op::Keep => out.push_str(&format!(" {}\n", line)),
+                Op::Remove => out.push_str(&format!("-{}\n", line)),
+                Op::Add => out.push_str(&format!("+{}\n", line)),
+            }
+        }
+
+        idx = hunk_end;
+    }
+
+    out
 }
 
 

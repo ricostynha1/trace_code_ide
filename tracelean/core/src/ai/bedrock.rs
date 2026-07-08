@@ -1,53 +1,50 @@
 //! Amazon Bedrock provider implementation.
-//! Uses the Bedrock Converse API via direct HTTP (no AWS SDK dependency).
+//! Uses the Bedrock Converse API with Bearer token authentication.
+//! No SigV4 signing needed — uses AWS_BEARER_TOKEN_BEDROCK.
 
 use super::provider::*;
 use super::tracking::TokenUsage;
 use serde::{Deserialize, Serialize};
 
+/// Default region for Bedrock API.
+pub const DEFAULT_REGION: &str = "eu-west-1";
+/// Default model ID.
+pub const DEFAULT_MODEL_ID: &str = "eu.amazon.nova-lite-v1:0";
+
 pub struct BedrockProvider {
-    #[allow(dead_code)]
-    access_key: String,
-    #[allow(dead_code)]
-    secret_key: String,
+    bearer_token: String,
     region: String,
     client: reqwest::Client,
     max_retries: u32,
 }
 
 impl BedrockProvider {
-    pub fn new(access_key: String, secret_key: String, region: String) -> Self {
+    /// Create with bearer token and optional region (defaults to eu-west-1).
+    pub fn new(bearer_token: String, region: Option<String>) -> Self {
         let client = reqwest::Client::builder()
             .timeout(std::time::Duration::from_secs(120))
             .build()
             .unwrap_or_default();
 
         Self {
-            access_key,
-            secret_key,
-            region,
+            bearer_token,
+            region: region.unwrap_or_else(|| DEFAULT_REGION.into()),
             client,
             max_retries: 3,
         }
     }
 
-    /// Generate AWS SigV4 authorization header.
-    /// Simplified — in production you'd use a proper signing lib.
-    fn sign_request(&self, method: &str, url: &str, body: &[u8], service: &str) -> Vec<(String, String)> {
-        // NOTE: This is a placeholder. Real implementation needs full AWS SigV4.
-        // For now, we include auth info that a proper signer would produce.
-        // TODO: integrate aws-sigv4 crate for proper signing.
-        let _ = (method, url, body, service);
-        vec![
-            ("x-amz-date".into(), chrono::Utc::now().format("%Y%m%dT%H%M%SZ").to_string()),
-            // Authorization header would go here after proper signing
-        ]
-    }
-
-    fn endpoint(&self, model_id: &str) -> String {
+    fn converse_endpoint(&self, model_id: &str) -> String {
         format!(
             "https://bedrock-runtime.{}.amazonaws.com/model/{}/converse",
             self.region, model_id
+        )
+    }
+
+    fn list_models_endpoint(&self) -> String {
+        format!(
+            "https://bedrock.{}.amazonaws.com/foundation-models",
+            self.region
         )
     }
 }
@@ -60,6 +57,36 @@ struct BrConverseRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
     system: Option<Vec<BrSystemBlock>>,
     inference_config: BrInferenceConfig,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    tool_config: Option<BrToolConfig>,
+}
+
+/// Bedrock tool configuration.
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct BrToolConfig {
+    tools: Vec<BrToolDef>,
+}
+
+/// A single tool definition for Bedrock.
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct BrToolDef {
+    tool_spec: BrToolSpec,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct BrToolSpec {
+    name: String,
+    description: String,
+    input_schema: BrInputSchema,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct BrInputSchema {
+    json: serde_json::Value,
 }
 
 #[derive(Serialize)]
@@ -69,7 +96,24 @@ struct BrMessage {
 }
 
 #[derive(Serialize)]
-struct BrContentBlock {
+#[serde(untagged)]
+#[allow(dead_code)]
+enum BrContentBlock {
+    Text { text: String },
+    ToolResult { tool_result: BrToolResultBlock },
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+#[allow(dead_code)]
+struct BrToolResultBlock {
+    tool_use_id: String,
+    content: Vec<BrToolResultContent>,
+}
+
+#[derive(Serialize)]
+#[allow(dead_code)]
+struct BrToolResultContent {
     text: String,
 }
 
@@ -107,17 +151,56 @@ struct BrOutMessage {
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct BrOutContent {
+    #[serde(default)]
     text: Option<String>,
+    #[serde(default)]
+    tool_use: Option<BrToolUse>,
+    #[serde(default)]
+    reasoning_content: Option<BrReasoningContent>,
+}
+
+/// Reasoning content block from Bedrock Converse API (extended thinking).
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct BrReasoningContent {
+    #[serde(default)]
+    reasoning_text: Option<BrReasoningText>,
+    /// Encrypted/redacted content (base64) — we just note its presence.
+    #[serde(default)]
+    redacted_content: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct BrReasoningText {
+    text: String,
+    #[serde(default)]
+    #[allow(dead_code)]
+    signature: Option<String>,
+}
+
+/// Tool use block in Bedrock response.
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct BrToolUse {
+    tool_use_id: String,
+    name: String,
+    input: serde_json::Value,
 }
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[allow(dead_code)]
 struct BrUsage {
     input_tokens: u32,
     output_tokens: u32,
     #[serde(default)]
+    total_tokens: Option<u32>,
+    #[serde(default)]
     cache_read_input_tokens: Option<u32>,
+    #[serde(default)]
+    cache_write_input_tokens: Option<u32>,
 }
 
 /// Bedrock ListFoundationModels response.
@@ -145,17 +228,65 @@ impl AiProvider for BedrockProvider {
             .map(|m| BrSystemBlock { text: m.content.clone() })
             .collect();
 
-        let messages: Vec<BrMessage> = request.messages.iter()
-            .filter(|m| m.role != MessageRole::System)
-            .map(|m| BrMessage {
-                role: match m.role {
-                    MessageRole::User => "user".into(),
-                    MessageRole::Assistant => "assistant".into(),
-                    _ => "user".into(),
-                },
-                content: vec![BrContentBlock { text: m.content.clone() }],
-            })
-            .collect();
+        // Build messages, converting Tool messages to user messages with toolResult blocks
+        let mut messages: Vec<BrMessage> = Vec::new();
+        let mut pending_tool_results: Vec<BrContentBlock> = Vec::new();
+
+        for m in request.messages.iter().filter(|m| m.role != MessageRole::System) {
+            match m.role {
+                MessageRole::Tool => {
+                    // Accumulate tool results — they'll be sent as a user message
+                    let tool_call_id = m.tool_call_id.clone().unwrap_or_else(|| "unknown".into());
+                    pending_tool_results.push(BrContentBlock::ToolResult {
+                        tool_result: BrToolResultBlock {
+                            tool_use_id: tool_call_id,
+                            content: vec![BrToolResultContent { text: m.content.clone() }],
+                        },
+                    });
+                }
+                _ => {
+                    // If we have pending tool results, flush them as a user message first
+                    if !pending_tool_results.is_empty() {
+                        messages.push(BrMessage {
+                            role: "user".into(),
+                            content: std::mem::take(&mut pending_tool_results),
+                        });
+                    }
+                    messages.push(BrMessage {
+                        role: match m.role {
+                            MessageRole::User => "user".into(),
+                            MessageRole::Assistant => "assistant".into(),
+                            _ => "user".into(),
+                        },
+                        content: vec![BrContentBlock::Text { text: m.content.clone() }],
+                    });
+                }
+            }
+        }
+        // Flush any remaining tool results
+        if !pending_tool_results.is_empty() {
+            messages.push(BrMessage {
+                role: "user".into(),
+                content: pending_tool_results,
+            });
+        }
+
+        // Convert ToolSchema to Bedrock toolConfig format
+        let tool_config = request.tools.as_ref().and_then(|tools| {
+            if tools.is_empty() { return None; }
+            let br_tools: Vec<BrToolDef> = tools.iter().map(|ts| {
+                BrToolDef {
+                    tool_spec: BrToolSpec {
+                        name: ts.function.name.clone(),
+                        description: ts.function.description.clone(),
+                        input_schema: BrInputSchema {
+                            json: ts.function.parameters.clone(),
+                        },
+                    },
+                }
+            }).collect();
+            Some(BrToolConfig { tools: br_tools })
+        });
 
         let body = BrConverseRequest {
             messages,
@@ -165,16 +296,10 @@ impl AiProvider for BedrockProvider {
                 temperature: request.model.temperature,
                 stop_sequences: request.stop.clone(),
             },
+            tool_config,
         };
 
-        let body_bytes = serde_json::to_vec(&body).map_err(|e| AiError {
-            kind: AiErrorKind::InvalidRequest,
-            message: format!("Serialize error: {}", e),
-            retryable: false,
-        })?;
-
-        let url = self.endpoint(&request.model.model_id);
-        let _headers = self.sign_request("POST", &url, &body_bytes, "bedrock");
+        let url = self.converse_endpoint(&request.model.model_id);
 
         let mut last_err = None;
         for attempt in 0..=self.max_retries {
@@ -182,17 +307,14 @@ impl AiProvider for BedrockProvider {
                 tokio::time::sleep(std::time::Duration::from_millis(500 * 2u64.pow(attempt - 1))).await;
             }
 
-            let mut req_builder = self.client
+            let resp = self.client
                 .post(&url)
+                .header("Authorization", format!("Bearer {}", self.bearer_token))
                 .header("Content-Type", "application/json")
-                .header("Accept", "application/json");
-
-            // Apply auth headers
-            for (k, v) in self.sign_request("POST", &url, &body_bytes, "bedrock") {
-                req_builder = req_builder.header(&k, &v);
-            }
-
-            let resp = req_builder.body(body_bytes.clone()).send().await;
+                .header("Accept", "application/json")
+                .json(&body)
+                .send()
+                .await;
 
             match resp {
                 Ok(r) => {
@@ -206,6 +328,14 @@ impl AiProvider for BedrockProvider {
                             retryable: true,
                         });
                         continue;
+                    }
+
+                    if status == 401 || status == 403 {
+                        return Err(AiError {
+                            kind: AiErrorKind::Authentication,
+                            message: format!("Auth failed ({}): {}", status, &raw_text[..raw_text.len().min(200)]),
+                            retryable: false,
+                        });
                     }
 
                     if !status.is_success() {
@@ -225,17 +355,56 @@ impl AiProvider for BedrockProvider {
                         retryable: false,
                     })?;
 
-                    let content = parsed.output.message
-                        .and_then(|m| m.content.into_iter().next())
-                        .and_then(|c| c.text)
-                        .unwrap_or_default();
+                    let mut content = String::new();
+                    let mut tool_calls = Vec::new();
+                    let mut thinking_text_len: usize = 0;
+
+                    if let Some(msg) = parsed.output.message {
+                        for block in msg.content {
+                            if let Some(text) = block.text {
+                                if !content.is_empty() {
+                                    content.push('\n');
+                                }
+                                content.push_str(&text);
+                            }
+                            if let Some(tu) = block.tool_use {
+                                tool_calls.push(super::provider::ToolCallResponse {
+                                    id: tu.tool_use_id,
+                                    call_type: "function".into(),
+                                    function: super::provider::ToolCallFunction {
+                                        name: tu.name,
+                                        arguments: serde_json::to_string(&tu.input).unwrap_or_else(|_| "{}".into()),
+                                    },
+                                });
+                            }
+                            if let Some(rc) = block.reasoning_content {
+                                if let Some(rt) = rc.reasoning_text {
+                                    thinking_text_len += rt.text.len();
+                                } else if rc.redacted_content.is_some() {
+                                    // Redacted reasoning — we can't measure but note presence
+                                    thinking_text_len += 100; // minimal estimate
+                                }
+                            }
+                        }
+                    }
 
                     let truncated = parsed.stop_reason.as_deref() == Some("max_tokens");
+
+                    // Estimate thinking tokens: ~4 chars per token (rough heuristic).
+                    // Bedrock Converse API includes thinking in outputTokens, so we
+                    // estimate thinking_tokens as a subset of output_tokens.
+                    let estimated_thinking_tokens = if thinking_text_len > 0 {
+                        let estimate = (thinking_text_len as u32) / 4;
+                        // Don't exceed output_tokens
+                        estimate.min(parsed.usage.output_tokens)
+                    } else {
+                        0
+                    };
 
                     let token_usage = TokenUsage {
                         input_tokens: parsed.usage.input_tokens,
                         output_tokens: parsed.usage.output_tokens,
-                        thinking_tokens: 0,
+                        thinking_tokens: estimated_thinking_tokens,
                         cached_tokens: parsed.usage.cache_read_input_tokens.unwrap_or(0),
                     };
 
@@ -244,6 +413,7 @@ impl AiProvider for BedrockProvider {
                         usage: token_usage,
                         raw_response: Some(raw_text),
                         truncated,
+                        tool_calls,
                     });
                 }
                 Err(e) => {
@@ -273,27 +443,27 @@ impl AiProvider for BedrockProvider {
     }
 
     async fn list_models(&self) -> Result<Vec<ModelConfig>, AiError> {
-        // Query Bedrock ListFoundationModels API
-        let url = format!(
-            "https://bedrock.{}.amazonaws.com/foundation-models",
-            self.region
-        );
+        let url = self.list_models_endpoint();
 
-        let _headers = self.sign_request("GET", &url, &[], "bedrock");
-
-        let mut req_builder = self.client
+        let resp = self.client
             .get(&url)
-            .header("Accept", "application/json");
+            .header("Authorization", format!("Bearer {}", self.bearer_token))
+            .header("Accept", "application/json")
+            .send()
+            .await
+            .map_err(|e| AiError {
+                kind: AiErrorKind::Network,
+                message: e.to_string(),
+                retryable: true,
+            })?;
 
-        for (k, v) in self.sign_request("GET", &url, &[], "bedrock") {
-            req_builder = req_builder.header(&k, &v);
+        if resp.status() == 401 || resp.status() == 403 {
+            return Err(AiError {
+                kind: AiErrorKind::Authentication,
+                message: format!("Auth failed fetching models ({})", resp.status()),
+                retryable: false,
+            });
         }
-
-        let resp = req_builder.send().await.map_err(|e| AiError {
-            kind: AiErrorKind::Network,
-            message: e.to_string(),
-            retryable: true,
-        })?;
 
         if !resp.status().is_success() {
             return Err(AiError {
@@ -309,21 +479,127 @@ impl AiProvider for BedrockProvider {
             retryable: false,
         })?;
 
+        // Fetch pricing from AWS public bulk pricing API (no auth needed)
+        let pricing = fetch_bedrock_pricing(&self.client, &self.region).await;
+
         let models = body.model_summaries.into_iter()
             .filter(|m| m.inference_types_supported.iter().any(|t| t == "ON_DEMAND"))
-            .map(|m| ModelConfig {
-                provider: ProviderKind::Bedrock,
-                model_id: m.model_id.clone(),
-                display_name: m.model_name.unwrap_or(m.model_id),
-                max_tokens: 4096,
-                temperature: 0.3,
-                input_cost_per_m: 0.0, // Bedrock doesn't expose pricing in API; user configures
-                output_cost_per_m: 0.0,
-                cached_input_cost_per_m: 0.0,
-                extra_params: None,
+            .map(|m| {
+                let (input_cost, output_cost) = pricing.get(&m.model_id)
+                    .copied()
+                    .unwrap_or((0.0, 0.0));
+                ModelConfig {
+                    provider: ProviderKind::Bedrock,
+                    model_id: m.model_id.clone(),
+                    display_name: m.model_name.unwrap_or_else(|| m.model_id.clone()),
+                    max_tokens: 4096,
+                    temperature: 0.3,
+                    input_cost_per_m: input_cost,
+                    output_cost_per_m: output_cost,
+                    cached_input_cost_per_m: input_cost * 0.1, // estimate: ~10% of input for cached
+                    extra_params: None,
+                }
             })
             .collect();
 
         Ok(models)
     }
+}
+
+// ---------------------------------------------------------------------------
+// Pricing fetch from AWS public bulk pricing API
+// ---------------------------------------------------------------------------
+
+/// Fetch per-model pricing from AWS public pricing endpoint (no auth needed).
+/// Returns map of model_id -> (input_cost_per_1M_tokens, output_cost_per_1M_tokens).
+async fn fetch_bedrock_pricing(
+    client: &reqwest::Client,
+    region: &str,
+) -> std::collections::HashMap<String, (f64, f64)> {
+    let mut pricing = std::collections::HashMap::new();
+
+    // AWS public pricing bulk API — region-specific file
+    let pricing_url = format!(
+        "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonBedrock/current/{}/index.json",
+        region
+    );
+
+    let resp = match client
+        .get(&pricing_url)
+        .timeout(std::time::Duration::from_secs(30))
+        .send()
+        .await
+    {
+        Ok(r) if r.status().is_success() => r,
+        _ => return pricing, // Silently fail — pricing is optional
+    };
+
+    let body = match resp.text().await {
+        Ok(t) => t,
+        Err(_) => return pricing,
+    };
+
+    // Parse the pricing JSON — structure:
+    // { "products": { "<sku>": { "attributes": { "model": "...", "usagetype": "..." } } },
+    //   "terms": { "OnDemand": { "<sku>": { "<offerTermCode>": { "priceDimensions": { ... } } } } } }
+    let val: serde_json::Value = match serde_json::from_str(&body) {
+        Ok(v) => v,
+        Err(_) => return pricing,
+    };
+
+    let products = match val.get("products").and_then(|p| p.as_object()) {
+        Some(p) => p,
+        None => return pricing,
+    };
+    let terms = match val.get("terms")
+        .and_then(|t| t.get("OnDemand"))
+        .and_then(|o| o.as_object())
+    {
+        Some(t) => t,
+        None => return pricing,
+    };
+
+    // Build sku -> (model_id, is_input) map
+    let mut sku_map: std::collections::HashMap<String, (String, bool)> = std::collections::HashMap::new();
+    for (sku, product) in products {
+        let attrs = match product.get("attributes").and_then(|a| a.as_object()) {
+            Some(a) => a,
+            None => continue,
+        };
+        let model_id = match attrs.get("model").or(attrs.get("modelId")).and_then(|m| m.as_str()) {
+            Some(m) => m.to_string(),
+            None => continue,
+        };
+        let usage_type = attrs.get("usagetype").and_then(|u| u.as_str()).unwrap_or("");
+        let is_input = usage_type.contains("Input") || usage_type.contains("input");
+        sku_map.insert(sku.clone(), (model_id, is_input));
+    }
+
+    // Extract prices per SKU from terms
+    for (sku, (model_id, is_input)) in &sku_map {
+        if let Some(term) = terms.get(sku).and_then(|t| t.as_object()) {
+            for (_offer_code, offer) in term {
+                if let Some(dims) = offer.get("priceDimensions").and_then(|d| d.as_object()) {
+                    for (_dim_key, dim) in dims {
+                        let price_str = dim.get("pricePerUnit")
+                            .and_then(|p| p.get("USD"))
+                            .and_then(|u| u.as_str())
+                            .unwrap_or("0");
+                        let price_per_unit: f64 = price_str.parse().unwrap_or(0.0);
+                        // Price is per token; convert to per-million
+                        let price_per_m = price_per_unit * 1_000_000.0;
+
+                        let entry = pricing.entry(model_id.clone()).or_insert((0.0, 0.0));
+                        if *is_input {
+                            entry.0 = price_per_m;
+                        } else {
+                            entry.1 = price_per_m;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    pricing
 }

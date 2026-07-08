@@ -1,6 +1,7 @@
 //! TraceLean Core — shared engine for GUI and TUI frontends.
 //! No Tauri dependency. Pure domain logic + service orchestration.
 
+pub mod acp;
 pub mod ai;
 pub mod commands;
 pub mod debug_nodes;
@@ -110,8 +111,9 @@ pub enum ToolCallStatus {
 pub struct AiSettings {
     pub active_provider: ai::ProviderKind,
     pub openrouter_api_key: Option<String>,
-    pub bedrock_access_key: Option<String>,
-    pub bedrock_secret_key: Option<String>,
+    /// Bearer token for Bedrock API (AWS_BEARER_TOKEN_BEDROCK)
+    pub bedrock_api_key: Option<String>,
+    /// Bedrock region (defaults to "eu-west-1")
     pub bedrock_region: Option<String>,
     pub selected_model: Option<ai::ModelConfig>,
 }
@@ -121,8 +123,7 @@ impl Default for AiSettings {
         Self {
             active_provider: ai::ProviderKind::Mock,
             openrouter_api_key: None,
-            bedrock_access_key: None,
-            bedrock_secret_key: None,
+            bedrock_api_key: None,
             bedrock_region: None,
             selected_model: None,
         }
@@ -144,6 +145,8 @@ pub struct SharedApp {
     pub mcp_client: Arc<tokio::sync::Mutex<McpClientManager>>,
     pub agent_permissions: Arc<Mutex<HashMap<String, AgentPermissions>>>,
     pub event_sink: Arc<dyn EventSink>,
+    /// ACP client manager — connects to external ACP agents.
+    pub acp: Option<Arc<acp::AcpClientManager>>,
 }
 
 impl SharedApp {
@@ -160,12 +163,19 @@ impl SharedApp {
             mcp_client: Arc::new(tokio::sync::Mutex::new(McpClientManager::new())),
             agent_permissions: Arc::new(Mutex::new(HashMap::new())),
             event_sink,
+            acp: None, // Initialized lazily when first agent connects
         }
     }
 
     /// Create with NullSink (for tests / headless).
     pub fn new_headless() -> Self {
         Self::new(Arc::new(NullSink))
+    }
+
+    /// Initialize ACP client manager (call once when app is set up).
+    pub fn init_acp(self: &Arc<Self>) -> Arc<acp::AcpClientManager> {
+        let mgr = Arc::new(acp::AcpClientManager::new(self.clone()));
+        mgr
     }
 }
 

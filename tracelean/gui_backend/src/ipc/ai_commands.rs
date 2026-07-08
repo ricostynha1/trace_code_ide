@@ -19,6 +19,20 @@ pub fn get_ai_settings(settings: State<'_, AiSettingsWrapper>) -> Result<AiSetti
     Ok(s.clone())
 }
 
+/// Check which API keys are available via environment variables.
+/// Returns a map of provider -> env var name if set.
+#[tauri::command]
+pub fn detect_env_keys() -> std::collections::HashMap<String, String> {
+    let mut detected = std::collections::HashMap::new();
+    if std::env::var("AWS_BEARER_TOKEN_BEDROCK").is_ok() {
+        detected.insert("bedrock".into(), "AWS_BEARER_TOKEN_BEDROCK".into());
+    }
+    if std::env::var("OPENROUTER_API_KEY").is_ok() {
+        detected.insert("openrouter".into(), "OPENROUTER_API_KEY".into());
+    }
+    detected
+}
+
 #[tauri::command]
 pub fn update_ai_settings(settings: State<'_, AiSettingsWrapper>, new_settings: AiSettings) -> Result<(), String> {
     let mut s = settings.0.lock().map_err(|e| e.to_string())?;
@@ -30,12 +44,11 @@ pub fn update_ai_settings(settings: State<'_, AiSettingsWrapper>, new_settings: 
 pub async fn get_ai_models(settings: State<'_, AiSettingsWrapper>) -> Result<Vec<ai::ModelConfig>, String> {
     use ai::provider::AiProvider;
 
-    let (or_key, br_access, br_secret, br_region) = {
+    let (or_key, br_token, br_region) = {
         let s = settings.0.lock().map_err(|e| e.to_string())?;
         (
             s.openrouter_api_key.clone(),
-            s.bedrock_access_key.clone(),
-            s.bedrock_secret_key.clone(),
+            s.bedrock_api_key.clone(),
             s.bedrock_region.clone(),
         )
     };
@@ -47,7 +60,7 @@ pub async fn get_ai_models(settings: State<'_, AiSettingsWrapper>) -> Result<Vec
         models.extend(m);
     }
 
-    if let Some(key) = or_key {
+    if let Some(key) = or_key.or_else(|| std::env::var("OPENROUTER_API_KEY").ok()) {
         let or = ai::openrouter::OpenRouterProvider::new(key);
         match or.list_models().await {
             Ok(m) => models.extend(m),
@@ -55,10 +68,8 @@ pub async fn get_ai_models(settings: State<'_, AiSettingsWrapper>) -> Result<Vec
         }
     }
 
-    if let Some(access) = br_access {
-        let secret = br_secret.unwrap_or_default();
-        let region = br_region.unwrap_or_else(|| "us-east-1".into());
-        let br = ai::bedrock::BedrockProvider::new(access, secret, region);
+    if let Some(token) = br_token.or_else(|| std::env::var("AWS_BEARER_TOKEN_BEDROCK").ok()) {
+        let br = ai::bedrock::BedrockProvider::new(token, br_region);
         match br.list_models().await {
             Ok(m) => models.extend(m),
             Err(e) => eprintln!("Bedrock list_models failed: {}", e.message),
@@ -132,47 +143,6 @@ pub async fn mock_submit_response(
 
 // --- Chat ---
 
-/// If no system message exists in the conversation, prepend one with tool definitions
-/// (builtin + MCP client tools) so the model knows how to call tools.
-async fn inject_tools_system_prompt(
-    mut messages: Vec<ai::provider::ChatMessage>,
-    mcp_client: &tauri::State<'_, McpClientWrapper>,
-) -> Vec<ai::provider::ChatMessage> {
-    let has_system = messages.iter().any(|m| m.role == ai::provider::MessageRole::System);
-    if !has_system {
-        let mut tools = ai::tools::builtin_tool_definitions();
-        let mgr = mcp_client.0.lock().await;
-        let mcp_tools: Vec<ToolDefinition> = mgr.all_tools().into_iter().map(|(_s, t)| t).collect();
-        tools.extend(mcp_tools);
-
-        let system_content = format!(
-            "You are an AI assistant inside the TraceLean IDE. You help with requirements engineering, \
-             formal specification, implementation, and repair.\n\n{}",
-            ai::tools::tools_as_system_prompt(&tools)
-        );
-        messages.insert(0, ai::provider::ChatMessage {
-            role: ai::provider::MessageRole::System,
-            content: system_content,
-        });
-    }
-    messages
-}
-
-/// Parse tool_call code blocks from an AI response.
-/// Parses AgentToolCall (MCP call + optional ui metadata).
-fn extract_tool_calls(content: &str) -> Vec<ai::tools::AgentToolCall> {
-    let mut calls = Vec::new();
-    let blocks = ai::templates::extract_code_blocks(content);
-    for block in &blocks {
-        if block.language == "tool_call" {
-            if let Ok(tc) = serde_json::from_str::<ai::tools::AgentToolCall>(&block.content) {
-                calls.push(tc);
-            }
-        }
-    }
-    calls
-}
-
 #[tauri::command]
 pub async fn ai_chat(
     app: AppHandle,
@@ -189,45 +159,68 @@ pub async fn ai_chat(
 ) -> Result<ai::AiResponse, String> {
     use ai::provider::{AiProvider, MessageRole};
 
-    let (model, provider_kind, or_key, br_access, br_secret, br_region) = {
+    let (model, provider_kind, or_key, br_token, br_region) = {
         let s = settings.0.lock().map_err(|e| e.to_string())?;
         let model = s.selected_model.clone().ok_or("No model selected")?;
         (
             model,
             s.active_provider.clone(),
             s.openrouter_api_key.clone(),
-            s.bedrock_access_key.clone(),
-            s.bedrock_secret_key.clone(),
+            s.bedrock_api_key.clone(),
             s.bedrock_region.clone(),
         )
     };
 
-    // Inject system prompt with tool definitions if no system message present
-    let mut messages = inject_tools_system_prompt(messages, &mcp_client).await;
+    // Build tool schemas from builtin + MCP client tools
+    let all_tool_schemas = {
+        let mut schemas = ai::tools::builtin_tool_schemas();
+        let mgr = mcp_client.0.lock().await;
+        for (_server, tool) in mgr.all_tools() {
+            schemas.push(tool.to_tool_schema());
+        }
+        schemas
+    };
 
+    // Build tool index for selection
+    let tool_index = ai::ToolIndex::new(&all_tool_schemas);
+
+    // Extract user query for tool selection (last user message)
+    let user_query = messages.iter().rev()
+        .find(|m| m.role == MessageRole::User)
+        .map(|m| m.content.clone())
+        .unwrap_or_default();
+
+    let mut messages = messages;
+    let mut previously_called: Vec<String> = Vec::new();
     let max_tool_loops = 10;
     let mut consecutive_failures: u32 = 0;
 
     for _loop_i in 0..max_tool_loops {
+        // Select relevant tools for this turn
+        let selected_tools = tool_index.select_with_context(&user_query, &previously_called, None);
+
         let request = ai::AiRequest {
             model: model.clone(),
             messages: messages.clone(),
             stop: None,
+            tools: if selected_tools.is_empty() { None } else { Some(selected_tools) },
         };
 
         let start = std::time::Instant::now();
 
         let result: Result<ai::AiResponse, ai::provider::AiError> = match provider_kind {
             ai::ProviderKind::OpenRouter => {
-                let key = or_key.clone().ok_or("OpenRouter API key not set")?;
+                let key = or_key.clone()
+                    .or_else(|| std::env::var("OPENROUTER_API_KEY").ok())
+                    .ok_or("OpenRouter API key not set")?;
                 let provider = ai::openrouter::OpenRouterProvider::new(key);
                 provider.complete(&request).await
             }
             ai::ProviderKind::Bedrock => {
-                let access = br_access.clone().ok_or("Bedrock access key not set")?;
-                let secret = br_secret.clone().ok_or("Bedrock secret key not set")?;
-                let region = br_region.clone().unwrap_or_else(|| "us-east-1".into());
-                let provider = ai::bedrock::BedrockProvider::new(access, secret, region);
+                let token = br_token.clone()
+                    .or_else(|| std::env::var("AWS_BEARER_TOKEN_BEDROCK").ok())
+                    .ok_or("Bedrock bearer token not set")?;
+                let provider = ai::bedrock::BedrockProvider::new(token, br_region.clone());
                 provider.complete(&request).await
             }
             ai::ProviderKind::Mock => {
@@ -260,42 +253,46 @@ pub async fn ai_chat(
                     let mut s = stats.0.lock().map_err(|e| e.to_string())?;
                     s.record(&response.usage, &cost);
                 }
+                // Notify frontend about updated stats
+                let _ = app.emit("ai-stats-updated", ());
 
-                // Check for tool_call blocks in the response
-                let tool_calls = extract_tool_calls(&response.content);
-                if tool_calls.is_empty() {
+                // Check for tool calls in response (native tool calling)
+                if response.tool_calls.is_empty() {
                     // No tool calls — final response
                     return Ok(response);
                 }
 
-                // Execute tool calls and build results
+                // Execute tool calls
                 messages.push(ai::provider::ChatMessage {
                     role: MessageRole::Assistant,
                     content: response.content.clone(),
+                    tool_call_id: None,
                 });
 
-                let mut tool_results = String::new();
-                for tc in &tool_calls {
-                    let reason = tc.reason().map(|s| s.to_string());
-                    let mcp_call = tc.to_mcp_call();
+                for tc in &response.tool_calls {
+                    let tool_name = &tc.function.name;
+                    let arguments: serde_json::Value = serde_json::from_str(&tc.function.arguments)
+                        .unwrap_or(serde_json::Value::Object(serde_json::Map::new()));
+
+                    previously_called.push(tool_name.clone());
 
                     // Emit tool call message to frontend chat
-                    let reason_text = reason.as_deref().unwrap_or("");
                     let _ = app.emit("ai-chat-message", serde_json::json!({
                         "role": "system",
-                        "content": format!("call {} {}", mcp_call.name, reason_text)
+                        "content": format!("call {}", tool_name)
                     }));
 
                     // Emit "running" event
                     let _ = app.emit("tool-call", ToolCallEvent {
-                        tool_name: mcp_call.name.clone(),
+                        tool_name: tool_name.clone(),
                         status: ToolCallStatus::Running,
                         duration_ms: None,
                         depth: 0,
-                        reason: reason.clone(),
+                        reason: None,
                     });
 
                     let start_tool = std::time::Instant::now();
+                    let mcp_call = ai::ToolCall { name: tool_name.clone(), arguments };
                     let result = {
                         let mut s = state.0.lock().map_err(|e| e.to_string())?;
                         let sym = symbols_state.0.lock().map_err(|e| e.to_string())?;
@@ -309,37 +306,31 @@ pub async fn ai_chat(
                     // Emit tool response message to frontend chat
                     let _ = app.emit("ai-chat-message", serde_json::json!({
                         "role": "system",
-                        "content": format!("rsp {}", mcp_call.name)
+                        "content": format!("rsp {}", tool_name)
                     }));
 
-                    // Emit "completed" or "failed" event
+                    // Emit completed/failed event
                     let status = if result.success {
                         ToolCallStatus::Completed
                     } else {
                         ToolCallStatus::Failed { error: result.content.clone() }
                     };
                     let _ = app.emit("tool-call", ToolCallEvent {
-                        tool_name: mcp_call.name.clone(),
+                        tool_name: tool_name.clone(),
                         status,
                         duration_ms: Some(tool_duration),
                         depth: 0,
-                        reason,
+                        reason: None,
                     });
 
-                    // P3-T1: MCP-standard JSON tool response
-                    let tool_response = serde_json::json!({
-                        "type": "tool_result",
-                        "tool_name": mcp_call.name,
-                        "is_error": !result.success,
-                        "content": [{
-                            "type": "text",
-                            "text": result.content
-                        }]
+                    // Push tool result as proper Tool role message
+                    messages.push(ai::provider::ChatMessage {
+                        role: MessageRole::Tool,
+                        content: result.content.clone(),
+                        tool_call_id: Some(tc.id.clone()),
                     });
-                    tool_results.push_str(&serde_json::to_string(&tool_response).unwrap_or_default());
-                    tool_results.push_str("\n");
 
-                    // P3-T2: Track consecutive failures
+                    // Track consecutive failures
                     if result.success {
                         consecutive_failures = 0;
                     } else {
@@ -350,7 +341,7 @@ pub async fn ai_chat(
                     }
                 }
 
-                // P3-T2: Stop if too many consecutive failures
+                // Stop if too many consecutive failures
                 if consecutive_failures >= 6 {
                     let failure_msg = format!(
                         "{}\n\n[Tool execution stopped: {} consecutive failures. Please provide additional guidance.]",
@@ -361,6 +352,7 @@ pub async fn ai_chat(
                         usage: response.usage.clone(),
                         raw_response: response.raw_response.clone(),
                         truncated: response.truncated,
+                        tool_calls: Vec::new(),
                     });
                 }
 
@@ -368,10 +360,6 @@ pub async fn ai_chat(
                 invalidate_undo_cache(&cache);
                 let _ = app.emit("undo-tree-changed", ());
 
-                messages.push(ai::provider::ChatMessage {
-                    role: MessageRole::User,
-                    content: tool_results.clone(),
-                });
                 // Loop to send results back to AI
             }
             Err(e) => {
@@ -429,84 +417,130 @@ async fn get_mcp_client_tools(client: &tauri::State<'_, McpClientWrapper>) -> Ve
     mgr.all_tools().into_iter().map(|(_server, tool)| tool).collect()
 }
 
+/// Get provider + model config (needed for cost calculation).
+async fn get_provider_and_model(
+    settings: &tauri::State<'_, AiSettingsWrapper>,
+    mock_provider: &tauri::State<'_, MockProviderWrapper>,
+) -> Result<(Box<dyn ai::provider::AiProvider + Send + Sync>, ai::ModelConfig), String> {
+    let model = {
+        let s = settings.0.lock().map_err(|e| e.to_string())?;
+        s.selected_model.clone().ok_or("No model selected")?
+    };
+    let provider = get_provider(settings, mock_provider).await?;
+    Ok((provider, model))
+}
+
+/// Record token usage + cost from agent result into session stats, emit event.
+fn record_agent_stats(
+    stats: &tauri::State<'_, AiSessionStatsWrapper>,
+    model: &ai::ModelConfig,
+    result: &ai::agents::AgentResult,
+    app: &AppHandle,
+) {
+    if let Some(ref usage) = result.usage {
+        let cost = usage.estimate_cost(
+            model.input_cost_per_m,
+            model.output_cost_per_m,
+            model.cached_input_cost_per_m,
+        );
+        if let Ok(mut s) = stats.0.lock() {
+            s.record(usage, &cost);
+        }
+        // Emit cost-updated event so frontend can refresh display
+        let _ = app.emit("ai-stats-updated", ());
+    }
+}
+
 #[tauri::command]
 pub async fn run_agent_elicitation(
-    _app: AppHandle,
+    app: AppHandle,
     state: State<'_, AppStateWrapper>,
     _graph_state: State<'_, TraceGraphWrapper>,
     settings: State<'_, AiSettingsWrapper>,
     mock_provider: State<'_, MockProviderWrapper>,
     _log_state: State<'_, AiLogWrapper>,
+    stats: State<'_, AiSessionStatsWrapper>,
     mcp_client: State<'_, McpClientWrapper>,
     user_goal: String,
 ) -> Result<ai::agents::AgentResult, String> {
-    let provider = get_provider(&settings, &mock_provider).await?;
+    let (provider, model) = get_provider_and_model(&settings, &mock_provider).await?;
     let project_root = {
         let s = state.0.lock().map_err(|e| e.to_string())?;
         s.project_root().cloned().ok_or("No project open")?
     };
     let extra_tools = get_mcp_client_tools(&mcp_client).await;
-    ai::agents::run_elicitation_standalone(provider.as_ref(), &project_root, &user_goal, &extra_tools).await
+    let result = ai::agents::run_elicitation_standalone(provider.as_ref(), &project_root, &user_goal, &extra_tools).await?;
+    record_agent_stats(&stats, &model, &result, &app);
+    Ok(result)
 }
 
 #[tauri::command]
 pub async fn run_agent_formalisation(
-    _app: AppHandle,
+    app: AppHandle,
     state: State<'_, AppStateWrapper>,
     _graph_state: State<'_, TraceGraphWrapper>,
     settings: State<'_, AiSettingsWrapper>,
     mock_provider: State<'_, MockProviderWrapper>,
+    stats: State<'_, AiSessionStatsWrapper>,
     mcp_client: State<'_, McpClientWrapper>,
     req_id: String,
 ) -> Result<ai::agents::AgentResult, String> {
-    let provider = get_provider(&settings, &mock_provider).await?;
+    let (provider, model) = get_provider_and_model(&settings, &mock_provider).await?;
     let project_root = {
         let s = state.0.lock().map_err(|e| e.to_string())?;
         s.project_root().cloned().ok_or("No project open")?
     };
     let extra_tools = get_mcp_client_tools(&mcp_client).await;
-    ai::agents::run_formalisation_standalone(provider.as_ref(), &project_root, &req_id, &extra_tools).await
+    let result = ai::agents::run_formalisation_standalone(provider.as_ref(), &project_root, &req_id, &extra_tools).await?;
+    record_agent_stats(&stats, &model, &result, &app);
+    Ok(result)
 }
 
 #[tauri::command]
 pub async fn run_agent_implementation(
-    _app: AppHandle,
+    app: AppHandle,
     state: State<'_, AppStateWrapper>,
     _graph_state: State<'_, TraceGraphWrapper>,
     settings: State<'_, AiSettingsWrapper>,
     mock_provider: State<'_, MockProviderWrapper>,
+    stats: State<'_, AiSessionStatsWrapper>,
     mcp_client: State<'_, McpClientWrapper>,
     spec_path: String,
     language: String,
 ) -> Result<ai::agents::AgentResult, String> {
-    let provider = get_provider(&settings, &mock_provider).await?;
+    let (provider, model) = get_provider_and_model(&settings, &mock_provider).await?;
     let project_root = {
         let s = state.0.lock().map_err(|e| e.to_string())?;
         s.project_root().cloned().ok_or("No project open")?
     };
     let extra_tools = get_mcp_client_tools(&mcp_client).await;
-    ai::agents::run_implementation_standalone(provider.as_ref(), &project_root, &spec_path, &language, &extra_tools).await
+    let result = ai::agents::run_implementation_standalone(provider.as_ref(), &project_root, &spec_path, &language, &extra_tools).await?;
+    record_agent_stats(&stats, &model, &result, &app);
+    Ok(result)
 }
 
 #[tauri::command]
 pub async fn run_agent_repair(
-    _app: AppHandle,
+    app: AppHandle,
     state: State<'_, AppStateWrapper>,
     _graph_state: State<'_, TraceGraphWrapper>,
     settings: State<'_, AiSettingsWrapper>,
     mock_provider: State<'_, MockProviderWrapper>,
+    stats: State<'_, AiSessionStatsWrapper>,
     mcp_client: State<'_, McpClientWrapper>,
     file_path: String,
     violation: String,
     language: String,
 ) -> Result<ai::agents::AgentResult, String> {
-    let provider = get_provider(&settings, &mock_provider).await?;
+    let (provider, model) = get_provider_and_model(&settings, &mock_provider).await?;
     let project_root = {
         let s = state.0.lock().map_err(|e| e.to_string())?;
         s.project_root().cloned().ok_or("No project open")?
     };
     let extra_tools = get_mcp_client_tools(&mcp_client).await;
-    ai::agents::run_repair_standalone(provider.as_ref(), &project_root, &file_path, &violation, &language, &extra_tools).await
+    let result = ai::agents::run_repair_standalone(provider.as_ref(), &project_root, &file_path, &violation, &language, &extra_tools).await?;
+    record_agent_stats(&stats, &model, &result, &app);
+    Ok(result)
 }
 
 // --- Diff Pipeline ---
