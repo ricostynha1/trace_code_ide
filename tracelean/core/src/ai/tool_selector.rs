@@ -1,13 +1,22 @@
-//! Tool selector — picks relevant tools for a given user query using keyword/TF-IDF scoring.
-//! Avoids sending all tools to the model on every request.
+//! Tool selector — picks relevant tools for a given user query.
+//!
+//! Uses enriched tool descriptions (aliases, examples, categories) with TF-IDF
+//! cosine similarity scoring. This is the retrieval layer that avoids sending all
+//! tools to the model on every request.
+//!
+//! Architecture (per new_tool_retrieval.md spec, fallback mode):
+//! - Enriched tool text with name + description + category + aliases + examples
+//! - TF-IDF vectorization with cosine similarity
+//! - Top-K=5 default retrieval
+//! - Ready for semantic embedding upgrade (swap TF-IDF for FastEmbed when available)
 
 use super::provider::ToolSchema;
 use std::collections::HashMap;
 
-/// Maximum number of tools to include in a single request.
-const DEFAULT_MAX_TOOLS: usize = 12;
+/// Default number of tools to include in a single request (per spec: top_k = 5).
+const DEFAULT_MAX_TOOLS: usize = 5;
 
-/// Minimum relevance score to include a tool (0.0 = include everything above zero).
+/// Minimum relevance score to include a tool.
 const MIN_SCORE_THRESHOLD: f64 = 0.01;
 
 /// Pre-indexed tool corpus for fast selection.
@@ -19,10 +28,122 @@ pub struct ToolIndex {
 
 struct IndexedTool {
     schema: ToolSchema,
-    /// TF-IDF vector for this tool's text (name + description + param names)
+    /// TF-IDF vector for this tool's enriched text
     terms: HashMap<String, f64>,
-    /// Category tags for boosting
-    categories: Vec<String>,
+    /// Category for boosting
+    category: String,
+}
+
+/// Enrichment data for a tool: aliases, examples, and category.
+struct ToolEnrichment {
+    category: &'static str,
+    aliases: &'static [&'static str],
+    examples: &'static [&'static str],
+}
+
+/// Get enrichment data for builtin tools.
+fn get_enrichment(tool_name: &str) -> ToolEnrichment {
+    match tool_name {
+        "read_file" => ToolEnrichment {
+            category: "filesystem",
+            aliases: &["open file", "load file", "display file", "show source code", "cat file", "view file", "get contents", "look at file"],
+            examples: &["Read Cargo.toml", "Open src/main.rs", "Display configuration file", "Show auth.rs contents", "View the readme", "Check what is in file"],
+        },
+        "write_file" => ToolEnrichment {
+            category: "filesystem",
+            aliases: &["create file", "save file", "overwrite file", "put content", "write content", "make file", "output to file", "generate file"],
+            examples: &["Create a new config.json", "Write hello world to main.rs", "Save output to results.txt", "Add phrase to end of file", "Put text in file", "Create auth.rs with content"],
+        },
+        "str_replace" => ToolEnrichment {
+            category: "editing",
+            aliases: &["replace text", "find and replace", "substitute", "edit text", "change text", "modify content", "swap text", "update line", "patch file", "fix typo"],
+            examples: &["Replace TODO with implementation", "Change function name from foo to bar", "Fix typo in auth.rs", "Update the import statement", "Add phrase at end of file by replacing last line"],
+        },
+        "insert_lines" => ToolEnrichment {
+            category: "editing",
+            aliases: &["add lines", "append text", "prepend text", "insert text", "add content at line", "put text at position", "add to file"],
+            examples: &["Insert import at top of file", "Add line at end of file", "Prepend header comment", "Add phrase at the end", "Insert after line 10"],
+        },
+        "list_files" => ToolEnrichment {
+            category: "filesystem",
+            aliases: &["show directory", "ls", "list directory", "browse files", "show tree", "what files", "directory contents", "find files"],
+            examples: &["List all files in src/", "Show project structure", "What files are in the root", "Browse the test directory"],
+        },
+        "emit_command" => ToolEnrichment {
+            category: "commands",
+            aliases: &["run command", "execute command", "do operation", "undo redo", "insert delete"],
+            examples: &["Insert text at position", "Delete range", "Replace content"],
+        },
+        "query_trace_graph" => ToolEnrichment {
+            category: "traceability",
+            aliases: &["trace requirement", "find links", "requirement coverage", "what implements", "trace link"],
+            examples: &["What code implements REQ-01", "Show traceability for REQ-03", "Find tests for requirement"],
+        },
+        "query_code_element" => ToolEnrichment {
+            category: "traceability",
+            aliases: &["trace code", "code links", "what requirement", "element trace"],
+            examples: &["What requirement does login() satisfy", "Find spec for upload function"],
+        },
+        "list_requirements" => ToolEnrichment {
+            category: "requirements",
+            aliases: &["show requirements", "all requirements", "requirement list", "specs", "project requirements"],
+            examples: &["List all requirements", "Show project requirements", "What are the specs"],
+        },
+        "get_symbols" => ToolEnrichment {
+            category: "code_analysis",
+            aliases: &["parse symbols", "functions in file", "classes in file", "code structure", "definitions", "what functions"],
+            examples: &["Get symbols from main.rs", "What functions are in auth.rs", "Show class structure"],
+        },
+        "run_shell" => ToolEnrichment {
+            category: "shell",
+            aliases: &["execute shell", "terminal", "run command", "bash", "compile", "build", "test", "make"],
+            examples: &["Run cargo build", "Execute tests", "Compile the project", "Run make", "Check linting"],
+        },
+        "search_files" => ToolEnrichment {
+            category: "search",
+            aliases: &["find text", "grep", "search code", "look for", "find pattern", "where is", "search project"],
+            examples: &["Find all TODO comments", "Search for 'error' in project", "Where is function login defined", "Grep for API_KEY"],
+        },
+        _ => ToolEnrichment {
+            category: "other",
+            aliases: &[],
+            examples: &[],
+        },
+    }
+}
+
+/// Build enriched text representation for a tool (per spec section 5).
+fn enriched_tool_text(schema: &ToolSchema) -> String {
+    let enrichment = get_enrichment(&schema.function.name);
+
+    let mut text = format!(
+        "Tool: {}\nDescription: {}\nCategory: {}",
+        schema.function.name.replace('_', " "),
+        schema.function.description,
+        enrichment.category
+    );
+
+    if !enrichment.aliases.is_empty() {
+        text.push_str("\nAliases: ");
+        text.push_str(&enrichment.aliases.join(", "));
+    }
+
+    if !enrichment.examples.is_empty() {
+        text.push_str("\nExamples: ");
+        text.push_str(&enrichment.examples.join(", "));
+    }
+
+    // Include parameter names and descriptions
+    if let Some(props) = schema.function.parameters.get("properties").and_then(|p| p.as_object()) {
+        text.push_str("\nParameters: ");
+        let params: Vec<String> = props.iter().map(|(name, val)| {
+            let desc = val.get("description").and_then(|d| d.as_str()).unwrap_or("");
+            format!("{} ({})", name.replace('_', " "), desc)
+        }).collect();
+        text.push_str(&params.join(", "));
+    }
+
+    text
 }
 
 impl ToolIndex {
@@ -30,13 +151,14 @@ impl ToolIndex {
     pub fn new(tools: &[ToolSchema]) -> Self {
         let n_docs = tools.len() as f64;
 
-        // Count document frequency per term
-        let mut df: HashMap<String, u32> = HashMap::new();
+        // Tokenize enriched text for each tool
         let tool_tokens: Vec<Vec<String>> = tools.iter().map(|t| {
-            let text = tool_text(t);
+            let text = enriched_tool_text(t);
             tokenize(&text)
         }).collect();
 
+        // Count document frequency per term
+        let mut df: HashMap<String, u32> = HashMap::new();
         for tokens in &tool_tokens {
             let unique: std::collections::HashSet<&String> = tokens.iter().collect();
             for term in unique {
@@ -62,22 +184,26 @@ impl ToolIndex {
                 (term.clone(), tf_norm * idf_val)
             }).collect();
 
-            let categories = categorize_tool(&schema.function.name);
+            let enrichment = get_enrichment(&schema.function.name);
 
-            IndexedTool { schema: schema.clone(), terms, categories }
+            IndexedTool {
+                schema: schema.clone(),
+                terms,
+                category: enrichment.category.to_string(),
+            }
         }).collect();
 
         Self { tools: indexed, idf }
     }
 
     /// Select the most relevant tools for a query.
-    /// Returns up to `max_tools` tools sorted by relevance.
+    /// Returns up to `max_tools` tools sorted by relevance (default: 5).
     pub fn select(&self, query: &str, max_tools: Option<usize>) -> Vec<ToolSchema> {
         let max = max_tools.unwrap_or(DEFAULT_MAX_TOOLS);
         let query_tokens = tokenize(query);
 
         if query_tokens.is_empty() {
-            // No query content — return top tools by category diversity
+            // No query content — return top tools by diversity
             return self.tools.iter().take(max).map(|t| t.schema.clone()).collect();
         }
 
@@ -93,7 +219,7 @@ impl ToolIndex {
             (term.clone(), tf_norm * idf_val)
         }).collect();
 
-        // Score each tool using cosine similarity
+        // Score each tool using cosine similarity + boosts
         let mut scored: Vec<(f64, usize)> = self.tools.iter().enumerate().map(|(i, tool)| {
             let mut dot = 0.0;
             let mut norm_tool = 0.0;
@@ -111,16 +237,17 @@ impl ToolIndex {
             let denom = norm_tool.sqrt() * norm_query.sqrt();
             let cosine = if denom > 0.0 { dot / denom } else { 0.0 };
 
-            // Boost: exact name match in query
-            let name_boost = if query.to_lowercase().contains(&tool.schema.function.name.to_lowercase().replace('_', " "))
-                || query.to_lowercase().contains(&tool.schema.function.name.to_lowercase()) {
+            // Boost: exact tool name match in query
+            let name_lower = tool.schema.function.name.to_lowercase();
+            let query_lower = query.to_lowercase();
+            let name_boost = if query_lower.contains(&name_lower) || query_lower.contains(&name_lower.replace('_', " ")) {
                 0.5
             } else {
                 0.0
             };
 
             // Boost: category keyword match
-            let cat_boost = category_boost(&tool.categories, &query_tokens);
+            let cat_boost = category_boost(&tool.category, &query_tokens);
 
             (cosine + name_boost + cat_boost, i)
         }).collect();
@@ -135,7 +262,7 @@ impl ToolIndex {
     }
 
     /// Select tools given previous tool results context (for multi-turn).
-    /// Includes query relevance + tools that are commonly used together.
+    /// Includes query relevance + previously called tools.
     pub fn select_with_context(
         &self,
         query: &str,
@@ -143,7 +270,9 @@ impl ToolIndex {
         max_tools: Option<usize>,
     ) -> Vec<ToolSchema> {
         let max = max_tools.unwrap_or(DEFAULT_MAX_TOOLS);
-        let mut selected = self.select(query, Some(max.saturating_sub(2)));
+        // Reserve slots for previously called tools
+        let query_slots = max.saturating_sub(previously_called.len().min(2));
+        let mut selected = self.select(query, Some(query_slots));
 
         // Always re-include previously called tools (model may want to call them again)
         for name in previously_called {
@@ -157,25 +286,6 @@ impl ToolIndex {
         selected.truncate(max);
         selected
     }
-}
-
-/// Extract searchable text from a tool schema.
-fn tool_text(schema: &ToolSchema) -> String {
-    let mut text = format!("{} {}", schema.function.name.replace('_', " "), schema.function.description);
-
-    // Include parameter names and descriptions
-    if let Some(props) = schema.function.parameters.get("properties").and_then(|p| p.as_object()) {
-        for (name, val) in props {
-            text.push(' ');
-            text.push_str(&name.replace('_', " "));
-            if let Some(desc) = val.get("description").and_then(|d| d.as_str()) {
-                text.push(' ');
-                text.push_str(desc);
-            }
-        }
-    }
-
-    text
 }
 
 /// Tokenize text into lowercase terms, filtering stopwords.
@@ -201,64 +311,27 @@ fn tokenize(text: &str) -> Vec<String> {
         .collect()
 }
 
-/// Assign category tags based on tool name.
-fn categorize_tool(name: &str) -> Vec<String> {
-    let mut cats = Vec::new();
-    match name {
-        "read_file" | "write_file" | "str_replace" | "insert_lines" | "list_files" =>
-            cats.push("file".into()),
-        "emit_command" =>
-            cats.push("command".into()),
-        "query_trace_graph" | "query_code_element" =>
-            cats.push("trace".into()),
-        "list_requirements" =>
-            cats.push("requirements".into()),
-        "get_symbols" =>
-            cats.push("symbols".into()),
-        "run_shell" =>
-            cats.push("shell".into()),
-        "search_files" =>
-            cats.push("search".into()),
-        _ => {
-            // MCP tools — try to infer category from name
-            if name.contains("file") || name.contains("read") || name.contains("write") {
-                cats.push("file".into());
-            }
-            if name.contains("search") || name.contains("find") || name.contains("grep") {
-                cats.push("search".into());
-            }
-            if name.contains("run") || name.contains("exec") || name.contains("shell") {
-                cats.push("shell".into());
-            }
-        }
-    }
-    cats
-}
-
 /// Boost score if query mentions category-related keywords.
-fn category_boost(categories: &[String], query_tokens: &[String]) -> f64 {
+fn category_boost(category: &str, query_tokens: &[String]) -> f64 {
     let category_keywords: &[(&str, &[&str])] = &[
-        ("file", &["file", "read", "write", "open", "save", "create", "edit", "modify", "content", "path"]),
-        ("search", &["search", "find", "grep", "look", "pattern", "match"]),
-        ("shell", &["run", "execute", "command", "shell", "terminal", "build", "test", "compile"]),
-        ("trace", &["trace", "requirement", "spec", "link", "traceability"]),
-        ("requirements", &["requirement", "req", "requirements", "status"]),
-        ("symbols", &["symbol", "function", "class", "struct", "parse", "definition"]),
-        ("command", &["undo", "redo", "command", "insert", "delete", "replace"]),
+        ("filesystem", &["file", "read", "write", "open", "save", "create", "edit", "modify", "content", "path", "append", "end", "add", "phrase"]),
+        ("editing", &["replace", "change", "fix", "update", "modify", "edit", "swap", "patch", "typo", "insert", "append", "add", "end", "phrase", "text"]),
+        ("search", &["search", "find", "grep", "look", "pattern", "match", "where"]),
+        ("shell", &["run", "execute", "command", "shell", "terminal", "build", "test", "compile", "make"]),
+        ("traceability", &["trace", "requirement", "spec", "link", "traceability", "coverage"]),
+        ("requirements", &["requirement", "req", "requirements", "status", "specs"]),
+        ("code_analysis", &["symbol", "function", "class", "struct", "parse", "definition", "declarations"]),
+        ("commands", &["undo", "redo", "command", "insert", "delete", "replace"]),
     ];
 
-    let mut boost = 0.0;
-    for cat in categories {
-        if let Some((_cat_name, keywords)) = category_keywords.iter().find(|(name, _)| name == cat) {
-            for kw in *keywords {
-                if query_tokens.iter().any(|qt| qt == kw) {
-                    boost += 0.2;
-                    break; // One match per category is enough
-                }
+    if let Some((_cat_name, keywords)) = category_keywords.iter().find(|(name, _)| *name == category) {
+        for kw in *keywords {
+            if query_tokens.iter().any(|qt| qt == kw) {
+                return 0.3;
             }
         }
     }
-    boost
+    0.0
 }
 
 #[cfg(test)]
@@ -303,5 +376,37 @@ mod tests {
         );
         let names: Vec<&str> = selected.iter().map(|t| t.function.name.as_str()).collect();
         assert!(names.contains(&"read_file"), "Should include previously called tool");
+    }
+
+    #[test]
+    fn selects_write_tools_for_add_phrase_query() {
+        let schemas = builtin_tool_schemas();
+        let index = ToolIndex::new(&schemas);
+        let selected = index.select("Add the phrase 'Hello bob' at the end of the file auth.rs", None);
+        let names: Vec<&str> = selected.iter().map(|t| t.function.name.as_str()).collect();
+        // Should include file-editing tools
+        let has_edit_tool = names.contains(&"write_file")
+            || names.contains(&"str_replace")
+            || names.contains(&"insert_lines");
+        assert!(has_edit_tool, "Expected a file editing tool in {:?}", names);
+        // Should include read_file (to check current content)
+        assert!(names.contains(&"read_file"), "Expected read_file in {:?}", names);
+    }
+
+    #[test]
+    fn selects_list_files_for_directory_query() {
+        let schemas = builtin_tool_schemas();
+        let index = ToolIndex::new(&schemas);
+        let selected = index.select("show me the project structure", None);
+        let names: Vec<&str> = selected.iter().map(|t| t.function.name.as_str()).collect();
+        assert!(names.contains(&"list_files"), "Expected list_files in {:?}", names);
+    }
+
+    #[test]
+    fn default_returns_at_most_5_tools() {
+        let schemas = builtin_tool_schemas();
+        let index = ToolIndex::new(&schemas);
+        let selected = index.select("read and modify files then run tests", None);
+        assert!(selected.len() <= 5, "Default should be max 5, got {}", selected.len());
     }
 }

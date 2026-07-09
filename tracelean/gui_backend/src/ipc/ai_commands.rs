@@ -7,7 +7,7 @@ use crate::{
     AppStateWrapper, AiSettingsWrapper, AiLogWrapper, AiSessionStatsWrapper,
     MockProviderWrapper, PendingDiffsWrapper, TraceGraphWrapper, UndoTreeCacheWrapper,
     SymbolTableWrapper, AiSettings, McpClientWrapper, invalidate_undo_cache, get_provider,
-    ToolCallEvent, ToolCallStatus,
+    ToolCallEvent, ToolCallStatus, ToolLoopResumeWrapper,
 };
 use tauri::{AppHandle, Emitter, State};
 
@@ -155,6 +155,7 @@ pub async fn ai_chat(
     symbols_state: State<'_, SymbolTableWrapper>,
     graph_state: State<'_, TraceGraphWrapper>,
     cache: State<'_, UndoTreeCacheWrapper>,
+    resume_state: State<'_, ToolLoopResumeWrapper>,
     messages: Vec<ai::provider::ChatMessage>,
 ) -> Result<ai::AiResponse, String> {
     use ai::provider::{AiProvider, MessageRole};
@@ -192,10 +193,40 @@ pub async fn ai_chat(
 
     let mut messages = messages;
     let mut previously_called: Vec<String> = Vec::new();
-    let max_tool_loops = 10;
+    let tool_loop_pause_threshold = 10;
     let mut consecutive_failures: u32 = 0;
+    let mut loop_i: usize = 0;
 
-    for _loop_i in 0..max_tool_loops {
+    loop {
+        // Bug 3: Pause at threshold, wait for user confirmation
+        if loop_i > 0 && loop_i % tool_loop_pause_threshold == 0 {
+            // Emit pause event to frontend
+            let _ = app.emit("tool-loop-pause", serde_json::json!({
+                "loops_completed": loop_i,
+                "message": format!("{} consecutive tool calls reached. Continue?", loop_i)
+            }));
+
+            // Set up oneshot channel and wait for resume
+            let (tx, rx) = tokio::sync::oneshot::channel::<bool>();
+            {
+                let mut guard = resume_state.0.lock().await;
+                *guard = Some(tx);
+            }
+
+            match rx.await {
+                Ok(true) => {
+                    // User said continue — proceed
+                }
+                _ => {
+                    // User said stop or channel dropped
+                    let _ = app.emit("ai-chat-message", serde_json::json!({
+                        "role": "system",
+                        "content": format!("[Stopped by user after {} tool call loops.]", loop_i)
+                    }));
+                    return Err(format!("Tool loop stopped by user after {} iterations.", loop_i));
+                }
+            }
+        }
         // Select relevant tools for this turn
         let selected_tools = tool_index.select_with_context(&user_query, &previously_called, None);
 
@@ -247,7 +278,8 @@ pub async fn ai_chat(
                 );
                 {
                     let mut log = log_state.0.lock().map_err(|e| e.to_string())?;
-                    log.record_success("chat", &request, &response, duration_ms);
+                    let label = if loop_i == 0 { "chat".to_string() } else { format!("chat/tool_{}", loop_i) };
+                    log.record_success(&label, &request, &response, duration_ms);
                 }
                 {
                     let mut s = stats.0.lock().map_err(|e| e.to_string())?;
@@ -262,17 +294,57 @@ pub async fn ai_chat(
                     return Ok(response);
                 }
 
+                // Bug 2 fix: Emit assistant text content to chat UI between tool loops
+                if !response.content.is_empty() {
+                    let _ = app.emit("ai-chat-message", serde_json::json!({
+                        "role": "assistant",
+                        "content": response.content.clone()
+                    }));
+                }
+
                 // Execute tool calls
                 messages.push(ai::provider::ChatMessage {
                     role: MessageRole::Assistant,
                     content: response.content.clone(),
                     tool_call_id: None,
+                    tool_calls: response.tool_calls.clone(),
                 });
 
                 for tc in &response.tool_calls {
                     let tool_name = &tc.function.name;
-                    let arguments: serde_json::Value = serde_json::from_str(&tc.function.arguments)
-                        .unwrap_or(serde_json::Value::Object(serde_json::Map::new()));
+
+                    // Bug 1 fix: detect malformed JSON args and report to user instead of silent fallback
+                    let arguments: serde_json::Value = match serde_json::from_str(&tc.function.arguments) {
+                        Ok(v) => v,
+                        Err(parse_err) => {
+                            let error_msg = format!(
+                                "tool_call_failed: model produced invalid JSON for {}({}): {}",
+                                tool_name, tc.function.arguments, parse_err
+                            );
+                            // Emit failure to frontend chat
+                            let _ = app.emit("ai-chat-message", serde_json::json!({
+                                "role": "system",
+                                "content": error_msg.clone()
+                            }));
+                            let _ = app.emit("tool-call", ToolCallEvent {
+                                tool_name: tool_name.clone(),
+                                status: ToolCallStatus::Failed { error: error_msg.clone() },
+                                duration_ms: Some(0),
+                                depth: 0,
+                                reason: None,
+                            });
+
+                            // Push error as tool result so model can self-correct
+                            messages.push(ai::provider::ChatMessage {
+                                role: MessageRole::Tool,
+                                content: format!("Error: invalid JSON arguments — {}", parse_err),
+                                tool_call_id: Some(tc.id.clone()),
+                                tool_calls: Vec::new(),
+                            });
+                            consecutive_failures += 1;
+                            continue;
+                        }
+                    };
 
                     previously_called.push(tool_name.clone());
 
@@ -328,6 +400,7 @@ pub async fn ai_chat(
                         role: MessageRole::Tool,
                         content: result.content.clone(),
                         tool_call_id: Some(tc.id.clone()),
+                        tool_calls: Vec::new(),
                     });
 
                     // Track consecutive failures
@@ -359,18 +432,35 @@ pub async fn ai_chat(
                 // Invalidate undo cache and notify frontend after tool execution
                 invalidate_undo_cache(&cache);
                 let _ = app.emit("undo-tree-changed", ());
+                let _ = app.emit("files-changed", ());
 
                 // Loop to send results back to AI
             }
             Err(e) => {
                 let mut log = log_state.0.lock().map_err(|e2| e2.to_string())?;
-                log.record_failure("chat", &request, &e, duration_ms);
+                let label = if loop_i == 0 { "chat".to_string() } else { format!("chat/tool_{}", loop_i) };
+                log.record_failure(&label, &request, &e, duration_ms);
                 return Err(e.message);
             }
         }
-    }
 
-    Err("Max tool call loops exceeded (10).".into())
+        loop_i += 1;
+    }
+}
+
+// --- Tool Loop Resume ---
+
+/// Called by frontend when user clicks "Continue" or "Stop" on tool loop pause prompt.
+#[tauri::command]
+pub async fn resume_tool_loop(
+    resume_state: State<'_, ToolLoopResumeWrapper>,
+    should_continue: bool,
+) -> Result<(), String> {
+    let mut guard = resume_state.0.lock().await;
+    if let Some(tx) = guard.take() {
+        let _ = tx.send(should_continue);
+    }
+    Ok(())
 }
 
 // --- Templates & Context ---

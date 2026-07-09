@@ -48,6 +48,9 @@ pub struct MockPendingWrapper(pub Mutex<Vec<ai::mock::MockPendingRequest>>);
 pub struct MockProviderWrapper(pub Arc<tokio::sync::Mutex<Option<Arc<ai::mock::MockProvider>>>>);
 pub struct PendingDiffsWrapper(pub Mutex<Vec<PendingDiff>>);
 
+/// Channel for tool loop pause/resume. Frontend sends true=continue, false=abort.
+pub struct ToolLoopResumeWrapper(pub tokio::sync::Mutex<Option<tokio::sync::oneshot::Sender<bool>>>);
+
 // ─── MCP & Permissions State ─────────────────────────────────────────────────
 
 pub struct McpHostPermissionsWrapper(pub Mutex<AgentPermissions>);
@@ -172,6 +175,7 @@ pub fn run() {
         .manage(MockPendingWrapper(Mutex::new(Vec::new())))
         .manage(MockProviderWrapper(Arc::new(tokio::sync::Mutex::new(None))))
         .manage(PendingDiffsWrapper(Mutex::new(Vec::new())))
+        .manage(ToolLoopResumeWrapper(tokio::sync::Mutex::new(None)))
         .manage(McpHostPermissionsWrapper(Mutex::new(AgentPermissions::full_access("mcp-host"))))
         .manage(McpClientWrapper(tokio::sync::Mutex::new(McpClientManager::new())))
         .manage(AgentPermissionsStore(Mutex::new(std::collections::HashMap::new())))
@@ -236,6 +240,7 @@ pub fn run() {
             ipc::ai_commands::reject_diff_hunk,
             ipc::ai_commands::apply_accepted_hunks,
             ipc::ai_commands::discard_pending_diff,
+            ipc::ai_commands::resume_tool_loop,
             // MCP & Permissions & Streaming
             ipc::mcp_commands::mcp_list_tools,
             ipc::mcp_commands::mcp_call_tool,

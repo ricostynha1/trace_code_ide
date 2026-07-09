@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 
 interface FileEntry {
   name: string;
@@ -20,6 +21,23 @@ export function FileTree({ projectRoot, onFileSelect, selectedFile }: FileTreePr
   useEffect(() => {
     loadDirectory("");
   }, [projectRoot]);
+
+  // Refresh file tree when AI agent creates/deletes files
+  useEffect(() => {
+    const unlistenUndo = listen("undo-tree-changed", () => {
+      loadDirectory("");
+      // Also reload expanded dirs
+      expanded.forEach((dir) => loadDirectory(dir));
+    });
+    const unlistenFiles = listen("files-changed", () => {
+      loadDirectory("");
+      expanded.forEach((dir) => loadDirectory(dir));
+    });
+    return () => {
+      unlistenUndo.then((fn) => fn());
+      unlistenFiles.then((fn) => fn());
+    };
+  }, [projectRoot, expanded]);
 
   const loadDirectory = async (path: string) => {
     try {

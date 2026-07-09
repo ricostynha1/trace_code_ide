@@ -13,6 +13,7 @@
 pub mod provider;
 pub mod openrouter;
 pub mod bedrock;
+pub mod bedrock_pricing;
 pub mod mock;
 pub mod tracking;
 pub mod templates;

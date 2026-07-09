@@ -128,6 +128,7 @@ pub fn execute_tool(
     match call.name.as_str() {
         "read_file" => execute_read_file(call, project_root, permissions),
         "write_file" => execute_write_file(call, project_root, state, permissions),
+        "delete_file" => execute_delete_file(call, project_root, state, permissions),
         "str_replace" => execute_str_replace(call, project_root, state, permissions),
         "insert_lines" => execute_insert_lines(call, project_root, state, permissions),
         "list_files" => execute_list_files(call, project_root),
@@ -239,6 +240,58 @@ fn execute_write_file(
     match save_eff(state, project_root, &rel_path) {
         Ok(_) => ToolResult { success: true, content: format!("Wrote {} bytes to '{}'.", content_len, path), data: None },
         Err(e) => ToolResult { success: false, content: format!("Write error: {}", e), data: None },
+    }
+}
+
+fn execute_delete_file(
+    call: &ToolCall,
+    project_root: &Path,
+    state: &mut AppState,
+    perms: &AgentPermissions,
+) -> ToolResult {
+    let path = match get_str_arg(call, "path") {
+        Some(p) => p,
+        None => return ToolResult { success: false, content: "Missing 'path' argument.".into(), data: None },
+    };
+
+    if !perms.can_write(&path) {
+        return ToolResult {
+            success: false,
+            content: format!("Permission denied: cannot delete '{}'.", path),
+            data: None,
+        };
+    }
+
+    let rel_path = PathBuf::from(&path);
+    let full_path = project_root.join(&path);
+
+    // Read current content (needed for undo) — from buffer or disk
+    let content = if let Some(buf) = state.get_content(&rel_path) {
+        buf.to_string()
+    } else {
+        match std::fs::read_to_string(&full_path) {
+            Ok(c) => c,
+            Err(e) => {
+                if e.kind() == std::io::ErrorKind::NotFound {
+                    return ToolResult { success: false, content: format!("File '{}' does not exist.", path), data: None };
+                }
+                return ToolResult { success: false, content: format!("Error reading '{}': {}", path, e), data: None };
+            }
+        }
+    };
+
+    // Check file exists on disk
+    if !full_path.exists() {
+        return ToolResult { success: false, content: format!("File '{}' does not exist.", path), data: None };
+    }
+
+    // Apply DeleteFile command (captures content for undo)
+    state.apply(Command::DeleteFile { path: rel_path.clone(), content });
+
+    // Remove from disk
+    match std::fs::remove_file(&full_path) {
+        Ok(_) => ToolResult { success: true, content: format!("Deleted '{}'.", path), data: None },
+        Err(e) => ToolResult { success: false, content: format!("Error deleting '{}': {}", path, e), data: None },
     }
 }
 
@@ -415,9 +468,44 @@ fn execute_emit_command(call: &ToolCall, state: &mut AppState, perms: &AgentPerm
         None => return ToolResult { success: false, content: "Missing 'command' argument.".into(), data: None },
     };
 
-    let cmd: Command = match serde_json::from_value(cmd_value) {
+    // Provide human-readable error when parsing fails
+    let cmd: Command = match serde_json::from_value(cmd_value.clone()) {
         Ok(c) => c,
-        Err(e) => return ToolResult { success: false, content: format!("Invalid command JSON: {}", e), data: None },
+        Err(_e) => {
+            // Diagnose the issue for the model
+            let hint = if let Some(obj) = cmd_value.as_object() {
+                if obj.len() != 1 {
+                    let keys: Vec<&String> = obj.keys().collect();
+                    format!(
+                        "Invalid command format. Expected a single-key object like {{\"Insert\": {{...}}}} or {{\"DeleteFile\": {{...}}}}. \
+                         Got {} keys: {:?}. Valid commands: Insert, Delete, CreateFile, DeleteFile, RenameFile, Batch.",
+                        obj.len(), keys
+                    )
+                } else {
+                    let variant_name = obj.keys().next().unwrap();
+                    let valid = ["Insert", "Delete", "SetCursor", "SetSelection", "CreateFile", "DeleteFile", "RenameFile", "Batch"];
+                    if !valid.contains(&variant_name.as_str()) {
+                        format!(
+                            "Unknown command variant '{}'. Valid commands: Insert, Delete, CreateFile, DeleteFile, RenameFile, Batch.",
+                            variant_name
+                        )
+                    } else {
+                        format!(
+                            "Command '{}' has wrong parameters. Expected format: \
+                             Insert: {{\"file\": \"path\", \"offset\": N, \"text\": \"...\"}}, \
+                             Delete: {{\"file\": \"path\", \"offset\": N, \"len\": N, \"deleted_text\": \"...\"}}, \
+                             CreateFile: {{\"path\": \"...\"}}, \
+                             DeleteFile: {{\"path\": \"...\", \"content\": \"...\"}}, \
+                             RenameFile: {{\"from\": \"...\", \"to\": \"...\"}}.",
+                            variant_name
+                        )
+                    }
+                }
+            } else {
+                "Invalid command: expected a JSON object like {\"DeleteFile\": {\"path\": \"...\", \"content\": \"...\"}}.".to_string()
+            };
+            return ToolResult { success: false, content: hint, data: None };
+        }
     };
 
     // Check write permissions on affected files

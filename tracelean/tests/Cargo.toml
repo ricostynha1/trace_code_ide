@@ -4,6 +4,9 @@ version = "0.1.0"
 edition = "2021"
 publish = false
 
+[features]
+live_bedrock = []
+
 [lib]
 path = "lib.rs"  # empty lib, tests-only crate
 
@@ -11,9 +14,15 @@ path = "lib.rs"  # empty lib, tests-only crate
 name = "unit"
 path = "unit.rs"
 
+[[test]]
+name = "integration_bedrock"
+path = "integration_bedrock.rs"
+
 [dev-dependencies]
 tracelean_lib = { path = "../gui_backend", package = "tracelean" }
 tracelean-core = { path = "../core" }
 tempfile = "3"
 chrono = { version = "0.4", features = ["serde"] }
 serde_json = "1"
+tokio = { version = "1", features = ["full"] }
+reqwest = { version = "0.12", features = ["json"] }

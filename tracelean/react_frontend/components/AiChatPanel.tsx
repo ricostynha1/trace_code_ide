@@ -3,8 +3,10 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 
 interface ChatMessage {
-  role: "system" | "user" | "assistant";
+  role: "system" | "user" | "assistant" | "tool";
   content: string;
+  tool_call_id?: string;
+  tool_calls?: ToolCallResponse[];
 }
 
 interface TokenUsage {
@@ -49,6 +51,21 @@ interface AiSettings {
   selected_model: ModelConfig | null;
 }
 
+interface ToolCallResponse {
+  id: string;
+  type: string;
+  function: { name: string; arguments: string };
+}
+
+interface ToolSchemaInfo {
+  type: string;
+  function: {
+    name: string;
+    description: string;
+    parameters: any;
+  };
+}
+
 interface InteractionEntry {
   id: string;
   timestamp: string;
@@ -57,11 +74,15 @@ interface InteractionEntry {
   model_display_name: string;
   request_messages: ChatMessage[];
   response_content: string | null;
+  response_tool_calls: ToolCallResponse[];
   error: string | null;
   usage: TokenUsage;
   cost: { total_usd: number; input_cost: number; output_cost: number; cached_savings: number };
   duration_ms: number;
   truncated: boolean;
+  tools_provided?: number;
+  tool_names?: string[];
+  tool_schemas?: ToolSchemaInfo[];
 }
 
 interface Props {
@@ -103,6 +124,7 @@ export function AiChatPanel({ visible, onClose }: Props) {
   const [modelFetchLoading, setModelFetchLoading] = useState(false);
   const [modelFetchError, setModelFetchError] = useState<string | null>(null);
   const [envKeys, setEnvKeys] = useState<Record<string, string>>({});
+  const [toolLoopPaused, setToolLoopPaused] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const mockPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -146,6 +168,14 @@ export function AiChatPanel({ visible, onClose }: Props) {
     const unlisten = listen<{ role: string; content: string }>("ai-chat-message", (event) => {
       const { role, content } = event.payload;
       setMessages((prev) => [...prev, { role: role as "system" | "user" | "assistant", content }]);
+    });
+    return () => { unlisten.then((fn) => fn()); };
+  }, []);
+
+  // Listen for tool loop pause (Bug 3: user-prompted pause instead of hard abort)
+  useEffect(() => {
+    const unlisten = listen<{ loops_completed: number; message: string }>("tool-loop-pause", (event) => {
+      setToolLoopPaused(event.payload.message);
     });
     return () => { unlisten.then((fn) => fn()); };
   }, []);
@@ -237,6 +267,15 @@ export function AiChatPanel({ visible, onClose }: Props) {
     }
   };
 
+  const resumeToolLoop = async (shouldContinue: boolean) => {
+    setToolLoopPaused(null);
+    try {
+      await invoke("resume_tool_loop", { shouldContinue });
+    } catch (e) {
+      setError(String(e));
+    }
+  };
+
   const saveSettings = async (newSettings: AiSettings) => {
     try {
       await invoke("update_ai_settings", { newSettings });
@@ -285,6 +324,15 @@ export function AiChatPanel({ visible, onClose }: Props) {
             {loading && mockPending.length > 0 && (
               <div className="ai-msg ai-msg-loading">
                 Mock mode — respond in the prompt window overlay.
+              </div>
+            )}
+            {toolLoopPaused && (
+              <div className="ai-msg ai-msg-pause">
+                <span>{toolLoopPaused}</span>
+                <div className="ai-pause-buttons">
+                  <button onClick={() => resumeToolLoop(true)}>Continue</button>
+                  <button onClick={() => resumeToolLoop(false)}>Stop</button>
+                </div>
               </div>
             )}
             {error && <div className="ai-msg ai-msg-error">{error}</div>}
@@ -413,15 +461,60 @@ export function AiChatPanel({ visible, onClose }: Props) {
               <button onClick={() => setInspectEntry(null)}>← Back</button>
               <h4>{inspectEntry.agent} — {inspectEntry.model_display_name}</h4>
               <p className="ai-meta">{inspectEntry.timestamp} | {inspectEntry.duration_ms}ms | ${inspectEntry.cost.total_usd.toFixed(6)}</p>
+
+              {(inspectEntry.tool_names?.length ?? 0) > 0 && (
+                <details className="ai-log-tools-provided">
+                  <summary>Tools provided: {inspectEntry.tools_provided ?? 0} — [{inspectEntry.tool_names?.join(", ")}]</summary>
+                  <div className="ai-log-tools-list">
+                    {(inspectEntry.tool_schemas ?? []).map((schema, i) => (
+                      <div key={i} className="ai-log-tool-schema">
+                        <strong>{schema.function.name}</strong>
+                        <span className="ai-tool-desc"> — {schema.function.description}</span>
+                        <pre className="ai-tool-params">{JSON.stringify(schema.function.parameters, null, 2)}</pre>
+                      </div>
+                    ))}
+                    {(!inspectEntry.tool_schemas || inspectEntry.tool_schemas.length === 0) && (
+                      <ul>
+                        {inspectEntry.tool_names?.map((name, i) => <li key={i}>{name}</li>)}
+                      </ul>
+                    )}
+                  </div>
+                </details>
+              )}
+
               <h5>Request Messages</h5>
               {inspectEntry.request_messages.map((m, i) => (
                 <div key={i} className="ai-log-msg">
-                  <strong>{m.role}:</strong>
-                  <pre>{m.content}</pre>
+                  <strong>{m.role.toUpperCase()}:</strong>
+                  {m.content && <pre>{m.content}</pre>}
+                  {(m as any).tool_calls?.length > 0 && (
+                    <div className="ai-log-tool-calls">
+                      {(m as any).tool_calls.map((tc: any, j: number) => (
+                        <pre key={j} className="ai-log-tool-call">→ {tc.function?.name}({tc.function?.arguments})</pre>
+                      ))}
+                    </div>
+                  )}
+                  {(m as any).tool_call_id && (
+                    <span className="ai-log-tool-id">[tool_call_id: {(m as any).tool_call_id}]</span>
+                  )}
                 </div>
               ))}
+
               <h5>Response</h5>
-              <pre>{inspectEntry.response_content || inspectEntry.error || "(none)"}</pre>
+              {inspectEntry.response_tool_calls?.length > 0 ? (
+                <div className="ai-log-response-tools">
+                  {inspectEntry.response_content && <pre>{inspectEntry.response_content}</pre>}
+                  <div className="ai-log-tool-calls">
+                    <strong>Tool calls:</strong>
+                    {inspectEntry.response_tool_calls.map((tc, i) => (
+                      <pre key={i} className="ai-log-tool-call">→ {tc.function.name}({tc.function.arguments})</pre>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <pre>{inspectEntry.response_content || inspectEntry.error || "(no response)"}</pre>
+              )}
+
               <h5>Token Usage</h5>
               <table>
                 <tbody>
@@ -429,6 +522,9 @@ export function AiChatPanel({ visible, onClose }: Props) {
                   <tr><td>Output</td><td>{inspectEntry.usage.output_tokens}</td></tr>
                   <tr><td>Thinking</td><td>{inspectEntry.usage.thinking_tokens}</td></tr>
                   <tr><td>Cached</td><td>{inspectEntry.usage.cached_tokens}</td></tr>
+                  {inspectEntry.cost.cached_savings > 0 && (
+                    <tr><td>Cache savings</td><td>${inspectEntry.cost.cached_savings.toFixed(6)}</td></tr>
+                  )}
                 </tbody>
               </table>
             </div>

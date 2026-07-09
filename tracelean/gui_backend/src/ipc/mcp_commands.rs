@@ -6,7 +6,7 @@ use crate::{
     AppStateWrapper, AiSettingsWrapper, AiLogWrapper, AiSessionStatsWrapper,
     MockProviderWrapper, SymbolTableWrapper, TraceGraphWrapper,
     McpHostPermissionsWrapper, McpClientWrapper, AgentPermissionsStore,
-    UndoTreeCacheWrapper, invalidate_undo_cache,
+    UndoTreeCacheWrapper, ToolLoopResumeWrapper, invalidate_undo_cache,
 };
 use tauri::{AppHandle, Emitter, State};
 
@@ -157,6 +157,7 @@ pub async fn ai_chat_stream(
     symbols_state: State<'_, SymbolTableWrapper>,
     graph_state: State<'_, TraceGraphWrapper>,
     cache: State<'_, UndoTreeCacheWrapper>,
+    resume_state: State<'_, ToolLoopResumeWrapper>,
     messages: Vec<ai::provider::ChatMessage>,
 ) -> Result<ai::AiResponse, String> {
     use ai::provider::{AiProvider, MessageRole};
@@ -199,11 +200,37 @@ pub async fn ai_chat_stream(
         )
     };
 
-    let max_tool_loops = 10;
+    let tool_loop_pause_threshold = 10;
     let mut consecutive_failures: u32 = 0;
     let mut previously_called: Vec<String> = Vec::new();
+    let mut loop_i: usize = 0;
 
-    for _loop_i in 0..max_tool_loops {
+    loop {
+        // Bug 3: Pause at threshold, wait for user confirmation
+        if loop_i > 0 && loop_i % tool_loop_pause_threshold == 0 {
+            let _ = app.emit("tool-loop-pause", serde_json::json!({
+                "loops_completed": loop_i,
+                "message": format!("{} consecutive tool calls reached. Continue?", loop_i)
+            }));
+
+            let (tx, rx) = tokio::sync::oneshot::channel::<bool>();
+            {
+                let mut guard = resume_state.0.lock().await;
+                *guard = Some(tx);
+            }
+
+            match rx.await {
+                Ok(true) => { /* user said continue */ }
+                _ => {
+                    let _ = app.emit("ai-chat-message", serde_json::json!({
+                        "role": "system",
+                        "content": format!("[Stopped by user after {} tool call loops.]", loop_i)
+                    }));
+                    let _ = app.emit("ai-stream-token", session.finish());
+                    return Err(format!("Tool loop stopped by user after {} iterations.", loop_i));
+                }
+            }
+        }
         // Select relevant tools for this turn
         let selected_tools = tool_index.select_with_context(&user_query, &previously_called, None);
 
@@ -285,7 +312,8 @@ pub async fn ai_chat_stream(
                 );
                 {
                     let mut log = log_state.0.lock().map_err(|e| e.to_string())?;
-                    log.record_success("chat_stream", &request, &response, duration_ms);
+                    let label = if loop_i == 0 { "chat_stream".to_string() } else { format!("chat_stream/tool_{}", loop_i) };
+                    log.record_success(&label, &request, &response, duration_ms);
                 }
                 {
                     let mut s = stats.0.lock().map_err(|e| e.to_string())?;
@@ -298,17 +326,51 @@ pub async fn ai_chat_stream(
                     return Ok(response);
                 }
 
+                // Bug 2 fix: Emit assistant text content to chat UI between tool loops
+                if !response.content.is_empty() {
+                    let _ = app.emit("ai-chat-message", serde_json::json!({
+                        "role": "assistant",
+                        "content": response.content.clone()
+                    }));
+                }
+
                 // Execute tool calls and loop
                 messages.push(ai::provider::ChatMessage {
                     role: MessageRole::Assistant,
                     content: response.content.clone(),
                     tool_call_id: None,
+                    tool_calls: response.tool_calls.clone(),
                 });
 
                 for tc in &response.tool_calls {
                     let tool_name = &tc.function.name;
-                    let arguments: serde_json::Value = serde_json::from_str(&tc.function.arguments)
-                        .unwrap_or(serde_json::Value::Object(serde_json::Map::new()));
+
+                    // Bug 1 fix: detect malformed JSON args and report to user
+                    let arguments: serde_json::Value = match serde_json::from_str(&tc.function.arguments) {
+                        Ok(v) => v,
+                        Err(parse_err) => {
+                            let error_msg = format!(
+                                "tool_call_failed: model produced invalid JSON for {}({}): {}",
+                                tool_name, tc.function.arguments, parse_err
+                            );
+                            let _ = app.emit("ai-chat-message", serde_json::json!({
+                                "role": "system",
+                                "content": error_msg.clone()
+                            }));
+                            // Push error as tool result so model can self-correct
+                            messages.push(ai::provider::ChatMessage {
+                                role: MessageRole::Tool,
+                                content: format!("Error: invalid JSON arguments — {}", parse_err),
+                                tool_call_id: Some(tc.id.clone()),
+                                tool_calls: Vec::new(),
+                            });
+                            let tool_msg = format!("\n\n[Tool: {} → JSON parse error]\n", tool_name);
+                            let token_event = session.push_token(&tool_msg);
+                            let _ = app.emit("ai-stream-token", &token_event);
+                            consecutive_failures += 1;
+                            continue;
+                        }
+                    };
 
                     previously_called.push(tool_name.clone());
 
@@ -339,6 +401,7 @@ pub async fn ai_chat_stream(
                         role: MessageRole::Tool,
                         content: result.content.clone(),
                         tool_call_id: Some(tc.id.clone()),
+                        tool_calls: Vec::new(),
                     });
 
                     // Stream tool result to UI
@@ -376,20 +439,21 @@ pub async fn ai_chat_stream(
                 // Invalidate undo cache and notify frontend after tool execution
                 invalidate_undo_cache(&cache);
                 let _ = app.emit("undo-tree-changed", ());
+                let _ = app.emit("files-changed", ());
 
                 // Continue loop — will call AI again with results
             }
             Err(e) => {
                 let _ = app.emit("ai-stream-token", session.finish());
                 let mut log = log_state.0.lock().map_err(|e2| e2.to_string())?;
-                log.record_failure("chat_stream", &request, &e, duration_ms);
+                let label = if loop_i == 0 { "chat_stream".to_string() } else { format!("chat_stream/tool_{}", loop_i) };
+                log.record_failure(&label, &request, &e, duration_ms);
                 return Err(e.message);
             }
         }
-    }
 
-    let _ = app.emit("ai-stream-token", session.finish());
-    Err("Max tool call loops exceeded (10).".into())
+        loop_i += 1;
+    }
 }
 
 // --- Tool Definitions ---

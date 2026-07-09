@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import { EditorState, StateField, StateEffect, RangeSet } from "@codemirror/state";
 import { EditorView, keymap, lineNumbers, highlightActiveLine, hoverTooltip, Tooltip, Decoration, DecorationSet } from "@codemirror/view";
 import { defaultKeymap } from "@codemirror/commands";
@@ -191,6 +192,14 @@ export function Editor({ filePath }: EditorProps) {
       }
     };
     checkLink();
+  }, [filePath]);
+
+  // Always stay in sync with backend state — covers agent edits, undo, redo, etc.
+  useEffect(() => {
+    const unlisten = listen("undo-tree-changed", () => {
+      syncFromBackend();
+    });
+    return () => { unlisten.then((fn) => fn()); };
   }, [filePath]);
 
   useEffect(() => {

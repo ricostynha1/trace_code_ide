@@ -1,6 +1,6 @@
 //! AI interaction log — stores all prompts/responses for browsing and debugging.
 
-use super::provider::{AiRequest, AiResponse, AiError};
+use super::provider::{AiRequest, AiResponse, AiError, ToolSchema};
 use super::tracking::{CostEstimate, TokenUsage};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
@@ -15,6 +15,9 @@ pub struct InteractionEntry {
     pub model_display_name: String,
     pub request_messages: Vec<super::provider::ChatMessage>,
     pub response_content: Option<String>,
+    /// Tool calls returned by the model (if any).
+    #[serde(default)]
+    pub response_tool_calls: Vec<super::provider::ToolCallResponse>,
     pub error: Option<String>,
     pub usage: TokenUsage,
     pub cost: CostEstimate,
@@ -22,6 +25,15 @@ pub struct InteractionEntry {
     pub duration_ms: u64,
     /// Was the response truncated?
     pub truncated: bool,
+    /// Number of tools provided to the model in this request.
+    #[serde(default)]
+    pub tools_provided: u32,
+    /// Names of tools provided to the model.
+    #[serde(default)]
+    pub tool_names: Vec<String>,
+    /// Full tool schemas sent to the model (for log inspection).
+    #[serde(default)]
+    pub tool_schemas: Vec<ToolSchema>,
 }
 
 /// Persistent interaction log.
@@ -54,6 +66,19 @@ impl InteractionLog {
             request.model.cached_input_cost_per_m,
         );
 
+        let tools_provided = request.tools.as_ref().map(|t| t.len() as u32).unwrap_or(0);
+        let tool_names: Vec<String> = request.tools.as_ref()
+            .map(|t| t.iter().map(|s| s.function.name.clone()).collect())
+            .unwrap_or_default();
+        let tool_schemas: Vec<ToolSchema> = request.tools.clone().unwrap_or_default();
+
+        // If model returned tool_calls with no text content, store None (not empty string)
+        let response_content = if response.content.is_empty() && !response.tool_calls.is_empty() {
+            None
+        } else {
+            Some(response.content.clone())
+        };
+
         let entry = InteractionEntry {
             id: uuid::Uuid::new_v4().to_string(),
             timestamp: chrono::Utc::now().to_rfc3339(),
@@ -61,12 +86,16 @@ impl InteractionLog {
             model_id: request.model.model_id.clone(),
             model_display_name: request.model.display_name.clone(),
             request_messages: request.messages.clone(),
-            response_content: Some(response.content.clone()),
+            response_content,
+            response_tool_calls: response.tool_calls.clone(),
             error: None,
             usage: response.usage.clone(),
             cost,
             duration_ms,
             truncated: response.truncated,
+            tools_provided,
+            tool_names,
+            tool_schemas,
         };
 
         self.entries.push(entry);
@@ -81,6 +110,12 @@ impl InteractionLog {
         error: &AiError,
         duration_ms: u64,
     ) {
+        let tools_provided = request.tools.as_ref().map(|t| t.len() as u32).unwrap_or(0);
+        let tool_names: Vec<String> = request.tools.as_ref()
+            .map(|t| t.iter().map(|s| s.function.name.clone()).collect())
+            .unwrap_or_default();
+        let tool_schemas: Vec<ToolSchema> = request.tools.clone().unwrap_or_default();
+
         let entry = InteractionEntry {
             id: uuid::Uuid::new_v4().to_string(),
             timestamp: chrono::Utc::now().to_rfc3339(),
@@ -89,6 +124,7 @@ impl InteractionLog {
             model_display_name: request.model.display_name.clone(),
             request_messages: request.messages.clone(),
             response_content: None,
+            response_tool_calls: Vec::new(),
             error: Some(error.message.clone()),
             usage: TokenUsage::default(),
             cost: CostEstimate {
@@ -99,6 +135,9 @@ impl InteractionLog {
             },
             duration_ms,
             truncated: false,
+            tools_provided,
+            tool_names,
+            tool_schemas,
         };
 
         self.entries.push(entry);

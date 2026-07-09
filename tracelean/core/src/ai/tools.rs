@@ -245,12 +245,12 @@ pub fn builtin_tool_definitions() -> Vec<ToolDefinition> {
             }],
         },
         ToolDefinition {
-            name: "emit_command".into(),
-            description: "Emit a raw Command into the command system (Insert, Delete, Replace, CreateFile, etc.).".into(),
+            name: "delete_file".into(),
+            description: "Delete a file from the project. Reversible via undo.".into(),
             parameters: vec![ToolParam {
-                name: "command".into(),
-                param_type: ParamType::Object,
-                description: "A JSON-serialized Command variant.".into(),
+                name: "path".into(),
+                param_type: ParamType::String,
+                description: "Relative file path to delete.".into(),
                 required: true,
             }],
         },

@@ -301,12 +301,14 @@ async fn handle_prompt_loop(
                 role: MessageRole::System,
                 content: SYSTEM_PROMPT.to_string(),
                 tool_call_id: None,
+                tool_calls: Vec::new(),
             }];
             for entry in &session.conversation {
                 msgs.push(ChatMessage {
                     role: entry.role.clone(),
                     content: entry.content.clone(),
                     tool_call_id: None,
+                    tool_calls: Vec::new(),
                 });
             }
             msgs
