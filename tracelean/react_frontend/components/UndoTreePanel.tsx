@@ -267,11 +267,15 @@ export function UndoTreePanel({ visible, onClose, onNodeJump, onFileSelect, curr
       try {
         const diff = await invoke<string>("get_undo_node_diff", { nodeId });
         setDiffPreview(diff);
+        // T0: Emit event so Editor can show inline diff view
+        window.dispatchEvent(new CustomEvent("undo-hover-diff", { detail: { diff, nodeId } }));
       } catch {
         setDiffPreview(null);
+        window.dispatchEvent(new CustomEvent("undo-hover-diff", { detail: null }));
       }
     } else {
       setDiffPreview(null);
+      window.dispatchEvent(new CustomEvent("undo-hover-diff", { detail: null }));
     }
   };
 
@@ -334,11 +338,6 @@ export function UndoTreePanel({ visible, onClose, onNodeJump, onFileSelect, curr
         {activeTab === "tree" ? (
           <>
             <TreeGraph layout={layout} onJump={handleJump} onHover={handleHover} filterMode={filterMode} />
-            {diffPreview && hoveredNodeId && (
-              <div className="diff-preview">
-                <pre>{diffPreview}</pre>
-              </div>
-            )}
           </>
         ) : (
           <LogView entries={commandLog} />

@@ -68,17 +68,35 @@ impl AppState {
         match cmd {
             Command::Insert { file, offset, text } => {
                 let buffer = self.get_or_create_buffer(file);
-                if *offset <= buffer.content.len() {
-                    buffer.content.insert_str(*offset, text);
-                }
+                let pos = (*offset).min(buffer.content.len());
+                // Clamp to char boundary
+                let pos = if buffer.content.is_char_boundary(pos) {
+                    pos
+                } else {
+                    buffer.content.floor_char_boundary(pos)
+                };
+                buffer.content.insert_str(pos, text);
             }
             Command::Delete {
                 file, offset, len, ..
             } => {
                 let buffer = self.get_or_create_buffer(file);
-                let end = (*offset + *len).min(buffer.content.len());
-                if *offset <= buffer.content.len() {
-                    buffer.content.drain(*offset..end);
+                let content_len = buffer.content.len();
+                let start = (*offset).min(content_len);
+                let end = (*offset + *len).min(content_len);
+                // Clamp to char boundaries to avoid panics on multi-byte chars
+                let start = if buffer.content.is_char_boundary(start) {
+                    start
+                } else {
+                    buffer.content.floor_char_boundary(start)
+                };
+                let end = if buffer.content.is_char_boundary(end) {
+                    end
+                } else {
+                    buffer.content.ceil_char_boundary(end)
+                };
+                if start < end {
+                    buffer.content.drain(start..end);
                 }
             }
             Command::SetCursor { file, new_pos, .. } => {

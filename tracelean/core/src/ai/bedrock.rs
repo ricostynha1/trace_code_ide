@@ -415,11 +415,12 @@ impl AiProvider for BedrockProvider {
             .filter(|m| m.status.as_deref() != Some("unavailable"))
             .map(|m| {
                 let (input_cost, output_cost) = bedrock_pricing(&m.id);
+                let (display, max_tok) = bedrock_model_meta(&m.id);
                 ModelConfig {
                     provider: ProviderKind::Bedrock,
                     model_id: m.id.clone(),
-                    display_name: m.id.clone(),
-                    max_tokens: 4096,
+                    display_name: display.unwrap_or_else(|| m.id.clone()),
+                    max_tokens: max_tok,
                     temperature: 0.3,
                     input_cost_per_m: input_cost,
                     output_cost_per_m: output_cost,
@@ -430,6 +431,22 @@ impl AiProvider for BedrockProvider {
             .collect();
 
         Ok(models)
+    }
+}
+
+/// Returns (display_name, max_tokens) for known Bedrock models.
+fn bedrock_model_meta(id: &str) -> (Option<String>, u32) {
+    match id {
+        "amazon.nova-micro" => (Some("Nova Micro (cache✓)".into()), 5120),
+        "amazon.nova-lite" => (Some("Nova Lite (cache✓)".into()), 5120),
+        "amazon.nova-pro" => (Some("Nova Pro (cache✓)".into()), 5120),
+        "amazon.nova-premier" => (Some("Nova Premier (cache✓)".into()), 5120),
+        "anthropic.claude-sonnet-5" => (Some("Claude Sonnet 5 (cache✓)".into()), 8192),
+        "anthropic.claude-haiku-4-5" => (Some("Claude Haiku 4.5 (cache✓)".into()), 8192),
+        "anthropic.claude-opus-4-7" => (Some("Claude Opus 4.7".into()), 8192),
+        "anthropic.claude-opus-4-8" => (Some("Claude Opus 4.8".into()), 8192),
+        "anthropic.claude-fable-5" => (Some("Claude Fable 5".into()), 8192),
+        _ => (None, 4096),
     }
 }
 

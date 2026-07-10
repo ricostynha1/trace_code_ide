@@ -76,7 +76,36 @@ pub async fn get_ai_models(settings: State<'_, AiSettingsWrapper>) -> Result<Vec
         }
     }
 
+    // Sort by recency: models with higher version numbers / newer names first
+    models.sort_by(|a, b| {
+        let score_a = model_recency_score(&a.model_id);
+        let score_b = model_recency_score(&b.model_id);
+        score_b.cmp(&score_a)
+    });
+
     Ok(models)
+}
+
+/// Heuristic recency score for sorting models. Higher = more recent.
+fn model_recency_score(id: &str) -> u32 {
+    // Prompt-caching capable models get a bonus
+    let cache_bonus = if id.contains("nova-") || id.contains("claude-haiku-4") || id.contains("claude-sonnet") {
+        100
+    } else {
+        0
+    };
+
+    let base = if id.contains("opus-4") || id.contains("gpt-5.5") || id.contains("claude-fable") { 900 }
+    else if id.contains("claude-sonnet-5") || id.contains("gpt-5.4") || id.contains("grok-4") { 850 }
+    else if id.contains("claude-haiku-4.5") || id.contains("nova-premier") { 800 }
+    else if id.contains("nova-pro") || id.contains("nova-lite") || id.contains("nova-micro") { 750 }
+    else if id.contains("qwen3") || id.contains("kimi-k2") || id.contains("glm-5") { 700 }
+    else if id.contains("deepseek.v3") || id.contains("mistral-large-3") || id.contains("devstral") { 650 }
+    else if id.contains("gemma-4") || id.contains("nemotron") { 600 }
+    else if id.contains("minimax-m2") { 550 }
+    else { 100 };
+
+    base + cache_bonus
 }
 
 #[tauri::command]
@@ -185,48 +214,49 @@ pub async fn ai_chat(
     // Build tool index for selection
     let tool_index = ai::ToolIndex::new(&all_tool_schemas);
 
-    // Extract user query for tool selection (last user message)
-    let user_query = messages.iter().rev()
-        .find(|m| m.role == MessageRole::User)
-        .map(|m| m.content.clone())
-        .unwrap_or_default();
+    // Extract user query for tool selection (sliding window of last 3 turns)
+    let user_query = {
+        let mut window_parts: Vec<String> = Vec::new();
+        let mut turn_count = 0;
+        for m in messages.iter().rev() {
+            if m.role == MessageRole::Tool { continue; }
+            let label = match m.role {
+                MessageRole::User => "User",
+                MessageRole::Assistant => "Agent",
+                _ => continue,
+            };
+            window_parts.push(format!("{}: {}", label, m.content));
+            if m.role == MessageRole::User {
+                turn_count += 1;
+                if turn_count >= 3 { break; }
+            }
+        }
+        window_parts.reverse();
+        window_parts.join("\n")
+    };
 
     let mut messages = messages;
     let mut previously_called: Vec<String> = Vec::new();
     let tool_loop_pause_threshold = 10;
     let mut consecutive_failures: u32 = 0;
     let mut loop_i: usize = 0;
+    let mut total_tool_calls: usize = 0;
+
+    // T3.8: Read spend cap
+    let spend_cap = {
+        let s = settings.0.lock().map_err(|e| e.to_string())?;
+        s.spend_cap_usd
+    };
 
     loop {
-        // Bug 3: Pause at threshold, wait for user confirmation
-        if loop_i > 0 && loop_i % tool_loop_pause_threshold == 0 {
-            // Emit pause event to frontend
-            let _ = app.emit("tool-loop-pause", serde_json::json!({
-                "loops_completed": loop_i,
-                "message": format!("{} consecutive tool calls reached. Continue?", loop_i)
-            }));
-
-            // Set up oneshot channel and wait for resume
-            let (tx, rx) = tokio::sync::oneshot::channel::<bool>();
-            {
-                let mut guard = resume_state.0.lock().await;
-                *guard = Some(tx);
-            }
-
-            match rx.await {
-                Ok(true) => {
-                    // User said continue — proceed
-                }
-                _ => {
-                    // User said stop or channel dropped
-                    let _ = app.emit("ai-chat-message", serde_json::json!({
-                        "role": "system",
-                        "content": format!("[Stopped by user after {} tool call loops.]", loop_i)
-                    }));
-                    return Err(format!("Tool loop stopped by user after {} iterations.", loop_i));
-                }
+        // T3.8: Enforce spend cap
+        {
+            let s = stats.0.lock().map_err(|e| e.to_string())?;
+            if s.total_cost_usd >= spend_cap {
+                return Err(format!("Spend cap reached (${:.4} >= ${:.2}). Increase cap in settings to continue.", s.total_cost_usd, spend_cap));
             }
         }
+
         // Select relevant tools for this turn
         let selected_tools = tool_index.select_with_context(&user_query, &previously_called, None);
 
@@ -302,7 +332,55 @@ pub async fn ai_chat(
                     }));
                 }
 
-                // Execute tool calls
+                // Check if any tool call has malformed JSON arguments
+                let has_malformed = response.tool_calls.iter().any(|tc| {
+                    serde_json::from_str::<serde_json::Value>(&tc.function.arguments).is_err()
+                });
+
+                if has_malformed {
+                    // Don't push tool_calls to history (API would reject malformed JSON).
+                    // Instead, inform the model about the error so it can retry.
+                    let error_details: Vec<String> = response.tool_calls.iter()
+                        .filter(|tc| serde_json::from_str::<serde_json::Value>(&tc.function.arguments).is_err())
+                        .map(|tc| format!("{}({}) — invalid JSON", tc.function.name, tc.function.arguments))
+                        .collect();
+
+                    let error_msg = format!(
+                        "Error: your tool call(s) contained invalid JSON arguments and could not be executed:\n{}\nPlease retry with valid JSON.",
+                        error_details.join("\n")
+                    );
+
+                    // Emit to frontend
+                    let _ = app.emit("ai-chat-message", serde_json::json!({
+                        "role": "system",
+                        "content": error_msg.clone()
+                    }));
+
+                    // Push assistant text + error as conversation so model can self-correct
+                    if !response.content.is_empty() {
+                        messages.push(ai::provider::ChatMessage {
+                            role: MessageRole::Assistant,
+                            content: response.content.clone(),
+                            tool_call_id: None,
+                            tool_calls: Vec::new(),
+                        });
+                    }
+                    messages.push(ai::provider::ChatMessage {
+                        role: MessageRole::User,
+                        content: error_msg,
+                        tool_call_id: None,
+                        tool_calls: Vec::new(),
+                    });
+
+                    consecutive_failures += 1;
+                    if consecutive_failures >= 6 {
+                        return Err("Too many consecutive tool call failures (invalid JSON). Stopping.".into());
+                    }
+                    loop_i += 1;
+                    continue;
+                }
+
+                // All tool calls have valid JSON — push assistant message with tool_calls
                 messages.push(ai::provider::ChatMessage {
                     role: MessageRole::Assistant,
                     content: response.content.clone(),
@@ -312,6 +390,32 @@ pub async fn ai_chat(
 
                 for tc in &response.tool_calls {
                     let tool_name = &tc.function.name;
+
+                    // Pause every N tool calls for user confirmation
+                    total_tool_calls += 1;
+                    if total_tool_calls > 0 && total_tool_calls % tool_loop_pause_threshold == 0 {
+                        let _ = app.emit("tool-loop-pause", serde_json::json!({
+                            "loops_completed": total_tool_calls,
+                            "message": format!("{} tool calls executed. Continue?", total_tool_calls)
+                        }));
+
+                        let (tx, rx) = tokio::sync::oneshot::channel::<bool>();
+                        {
+                            let mut guard = resume_state.0.lock().await;
+                            *guard = Some(tx);
+                        }
+
+                        match rx.await {
+                            Ok(true) => { /* user said continue */ }
+                            _ => {
+                                let _ = app.emit("ai-chat-message", serde_json::json!({
+                                    "role": "system",
+                                    "content": format!("[Stopped by user after {} tool calls.]", total_tool_calls)
+                                }));
+                                return Err(format!("Tool loop stopped by user after {} tool calls.", total_tool_calls));
+                            }
+                        }
+                    }
 
                     // Bug 1 fix: detect malformed JSON args and report to user instead of silent fallback
                     let arguments: serde_json::Value = match serde_json::from_str(&tc.function.arguments) {

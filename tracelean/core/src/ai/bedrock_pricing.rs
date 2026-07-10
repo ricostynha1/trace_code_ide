@@ -16,6 +16,12 @@ pub fn bedrock_pricing(model_id: &str) -> (f64, f64) {
         "anthropic.claude-haiku-4-5" => (0.80, 4.00),
         "anthropic.claude-fable-5" => (8.00, 40.00),
 
+        // ─── Amazon Nova (prompt caching supported) ─────────────────────
+        "amazon.nova-micro" | "amazon.nova-micro-v1:0" => (0.035, 0.14),
+        "amazon.nova-lite" | "amazon.nova-lite-v1:0" => (0.06, 0.24),
+        "amazon.nova-pro" | "amazon.nova-pro-v1:0" => (0.80, 3.20),
+        "amazon.nova-premier" | "amazon.nova-premier-v1:0" => (2.50, 10.00),
+
         // ─── OpenAI ─────────────────────────────────────────────────────
         "openai.gpt-5.4" | "openai.gpt-5.4-2026-03-05" => (3.00, 15.00),
         "openai.gpt-5.5" | "openai.gpt-5.5-2026-04-23" => (3.00, 15.00),

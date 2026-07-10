@@ -49,6 +49,7 @@ interface AiSettings {
   bedrock_api_key: string | null;
   bedrock_region: string | null;
   selected_model: ModelConfig | null;
+  spend_cap_usd: number;
 }
 
 interface ToolCallResponse {
@@ -167,6 +168,8 @@ export function AiChatPanel({ visible, onClose }: Props) {
   useEffect(() => {
     const unlisten = listen<{ role: string; content: string }>("ai-chat-message", (event) => {
       const { role, content } = event.payload;
+      // T3.2: Reset streaming content so tool calls appear as separate messages
+      setStreamingContent("");
       setMessages((prev) => [...prev, { role: role as "system" | "user" | "assistant", content }]);
     });
     return () => { unlisten.then((fn) => fn()); };
@@ -176,6 +179,14 @@ export function AiChatPanel({ visible, onClose }: Props) {
   useEffect(() => {
     const unlisten = listen<{ loops_completed: number; message: string }>("tool-loop-pause", (event) => {
       setToolLoopPaused(event.payload.message);
+    });
+    return () => { unlisten.then((fn) => fn()); };
+  }, []);
+
+  // T3.1: Listen for stats updates to refresh cost bar live (not only on user prompt)
+  useEffect(() => {
+    const unlisten = listen("ai-stats-updated", () => {
+      loadStats();
     });
     return () => { unlisten.then((fn) => fn()); };
   }, []);
@@ -214,6 +225,13 @@ export function AiChatPanel({ visible, onClose }: Props) {
 
   const sendMessage = async () => {
     if (!input.trim() || loading) return;
+
+    // T3.8: Frontend spend cap check
+    const cap = settings?.spend_cap_usd ?? 1;
+    if (stats && stats.total_cost_usd >= cap) {
+      setError(`Spend cap reached ($${stats.total_cost_usd.toFixed(4)} >= $${cap.toFixed(2)}). Increase in settings.`);
+      return;
+    }
 
     const userMsg: ChatMessage = { role: "user", content: input.trim() };
     const newMessages = [...messages, userMsg];
@@ -295,6 +313,7 @@ export function AiChatPanel({ visible, onClose }: Props) {
           <button className={tab === "settings" ? "active" : ""} onClick={() => { setTab("settings"); loadModels(); }}>Settings</button>
           <button className={tab === "log" ? "active" : ""} onClick={() => { setTab("log"); loadLog(); }}>Log</button>
           <button className={tab === "stats" ? "active" : ""} onClick={() => { setTab("stats"); loadStats(); }}>Stats</button>
+          <button className="ai-new-session-btn" onClick={() => { setMessages([]); setError(null); setStreamingContent(""); }} title="New session (clear chat)">+</button>
         </div>
         <button className="close-btn" onClick={onClose}>×</button>
       </div>
@@ -354,6 +373,11 @@ export function AiChatPanel({ visible, onClose }: Props) {
               <span className="ai-cost-tokens">
                 I{compactNum(stats.total_input_tokens)} O{compactNum(stats.total_output_tokens)} T{compactNum(stats.total_thinking_tokens)}
               </span>
+              {settings?.selected_model && (
+                <span className="ai-cost-context">
+                  {compactNum(stats.total_input_tokens)}/{compactNum(settings.selected_model.max_tokens)} ctx
+                </span>
+              )}
             </div>
           )}
         </div>
@@ -450,12 +474,42 @@ export function AiChatPanel({ visible, onClose }: Props) {
               <strong>Error:</strong> {modelFetchError}
             </div>
           )}
+
+          <h3>Spend Cap</h3>
+          <label>Max session spend (USD)</label>
+          <input
+            type="number"
+            step="0.1"
+            min="0"
+            value={settings.spend_cap_usd ?? 1}
+            onChange={(e) => saveSettings({ ...settings, spend_cap_usd: parseFloat(e.target.value) || 1 })}
+          />
+          <p className="ai-hint">Chat will refuse new requests when session cost exceeds this cap.</p>
         </div>
       )}
 
       {tab === "log" && (
         <div className="ai-log-content">
           <h3>Interaction Log</h3>
+          {/* T3.3: Total cost on top */}
+          {!inspectEntry && log.length > 0 && (
+            <div className="ai-log-totals">
+              <table className="ai-log-aggregate-table">
+                <thead>
+                  <tr><th>Metric</th><th>Total</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td>Requests</td><td>{log.length}</td></tr>
+                  <tr><td>Input tokens</td><td>{log.reduce((s, e) => s + e.usage.input_tokens, 0).toLocaleString()}</td></tr>
+                  <tr><td>Cached tokens</td><td>{log.reduce((s, e) => s + e.usage.cached_tokens, 0).toLocaleString()}</td></tr>
+                  <tr><td>Output tokens</td><td>{log.reduce((s, e) => s + e.usage.output_tokens, 0).toLocaleString()}</td></tr>
+                  <tr><td>Thinking tokens</td><td>{log.reduce((s, e) => s + e.usage.thinking_tokens, 0).toLocaleString()}</td></tr>
+                  <tr><td>Total cost</td><td><strong>${log.reduce((s, e) => s + e.cost.total_usd, 0).toFixed(6)}</strong></td></tr>
+                  <tr><td>Cache savings</td><td>${log.reduce((s, e) => s + e.cost.cached_savings, 0).toFixed(6)}</td></tr>
+                </tbody>
+              </table>
+            </div>
+          )}
           {inspectEntry ? (
             <div className="ai-log-detail">
               <button onClick={() => setInspectEntry(null)}>← Back</button>
@@ -515,16 +569,16 @@ export function AiChatPanel({ visible, onClose }: Props) {
                 <pre>{inspectEntry.response_content || inspectEntry.error || "(no response)"}</pre>
               )}
 
-              <h5>Token Usage</h5>
+              {/* T3.7: Detailed cost breakdown per log */}
+              <h5>Token Usage & Cost</h5>
               <table>
                 <tbody>
-                  <tr><td>Input</td><td>{inspectEntry.usage.input_tokens}</td></tr>
-                  <tr><td>Output</td><td>{inspectEntry.usage.output_tokens}</td></tr>
-                  <tr><td>Thinking</td><td>{inspectEntry.usage.thinking_tokens}</td></tr>
-                  <tr><td>Cached</td><td>{inspectEntry.usage.cached_tokens}</td></tr>
-                  {inspectEntry.cost.cached_savings > 0 && (
-                    <tr><td>Cache savings</td><td>${inspectEntry.cost.cached_savings.toFixed(6)}</td></tr>
-                  )}
+                  <tr><td>Input (non-cached)</td><td>{inspectEntry.usage.input_tokens - inspectEntry.usage.cached_tokens}</td><td>${((inspectEntry.usage.input_tokens - inspectEntry.usage.cached_tokens) / 1_000_000 * (settings?.selected_model?.input_cost_per_m ?? 0)).toFixed(6)}</td></tr>
+                  <tr><td>Input (cached)</td><td>{inspectEntry.usage.cached_tokens}</td><td>${(inspectEntry.usage.cached_tokens / 1_000_000 * (settings?.selected_model?.cached_input_cost_per_m ?? 0)).toFixed(6)}</td></tr>
+                  <tr><td>Output</td><td>{inspectEntry.usage.output_tokens}</td><td>${(inspectEntry.usage.output_tokens / 1_000_000 * (settings?.selected_model?.output_cost_per_m ?? 0)).toFixed(6)}</td></tr>
+                  <tr><td>Thinking</td><td>{inspectEntry.usage.thinking_tokens}</td><td>${(inspectEntry.usage.thinking_tokens / 1_000_000 * (settings?.selected_model?.output_cost_per_m ?? 0)).toFixed(6)}</td></tr>
+                  <tr><td><strong>Total</strong></td><td></td><td><strong>${inspectEntry.cost.total_usd.toFixed(6)}</strong></td></tr>
+                  <tr><td>Cache savings</td><td></td><td>${inspectEntry.cost.cached_savings.toFixed(6)}</td></tr>
                 </tbody>
               </table>
             </div>

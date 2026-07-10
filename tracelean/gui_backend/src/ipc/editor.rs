@@ -34,6 +34,59 @@ pub fn apply_command(
     Ok("ok".into())
 }
 
+/// Sync filesystem for file-level operations (CreateFile/DeleteFile/RenameFile) after undo/redo.
+/// Ensures files in buffers exist on disk, and files removed from buffers are deleted from disk.
+/// Only touches files tracked in the undo tree — not a full filesystem scan.
+fn sync_file_operations_to_disk(s: &crate::state::AppState) {
+    let root = match s.project_root() {
+        Some(r) => r.clone(),
+        None => return,
+    };
+
+    // Collect all file paths mentioned in file-level commands across the undo tree
+    let tree = s.undo_tree();
+    let mut tracked_paths: std::collections::HashSet<PathBuf> = std::collections::HashSet::new();
+    for node in tree.nodes() {
+        collect_file_op_paths(&node.command, &mut tracked_paths);
+    }
+
+    // Reconcile: for each tracked path, disk should match buffer state
+    for path in &tracked_paths {
+        let full = root.join(path);
+        let in_buffer = s.get_content(path);
+        match in_buffer {
+            Some(content) => {
+                // File should exist on disk with this content
+                if let Some(parent) = full.parent() {
+                    let _ = std::fs::create_dir_all(parent);
+                }
+                let _ = std::fs::write(&full, content);
+            }
+            None => {
+                // File should NOT exist on disk
+                if full.exists() {
+                    let _ = std::fs::remove_file(&full);
+                }
+            }
+        }
+    }
+}
+
+/// Collect paths from CreateFile/DeleteFile/RenameFile commands.
+fn collect_file_op_paths(cmd: &Command, paths: &mut std::collections::HashSet<PathBuf>) {
+    match cmd {
+        Command::CreateFile { path } => { paths.insert(path.clone()); }
+        Command::DeleteFile { path, .. } => { paths.insert(path.clone()); }
+        Command::RenameFile { from, to } => { paths.insert(from.clone()); paths.insert(to.clone()); }
+        Command::Batch { commands } => {
+            for c in commands {
+                collect_file_op_paths(c, paths);
+            }
+        }
+        _ => {}
+    }
+}
+
 #[tauri::command]
 pub fn undo(
     app: AppHandle,
@@ -43,8 +96,10 @@ pub fn undo(
     let mut s = state.0.lock().map_err(|e| e.to_string())?;
     let result = s.undo();
     if result {
+        sync_file_operations_to_disk(&s);
         invalidate_undo_cache(&cache);
         let _ = app.emit("undo-tree-changed", ());
+        let _ = app.emit("files-changed", ());
     }
     Ok(result)
 }
@@ -58,8 +113,10 @@ pub fn redo(
     let mut s = state.0.lock().map_err(|e| e.to_string())?;
     let result = s.redo();
     if result {
+        sync_file_operations_to_disk(&s);
         invalidate_undo_cache(&cache);
         let _ = app.emit("undo-tree-changed", ());
+        let _ = app.emit("files-changed", ());
     }
     Ok(result)
 }
@@ -184,8 +241,10 @@ pub fn jump_to_node(
         for cmd in commands {
             s.execute_raw(&cmd);
         }
+        sync_file_operations_to_disk(&s);
         invalidate_undo_cache(&cache);
         let _ = app.emit("undo-tree-changed", ());
+        let _ = app.emit("files-changed", ());
         Ok(true)
     } else {
         Ok(false)

@@ -116,7 +116,12 @@ pub struct AiSettings {
     /// Bedrock region (defaults to "eu-west-1")
     pub bedrock_region: Option<String>,
     pub selected_model: Option<ai::ModelConfig>,
+    /// Hard spend cap per session (USD). Default $1.
+    #[serde(default = "default_spend_cap")]
+    pub spend_cap_usd: f64,
 }
+
+fn default_spend_cap() -> f64 { 1.0 }
 
 impl Default for AiSettings {
     fn default() -> Self {
@@ -126,6 +131,7 @@ impl Default for AiSettings {
             bedrock_api_key: None,
             bedrock_region: None,
             selected_model: None,
+            spend_cap_usd: 1.0,
         }
     }
 }

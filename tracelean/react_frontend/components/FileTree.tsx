@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 
@@ -17,35 +17,19 @@ interface FileTreeProps {
 export function FileTree({ projectRoot, onFileSelect, selectedFile }: FileTreeProps) {
   const [entries, setEntries] = useState<FileEntry[]>([]);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const expandedRef = useRef<Set<string>>(expanded);
 
+  // Keep ref in sync so event listeners can read current expanded set
   useEffect(() => {
-    loadDirectory("");
-  }, [projectRoot]);
+    expandedRef.current = expanded;
+  }, [expanded]);
 
-  // Refresh file tree when AI agent creates/deletes files
-  useEffect(() => {
-    const unlistenUndo = listen("undo-tree-changed", () => {
-      loadDirectory("");
-      // Also reload expanded dirs
-      expanded.forEach((dir) => loadDirectory(dir));
-    });
-    const unlistenFiles = listen("files-changed", () => {
-      loadDirectory("");
-      expanded.forEach((dir) => loadDirectory(dir));
-    });
-    return () => {
-      unlistenUndo.then((fn) => fn());
-      unlistenFiles.then((fn) => fn());
-    };
-  }, [projectRoot, expanded]);
-
-  const loadDirectory = async (path: string) => {
+  const loadDirectory = useCallback(async (path: string) => {
     try {
       const result = await invoke<FileEntry[]>("list_files", { path });
       if (path === "") {
         setEntries(result);
       } else {
-        // Merge sub-entries
         setEntries((prev) => {
           const filtered = prev.filter(
             (e) => !e.path.startsWith(path + "/") || e.path === path
@@ -56,7 +40,26 @@ export function FileTree({ projectRoot, onFileSelect, selectedFile }: FileTreePr
     } catch (e) {
       console.error("Failed to list files:", e);
     }
-  };
+  }, []);
+
+  const refreshAll = useCallback(() => {
+    loadDirectory("");
+    expandedRef.current.forEach((dir) => loadDirectory(dir));
+  }, [loadDirectory]);
+
+  useEffect(() => {
+    loadDirectory("");
+  }, [projectRoot, loadDirectory]);
+
+  // Refresh file tree when AI agent creates/deletes files or undo/redo
+  useEffect(() => {
+    const unlistenUndo = listen("undo-tree-changed", () => refreshAll());
+    const unlistenFiles = listen("files-changed", () => refreshAll());
+    return () => {
+      unlistenUndo.then((fn) => fn());
+      unlistenFiles.then((fn) => fn());
+    };
+  }, [refreshAll]);
 
   const toggleDir = (path: string) => {
     setExpanded((prev) => {
@@ -112,7 +115,10 @@ export function FileTree({ projectRoot, onFileSelect, selectedFile }: FileTreePr
 
   return (
     <div className="file-tree">
-      <div className="file-tree-header">EXPLORER</div>
+      <div className="file-tree-header">
+        <span>EXPLORER</span>
+        <button className="file-tree-refresh-btn" onClick={refreshAll} title="Refresh file tree">⟳</button>
+      </div>
       <div className="file-tree-content">
         {rootEntries.map((entry) => renderEntry(entry))}
       </div>
