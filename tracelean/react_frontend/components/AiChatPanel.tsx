@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
+import { ChatSwitcher, ChatInstance } from "./ChatSwitcher";
 
 interface ChatMessage {
   role: "system" | "user" | "assistant" | "tool";
@@ -41,6 +42,10 @@ interface ModelConfig {
   input_cost_per_m: number;
   output_cost_per_m: number;
   cached_input_cost_per_m: number;
+  coding_index?: number | null;
+  coding_rank?: number | null;
+  supports_caching: boolean;
+  supports_tools: boolean;
 }
 
 interface AiSettings {
@@ -126,6 +131,9 @@ export function AiChatPanel({ visible, onClose }: Props) {
   const [modelFetchError, setModelFetchError] = useState<string | null>(null);
   const [envKeys, setEnvKeys] = useState<Record<string, string>>({});
   const [toolLoopPaused, setToolLoopPaused] = useState<string | null>(null);
+  const [chatInstances, setChatInstances] = useState<ChatInstance[]>([{ id: crypto.randomUUID(), messages: [], createdAt: new Date(), label: "Chat 1" }]);
+  const [activeChatId, setActiveChatId] = useState<string>(chatInstances[0].id);
+  const [showSwitcher, setShowSwitcher] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const mockPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -303,6 +311,35 @@ export function AiChatPanel({ visible, onClose }: Props) {
     }
   };
 
+  const switchChat = (id: string) => {
+    // Save current messages to active instance
+    setChatInstances((prev) =>
+      prev.map((inst) => inst.id === activeChatId ? { ...inst, messages } : inst)
+    );
+    // Load target instance
+    const target = chatInstances.find((inst) => inst.id === id);
+    if (target) {
+      setMessages(target.messages as ChatMessage[]);
+      setActiveChatId(id);
+      setError(null);
+      setStreamingContent("");
+    }
+  };
+
+  const createNewChat = () => {
+    // Save current messages first
+    setChatInstances((prev) =>
+      prev.map((inst) => inst.id === activeChatId ? { ...inst, messages } : inst)
+    );
+    const newId = crypto.randomUUID();
+    const newInst: ChatInstance = { id: newId, messages: [], createdAt: new Date(), label: `Chat ${chatInstances.length + 1}` };
+    setChatInstances((prev) => [...prev, newInst]);
+    setActiveChatId(newId);
+    setMessages([]);
+    setError(null);
+    setStreamingContent("");
+  };
+
   if (!visible) return null;
 
   return (
@@ -313,7 +350,7 @@ export function AiChatPanel({ visible, onClose }: Props) {
           <button className={tab === "settings" ? "active" : ""} onClick={() => { setTab("settings"); loadModels(); }}>Settings</button>
           <button className={tab === "log" ? "active" : ""} onClick={() => { setTab("log"); loadLog(); }}>Log</button>
           <button className={tab === "stats" ? "active" : ""} onClick={() => { setTab("stats"); loadStats(); }}>Stats</button>
-          <button className="ai-new-session-btn" onClick={() => { setMessages([]); setError(null); setStreamingContent(""); }} title="New session (clear chat)">+</button>
+          <button className="ai-new-session-btn" onClick={() => setShowSwitcher(true)} title="Switch chat session">+</button>
         </div>
         <button className="close-btn" onClick={onClose}>×</button>
       </div>
@@ -321,18 +358,73 @@ export function AiChatPanel({ visible, onClose }: Props) {
       {tab === "chat" && (
         <div className="ai-chat-content">
           <div className="ai-messages">
-            {messages.map((m, i) => (
-              <div key={i} className={`ai-msg ai-msg-${m.role}`}>
-                {m.role === "system" ? (
-                  <span className="ai-msg-tool-call">{m.content}</span>
-                ) : (
-                  <>
-                    <span className="ai-msg-role">{m.role}</span>
-                    <pre className="ai-msg-content">{m.content}</pre>
-                  </>
-                )}
-              </div>
-            ))}
+            {(() => {
+              // Group consecutive system messages into batches
+              const grouped: Array<{ type: "single"; msg: ChatMessage; idx: number } | { type: "batch"; msgs: ChatMessage[]; startIdx: number }> = [];
+              let i = 0;
+              while (i < messages.length) {
+                if (messages[i].role === "system") {
+                  const batch: ChatMessage[] = [];
+                  const startIdx = i;
+                  while (i < messages.length && messages[i].role === "system") {
+                    batch.push(messages[i]);
+                    i++;
+                  }
+                  if (batch.length > 1) {
+                    grouped.push({ type: "batch", msgs: batch, startIdx });
+                  } else {
+                    grouped.push({ type: "single", msg: batch[0], idx: startIdx });
+                  }
+                } else {
+                  grouped.push({ type: "single", msg: messages[i], idx: i });
+                  i++;
+                }
+              }
+
+              // Parse tool name from content like '→ tool_name(args)' or 'call tool_name'
+              const parseToolName = (content: string): string => {
+                const m1 = content.match(/^→\s+(\w+)/);
+                if (m1) return m1[1];
+                const m2 = content.match(/^call\s+(\w+)/i);
+                if (m2) return m2[1];
+                const m3 = content.match(/tool[_\s]call[:\s]+(\w+)/i);
+                if (m3) return m3[1];
+                return "tool_call";
+              };
+
+              return grouped.map((entry, _gi) => {
+                if (entry.type === "batch") {
+                  // Count tool names
+                  const counts: Record<string, number> = {};
+                  for (const msg of entry.msgs) {
+                    const name = parseToolName(msg.content);
+                    counts[name] = (counts[name] || 0) + 1;
+                  }
+                  const summary = Object.entries(counts)
+                    .map(([name, count]) => `${name} ×${count}`)
+                    .join(", ");
+                  return (
+                    <div key={`batch-${entry.startIdx}`} className="ai-msg ai-msg-system ai-msg-tool-batch">
+                      <span className="ai-msg-tool-batch-label">batch</span>
+                      <span className="ai-msg-tool-call">call {summary}</span>
+                    </div>
+                  );
+                }
+                const m = entry.msg;
+                return (
+                  <div key={entry.idx} className={`ai-msg ai-msg-${m.role}`}>
+                    {m.role === "system" ? (
+                      <span className="ai-msg-tool-call">{m.content}</span>
+                    ) : (
+                      <>
+                        <span className="ai-msg-role">{m.role}</span>
+                        <pre className="ai-msg-content">{m.content}</pre>
+                      </>
+                    )}
+                  </div>
+                );
+              });
+            })()}
             {loading && mockPending.length === 0 && !streamingContent && <div className="ai-msg ai-msg-loading">Thinking...</div>}
             {loading && streamingContent && (
               <div className="ai-msg ai-msg-assistant">
@@ -461,11 +553,19 @@ export function AiChatPanel({ visible, onClose }: Props) {
               }}
             >
               <option value="">-- Select model --</option>
-              {models.map((m) => (
-                <option key={m.model_id} value={m.model_id}>
-                  {m.display_name} (${m.input_cost_per_m.toFixed(2)}/${m.output_cost_per_m.toFixed(2)} per 1M)
-                </option>
-              ))}
+              {models.map((m) => {
+                const rank = m.coding_rank ? `#${m.coding_rank}` : "—";
+                const badges = [
+                  m.supports_caching ? "⚡cache" : "",
+                  m.supports_tools ? "🔧tools" : "",
+                ].filter(Boolean).join(" ");
+                const price = `$${m.input_cost_per_m.toFixed(2)}/${m.output_cost_per_m.toFixed(2)}`;
+                return (
+                  <option key={m.model_id} value={m.model_id}>
+                    [{rank}] {m.display_name} {badges} ({price}/1M)
+                  </option>
+                );
+              })}
             </select>
           )}
 
@@ -539,8 +639,17 @@ export function AiChatPanel({ visible, onClose }: Props) {
               <h5>Request Messages</h5>
               {inspectEntry.request_messages.map((m, i) => (
                 <div key={i} className="ai-log-msg">
-                  <strong>{m.role.toUpperCase()}:</strong>
-                  {m.content && <pre>{m.content}</pre>}
+                  {m.role.toUpperCase() === "SYSTEM" ? (
+                    <details className="ai-log-system-prompt">
+                      <summary><strong>SYSTEM PROMPT</strong> ({m.content.length} chars)</summary>
+                      <pre>{m.content}</pre>
+                    </details>
+                  ) : (
+                    <>
+                      <strong>{m.role.toUpperCase()}:</strong>
+                      {m.content && <pre>{m.content}</pre>}
+                    </>
+                  )}
                   {(m as any).tool_calls?.length > 0 && (
                     <div className="ai-log-tool-calls">
                       {(m as any).tool_calls.map((tc: any, j: number) => (
@@ -616,6 +725,17 @@ export function AiChatPanel({ visible, onClose }: Props) {
             <p>Loading...</p>
           )}
         </div>
+      )}
+
+      {showSwitcher && (
+        <ChatSwitcher
+          chatInstances={chatInstances.map((inst) => inst.id === activeChatId ? { ...inst, messages } : inst)}
+          activeChatId={activeChatId}
+          onSwitch={switchChat}
+          onNewChat={createNewChat}
+          onReorder={setChatInstances}
+          onClose={() => setShowSwitcher(false)}
+        />
       )}
     </div>
   );

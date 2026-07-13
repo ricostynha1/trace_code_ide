@@ -21,9 +21,9 @@ use std::sync::{Arc, Mutex};
 // ─── Tauri State Wrappers ────────────────────────────────────────────────────
 // These wrap the core types for Tauri's managed state system.
 
-pub struct AppStateWrapper(pub Mutex<AppState>);
-pub struct SymbolTableWrapper(pub Mutex<SymbolTable>);
-pub struct TraceGraphWrapper(pub Mutex<TraceGraph>);
+pub struct AppStateWrapper(pub Arc<Mutex<AppState>>);
+pub struct SymbolTableWrapper(pub Arc<Mutex<SymbolTable>>);
+pub struct TraceGraphWrapper(pub Arc<Mutex<TraceGraph>>);
 
 pub struct UndoTreeCache {
     pub version: u64,
@@ -41,15 +41,15 @@ pub struct UndoTreeCacheWrapper(pub Mutex<UndoTreeCache>);
 
 // ─── AI Tauri State Wrappers ─────────────────────────────────────────────────
 
-pub struct AiSettingsWrapper(pub Mutex<AiSettings>);
-pub struct AiLogWrapper(pub Mutex<InteractionLog>);
-pub struct AiSessionStatsWrapper(pub Mutex<SessionStats>);
+pub struct AiSettingsWrapper(pub Arc<Mutex<AiSettings>>);
+pub struct AiLogWrapper(pub Arc<Mutex<InteractionLog>>);
+pub struct AiSessionStatsWrapper(pub Arc<Mutex<SessionStats>>);
 pub struct MockPendingWrapper(pub Mutex<Vec<ai::mock::MockPendingRequest>>);
 pub struct MockProviderWrapper(pub Arc<tokio::sync::Mutex<Option<Arc<ai::mock::MockProvider>>>>);
 pub struct PendingDiffsWrapper(pub Mutex<Vec<PendingDiff>>);
 
 /// Channel for tool loop pause/resume. Frontend sends true=continue, false=abort.
-pub struct ToolLoopResumeWrapper(pub tokio::sync::Mutex<Option<tokio::sync::oneshot::Sender<bool>>>);
+pub struct ToolLoopResumeWrapper(pub Arc<tokio::sync::Mutex<Option<tokio::sync::oneshot::Sender<bool>>>>);
 
 // ─── MCP & Permissions State ─────────────────────────────────────────────────
 
@@ -154,6 +154,10 @@ impl ai::provider::AiProvider for SharedMockProvider {
             output_cost_per_m: 75.0,
             cached_input_cost_per_m: 1.875,
             extra_params: None,
+                coding_index: None,
+                coding_rank: None,
+                supports_caching: false,
+                supports_tools: false,
         }])
     }
 }
@@ -165,17 +169,17 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
-        .manage(AppStateWrapper(Mutex::new(AppState::new())))
-        .manage(SymbolTableWrapper(Mutex::new(SymbolTable::new())))
-        .manage(TraceGraphWrapper(Mutex::new(TraceGraph::new())))
+        .manage(AppStateWrapper(Arc::new(Mutex::new(AppState::new()))))
+        .manage(SymbolTableWrapper(Arc::new(Mutex::new(SymbolTable::new()))))
+        .manage(TraceGraphWrapper(Arc::new(Mutex::new(TraceGraph::new()))))
         .manage(UndoTreeCacheWrapper(Mutex::new(UndoTreeCache::new())))
-        .manage(AiSettingsWrapper(Mutex::new(AiSettings::default())))
-        .manage(AiLogWrapper(Mutex::new(InteractionLog::new())))
-        .manage(AiSessionStatsWrapper(Mutex::new(SessionStats::default())))
+        .manage(AiSettingsWrapper(Arc::new(Mutex::new(AiSettings::default()))))
+        .manage(AiLogWrapper(Arc::new(Mutex::new(InteractionLog::new()))))
+        .manage(AiSessionStatsWrapper(Arc::new(Mutex::new(SessionStats::default()))))
         .manage(MockPendingWrapper(Mutex::new(Vec::new())))
         .manage(MockProviderWrapper(Arc::new(tokio::sync::Mutex::new(None))))
         .manage(PendingDiffsWrapper(Mutex::new(Vec::new())))
-        .manage(ToolLoopResumeWrapper(tokio::sync::Mutex::new(None)))
+        .manage(ToolLoopResumeWrapper(Arc::new(tokio::sync::Mutex::new(None))))
         .manage(McpHostPermissionsWrapper(Mutex::new(AgentPermissions::full_access("mcp-host"))))
         .manage(McpClientWrapper(tokio::sync::Mutex::new(McpClientManager::new())))
         .manage(AgentPermissionsStore(Mutex::new(std::collections::HashMap::new())))

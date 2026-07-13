@@ -7,9 +7,10 @@ use crate::{
     AppStateWrapper, AiSettingsWrapper, AiLogWrapper, AiSessionStatsWrapper,
     MockProviderWrapper, PendingDiffsWrapper, TraceGraphWrapper, UndoTreeCacheWrapper,
     SymbolTableWrapper, AiSettings, McpClientWrapper, invalidate_undo_cache, get_provider,
-    ToolCallEvent, ToolCallStatus, ToolLoopResumeWrapper,
+    ToolLoopResumeWrapper,
 };
 use tauri::{AppHandle, Emitter, State};
+use std::sync::Arc;
 
 // --- Settings & Models ---
 
@@ -76,37 +77,24 @@ pub async fn get_ai_models(settings: State<'_, AiSettingsWrapper>) -> Result<Vec
         }
     }
 
-    // Sort by recency: models with higher version numbers / newer names first
+    // Enrich with catalog data (coding_index, rank, caching, tools)
+    for model in &mut models {
+        ai::model_catalog::enrich(model);
+    }
+
+    // Sort by coding_rank (ranked models first, unranked last)
     models.sort_by(|a, b| {
-        let score_a = model_recency_score(&a.model_id);
-        let score_b = model_recency_score(&b.model_id);
-        score_b.cmp(&score_a)
+        match (a.coding_rank, b.coding_rank) {
+            (Some(ra), Some(rb)) => ra.cmp(&rb),
+            (Some(_), None) => std::cmp::Ordering::Less,
+            (None, Some(_)) => std::cmp::Ordering::Greater,
+            (None, None) => a.display_name.cmp(&b.display_name),
+        }
     });
 
     Ok(models)
 }
 
-/// Heuristic recency score for sorting models. Higher = more recent.
-fn model_recency_score(id: &str) -> u32 {
-    // Prompt-caching capable models get a bonus
-    let cache_bonus = if id.contains("nova-") || id.contains("claude-haiku-4") || id.contains("claude-sonnet") {
-        100
-    } else {
-        0
-    };
-
-    let base = if id.contains("opus-4") || id.contains("gpt-5.5") || id.contains("claude-fable") { 900 }
-    else if id.contains("claude-sonnet-5") || id.contains("gpt-5.4") || id.contains("grok-4") { 850 }
-    else if id.contains("claude-haiku-4.5") || id.contains("nova-premier") { 800 }
-    else if id.contains("nova-pro") || id.contains("nova-lite") || id.contains("nova-micro") { 750 }
-    else if id.contains("qwen3") || id.contains("kimi-k2") || id.contains("glm-5") { 700 }
-    else if id.contains("deepseek.v3") || id.contains("mistral-large-3") || id.contains("devstral") { 650 }
-    else if id.contains("gemma-4") || id.contains("nemotron") { 600 }
-    else if id.contains("minimax-m2") { 550 }
-    else { 100 };
-
-    base + cache_bonus
-}
 
 #[tauri::command]
 pub fn get_ai_session_stats(stats: State<'_, AiSessionStatsWrapper>) -> Result<SessionStats, String> {
@@ -178,7 +166,7 @@ pub async fn ai_chat(
     settings: State<'_, AiSettingsWrapper>,
     log_state: State<'_, AiLogWrapper>,
     stats: State<'_, AiSessionStatsWrapper>,
-    mock_provider: State<'_, MockProviderWrapper>,
+    _mock_provider: State<'_, MockProviderWrapper>,
     mcp_client: State<'_, McpClientWrapper>,
     state: State<'_, AppStateWrapper>,
     symbols_state: State<'_, SymbolTableWrapper>,
@@ -187,368 +175,73 @@ pub async fn ai_chat(
     resume_state: State<'_, ToolLoopResumeWrapper>,
     messages: Vec<ai::provider::ChatMessage>,
 ) -> Result<ai::AiResponse, String> {
-    use ai::provider::{AiProvider, MessageRole};
+    use tracelean_core::agent::{AgentContext, run_agent_turn};
 
-    let (model, provider_kind, or_key, br_token, br_region) = {
-        let s = settings.0.lock().map_err(|e| e.to_string())?;
-        let model = s.selected_model.clone().ok_or("No model selected")?;
-        (
-            model,
-            s.active_provider.clone(),
-            s.openrouter_api_key.clone(),
-            s.bedrock_api_key.clone(),
-            s.bedrock_region.clone(),
-        )
+    // Snapshot project root
+    let project_root = {
+        let s = state.0.lock().map_err(|e| e.to_string())?;
+        s.project_root().cloned().unwrap_or_default()
     };
 
-    // Build tool schemas from builtin + MCP client tools
-    let all_tool_schemas = {
-        let mut schemas = ai::tools::builtin_tool_schemas();
+    // Collect MCP tool definitions (read-only snapshot)
+    let extra_tools: Vec<ai::tools::ToolDefinition> = {
         let mgr = mcp_client.0.lock().await;
-        for (_server, tool) in mgr.all_tools() {
-            schemas.push(tool.to_tool_schema());
-        }
-        schemas
+        mgr.all_tools().into_iter().map(|(_server, tool)| tool).collect()
     };
 
-    // Build tool index for selection
-    let tool_index = ai::ToolIndex::new(&all_tool_schemas);
+    let spend_cap = settings.0.lock().map_err(|e| e.to_string())?.spend_cap_usd;
 
-    // Extract user query for tool selection (sliding window of last 3 turns)
-    let user_query = {
-        let mut window_parts: Vec<String> = Vec::new();
-        let mut turn_count = 0;
-        for m in messages.iter().rev() {
-            if m.role == MessageRole::Tool { continue; }
-            let label = match m.role {
-                MessageRole::User => "User",
-                MessageRole::Assistant => "Agent",
-                _ => continue,
-            };
-            window_parts.push(format!("{}: {}", label, m.content));
-            if m.role == MessageRole::User {
-                turn_count += 1;
-                if turn_count >= 3 { break; }
-            }
-        }
-        window_parts.reverse();
-        window_parts.join("\n")
+    let ctx = AgentContext {
+        state: state.0.clone(),
+        symbols: symbols_state.0.clone(),
+        graph: graph_state.0.clone(),
+        settings: settings.0.clone(),
+        stats: stats.0.clone(),
+        log: log_state.0.clone(),
+        extra_tools,
+        permissions: tracelean_core::AgentPermissions::full_access("chat"),
+        project_root,
+        event_sink: Arc::new(crate::TauriEventSink { app_handle: app.clone() }),
+        spend_cap_usd: spend_cap,
+        pause_handler: Some(Arc::new(TauriPauseHandler {
+            app_handle: app.clone(),
+            resume_state: resume_state.0.clone(),
+        })),
+        verbose: false,
     };
 
-    let mut messages = messages;
-    let mut previously_called: Vec<String> = Vec::new();
-    let tool_loop_pause_threshold = 10;
-    let mut consecutive_failures: u32 = 0;
-    let mut loop_i: usize = 0;
-    let mut total_tool_calls: usize = 0;
+    let result = run_agent_turn(&ctx, messages).await.map_err(|e| e.to_string())?;
 
-    // T3.8: Read spend cap
-    let spend_cap = {
-        let s = settings.0.lock().map_err(|e| e.to_string())?;
-        s.spend_cap_usd
-    };
+    // Invalidate undo cache after tool execution
+    invalidate_undo_cache(&cache);
 
-    loop {
-        // T3.8: Enforce spend cap
+    Ok(result.response)
+}
+
+/// PauseHandler implementation for Tauri — emits event and waits for user response.
+struct TauriPauseHandler {
+    app_handle: AppHandle,
+    resume_state: Arc<tokio::sync::Mutex<Option<tokio::sync::oneshot::Sender<bool>>>>,
+}
+
+#[async_trait::async_trait]
+impl tracelean_core::agent::PauseHandler for TauriPauseHandler {
+    async fn should_continue(&self, tool_calls_so_far: usize) -> bool {
+        let _ = self.app_handle.emit("tool-loop-pause", serde_json::json!({
+            "loops_completed": tool_calls_so_far,
+            "message": format!("{} tool calls executed. Continue?", tool_calls_so_far)
+        }));
+
+        let (tx, rx) = tokio::sync::oneshot::channel::<bool>();
         {
-            let s = stats.0.lock().map_err(|e| e.to_string())?;
-            if s.total_cost_usd >= spend_cap {
-                return Err(format!("Spend cap reached (${:.4} >= ${:.2}). Increase cap in settings to continue.", s.total_cost_usd, spend_cap));
-            }
+            let mut guard = self.resume_state.lock().await;
+            *guard = Some(tx);
         }
 
-        // Select relevant tools for this turn
-        let selected_tools = tool_index.select_with_context(&user_query, &previously_called, None);
-
-        let request = ai::AiRequest {
-            model: model.clone(),
-            messages: messages.clone(),
-            stop: None,
-            tools: if selected_tools.is_empty() { None } else { Some(selected_tools) },
-        };
-
-        let start = std::time::Instant::now();
-
-        let result: Result<ai::AiResponse, ai::provider::AiError> = match provider_kind {
-            ai::ProviderKind::OpenRouter => {
-                let key = or_key.clone()
-                    .or_else(|| std::env::var("OPENROUTER_API_KEY").ok())
-                    .ok_or("OpenRouter API key not set")?;
-                let provider = ai::openrouter::OpenRouterProvider::new(key);
-                provider.complete(&request).await
-            }
-            ai::ProviderKind::Bedrock => {
-                let token = br_token.clone()
-                    .or_else(|| std::env::var("AWS_BEARER_TOKEN_BEDROCK").ok())
-                    .ok_or("Bedrock bearer token not set")?;
-                let provider = ai::bedrock::BedrockProvider::new(token, br_region.clone());
-                provider.complete(&request).await
-            }
-            ai::ProviderKind::Mock => {
-                let provider = {
-                    let mut guard = mock_provider.0.lock().await;
-                    if guard.is_none() {
-                        let (p, _rx) = ai::mock::MockProvider::new();
-                        *guard = Some(std::sync::Arc::new(p));
-                    }
-                    guard.as_ref().unwrap().clone()
-                };
-                provider.complete(&request).await
-            }
-        };
-
-        let duration_ms = start.elapsed().as_millis() as u64;
-
-        match result {
-            Ok(response) => {
-                let cost = response.usage.estimate_cost(
-                    model.input_cost_per_m,
-                    model.output_cost_per_m,
-                    model.cached_input_cost_per_m,
-                );
-                {
-                    let mut log = log_state.0.lock().map_err(|e| e.to_string())?;
-                    let label = if loop_i == 0 { "chat".to_string() } else { format!("chat/tool_{}", loop_i) };
-                    log.record_success(&label, &request, &response, duration_ms);
-                }
-                {
-                    let mut s = stats.0.lock().map_err(|e| e.to_string())?;
-                    s.record(&response.usage, &cost);
-                }
-                // Notify frontend about updated stats
-                let _ = app.emit("ai-stats-updated", ());
-
-                // Check for tool calls in response (native tool calling)
-                if response.tool_calls.is_empty() {
-                    // No tool calls — final response
-                    return Ok(response);
-                }
-
-                // Bug 2 fix: Emit assistant text content to chat UI between tool loops
-                if !response.content.is_empty() {
-                    let _ = app.emit("ai-chat-message", serde_json::json!({
-                        "role": "assistant",
-                        "content": response.content.clone()
-                    }));
-                }
-
-                // Check if any tool call has malformed JSON arguments
-                let has_malformed = response.tool_calls.iter().any(|tc| {
-                    serde_json::from_str::<serde_json::Value>(&tc.function.arguments).is_err()
-                });
-
-                if has_malformed {
-                    // Don't push tool_calls to history (API would reject malformed JSON).
-                    // Instead, inform the model about the error so it can retry.
-                    let error_details: Vec<String> = response.tool_calls.iter()
-                        .filter(|tc| serde_json::from_str::<serde_json::Value>(&tc.function.arguments).is_err())
-                        .map(|tc| format!("{}({}) — invalid JSON", tc.function.name, tc.function.arguments))
-                        .collect();
-
-                    let error_msg = format!(
-                        "Error: your tool call(s) contained invalid JSON arguments and could not be executed:\n{}\nPlease retry with valid JSON.",
-                        error_details.join("\n")
-                    );
-
-                    // Emit to frontend
-                    let _ = app.emit("ai-chat-message", serde_json::json!({
-                        "role": "system",
-                        "content": error_msg.clone()
-                    }));
-
-                    // Push assistant text + error as conversation so model can self-correct
-                    if !response.content.is_empty() {
-                        messages.push(ai::provider::ChatMessage {
-                            role: MessageRole::Assistant,
-                            content: response.content.clone(),
-                            tool_call_id: None,
-                            tool_calls: Vec::new(),
-                        });
-                    }
-                    messages.push(ai::provider::ChatMessage {
-                        role: MessageRole::User,
-                        content: error_msg,
-                        tool_call_id: None,
-                        tool_calls: Vec::new(),
-                    });
-
-                    consecutive_failures += 1;
-                    if consecutive_failures >= 6 {
-                        return Err("Too many consecutive tool call failures (invalid JSON). Stopping.".into());
-                    }
-                    loop_i += 1;
-                    continue;
-                }
-
-                // All tool calls have valid JSON — push assistant message with tool_calls
-                messages.push(ai::provider::ChatMessage {
-                    role: MessageRole::Assistant,
-                    content: response.content.clone(),
-                    tool_call_id: None,
-                    tool_calls: response.tool_calls.clone(),
-                });
-
-                for tc in &response.tool_calls {
-                    let tool_name = &tc.function.name;
-
-                    // Pause every N tool calls for user confirmation
-                    total_tool_calls += 1;
-                    if total_tool_calls > 0 && total_tool_calls % tool_loop_pause_threshold == 0 {
-                        let _ = app.emit("tool-loop-pause", serde_json::json!({
-                            "loops_completed": total_tool_calls,
-                            "message": format!("{} tool calls executed. Continue?", total_tool_calls)
-                        }));
-
-                        let (tx, rx) = tokio::sync::oneshot::channel::<bool>();
-                        {
-                            let mut guard = resume_state.0.lock().await;
-                            *guard = Some(tx);
-                        }
-
-                        match rx.await {
-                            Ok(true) => { /* user said continue */ }
-                            _ => {
-                                let _ = app.emit("ai-chat-message", serde_json::json!({
-                                    "role": "system",
-                                    "content": format!("[Stopped by user after {} tool calls.]", total_tool_calls)
-                                }));
-                                return Err(format!("Tool loop stopped by user after {} tool calls.", total_tool_calls));
-                            }
-                        }
-                    }
-
-                    // Bug 1 fix: detect malformed JSON args and report to user instead of silent fallback
-                    let arguments: serde_json::Value = match serde_json::from_str(&tc.function.arguments) {
-                        Ok(v) => v,
-                        Err(parse_err) => {
-                            let error_msg = format!(
-                                "tool_call_failed: model produced invalid JSON for {}({}): {}",
-                                tool_name, tc.function.arguments, parse_err
-                            );
-                            // Emit failure to frontend chat
-                            let _ = app.emit("ai-chat-message", serde_json::json!({
-                                "role": "system",
-                                "content": error_msg.clone()
-                            }));
-                            let _ = app.emit("tool-call", ToolCallEvent {
-                                tool_name: tool_name.clone(),
-                                status: ToolCallStatus::Failed { error: error_msg.clone() },
-                                duration_ms: Some(0),
-                                depth: 0,
-                                reason: None,
-                            });
-
-                            // Push error as tool result so model can self-correct
-                            messages.push(ai::provider::ChatMessage {
-                                role: MessageRole::Tool,
-                                content: format!("Error: invalid JSON arguments — {}", parse_err),
-                                tool_call_id: Some(tc.id.clone()),
-                                tool_calls: Vec::new(),
-                            });
-                            consecutive_failures += 1;
-                            continue;
-                        }
-                    };
-
-                    previously_called.push(tool_name.clone());
-
-                    // Emit tool call message to frontend chat
-                    let _ = app.emit("ai-chat-message", serde_json::json!({
-                        "role": "system",
-                        "content": format!("call {}", tool_name)
-                    }));
-
-                    // Emit "running" event
-                    let _ = app.emit("tool-call", ToolCallEvent {
-                        tool_name: tool_name.clone(),
-                        status: ToolCallStatus::Running,
-                        duration_ms: None,
-                        depth: 0,
-                        reason: None,
-                    });
-
-                    let start_tool = std::time::Instant::now();
-                    let mcp_call = ai::ToolCall { name: tool_name.clone(), arguments };
-                    let result = {
-                        let mut s = state.0.lock().map_err(|e| e.to_string())?;
-                        let sym = symbols_state.0.lock().map_err(|e| e.to_string())?;
-                        let g = graph_state.0.lock().map_err(|e| e.to_string())?;
-                        let root = s.project_root().cloned().unwrap_or_default();
-                        let perms = ai::tool_executor::AgentPermissions::full_access("chat");
-                        ai::tool_executor::execute_tool(&mcp_call, &root, &mut s, &sym, &g, &perms)
-                    };
-                    let tool_duration = start_tool.elapsed().as_millis() as u64;
-
-                    // Emit tool response message to frontend chat
-                    let _ = app.emit("ai-chat-message", serde_json::json!({
-                        "role": "system",
-                        "content": format!("rsp {}", tool_name)
-                    }));
-
-                    // Emit completed/failed event
-                    let status = if result.success {
-                        ToolCallStatus::Completed
-                    } else {
-                        ToolCallStatus::Failed { error: result.content.clone() }
-                    };
-                    let _ = app.emit("tool-call", ToolCallEvent {
-                        tool_name: tool_name.clone(),
-                        status,
-                        duration_ms: Some(tool_duration),
-                        depth: 0,
-                        reason: None,
-                    });
-
-                    // Push tool result as proper Tool role message
-                    messages.push(ai::provider::ChatMessage {
-                        role: MessageRole::Tool,
-                        content: result.content.clone(),
-                        tool_call_id: Some(tc.id.clone()),
-                        tool_calls: Vec::new(),
-                    });
-
-                    // Track consecutive failures
-                    if result.success {
-                        consecutive_failures = 0;
-                    } else {
-                        consecutive_failures += 1;
-                    }
-                    if consecutive_failures >= 6 {
-                        break;
-                    }
-                }
-
-                // Stop if too many consecutive failures
-                if consecutive_failures >= 6 {
-                    let failure_msg = format!(
-                        "{}\n\n[Tool execution stopped: {} consecutive failures. Please provide additional guidance.]",
-                        response.content, consecutive_failures
-                    );
-                    return Ok(ai::AiResponse {
-                        content: failure_msg,
-                        usage: response.usage.clone(),
-                        raw_response: response.raw_response.clone(),
-                        truncated: response.truncated,
-                        tool_calls: Vec::new(),
-                    });
-                }
-
-                // Invalidate undo cache and notify frontend after tool execution
-                invalidate_undo_cache(&cache);
-                let _ = app.emit("undo-tree-changed", ());
-                let _ = app.emit("files-changed", ());
-
-                // Loop to send results back to AI
-            }
-            Err(e) => {
-                let mut log = log_state.0.lock().map_err(|e2| e2.to_string())?;
-                let label = if loop_i == 0 { "chat".to_string() } else { format!("chat/tool_{}", loop_i) };
-                log.record_failure(&label, &request, &e, duration_ms);
-                return Err(e.message);
-            }
+        match rx.await {
+            Ok(cont) => cont,
+            _ => false,
         }
-
-        loop_i += 1;
     }
 }
 

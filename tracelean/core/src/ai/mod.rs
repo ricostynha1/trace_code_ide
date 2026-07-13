@@ -28,6 +28,9 @@ pub mod tool_selector;
 pub mod mcp_host;
 pub mod mcp_client;
 pub mod streaming;
+pub mod embeddings;
+pub mod benchmark;
+pub mod model_catalog;
 
 pub use provider::{AiProvider, AiRequest, AiResponse, ModelConfig, ProviderKind, ToolSchema, ToolCallResponse};
 pub use tracking::{TokenUsage, CostEstimate};
@@ -36,3 +39,4 @@ pub use tools::{ToolDefinition, ToolCall, ToolResult};
 pub use tool_executor::AgentPermissions;
 pub use tool_selector::ToolIndex;
 pub use streaming::StreamToken;
+pub use embeddings::{EmbeddingsIndex, SharedIndex, new_shared_index, EmbedResult};

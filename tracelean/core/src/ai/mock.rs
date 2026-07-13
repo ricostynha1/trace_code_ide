@@ -266,6 +266,10 @@ impl AiProvider for MockProvider {
             output_cost_per_m: 75.0,
             cached_input_cost_per_m: 1.875,
             extra_params: None,
+                coding_index: None,
+                coding_rank: None,
+                supports_caching: false,
+                supports_tools: false,
         }])
     }
 }

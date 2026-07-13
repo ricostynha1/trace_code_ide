@@ -50,6 +50,109 @@ cargo build --release -p tracelean-tui
 | Tab | Cycle panels |
 | Alt+1–5 | Jump to panel (FileTree, Editor, AI Chat, Trace, Requirements) |
 
+## Generating Model Metadata JSONs
+
+Build-time scripts fetch model pricing (LiteLLM) and coding rankings (llm-stats.com API) and output JSON files consumed by the Rust app.
+
+```bash
+# Install Python deps
+pip install -r scripts/requirements.txt
+
+# Set your llm-stats.com API key (free, get at https://llm-stats.com/developer)
+export LLM_STATS_API_KEY=ze_your_key_here
+
+# Generate data/model_pricing.json and data/model_rankings.json
+python scripts/fetch_model_metadata.py
+```
+
+Output goes to `data/model_pricing.json` (pricing, context window, capabilities) and `data/model_rankings.json` (coding performance TrueSkill rankings, stable order).
+
+## Running Benchmarks
+
+### Headless Agent (Rust binary)
+
+The `tracelean-bench` binary runs the agent runtime headlessly — no GUI, no TUI. It exercises the full LLM tool loop (prompt → tools → LLM → ... → done) against exercism tasks and outputs JSON results.
+
+```bash
+# Set provider credentials (pick one)
+export OPENROUTER_API_KEY=sk-or-...
+# or
+export AWS_BEARER_TOKEN_BEDROCK=...
+
+# List available models for your provider
+cargo run --bin tracelean-bench -- -p bedrock --list-models
+cargo run --bin tracelean-bench -- -p openrouter --list-models
+
+# Run with explicit provider and model
+cargo run --bin tracelean-bench -- \
+  --provider openrouter \
+  --model anthropic/claude-sonnet-4-20250514 \
+  hello-world
+
+# Bedrock provider (region defaults to eu-west-1)
+cargo run --bin tracelean-bench -- \
+  -p bedrock \
+  -m anthropic.claude-sonnet-5 \
+  hello-world
+
+# Bedrock with explicit region
+cargo run --bin tracelean-bench -- \
+  -p bedrock -r us-east-1 \
+  -m qwen.qwen3-coder-480b-a35b-instruct \
+  --all
+
+# Custom cost cap
+cargo run --bin tracelean-bench -- -p bedrock -m qwen.qwen3-coder-480b-a35b-instruct --cap 2.00 --all
+
+# Auto-detect provider from env vars (fallback)
+cargo run --bin tracelean-bench -- hello-world two-fer
+
+# Real command to use 
+  cargo run --bin tracelean-bench -- -p bedrock -m qwen.qwen3-32b hello-world -v 2>&1 | tee full_output.log
+
+```
+
+
+
+**CLI flags**:
+
+| Flag | Short | Default | Purpose |
+|------|-------|---------|---------|
+| `--provider` | `-p` | auto-detect | `openrouter`, `bedrock`, or `mock` |
+| `--model` | `-m` | `anthropic/claude-sonnet-4-20250514` | Model ID |
+| `--cap` | `-c` | `1.0` | Spend cap in USD |
+| `--all` | | | Run all 10 default exercism tasks |
+
+**Environment variables** (used as fallbacks when flags not given):
+
+| Variable | Purpose |
+|----------|---------|
+| `OPENROUTER_API_KEY` | OpenRouter provider key |
+| `AWS_BEARER_TOKEN_BEDROCK` | Bedrock provider token |
+| `AWS_REGION` | Bedrock region (default: eu-west-1) |
+| `PROVIDER` | Same as `--provider` |
+| `MODEL_ID` | Same as `--model` |
+| `SPEND_CAP_USD` | Same as `--cap` |
+
+**What it tests**: The full `core/src/agent/runtime.rs` loop — provider dispatch, tool selection, tool execution, cost tracking, failure handling — without any UI dependency.
+
+### Python Script (legacy wrapper)
+
+Exercism tasks are auto-downloaded from GitHub on first run.
+
+```bash
+# Run Aider Exercism benchmark (default $1 cost cap)
+python scripts/benchmark_exercism.py
+
+# Custom tasks and cost cap
+BENCHMARK_COST_CAP=0.50 python scripts/benchmark_exercism.py hello-world two-fer
+
+# Use different language track (default: python)
+EXERCISM_LANGUAGE=rust python scripts/benchmark_exercism.py
+```
+
+Results written to `benchmark_results.json`.
+
 ## Running Tests
 
 ```bash

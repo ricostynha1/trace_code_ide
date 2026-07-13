@@ -2,6 +2,7 @@
 //! No Tauri dependency. Pure domain logic + service orchestration.
 
 pub mod acp;
+pub mod agent;
 pub mod ai;
 pub mod commands;
 pub mod debug_nodes;
@@ -26,6 +27,7 @@ pub use ai::{InteractionLog, tracking::SessionStats, diff_pipeline::PendingDiff}
 pub use ai::provider::{AiProvider, AiError, AiRequest, AiResponse};
 pub use ai::mcp_client::McpClientManager;
 pub use ai::tool_executor::AgentPermissions;
+pub use agent::{AgentContext, AgentError, AgentTurnResult, PauseHandler, ToolCallRecord, run_agent_turn};
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;

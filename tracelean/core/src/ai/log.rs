@@ -166,7 +166,7 @@ impl InteractionLog {
         }
     }
 
-    /// Persist log to disk.
+    /// Persist log to disk (AI log dir).
     pub fn save_to_disk(&self, project_root: &PathBuf) -> Result<(), String> {
         let dir = project_root.join(".tracelean").join("ai_log");
         std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
@@ -174,6 +174,22 @@ impl InteractionLog {
         let json = serde_json::to_string_pretty(&self.entries).map_err(|e| e.to_string())?;
         std::fs::write(path, json).map_err(|e| e.to_string())?;
         Ok(())
+    }
+
+    /// Persist log to .tracelean/commands/command_log.json (structured storage).
+    pub fn save_to_command_log(&self, project_root: &PathBuf) -> Result<(), String> {
+        let dir = project_root.join(".tracelean").join("commands");
+        std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+        let path = dir.join("command_log.json");
+        let json = serde_json::to_string_pretty(&self.entries).map_err(|e| e.to_string())?;
+        std::fs::write(path, json).map_err(|e| e.to_string())?;
+        Ok(())
+    }
+
+    /// Save to both log locations. Call after each record_success/record_failure.
+    pub fn persist(&self, project_root: &PathBuf) {
+        let _ = self.save_to_disk(project_root);
+        let _ = self.save_to_command_log(project_root);
     }
 
     /// Load log from disk.

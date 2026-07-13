@@ -329,6 +329,10 @@ impl AiProvider for OpenRouterProvider {
                 output_cost_per_m: parse_price_per_m(&pricing.completion),
                 cached_input_cost_per_m: parse_price_per_m(&pricing.prompt) * 0.1, // estimate ~10% of input price for cached
                 extra_params: None,
+                coding_index: None,
+                coding_rank: None,
+                supports_caching: false,
+                supports_tools: false,
             }
         }).collect();
 

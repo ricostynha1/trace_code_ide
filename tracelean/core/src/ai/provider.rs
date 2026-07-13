@@ -28,6 +28,18 @@ pub struct ModelConfig {
     pub cached_input_cost_per_m: f64,
     /// Provider-specific extra params (JSON blob)
     pub extra_params: Option<serde_json::Value>,
+    /// Coding index score from llm-stats.com (TrueSkill μ−3σ). Higher = better.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub coding_index: Option<f64>,
+    /// Coding rank (1 = best)
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub coding_rank: Option<u32>,
+    /// Whether the model supports prompt caching
+    #[serde(default)]
+    pub supports_caching: bool,
+    /// Whether the model supports tool/function calling
+    #[serde(default)]
+    pub supports_tools: bool,
 }
 
 /// A message in a conversation.

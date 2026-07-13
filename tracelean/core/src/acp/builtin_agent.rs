@@ -23,9 +23,7 @@ use agent_client_protocol::{
 };
 use tokio::sync::{watch, Mutex};
 
-// TODO: Wire in actual provider once API keys come from settings.
-#[allow(unused_imports)]
-use crate::ai::provider::{AiProvider, AiRequest, AiResponse, ChatMessage, MessageRole, ModelConfig};
+use crate::ai::provider::{ChatMessage, MessageRole};
 
 // ---------------------------------------------------------------------------
 // Steering
@@ -135,8 +133,6 @@ impl SessionState {
 struct AgentState {
     sessions: HashMap<String, SessionState>,
     steering_rx: watch::Receiver<SteeringCommand>,
-    // TODO: Add AiProvider instance once API keys are wired from settings
-    // provider: Arc<dyn AiProvider>,
 }
 
 type SharedState = Arc<Mutex<AgentState>>;
@@ -413,20 +409,81 @@ async fn handle_prompt_loop(
 }
 
 // ---------------------------------------------------------------------------
-// LLM integration (TODO: wire real provider)
+// LLM integration
 // ---------------------------------------------------------------------------
 
 /// Call the LLM with assembled messages.
-/// TODO: Wire in actual AiProvider from crate::ai once API keys come from settings.
+/// Uses the configured provider from AiSettings (via env vars for standalone agent).
 async fn call_llm(messages: &[ChatMessage]) -> String {
-    // TODO: Replace with actual provider call:
-    //   let request = AiRequest { model: config, messages: messages.to_vec(), stop: None };
-    //   let response = provider.complete(&request).await?;
-    //   return response.content;
-    //
-    // For now, return a stub that signals "end turn" (no tool calls).
-    let _ = messages;
-    "I'm the TraceLean built-in agent. LLM integration pending — API keys not yet configured.".to_string()
+    use crate::ai::{self, provider::AiProvider};
+    use crate::AiSettings;
+
+    // Read settings from env
+    let settings = AiSettings {
+        active_provider: if std::env::var("OPENROUTER_API_KEY").is_ok() {
+            ai::ProviderKind::OpenRouter
+        } else if std::env::var("AWS_BEARER_TOKEN_BEDROCK").is_ok() {
+            ai::ProviderKind::Bedrock
+        } else {
+            ai::ProviderKind::Mock
+        },
+        openrouter_api_key: std::env::var("OPENROUTER_API_KEY").ok(),
+        bedrock_api_key: std::env::var("AWS_BEARER_TOKEN_BEDROCK").ok(),
+        bedrock_region: std::env::var("AWS_REGION").ok().or(Some("eu-west-1".to_string())),
+        selected_model: None, // Will use default model below
+        spend_cap_usd: std::env::var("SPEND_CAP_USD")
+            .ok()
+            .and_then(|s| s.parse().ok())
+            .unwrap_or(1.0),
+    };
+
+    // Pick a default model if none configured
+    let model = settings.selected_model.clone().unwrap_or_else(|| ai::ModelConfig {
+        provider: settings.active_provider.clone(),
+        model_id: std::env::var("MODEL_ID").unwrap_or_else(|_| "anthropic/claude-sonnet-4-20250514".to_string()),
+        display_name: "Agent Model".to_string(),
+        max_tokens: 16384,
+        temperature: 0.0,
+        input_cost_per_m: 3.0,
+        output_cost_per_m: 15.0,
+        cached_input_cost_per_m: 0.3,
+        extra_params: None,
+        coding_index: None,
+        coding_rank: None,
+        supports_caching: false,
+        supports_tools: false,
+    });
+
+    let provider: Box<dyn AiProvider + Send + Sync> = match settings.active_provider {
+        ai::ProviderKind::OpenRouter => {
+            match settings.openrouter_api_key {
+                Some(key) => Box::new(ai::openrouter::OpenRouterProvider::new(key)),
+                None => return "Error: OPENROUTER_API_KEY not set".to_string(),
+            }
+        }
+        ai::ProviderKind::Bedrock => {
+            match settings.bedrock_api_key {
+                Some(token) => Box::new(ai::bedrock::BedrockProvider::new(token, settings.bedrock_region)),
+                None => return "Error: AWS_BEARER_TOKEN_BEDROCK not set".to_string(),
+            }
+        }
+        ai::ProviderKind::Mock => {
+            let (p, _rx) = ai::mock::MockProvider::new();
+            Box::new(p)
+        }
+    };
+
+    let request = ai::AiRequest {
+        model,
+        messages: messages.to_vec(),
+        stop: None,
+        tools: None, // ACP agent uses text-based tool calling via parse_llm_response
+    };
+
+    match provider.complete(&request).await {
+        Ok(response) => response.content,
+        Err(e) => format!("LLM error: {}", e.message),
+    }
 }
 
 // ---------------------------------------------------------------------------

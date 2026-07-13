@@ -201,7 +201,27 @@ pub async fn ai_chat_stream(
         window_parts.join("\n")
     };
 
-    let mut messages = messages;
+    let mut messages = {
+        let system_prompt = "You are TraceLean, an AI coding assistant embedded in an IDE.\n\
+            You help users understand, modify, and verify code using the provided tools.\n\n\
+            CRITICAL — PARALLEL TOOL CALLS:\n\
+            When you need multiple independent operations, call ALL tools in ONE response.\n\n\
+            GOOD example — user asks to add a comment to 3 files:\n\
+            Response: [tool_call: write_range(A.md), tool_call: write_range(B.md), tool_call: write_range(C.md)]\n\n\
+            BAD example — same task but one call per turn:\n\
+            Turn 1: [tool_call: write_range(A.md)]  ← wastes 2 extra LLM round-trips\n\
+            Turn 2: [tool_call: write_range(B.md)]\n\
+            Turn 3: [tool_call: write_range(C.md)]\n\n\
+            Same applies to reads: if you need to read 3 files, read all 3 in one response.";
+        let mut full = vec![ai::provider::ChatMessage {
+            role: MessageRole::System,
+            content: system_prompt.to_string(),
+            tool_call_id: None,
+            tool_calls: Vec::new(),
+        }];
+        full.extend(messages);
+        full
+    };
 
     let (model, provider_kind, or_key, br_token, br_region) = {
         let s = settings.0.lock().map_err(|e| e.to_string())?;

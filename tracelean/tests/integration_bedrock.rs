@@ -38,6 +38,10 @@ fn test_model_config() -> ModelConfig {
         output_cost_per_m: 0.0,
         cached_input_cost_per_m: 0.0,
         extra_params: None,
+        coding_index: None,
+        coding_rank: None,
+        supports_caching: false,
+        supports_tools: false,
     }
 }
 

@@ -9,7 +9,7 @@ use super::bedrock_pricing::bedrock_pricing;
 use serde::{Deserialize, Serialize};
 
 /// Default region for Bedrock API.
-pub const DEFAULT_REGION: &str = "us-east-1";
+pub const DEFAULT_REGION: &str = "eu-west-1";
 /// Default model ID (mantle format — no version suffix, no cross-region prefix).
 pub const DEFAULT_MODEL_ID: &str = "qwen.qwen3-32b";
 
@@ -426,6 +426,10 @@ impl AiProvider for BedrockProvider {
                     output_cost_per_m: output_cost,
                     cached_input_cost_per_m: input_cost * 0.1,
                     extra_params: None,
+                coding_index: None,
+                coding_rank: None,
+                supports_caching: false,
+                supports_tools: false,
                 }
             })
             .collect();
