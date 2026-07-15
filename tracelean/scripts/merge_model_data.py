@@ -120,15 +120,51 @@ def find_best_match(slug: str, ranking_entries: list[tuple], ranking_index: dict
     return None
 
 
+def resolve_provider_cache(model_key: str, provider_cache: dict) -> dict | None:
+    """Resolve provider cache config for a model key.
+
+    Matches based on provider keywords in the model key.
+    Returns None for providers not in our cache config (they get null fields in output).
+    """
+    lower = model_key.lower()
+
+    if "anthropic" in lower or "claude" in lower:
+        return provider_cache.get("anthropic_5min")
+    if "openai" in lower or "gpt" in lower or "/o1" in lower or "/o3" in lower:
+        return provider_cache.get("openai")
+    if "deepseek" in lower:
+        return provider_cache.get("deepseek")
+    if "minimax" in lower:
+        return provider_cache.get("minimax_passive")
+    if "qwen" in lower or "alibaba" in lower:
+        return provider_cache.get("qwen")
+    # Providers without explicit cache support — use OpenAI-like automatic defaults
+    if "mistral" in lower:
+        return provider_cache.get("openai")  # automatic prefix cache like OpenAI
+    if "meta" in lower or "llama" in lower:
+        return provider_cache.get("openai")
+    if "xai" in lower or "grok" in lower:
+        return provider_cache.get("openai")
+
+    return None
+
+
 def merge() -> list[dict]:
     """Merge pricing and rankings into unified model list."""
     pricing_path = DATA_DIR / "model_pricing.json"
     rankings_path = DATA_DIR / "model_rankings.json"
+    provider_cache_path = DATA_DIR / "provider_cache.json"
 
     with open(pricing_path) as f:
         pricing = json.load(f)
     with open(rankings_path) as f:
         rankings = json.load(f)
+
+    # Load provider cache config if available
+    provider_cache = {}
+    if provider_cache_path.exists():
+        with open(provider_cache_path) as f:
+            provider_cache = json.load(f).get("providers", {})
 
     ranking_index = {r["model_id"].lower(): r for r in rankings}
     # Pre-tokenize ranking IDs, sort by token count descending (most specific first)
@@ -144,12 +180,21 @@ def merge() -> list[dict]:
 
         match = find_best_match(slug, ranking_entries, ranking_index)
 
+        # Resolve provider cache config for this model
+        cache_config = resolve_provider_cache(pricing_key, provider_cache)
+
         merged_entry = {
             **entry,
             "slug": slug,
             "coding_index": match["coding_index"] if match else None,
             "coding_rank": match["rank"] if match else None,
             "ranking_model_id": match["model_id"] if match else None,
+            # Provider cache fields (from data/provider_cache.json)
+            "cache_mode": cache_config.get("cache_mode") if cache_config else None,
+            "cache_read_discount": cache_config.get("cache_read_discount") if cache_config else None,
+            "cache_write_multiplier": cache_config.get("cache_write_multiplier") if cache_config else None,
+            "cache_ttl_seconds": cache_config.get("ttl_seconds") if cache_config else None,
+            "cache_requires_markers": cache_config.get("requires_markers") if cache_config else None,
         }
         results.append(merged_entry)
 

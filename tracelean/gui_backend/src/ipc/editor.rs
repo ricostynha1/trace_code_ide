@@ -315,27 +315,6 @@ pub fn get_highlights(
     Ok(parser::get_highlights_query(&rel_path, &content))
 }
 
-/// Legacy highlighter endpoint (deprecated — now redirects to query-based system).
-/// Kept for dev-mode comparison logging in frontend.
-#[tauri::command]
-pub fn get_highlights_legacy(
-    state: State<'_, AppStateWrapper>,
-    path: String,
-) -> Result<Vec<parser::HighlightSpan>, String> {
-    let s = state.0.lock().map_err(|e| e.to_string())?;
-    let rel_path = PathBuf::from(&path);
-
-    let content = if let Some(c) = s.get_content(&rel_path) {
-        c.to_string()
-    } else {
-        let root = s.project_root().cloned().unwrap_or_default();
-        std::fs::read_to_string(root.join(&path))
-            .map_err(|e| format!("Read error: {}", e))?
-    };
-
-    Ok(parser::get_highlights_query(&rel_path, &content))
-}
-
 #[tauri::command]
 pub fn parse_project(
     state: State<'_, AppStateWrapper>,

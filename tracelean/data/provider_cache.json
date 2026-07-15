@@ -1,0 +1,61 @@
+{
+  "_comment": "Provider cache configuration. Used by cost engine for prune/summarize decisions.",
+  "providers": {
+    "openai": {
+      "cache_mode": "automatic",
+      "cache_read_discount": 0.5,
+      "cache_write_multiplier": 0.0,
+      "ttl_seconds": null,
+      "requires_markers": false,
+      "notes": "Longest matching prefix automatically cached. 50% discount on cached reads."
+    },
+    "anthropic_5min": {
+      "cache_mode": "explicit",
+      "cache_read_discount": 0.1,
+      "cache_write_multiplier": 1.25,
+      "ttl_seconds": 300,
+      "requires_markers": true,
+      "notes": "90% discount on reads. 25% surcharge on writes. 5 minute TTL."
+    },
+    "anthropic_1h": {
+      "cache_mode": "explicit",
+      "cache_read_discount": 0.1,
+      "cache_write_multiplier": 2.0,
+      "ttl_seconds": 3600,
+      "requires_markers": true,
+      "notes": "90% discount on reads. 100% surcharge on writes. 1 hour TTL."
+    },
+    "deepseek": {
+      "cache_mode": "automatic",
+      "cache_read_discount": 0.2,
+      "cache_write_multiplier": 0.0,
+      "ttl_seconds": null,
+      "requires_markers": false,
+      "notes": "Automatic prefix reuse. ~80% discount."
+    },
+    "minimax_passive": {
+      "cache_mode": "automatic",
+      "cache_read_discount": 0.2,
+      "cache_write_multiplier": 0.0,
+      "ttl_seconds": null,
+      "requires_markers": false,
+      "notes": "Passive automatic cache. 80% discount."
+    },
+    "minimax_explicit": {
+      "cache_mode": "explicit",
+      "cache_read_discount": 0.1,
+      "cache_write_multiplier": 1.25,
+      "ttl_seconds": null,
+      "requires_markers": true,
+      "notes": "Anthropic-compatible explicit cache. 90% discount, 25% write surcharge."
+    },
+    "qwen": {
+      "cache_mode": "automatic",
+      "cache_read_discount": 0.2,
+      "cache_write_multiplier": 0.0,
+      "ttl_seconds": null,
+      "requires_markers": false,
+      "notes": "Context cache. Cached tokens billed at 20% of input price."
+    }
+  }
+}

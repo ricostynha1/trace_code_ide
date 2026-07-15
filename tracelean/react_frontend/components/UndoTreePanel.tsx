@@ -220,8 +220,8 @@ export function UndoTreePanel({ visible, onClose, onNodeJump, onFileSelect, curr
   const [commandLog, setCommandLog] = useState<CommandLogEntry[]>([]);
   const [activeTab, setActiveTab] = useState<"tree" | "log">("tree");
   const [filterMode, setFilterMode] = useState<FilterMode>("global");
-  const [diffPreview, setDiffPreview] = useState<string | null>(null);
-  const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
+  const [_diffPreview, setDiffPreview] = useState<string | null>(null);
+  const [_hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     try {

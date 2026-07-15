@@ -3,7 +3,9 @@
 pub mod context;
 pub mod error;
 pub mod runtime;
+pub mod session;
 
 pub use context::{AgentContext, PauseHandler};
 pub use error::AgentError;
-pub use runtime::{run_agent_turn, AgentTurnResult, ToolCallRecord};
+pub use runtime::{run_agent_turn, run_agent_turn_session, AgentTurnResult, ToolCallRecord};
+pub use session::ChatSession;

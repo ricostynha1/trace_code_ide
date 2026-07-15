@@ -455,3 +455,16 @@ When done, provide final answer without tool_call blocks.
 ");
     out
 }
+
+/// System prompt additions for tool-calling compactness (Req 3).
+/// These rules reduce wasted output tokens and redundant tool calls.
+pub fn tool_calling_rules() -> &'static str {
+    r#"Tool rules:
+- Tool calls: arguments only, no extra text unless explicitly asked.
+- Batch: call multiple tools in a single response when possible.
+- file_filter: glob syntax (shell wildcards), e.g. *.py, src/**/*.ts.
+- Prefer `find` over `run_shell` for file search tasks.
+- Do not repeat file contents already visible in context. Reference by path and line range.
+- When a tool returns has_more=true, decide whether more data is needed before calling again.
+- Minimize redundant reads: if a file region is already in context and unmodified, do not re-read it."#
+}

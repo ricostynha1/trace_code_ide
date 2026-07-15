@@ -9,6 +9,7 @@ use crate::{
     ai::tool_executor::AgentPermissions,
     ai::tools::ToolDefinition,
     ai::tracking::SessionStats,
+    ai::{RetentionEngine, TurnTimingTracker},
 };
 
 /// Everything the agent loop needs — no Tauri, no UI framework.
@@ -29,6 +30,10 @@ pub struct AgentContext {
     pub pause_handler: Option<Arc<dyn PauseHandler>>,
     /// Print prompts, responses, and tool calls to stderr.
     pub verbose: bool,
+    /// Cost-aware retention engine for context compaction decisions.
+    pub retention_engine: Arc<Mutex<RetentionEngine>>,
+    /// Turn timing tracker (idle time → cache cold detection).
+    pub timing_tracker: Arc<Mutex<TurnTimingTracker>>,
 }
 
 /// Abstraction for tool-loop pause behavior.
@@ -62,6 +67,8 @@ impl AgentContext {
             spend_cap_usd: spend_cap,
             pause_handler: None,
             verbose: false,
+            retention_engine: Arc::new(Mutex::new(RetentionEngine::with_defaults())),
+            timing_tracker: Arc::new(Mutex::new(TurnTimingTracker::new())),
         }
     }
 
@@ -81,6 +88,8 @@ impl AgentContext {
             spend_cap_usd: 1.0,
             pause_handler: None,
             verbose: false,
+            retention_engine: Arc::new(Mutex::new(RetentionEngine::with_defaults())),
+            timing_tracker: Arc::new(Mutex::new(TurnTimingTracker::new())),
         }
     }
 }

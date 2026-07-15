@@ -18,6 +18,10 @@ path = "unit.rs"
 name = "integration_bedrock"
 path = "integration_bedrock.rs"
 
+[[test]]
+name = "integration_cost_reduction"
+path = "integration_cost_reduction.rs"
+
 [dev-dependencies]
 tracelean_lib = { path = "../gui_backend", package = "tracelean" }
 tracelean-core = { path = "../core" }

@@ -224,31 +224,7 @@ async fn test_bedrock_list_models() {
 // Model ID conversion (unit test — no network needed)
 // ─────────────────────────────────────────────────────────────────────────────
 
-#[test]
-fn test_to_mantle_model_id_conversion() {
-    // Runtime-style → mantle-style
-    assert_eq!(
-        BedrockProvider::to_mantle_model_id("eu.amazon.nova-lite-v1:0"),
-        "amazon.nova-lite"
-    );
-    assert_eq!(
-        BedrockProvider::to_mantle_model_id("qwen.qwen3-32b-v1:0"),
-        "qwen.qwen3-32b"
-    );
-    assert_eq!(
-        BedrockProvider::to_mantle_model_id("us.anthropic.claude-sonnet-4-6"),
-        "anthropic.claude-sonnet-4-6"
-    );
-    // Already mantle-style — should pass through unchanged
-    assert_eq!(
-        BedrockProvider::to_mantle_model_id("qwen.qwen3-32b"),
-        "qwen.qwen3-32b"
-    );
-    assert_eq!(
-        BedrockProvider::to_mantle_model_id("mistral.ministral-3-3b-instruct"),
-        "mistral.ministral-3-3b-instruct"
-    );
-}
+// to_mantle_model_id test removed — Converse API takes model IDs directly, no conversion needed.
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Auth failure test

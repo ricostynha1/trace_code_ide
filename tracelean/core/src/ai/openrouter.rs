@@ -44,16 +44,18 @@ impl OpenRouterProvider {
 }
 
 /// OpenRouter request body (OpenAI-compatible).
+/// Field order matters for prefix caching: tools → messages maximizes cache hits.
+/// MiniMax docs: "prefix matching constructed in order: tool list → system prompts → user messages"
 #[derive(Serialize)]
 struct OrRequest {
     model: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    tools: Option<Vec<super::provider::ToolSchema>>,
     messages: Vec<OrMessage>,
     max_tokens: u32,
     temperature: f32,
     #[serde(skip_serializing_if = "Option::is_none")]
     stop: Option<Vec<String>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    tools: Option<Vec<super::provider::ToolSchema>>,
 }
 
 #[derive(Serialize)]
@@ -156,11 +158,11 @@ impl AiProvider for OpenRouterProvider {
 
         let body = OrRequest {
             model: request.model.model_id.clone(),
+            tools: request.tools.clone(),
             messages,
             max_tokens: request.model.max_tokens,
             temperature: request.model.temperature,
             stop: request.stop.clone(),
-            tools: request.tools.clone(),
         };
 
         let mut last_err = None;

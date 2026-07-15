@@ -60,12 +60,52 @@ struct ConversationEntry {
     is_tool_result: bool,
 }
 
-/// Compact conversation history when it exceeds threshold.
+/// Cost-aware context compaction.
+///
+/// Uses the cost model to decide what to prune based on cache economics.
+/// Falls back to simple truncation if cost model shows Keep for everything.
 fn compact_context(system_prompt: &str, entries: &mut Vec<ConversationEntry>) {
     let total_chars: usize = system_prompt.len() + entries.iter().map(|e| e.content.len()).sum::<usize>();
     if total_chars < COMPACTION_THRESHOLD {
         return;
     }
+
+    use crate::ai::{
+        retention::{RetentionEntry, EntryKind, RetentionAction},
+        cost_model::{batch_prune_decisions, PruneContext},
+        provider_cache::{CacheMode, ProviderCacheConfig},
+    };
+
+    // Build a default provider cache config (assume automatic, no explicit cache)
+    let cache_cfg = ProviderCacheConfig {
+        cache_mode: CacheMode::Automatic,
+        cache_read_discount: 0.5,
+        cache_write_multiplier: 0.0,
+        ttl_seconds: Some(300),
+        requires_markers: false,
+        notes: None,
+    };
+
+    // Read pricing from env (summary model may be cheaper)
+    let main_input_per_m: f64 = std::env::var("MODEL_INPUT_COST_PER_M")
+        .ok().and_then(|s| s.parse().ok()).unwrap_or(3.0);
+    let summary_input_per_m: f64 = std::env::var("SUMMARY_MODEL_INPUT_COST_PER_M")
+        .ok().and_then(|s| s.parse().ok()).unwrap_or(main_input_per_m * 0.5);
+    let summary_output_per_m: f64 = std::env::var("SUMMARY_MODEL_OUTPUT_COST_PER_M")
+        .ok().and_then(|s| s.parse().ok()).unwrap_or(main_input_per_m * 3.0);
+
+    let cost_per_token = main_input_per_m / 1_000_000.0;
+
+    let prune_ctx = PruneContext {
+        provider: cache_cfg,
+        cost_per_token,
+        n_expected: 4,
+        time_since_last_request_secs: 0,
+        cached_prefix_tokens: 0,
+        compression_ratio: 0.25,
+        summarizer_input_cost: summary_input_per_m / 1_000_000.0,
+        summarizer_output_cost: summary_output_per_m / 1_000_000.0,
+    };
 
     // Find indices of user messages (for "keep last N" logic)
     let user_indices: Vec<usize> = entries
@@ -81,19 +121,59 @@ fn compact_context(system_prompt: &str, entries: &mut Vec<ConversationEntry>) {
         0
     };
 
-    // Compact older entries
+    // Build retention entries for the older messages
+    let older_entries: Vec<RetentionEntry> = entries[..keep_from]
+        .iter()
+        .enumerate()
+        .map(|(i, e)| RetentionEntry {
+            id: i as u64,
+            kind: if e.is_tool_result { EntryKind::ToolResult } else { EntryKind::AssistantMsg },
+            content: e.content.clone(),
+            resources: Vec::new(),
+            created_turn: 0,
+            last_used_turn: 0,
+            approx_tokens: e.content.len() / 4,
+            ttl: None,
+            invalidation_events: Vec::new(),
+            action: RetentionAction::Eligible,
+            args_hash: None,
+            ephemeral: false,
+            offloaded: false,
+            offload_path: None,
+        })
+        .collect();
+
+    let refs: Vec<&RetentionEntry> = older_entries.iter().collect();
+    let (prune_ids, _logs) = batch_prune_decisions(&refs, &prune_ctx, 1);
+
+    // Apply prune decisions
+    let mut pruned_any = false;
     for i in 0..keep_from {
-        let entry = &mut entries[i];
-        if entry.is_tool_result {
-            // Truncate tool results
-            if entry.content.len() > TRUNCATED_TOOL_RESULT_LEN {
+        if prune_ids.contains(&(i as u64)) {
+            let entry = &mut entries[i];
+            if entry.is_tool_result {
+                if entry.content.len() > TRUNCATED_TOOL_RESULT_LEN {
+                    entry.content.truncate(TRUNCATED_TOOL_RESULT_LEN);
+                    entry.content.push_str("... [pruned:cost]");
+                    pruned_any = true;
+                }
+            } else if entry.content.len() > 100 {
+                let first_line = entry.content.lines().next().unwrap_or("").to_string();
+                entry.content = format!("[compacted:cost] {}", &first_line[..first_line.len().min(80)]);
+                pruned_any = true;
+            }
+        }
+    }
+
+    // Fallback: if cost model kept everything but we're still over threshold, do simple truncation
+    if !pruned_any {
+        for i in 0..keep_from {
+            let entry = &mut entries[i];
+            if entry.is_tool_result && entry.content.len() > TRUNCATED_TOOL_RESULT_LEN {
                 entry.content.truncate(TRUNCATED_TOOL_RESULT_LEN);
                 entry.content.push_str("... [truncated]");
-            }
-        } else {
-            // Summarize older messages to single line
-            let first_line = entry.content.lines().next().unwrap_or("").to_string();
-            if entry.content.len() > 100 {
+            } else if !entry.is_tool_result && entry.content.len() > 100 {
+                let first_line = entry.content.lines().next().unwrap_or("").to_string();
                 entry.content = format!("[compacted] {}", &first_line[..first_line.len().min(80)]);
             }
         }
@@ -221,11 +301,7 @@ pub async fn run_builtin_agent(
 // Prompt handler — the agent loop
 // ---------------------------------------------------------------------------
 
-/// System prompt for the built-in agent.
-const SYSTEM_PROMPT: &str = r#"You are TraceLean, an AI coding assistant embedded in an IDE.
-You help users understand, modify, and verify code. You have access to tools
-for reading files, writing files, and running commands. Always explain your
-reasoning before making changes. Request permission before modifying files."#;
+use crate::ai::SYSTEM_PROMPT;
 
 /// Execute the agent turn loop for a prompt.
 async fn handle_prompt_loop(
@@ -431,6 +507,7 @@ async fn call_llm(messages: &[ChatMessage]) -> String {
         bedrock_api_key: std::env::var("AWS_BEARER_TOKEN_BEDROCK").ok(),
         bedrock_region: std::env::var("AWS_REGION").ok().or(Some("eu-west-1".to_string())),
         selected_model: None, // Will use default model below
+        summary_model: None,
         spend_cap_usd: std::env::var("SPEND_CAP_USD")
             .ok()
             .and_then(|s| s.parse().ok())

@@ -27,7 +27,7 @@ pub use ai::{InteractionLog, tracking::SessionStats, diff_pipeline::PendingDiff}
 pub use ai::provider::{AiProvider, AiError, AiRequest, AiResponse};
 pub use ai::mcp_client::McpClientManager;
 pub use ai::tool_executor::AgentPermissions;
-pub use agent::{AgentContext, AgentError, AgentTurnResult, PauseHandler, ToolCallRecord, run_agent_turn};
+pub use agent::{AgentContext, AgentError, AgentTurnResult, PauseHandler, ToolCallRecord, run_agent_turn, run_agent_turn_session, ChatSession};
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -118,6 +118,9 @@ pub struct AiSettings {
     /// Bedrock region (defaults to "eu-west-1")
     pub bedrock_region: Option<String>,
     pub selected_model: Option<ai::ModelConfig>,
+    /// Cheaper model used for log summarisation / context compression.
+    #[serde(default)]
+    pub summary_model: Option<ai::ModelConfig>,
     /// Hard spend cap per session (USD). Default $1.
     #[serde(default = "default_spend_cap")]
     pub spend_cap_usd: f64,
@@ -133,6 +136,7 @@ impl Default for AiSettings {
             bedrock_api_key: None,
             bedrock_region: None,
             selected_model: None,
+            summary_model: None,
             spend_cap_usd: 1.0,
         }
     }

@@ -54,6 +54,7 @@ interface AiSettings {
   bedrock_api_key: string | null;
   bedrock_region: string | null;
   selected_model: ModelConfig | null;
+  summary_model: ModelConfig | null;
   spend_cap_usd: number;
 }
 
@@ -86,6 +87,7 @@ interface InteractionEntry {
   cost: { total_usd: number; input_cost: number; output_cost: number; cached_savings: number };
   duration_ms: number;
   truncated: boolean;
+  was_compacted?: boolean;
   tools_provided?: number;
   tool_names?: string[];
   tool_schemas?: ToolSchemaInfo[];
@@ -249,9 +251,6 @@ export function AiChatPanel({ visible, onClose }: Props) {
     setError(null);
     setStreamingContent("");
 
-    // Filter out synthetic system messages (tool calls/responses) before sending to backend
-    const apiMessages = newMessages.filter((m) => m.role !== "system");
-
     try {
       if (useStreaming) {
         // Listen for stream tokens
@@ -264,13 +263,19 @@ export function AiChatPanel({ visible, onClose }: Props) {
           }
         );
 
+        // Streaming still uses full messages (TODO: migrate ai_chat_stream to session-based)
+        const apiMessages = newMessages.filter((m) => m.role !== "system");
         const response = await invoke<AiResponse>("ai_chat_stream", { messages: apiMessages });
         unlisten();
         const assistantMsg: ChatMessage = { role: "assistant", content: response.content };
         setMessages((prev) => [...prev, assistantMsg]);
         setStreamingContent("");
       } else {
-        const response = await invoke<AiResponse>("ai_chat", { messages: apiMessages });
+        // Session-based: backend owns conversation state, preserves compaction across calls
+        const response = await invoke<AiResponse>("ai_chat_session", {
+          sessionId: activeChatId,
+          userMessage: input.trim(),
+        });
         const assistantMsg: ChatMessage = { role: "assistant", content: response.content };
         setMessages((prev) => [...prev, assistantMsg]);
       }
@@ -283,7 +288,8 @@ export function AiChatPanel({ visible, onClose }: Props) {
     }
   };
 
-  const submitMockResponse = async (requestId: string) => {
+  // @ts-expect-error kept for future use
+  const _submitMockResponse = async (requestId: string) => {
     if (!mockResponse.trim()) return;
     try {
       await invoke("mock_submit_response", { requestId, response: mockResponse.trim() });
@@ -569,6 +575,30 @@ export function AiChatPanel({ visible, onClose }: Props) {
             </select>
           )}
 
+          {models.length > 0 && (
+            <>
+              <h4>Summary / Compression Model</h4>
+              <p className="ai-hint">Cheaper model used for log summarisation and context compression.</p>
+              <select
+                value={settings.summary_model?.model_id || ""}
+                onChange={(e) => {
+                  const m = models.find((x) => x.model_id === e.target.value) || null;
+                  saveSettings({ ...settings, summary_model: m });
+                }}
+              >
+                <option value="">-- None (use main model) --</option>
+                {models.map((m) => {
+                  const price = `$${m.input_cost_per_m.toFixed(2)}/${m.output_cost_per_m.toFixed(2)}`;
+                  return (
+                    <option key={m.model_id} value={m.model_id}>
+                      {m.display_name} ({price}/1M)
+                    </option>
+                  );
+                })}
+              </select>
+            </>
+          )}
+
           {modelFetchError && (
             <div className="ai-settings-error">
               <strong>Error:</strong> {modelFetchError}
@@ -615,6 +645,9 @@ export function AiChatPanel({ visible, onClose }: Props) {
               <button onClick={() => setInspectEntry(null)}>← Back</button>
               <h4>{inspectEntry.agent} — {inspectEntry.model_display_name}</h4>
               <p className="ai-meta">{inspectEntry.timestamp} | {inspectEntry.duration_ms}ms | ${inspectEntry.cost.total_usd.toFixed(6)}</p>
+              {inspectEntry.was_compacted && (
+                <span className="ai-log-compacted-badge">⚡ compacted</span>
+              )}
 
               {(inspectEntry.tool_names?.length ?? 0) > 0 && (
                 <details className="ai-log-tools-provided">

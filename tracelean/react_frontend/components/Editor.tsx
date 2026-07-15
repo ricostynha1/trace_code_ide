@@ -98,7 +98,8 @@ const diffField = StateField.define<DecorationSet>({
 
 const diffAddedLine = Decoration.line({ attributes: { style: "background-color: rgba(40, 160, 40, 0.15); border-left: 3px solid #4ec9b0;" } });
 const diffRemovedLine = Decoration.line({ attributes: { style: "background-color: rgba(200, 50, 50, 0.15); border-left: 3px solid #e06c75;" } });
-const diffContextLine = Decoration.line({ attributes: { style: "opacity: 0.6;" } });
+// @ts-expect-error kept for future use
+const _diffContextLine = Decoration.line({ attributes: { style: "opacity: 0.6;" } });
 
 // Cache: color hex → Decoration with inline style
 const decoCache: Map<string, Decoration> = new Map();
@@ -128,7 +129,7 @@ function parseDiffToDecorations(diffText: string, currentFile: string, view: Edi
   if (!diffText || diffText === "(no changes)") return Decoration.none;
 
   const lines = diffText.split("\n");
-  const decos: { from: number; value: Decoration }[] = [];
+  const decos: { from: number; to: number; value: Decoration }[] = [];
   let inRelevantFile = false;
   let currentLineNum = 0; // 1-based line in the "a" (current) side
 
@@ -162,7 +163,7 @@ function parseDiffToDecorations(diffText: string, currentFile: string, view: Edi
       // Removed line — this line exists in current but not at target
       if (currentLineNum >= 1 && currentLineNum <= docLines) {
         const lineObj = view.state.doc.line(currentLineNum);
-        decos.push({ from: lineObj.from, value: diffRemovedLine });
+        decos.push({ from: lineObj.from, to: lineObj.from, value: diffRemovedLine });
       }
       currentLineNum++;
     } else if (line.startsWith("+")) {
@@ -170,7 +171,7 @@ function parseDiffToDecorations(diffText: string, currentFile: string, view: Edi
       const targetLine = Math.min(Math.max(currentLineNum, 1), docLines);
       if (targetLine >= 1) {
         const lineObj = view.state.doc.line(targetLine);
-        decos.push({ from: lineObj.from, value: diffAddedLine });
+        decos.push({ from: lineObj.from, to: lineObj.from, value: diffAddedLine });
       }
     } else if (line.startsWith(" ")) {
       // Context line

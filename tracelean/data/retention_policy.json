@@ -1,0 +1,78 @@
+{
+  "_comment": "Retention policy configuration. Human-readable, agent-tunable. Used by retention engine for entry lifecycle decisions.",
+  "defaults": {
+    "n_expected": 4,
+    "recent_turns_protected": 4,
+    "compression_ratio": 0.25,
+    "overflow_threshold_tokens": 4000
+  },
+  "entry_policies": {
+    "discover_tools_result": {
+      "ttl_turns": 1,
+      "invalidate_on": ["schemas_in_payload", "dynamic_set_purged"],
+      "default_action": "prune_after_forward",
+      "notes": "Forward once so model knows tools are available, then prune. Schemas live in tool payload."
+    },
+    "list_directory_result": {
+      "ttl_turns": 5,
+      "invalidate_on": ["write_in_dir", "delete_in_dir", "rename_in_dir", "newer_listing"],
+      "default_action": "event_driven_ttl_fallback",
+      "notes": "Keep until directory state changes or TTL expires."
+    },
+    "find_result": {
+      "ttl_turns": 5,
+      "invalidate_on": ["edit_in_searched_scope", "newer_equivalent_search"],
+      "default_action": "event_driven",
+      "notes": "Invalidate when searched files change or a newer search replaces it."
+    },
+    "read_file_content": {
+      "ttl_turns": 8,
+      "invalidate_on": ["edit_overlaps_region", "newer_read_covers_region"],
+      "default_action": "prune_stale_keep_disjoint",
+      "notes": "Prune when overlapping edit happens. Keep disjoint reads of same file."
+    },
+    "tool_data_hints": {
+      "ttl_turns": 1,
+      "invalidate_on": ["followup_call_made", "unrelated_action"],
+      "default_action": "strip_after_1_turn",
+      "notes": "Pagination hints, metadata. Keep for one decision, then strip."
+    },
+    "edit_result": {
+      "ttl_turns": 3,
+      "invalidate_on": ["newer_edit_supersedes", "fresh_read_or_test"],
+      "default_action": "keep_briefly",
+      "notes": "Model may need edit confirmation. Short retention."
+    },
+    "run_shell_result": {
+      "ttl_turns": 6,
+      "invalidate_on": ["relevant_edit_changes_inputs", "newer_command_supersedes"],
+      "default_action": "event_driven_ttl_fallback",
+      "notes": "Longer TTL. Invalidate when dependencies change."
+    },
+    "validation_error": {
+      "ttl_turns": 0,
+      "invalidate_on": ["retry_produced"],
+      "default_action": "ephemeral_send_once",
+      "notes": "Send correction once, never persist to durable history."
+    },
+    "oversized_output": {
+      "threshold_tokens": 4000,
+      "default_action": "offload_to_tmp",
+      "notes": "Write full output to tmp file. Keep preview + path + size + retrieval hint."
+    },
+    "repeated_tool_call": {
+      "invalidate_on": ["dependency_changed"],
+      "default_action": "serve_cached",
+      "notes": "Deduplicate. Serve cached result if args + deps unchanged."
+    },
+    "conversation_middle": {
+      "default_action": "summarize_when_profitable",
+      "notes": "Cost engine decides when summarization is profitable. No hardcoded threshold."
+    }
+  },
+  "dynamic_tool_retention": {
+    "retention_turns": 5,
+    "max_schema_chars": 2048,
+    "notes": "retention_turns = minimum holding period before tool becomes eligible for cost-based removal. NOT automatic removal."
+  }
+}

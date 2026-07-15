@@ -1,0 +1,225 @@
+{
+  "tools": [
+    {
+      "name": "discover_tools",
+      "tier": "static",
+      "category": "meta",
+      "description": "Find additional tools by capability.",
+      "embedded_txt": "Search for and discover additional tools beyond the static core set. Use when the current 7 tools are insufficient for the task. The discovery uses semantic embedding search to find tools matching your described capability needs. Returns tool schemas that get appended to the available tool set for the session. Examples: need to delete a file, query traceability graph, get code symbols, run specialized analysis. Call with a natural language description of what you need to accomplish.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "query": { "type": "string", "description": "Capabilities or keyword phrases." },
+          "max_results": { "type": "integer", "default": 10 }
+        },
+        "required": ["query"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "list_directory",
+      "tier": "static",
+      "category": "filesystem",
+      "description": "List files and directories. Paginated.",
+      "embedded_txt": "List files and directories in a given path. Supports pagination via offset/max_results, recursive listing, glob filtering, and depth limiting. Use to explore project structure, find files by pattern, or browse directory contents. Returns file names with type indicators (trailing / for dirs). Replaces old non-paginated list_files. Examples: list all .rs files in src/, show project root structure, find all test directories recursively.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "path": { "type": "string", "default": "" },
+          "recursive": { "type": "boolean", "default": false },
+          "max_results": { "type": "integer", "default": 50 },
+          "offset": { "type": "integer", "default": 0 },
+          "file_filter": { "type": "string" },
+          "max_depth": { "type": "integer" }
+        },
+        "required": [],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "find",
+      "tier": "static",
+      "category": "search",
+      "description": "Search project files by regex or semantic similarity. Returns matching lines with context.",
+      "embedded_txt": "Unified search tool combining regex grep and semantic embedding search. Mode auto picks regex if query looks like a pattern, semantic otherwise. Regex mode: fast text/pattern matching across files like grep. Semantic mode: natural language search using embeddings, finds code by meaning not exact text. Supports pagination, file filtering by glob, case sensitivity, context lines around matches. Use instead of run_shell for any file search task. Examples: find all TODO comments, search for authentication handling logic, locate where a function is defined, find files importing a module.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "query": { "type": "string" },
+          "mode": { "type": "string", "enum": ["auto", "regex", "semantic"], "default": "auto" },
+          "case_sensitive": { "type": "boolean", "default": false },
+          "max_results": { "type": "integer", "default": 20 },
+          "offset": { "type": "integer", "default": 0 },
+          "path": { "type": "string" },
+          "file_filter": { "type": "string" },
+          "max_depth": { "type": "integer" },
+          "context": { "type": "integer", "default": 1 }
+        },
+        "required": ["query"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "read_file",
+      "tier": "static",
+      "category": "filesystem",
+      "description": "Read file lines from offset. Returns file metadata (lines, bytes, size, modified, permissions, owner, group). Empty range = metadata only.",
+      "embedded_txt": "Read lines from a file with pagination support. Returns content plus file metadata: total lines, bytes, human-readable size, relative modification time, unix permissions string, owner and group. Reading with max_results=0 returns only metadata without content — use as a cheap stat check. Supports negative offset (-1 = last line). Paginated: check has_more and next_offset in response data. Lines over 300 chars are truncated with a hint to re-read that specific line. Subsumes old count_lines tool since metadata always includes line count. Examples: read first 50 lines of main.rs, check file size without reading content, read last 20 lines of a log file.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "path": { "type": "string" },
+          "offset": { "type": "integer", "default": 0 },
+          "max_results": { "type": "integer", "default": 200 }
+        },
+        "required": ["path"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "edit_file",
+      "tier": "static",
+      "category": "editing",
+      "description": "Replace line range [start, end) with text. start==end inserts. Both omitted replaces whole file. Creates file if not exists.",
+      "embedded_txt": "Edit a file by replacing a line range with new text. Versatile: start==end means pure insert at that line (no removal). Both start and end omitted means replace entire file content. If file does not exist, creates it. Supports negative indexing (-1 = last line). Use for: inserting code at specific locations, replacing function bodies, creating new files, appending content. For single unique-string replacements, prefer replace_str instead. Examples: insert import at line 0, replace lines 5-10 with new implementation, create a new config file, append test at end of file.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "path": { "type": "string" },
+          "text": { "type": "string" },
+          "start": { "type": "integer", "description": "First line to replace (inclusive). Negative = from end." },
+          "end": { "type": "integer", "description": "Last line to replace (exclusive). Negative = from end." }
+        },
+        "required": ["path", "text"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "replace_str",
+      "tier": "static",
+      "category": "editing",
+      "description": "Replace a unique string occurrence in a file. Fails if not exactly one match.",
+      "embedded_txt": "Find and replace an exact string in a file. The old_str must match exactly once in the file — fails with error if zero or multiple matches found. This is the safest edit operation when you know the exact text to change. Preferred over edit_file for: renaming functions/variables, fixing typos, updating import paths, changing single values. Does not use regex — literal string match only. Examples: rename a function, fix a typo in a comment, update a dependency version string, change a constant value.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "path": { "type": "string" },
+          "old_str": { "type": "string", "description": "Exact text to find (must match once)." },
+          "new_str": { "type": "string", "description": "Replacement text." }
+        },
+        "required": ["path", "old_str", "new_str"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "run_shell",
+      "tier": "static",
+      "category": "execution",
+      "description": "Run a shell command. Output truncated to head/tail lines.",
+      "embedded_txt": "Execute an arbitrary shell command in the project directory or specified cwd. Returns stdout and stderr with head/tail truncation for large outputs. Use for: running tests, building projects, installing dependencies, git operations, any CLI tool. Prefer find tool over run_shell for file searching. Timeout configurable (default 30s). Output shows first N and last M lines with a note about omitted middle. Examples: cargo test, npm install, git status, python script.py, make build.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "command": { "type": "string" },
+          "cwd": { "type": "string" },
+          "timeout_secs": { "type": "integer", "default": 30 },
+          "head_lines": { "type": "integer", "default": 50 },
+          "tail_lines": { "type": "integer", "default": 30 }
+        },
+        "required": ["command"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "help_tool",
+      "tier": "static",
+      "category": "meta",
+      "description": "Get detailed usage info for any tool by name.",
+      "embedded_txt": "Retrieve the extended description (embedded_txt) for any available tool. Use when you need more detail about a tool's capabilities, parameters, edge cases, or usage examples before calling it. Works for both static and dynamic tools. Returns the full embedded_txt field which contains comprehensive usage documentation. Examples: help_tool('edit_file') to understand line range semantics, help_tool('find') to understand mode differences.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "tool_name": { "type": "string", "description": "Name of the tool to get help for." }
+        },
+        "required": ["tool_name"],
+        "additionalProperties": false
+      }
+    }
+  ],
+  "dynamic_tools": [
+    {
+      "name": "delete_file",
+      "tier": "dynamic",
+      "category": "filesystem",
+      "description": "Delete a file. Reversible via undo.",
+      "embedded_txt": "Delete a file from the filesystem. The operation is reversible through the undo system. Use when you need to remove files that are no longer needed: temporary files, deprecated modules, generated artifacts. Will fail if the path is a directory. Examples: remove a scratch file, delete an obsolete test, clean up generated output.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "path": { "type": "string", "description": "Relative file path to delete." }
+        },
+        "required": ["path"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "query_trace_graph",
+      "tier": "dynamic",
+      "category": "traceability",
+      "description": "Query traceability graph by requirement ID. Returns linked specs, code, tests.",
+      "embedded_txt": "Query the project traceability graph for a specific requirement. Returns all linked artifacts: formal specs (Lean4), implementing code elements (functions, structs), and test cases. Use to understand requirement coverage, find what code implements a requirement, or check test coverage for a feature. The trace graph is built from source annotations and spec files. Examples: what code implements REQ-01, show test coverage for REQ-03, find the formal spec for a requirement.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "req_id": { "type": "string", "description": "Requirement ID (e.g. REQ-01)." }
+        },
+        "required": ["req_id"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "query_code_element",
+      "tier": "dynamic",
+      "category": "traceability",
+      "description": "Query trace graph for a code element to find linked requirements and specs.",
+      "embedded_txt": "Query the traceability graph starting from a code element (function, struct, module) to find which requirements it satisfies and which formal specs verify it. Use for impact analysis: before modifying code, check what requirements would be affected. Also useful to understand the purpose of unfamiliar code. Examples: what requirement does the login function satisfy, find the spec for the upload handler, check which reqs are impacted by changes to auth.rs.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "file": { "type": "string", "description": "File containing the element." },
+          "name": { "type": "string", "description": "Symbol name." }
+        },
+        "required": ["file", "name"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "list_requirements",
+      "tier": "dynamic",
+      "category": "requirements",
+      "description": "List all project requirements with ID, title, and status.",
+      "embedded_txt": "List all requirements defined in the project. Returns each requirement's ID, title, and current status (implemented, pending, partial). Use to get an overview of project scope, find requirements to work on, or check overall progress. No parameters needed — returns the complete list. Examples: show all project requirements, what requirements exist, check implementation status.",
+      "input_schema": {
+        "type": "object",
+        "properties": {},
+        "required": [],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "get_symbols",
+      "tier": "dynamic",
+      "category": "code_analysis",
+      "description": "Get parsed symbols (functions, structs, classes) from a file using tree-sitter.",
+      "embedded_txt": "Parse a source file using tree-sitter and extract all top-level symbols: functions, structs, classes, traits, enums, constants, type aliases. Returns symbol name, kind, and line range. Use to understand file structure without reading the entire file, find specific functions by name, or get an overview of a module's API. Supports: Rust, Python, C++, JavaScript, TypeScript, Lean4. Examples: what functions are in auth.rs, show the struct definitions in types.rs, list all classes in a Python module.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "path": { "type": "string", "description": "Relative file path." }
+        },
+        "required": ["path"],
+        "additionalProperties": false
+      }
+    }
+  ]
+}

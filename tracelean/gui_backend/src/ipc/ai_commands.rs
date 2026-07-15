@@ -208,6 +208,8 @@ pub async fn ai_chat(
             resume_state: resume_state.0.clone(),
         })),
         verbose: false,
+        retention_engine: Arc::new(std::sync::Mutex::new(tracelean_core::ai::RetentionEngine::with_defaults())),
+        timing_tracker: Arc::new(std::sync::Mutex::new(tracelean_core::ai::TurnTimingTracker::new())),
     };
 
     let result = run_agent_turn(&ctx, messages).await.map_err(|e| e.to_string())?;
@@ -218,10 +220,119 @@ pub async fn ai_chat(
     Ok(result.response)
 }
 
+// --- Session-Based Chat (persistent model_view across calls) ---
+
+/// Chat with persistent session state. Compaction evolves across calls (preserves caching).
+/// Frontend sends only session_id + new user message. Backend owns the conversation state.
+#[tauri::command]
+pub async fn ai_chat_session(
+    app: AppHandle,
+    settings: State<'_, AiSettingsWrapper>,
+    log_state: State<'_, AiLogWrapper>,
+    stats: State<'_, AiSessionStatsWrapper>,
+    _mock_provider: State<'_, MockProviderWrapper>,
+    mcp_client: State<'_, McpClientWrapper>,
+    state: State<'_, AppStateWrapper>,
+    symbols_state: State<'_, SymbolTableWrapper>,
+    graph_state: State<'_, TraceGraphWrapper>,
+    cache: State<'_, UndoTreeCacheWrapper>,
+    resume_state: State<'_, ToolLoopResumeWrapper>,
+    session_store: State<'_, crate::ChatSessionStoreWrapper>,
+    session_id: String,
+    user_message: String,
+) -> Result<ai::AiResponse, String> {
+    use tracelean_core::agent::{AgentContext, run_agent_turn_session};
+    use tracelean_core::ai::provider::{ChatMessage, MessageRole};
+    use tracelean_core::ChatSession;
+
+    // Snapshot project root
+    let project_root = {
+        let s = state.0.lock().map_err(|e| e.to_string())?;
+        s.project_root().cloned().unwrap_or_default()
+    };
+
+    // Collect MCP tool definitions
+    let extra_tools: Vec<ai::tools::ToolDefinition> = {
+        let mgr = mcp_client.0.lock().await;
+        mgr.all_tools().into_iter().map(|(_server, tool)| tool).collect()
+    };
+
+    let spend_cap = settings.0.lock().map_err(|e| e.to_string())?.spend_cap_usd;
+
+    let ctx = AgentContext {
+        state: state.0.clone(),
+        symbols: symbols_state.0.clone(),
+        graph: graph_state.0.clone(),
+        settings: settings.0.clone(),
+        stats: stats.0.clone(),
+        log: log_state.0.clone(),
+        extra_tools,
+        permissions: tracelean_core::AgentPermissions::full_access("chat"),
+        project_root,
+        event_sink: Arc::new(crate::TauriEventSink { app_handle: app.clone() }),
+        spend_cap_usd: spend_cap,
+        pause_handler: Some(Arc::new(TauriPauseHandler {
+            app_handle: app.clone(),
+            resume_state: resume_state.0.clone(),
+        })),
+        verbose: false,
+        retention_engine: Arc::new(std::sync::Mutex::new(tracelean_core::ai::RetentionEngine::with_defaults())),
+        timing_tracker: Arc::new(std::sync::Mutex::new(tracelean_core::ai::TurnTimingTracker::new())),
+    };
+
+    // Get or create session
+    let mut store = session_store.0.lock().await;
+    let session = store.entry(session_id.clone())
+        .or_insert_with(|| ChatSession::new(session_id.clone()));
+
+    // Append user message to both views
+    let user_msg = ChatMessage {
+        role: MessageRole::User,
+        content: user_message,
+        tool_call_id: None,
+        tool_calls: Vec::new(),
+    };
+    session.append(user_msg);
+
+    // Run agent turn with persistent session
+    let result = run_agent_turn_session(&ctx, session).await.map_err(|e| e.to_string())?;
+
+    // Drop lock before other operations
+    drop(store);
+
+    invalidate_undo_cache(&cache);
+
+    Ok(result.response)
+}
+
+/// Reset a chat session (new conversation). Clears both user_view and model_view.
+#[tauri::command]
+pub async fn reset_chat_session(
+    session_store: State<'_, crate::ChatSessionStoreWrapper>,
+    session_id: String,
+) -> Result<(), String> {
+    let mut store = session_store.0.lock().await;
+    store.remove(&session_id);
+    Ok(())
+}
+
+/// Get the raw user_view messages for a session (what user sees in chat panel).
+#[tauri::command]
+pub async fn get_chat_session_messages(
+    session_store: State<'_, crate::ChatSessionStoreWrapper>,
+    session_id: String,
+) -> Result<Vec<ai::provider::ChatMessage>, String> {
+    let store = session_store.0.lock().await;
+    match store.get(&session_id) {
+        Some(session) => Ok(session.user_view.clone()),
+        None => Ok(Vec::new()),
+    }
+}
+
 /// PauseHandler implementation for Tauri — emits event and waits for user response.
-struct TauriPauseHandler {
-    app_handle: AppHandle,
-    resume_state: Arc<tokio::sync::Mutex<Option<tokio::sync::oneshot::Sender<bool>>>>,
+pub struct TauriPauseHandler {
+    pub app_handle: AppHandle,
+    pub resume_state: Arc<tokio::sync::Mutex<Option<tokio::sync::oneshot::Sender<bool>>>>,
 }
 
 #[async_trait::async_trait]

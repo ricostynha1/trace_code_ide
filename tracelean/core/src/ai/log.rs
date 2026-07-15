@@ -25,6 +25,9 @@ pub struct InteractionEntry {
     pub duration_ms: u64,
     /// Was the response truncated?
     pub truncated: bool,
+    /// Was context compacted/pruned before this request?
+    #[serde(default)]
+    pub was_compacted: bool,
     /// Number of tools provided to the model in this request.
     #[serde(default)]
     pub tools_provided: u32,
@@ -93,6 +96,7 @@ impl InteractionLog {
             cost,
             duration_ms,
             truncated: response.truncated,
+            was_compacted: false,
             tools_provided,
             tool_names,
             tool_schemas,
@@ -135,6 +139,7 @@ impl InteractionLog {
             },
             duration_ms,
             truncated: false,
+            was_compacted: false,
             tools_provided,
             tool_names,
             tool_schemas,
@@ -142,6 +147,13 @@ impl InteractionLog {
 
         self.entries.push(entry);
         self.trim();
+    }
+
+    /// Mark the last entry as having used compacted context.
+    pub fn mark_last_entry_compacted(&mut self) {
+        if let Some(entry) = self.entries.last_mut() {
+            entry.was_compacted = true;
+        }
     }
 
     /// Get recent entries (most recent first).

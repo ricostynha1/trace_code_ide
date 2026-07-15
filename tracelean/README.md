@@ -1,6 +1,7 @@
 # TraceLean IDE
 
-Command-sourced editor with formal verification traceability. Ships as both a GUI (Tauri + React) and a TUI (Ratatui terminal interface).
+Command-sourced editor with formal verification traceability. Ships as both 
+a GUI (Tauri + React) and a TUI (Ratatui terminal interface).
 
 ## Project Structure
 
@@ -52,20 +53,27 @@ cargo build --release -p tracelean-tui
 
 ## Generating Model Metadata JSONs
 
-Build-time scripts fetch model pricing (LiteLLM) and coding rankings (llm-stats.com API) and output JSON files consumed by the Rust app.
+Single script fetches external data and produces `data/models.json`:
 
 ```bash
-# Install Python deps
 pip install -r scripts/requirements.txt
-
-# Set your llm-stats.com API key (free, get at https://llm-stats.com/developer)
 export LLM_STATS_API_KEY=ze_your_key_here
 
-# Generate data/model_pricing.json and data/model_rankings.json
-python scripts/fetch_model_metadata.py
+python scripts/generate_models.py
 ```
 
-Output goes to `data/model_pricing.json` (pricing, context window, capabilities) and `data/model_rankings.json` (coding performance TrueSkill rankings, stable order).
+This runs internally:
+1. `fetch_model_metadata.py` — fetches pricing (LiteLLM) + rankings (llm-stats.com) → `model_pricing.json`, `model_rankings.json`
+2. `merge_model_data.py` — merges + enriches with provider cache config → `models.json`
+
+Data files in `data/`:
+
+| File | Source | Purpose |
+|------|--------|---------|
+| `models.json` | Generated | Unified model catalog: pricing + rank + cache config |
+| `provider_cache.json` | Manual | Provider cache modes, discounts, TTL, write costs |
+| `tools.json` | Manual | Tool schemas (static + dynamic) with `embedded_txt` |
+| `retention_policy.json` | Manual | Retention engine entry policies and tuning defaults |
 
 ## Running Benchmarks
 
@@ -81,34 +89,12 @@ export AWS_BEARER_TOKEN_BEDROCK=...
 
 # List available models for your provider
 cargo run --bin tracelean-bench -- -p bedrock --list-models
-cargo run --bin tracelean-bench -- -p openrouter --list-models
-
-# Run with explicit provider and model
-cargo run --bin tracelean-bench -- \
-  --provider openrouter \
-  --model anthropic/claude-sonnet-4-20250514 \
-  hello-world
-
-# Bedrock provider (region defaults to eu-west-1)
-cargo run --bin tracelean-bench -- \
-  -p bedrock \
-  -m anthropic.claude-sonnet-5 \
-  hello-world
-
-# Bedrock with explicit region
-cargo run --bin tracelean-bench -- \
-  -p bedrock -r us-east-1 \
-  -m qwen.qwen3-coder-480b-a35b-instruct \
-  --all
 
 # Custom cost cap
 cargo run --bin tracelean-bench -- -p bedrock -m qwen.qwen3-coder-480b-a35b-instruct --cap 2.00 --all
 
-# Auto-detect provider from env vars (fallback)
-cargo run --bin tracelean-bench -- hello-world two-fer
-
 # Real command to use 
-  cargo run --bin tracelean-bench -- -p bedrock -m qwen.qwen3-32b hello-world -v 2>&1 | tee full_output.log
+  cargo run --bin tracelean-bench -- -p bedrock -m minimax.minimax-m2.5 hello-world -v --cap 0.1 2>&1 | tee full_output.log
 
 ```
 
@@ -128,7 +114,7 @@ cargo run --bin tracelean-bench -- hello-world two-fer
 | Variable | Purpose |
 |----------|---------|
 | `OPENROUTER_API_KEY` | OpenRouter provider key |
-| `AWS_BEARER_TOKEN_BEDROCK` | Bedrock provider token |
+| `AWS_BEARER_TOKEN_BEDROCK` | Bedrock provider token | 
 | `AWS_REGION` | Bedrock region (default: eu-west-1) |
 | `PROVIDER` | Same as `--provider` |
 | `MODEL_ID` | Same as `--model` |

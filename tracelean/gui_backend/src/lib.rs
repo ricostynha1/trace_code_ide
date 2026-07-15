@@ -51,6 +51,10 @@ pub struct PendingDiffsWrapper(pub Mutex<Vec<PendingDiff>>);
 /// Channel for tool loop pause/resume. Frontend sends true=continue, false=abort.
 pub struct ToolLoopResumeWrapper(pub Arc<tokio::sync::Mutex<Option<tokio::sync::oneshot::Sender<bool>>>>);
 
+/// Persistent chat session store — maps session_id → ChatSession.
+/// Sessions hold both user_view (raw) and model_view (compacted) across calls.
+pub struct ChatSessionStoreWrapper(pub Arc<tokio::sync::Mutex<std::collections::HashMap<String, tracelean_core::ChatSession>>>);
+
 // ─── MCP & Permissions State ─────────────────────────────────────────────────
 
 pub struct McpHostPermissionsWrapper(pub Mutex<AgentPermissions>);
@@ -180,6 +184,7 @@ pub fn run() {
         .manage(MockProviderWrapper(Arc::new(tokio::sync::Mutex::new(None))))
         .manage(PendingDiffsWrapper(Mutex::new(Vec::new())))
         .manage(ToolLoopResumeWrapper(Arc::new(tokio::sync::Mutex::new(None))))
+        .manage(ChatSessionStoreWrapper(Arc::new(tokio::sync::Mutex::new(std::collections::HashMap::new()))))
         .manage(McpHostPermissionsWrapper(Mutex::new(AgentPermissions::full_access("mcp-host"))))
         .manage(McpClientWrapper(tokio::sync::Mutex::new(McpClientManager::new())))
         .manage(AgentPermissionsStore(Mutex::new(std::collections::HashMap::new())))
@@ -205,7 +210,6 @@ pub fn run() {
             ipc::editor::parse_file_symbols,
             ipc::editor::get_file_symbols,
             ipc::editor::get_highlights,
-            ipc::editor::get_highlights_legacy,
             ipc::editor::parse_project,
             ipc::editor::get_initial_project,
             // Trace & Requirements
@@ -232,6 +236,9 @@ pub fn run() {
             ipc::ai_commands::get_mock_pending,
             ipc::ai_commands::mock_submit_response,
             ipc::ai_commands::ai_chat,
+            ipc::ai_commands::ai_chat_session,
+            ipc::ai_commands::reset_chat_session,
+            ipc::ai_commands::get_chat_session_messages,
             ipc::ai_commands::get_prompt_templates,
             ipc::ai_commands::assemble_context_for_requirement,
             ipc::ai_commands::assemble_context_for_file,
