@@ -20,24 +20,7 @@ interface HoverBadge {
   removed: number;
 }
 
-/** Myth which-key entry (core Keymap::bindings_for_state). */
-interface KeyBindingInfo {
-  key: string;
-  target: string;
-  kind: string;
-}
-
-/** Translate a React key event to the keymap's key names ("C-Space", "S-ArrowUp", "f"). */
-function mythKeyName(e: React.KeyboardEvent): string | null {
-  if (e.key === "Control" || e.key === "Shift" || e.key === "Alt" || e.key === "Meta") return null;
-  let base = e.key === " " ? "Space" : e.key;
-  if (base.length === 1) base = base.toLowerCase();
-  let prefix = "";
-  if (e.ctrlKey) prefix += "C-";
-  if (e.altKey) prefix += "A-";
-  if (e.shiftKey && base.length > 1) prefix += "S-";
-  return prefix + base;
-}
+import { mythKeyName, type KeyBindingInfo } from "./mythKeys";
 
 export function FileTree({ projectRoot, onFileSelect, selectedFile }: FileTreeProps) {
   const [entries, setEntries] = useState<FileEntry[]>([]);
@@ -223,8 +206,9 @@ export function FileTree({ projectRoot, onFileSelect, selectedFile }: FileTreePr
     const key = mythKeyName(e);
     if (!key) return;
     // preventDefault must be synchronous: consume everything while a mode is
-    // active, and the mode-entry chord itself while in Main.
-    if (mythMode !== "Main" || key === "C-Space") {
+    // active, and the mode-entry chords themselves while in Main.
+    // (C-. is the IME-safe alternate — Ctrl+Space is often grabbed on Linux.)
+    if (mythMode !== "Main" || key === "C-Space" || key === "C-.") {
       e.preventDefault();
     }
     try {
@@ -306,7 +290,7 @@ export function FileTree({ projectRoot, onFileSelect, selectedFile }: FileTreePr
       className="file-tree"
       tabIndex={0}
       onKeyDown={handleKeyDown}
-      title="Keyboard: ↑↓ select, Enter open, Ctrl+Space for modes"
+      title="Keyboard: ↑↓ select, Enter open, Ctrl+Space or Ctrl+. for modes"
     >
       <div className="file-tree-header">
         <span>EXPLORER</span>

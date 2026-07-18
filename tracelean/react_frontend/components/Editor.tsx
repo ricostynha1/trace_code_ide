@@ -6,6 +6,7 @@ import { EditorView, keymap, lineNumbers, highlightActiveLine, hoverTooltip, Too
 import { defaultKeymap } from "@codemirror/commands";
 import { oneDark } from "@codemirror/theme-one-dark";
 import { searchKeymap, highlightSelectionMatches } from "@codemirror/search";
+import { mythKeyName, type KeyBindingInfo } from "./mythKeys";
 
 interface EditorProps {
   filePath: string;
@@ -325,6 +326,10 @@ export function Editor({ filePath }: EditorProps) {
   const [leanDiagnostics, setLeanDiagnostics] = useState<LeanDiagnostic[]>([]);
   const [traceLink, setTraceLink] = useState<string | null>(null);
   const [ctxMenu, setCtxMenu] = useState<MythContextMenu | null>(null);
+  const [mythMode, setMythMode] = useState("Main");
+  const [whichKey, setWhichKey] = useState<KeyBindingInfo[]>([]);
+  // Read by the DOM capture handler (state would be stale inside CodeMirror callbacks)
+  const mythModeRef = useRef("Main");
   const syncingFromBackend = useRef(false);
   const highlightTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const sendQueue = useRef<Promise<void>>(Promise.resolve());
@@ -458,6 +463,10 @@ export function Editor({ filePath }: EditorProps) {
               { key: "Shift-ArrowDown", run: () => mythKey("S-ArrowDown") },
               { key: "Shift-ArrowLeft", run: () => mythKey("S-ArrowLeft") },
               { key: "Shift-ArrowRight", run: () => mythKey("S-ArrowRight") },
+              // Mode-entry chords (C-. is the IME-safe alternate: Ctrl+Space
+              // is often grabbed by the input method on Linux)
+              { key: "Ctrl-Space", run: () => mythKey("C-Space") },
+              { key: "Ctrl-.", run: () => mythKey("C-.") },
             ]),
             EditorView.updateListener.of((update) => {
               if (update.docChanged && !syncingFromBackend.current) {
@@ -719,6 +728,10 @@ export function Editor({ filePath }: EditorProps) {
     (async () => {
       try {
         const res = await invoke<any>("myth_key_event", { key: keyName });
+        const state = res?.state ?? "Main";
+        mythModeRef.current = state;
+        setMythMode(state);
+        setWhichKey(state !== "Main" ? res?.bindings ?? [] : []);
         if (res?.result?.kind === "dispatch") {
           const head = view.state.selection.main.head;
           const charPos = countCodePoints(view.state.doc.sliceString(0, head));
@@ -731,6 +744,17 @@ export function Editor({ filePath }: EditorProps) {
     return true;
   };
 
+  // While a mode is active, every key belongs to the mode machine — intercept
+  // before CodeMirror inserts it as text (capture phase).
+  const handleModeKeyCapture = (e: React.KeyboardEvent) => {
+    if (mythModeRef.current === "Main") return;
+    const key = mythKeyName(e);
+    if (!key) return;
+    e.preventDefault();
+    e.stopPropagation();
+    mythKey(key);
+  };
+
   return (
     <div className="editor-container">
       <div className="editor-tab">
@@ -738,13 +762,32 @@ export function Editor({ filePath }: EditorProps) {
           {modeLabel(mode)}
         </span>
         <span className="editor-filename">{filePath.split("/").pop()}</span>
+        {mythMode !== "Main" && <span className="myth-mode-badge">{mythMode}</span>}
         {traceLink && (
           <button className="trace-link-btn" onClick={handleNavigate} title={`Go to ${traceLink}`}>
             {mode === "lean" ? "← Req" : mode === "requirement" ? "Spec →" : ""}
           </button>
         )}
       </div>
-      <div className="editor-content" ref={editorRef} onContextMenu={handleContextMenu} />
+      <div
+        className="editor-content"
+        ref={editorRef}
+        onContextMenu={handleContextMenu}
+        onKeyDownCapture={handleModeKeyCapture}
+      />
+      {whichKey.length > 0 && (
+        <div className="which-key">
+          <div className="which-key-title">{mythMode}</div>
+          {whichKey.map((b) => (
+            <div key={b.key} className="which-key-row">
+              <span className="which-key-key">{b.key}</span>
+              <span className={`which-key-target which-key-${b.kind}`}>
+                {b.kind === "transition" ? `→${b.target}` : b.target.replace(/_/g, " ")}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
       {ctxMenu && (
         <div
           className="myth-menu"

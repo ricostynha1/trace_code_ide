@@ -1,6 +1,7 @@
 {
   "Main": {
     "C-Space": "→Options",
+    "C-.": "→Options",
     "S-ArrowUp": "go_parent",
     "S-ArrowDown": "go_child",
     "S-ArrowLeft": "go_prev_sibling",
