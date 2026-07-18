@@ -136,6 +136,18 @@ fn parse_tool_blocks(content: &str) -> ParsedToolCalls {
     parse_tool_blocks_with(content, ToolCallFormat::HermesJson, &ToolSchemaMap::new())
 }
 
+/// P17: public replay entry — parse tool calls from raw model output exactly
+/// as the runtime does (declared dialect first, other formats as fallback).
+pub fn parse_tool_calls_from_text(
+    content: &str,
+    format: ToolCallFormat,
+    tools: Option<&[ToolSchema]>,
+) -> (Vec<ToolCallResponse>, Vec<String>) {
+    let map = build_schema_map(tools);
+    let parsed = parse_tool_blocks_with(content, format, &map);
+    (parsed.calls, parsed.errors)
+}
+
 /// Parse tool calls from model output. The model's declared `ToolCallFormat`
 /// is tried first (D2.2); the other formats stay as fallback so a model
 /// answering in a different dialect still works. Supported dialects:
