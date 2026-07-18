@@ -177,6 +177,8 @@ pub struct SharedApp {
     pub mcp_client: Arc<tokio::sync::Mutex<McpClientManager>>,
     pub agent_permissions: Arc<Mutex<HashMap<String, AgentPermissions>>>,
     pub event_sink: Arc<dyn EventSink>,
+    /// Persistent chat sessions (P8 — shared with AiService).
+    pub chat_sessions: Arc<tokio::sync::Mutex<HashMap<String, agent::ChatSession>>>,
     /// ACP client manager — connects to external ACP agents.
     pub acp: Option<Arc<acp::AcpClientManager>>,
 }
@@ -195,7 +197,23 @@ impl SharedApp {
             mcp_client: Arc::new(tokio::sync::Mutex::new(McpClientManager::new())),
             agent_permissions: Arc::new(Mutex::new(HashMap::new())),
             event_sink,
+            chat_sessions: Arc::new(tokio::sync::Mutex::new(HashMap::new())),
             acp: None, // Initialized lazily when first agent connects
+        }
+    }
+
+    /// The AI application service over this app's shared state (P8).
+    pub fn ai_service(&self) -> ai::AiService {
+        ai::AiService {
+            state: self.state.clone(),
+            symbols: self.symbols.clone(),
+            graph: self.graph.clone(),
+            settings: self.ai_settings.clone(),
+            stats: self.ai_stats.clone(),
+            log: self.ai_log.clone(),
+            sessions: self.chat_sessions.clone(),
+            mcp_client: self.mcp_client.clone(),
+            event_sink: self.event_sink.clone(),
         }
     }
 

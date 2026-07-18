@@ -58,7 +58,7 @@ pub struct ChatSessionStoreWrapper(pub Arc<tokio::sync::Mutex<std::collections::
 // ─── MCP & Permissions State ─────────────────────────────────────────────────
 
 pub struct McpHostPermissionsWrapper(pub Mutex<AgentPermissions>);
-pub struct McpClientWrapper(pub tokio::sync::Mutex<McpClientManager>);
+pub struct McpClientWrapper(pub Arc<tokio::sync::Mutex<McpClientManager>>);
 pub struct AgentPermissionsStore(pub Mutex<std::collections::HashMap<String, AgentPermissions>>);
 
 // ─── ACP State ───────────────────────────────────────────────────────────────
@@ -187,7 +187,10 @@ pub fn run() {
         .manage(SymbolTableWrapper(Arc::new(Mutex::new(SymbolTable::new()))))
         .manage(TraceGraphWrapper(Arc::new(Mutex::new(TraceGraph::new()))))
         .manage(UndoTreeCacheWrapper(Mutex::new(UndoTreeCache::new())))
-        .manage(AiSettingsWrapper(Arc::new(Mutex::new(AiSettings::default()))))
+        .manage(AiSettingsWrapper(Arc::new(Mutex::new(
+            // P8: settings persist across launches (~/.tracelean/ai_settings.json)
+            tracelean_core::ai::service::load_settings(),
+        ))))
         .manage(AiLogWrapper(Arc::new(Mutex::new(InteractionLog::new()))))
         .manage(AiSessionStatsWrapper(Arc::new(Mutex::new(SessionStats::default()))))
         .manage(MockPendingWrapper(Mutex::new(Vec::new())))
@@ -196,7 +199,7 @@ pub fn run() {
         .manage(ToolLoopResumeWrapper(Arc::new(tokio::sync::Mutex::new(None))))
         .manage(ChatSessionStoreWrapper(Arc::new(tokio::sync::Mutex::new(std::collections::HashMap::new()))))
         .manage(McpHostPermissionsWrapper(Mutex::new(AgentPermissions::full_access("mcp-host"))))
-        .manage(McpClientWrapper(tokio::sync::Mutex::new(McpClientManager::new())))
+        .manage(McpClientWrapper(Arc::new(tokio::sync::Mutex::new(McpClientManager::new()))))
         .manage(AgentPermissionsStore(Mutex::new(std::collections::HashMap::new())))
         .manage(AcpManagerWrapper(std::sync::Arc::new(
             tracelean_core::acp::AcpClientManager::new(Arc::new(tracelean_core::SharedApp::new_headless()))

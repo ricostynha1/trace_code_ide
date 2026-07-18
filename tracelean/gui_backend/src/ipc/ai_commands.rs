@@ -11,6 +11,34 @@ use crate::{
 };
 use tauri::{AppHandle, Emitter, State};
 use std::sync::Arc;
+use tracelean_core::ai::AiService;
+
+/// P8 (D8.1): assemble the core AiService from Tauri-managed state. All AI
+/// orchestration lives in core; commands below are argument marshalling.
+#[allow(clippy::too_many_arguments)]
+fn ai_service(
+    app: &AppHandle,
+    settings: &State<'_, AiSettingsWrapper>,
+    log_state: &State<'_, AiLogWrapper>,
+    stats: &State<'_, AiSessionStatsWrapper>,
+    mcp_client: &State<'_, McpClientWrapper>,
+    state: &State<'_, AppStateWrapper>,
+    symbols_state: &State<'_, SymbolTableWrapper>,
+    graph_state: &State<'_, TraceGraphWrapper>,
+    session_store: &State<'_, crate::ChatSessionStoreWrapper>,
+) -> AiService {
+    AiService {
+        state: state.0.clone(),
+        symbols: symbols_state.0.clone(),
+        graph: graph_state.0.clone(),
+        settings: settings.0.clone(),
+        stats: stats.0.clone(),
+        log: log_state.0.clone(),
+        sessions: session_store.0.clone(),
+        mcp_client: mcp_client.0.clone(),
+        event_sink: Arc::new(crate::TauriEventSink { app_handle: app.clone() }),
+    }
+}
 
 // --- Settings & Models ---
 
@@ -36,63 +64,21 @@ pub fn detect_env_keys() -> std::collections::HashMap<String, String> {
 
 #[tauri::command]
 pub fn update_ai_settings(settings: State<'_, AiSettingsWrapper>, new_settings: AiSettings) -> Result<(), String> {
-    let mut s = settings.0.lock().map_err(|e| e.to_string())?;
-    *s = new_settings;
+    {
+        let mut s = settings.0.lock().map_err(|e| e.to_string())?;
+        *s = new_settings.clone();
+    }
+    // P8: persist so the selected model/provider survives restarts.
+    if let Err(e) = tracelean_core::ai::service::save_settings(&new_settings) {
+        eprintln!("failed to persist ai settings: {}", e);
+    }
     Ok(())
 }
 
 #[tauri::command]
 pub async fn get_ai_models(settings: State<'_, AiSettingsWrapper>) -> Result<Vec<ai::ModelConfig>, String> {
-    use ai::provider::AiProvider;
-
-    let (or_key, br_token, br_region) = {
-        let s = settings.0.lock().map_err(|e| e.to_string())?;
-        (
-            s.openrouter_api_key.clone(),
-            s.bedrock_api_key.clone(),
-            s.bedrock_region.clone(),
-        )
-    };
-
-    let mut models = Vec::new();
-
-    let mock = ai::mock::MockProvider::new().0;
-    if let Ok(m) = mock.list_models().await {
-        models.extend(m);
-    }
-
-    if let Some(key) = or_key.or_else(|| std::env::var("OPENROUTER_API_KEY").ok()) {
-        let or = ai::openrouter::OpenRouterProvider::new(key);
-        match or.list_models().await {
-            Ok(m) => models.extend(m),
-            Err(e) => eprintln!("OpenRouter list_models failed: {}", e.message),
-        }
-    }
-
-    if let Some(token) = br_token.or_else(|| std::env::var("AWS_BEARER_TOKEN_BEDROCK").ok()) {
-        let br = ai::bedrock::BedrockProvider::new(token, br_region);
-        match br.list_models().await {
-            Ok(m) => models.extend(m),
-            Err(e) => eprintln!("Bedrock list_models failed: {}", e.message),
-        }
-    }
-
-    // Enrich with catalog data (coding_index, rank, caching, tools)
-    for model in &mut models {
-        ai::model_catalog::enrich(model);
-    }
-
-    // Sort by coding_rank (ranked models first, unranked last)
-    models.sort_by(|a, b| {
-        match (a.coding_rank, b.coding_rank) {
-            (Some(ra), Some(rb)) => ra.cmp(&rb),
-            (Some(_), None) => std::cmp::Ordering::Less,
-            (None, Some(_)) => std::cmp::Ordering::Greater,
-            (None, None) => a.display_name.cmp(&b.display_name),
-        }
-    });
-
-    Ok(models)
+    let snapshot = settings.0.lock().map_err(|e| e.to_string())?.clone();
+    Ok(tracelean_core::ai::service::list_models_for(&snapshot).await)
 }
 
 
@@ -173,51 +159,20 @@ pub async fn ai_chat(
     graph_state: State<'_, TraceGraphWrapper>,
     cache: State<'_, UndoTreeCacheWrapper>,
     resume_state: State<'_, ToolLoopResumeWrapper>,
+    session_store: State<'_, crate::ChatSessionStoreWrapper>,
     messages: Vec<ai::provider::ChatMessage>,
 ) -> Result<ai::AiResponse, String> {
-    use tracelean_core::agent::{AgentContext, run_agent_turn};
-
-    // Snapshot project root
-    let project_root = {
-        let s = state.0.lock().map_err(|e| e.to_string())?;
-        s.project_root().cloned().unwrap_or_default()
-    };
-
-    // Collect MCP tool definitions (read-only snapshot)
-    let extra_tools: Vec<ai::tools::ToolDefinition> = {
-        let mgr = mcp_client.0.lock().await;
-        mgr.all_tools().into_iter().map(|(_server, tool)| tool).collect()
-    };
-
-    let spend_cap = settings.0.lock().map_err(|e| e.to_string())?.spend_cap_usd;
-
-    let ctx = AgentContext {
-        state: state.0.clone(),
-        symbols: symbols_state.0.clone(),
-        graph: graph_state.0.clone(),
-        settings: settings.0.clone(),
-        stats: stats.0.clone(),
-        log: log_state.0.clone(),
-        extra_tools,
-        permissions: tracelean_core::AgentPermissions::full_access("chat"),
-        project_root,
-        event_sink: Arc::new(crate::TauriEventSink { app_handle: app.clone() }),
-        spend_cap_usd: spend_cap,
-        pause_handler: Some(Arc::new(TauriPauseHandler {
-            app_handle: app.clone(),
-            resume_state: resume_state.0.clone(),
-        })),
-        verbose: false,
-        retention_engine: Arc::new(std::sync::Mutex::new(tracelean_core::ai::RetentionEngine::with_defaults())),
-        timing_tracker: Arc::new(std::sync::Mutex::new(tracelean_core::ai::TurnTimingTracker::new())),
-    };
-
-    let result = run_agent_turn(&ctx, messages).await.map_err(|e| e.to_string())?;
-
-    // Invalidate undo cache after tool execution
+    let svc = ai_service(
+        &app, &settings, &log_state, &stats, &mcp_client,
+        &state, &symbols_state, &graph_state, &session_store,
+    );
+    let pause = Arc::new(TauriPauseHandler {
+        app_handle: app.clone(),
+        resume_state: resume_state.0.clone(),
+    });
+    let response = svc.one_shot_turn(messages, Some(pause), false).await?;
     invalidate_undo_cache(&cache);
-
-    Ok(result.response)
+    Ok(response)
 }
 
 // --- Session-Based Chat (persistent model_view across calls) ---
@@ -241,67 +196,16 @@ pub async fn ai_chat_session(
     session_id: String,
     user_message: String,
 ) -> Result<ai::AiResponse, String> {
-    use tracelean_core::agent::{AgentContext, run_agent_turn_session};
-    use tracelean_core::ai::provider::{ChatMessage, MessageRole};
-    use tracelean_core::ChatSession;
-
-    // Snapshot project root
-    let project_root = {
-        let s = state.0.lock().map_err(|e| e.to_string())?;
-        s.project_root().cloned().unwrap_or_default()
-    };
-
-    // Collect MCP tool definitions
-    let extra_tools: Vec<ai::tools::ToolDefinition> = {
-        let mgr = mcp_client.0.lock().await;
-        mgr.all_tools().into_iter().map(|(_server, tool)| tool).collect()
-    };
-
-    let spend_cap = settings.0.lock().map_err(|e| e.to_string())?.spend_cap_usd;
-
-    let ctx = AgentContext {
-        state: state.0.clone(),
-        symbols: symbols_state.0.clone(),
-        graph: graph_state.0.clone(),
-        settings: settings.0.clone(),
-        stats: stats.0.clone(),
-        log: log_state.0.clone(),
-        extra_tools,
-        permissions: tracelean_core::AgentPermissions::full_access("chat"),
-        project_root,
-        event_sink: Arc::new(crate::TauriEventSink { app_handle: app.clone() }),
-        spend_cap_usd: spend_cap,
-        pause_handler: Some(Arc::new(TauriPauseHandler {
-            app_handle: app.clone(),
-            resume_state: resume_state.0.clone(),
-        })),
-        verbose: false,
-        retention_engine: Arc::new(std::sync::Mutex::new(tracelean_core::ai::RetentionEngine::with_defaults())),
-        timing_tracker: Arc::new(std::sync::Mutex::new(tracelean_core::ai::TurnTimingTracker::new())),
-    };
-
-    // Get or create session
-    let mut store = session_store.0.lock().await;
-    let session = store.entry(session_id.clone())
-        .or_insert_with(|| ChatSession::new(session_id.clone()));
-
-    // Append user message to both views
-    let user_msg = ChatMessage {
-        role: MessageRole::User,
-        content: user_message,
-        tool_call_id: None,
-        tool_calls: Vec::new(),
-    };
-    session.append(user_msg);
-
-    // Run agent turn with persistent session
-    let result = run_agent_turn_session(&ctx, session).await.map_err(|e| e.to_string())?;
-
-    // Drop lock before other operations
-    drop(store);
-
+    let svc = ai_service(
+        &app, &settings, &log_state, &stats, &mcp_client,
+        &state, &symbols_state, &graph_state, &session_store,
+    );
+    let pause = Arc::new(TauriPauseHandler {
+        app_handle: app.clone(),
+        resume_state: resume_state.0.clone(),
+    });
+    let result = svc.chat_turn(&session_id, &user_message, Some(pause), false).await?;
     invalidate_undo_cache(&cache);
-
     Ok(result.response)
 }
 
@@ -638,7 +542,7 @@ pub fn apply_accepted_hunks(
     {
         let mut s = state.0.lock().map_err(|e| e.to_string())?;
         for cmd in commands {
-            s.apply(cmd);
+            s.apply(cmd).map_err(|e| format!("hunk apply failed: {}", e))?;
         }
     }
 

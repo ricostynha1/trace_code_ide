@@ -6,7 +6,73 @@ use crossterm::event::{KeyCode, KeyEvent, KeyModifiers, MouseEvent, MouseEventKi
 pub fn handle_key(app: &mut App, key: KeyEvent) {
     match app.mode {
         Mode::Input => handle_input_mode(app, key),
-        Mode::Normal => handle_normal_mode(app, key),
+        Mode::Normal => {
+            // Editor insert mode captures everything except Esc (P8 tier 1).
+            if app.active_panel == Panel::Editor && app.insert_mode {
+                handle_editor_insert(app, key);
+                return;
+            }
+            // Chat input captures printable keys (P8 tier 1).
+            if app.active_panel == Panel::AiChat && handle_chat_key(app, key) {
+                return;
+            }
+            handle_normal_mode(app, key);
+        }
+    }
+}
+
+fn handle_editor_insert(app: &mut App, key: KeyEvent) {
+    match key.code {
+        KeyCode::Esc => {
+            app.insert_mode = false;
+            app.status_msg = "-- NORMAL --  u=undo r=redo s=save i=edit".into();
+        }
+        KeyCode::Char(c) if !key.modifiers.contains(KeyModifiers::CONTROL) => {
+            app.editor_insert(&c.to_string());
+        }
+        KeyCode::Enter => app.editor_insert("\n"),
+        KeyCode::Backspace => app.editor_backspace(),
+        KeyCode::Up => {
+            app.cursor_line = app.cursor_line.saturating_sub(1);
+            app.refresh_editor_content();
+        }
+        KeyCode::Down => {
+            app.cursor_line += 1;
+            app.refresh_editor_content();
+        }
+        KeyCode::Left => {
+            app.cursor_col = app.cursor_col.saturating_sub(1);
+        }
+        KeyCode::Right => {
+            app.cursor_col += 1;
+            app.refresh_editor_content();
+        }
+        KeyCode::Char('s') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+            app.editor_save();
+        }
+        _ => {}
+    }
+}
+
+/// Returns true if the key was consumed by the chat input.
+fn handle_chat_key(app: &mut App, key: KeyEvent) -> bool {
+    match key.code {
+        KeyCode::Char(c)
+            if !key.modifiers.contains(KeyModifiers::CONTROL)
+                && !key.modifiers.contains(KeyModifiers::ALT) =>
+        {
+            app.chat_input.push(c);
+            true
+        }
+        KeyCode::Backspace => {
+            app.chat_input.pop();
+            true
+        }
+        KeyCode::Enter => {
+            app.send_chat();
+            true
+        }
+        _ => false,
     }
 }
 
@@ -99,6 +165,21 @@ fn handle_normal_mode(app: &mut App, key: KeyEvent) {
         }
         KeyCode::Backspace if app.active_panel == Panel::FileTree => {
             app.go_up_directory();
+        }
+
+        // Editor (P8 tier 1): modal editing over AppState::apply
+        KeyCode::Char('i') if app.active_panel == Panel::Editor && app.file_content.is_some() => {
+            app.insert_mode = true;
+            app.status_msg = "-- INSERT --  Esc=normal, Ctrl+S=save".into();
+        }
+        KeyCode::Char('u') if app.active_panel == Panel::Editor => {
+            app.editor_undo();
+        }
+        KeyCode::Char('r') if app.active_panel == Panel::Editor => {
+            app.editor_redo();
+        }
+        KeyCode::Char('s') if app.active_panel == Panel::Editor => {
+            app.editor_save();
         }
 
         // Editor scrolling

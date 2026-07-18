@@ -58,10 +58,114 @@ fn render_main(frame: &mut Frame, app: &App, area: Rect) {
     match app.active_panel {
         Panel::FileTree => render_file_tree(frame, app, area),
         Panel::Editor => render_editor(frame, app, area),
-        Panel::AiChat => render_placeholder(frame, "AI Chat", "AI chat panel — coming soon. Use GUI for now.", area),
+        Panel::AiChat => render_ai_chat(frame, app, area),
         Panel::Trace => render_placeholder(frame, "Traceability", "Trace graph panel — coming soon. Use GUI for now.", area),
         Panel::Requirements => render_requirements(frame, app, area),
     }
+}
+
+/// AI chat (P8 tier 1): transcript + tool chips + cost bar + input line —
+/// rendered straight from the shared core state the GUI uses.
+fn render_ai_chat(frame: &mut Frame, app: &App, area: Rect) {
+    use crate::app::ChatEntry;
+
+    let chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Min(0),    // transcript
+            Constraint::Length(1), // cost/context bar
+            Constraint::Length(3), // input
+        ])
+        .split(area);
+
+    let block = Block::default()
+        .title(" AI Chat (type + Enter to send) ")
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(Color::Green));
+
+    let mut lines: Vec<Line> = Vec::new();
+    {
+        let entries = app.chat_entries.lock().unwrap();
+        for entry in entries.iter() {
+            match entry {
+                ChatEntry::User(text) => {
+                    lines.push(Line::from(Span::styled(
+                        format!("you ▸ {}", text),
+                        Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
+                    )));
+                }
+                ChatEntry::Assistant(text) => {
+                    for (i, l) in text.lines().enumerate() {
+                        let prefix = if i == 0 { "ai  ▸ " } else { "      " };
+                        lines.push(Line::from(format!("{}{}", prefix, l)));
+                    }
+                }
+                ChatEntry::Chip { tool, status, .. } => {
+                    let color = if status.starts_with('✗') {
+                        Color::Red
+                    } else if status == "…" {
+                        Color::Yellow
+                    } else {
+                        Color::Green
+                    };
+                    lines.push(Line::from(Span::styled(
+                        format!("  [⚙ {} {}]", tool, status),
+                        Style::default().fg(color),
+                    )));
+                }
+                ChatEntry::Info(text) => {
+                    lines.push(Line::from(Span::styled(
+                        format!("  {}", text),
+                        Style::default().fg(Color::DarkGray),
+                    )));
+                }
+                ChatEntry::Error(text) => {
+                    lines.push(Line::from(Span::styled(
+                        format!("  error: {}", text),
+                        Style::default().fg(Color::Red),
+                    )));
+                }
+            }
+        }
+    }
+    if app.chat_busy.load(std::sync::atomic::Ordering::SeqCst) {
+        lines.push(Line::from(Span::styled(
+            "  thinking…",
+            Style::default().fg(Color::Yellow),
+        )));
+    }
+    // Keep the tail visible.
+    let inner_height = chunks[0].height.saturating_sub(2) as usize;
+    let scroll = lines.len().saturating_sub(inner_height) as u16;
+    let para = Paragraph::new(lines)
+        .block(block)
+        .scroll((scroll, 0))
+        .wrap(Wrap { trim: false });
+    frame.render_widget(para, chunks[0]);
+
+    // Cost / model bar (P7 data from shared stats + settings)
+    let (cost, cap, model) = {
+        let stats = app.shared.ai_stats.lock().unwrap();
+        let settings = app.shared.ai_settings.lock().unwrap();
+        (
+            stats.total_cost_usd,
+            settings.spend_cap_usd,
+            settings
+                .selected_model
+                .as_ref()
+                .map(|m| m.display_name.clone())
+                .unwrap_or_else(|| "(no model — set one in the GUI or ~/.tracelean/ai_settings.json)".into()),
+        )
+    };
+    let bar = Paragraph::new(format!(" {} │ session ${:.4} / cap ${:.2}", model, cost, cap))
+        .style(Style::default().fg(Color::Black).bg(Color::Gray));
+    frame.render_widget(bar, chunks[1]);
+
+    // Input line
+    let input = Paragraph::new(format!("> {}", app.chat_input))
+        .block(Block::default().borders(Borders::ALL).title(" message "))
+        .style(Style::default().fg(Color::Yellow));
+    frame.render_widget(input, chunks[2]);
 }
 
 fn render_file_tree(frame: &mut Frame, app: &App, area: Rect) {
@@ -126,13 +230,22 @@ fn render_file_tree(frame: &mut Frame, app: &App, area: Rect) {
 
 fn render_editor(frame: &mut Frame, app: &App, area: Rect) {
     let title = match &app.current_file {
-        Some(f) => format!(" Editor: {} (j/k=scroll, PgUp/PgDn) ", f),
+        Some(f) => {
+            let mode = if app.insert_mode { "INSERT" } else { "NORMAL" };
+            format!(
+                " Editor: {} [{} {}:{}] (i=edit, u=undo, r=redo, s=save) ",
+                f,
+                mode,
+                app.cursor_line + 1,
+                app.cursor_col + 1
+            )
+        }
         None => " Editor (no file open — select from File Tree) ".to_string(),
     };
     let block = Block::default()
         .title(title)
         .borders(Borders::ALL)
-        .border_style(Style::default().fg(Color::Green));
+        .border_style(Style::default().fg(if app.insert_mode { Color::Yellow } else { Color::Green }));
 
     match &app.file_content {
         Some(content) => {
@@ -144,6 +257,24 @@ fn render_editor(frame: &mut Frame, app: &App, area: Rect) {
                         format!("{:4} │ ", i + 1),
                         Style::default().fg(Color::DarkGray),
                     );
+                    // Highlight the cursor line; mark the cursor column in insert mode.
+                    if i == app.cursor_line {
+                        let col = app.cursor_col.min(line.chars().count());
+                        let before: String = line.chars().take(col).collect();
+                        let at: String = line.chars().nth(col).map(|c| c.to_string()).unwrap_or_else(|| " ".into());
+                        let after: String = line.chars().skip(col + 1).collect();
+                        let cursor_style = if app.insert_mode {
+                            Style::default().fg(Color::Black).bg(Color::Yellow)
+                        } else {
+                            Style::default().fg(Color::Black).bg(Color::White)
+                        };
+                        return Line::from(vec![
+                            num,
+                            Span::raw(before),
+                            Span::styled(at, cursor_style),
+                            Span::raw(after),
+                        ]);
+                    }
                     let text = Span::raw(line);
                     Line::from(vec![num, text])
                 })

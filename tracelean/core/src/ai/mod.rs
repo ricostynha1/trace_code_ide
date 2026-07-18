@@ -36,6 +36,7 @@ pub mod tool_errors;
 pub mod provider_cache;
 pub mod retention;
 pub mod cost_model;
+pub mod service;
 pub mod ttl_tracking;
 
 pub use provider::{AiProvider, AiRequest, AiResponse, ModelConfig, ProviderKind, ToolSchema, ToolCallResponse};
@@ -50,6 +51,7 @@ pub use tool_registry::{ToolRegistry, DynamicEntry, ToolJsonEntry};
 pub use provider_cache::{ProviderCacheRegistry, ProviderCacheConfig, CacheMode};
 pub use ttl_tracking::{TurnTimingTracker, CacheMarkerPlanner};
 pub use retention::RetentionEngine;
+pub use service::AiService;
 pub use cost_model::{CostDecision, PruneContext, should_prune, should_summarize, batch_prune_decisions, summarization_decision};
 
 /// Canonical system prompt for all TraceLean agent paths (GUI chat, ACP, headless).

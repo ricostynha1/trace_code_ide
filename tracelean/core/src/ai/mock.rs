@@ -183,6 +183,18 @@ fn parse_mock_response(raw: &str) -> (String, Vec<ToolCallResponse>) {
 #[async_trait::async_trait]
 impl AiProvider for MockProvider {
     async fn complete(&self, request: &AiRequest) -> Result<AiResponse, AiError> {
+        // Headless auto-response (P8, D8.3): CI/smoke tests set
+        // TRACELEAN_MOCK_AUTO to bypass the interactive queue entirely.
+        if let Ok(auto) = std::env::var("TRACELEAN_MOCK_AUTO") {
+            return Ok(AiResponse {
+                content: auto,
+                usage: TokenUsage::default(),
+                raw_response: None,
+                truncated: false,
+                tool_calls: Vec::new(),
+            });
+        }
+
         let id = uuid::Uuid::new_v4().to_string();
         let raw_request_json = build_raw_request_json(request);
 
