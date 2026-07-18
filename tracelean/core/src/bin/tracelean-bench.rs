@@ -377,6 +377,7 @@ fn configure_settings(
         coding_rank: None,
         supports_caching: false,
         supports_tools: false,
+        ..Default::default()
     });
 
     settings.spend_cap_usd = cost_cap;

@@ -457,7 +457,7 @@ fn execute_edit_file(
                         c
                     }
                     Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
-                        state.apply(Command::CreateFile { path: rel_path.clone() });
+                        let _ = state.apply(Command::CreateFile { path: rel_path.clone() });
                         state.load_file(rel_path.clone(), String::new());
                         String::new()
                     }
@@ -472,12 +472,18 @@ fn execute_edit_file(
             };
 
             // Replace entire content
-            state.apply(Command::replace(
+            if let Err(e) = state.apply(Command::replace(
                 rel_path.clone(),
                 0,
                 old_content,
                 text.clone(),
-            ));
+            )) {
+                return ToolResult {
+                    success: false,
+                    content: format!("Edit rejected: {}", e),
+                    data: None,
+                };
+            }
 
             return match save_eff(state, project_root, &rel_path) {
                 Ok(_) => ToolResult {
@@ -520,7 +526,7 @@ fn execute_edit_file(
                     if let Some(parent) = full_path.parent() {
                         let _ = std::fs::create_dir_all(parent);
                     }
-                    state.apply(Command::CreateFile {
+                    let _ = state.apply(Command::CreateFile {
                         path: rel_path.clone(),
                     });
                     state.load_file(rel_path.clone(), String::new());
@@ -579,13 +585,20 @@ fn execute_edit_file(
 
     let old_text = content[start_offset..end_offset].to_string();
 
-    // Apply as Replace command
-    state.apply(Command::replace(
+    // Apply as Replace command (positions are char indices, not bytes)
+    let at = content[..start_offset].chars().count();
+    if let Err(e) = state.apply(Command::replace(
         rel_path.clone(),
-        start_offset,
+        at,
         old_text.clone(),
         text.clone(),
-    ));
+    )) {
+        return ToolResult {
+            success: false,
+            content: format!("Edit rejected: {}", e),
+            data: None,
+        };
+    }
 
     match save_eff(state, project_root, &rel_path) {
         Ok(_) => {
@@ -672,7 +685,7 @@ fn execute_delete_file(
     }
 
     // Apply DeleteFile command (captures content for undo)
-    state.apply(Command::DeleteFile {
+    let _ = state.apply(Command::DeleteFile {
         path: rel_path.clone(),
         content,
     });
@@ -780,12 +793,19 @@ fn execute_str_replace(
     }
 
     let offset = matches[0].0;
-    state.apply(Command::replace(
+    let at = content[..offset].chars().count();
+    if let Err(e) = state.apply(Command::replace(
         rel_path.clone(),
-        offset,
+        at,
         old_str.clone(),
         new_str.clone(),
-    ));
+    )) {
+        return ToolResult {
+            success: false,
+            content: format!("Edit rejected: {}", e),
+            data: None,
+        };
+    }
 
     match save_eff(state, project_root, &rel_path) {
         Ok(_) => ToolResult {
@@ -1605,7 +1625,7 @@ mod tests {
         assert!(state.get_content(&rel).unwrap().contains("// added"));
 
         let undone = state.undo();
-        assert!(undone);
+        assert!(undone.changed);
         assert_eq!(state.get_content(&rel).unwrap(), "original\n");
     }
 

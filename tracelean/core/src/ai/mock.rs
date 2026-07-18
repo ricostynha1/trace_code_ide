@@ -270,6 +270,7 @@ impl AiProvider for MockProvider {
                 coding_rank: None,
                 supports_caching: false,
                 supports_tools: false,
+            ..Default::default()
         }])
     }
 }

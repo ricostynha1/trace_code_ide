@@ -3,10 +3,13 @@
 //! Uses `bedrock-mantle.{region}.api.aws/v1/chat/completions`
 //! with Bearer token authentication (Bedrock API key).
 //!
-//! Tool definitions are embedded as text in the system prompt (not the `tools` param)
-//! because Bedrock's proxy does NOT cache the `tools` field for MiniMax models.
-//! The model responds with tool calls using <tool_call> tags (Hermes format)
-//! or [TOOL_CALLS] prefix (Mistral format). Both are parsed.
+//! Tool passing follows the model's `ToolPassing` strategy (P9a):
+//! - `NativeParam` (default): tools go in the request `tools` field, history keeps
+//!   structured `tool_calls` / `role: "tool"` messages, and native response
+//!   `tool_calls` take precedence (text parsing stays as fallback).
+//! - `SystemPromptEmbed` (Bedrock+MiniMax): tools are rendered as text into the
+//!   system prompt in the model's trained dialect (`ToolCallFormat`, P2) and
+//!   calls are parsed from response text in that dialect.
 
 use super::provider::*;
 use super::tracking::TokenUsage;
@@ -55,31 +58,53 @@ impl BedrockProvider {
 // Tool embedding: render tool schemas as text for the system prompt
 // ---------------------------------------------------------------------------
 
-/// Render tool schemas as a text block to embed in system prompt.
-/// Uses a format close to MiniMax-M2.5 training data but with Hermes-style output tags.
-/// The `<tools>` section matches MiniMax's internal chat template format for tool definitions.
-fn render_tools_as_text(tools: &[ToolSchema]) -> String {
+/// Render tool schemas as a text block to embed in system prompt (D2.1).
+/// The `<tools>` section carries the full JSON schema per tool (matching the
+/// MiniMax chat template); the invocation instructions follow the model's
+/// trained dialect.
+fn render_tools_as_text(tools: &[ToolSchema], format: ToolCallFormat) -> String {
     let mut out = String::from("# Tools\n");
-    out.push_str("You may call one or more tools to assist with the user query.\n\n");
-    out.push_str("Available tools:\n\n");
-
+    out.push_str("You may call one or more tools to assist with the user query.\n");
+    out.push_str("Here are the tools available in JSONSchema format:\n\n");
+    out.push_str("<tools>\n");
     for tool in tools {
-        let params_str = serde_json::to_string(&tool.function.parameters).unwrap_or_else(|_| "{}".into());
-        out.push_str(&format!(
-            "- **{}**: {} | Parameters: {}\n",
-            tool.function.name, tool.function.description, params_str
-        ));
+        let schema_json = serde_json::json!({
+            "name": tool.function.name,
+            "description": tool.function.description,
+            "parameters": tool.function.parameters,
+        });
+        out.push_str("<tool>");
+        out.push_str(&serde_json::to_string(&schema_json).unwrap_or_else(|_| "{}".into()));
+        out.push_str("</tool>\n");
+    }
+    out.push_str("</tools>\n\n");
+
+    match format {
+        ToolCallFormat::MiniMaxXml => {
+            out.push_str("When making tool calls, use XML format to invoke tools and pass parameters:\n\n");
+            out.push_str("<minimax:tool_call>\n");
+            out.push_str("<invoke name=\"tool-name\">\n");
+            out.push_str("<parameter name=\"param-key\">param-value</parameter>\n");
+            out.push_str("...\n");
+            out.push_str("</invoke>\n");
+            out.push_str("</minimax:tool_call>\n");
+        }
+        ToolCallFormat::HermesJson => {
+            out.push_str("To call tools, respond with one or more <tool_call> blocks:\n\n");
+            out.push_str("<tool_call>\n");
+            out.push_str("{\"name\": \"read_file\", \"arguments\": {\"path\": \"src/main.py\"}}\n");
+            out.push_str("</tool_call>\n");
+            out.push_str("<tool_call>\n");
+            out.push_str("{\"name\": \"list_directory\", \"arguments\": {\"path\": \".\"}}\n");
+            out.push_str("</tool_call>\n");
+        }
+        ToolCallFormat::MistralBrackets => {
+            out.push_str("To call tools, respond with a [TOOL_CALLS] line containing a JSON array:\n\n");
+            out.push_str("[TOOL_CALLS] [{\"name\": \"read_file\", \"arguments\": {\"path\": \"src/main.py\"}}]\n");
+        }
     }
 
-    out.push_str("\nTo call tools, respond with one or more <tool_call> blocks:\n\n");
-    out.push_str("<tool_call>\n");
-    out.push_str("{\"name\": \"read_file\", \"arguments\": {\"path\": \"src/main.py\"}}\n");
-    out.push_str("</tool_call>\n");
-    out.push_str("<tool_call>\n");
-    out.push_str("{\"name\": \"list_directory\", \"arguments\": {\"path\": \".\"}}\n");
-    out.push_str("</tool_call>\n\n");
-    out.push_str("Return ALL independent calls in ONE response. Do NOT call one tool then wait.\n");
-
+    out.push_str("\nReturn ALL independent calls in ONE response. Do NOT call one tool then wait.\n");
     out
 }
 
@@ -90,17 +115,83 @@ struct ParsedToolCalls {
     errors: Vec<String>,
 }
 
-/// Parse tool calls from model output. Supports:
+/// Map from tool name → its JSON-schema `parameters` object, for schema-driven
+/// type coercion in the XML parser (D2.3).
+type ToolSchemaMap<'a> = std::collections::HashMap<&'a str, &'a serde_json::Value>;
+
+fn build_schema_map(tools: Option<&[ToolSchema]>) -> ToolSchemaMap<'_> {
+    tools
+        .map(|ts| {
+            ts.iter()
+                .map(|t| (t.function.name.as_str(), &t.function.parameters))
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+/// Parse tool calls from model output with the Hermes-first legacy ordering
+/// and no schema coercion. Kept for callers/tests without model context.
+#[cfg(test)]
+fn parse_tool_blocks(content: &str) -> ParsedToolCalls {
+    parse_tool_blocks_with(content, ToolCallFormat::HermesJson, &ToolSchemaMap::new())
+}
+
+/// Parse tool calls from model output. The model's declared `ToolCallFormat`
+/// is tried first (D2.2); the other formats stay as fallback so a model
+/// answering in a different dialect still works. Supported dialects:
 /// 1. Hermes format: <tool_call>{"name": "...", "arguments": {...}}</tool_call>
 /// 2. Mistral format: [TOOL_CALLS] [{"name": "...", "arguments": {...}}, ...]
 ///    or [TOOL_CALL] followed by JSON lines
 /// 3. MiniMax native: <minimax:tool_call><invoke name="..."><parameter name="...">...</invoke></minimax:tool_call>
-fn parse_tool_blocks(content: &str) -> ParsedToolCalls {
+fn parse_tool_blocks_with(
+    content: &str,
+    format: ToolCallFormat,
+    schemas: &ToolSchemaMap,
+) -> ParsedToolCalls {
     let mut calls = Vec::new();
     let mut errors = Vec::new();
     let mut idx = 0u32;
 
-    // Strategy 1: <tool_call> ... </tool_call> tags (Hermes format)
+    let order: [ToolCallFormat; 3] = match format {
+        ToolCallFormat::MiniMaxXml => [
+            ToolCallFormat::MiniMaxXml,
+            ToolCallFormat::HermesJson,
+            ToolCallFormat::MistralBrackets,
+        ],
+        ToolCallFormat::HermesJson => [
+            ToolCallFormat::HermesJson,
+            ToolCallFormat::MistralBrackets,
+            ToolCallFormat::MiniMaxXml,
+        ],
+        ToolCallFormat::MistralBrackets => [
+            ToolCallFormat::MistralBrackets,
+            ToolCallFormat::HermesJson,
+            ToolCallFormat::MiniMaxXml,
+        ],
+    };
+
+    for strategy in order {
+        match strategy {
+            ToolCallFormat::MiniMaxXml => {
+                parse_minimax_native(content, &mut calls, &mut errors, &mut idx, schemas)
+            }
+            ToolCallFormat::HermesJson => {
+                parse_hermes_blocks(content, &mut calls, &mut errors, &mut idx)
+            }
+            ToolCallFormat::MistralBrackets => {
+                parse_mistral_prefix(content, &mut calls, &mut errors, &mut idx)
+            }
+        }
+        if !calls.is_empty() || !errors.is_empty() {
+            break;
+        }
+    }
+
+    ParsedToolCalls { calls, errors }
+}
+
+/// Hermes format: <tool_call> ... </tool_call> tags with JSON bodies.
+fn parse_hermes_blocks(content: &str, calls: &mut Vec<ToolCallResponse>, errors: &mut Vec<String>, idx: &mut u32) {
     let mut search_from = 0;
     loop {
         let opener = if let Some(pos) = content[search_from..].find("<tool_call>") {
@@ -118,40 +209,34 @@ fn parse_tool_blocks(content: &str) -> ParsedToolCalls {
         };
 
         let body = content[body_start..closer].trim();
-        parse_json_body(body, &mut calls, &mut errors, &mut idx);
+        parse_json_body(body, calls, errors, idx);
         search_from = closer + "</tool_call>".len();
     }
+}
 
-    // Strategy 2: [TOOL_CALLS] or [TOOL_CALL] prefix (Mistral-style)
-    if calls.is_empty() && errors.is_empty() {
-        // Case-insensitive search for [TOOL_CALL] or [TOOL_CALLS]
-        let upper = content.to_uppercase();
-        if let Some(pos) = upper.find("[TOOL_CALL") {
-            // Skip past the tag and any trailing ] or S]
-            let after_tag = content[pos..].find(']').map(|p| pos + p + 1).unwrap_or(pos + 11);
-            let body = content[after_tag..].trim();
+/// Mistral format: [TOOL_CALLS] / [TOOL_CALL] prefix followed by a JSON array
+/// or JSON lines.
+fn parse_mistral_prefix(content: &str, calls: &mut Vec<ToolCallResponse>, errors: &mut Vec<String>, idx: &mut u32) {
+    // Case-insensitive search for [TOOL_CALL] or [TOOL_CALLS]
+    let upper = content.to_uppercase();
+    if let Some(pos) = upper.find("[TOOL_CALL") {
+        // Skip past the tag and any trailing ] or S]
+        let after_tag = content[pos..].find(']').map(|p| pos + p + 1).unwrap_or(pos + 11);
+        let body = content[after_tag..].trim();
 
-            // Try as JSON array first: [{"name": ...}, {"name": ...}]
-            if let Ok(arr) = serde_json::from_str::<Vec<serde_json::Value>>(body) {
-                for item in &arr {
-                    match extract_tool_call(item, &mut idx) {
-                        Ok(tc) => calls.push(tc),
-                        Err(e) => errors.push(e),
-                    }
+        // Try as JSON array first: [{"name": ...}, {"name": ...}]
+        if let Ok(arr) = serde_json::from_str::<Vec<serde_json::Value>>(body) {
+            for item in &arr {
+                match extract_tool_call(item, idx) {
+                    Ok(tc) => calls.push(tc),
+                    Err(e) => errors.push(e),
                 }
-            } else {
-                // Try line-by-line JSON
-                parse_json_body(body, &mut calls, &mut errors, &mut idx);
             }
+        } else {
+            // Try line-by-line JSON
+            parse_json_body(body, calls, errors, idx);
         }
     }
-
-    // Strategy 3: MiniMax native format — <minimax:tool_call><invoke name="...">...</invoke></minimax:tool_call>
-    if calls.is_empty() && errors.is_empty() {
-        parse_minimax_native(content, &mut calls, &mut errors, &mut idx);
-    }
-
-    ParsedToolCalls { calls, errors }
 }
 
 /// Parse a text body as JSON tool calls — single object or one per line.
@@ -184,6 +269,60 @@ fn parse_json_body(body: &str, calls: &mut Vec<ToolCallResponse>, errors: &mut V
     }
 }
 
+/// Strip at most one leading and one trailing newline. Preserves inner
+/// whitespace and leading indentation — critical for `old_str`-style params.
+fn strip_edge_newlines(s: &str) -> &str {
+    let s = s.strip_prefix("\r\n").or_else(|| s.strip_prefix('\n')).unwrap_or(s);
+    s.strip_suffix("\r\n").or_else(|| s.strip_suffix('\n')).unwrap_or(s)
+}
+
+/// Coerce a raw XML parameter value using its declared JSON-schema type
+/// (D2.3). `declared: None` (unknown tool/param) falls back to guessing.
+fn coerce_param_value(raw: &str, declared: Option<&str>) -> serde_json::Value {
+    match declared {
+        // Declared string: raw text verbatim (minus the template's edge
+        // newlines). Never guessed into bool/number/JSON.
+        Some("string") => serde_json::Value::String(strip_edge_newlines(raw).to_string()),
+        Some("boolean") => match raw.trim() {
+            "true" => serde_json::Value::Bool(true),
+            "false" => serde_json::Value::Bool(false),
+            other => serde_json::Value::String(other.to_string()),
+        },
+        Some("integer") => raw
+            .trim()
+            .parse::<i64>()
+            .map(|n| serde_json::Value::Number(n.into()))
+            .unwrap_or_else(|_| serde_json::Value::String(raw.trim().to_string())),
+        Some("number") => raw
+            .trim()
+            .parse::<f64>()
+            .map(|n| serde_json::json!(n))
+            .unwrap_or_else(|_| serde_json::Value::String(raw.trim().to_string())),
+        Some("array") | Some("object") => serde_json::from_str(raw.trim())
+            .unwrap_or_else(|_| serde_json::Value::String(raw.trim().to_string())),
+        // Unknown: legacy guessing heuristic.
+        _ => {
+            let trimmed = raw.trim();
+            if trimmed.starts_with('[') || trimmed.starts_with('{') {
+                serde_json::from_str(trimmed)
+                    .unwrap_or_else(|_| serde_json::Value::String(trimmed.to_string()))
+            } else if trimmed == "true" {
+                serde_json::Value::Bool(true)
+            } else if trimmed == "false" {
+                serde_json::Value::Bool(false)
+            } else if trimmed == "null" {
+                serde_json::Value::Null
+            } else if let Ok(n) = trimmed.parse::<i64>() {
+                serde_json::Value::Number(n.into())
+            } else if let Ok(n) = trimmed.parse::<f64>() {
+                serde_json::json!(n)
+            } else {
+                serde_json::Value::String(trimmed.to_string())
+            }
+        }
+    }
+}
+
 /// Parse MiniMax native format:
 /// <minimax:tool_call>
 ///   <invoke name="tool_name">
@@ -191,7 +330,17 @@ fn parse_json_body(body: &str, calls: &mut Vec<ToolCallResponse>, errors: &mut V
 ///     <parameter name="param2">value2</parameter>
 ///   </invoke>
 /// </minimax:tool_call>
-fn parse_minimax_native(content: &str, calls: &mut Vec<ToolCallResponse>, errors: &mut Vec<String>, idx: &mut u32) {
+///
+/// Parameter values capture everything (newlines, quotes, braces) up to the
+/// next `</parameter>` (D2.5). Documented limitation: a value containing the
+/// literal string `</parameter>` cannot be represented.
+fn parse_minimax_native(
+    content: &str,
+    calls: &mut Vec<ToolCallResponse>,
+    errors: &mut Vec<String>,
+    idx: &mut u32,
+    schemas: &ToolSchemaMap,
+) {
     const OPEN_TAG: &str = "<minimax:tool_call>";
     const CLOSE_TAG: &str = "</minimax:tool_call>";
 
@@ -256,24 +405,16 @@ fn parse_minimax_native(content: &str, calls: &mut Vec<ToolCallResponse>, errors
                         continue;
                     }
                 };
-                let raw_value = param_tag[value_start..].trim();
+                let raw_value = &param_tag[value_start..];
 
-                // Try to parse value as JSON (for arrays, objects, numbers, bools)
-                let json_value = if raw_value.starts_with('[') || raw_value.starts_with('{') {
-                    serde_json::from_str(raw_value).unwrap_or_else(|_| serde_json::Value::String(raw_value.to_string()))
-                } else if raw_value == "true" {
-                    serde_json::Value::Bool(true)
-                } else if raw_value == "false" {
-                    serde_json::Value::Bool(false)
-                } else if raw_value == "null" {
-                    serde_json::Value::Null
-                } else if let Ok(n) = raw_value.parse::<i64>() {
-                    serde_json::Value::Number(n.into())
-                } else if let Ok(n) = raw_value.parse::<f64>() {
-                    serde_json::json!(n)
-                } else {
-                    serde_json::Value::String(raw_value.to_string())
-                };
+                // Coerce using the declared JSON-schema type when known (D2.3)
+                let declared = schemas
+                    .get(func_name.as_str())
+                    .and_then(|params| params.get("properties"))
+                    .and_then(|props| props.get(pname.as_str()))
+                    .and_then(|schema| schema.get("type"))
+                    .and_then(|t| t.as_str());
+                let json_value = coerce_param_value(raw_value, declared);
 
                 if !pname.is_empty() {
                     arguments.insert(pname, json_value);
@@ -350,6 +491,27 @@ fn extract_tool_call(parsed: &serde_json::Value, idx: &mut u32) -> Result<ToolCa
     })
 }
 
+/// Strip `<think>…</think>` spans (D2.6): MiniMax emits them in its native
+/// dialect. An unterminated `<think>` drops the rest of the content (it is
+/// all thinking).
+fn strip_think_tags(content: &str) -> String {
+    let mut result = content.to_string();
+    loop {
+        let Some(open) = result.find("<think>") else { break };
+        match result[open..].find("</think>") {
+            Some(rel) => {
+                let end = open + rel + "</think>".len();
+                result.replace_range(open..end, "");
+            }
+            None => {
+                result.truncate(open);
+                break;
+            }
+        }
+    }
+    result.trim().to_string()
+}
+
 /// Strip tool call blocks from content (both <tool_call> tags and [TOOL_CALL] sections).
 fn strip_tool_blocks(content: &str) -> String {
     let mut result = content.to_string();
@@ -400,12 +562,27 @@ struct ChatRequest {
     temperature: f32,
     #[serde(skip_serializing_if = "Option::is_none")]
     stop: Option<Vec<String>>,
+    /// Native tool passing (P9a) — only set for `ToolPassing::NativeParam`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    tools: Option<Vec<ToolSchema>>,
 }
 
 #[derive(Serialize)]
 struct ChatMsg {
     role: String,
     content: String,
+    /// Structured tool calls on assistant messages (native history, P9a).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    tool_calls: Option<Vec<ToolCallResponse>>,
+    /// Set on `role: "tool"` result messages (native history, P9a).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    tool_call_id: Option<String>,
+}
+
+impl ChatMsg {
+    fn text(role: &str, content: String) -> Self {
+        Self { role: role.into(), content, tool_calls: None, tool_call_id: None }
+    }
 }
 
 #[derive(Deserialize, Debug)]
@@ -424,6 +601,10 @@ struct ChatChoice {
 struct ChatChoiceMessage {
     content: Option<String>,
     reasoning: Option<String>,
+    /// Native tool calls (P9a). Previously not deserialized at all, which made
+    /// every natively-tool-calling Bedrock model appear tool-less.
+    #[serde(default)]
+    tool_calls: Option<Vec<ToolCallResponse>>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -452,7 +633,10 @@ impl AiProvider for BedrockProvider {
         // Verbose: log the ACTUAL payload being sent to the API
         if self.verbose {
             eprintln!("\n--- [bedrock] ACTUAL PAYLOAD ({} messages) ---", messages.len());
-            // Show which tools are available (embedded in system prompt)
+            eprintln!(
+                "[tool_passing: {:?} | tool_call_format: {:?}]",
+                request.model.tool_passing, request.model.tool_call_format
+            );
             if let Some(ref tools) = request.tools {
                 let names: Vec<&str> = tools.iter().map(|t| t.function.name.as_str()).collect();
                 eprintln!("[tools: {}]", names.join(", "));
@@ -468,12 +652,19 @@ impl AiProvider for BedrockProvider {
             eprintln!("--- [bedrock] END PAYLOAD ---\n");
         }
 
+        // Native tool passing (P9a): tools go in the request field
+        let native = request.model.tool_passing == ToolPassing::NativeParam;
         let body = ChatRequest {
             model: request.model.model_id.clone(),
             messages,
             max_tokens: request.model.max_tokens,
             temperature: request.model.temperature,
             stop: request.stop.clone(),
+            tools: if native {
+                request.tools.clone().filter(|t| !t.is_empty())
+            } else {
+                None
+            },
         };
 
         let url = self.endpoint();
@@ -546,32 +737,69 @@ impl AiProvider for BedrockProvider {
                         retryable: false,
                     })?;
 
-                    let raw_content = message.content.clone().unwrap_or_default();
+                    // Strip <think>…</think> before tool parsing and display (D2.6)
+                    let raw_content =
+                        strip_think_tags(&message.content.clone().unwrap_or_default());
                     let truncated = choice.finish_reason.as_deref() == Some("length");
 
-                    // Parse tool calls from content (<tool_call> or [TOOL_CALL] formats)
-                    let tool_parsed = parse_tool_blocks(&raw_content);
+                    // Native tool calls take precedence (D9a.2); text parsing
+                    // stays as fallback so a model answering in dialect text
+                    // still works.
+                    let native_calls: Vec<ToolCallResponse> = message
+                        .tool_calls
+                        .clone()
+                        .unwrap_or_default()
+                        .into_iter()
+                        .enumerate()
+                        .map(|(i, mut tc)| {
+                            if tc.id.is_empty() {
+                                tc.id = format!("call_{}", i);
+                            }
+                            if tc.call_type.is_empty() {
+                                tc.call_type = "function".into();
+                            }
+                            tc
+                        })
+                        .collect();
 
-                    // Strip tool blocks from content (leave only natural text)
-                    let mut content = if !tool_parsed.calls.is_empty() || !tool_parsed.errors.is_empty() {
-                        strip_tool_blocks(&raw_content)
+                    let (tool_calls, content) = if !native_calls.is_empty() {
+                        (native_calls, raw_content)
                     } else {
-                        raw_content
-                    };
+                        // Parse tool calls from text, dialect-first (P2)
+                        let schemas = build_schema_map(request.tools.as_deref());
+                        let tool_parsed = parse_tool_blocks_with(
+                            &raw_content,
+                            request.model.tool_call_format,
+                            &schemas,
+                        );
 
-                    // If there were parse errors, append them to content so runtime
-                    // sees them and can feed back to the model on next iteration
-                    if !tool_parsed.errors.is_empty() {
-                        let mut error_msg = String::from("\n\n[TOOL_CALL_ERROR]\n");
-                        for err in &tool_parsed.errors {
-                            error_msg.push_str(&format!("- {}\n", err));
+                        // Strip tool blocks from content (leave only natural text)
+                        let mut content = if !tool_parsed.calls.is_empty()
+                            || !tool_parsed.errors.is_empty()
+                        {
+                            strip_tool_blocks(&raw_content)
+                        } else {
+                            raw_content
+                        };
+
+                        // If there were parse errors, append them to content so runtime
+                        // sees them and can feed back to the model on next iteration
+                        if !tool_parsed.errors.is_empty() {
+                            let registry = super::tool_registry::ToolRegistry::embedded();
+                            for err in &tool_parsed.errors {
+                                content.push_str("\n\n");
+                                content.push_str(&super::tool_errors::format_tool_call_error(
+                                    None,
+                                    err,
+                                    "tool call could not be parsed",
+                                    registry,
+                                    request.model.tool_call_format,
+                                ));
+                            }
                         }
-                        error_msg.push_str("\nExpected format:\n");
-                        error_msg.push_str("<tool_call>\n{\"name\": \"<tool_name>\", \"arguments\": {<params>}}\n</tool_call>\n");
-                        content.push_str(&error_msg);
-                    }
 
-                    let tool_calls = tool_parsed.calls;
+                        (tool_parsed.calls, content)
+                    };
 
                     // Token usage
                     let usage = parsed.usage.as_ref();
@@ -684,6 +912,7 @@ impl AiProvider for BedrockProvider {
                     coding_rank: None,
                     supports_caching: false,
                     supports_tools: true,
+                    ..Default::default()
                 };
                 super::model_catalog::enrich(&mut model);
                 model
@@ -699,14 +928,59 @@ impl AiProvider for BedrockProvider {
 // ---------------------------------------------------------------------------
 
 impl BedrockProvider {
-    /// Build the message array for Chat Completions.
-    /// - Tools are embedded as text at the END of the system prompt.
-    /// - Assistant messages with tool_calls are rendered as text with ```tool blocks.
-    /// - Tool result messages are rendered as user messages with tool output.
+    /// Build the message array for Chat Completions per the model's
+    /// tool-passing strategy (P9a).
     fn build_messages(&self, request: &AiRequest) -> Vec<ChatMsg> {
+        match request.model.tool_passing {
+            ToolPassing::NativeParam => self.build_messages_native(request),
+            ToolPassing::SystemPromptEmbed => self.build_messages_embedded(request),
+        }
+    }
+
+    /// Native path (D9a.2): history keeps real `tool_calls` and `role: "tool"`
+    /// messages — no text flattening. Tools go in the request `tools` field.
+    fn build_messages_native(&self, request: &AiRequest) -> Vec<ChatMsg> {
+        let mut out: Vec<ChatMsg> = Vec::new();
+
+        for msg in &request.messages {
+            match msg.role {
+                MessageRole::System => out.push(ChatMsg::text("system", msg.content.clone())),
+                MessageRole::User => out.push(ChatMsg::text("user", msg.content.clone())),
+                MessageRole::Assistant => out.push(ChatMsg {
+                    role: "assistant".into(),
+                    content: msg.content.clone(),
+                    tool_calls: if msg.tool_calls.is_empty() {
+                        None
+                    } else {
+                        Some(msg.tool_calls.clone())
+                    },
+                    tool_call_id: None,
+                }),
+                MessageRole::Tool => out.push(ChatMsg {
+                    role: "tool".into(),
+                    content: msg.content.clone(),
+                    tool_calls: None,
+                    tool_call_id: msg.tool_call_id.clone(),
+                }),
+            }
+        }
+
+        self.append_batching_reminder(request, &mut out);
+        out
+    }
+
+    /// Embedded path (P2, Bedrock+MiniMax):
+    /// - Tools are rendered as text at the END of the system prompt, in the
+    ///   model's tool-call dialect.
+    /// - Assistant tool calls are re-rendered in the SAME dialect (D2.4) so
+    ///   history matches what the model is told to emit and the cached prefix
+    ///   stays byte-stable.
+    /// - Tool result messages are flattened to user messages with an id label.
+    fn build_messages_embedded(&self, request: &AiRequest) -> Vec<ChatMsg> {
+        let format = request.model.tool_call_format;
         let tools_text = request.tools.as_ref()
             .filter(|t| !t.is_empty())
-            .map(|t| render_tools_as_text(t));
+            .map(|t| render_tools_as_text(t, format));
 
         let mut out: Vec<ChatMsg> = Vec::new();
 
@@ -719,36 +993,34 @@ impl BedrockProvider {
                         content.push_str("\n\n");
                         content.push_str(tt);
                     }
-                    out.push(ChatMsg { role: "system".into(), content });
+                    out.push(ChatMsg::text("system", content));
                 }
                 MessageRole::User => {
-                    out.push(ChatMsg { role: "user".into(), content: msg.content.clone() });
+                    out.push(ChatMsg::text("user", msg.content.clone()));
                 }
                 MessageRole::Assistant => {
-                    // Reconstruct assistant message: text + tool calls as <tool_call> tags
+                    // Reconstruct assistant message: text + tool calls in dialect
                     let mut content = msg.content.clone();
-                    if !msg.tool_calls.is_empty() {
-                        for tc in &msg.tool_calls {
-                            if !content.is_empty() {
-                                content.push('\n');
-                            }
-                            content.push_str("<tool_call>\n");
-                            let call_json = serde_json::json!({
-                                "name": tc.function.name,
-                                "arguments": serde_json::from_str::<serde_json::Value>(&tc.function.arguments)
-                                    .unwrap_or(serde_json::Value::Object(Default::default()))
-                            });
-                            content.push_str(&serde_json::to_string(&call_json).unwrap_or_default());
-                            content.push_str("\n</tool_call>");
+                    for tc in &msg.tool_calls {
+                        if !content.is_empty() {
+                            content.push('\n');
                         }
+                        let args: serde_json::Value =
+                            serde_json::from_str(&tc.function.arguments)
+                                .unwrap_or(serde_json::Value::Object(Default::default()));
+                        content.push_str(&super::tool_errors::render_tool_call(
+                            &tc.function.name,
+                            &args,
+                            format,
+                        ));
                     }
-                    out.push(ChatMsg { role: "assistant".into(), content });
+                    out.push(ChatMsg::text("assistant", content));
                 }
                 MessageRole::Tool => {
                     // Tool results → user message with label
                     let tool_id = msg.tool_call_id.as_deref().unwrap_or("unknown");
                     let content = format!("[tool_result id={}]\n{}", tool_id, msg.content);
-                    out.push(ChatMsg { role: "user".into(), content });
+                    out.push(ChatMsg::text("user", content));
                 }
             }
         }
@@ -756,19 +1028,22 @@ impl BedrockProvider {
         // If no system message was in the input but we have tools, prepend one
         if tools_text.is_some() && !request.messages.iter().any(|m| m.role == MessageRole::System) {
             if let Some(tt) = tools_text {
-                out.insert(0, ChatMsg { role: "system".into(), content: tt });
+                out.insert(0, ChatMsg::text("system", tt));
             }
         }
 
-        // Append batching reminder to the last user/tool message.
-        // Positioned at the very end of context so the model sees it right before generating.
+        self.append_batching_reminder(request, &mut out);
+        out
+    }
+
+    /// Append the batching reminder to the last user message. Positioned at
+    /// the very end of context (prefix-safe, D9b.4).
+    fn append_batching_reminder(&self, request: &AiRequest, out: &mut [ChatMsg]) {
         if request.tools.as_ref().map(|t| !t.is_empty()).unwrap_or(false) {
             if let Some(last) = out.iter_mut().rev().find(|m| m.role == "user") {
                 last.content.push_str("\n\n[IMPORTANT: Return ALL independent tool calls in ONE response. Do NOT call one tool then wait.]");
             }
         }
-
-        out
     }
 }
 
@@ -885,19 +1160,310 @@ mod tests {
         assert_eq!(stripped, "Thinking...");
     }
 
-    #[test]
-    fn test_render_tools_as_text() {
-        let tools = vec![ToolSchema {
-            tool_type: "function".into(),
-            function: ToolFunction {
-                name: "read_file".into(),
-                description: "Read a file".into(),
-                parameters: serde_json::json!({"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"]}),
+    fn sample_tools() -> Vec<ToolSchema> {
+        vec![
+            ToolSchema {
+                tool_type: "function".into(),
+                function: ToolFunction {
+                    name: "read_file".into(),
+                    description: "Read a file".into(),
+                    parameters: serde_json::json!({"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"]}),
+                },
             },
-        }];
-        let text = render_tools_as_text(&tools);
+            ToolSchema {
+                tool_type: "function".into(),
+                function: ToolFunction {
+                    name: "replace_str".into(),
+                    description: "Replace a string in a file".into(),
+                    parameters: serde_json::json!({
+                        "type": "object",
+                        "properties": {
+                            "path": {"type": "string"},
+                            "old_str": {"type": "string"},
+                            "new_str": {"type": "string"},
+                            "count": {"type": "integer"},
+                            "dry_run": {"type": "boolean"}
+                        },
+                        "required": ["path", "old_str", "new_str"]
+                    }),
+                },
+            },
+        ]
+    }
+
+    #[test]
+    fn test_render_tools_as_text_hermes() {
+        let text = render_tools_as_text(&sample_tools(), ToolCallFormat::HermesJson);
         assert!(text.contains("# Tools"));
+        assert!(text.contains("<tools>"));
         assert!(text.contains("read_file"));
         assert!(text.contains("<tool_call>"));
+        assert!(!text.contains("<minimax:tool_call>"));
+    }
+
+    #[test]
+    fn test_render_tools_as_text_minimax() {
+        let text = render_tools_as_text(&sample_tools(), ToolCallFormat::MiniMaxXml);
+        assert!(text.contains("<tools>"));
+        // Full JSON schema per tool inside <tool>
+        assert!(text.contains("<tool>{\"name\":\"read_file\""));
+        assert!(text.contains("<minimax:tool_call>"));
+        assert!(text.contains("<parameter name=\"param-key\">param-value</parameter>"));
+        assert!(!text.contains("<tool_call>\n{\"name\""));
+    }
+
+    // ─── P2 regression fixtures: MiniMax XML dialect ─────────────────────────
+
+    /// The exact failure class from todo.md: a multi-line `old_str` with
+    /// quotes, braces, and indentation that reliably broke JSON escaping.
+    #[test]
+    fn test_minimax_multiline_old_str_round_trips() {
+        let old_str = "    let config = Config {\n        name: \"tracelean\",\n        version: \"0.1.0\",\n    };\n    println!(\"{:?}\", config);";
+        let new_str = "    let config = Config::default();";
+        let content = format!(
+            "I'll fix that.\n<minimax:tool_call>\n<invoke name=\"replace_str\">\n<parameter name=\"path\">src/main.rs</parameter>\n<parameter name=\"old_str\">{}</parameter>\n<parameter name=\"new_str\">{}</parameter>\n</invoke>\n</minimax:tool_call>",
+            old_str, new_str
+        );
+        let tools = sample_tools();
+        let schemas = build_schema_map(Some(&tools));
+        let parsed = parse_tool_blocks_with(&content, ToolCallFormat::MiniMaxXml, &schemas);
+        assert!(parsed.errors.is_empty(), "errors: {:?}", parsed.errors);
+        assert_eq!(parsed.calls.len(), 1);
+        let args: serde_json::Value =
+            serde_json::from_str(&parsed.calls[0].function.arguments).unwrap();
+        assert_eq!(args["path"], "src/main.rs");
+        assert_eq!(args["old_str"], old_str, "old_str must survive verbatim");
+        assert_eq!(args["new_str"], new_str);
+    }
+
+    #[test]
+    fn test_minimax_cjk_emoji_values() {
+        let content = "<minimax:tool_call>\n<invoke name=\"replace_str\">\n<parameter name=\"path\">日本語/ファイル.rs</parameter>\n<parameter name=\"old_str\">let greeting = \"こんにちは 🎉\";</parameter>\n<parameter name=\"new_str\">let greeting = \"你好 🚀\";</parameter>\n</invoke>\n</minimax:tool_call>";
+        let tools = sample_tools();
+        let schemas = build_schema_map(Some(&tools));
+        let parsed = parse_tool_blocks_with(content, ToolCallFormat::MiniMaxXml, &schemas);
+        assert_eq!(parsed.calls.len(), 1);
+        let args: serde_json::Value =
+            serde_json::from_str(&parsed.calls[0].function.arguments).unwrap();
+        assert_eq!(args["path"], "日本語/ファイル.rs");
+        assert_eq!(args["old_str"], "let greeting = \"こんにちは 🎉\";");
+    }
+
+    /// A string-typed parameter whose value LOOKS like JSON must stay a string
+    /// (schema-driven coercion, D2.3 — the old parser guessed it into an object).
+    #[test]
+    fn test_minimax_json_looking_string_stays_string() {
+        let content = "<minimax:tool_call>\n<invoke name=\"replace_str\">\n<parameter name=\"path\">a.json</parameter>\n<parameter name=\"old_str\">{\"key\": \"value\"}</parameter>\n<parameter name=\"new_str\">{\"key\": \"new\"}</parameter>\n</invoke>\n</minimax:tool_call>";
+        let tools = sample_tools();
+        let schemas = build_schema_map(Some(&tools));
+        let parsed = parse_tool_blocks_with(content, ToolCallFormat::MiniMaxXml, &schemas);
+        assert_eq!(parsed.calls.len(), 1);
+        let args: serde_json::Value =
+            serde_json::from_str(&parsed.calls[0].function.arguments).unwrap();
+        assert!(args["old_str"].is_string());
+        assert_eq!(args["old_str"], "{\"key\": \"value\"}");
+    }
+
+    /// "true"/"123" as string-typed values must not be coerced to bool/number;
+    /// integer/boolean-typed params ARE coerced.
+    #[test]
+    fn test_minimax_schema_typed_coercion() {
+        let content = "<minimax:tool_call>\n<invoke name=\"replace_str\">\n<parameter name=\"path\">x</parameter>\n<parameter name=\"old_str\">true</parameter>\n<parameter name=\"new_str\">123</parameter>\n<parameter name=\"count\">2</parameter>\n<parameter name=\"dry_run\">true</parameter>\n</invoke>\n</minimax:tool_call>";
+        let tools = sample_tools();
+        let schemas = build_schema_map(Some(&tools));
+        let parsed = parse_tool_blocks_with(content, ToolCallFormat::MiniMaxXml, &schemas);
+        assert_eq!(parsed.calls.len(), 1);
+        let args: serde_json::Value =
+            serde_json::from_str(&parsed.calls[0].function.arguments).unwrap();
+        assert_eq!(args["old_str"], "true");
+        assert_eq!(args["new_str"], "123");
+        assert_eq!(args["count"], 2);
+        assert_eq!(args["dry_run"], true);
+    }
+
+    #[test]
+    fn test_minimax_two_invokes_one_block() {
+        let content = "<minimax:tool_call>\n<invoke name=\"read_file\">\n<parameter name=\"path\">a.rs</parameter>\n</invoke>\n<invoke name=\"read_file\">\n<parameter name=\"path\">b.rs</parameter>\n</invoke>\n</minimax:tool_call>";
+        let tools = sample_tools();
+        let schemas = build_schema_map(Some(&tools));
+        let parsed = parse_tool_blocks_with(content, ToolCallFormat::MiniMaxXml, &schemas);
+        assert_eq!(parsed.calls.len(), 2);
+        assert_eq!(parsed.calls[0].id, "call_0");
+        assert_eq!(parsed.calls[1].id, "call_1");
+    }
+
+    /// Full round-trip (D2.4): history rendering via render_tool_call must
+    /// parse back to identical arguments.
+    #[test]
+    fn test_minimax_render_parse_round_trip() {
+        let args = serde_json::json!({
+            "path": "src/lib.rs",
+            "old_str": "fn main() {\n    println!(\"old\");\n}",
+            "new_str": "fn main() {\n    println!(\"new\");\n}"
+        });
+        let rendered = super::super::tool_errors::render_tool_call(
+            "replace_str",
+            &args,
+            ToolCallFormat::MiniMaxXml,
+        );
+        let tools = sample_tools();
+        let schemas = build_schema_map(Some(&tools));
+        let parsed = parse_tool_blocks_with(&rendered, ToolCallFormat::MiniMaxXml, &schemas);
+        assert!(parsed.errors.is_empty(), "errors: {:?}", parsed.errors);
+        assert_eq!(parsed.calls.len(), 1);
+        let back: serde_json::Value =
+            serde_json::from_str(&parsed.calls[0].function.arguments).unwrap();
+        assert_eq!(back, args);
+    }
+
+    #[test]
+    fn test_strip_think_tags() {
+        assert_eq!(
+            strip_think_tags("<think>reasoning here</think>Hello."),
+            "Hello."
+        );
+        assert_eq!(
+            strip_think_tags("A<think>x</think>B<think>y</think>C"),
+            "ABC"
+        );
+        // Unterminated think drops the tail
+        assert_eq!(strip_think_tags("Answer.<think>still going"), "Answer.");
+        assert_eq!(strip_think_tags("No tags at all."), "No tags at all.");
+    }
+
+    // ─── P9a fixtures: native tool path ──────────────────────────────────────
+
+    #[test]
+    fn test_native_response_tool_calls_deserialize() {
+        let body = r#"{
+            "choices": [{
+                "message": {
+                    "content": "",
+                    "tool_calls": [{
+                        "id": "call_abc",
+                        "type": "function",
+                        "function": {"name": "read_file", "arguments": "{\"path\": \"a.rs\"}"}
+                    }]
+                },
+                "finish_reason": "tool_calls"
+            }],
+            "usage": {"prompt_tokens": 10, "completion_tokens": 5}
+        }"#;
+        let parsed: ChatResponse = serde_json::from_str(body).unwrap();
+        let msg = parsed.choices.unwrap().remove(0).message.unwrap();
+        let calls = msg.tool_calls.unwrap();
+        assert_eq!(calls.len(), 1);
+        assert_eq!(calls[0].function.name, "read_file");
+    }
+
+    /// D2.4: embedded MiniMax history re-renders past tool calls in the
+    /// MiniMax dialect (not Hermes), and is byte-stable across identical calls.
+    #[test]
+    fn test_embedded_minimax_history_dialect() {
+        use super::super::provider::{ChatMessage, MessageRole, ToolPassing};
+        let provider = BedrockProvider::new("test-token".into(), None);
+        let mut model = ModelConfig {
+            provider: ProviderKind::Bedrock,
+            model_id: "minimax.minimax-m2".into(),
+            ..Default::default()
+        };
+        model.tool_call_format = ToolCallFormat::MiniMaxXml;
+        model.tool_passing = ToolPassing::SystemPromptEmbed;
+
+        let request = AiRequest {
+            model,
+            messages: vec![
+                ChatMessage {
+                    role: MessageRole::System,
+                    content: "You are an agent.".into(),
+                    tool_call_id: None,
+                    tool_calls: Vec::new(),
+                },
+                ChatMessage {
+                    role: MessageRole::Assistant,
+                    content: "".into(),
+                    tool_call_id: None,
+                    tool_calls: vec![ToolCallResponse {
+                        id: "call_0".into(),
+                        call_type: "function".into(),
+                        function: ToolCallFunction {
+                            name: "read_file".into(),
+                            arguments: "{\"path\":\"a.rs\"}".into(),
+                        },
+                    }],
+                },
+                ChatMessage {
+                    role: MessageRole::Tool,
+                    content: "contents".into(),
+                    tool_call_id: Some("call_0".into()),
+                    tool_calls: Vec::new(),
+                },
+                ChatMessage {
+                    role: MessageRole::User,
+                    content: "now edit it".into(),
+                    tool_call_id: None,
+                    tool_calls: Vec::new(),
+                },
+            ],
+            stop: None,
+            tools: Some(sample_tools()),
+        };
+
+        let msgs = provider.build_messages(&request);
+        // System prompt carries the MiniMax-dialect tool block
+        assert!(msgs[0].content.contains("<tools>"));
+        assert!(msgs[0].content.contains("<minimax:tool_call>"));
+        // Assistant history re-rendered as MiniMax XML, not Hermes JSON
+        assert!(msgs[1].content.contains("<invoke name=\"read_file\">"));
+        assert!(msgs[1].content.contains("<parameter name=\"path\">a.rs</parameter>"));
+        assert!(!msgs[1].content.contains("<tool_call>"));
+        // Tool result flattened to user message
+        assert!(msgs[2].content.starts_with("[tool_result id=call_0]"));
+        assert_eq!(msgs[2].role, "user");
+        // Byte-stable across identical calls (cache precondition)
+        let again = provider.build_messages(&request);
+        for (a, b) in msgs.iter().zip(again.iter()) {
+            assert_eq!(a.content, b.content);
+        }
+    }
+
+    #[test]
+    fn test_chat_request_serializes_native_tools_and_history() {
+        let req = ChatRequest {
+            model: "eu.amazon.nova-pro-v1:0".into(),
+            messages: vec![
+                ChatMsg::text("system", "sys".into()),
+                ChatMsg {
+                    role: "assistant".into(),
+                    content: "".into(),
+                    tool_calls: Some(vec![ToolCallResponse {
+                        id: "call_0".into(),
+                        call_type: "function".into(),
+                        function: ToolCallFunction {
+                            name: "read_file".into(),
+                            arguments: "{\"path\":\"a.rs\"}".into(),
+                        },
+                    }]),
+                    tool_call_id: None,
+                },
+                ChatMsg {
+                    role: "tool".into(),
+                    content: "file contents".into(),
+                    tool_calls: None,
+                    tool_call_id: Some("call_0".into()),
+                },
+            ],
+            max_tokens: 100,
+            temperature: 0.2,
+            stop: None,
+            tools: Some(sample_tools()),
+        };
+        let json = serde_json::to_value(&req).unwrap();
+        assert_eq!(json["tools"].as_array().unwrap().len(), 2);
+        assert_eq!(json["messages"][1]["tool_calls"][0]["id"], "call_0");
+        assert_eq!(json["messages"][2]["role"], "tool");
+        assert_eq!(json["messages"][2]["tool_call_id"], "call_0");
+        // Text messages must not carry null tool fields
+        assert!(json["messages"][0].get("tool_calls").is_none());
     }
 }

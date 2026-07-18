@@ -99,6 +99,25 @@ pub struct ToolCallEvent {
     /// Agent-provided reason (UI metadata, not part of MCP protocol).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub reason: Option<String>,
+    /// Correlates Running → Completed/Failed events for the same call.
+    #[serde(default)]
+    pub call_id: Option<String>,
+    /// Truncated arguments for chip expansion (≤200 chars).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub args_preview: Option<String>,
+    /// Truncated result for chip expansion (≤200 chars).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub result_preview: Option<String>,
+}
+
+/// Truncate a string to `max` chars for event previews.
+pub fn preview_str(s: &str, max: usize) -> String {
+    if s.chars().count() > max {
+        let head: String = s.chars().take(max).collect();
+        format!("{}…", head)
+    } else {
+        s.to_string()
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -195,13 +214,21 @@ impl SharedApp {
 
 pub fn command_summary(cmd: &Command) -> String {
     match cmd {
-        Command::Insert { file, text, offset, .. } => {
-            let preview = if text.len() > 20 { format!("{}...", &text[..20]) } else { text.clone() };
-            format!("Insert @{}:{} \"{}\"", file.display(), offset, preview)
+        Command::Replace { file, at, old, new } => {
+            let preview = |s: &str| -> String {
+                let p: String = s.chars().take(20).collect();
+                if s.chars().count() > 20 { format!("{}...", p) } else { p }
+            };
+            if old.is_empty() && new.is_empty() {
+                format!("No-op @{}:{}", file.display(), at)
+            } else if old.is_empty() {
+                format!("Insert @{}:{} \"{}\"", file.display(), at, preview(new))
+            } else if new.is_empty() {
+                format!("Delete @{}:{} \"{}\"", file.display(), at, preview(old))
+            } else {
+                format!("Replace @{}:{} \"{}\" → \"{}\"", file.display(), at, preview(old), preview(new))
+            }
         }
-        Command::Delete { file, offset, len, .. } => format!("Delete @{}:{} len={}", file.display(), offset, len),
-        Command::SetCursor { file, new_pos, .. } => format!("Cursor @{}:{}:{}", file.display(), new_pos.line, new_pos.col),
-        Command::SetSelection { file, .. } => format!("Select @{}", file.display()),
         Command::CreateFile { path } => format!("Create {}", path.display()),
         Command::DeleteFile { path, .. } => format!("Delete file {}", path.display()),
         Command::RenameFile { from, to } => format!("Rename {} → {}", from.display(), to.display()),
@@ -217,9 +244,7 @@ pub fn command_summary(cmd: &Command) -> String {
 
 pub fn command_file(cmd: &Command) -> Option<String> {
     match cmd {
-        Command::Insert { file, .. } | Command::Delete { file, .. }
-        | Command::SetCursor { file, .. }
-        | Command::SetSelection { file, .. } => Some(file.to_string_lossy().to_string()),
+        Command::Replace { file, .. } => Some(file.to_string_lossy().to_string()),
         Command::CreateFile { path } | Command::DeleteFile { path, .. } => Some(path.to_string_lossy().to_string()),
         Command::RenameFile { from, .. } => Some(from.to_string_lossy().to_string()),
         Command::Batch { .. } => None,
@@ -228,9 +253,7 @@ pub fn command_file(cmd: &Command) -> Option<String> {
 
 pub fn command_affects_file(cmd: &Command, filter: &str) -> bool {
     match cmd {
-        Command::Insert { file, .. } | Command::Delete { file, .. }
-        | Command::SetCursor { file, .. }
-        | Command::SetSelection { file, .. } => file.to_string_lossy() == filter,
+        Command::Replace { file, .. } => file.to_string_lossy() == filter,
         Command::CreateFile { path } | Command::DeleteFile { path, .. } => path.to_string_lossy() == filter,
         Command::RenameFile { from, to } => from.to_string_lossy() == filter || to.to_string_lossy() == filter,
         Command::Batch { commands } => commands.iter().any(|c| command_affects_file(c, filter)),

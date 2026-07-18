@@ -277,12 +277,11 @@ mod tests {
         Lang::from_extension("rs").unwrap()
     }
 
-    /// Assert all commands are Insert or Delete only.
-    fn assert_only_insert_delete(commands: &[Command]) {
+    fn assert_only_replace(commands: &[Command]) {
         for cmd in commands {
             match cmd {
-                Command::Insert { .. } | Command::Delete { .. } => {}
-                other => panic!("Expected only Insert/Delete, got: {:?}", other),
+                Command::Replace { .. } => {}
+                other => panic!("Expected only Replace, got: {:?}", other),
             }
         }
     }
@@ -295,7 +294,7 @@ mod tests {
             AstEditOp::InsertAfter { new_text: "\nfn inserted() {}\n".into() },
         );
         let result = edit.apply(&PathBuf::from("test.rs"), source, &rust_lang()).unwrap();
-        assert_only_insert_delete(&result.commands);
+        assert_only_replace(&result.commands);
         assert!(result.new_content.contains("fn inserted() {}"));
         let hello_pos = result.new_content.find("fn hello").unwrap();
         let inserted_pos = result.new_content.find("fn inserted").unwrap();
@@ -311,7 +310,7 @@ mod tests {
             AstEditOp::DeleteNode,
         );
         let result = edit.apply(&PathBuf::from("test.rs"), source, &rust_lang()).unwrap();
-        assert_only_insert_delete(&result.commands);
+        assert_only_replace(&result.commands);
         assert!(!result.new_content.contains("delete_me"));
         assert!(result.new_content.contains("keep_me"));
         assert!(result.new_content.contains("also_keep"));
@@ -325,7 +324,7 @@ mod tests {
             AstEditOp::ReplaceNode { new_text: "fn target() {\n    new_code();\n}".into() },
         );
         let result = edit.apply(&PathBuf::from("test.rs"), source, &rust_lang()).unwrap();
-        assert_only_insert_delete(&result.commands);
+        assert_only_replace(&result.commands);
         assert!(result.new_content.contains("new_code()"));
         assert!(!result.new_content.contains("old_code()"));
     }
@@ -360,7 +359,7 @@ mod tests {
             AstEditOp::DeleteNode,
         );
         let result = edit.apply(&PathBuf::from("test.rs"), source, &rust_lang()).unwrap();
-        assert_only_insert_delete(&result.commands);
+        assert_only_replace(&result.commands);
         assert!(result.new_content.contains("first"));
         assert!(!result.new_content.contains("second"));
     }

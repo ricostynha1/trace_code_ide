@@ -74,7 +74,16 @@ pub struct TauriEventSink {
 impl EventSink for TauriEventSink {
     fn emit(&self, event: &str, payload: &str) {
         use tauri::Emitter;
-        let _ = self.app_handle.emit(event, payload);
+        // Emit JSON payloads as structured objects, not double-encoded strings —
+        // frontend listeners destructure `event.payload` directly.
+        match serde_json::from_str::<serde_json::Value>(payload) {
+            Ok(value) => {
+                let _ = self.app_handle.emit(event, value);
+            }
+            Err(_) => {
+                let _ = self.app_handle.emit(event, payload);
+            }
+        }
     }
 }
 
@@ -162,6 +171,7 @@ impl ai::provider::AiProvider for SharedMockProvider {
                 coding_rank: None,
                 supports_caching: false,
                 supports_tools: false,
+            ..Default::default()
         }])
     }
 }

@@ -529,6 +529,7 @@ async fn call_llm(messages: &[ChatMessage]) -> String {
         coding_rank: None,
         supports_caching: false,
         supports_tools: false,
+        ..Default::default()
     });
 
     let provider: Box<dyn AiProvider + Send + Sync> = match settings.active_provider {

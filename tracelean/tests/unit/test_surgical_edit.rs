@@ -1,6 +1,6 @@
 //! Tests for the Surgical Editing API.
 //! Uses a mock agent that selects editing mode via policy and executes edits.
-//! All commands produced MUST be Insert/Delete only — never Replace.
+//! All commands produced are the single char-indexed Replace primitive.
 
 use tracelean_core::commands::Command;
 use tracelean_core::parser::Lang;
@@ -17,24 +17,24 @@ use std::path::PathBuf;
 fn assert_only_insert_delete(commands: &[Command]) {
     for cmd in commands {
         match cmd {
-            Command::Insert { .. } | Command::Delete { .. } => {}
-            other => panic!("Only Insert/Delete allowed, got: {:?}", other),
+            Command::Replace { .. } => {}
+            other => panic!("Only Replace allowed, got: {:?}", other),
         }
     }
 }
 
-/// Apply Insert/Delete commands to a string buffer.
+/// Apply Replace commands (char-indexed) to a string buffer.
 fn apply_commands(content: &str, commands: &[Command]) -> String {
     let mut buf = content.to_string();
     for cmd in commands {
         match cmd {
-            Command::Delete { offset, len, .. } => {
-                buf.drain(*offset..(*offset + *len));
+            Command::Replace { at, old, new, .. } => {
+                let start = tracelean_core::commands::byte_index_at_char(&buf, *at);
+                let end = tracelean_core::commands::byte_index_at_char(&buf, *at + old.chars().count());
+                assert_eq!(&buf[start..end], old, "witness mismatch");
+                buf.replace_range(start..end, new);
             }
-            Command::Insert { offset, text, .. } => {
-                buf.insert_str(*offset, text);
-            }
-            _ => panic!("Only Insert/Delete allowed"),
+            _ => panic!("Only Replace allowed"),
         }
     }
     buf

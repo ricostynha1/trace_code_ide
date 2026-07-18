@@ -39,6 +39,10 @@ pub struct ToolJsonEntry {
     pub description: String,
     pub embedded_txt: String,
     pub input_schema: serde_json::Value,
+    /// A complete, valid arguments object — shown to the model verbatim when
+    /// it produces a malformed call for this tool.
+    #[serde(default)]
+    pub example: Option<serde_json::Value>,
 }
 
 /// The full tools.json structure.
@@ -77,6 +81,17 @@ pub struct ToolRegistry {
 }
 
 impl ToolRegistry {
+    /// Registry built from the embedded data/tools.json, lazily initialized.
+    /// Returns None only if the embedded JSON fails to parse (guarded by tests).
+    pub fn embedded() -> Option<&'static ToolRegistry> {
+        static EMBEDDED: std::sync::OnceLock<Option<ToolRegistry>> = std::sync::OnceLock::new();
+        EMBEDDED
+            .get_or_init(|| {
+                ToolRegistry::load_from_str(include_str!("../../../data/tools.json")).ok()
+            })
+            .as_ref()
+    }
+
     /// Load registry from a JSON string (e.g. from `include_str!`).
     pub fn load_from_str(json: &str) -> Result<Self, String> {
         let config: ToolsConfig = serde_json::from_str(json)
@@ -240,6 +255,22 @@ impl ToolRegistry {
     /// Get all available tool entries for embedding index building.
     pub fn all_tool_entries(&self) -> &[ToolJsonEntry] {
         &self.all_entries
+    }
+
+    /// Canonical example arguments for a tool (from tools.json).
+    pub fn example_for(&self, name: &str) -> Option<&serde_json::Value> {
+        self.all_entries
+            .iter()
+            .find(|e| e.name == name)
+            .and_then(|e| e.example.as_ref())
+    }
+
+    /// JSON schema for a tool's arguments, if known.
+    pub fn schema_for(&self, name: &str) -> Option<&serde_json::Value> {
+        self.all_entries
+            .iter()
+            .find(|e| e.name == name)
+            .map(|e| &e.input_schema)
     }
 
     /// Enforce max_schema_chars limit by purging oldest-unused dynamic tools.

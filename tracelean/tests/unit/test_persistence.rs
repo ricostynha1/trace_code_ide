@@ -1,4 +1,4 @@
-//! Unit tests for persistence (command log save/load, checkpoints)
+//! Unit tests for persistence (command log save/load, checkpoints, versioning)
 
 use tracelean_lib::commands::Command;
 use tracelean_lib::persistence;
@@ -12,16 +12,8 @@ fn save_and_load_command_log() {
     let root = tmp.path().to_path_buf();
 
     let commands = vec![
-        Command::Insert {
-            file: PathBuf::from("test.rs"),
-            offset: 0,
-            text: "hello".into(),
-        },
-        Command::Insert {
-            file: PathBuf::from("test.rs"),
-            offset: 5,
-            text: " world".into(),
-        },
+        Command::insert(PathBuf::from("test.rs"), 0, "hello".into()),
+        Command::insert(PathBuf::from("test.rs"), 5, " world".into()),
     ];
 
     persistence::save_command_log(&root, &commands).unwrap();
@@ -40,6 +32,40 @@ fn load_empty_log_returns_empty_vec() {
 }
 
 #[test]
+fn old_format_log_is_discarded_not_replayed() {
+    // A v1 log (bare JSON array of byte-offset Insert commands) must be
+    // discarded on load — replaying it under char semantics would corrupt.
+    let tmp = TempDir::new().unwrap();
+    let root = tmp.path().to_path_buf();
+    persistence::ensure_dirs(&root).unwrap();
+    let log_path = root.join(".tracelean").join("commands").join("command_log.json");
+    std::fs::write(
+        &log_path,
+        r#"[{"Insert":{"file":"test.rs","offset":0,"text":"hello"}}]"#,
+    )
+    .unwrap();
+
+    let loaded = persistence::load_command_log(&root).unwrap();
+    assert!(loaded.is_empty(), "old-format log must be discarded");
+}
+
+#[test]
+fn wrong_version_log_is_discarded() {
+    let tmp = TempDir::new().unwrap();
+    let root = tmp.path().to_path_buf();
+    persistence::ensure_dirs(&root).unwrap();
+    let log_path = root.join(".tracelean").join("commands").join("command_log.json");
+    std::fs::write(
+        &log_path,
+        r#"{"version":1,"commands":[{"Replace":{"file":"a.rs","at":0,"old":"","new":"x"}}]}"#,
+    )
+    .unwrap();
+
+    let loaded = persistence::load_command_log(&root).unwrap();
+    assert!(loaded.is_empty(), "wrong-version log must be discarded");
+}
+
+#[test]
 fn save_and_load_checkpoint() {
     let tmp = TempDir::new().unwrap();
     let root = tmp.path().to_path_buf();
@@ -47,11 +73,9 @@ fn save_and_load_checkpoint() {
     let mut state = AppState::new();
     let file = PathBuf::from("test.rs");
     state.load_file(file.clone(), String::new());
-    state.apply(Command::Insert {
-        file: file.clone(),
-        offset: 0,
-        text: "checkpoint content".into(),
-    });
+    state
+        .apply(Command::insert(file.clone(), 0, "checkpoint content".into()))
+        .unwrap();
 
     persistence::save_checkpoint(&root, &state).unwrap();
     let loaded = persistence::load_checkpoint(&root).unwrap();
@@ -71,6 +95,18 @@ fn load_checkpoint_when_none_exists() {
 }
 
 #[test]
+fn unreadable_checkpoint_is_ignored() {
+    let tmp = TempDir::new().unwrap();
+    let root = tmp.path().to_path_buf();
+    persistence::ensure_dirs(&root).unwrap();
+    let cp_path = root.join(".tracelean").join("commands").join("checkpoint.json");
+    std::fs::write(&cp_path, r#"{"state": "not a real checkpoint"}"#).unwrap();
+
+    let loaded = persistence::load_checkpoint(&root).unwrap();
+    assert!(loaded.is_none());
+}
+
+#[test]
 fn restore_state_from_log() {
     let tmp = TempDir::new().unwrap();
     let root = tmp.path().to_path_buf();
@@ -79,11 +115,7 @@ fn restore_state_from_log() {
         Command::CreateFile {
             path: PathBuf::from("test.rs"),
         },
-        Command::Insert {
-            file: PathBuf::from("test.rs"),
-            offset: 0,
-            text: "restored".into(),
-        },
+        Command::insert(PathBuf::from("test.rs"), 0, "restored".into()),
     ];
 
     persistence::save_command_log(&root, &commands).unwrap();
@@ -103,24 +135,14 @@ fn restore_state_from_checkpoint_plus_remaining() {
     let mut state = AppState::new();
     let file = PathBuf::from("test.rs");
     state.load_file(file.clone(), String::new());
-    state.apply(Command::Insert {
-        file: file.clone(),
-        offset: 0,
-        text: "first".into(),
-    });
+    state
+        .apply(Command::insert(file.clone(), 0, "first".into()))
+        .unwrap();
     persistence::save_checkpoint(&root, &state).unwrap();
 
     let commands = vec![
-        Command::Insert {
-            file: PathBuf::from("test.rs"),
-            offset: 0,
-            text: "first".into(),
-        },
-        Command::Insert {
-            file: PathBuf::from("test.rs"),
-            offset: 5,
-            text: " second".into(),
-        },
+        Command::insert(PathBuf::from("test.rs"), 0, "first".into()),
+        Command::insert(PathBuf::from("test.rs"), 5, " second".into()),
     ];
     persistence::save_command_log(&root, &commands).unwrap();
 

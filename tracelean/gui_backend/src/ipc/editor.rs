@@ -18,20 +18,28 @@ pub fn apply_command(
     state: State<'_, AppStateWrapper>,
     cache: State<'_, UndoTreeCacheWrapper>,
     command: Command,
-) -> Result<String, String> {
-    let checkpoint_info = {
+) -> Result<service::ApplyResult, String> {
+    let result = {
         let mut s = state.0.lock().map_err(|e| e.to_string())?;
         service::apply_command(&mut s, command)
+    };
+    let result = match result {
+        Ok(r) => r,
+        Err(e) => {
+            // Witness mismatch: state refused the edit. Tell the UI to resync.
+            let _ = app.emit("state-integrity-error", &e);
+            return Err(e);
+        }
     };
     invalidate_undo_cache(&cache);
     let _ = app.emit("undo-tree-changed", ());
 
-    if let Some((root, _)) = checkpoint_info {
+    if let Some((root, _)) = result.checkpoint.as_ref() {
         let s = state.0.lock().map_err(|e| e.to_string())?;
-        let _ = persistence::save_checkpoint(&root, &s);
-        let _ = persistence::save_command_log(&root, s.command_log());
+        let _ = persistence::save_checkpoint(root, &s);
+        let _ = persistence::save_command_log(root, s.command_log());
     }
-    Ok("ok".into())
+    Ok(result)
 }
 
 /// Sync filesystem for file-level operations (CreateFile/DeleteFile/RenameFile) after undo/redo.
@@ -92,10 +100,10 @@ pub fn undo(
     app: AppHandle,
     state: State<'_, AppStateWrapper>,
     cache: State<'_, UndoTreeCacheWrapper>,
-) -> Result<bool, String> {
+) -> Result<crate::core::state::EditOutcome, String> {
     let mut s = state.0.lock().map_err(|e| e.to_string())?;
     let result = s.undo();
-    if result {
+    if result.changed {
         sync_file_operations_to_disk(&s);
         invalidate_undo_cache(&cache);
         let _ = app.emit("undo-tree-changed", ());
@@ -109,10 +117,10 @@ pub fn redo(
     app: AppHandle,
     state: State<'_, AppStateWrapper>,
     cache: State<'_, UndoTreeCacheWrapper>,
-) -> Result<bool, String> {
+) -> Result<crate::core::state::EditOutcome, String> {
     let mut s = state.0.lock().map_err(|e| e.to_string())?;
     let result = s.redo();
-    if result {
+    if result.changed {
         sync_file_operations_to_disk(&s);
         invalidate_undo_cache(&cache);
         let _ = app.emit("undo-tree-changed", ());
@@ -234,10 +242,11 @@ pub fn jump_to_node(
     state: State<'_, AppStateWrapper>,
     cache: State<'_, UndoTreeCacheWrapper>,
     node_id: String,
-) -> Result<bool, String> {
+) -> Result<crate::core::state::EditOutcome, String> {
     let mut s = state.0.lock().map_err(|e| e.to_string())?;
     let id = uuid::Uuid::parse_str(&node_id).map_err(|e| e.to_string())?;
     if let Some(commands) = s.jump_to_node(id) {
+        let cursor = commands.iter().rev().find_map(|c| c.cursor_after());
         for cmd in commands {
             s.execute_raw(&cmd);
         }
@@ -245,9 +254,9 @@ pub fn jump_to_node(
         invalidate_undo_cache(&cache);
         let _ = app.emit("undo-tree-changed", ());
         let _ = app.emit("files-changed", ());
-        Ok(true)
+        Ok(crate::core::state::EditOutcome { changed: true, cursor })
     } else {
-        Ok(false)
+        Ok(crate::core::state::EditOutcome { changed: false, cursor: None })
     }
 }
 

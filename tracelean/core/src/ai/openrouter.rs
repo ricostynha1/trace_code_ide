@@ -335,6 +335,7 @@ impl AiProvider for OpenRouterProvider {
                 coding_rank: None,
                 supports_caching: false,
                 supports_tools: false,
+                ..Default::default()
             }
         }).collect();
 

@@ -145,6 +145,21 @@ impl UndoTree {
         self.current.map(|idx| &self.nodes[idx])
     }
 
+    /// Replace the current node's command in place (typing-run coalescing).
+    /// Refused if the node has children, is a commit point, or is the initial node.
+    /// Returns true if amended.
+    pub fn amend_current(&mut self, command: Command, inverse: Command) -> bool {
+        let Some(idx) = self.current else { return false };
+        let node = &mut self.nodes[idx];
+        if !node.children.is_empty() || node.commit_point.is_some() || node.parent.is_none() {
+            return false;
+        }
+        node.command = command;
+        node.inverse = inverse;
+        node.timestamp = Utc::now();
+        true
+    }
+
     /// Total number of nodes
     pub fn len(&self) -> usize {
         self.nodes.len()

@@ -316,22 +316,21 @@ async fn run_agent_turn_inner(
                     let error_details: Vec<String> = response
                         .tool_calls
                         .iter()
-                        .filter(|tc| {
-                            serde_json::from_str::<serde_json::Value>(&tc.function.arguments)
-                                .is_err()
-                        })
-                        .map(|tc| {
-                            format!(
-                                "{}({}) — invalid JSON",
-                                tc.function.name, tc.function.arguments
-                            )
+                        .filter_map(|tc| {
+                            match serde_json::from_str::<serde_json::Value>(&tc.function.arguments) {
+                                Ok(_) => None,
+                                Err(e) => Some(ai::tool_errors::format_tool_call_error(
+                                    Some(&tc.function.name),
+                                    &tc.function.arguments,
+                                    &format!("invalid JSON arguments: {}", e),
+                                    Some(&tool_registry),
+                                    model.tool_call_format,
+                                )),
+                            }
                         })
                         .collect();
 
-                    let error_msg = format!(
-                        "Error: your tool call(s) contained invalid JSON arguments and could not be executed:\n{}\nPlease retry with valid JSON.",
-                        error_details.join("\n")
-                    );
+                    let error_msg = error_details.join("\n\n");
 
                     ctx.event_sink.emit(
                         "ai-chat-message",
@@ -385,53 +384,61 @@ async fn run_agent_turn_inner(
                         }
                     }
 
-                    // Parse arguments
-                    let arguments: serde_json::Value =
-                        match serde_json::from_str(&tc.function.arguments) {
-                            Ok(v) => v,
-                            Err(parse_err) => {
-                                let error_msg = format!(
-                                    "tool_call_failed: invalid JSON for {}({}): {}",
-                                    tool_name, tc.function.arguments, parse_err
-                                );
-                                ctx.event_sink.emit(
-                                    "ai-chat-message",
-                                    &serde_json::json!({"role": "system", "content": error_msg})
-                                        .to_string(),
-                                );
-                                ctx.event_sink.emit(
-                                    "tool-call",
-                                    &serde_json::to_string(&ToolCallEvent {
-                                        tool_name: tool_name.clone(),
-                                        status: ToolCallStatus::Failed {
-                                            error: error_msg.clone(),
-                                        },
-                                        duration_ms: Some(0),
-                                        depth: 0,
-                                        reason: None,
-                                    })
-                                    .unwrap_or_default(),
-                                );
-                                messages.push(ChatMessage {
-                                    role: MessageRole::Tool,
-                                    content: format!(
-                                        "Error: invalid JSON arguments — {}",
-                                        parse_err
-                                    ),
-                                    tool_call_id: Some(tc.id.clone()),
-                                    tool_calls: Vec::new(),
-                                });
-                                consecutive_failures += 1;
-                                continue;
-                            }
-                        };
+                    // Parse arguments, then validate against the tool's schema
+                    // before execution (D3.3) — both failures produce the same
+                    // canonical actionable error.
+                    let parsed: Result<serde_json::Value, String> =
+                        serde_json::from_str(&tc.function.arguments)
+                            .map_err(|e| format!("invalid JSON arguments: {}", e))
+                            .and_then(|v: serde_json::Value| {
+                                match tool_registry.schema_for(tool_name) {
+                                    Some(schema) => ai::tool_errors::validate_args(&v, schema)
+                                        .map(|_| v)
+                                        .map_err(|e| format!("invalid arguments: {}", e)),
+                                    None => Ok(v),
+                                }
+                            });
+                    let arguments: serde_json::Value = match parsed {
+                        Ok(v) => v,
+                        Err(problem) => {
+                            let error_msg = ai::tool_errors::format_tool_call_error(
+                                Some(tool_name),
+                                &tc.function.arguments,
+                                &problem,
+                                Some(&tool_registry),
+                                model.tool_call_format,
+                            );
+                            ctx.event_sink.emit(
+                                "tool-call",
+                                &serde_json::to_string(&ToolCallEvent {
+                                    tool_name: tool_name.clone(),
+                                    status: ToolCallStatus::Failed {
+                                        error: problem.clone(),
+                                    },
+                                    duration_ms: Some(0),
+                                    depth: 0,
+                                    reason: None,
+                                    call_id: Some(tc.id.clone()),
+                                    args_preview: Some(crate::preview_str(
+                                        &tc.function.arguments,
+                                        200,
+                                    )),
+                                    result_preview: Some(crate::preview_str(&problem, 200)),
+                                })
+                                .unwrap_or_default(),
+                            );
+                            messages.push(ChatMessage {
+                                role: MessageRole::Tool,
+                                content: error_msg,
+                                tool_call_id: Some(tc.id.clone()),
+                                tool_calls: Vec::new(),
+                            });
+                            consecutive_failures += 1;
+                            continue;
+                        }
+                    };
 
-                    // Emit "running" event
-                    ctx.event_sink.emit(
-                        "ai-chat-message",
-                        &serde_json::json!({"role": "system", "content": format!("call {}", tool_name)})
-                            .to_string(),
-                    );
+                    // Emit "running" event (chip UI renders these; no prose message)
                     ctx.event_sink.emit(
                         "tool-call",
                         &serde_json::to_string(&ToolCallEvent {
@@ -440,6 +447,9 @@ async fn run_agent_turn_inner(
                             duration_ms: None,
                             depth: 0,
                             reason: None,
+                            call_id: Some(tc.id.clone()),
+                            args_preview: Some(crate::preview_str(&tc.function.arguments, 200)),
+                            result_preview: None,
                         })
                         .unwrap_or_default(),
                     );
@@ -482,12 +492,7 @@ async fn run_agent_turn_inner(
                         eprintln!("  - {} `{}` → {} ({}ms)", status_icon, tool_name, result_preview, tool_duration);
                     }
 
-                    // Emit response event
-                    ctx.event_sink.emit(
-                        "ai-chat-message",
-                        &serde_json::json!({"role": "system", "content": format!("rsp {}", tool_name)})
-                            .to_string(),
-                    );
+                    // Emit completion event
                     let status = if tool_result.success {
                         ToolCallStatus::Completed
                     } else {
@@ -503,6 +508,9 @@ async fn run_agent_turn_inner(
                             duration_ms: Some(tool_duration),
                             depth: 0,
                             reason: None,
+                            call_id: Some(tc.id.clone()),
+                            args_preview: Some(crate::preview_str(&tc.function.arguments, 200)),
+                            result_preview: Some(crate::preview_str(&tool_result.content, 200)),
                         })
                         .unwrap_or_default(),
                     );

@@ -42,6 +42,57 @@ interface LeanDiagnostic {
 
 type EditorMode = "code" | "lean" | "requirement";
 
+// --- Backend command protocol (P34) ---
+// The backend's only text primitive is Replace { file, at, old, new } where
+// `at` is a Unicode code-point (char) index — NOT a UTF-16 offset. CodeMirror
+// works in UTF-16, so we convert at the boundary.
+
+interface CursorHint {
+  file: string;
+  char_pos: number;
+}
+
+interface ApplyResult {
+  revision: number;
+  file: string | null;
+  content_hash: number | null;
+  cursor: CursorHint | null;
+}
+
+interface EditOutcome {
+  changed: boolean;
+  cursor: CursorHint | null;
+}
+
+/** Number of Unicode code points in a JS (UTF-16) string. */
+function countCodePoints(s: string): number {
+  const pairs = s.match(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g);
+  return s.length - (pairs ? pairs.length : 0);
+}
+
+/** UTF-16 offset corresponding to a code-point index. */
+function utf16OffsetOfCharIndex(s: string, charIdx: number): number {
+  let count = 0;
+  let i = 0;
+  while (i < s.length && count < charIdx) {
+    const cp = s.codePointAt(i)!;
+    i += cp > 0xffff ? 2 : 1;
+    count++;
+  }
+  return i;
+}
+
+/** FNV-1a 32-bit over UTF-8 bytes — must mirror the backend implementation. */
+function fnv1a32(s: string): number {
+  const bytes = new TextEncoder().encode(s);
+  let h = 0x811c9dc5;
+  for (let i = 0; i < bytes.length; i++) {
+    h ^= bytes[i];
+    h = Math.imul(h, 0x01000193);
+  }
+  return h >>> 0;
+}
+
 function getEditorMode(path: string): EditorMode {
   if (path.endsWith(".lean")) return "lean";
   if (path.startsWith("reqs/") && path.endsWith(".md")) return "requirement";
@@ -232,6 +283,7 @@ export function Editor({ filePath }: EditorProps) {
   const [traceLink, setTraceLink] = useState<string | null>(null);
   const syncingFromBackend = useRef(false);
   const highlightTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const sendQueue = useRef<Promise<void>>(Promise.resolve());
 
   const mode = getEditorMode(filePath);
 
@@ -283,7 +335,15 @@ export function Editor({ filePath }: EditorProps) {
     const unlisten = listen("undo-tree-changed", () => {
       syncFromBackend();
     });
-    return () => { unlisten.then((fn) => fn()); };
+    // Backend refused an edit (witness mismatch): hard resync.
+    const unlistenIntegrity = listen("state-integrity-error", (event) => {
+      console.warn("State integrity error:", event.payload);
+      syncFromBackend();
+    });
+    return () => {
+      unlisten.then((fn) => fn());
+      unlistenIntegrity.then((fn) => fn());
+    };
   }, [filePath]);
 
   // T0: Listen for undo tree hover diff — show inline diff decorations in editor
@@ -388,57 +448,55 @@ export function Editor({ filePath }: EditorProps) {
     };
   }, [filePath]);
 
-  const sendChangesAsCommands = async (update: any) => {
-    // Collect all changes and send them — avoids sequential IPC round-trips
+  const sendChangesAsCommands = (update: any) => {
+    // Every edit is a Replace { at, old, new } with `at` in char (code point)
+    // units against the pre-edit document. Positions from iterChanges are all
+    // in startState coordinates, so we apply them back-to-front: edits later
+    // in the document don't shift earlier positions.
     const commands: any[] = [];
+    const startDoc = update.startState.doc;
     update.changes.iterChanges(
       (fromA: number, toA: number, _fromB: number, _toB: number, inserted: any) => {
-        const insertedText = inserted.toString();
-        const deletedLen = toA - fromA;
-
-        if (deletedLen > 0 && insertedText.length > 0) {
-          const oldText = update.startState.doc.sliceString(fromA, toA);
-          commands.push({
-            Replace: {
-              file: filePath,
-              offset: fromA,
-              old_text: oldText,
-              new_text: insertedText,
-            },
-          });
-        } else if (deletedLen > 0) {
-          const deletedText = update.startState.doc.sliceString(fromA, toA);
-          commands.push({
-            Delete: {
-              file: filePath,
-              offset: fromA,
-              len: deletedLen,
-              deleted_text: deletedText,
-            },
-          });
-        } else if (insertedText.length > 0) {
-          commands.push({
-            Insert: {
-              file: filePath,
-              offset: fromA,
-              text: insertedText,
-            },
-          });
-        }
+        const oldText = startDoc.sliceString(fromA, toA);
+        const newText = inserted.toString();
+        if (oldText.length === 0 && newText.length === 0) return;
+        commands.push({
+          Replace: {
+            file: filePath,
+            at: countCodePoints(startDoc.sliceString(0, fromA)),
+            old: oldText,
+            new: newText,
+          },
+        });
       }
     );
-
-    // Send as batch if multiple, else single
     if (commands.length === 0) return;
-    try {
-      if (commands.length === 1) {
-        await invoke("apply_command", { command: commands[0] });
-      } else {
-        await invoke("apply_command", { command: { Batch: { commands } } });
+    commands.reverse(); // back-to-front: keeps every `at` valid sequentially
+
+    const command =
+      commands.length === 1 ? commands[0] : { Batch: { commands } };
+    // Hash of the doc as of this update — compared against the backend's hash
+    // for the same command to detect divergence.
+    const expectedHash = fnv1a32(update.state.doc.toString());
+
+    // Serialize sends: a later keystroke must never overtake an earlier one.
+    sendQueue.current = sendQueue.current.then(async () => {
+      try {
+        const result = await invoke<ApplyResult>("apply_command", { command });
+        if (
+          result.content_hash !== null &&
+          result.file === filePath &&
+          result.content_hash !== expectedHash
+        ) {
+          console.warn("Buffer divergence detected — resyncing from backend");
+          await syncFromBackend();
+        }
+      } catch (e) {
+        // Witness mismatch: the backend refused the edit. Resync to its state.
+        console.error("Command rejected, resyncing:", e);
+        await syncFromBackend();
       }
-    } catch (e) {
-      console.error("Failed to send command:", e);
-    }
+    });
   };
 
   const syncFromBackend = async () => {
@@ -461,11 +519,29 @@ export function Editor({ filePath }: EditorProps) {
     }
   };
 
+  // Place the CodeMirror cursor from a backend char-index hint and scroll it
+  // into view (used after undo/redo/jump).
+  const applyCursorHint = (cursor: CursorHint | null) => {
+    const view = viewRef.current;
+    if (!view || !cursor || cursor.file !== filePath) return;
+    const docStr = view.state.doc.toString();
+    const pos = Math.min(
+      utf16OffsetOfCharIndex(docStr, cursor.char_pos),
+      view.state.doc.length
+    );
+    view.dispatch({
+      selection: { anchor: pos },
+      scrollIntoView: true,
+    });
+    view.focus();
+  };
+
   const handleUndo = async () => {
     try {
-      const success = await invoke<boolean>("undo");
-      if (success) {
+      const outcome = await invoke<EditOutcome>("undo");
+      if (outcome.changed) {
         await syncFromBackend();
+        applyCursorHint(outcome.cursor);
       }
     } catch (e) {
       console.error("Undo failed:", e);
@@ -474,9 +550,10 @@ export function Editor({ filePath }: EditorProps) {
 
   const handleRedo = async () => {
     try {
-      const success = await invoke<boolean>("redo");
-      if (success) {
+      const outcome = await invoke<EditOutcome>("redo");
+      if (outcome.changed) {
         await syncFromBackend();
+        applyCursorHint(outcome.cursor);
       }
     } catch (e) {
       console.error("Redo failed:", e);

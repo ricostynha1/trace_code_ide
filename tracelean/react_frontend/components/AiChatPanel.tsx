@@ -8,6 +8,45 @@ interface ChatMessage {
   content: string;
   tool_call_id?: string;
   tool_calls?: ToolCallResponse[];
+  /** Present when this transcript entry is a tool-call chip, not a chat message. */
+  chip?: ToolChipData;
+}
+
+/** Backend ToolCallStatus: externally tagged, snake_case. */
+type ToolCallStatusPayload = "running" | "completed" | { failed: { error: string } };
+
+interface ToolCallEventPayload {
+  tool_name: string;
+  status: ToolCallStatusPayload;
+  duration_ms: number | null;
+  depth: number;
+  reason?: string | null;
+  call_id?: string | null;
+  args_preview?: string | null;
+  result_preview?: string | null;
+}
+
+interface ToolChipData {
+  callId: string | null;
+  toolName: string;
+  status: "running" | "completed" | "failed";
+  durationMs?: number;
+  argsPreview?: string;
+  resultPreview?: string;
+  error?: string;
+}
+
+/** Tauri event payloads may arrive as objects or as JSON strings (older
+ * emitters double-encoded). Accept both. */
+function normalizePayload<T>(payload: unknown): T | null {
+  if (typeof payload === "string") {
+    try {
+      return JSON.parse(payload) as T;
+    } catch {
+      return null;
+    }
+  }
+  return payload as T;
 }
 
 interface TokenUsage {
@@ -136,6 +175,7 @@ export function AiChatPanel({ visible, onClose }: Props) {
   const [chatInstances, setChatInstances] = useState<ChatInstance[]>([{ id: crypto.randomUUID(), messages: [], createdAt: new Date(), label: "Chat 1" }]);
   const [activeChatId, setActiveChatId] = useState<string>(chatInstances[0].id);
   const [showSwitcher, setShowSwitcher] = useState(false);
+  const [expandedChips, setExpandedChips] = useState<Record<string, boolean>>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const mockPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -174,13 +214,56 @@ export function AiChatPanel({ visible, onClose }: Props) {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Listen for intermediate chat messages (tool calls, tool responses) from backend
+  // Listen for intermediate chat messages (assistant text between tool loops,
+  // system error notices) from backend
   useEffect(() => {
-    const unlisten = listen<{ role: string; content: string }>("ai-chat-message", (event) => {
-      const { role, content } = event.payload;
-      // T3.2: Reset streaming content so tool calls appear as separate messages
+    const unlisten = listen("ai-chat-message", (event) => {
+      const payload = normalizePayload<{ role: string; content: string }>(event.payload);
+      if (!payload || typeof payload.content !== "string") return;
+      // T3.2: Reset streaming content so intermediate messages appear separately
       setStreamingContent("");
-      setMessages((prev) => [...prev, { role: role as "system" | "user" | "assistant", content }]);
+      setMessages((prev) => [...prev, { role: payload.role as "system" | "user" | "assistant", content: payload.content }]);
+    });
+    return () => { unlisten.then((fn) => fn()); };
+  }, []);
+
+  // Listen for tool-call lifecycle events: Running appends a chip, Completed/
+  // Failed updates the same chip in place (matched by call_id).
+  useEffect(() => {
+    const unlisten = listen("tool-call", (event) => {
+      const payload = normalizePayload<ToolCallEventPayload>(event.payload);
+      if (!payload || typeof payload.tool_name !== "string") return;
+
+      const status: ToolChipData["status"] =
+        payload.status === "running" ? "running"
+        : payload.status === "completed" ? "completed"
+        : "failed";
+      const chip: ToolChipData = {
+        callId: payload.call_id ?? null,
+        toolName: payload.tool_name,
+        status,
+        durationMs: payload.duration_ms ?? undefined,
+        argsPreview: payload.args_preview ?? undefined,
+        resultPreview: payload.result_preview ?? undefined,
+        error: typeof payload.status === "object" ? payload.status.failed.error : undefined,
+      };
+
+      setStreamingContent("");
+      setMessages((prev) => {
+        // Update the matching running chip in place if we have a call_id
+        if (chip.callId) {
+          for (let i = prev.length - 1; i >= 0; i--) {
+            const existing = prev[i].chip;
+            if (existing && existing.callId === chip.callId) {
+              if (existing.status !== "running") return prev; // already final
+              const next = [...prev];
+              next[i] = { ...prev[i], chip: { ...existing, ...chip } };
+              return next;
+            }
+          }
+        }
+        return [...prev, { role: "tool", content: "", chip }];
+      });
     });
     return () => { unlisten.then((fn) => fn()); };
   }, []);
@@ -264,7 +347,7 @@ export function AiChatPanel({ visible, onClose }: Props) {
         );
 
         // Streaming still uses full messages (TODO: migrate ai_chat_stream to session-based)
-        const apiMessages = newMessages.filter((m) => m.role !== "system");
+        const apiMessages = newMessages.filter((m) => m.role !== "system" && !m.chip);
         const response = await invoke<AiResponse>("ai_chat_stream", { messages: apiMessages });
         unlisten();
         const assistantMsg: ChatMessage = { role: "assistant", content: response.content };
@@ -365,54 +448,98 @@ export function AiChatPanel({ visible, onClose }: Props) {
         <div className="ai-chat-content">
           <div className="ai-messages">
             {(() => {
-              // Group consecutive system messages into batches
-              const grouped: Array<{ type: "single"; msg: ChatMessage; idx: number } | { type: "batch"; msgs: ChatMessage[]; startIdx: number }> = [];
+              // Group consecutive tool-call chips into batches
+              const grouped: Array<{ type: "single"; msg: ChatMessage; idx: number } | { type: "chips"; msgs: ChatMessage[]; startIdx: number }> = [];
               let i = 0;
               while (i < messages.length) {
-                if (messages[i].role === "system") {
+                if (messages[i].chip) {
                   const batch: ChatMessage[] = [];
                   const startIdx = i;
-                  while (i < messages.length && messages[i].role === "system") {
+                  while (i < messages.length && messages[i].chip) {
                     batch.push(messages[i]);
                     i++;
                   }
-                  if (batch.length > 1) {
-                    grouped.push({ type: "batch", msgs: batch, startIdx });
-                  } else {
-                    grouped.push({ type: "single", msg: batch[0], idx: startIdx });
-                  }
+                  grouped.push({ type: "chips", msgs: batch, startIdx });
                 } else {
                   grouped.push({ type: "single", msg: messages[i], idx: i });
                   i++;
                 }
               }
 
-              // Parse tool name from content like '→ tool_name(args)' or 'call tool_name'
-              const parseToolName = (content: string): string => {
-                const m1 = content.match(/^→\s+(\w+)/);
-                if (m1) return m1[1];
-                const m2 = content.match(/^call\s+(\w+)/i);
-                if (m2) return m2[1];
-                const m3 = content.match(/tool[_\s]call[:\s]+(\w+)/i);
-                if (m3) return m3[1];
-                return "tool_call";
+              const statusIcon = (chip: ToolChipData) =>
+                chip.status === "running" ? <span className="ai-chip-spinner">◌</span>
+                : chip.status === "completed" ? "✓"
+                : "✗";
+
+              const chipLabel = (chip: ToolChipData) => {
+                const dur = chip.durationMs != null && chip.durationMs > 0
+                  ? ` (${(chip.durationMs / 1000).toFixed(1)}s)` : "";
+                return `${chip.toolName}${dur}`;
               };
 
-              return grouped.map((entry, _gi) => {
-                if (entry.type === "batch") {
-                  // Count tool names
+              const renderChip = (msg: ChatMessage, idx: number) => {
+                const chip = msg.chip!;
+                const key = chip.callId ?? `chip-${idx}`;
+                const expanded = !!expandedChips[key];
+                return (
+                  <div key={key} className={`ai-tool-chip ai-tool-chip-${chip.status}`}>
+                    <button
+                      className="ai-tool-chip-head"
+                      onClick={() => setExpandedChips((prev) => ({ ...prev, [key]: !prev[key] }))}
+                      title={chip.status === "failed" ? chip.error : undefined}
+                    >
+                      {statusIcon(chip)} {chipLabel(chip)}
+                    </button>
+                    {expanded && (
+                      <div className="ai-tool-chip-detail">
+                        {chip.argsPreview && (
+                          <div><span className="ai-chip-detail-label">args</span><pre>{chip.argsPreview}</pre></div>
+                        )}
+                        {(chip.resultPreview || chip.error) && (
+                          <div><span className="ai-chip-detail-label">{chip.status === "failed" ? "error" : "result"}</span><pre>{chip.status === "failed" ? (chip.error ?? chip.resultPreview) : chip.resultPreview}</pre></div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              };
+
+              return grouped.map((entry) => {
+                if (entry.type === "chips") {
+                  // Summary label: read_file ×3, replace_str ×1 (1.2s total)
                   const counts: Record<string, number> = {};
+                  let totalMs = 0;
+                  let anyRunning = false;
+                  let anyFailed = false;
                   for (const msg of entry.msgs) {
-                    const name = parseToolName(msg.content);
-                    counts[name] = (counts[name] || 0) + 1;
+                    const chip = msg.chip!;
+                    counts[chip.toolName] = (counts[chip.toolName] || 0) + 1;
+                    totalMs += chip.durationMs ?? 0;
+                    if (chip.status === "running") anyRunning = true;
+                    if (chip.status === "failed") anyFailed = true;
                   }
                   const summary = Object.entries(counts)
-                    .map(([name, count]) => `${name} ×${count}`)
+                    .map(([name, count]) => count > 1 ? `${name} ×${count}` : name)
                     .join(", ");
+                  const dur = totalMs > 0 ? ` (${(totalMs / 1000).toFixed(1)}s)` : "";
+                  const batchKey = `batch-${entry.startIdx}`;
+                  const batchExpanded = !!expandedChips[batchKey];
+                  if (entry.msgs.length === 1) {
+                    return renderChip(entry.msgs[0], entry.startIdx);
+                  }
                   return (
-                    <div key={`batch-${entry.startIdx}`} className="ai-msg ai-msg-system ai-msg-tool-batch">
-                      <span className="ai-msg-tool-batch-label">batch</span>
-                      <span className="ai-msg-tool-call">call {summary}</span>
+                    <div key={batchKey} className={`ai-tool-chip-batch${anyFailed ? " ai-tool-chip-batch-failed" : ""}`}>
+                      <button
+                        className="ai-tool-chip-head"
+                        onClick={() => setExpandedChips((prev) => ({ ...prev, [batchKey]: !prev[batchKey] }))}
+                      >
+                        {anyRunning ? <span className="ai-chip-spinner">◌</span> : anyFailed ? "✗" : "✓"} {summary}{dur}
+                      </button>
+                      {batchExpanded && (
+                        <div className="ai-tool-chip-batch-items">
+                          {entry.msgs.map((msg, j) => renderChip(msg, entry.startIdx + j))}
+                        </div>
+                      )}
                     </div>
                   );
                 }

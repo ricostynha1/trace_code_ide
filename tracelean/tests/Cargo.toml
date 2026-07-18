@@ -26,6 +26,7 @@ path = "integration_cost_reduction.rs"
 tracelean_lib = { path = "../gui_backend", package = "tracelean" }
 tracelean-core = { path = "../core" }
 tempfile = "3"
+proptest = "1"
 chrono = { version = "0.4", features = ["serde"] }
 serde_json = "1"
 tokio = { version = "1", features = ["full"] }

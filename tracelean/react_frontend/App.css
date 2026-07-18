@@ -1638,3 +1638,80 @@ html, body, #root {
 .chat-switcher-new-btn:hover {
   background: #1e8ad6;
 }
+
+/* --- Tool-call chips (P1) --- */
+
+.ai-tool-chip,
+.ai-tool-chip-batch {
+  margin: 2px 0;
+  align-self: flex-start;
+  max-width: 100%;
+}
+
+.ai-tool-chip-head {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-family: inherit;
+  color: #abb2bf;
+  background: rgba(97, 175, 239, 0.08);
+  border: 1px solid rgba(97, 175, 239, 0.25);
+  border-radius: 10px;
+  padding: 2px 10px;
+  cursor: pointer;
+}
+
+.ai-tool-chip-head:hover {
+  background: rgba(97, 175, 239, 0.15);
+}
+
+.ai-tool-chip-completed > .ai-tool-chip-head {
+  border-color: rgba(152, 195, 121, 0.4);
+}
+
+.ai-tool-chip-failed > .ai-tool-chip-head,
+.ai-tool-chip-batch-failed > .ai-tool-chip-head {
+  color: #e06c75;
+  background: rgba(224, 108, 117, 0.08);
+  border-color: rgba(224, 108, 117, 0.4);
+}
+
+.ai-chip-spinner {
+  display: inline-block;
+  animation: ai-chip-spin 0.9s linear infinite;
+}
+
+@keyframes ai-chip-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.ai-tool-chip-detail {
+  margin: 4px 0 4px 12px;
+  border-left: 2px solid rgba(97, 175, 239, 0.3);
+  padding-left: 8px;
+  font-size: 11px;
+}
+
+.ai-tool-chip-detail pre {
+  margin: 2px 0 6px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: #9da5b4;
+}
+
+.ai-chip-detail-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  color: #61afef;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.ai-tool-chip-batch-items {
+  margin: 4px 0 4px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}

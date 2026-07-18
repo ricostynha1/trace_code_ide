@@ -1,112 +1,64 @@
-//! Unit tests for commands module
+//! Unit tests for the Command primitive (char-indexed Replace).
 
-use tracelean_lib::commands::Command;
+use tracelean_lib::commands::{byte_index_at_char, Command};
 use std::path::PathBuf;
 
 #[test]
-fn insert_inverse_is_delete() {
-    let cmd = Command::Insert {
+fn replace_inverse_swaps_old_new() {
+    let cmd = Command::Replace {
         file: PathBuf::from("test.rs"),
-        offset: 0,
-        text: "hello".into(),
+        at: 5,
+        old: "foo".into(),
+        new: "bar".into(),
     };
-    let inv = cmd.inverse();
-    match inv {
-        Command::Delete {
-            file,
-            offset,
-            len,
-            deleted_text,
-        } => {
+    match cmd.inverse() {
+        Command::Replace { file, at, old, new } => {
             assert_eq!(file, PathBuf::from("test.rs"));
-            assert_eq!(offset, 0);
-            assert_eq!(len, 5);
-            assert_eq!(deleted_text, "hello");
+            assert_eq!(at, 5);
+            assert_eq!(old, "bar");
+            assert_eq!(new, "foo");
         }
-        _ => panic!("Expected Delete"),
+        other => panic!("Expected Replace, got {:?}", other),
     }
 }
 
 #[test]
-fn delete_inverse_is_insert() {
-    let cmd = Command::Delete {
+fn insert_helper_is_replace_with_empty_old() {
+    let cmd = Command::insert(PathBuf::from("test.rs"), 3, "hi".into());
+    match &cmd {
+        Command::Replace { at, old, new, .. } => {
+            assert_eq!(*at, 3);
+            assert_eq!(old, "");
+            assert_eq!(new, "hi");
+        }
+        other => panic!("Expected Replace, got {:?}", other),
+    }
+    // Inverse of insert is delete of the same text
+    match cmd.inverse() {
+        Command::Replace { at, old, new, .. } => {
+            assert_eq!(at, 3);
+            assert_eq!(old, "hi");
+            assert_eq!(new, "");
+        }
+        other => panic!("Expected Replace, got {:?}", other),
+    }
+}
+
+#[test]
+fn double_inverse_is_identity() {
+    let cmd = Command::Replace {
         file: PathBuf::from("test.rs"),
-        offset: 3,
-        len: 4,
-        deleted_text: "world".into(),
+        at: 7,
+        old: "日本".into(),
+        new: "🎉".into(),
     };
-    let inv = cmd.inverse();
-    match inv {
-        Command::Insert { file, offset, text } => {
-            assert_eq!(file, PathBuf::from("test.rs"));
-            assert_eq!(offset, 3);
-            assert_eq!(text, "world");
+    match cmd.inverse().inverse() {
+        Command::Replace { at, old, new, .. } => {
+            assert_eq!(at, 7);
+            assert_eq!(old, "日本");
+            assert_eq!(new, "🎉");
         }
-        _ => panic!("Expected Insert"),
-    }
-}
-
-#[test]
-fn replace_helper_produces_batch_delete_insert() {
-    let cmd = Command::replace(
-        PathBuf::from("test.rs"),
-        5,
-        "foo".into(),
-        "bar".into(),
-    );
-    match cmd {
-        Command::Batch { commands } => {
-            assert_eq!(commands.len(), 2);
-            match &commands[0] {
-                Command::Delete { offset, len, deleted_text, .. } => {
-                    assert_eq!(*offset, 5);
-                    assert_eq!(*len, 3);
-                    assert_eq!(deleted_text, "foo");
-                }
-                _ => panic!("Expected Delete"),
-            }
-            match &commands[1] {
-                Command::Insert { offset, text, .. } => {
-                    assert_eq!(*offset, 5);
-                    assert_eq!(text, "bar");
-                }
-                _ => panic!("Expected Insert"),
-            }
-        }
-        _ => panic!("Expected Batch"),
-    }
-}
-
-#[test]
-fn replace_helper_inverse_is_batch_delete_insert_swapped() {
-    let cmd = Command::replace(
-        PathBuf::from("test.rs"),
-        5,
-        "foo".into(),
-        "bar".into(),
-    );
-    let inv = cmd.inverse();
-    // Inverse of Batch{Delete("foo"), Insert("bar")} = Batch{Delete("bar"), Insert("foo")}
-    match inv {
-        Command::Batch { commands } => {
-            assert_eq!(commands.len(), 2);
-            // Reversed order: inverse of Insert("bar") first, then inverse of Delete("foo")
-            match &commands[0] {
-                Command::Delete { offset, deleted_text, .. } => {
-                    assert_eq!(*offset, 5);
-                    assert_eq!(deleted_text, "bar");
-                }
-                _ => panic!("Expected Delete"),
-            }
-            match &commands[1] {
-                Command::Insert { offset, text, .. } => {
-                    assert_eq!(*offset, 5);
-                    assert_eq!(text, "foo");
-                }
-                _ => panic!("Expected Insert"),
-            }
-        }
-        _ => panic!("Expected Batch"),
+        other => panic!("Expected Replace, got {:?}", other),
     }
 }
 
@@ -116,8 +68,7 @@ fn rename_inverse_swaps_paths() {
         from: PathBuf::from("a.rs"),
         to: PathBuf::from("b.rs"),
     };
-    let inv = cmd.inverse();
-    match inv {
+    match cmd.inverse() {
         Command::RenameFile { from, to } => {
             assert_eq!(from, PathBuf::from("b.rs"));
             assert_eq!(to, PathBuf::from("a.rs"));
@@ -130,29 +81,24 @@ fn rename_inverse_swaps_paths() {
 fn batch_inverse_reverses_order() {
     let batch = Command::Batch {
         commands: vec![
-            Command::Insert {
-                file: PathBuf::from("a.rs"),
-                offset: 0,
-                text: "a".into(),
-            },
-            Command::Insert {
-                file: PathBuf::from("b.rs"),
-                offset: 0,
-                text: "b".into(),
-            },
+            Command::insert(PathBuf::from("a.rs"), 0, "a".into()),
+            Command::insert(PathBuf::from("b.rs"), 0, "b".into()),
         ],
     };
-    let inv = batch.inverse();
-    match inv {
+    match batch.inverse() {
         Command::Batch { commands } => {
             assert_eq!(commands.len(), 2);
             match &commands[0] {
-                Command::Delete { file, .. } => assert_eq!(file, &PathBuf::from("b.rs")),
-                _ => panic!("Expected Delete"),
+                Command::Replace { file, old, new, .. } => {
+                    assert_eq!(file, &PathBuf::from("b.rs"));
+                    assert_eq!(old, "b");
+                    assert_eq!(new, "");
+                }
+                _ => panic!("Expected Replace"),
             }
             match &commands[1] {
-                Command::Delete { file, .. } => assert_eq!(file, &PathBuf::from("a.rs")),
-                _ => panic!("Expected Delete"),
+                Command::Replace { file, .. } => assert_eq!(file, &PathBuf::from("a.rs")),
+                _ => panic!("Expected Replace"),
             }
         }
         _ => panic!("Expected Batch"),
@@ -164,8 +110,7 @@ fn create_file_inverse_is_delete_file() {
     let cmd = Command::CreateFile {
         path: PathBuf::from("new.rs"),
     };
-    let inv = cmd.inverse();
-    match inv {
+    match cmd.inverse() {
         Command::DeleteFile { path, .. } => {
             assert_eq!(path, PathBuf::from("new.rs"));
         }
@@ -174,16 +119,48 @@ fn create_file_inverse_is_delete_file() {
 }
 
 #[test]
-fn delete_file_inverse_is_create_file() {
+fn delete_file_inverse_restores_content() {
     let cmd = Command::DeleteFile {
         path: PathBuf::from("old.rs"),
         content: "fn main() {}".into(),
     };
-    let inv = cmd.inverse();
-    match inv {
-        Command::CreateFile { path } => {
-            assert_eq!(path, PathBuf::from("old.rs"));
+    // Inverse recreates the file AND restores its content.
+    match cmd.inverse() {
+        Command::Batch { commands } => {
+            assert!(matches!(&commands[0], Command::CreateFile { path } if path == &PathBuf::from("old.rs")));
+            match &commands[1] {
+                Command::Replace { at, old, new, .. } => {
+                    assert_eq!(*at, 0);
+                    assert_eq!(old, "");
+                    assert_eq!(new, "fn main() {}");
+                }
+                _ => panic!("Expected Replace"),
+            }
         }
-        _ => panic!("Expected CreateFile"),
+        _ => panic!("Expected Batch"),
     }
+}
+
+#[test]
+fn byte_index_at_char_handles_multibyte() {
+    let s = "aé日🎉b";
+    assert_eq!(byte_index_at_char(s, 0), 0);
+    assert_eq!(byte_index_at_char(s, 1), 1); // after 'a'
+    assert_eq!(byte_index_at_char(s, 2), 3); // after 'é' (2 bytes)
+    assert_eq!(byte_index_at_char(s, 3), 6); // after '日' (3 bytes)
+    assert_eq!(byte_index_at_char(s, 4), 10); // after '🎉' (4 bytes)
+    assert_eq!(byte_index_at_char(s, 5), 11);
+    assert_eq!(byte_index_at_char(s, 99), 11); // clamps to len
+}
+
+#[test]
+fn cursor_after_lands_at_end_of_new_text() {
+    let cmd = Command::Replace {
+        file: PathBuf::from("test.rs"),
+        at: 2,
+        old: "xx".into(),
+        new: "🎉🎉🎉".into(),
+    };
+    let hint = cmd.cursor_after().unwrap();
+    assert_eq!(hint.char_pos, 5); // 2 + 3 chars (not bytes, not UTF-16 units)
 }

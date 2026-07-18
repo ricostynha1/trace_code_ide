@@ -11,6 +11,33 @@ pub enum ProviderKind {
     Mock,
 }
 
+/// Text dialect the model uses for tool calls when tools are not passed
+/// natively (or as a text-parsing fallback).
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum ToolCallFormat {
+    /// MiniMax native XML: `<minimax:tool_call><invoke name=..><parameter ..>`
+    MiniMaxXml,
+    /// Hermes-style JSON inside `<tool_call>` tags.
+    #[default]
+    HermesJson,
+    /// Mistral `[TOOL_CALLS] [...]` bracket format.
+    MistralBrackets,
+}
+
+/// How tool definitions reach the model.
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum ToolPassing {
+    /// Native `tools` request parameter (structured tool_calls in response).
+    #[default]
+    NativeParam,
+    /// Tools rendered into the system prompt; calls parsed from response text.
+    /// Workaround for providers that don't cache/return native tool calls
+    /// (Bedrock Mantle + MiniMax).
+    SystemPromptEmbed,
+}
+
 /// Model configuration (selected by user in settings panel).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ModelConfig {
@@ -40,6 +67,47 @@ pub struct ModelConfig {
     /// Whether the model supports tool/function calling
     #[serde(default)]
     pub supports_tools: bool,
+    /// Total context window in tokens (input + output).
+    #[serde(default = "default_context_window")]
+    pub context_window: u32,
+    /// Whether context_window came from the catalog (false = fallback default,
+    /// UI shows a `~` marker).
+    #[serde(default)]
+    pub context_window_known: bool,
+    /// Text tool-call dialect for this model.
+    #[serde(default)]
+    pub tool_call_format: ToolCallFormat,
+    /// How tools are passed to this model.
+    #[serde(default)]
+    pub tool_passing: ToolPassing,
+}
+
+fn default_context_window() -> u32 {
+    128_000
+}
+
+impl Default for ModelConfig {
+    fn default() -> Self {
+        Self {
+            provider: ProviderKind::Mock,
+            model_id: String::new(),
+            display_name: String::new(),
+            max_tokens: 4096,
+            temperature: 0.2,
+            input_cost_per_m: 0.0,
+            output_cost_per_m: 0.0,
+            cached_input_cost_per_m: 0.0,
+            extra_params: None,
+            coding_index: None,
+            coding_rank: None,
+            supports_caching: false,
+            supports_tools: false,
+            context_window: default_context_window(),
+            context_window_known: false,
+            tool_call_format: ToolCallFormat::default(),
+            tool_passing: ToolPassing::default(),
+        }
+    }
 }
 
 /// A message in a conversation.

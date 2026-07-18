@@ -21,6 +21,11 @@ struct CatalogEntry {
     coding_rank: Option<u32>,
     ranking_model_id: Option<String>,
     pricing: Option<CatalogPricing>,
+    /// f64 because a few catalog entries carry float values (e.g. 2000000.0).
+    context_window: Option<f64>,
+    /// Optional catalog overrides for tool strategy (revert without code change).
+    tool_call_format: Option<super::provider::ToolCallFormat>,
+    tool_passing: Option<super::provider::ToolPassing>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -38,6 +43,9 @@ pub struct ModelEnrichment {
     pub supports_tools: bool,
     pub input_cost_per_m: Option<f64>,
     pub output_cost_per_m: Option<f64>,
+    pub context_window: Option<u32>,
+    pub tool_call_format: Option<super::provider::ToolCallFormat>,
+    pub tool_passing: Option<super::provider::ToolPassing>,
 }
 
 /// The compiled-in catalog JSON.
@@ -66,6 +74,12 @@ fn build_index() -> CatalogIndex {
             supports_tools: entry.supports_tool_calling,
             input_cost_per_m: entry.pricing.as_ref().and_then(|p| p.input_per_1m_tokens),
             output_cost_per_m: entry.pricing.as_ref().and_then(|p| p.output_per_1m_tokens),
+            context_window: entry
+                .context_window
+                .filter(|cw| cw.is_finite() && *cw > 0.0)
+                .map(|cw| cw as u32),
+            tool_call_format: entry.tool_call_format,
+            tool_passing: entry.tool_passing,
         };
 
         by_key.insert(entry.model.to_lowercase(), enrichment.clone());
@@ -128,7 +142,10 @@ pub fn lookup(model_id: &str) -> Option<ModelEnrichment> {
 
 /// Enrich a ModelConfig with catalog data.
 pub fn enrich(model: &mut super::provider::ModelConfig) {
-    if let Some(enrichment) = lookup(&model.model_id) {
+    use super::provider::{ProviderKind, ToolCallFormat, ToolPassing};
+
+    let enrichment = lookup(&model.model_id);
+    if let Some(ref enrichment) = enrichment {
         model.coding_index = enrichment.coding_index;
         model.coding_rank = enrichment.coding_rank;
         model.supports_caching = enrichment.supports_caching;
@@ -144,7 +161,42 @@ pub fn enrich(model: &mut super::provider::ModelConfig) {
                 model.output_cost_per_m = cost;
             }
         }
+        if let Some(cw) = enrichment.context_window {
+            if cw > 0 {
+                model.context_window = cw;
+                model.context_window_known = true;
+            }
+        }
     }
+
+    let id = model.model_id.to_lowercase();
+
+    // Tool-call dialect: catalog override wins; otherwise pick by model family.
+    model.tool_call_format = enrichment
+        .as_ref()
+        .and_then(|e| e.tool_call_format)
+        .unwrap_or_else(|| {
+            if id.contains("minimax") {
+                ToolCallFormat::MiniMaxXml
+            } else if id.contains("mistral") || id.contains("mixtral") {
+                ToolCallFormat::MistralBrackets
+            } else {
+                ToolCallFormat::HermesJson
+            }
+        });
+
+    // Tool passing: only Bedrock+MiniMax stays embedded (Mantle doesn't cache
+    // or reliably return native tool calls for MiniMax). Everything else native.
+    model.tool_passing = enrichment
+        .as_ref()
+        .and_then(|e| e.tool_passing)
+        .unwrap_or_else(|| {
+            if model.provider == ProviderKind::Bedrock && id.contains("minimax") {
+                ToolPassing::SystemPromptEmbed
+            } else {
+                ToolPassing::NativeParam
+            }
+        });
 }
 
 #[cfg(test)]

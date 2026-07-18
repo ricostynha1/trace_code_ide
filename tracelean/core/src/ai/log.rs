@@ -37,6 +37,9 @@ pub struct InteractionEntry {
     /// Full tool schemas sent to the model (for log inspection).
     #[serde(default)]
     pub tool_schemas: Vec<ToolSchema>,
+    /// How tools were passed for this request (D9a.3: diagnosable from the Log tab).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tool_passing: Option<super::provider::ToolPassing>,
 }
 
 /// Persistent interaction log.
@@ -100,6 +103,7 @@ impl InteractionLog {
             tools_provided,
             tool_names,
             tool_schemas,
+            tool_passing: Some(request.model.tool_passing),
         };
 
         self.entries.push(entry);
@@ -143,6 +147,7 @@ impl InteractionLog {
             tools_provided,
             tool_names,
             tool_schemas,
+            tool_passing: Some(request.model.tool_passing),
         };
 
         self.entries.push(entry);

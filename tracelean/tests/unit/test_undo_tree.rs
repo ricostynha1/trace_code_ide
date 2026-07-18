@@ -6,11 +6,7 @@ use chrono::Utc;
 use std::path::PathBuf;
 
 fn insert_cmd(text: &str) -> (Command, Command) {
-    let cmd = Command::Insert {
-        file: PathBuf::from("test.rs"),
-        offset: 0,
-        text: text.to_string(),
-    };
+    let cmd = Command::insert(PathBuf::from("test.rs"), 0, text.to_string());
     let inv = cmd.inverse();
     (cmd, inv)
 }

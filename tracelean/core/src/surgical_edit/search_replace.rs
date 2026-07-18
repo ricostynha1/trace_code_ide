@@ -67,11 +67,11 @@ mod tests {
     use super::*;
     use crate::commands::Command;
 
-    fn assert_only_insert_delete(commands: &[Command]) {
+    fn assert_only_replace(commands: &[Command]) {
         for cmd in commands {
             match cmd {
-                Command::Insert { .. } | Command::Delete { .. } => {}
-                other => panic!("Expected only Insert/Delete, got: {:?}", other),
+                Command::Replace { .. } => {}
+                other => panic!("Expected only Replace, got: {:?}", other),
             }
         }
     }
@@ -84,7 +84,7 @@ mod tests {
             "const MAX_SIZE: u64 = 200 * 1024 * 1024;",
         );
         let result = edit.apply(&PathBuf::from("test.rs"), source).unwrap();
-        assert_only_insert_delete(&result.commands);
+        assert_only_replace(&result.commands);
         assert!(result.new_content.contains("200 * 1024 * 1024"));
     }
 
@@ -109,7 +109,7 @@ mod tests {
         let source = "let x = 1;\nlet x = 1;\n";
         let edit = SearchReplace::new("let x = 1;", "let x = 2;").with_allow_multiple(true);
         let result = edit.apply(&PathBuf::from("test.rs"), source).unwrap();
-        assert_only_insert_delete(&result.commands);
+        assert_only_replace(&result.commands);
         assert_eq!(result.new_content.matches("let x = 2;").count(), 2);
     }
 
@@ -118,7 +118,7 @@ mod tests {
         let source = "// header\nconst VALUE: i32 = 5;\n// footer\n";
         let edit = SearchReplace::new("const VALUE: i32 = 5;", "const VALUE: i32 = 10;");
         let result = edit.apply(&PathBuf::from("test.rs"), source).unwrap();
-        assert_only_insert_delete(&result.commands);
+        assert_only_replace(&result.commands);
         assert!(result.new_content.contains("// header"));
         assert!(result.new_content.contains("// footer"));
         assert!(result.new_content.contains("const VALUE: i32 = 10;"));

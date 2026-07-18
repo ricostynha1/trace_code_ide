@@ -226,11 +226,11 @@ mod tests {
     use super::*;
     use crate::commands::Command;
 
-    fn assert_only_insert_delete(commands: &[Command]) {
+    fn assert_only_replace(commands: &[Command]) {
         for cmd in commands {
             match cmd {
-                Command::Insert { .. } | Command::Delete { .. } => {}
-                other => panic!("Expected only Insert/Delete, got: {:?}", other),
+                Command::Replace { .. } => {}
+                other => panic!("Expected only Replace, got: {:?}", other),
             }
         }
     }
@@ -241,7 +241,7 @@ mod tests {
         let patch = "@@\n pub enum UploadError {\n     EmptyFilename,\n     TooLarge,\n     IoError(String),\n }\n+\n+impl UploadError {}\n";
         let edit = PatchEdit::parse(patch).unwrap();
         let result = edit.apply(&PathBuf::from("test.rs"), source).unwrap();
-        assert_only_insert_delete(&result.commands);
+        assert_only_replace(&result.commands);
         assert!(result.new_content.contains("impl UploadError {}"));
     }
 
@@ -251,7 +251,7 @@ mod tests {
         let patch = "@@\n fn main() {\n-    let x = 1;\n+    let x = 42;\n     let y = 2;\n }\n";
         let edit = PatchEdit::parse(patch).unwrap();
         let result = edit.apply(&PathBuf::from("test.rs"), source).unwrap();
-        assert_only_insert_delete(&result.commands);
+        assert_only_replace(&result.commands);
         assert!(result.new_content.contains("let x = 42;"));
         assert!(!result.new_content.contains("let x = 1;"));
     }
@@ -277,7 +277,7 @@ mod tests {
         let patch = " line2\n line3\n+inserted\n line4\n";
         let edit = PatchEdit::parse(patch).unwrap();
         let result = edit.apply(&PathBuf::from("test.rs"), source).unwrap();
-        assert_only_insert_delete(&result.commands);
+        assert_only_replace(&result.commands);
         assert!(result.new_content.contains("line3\ninserted\nline4"));
     }
 }

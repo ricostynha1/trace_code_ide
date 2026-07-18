@@ -1,33 +1,40 @@
 //! AppState: the central application state.
-//! Has exactly ONE mutation path: apply(Command) -> Inverse.
+//! Has exactly ONE mutation path: apply(Command) -> Result<inverse>.
 //! No other way to mutate state exists.
+//!
+//! All text positions are Unicode-scalar (char) indices. Byte conversion is
+//! internal to this module.
 
-use crate::commands::{Command, Position, Range};
+use crate::commands::{byte_index_at_char, Command, CursorHint};
 use crate::undo_tree::{UndoTree, NodeId};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
 
+/// Max age of the previous edit for typing-run coalescing into one undo node.
+const COALESCE_WINDOW_MS: i64 = 750;
+
 /// In-memory representation of a file's content
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FileBuffer {
     pub content: String,
-    pub cursor: Position,
-    pub selection: Option<Range>,
 }
 
 impl FileBuffer {
     pub fn new(content: String) -> Self {
-        Self {
-            content,
-            cursor: Position { line: 0, col: 0 },
-            selection: None,
-        }
+        Self { content }
     }
 
     pub fn empty() -> Self {
         Self::new(String::new())
     }
+}
+
+/// Outcome of undo/redo: whether anything changed and where the cursor lands.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EditOutcome {
+    pub changed: bool,
+    pub cursor: Option<CursorHint>,
 }
 
 /// The application state. All fields are private to enforce command-only mutation.
@@ -41,6 +48,13 @@ pub struct AppState {
     command_log: Vec<Command>,
     /// Project root directory
     project_root: Option<PathBuf>,
+    /// Node created by the most recent apply() — coalescing target.
+    /// Cleared by undo/redo/jump so we never amend into history.
+    #[serde(default)]
+    last_applied_node: Option<NodeId>,
+    /// Runtime-only switch: disable typing-run coalescing (replay, tests).
+    #[serde(skip)]
+    coalesce_disabled: bool,
 }
 
 impl AppState {
@@ -50,101 +64,210 @@ impl AppState {
             undo_tree: UndoTree::new(),
             command_log: Vec::new(),
             project_root: None,
+            last_applied_node: None,
+            coalesce_disabled: false,
         }
     }
 
-    /// THE ONLY WAY to mutate state. No other mutation path exists.
-    /// Returns the inverse command for undo.
-    pub fn apply(&mut self, cmd: Command) -> Command {
-        let inverse = cmd.inverse();
-        self.execute(&cmd);
-        self.undo_tree.push(cmd.clone(), inverse.clone());
-        self.command_log.push(cmd);
-        inverse
+    /// Enable/disable typing-run coalescing (on by default).
+    pub fn set_coalescing(&mut self, on: bool) {
+        self.coalesce_disabled = !on;
     }
 
-    /// Execute a command's effect on state (internal only).
-    fn execute(&mut self, cmd: &Command) {
-        match cmd {
-            Command::Insert { file, offset, text } => {
-                let buffer = self.get_or_create_buffer(file);
-                let pos = (*offset).min(buffer.content.len());
-                // Clamp to char boundary
-                let pos = if buffer.content.is_char_boundary(pos) {
-                    pos
-                } else {
-                    buffer.content.floor_char_boundary(pos)
-                };
-                buffer.content.insert_str(pos, text);
+    /// THE ONLY WAY to mutate state. Returns the inverse command for undo.
+    /// Fails (without mutating) if a Replace witness does not match the buffer —
+    /// that means caller and state have diverged; the caller must resync.
+    pub fn apply(&mut self, cmd: Command) -> Result<Command, String> {
+        // Execute with rollback: a failed sub-command un-does prior sub-commands.
+        let mut applied: Vec<Command> = Vec::new();
+        if let Err(e) = self.execute_checked(&cmd, &mut applied) {
+            for done in applied.iter().rev() {
+                let _ = self.execute_one(&done.inverse());
             }
-            Command::Delete {
-                file, offset, len, ..
-            } => {
-                let buffer = self.get_or_create_buffer(file);
-                let content_len = buffer.content.len();
-                let start = (*offset).min(content_len);
-                let end = (*offset + *len).min(content_len);
-                // Clamp to char boundaries to avoid panics on multi-byte chars
-                let start = if buffer.content.is_char_boundary(start) {
-                    start
-                } else {
-                    buffer.content.floor_char_boundary(start)
-                };
-                let end = if buffer.content.is_char_boundary(end) {
-                    end
-                } else {
-                    buffer.content.ceil_char_boundary(end)
-                };
-                if start < end {
-                    buffer.content.drain(start..end);
+            return Err(e);
+        }
+
+        let inverse = cmd.inverse();
+
+        // Typing-run coalescing: merge consecutive small edits into one undo node.
+        if let Some(merged) = self.try_coalesce(&cmd) {
+            let merged_inverse = merged.inverse();
+            if self
+                .undo_tree
+                .amend_current(merged.clone(), merged_inverse)
+            {
+                if let Some(last) = self.command_log.last_mut() {
+                    *last = merged;
                 }
+                return Ok(inverse);
             }
-            Command::SetCursor { file, new_pos, .. } => {
-                let buffer = self.get_or_create_buffer(file);
-                buffer.cursor = new_pos.clone();
+        }
+
+        let node_id = self.undo_tree.push(cmd.clone(), inverse.clone());
+        self.last_applied_node = Some(node_id);
+        self.command_log.push(cmd);
+        Ok(inverse)
+    }
+
+    /// If `cmd` continues a typing/deleting run on the current node, return the
+    /// merged command. Only pure inserts merge with pure inserts and pure
+    /// deletes with pure deletes; never across files, branches, or commit points.
+    fn try_coalesce(&self, cmd: &Command) -> Option<Command> {
+        if self.coalesce_disabled {
+            return None;
+        }
+        let Command::Replace { file, at, old, new } = cmd else {
+            return None;
+        };
+        let node = self.undo_tree.current_node()?;
+        // Only amend the node the previous apply() created (leaf, no commits).
+        if self.last_applied_node != Some(node.id)
+            || !node.children.is_empty()
+            || node.commit_point.is_some()
+        {
+            return None;
+        }
+        let age_ms = (chrono::Utc::now() - node.timestamp).num_milliseconds();
+        if age_ms > COALESCE_WINDOW_MS {
+            return None;
+        }
+        let Command::Replace {
+            file: pfile,
+            at: pat,
+            old: pold,
+            new: pnew,
+        } = &node.command
+        else {
+            return None;
+        };
+        if pfile != file {
+            return None;
+        }
+
+        // Typing run: pure insert directly after the previous insert's end.
+        if old.is_empty() && !new.is_empty() && *at == pat + pnew.chars().count() {
+            return Some(Command::Replace {
+                file: file.clone(),
+                at: *pat,
+                old: pold.clone(),
+                new: format!("{}{}", pnew, new),
+            });
+        }
+        // Backspace run: pure delete ending exactly where the previous delete started.
+        if new.is_empty() && !old.is_empty() && pnew.is_empty() && !pold.is_empty() {
+            if at + old.chars().count() == *pat {
+                return Some(Command::Replace {
+                    file: file.clone(),
+                    at: *at,
+                    old: format!("{}{}", old, pold),
+                    new: String::new(),
+                });
             }
-            Command::SetSelection {
-                file, new_range, ..
-            } => {
+            // Forward-delete run: same position as the previous delete.
+            if at == pat {
+                return Some(Command::Replace {
+                    file: file.clone(),
+                    at: *at,
+                    old: format!("{}{}", pold, old),
+                    new: String::new(),
+                });
+            }
+        }
+        None
+    }
+
+    /// Execute recursively, recording each successfully applied leaf command.
+    fn execute_checked(&mut self, cmd: &Command, applied: &mut Vec<Command>) -> Result<(), String> {
+        match cmd {
+            Command::Batch { commands } => {
+                for c in commands {
+                    self.execute_checked(c, applied)?;
+                }
+                Ok(())
+            }
+            _ => {
+                self.execute_one(cmd)?;
+                applied.push(cmd.clone());
+                Ok(())
+            }
+        }
+    }
+
+    /// Execute a single non-batch command's effect on state (internal only).
+    fn execute_one(&mut self, cmd: &Command) -> Result<(), String> {
+        match cmd {
+            Command::Replace { file, at, old, new } => {
                 let buffer = self.get_or_create_buffer(file);
-                buffer.selection = Some(new_range.clone());
+                let start_byte = byte_index_at_char(&buffer.content, *at);
+                let old_char_len = old.chars().count();
+                let end_byte = byte_index_at_char(&buffer.content, *at + old_char_len);
+
+                // Witness check: the buffer must contain exactly `old` at `at`.
+                let actual = &buffer.content[start_byte..end_byte];
+                if actual != old {
+                    return Err(format!(
+                        "integrity error in {}: expected {:?} at char {}, found {:?} — state diverged, resync required",
+                        file.display(),
+                        truncate_for_error(old),
+                        at,
+                        truncate_for_error(actual),
+                    ));
+                }
+                buffer.content.replace_range(start_byte..end_byte, new);
+                Ok(())
             }
             Command::CreateFile { path } => {
                 self.buffers.insert(path.clone(), FileBuffer::empty());
+                Ok(())
             }
             Command::DeleteFile { path, .. } => {
                 self.buffers.remove(path);
+                Ok(())
             }
             Command::RenameFile { from, to } => {
                 if let Some(buffer) = self.buffers.remove(from) {
                     self.buffers.insert(to.clone(), buffer);
                 }
+                Ok(())
             }
             Command::Batch { commands } => {
                 for c in commands {
-                    self.execute(c);
+                    self.execute_one(c)?;
                 }
+                Ok(())
             }
         }
     }
 
     /// Undo: apply the inverse of the current command, move back in tree.
-    pub fn undo(&mut self) -> bool {
+    pub fn undo(&mut self) -> EditOutcome {
+        self.last_applied_node = None;
         if let Some(inverse) = self.undo_tree.undo().cloned() {
-            self.execute(&inverse);
-            true
+            if let Err(e) = self.execute_one(&inverse) {
+                eprintln!("undo integrity failure: {}", e);
+            }
+            EditOutcome {
+                changed: true,
+                cursor: inverse.cursor_after(),
+            }
         } else {
-            false
+            EditOutcome { changed: false, cursor: None }
         }
     }
 
     /// Redo: reapply the forward command, move forward in tree.
-    pub fn redo(&mut self) -> bool {
+    pub fn redo(&mut self) -> EditOutcome {
+        self.last_applied_node = None;
         if let Some(cmd) = self.undo_tree.redo().cloned() {
-            self.execute(&cmd);
-            true
+            if let Err(e) = self.execute_one(&cmd) {
+                eprintln!("redo integrity failure: {}", e);
+            }
+            EditOutcome {
+                changed: true,
+                cursor: cmd.cursor_after(),
+            }
         } else {
-            false
+            EditOutcome { changed: false, cursor: None }
         }
     }
 
@@ -156,6 +279,12 @@ impl AppState {
     /// Get buffer (read-only)
     pub fn get_buffer(&self, path: &PathBuf) -> Option<&FileBuffer> {
         self.buffers.get(path)
+    }
+
+    /// Stable FNV-1a 32-bit hash of a buffer's content (divergence detection).
+    /// Must match the frontend implementation byte-for-byte (UTF-8).
+    pub fn content_hash(&self, path: &PathBuf) -> Option<u32> {
+        self.get_content(path).map(|c| fnv1a_32(c.as_bytes()))
     }
 
     /// List all open buffers
@@ -194,27 +323,41 @@ impl AppState {
         &self.command_log
     }
 
-    /// Replay commands (for startup from persisted log)
+    /// Replay commands (for startup from persisted log).
+    /// Stops at the first failing command — a failure means the log no longer
+    /// matches the on-disk state it was recorded against.
     pub fn replay(&mut self, commands: Vec<Command>) {
+        // No coalescing during replay: the log is already in final granularity.
+        let was_disabled = self.coalesce_disabled;
+        self.coalesce_disabled = true;
         for cmd in commands {
-            self.apply(cmd);
+            if let Err(e) = self.apply(cmd) {
+                eprintln!("replay stopped: {}", e);
+                break;
+            }
         }
+        self.coalesce_disabled = was_disabled;
+        self.last_applied_node = None;
     }
 
     /// Jump to a specific undo-tree node. Returns commands needed for traversal.
     pub fn jump_to_node(&mut self, target: NodeId) -> Option<Vec<Command>> {
+        self.last_applied_node = None;
         self.undo_tree.jump_to(target)
     }
 
     /// Execute a command without recording it (used during tree traversal)
     pub fn execute_raw(&mut self, cmd: &Command) {
-        self.execute(cmd);
+        if let Err(e) = self.execute_one(cmd) {
+            eprintln!("traversal integrity failure: {}", e);
+        }
     }
 
     /// Clear undo tree and command log (reset history)
     pub fn clear_history(&mut self) {
         self.undo_tree = UndoTree::new();
         self.command_log.clear();
+        self.last_applied_node = None;
     }
 
     fn get_or_create_buffer(&mut self, path: &PathBuf) -> &mut FileBuffer {
@@ -233,7 +376,7 @@ impl AppState {
             None => return String::from("(node not found)"),
         };
         for cmd in &commands {
-            clone.execute(cmd);
+            clone.execute_raw(cmd);
         }
 
         // Diff all buffers: current vs target
@@ -266,6 +409,23 @@ impl AppState {
         }
     }
 
+    /// Compute the buffer contents at a target node (for structured diffs).
+    /// Returns (path -> content) for every buffer that differs from current.
+    pub fn buffers_at_node(&self, node_id: NodeId) -> Option<HashMap<PathBuf, String>> {
+        let mut clone = self.clone();
+        let commands = clone.undo_tree.jump_to(node_id)?;
+        for cmd in &commands {
+            clone.execute_raw(cmd);
+        }
+        Some(
+            clone
+                .buffers
+                .into_iter()
+                .map(|(p, b)| (p, b.content))
+                .collect(),
+        )
+    }
+
     /// Return a human-readable diff summary for a given undo node.
     pub fn node_diff_summary(&self, node_id: NodeId) -> String {
         if let Some(node) = self.undo_tree.get_node(node_id) {
@@ -277,32 +437,25 @@ impl AppState {
 
     fn command_diff_text(cmd: &Command) -> String {
         match cmd {
-            Command::Insert { file, offset, text } => {
-                let lines: Vec<&str> = text.lines().take(15).collect();
-                let mut out = format!("--- {}\n+++ {} @offset {}\n", file.display(), file.display(), offset);
-                for line in &lines {
-                    out.push_str(&format!("+{}\n", line));
-                }
-                if text.lines().count() > 15 {
-                    out.push_str(&format!("... (+{} more lines)\n", text.lines().count() - 15));
-                }
-                out
-            }
-            Command::Delete { file, offset, deleted_text, .. } => {
-                let lines: Vec<&str> = deleted_text.lines().take(15).collect();
-                let mut out = format!("--- {} @offset {}\n", file.display(), offset);
-                for line in &lines {
+            Command::Replace { file, at, old, new } => {
+                let mut out = format!("--- {} @char {}\n", file.display(), at);
+                for line in old.lines().take(15) {
                     out.push_str(&format!("-{}\n", line));
                 }
-                if deleted_text.lines().count() > 15 {
-                    out.push_str(&format!("... (-{} more lines)\n", deleted_text.lines().count() - 15));
+                if old.lines().count() > 15 {
+                    out.push_str(&format!("... (-{} more lines)\n", old.lines().count() - 15));
+                }
+                for line in new.lines().take(15) {
+                    out.push_str(&format!("+{}\n", line));
+                }
+                if new.lines().count() > 15 {
+                    out.push_str(&format!("... (+{} more lines)\n", new.lines().count() - 15));
                 }
                 out
             }
             Command::CreateFile { path } => format!("+++ new file: {}\n", path.display()),
             Command::DeleteFile { path, .. } => format!("--- deleted: {}\n", path.display()),
             Command::RenameFile { from, to } => format!("rename: {} → {}\n", from.display(), to.display()),
-            Command::SetCursor { .. } | Command::SetSelection { .. } => String::new(),
             Command::Batch { commands } => {
                 let mut out = String::new();
                 for (i, c) in commands.iter().take(10).enumerate() {
@@ -327,28 +480,76 @@ impl Default for AppState {
     }
 }
 
+/// FNV-1a 32-bit. Mirrored in the frontend for divergence detection.
+pub fn fnv1a_32(bytes: &[u8]) -> u32 {
+    let mut hash: u32 = 0x811c9dc5;
+    for &b in bytes {
+        hash ^= b as u32;
+        hash = hash.wrapping_mul(0x01000193);
+    }
+    hash
+}
+
+fn truncate_for_error(s: &str) -> String {
+    if s.chars().count() > 40 {
+        let head: String = s.chars().take(40).collect();
+        format!("{}…", head)
+    } else {
+        s.to_string()
+    }
+}
+
 /// Simple line-based unified diff (Myers-like LCS approach).
 /// Produces @@ hunks with context lines.
 fn simple_unified_diff(a: &[&str], b: &[&str]) -> String {
-    // LCS-based diff: find longest common subsequence indices
+    let mut out = String::new();
+    for hunk in diff_hunks(a, b, 3) {
+        out.push_str(&format!(
+            "@@ -{},{} +{},{} @@\n",
+            hunk.a_start, hunk.a_count, hunk.b_start, hunk.b_count
+        ));
+        for line in &hunk.lines {
+            out.push_str(line);
+            out.push('\n');
+        }
+    }
+    out
+}
+
+/// A rendered hunk (text form) — used by the unified-diff renderer.
+struct TextHunk {
+    a_start: usize,
+    a_count: usize,
+    b_start: usize,
+    b_count: usize,
+    lines: Vec<String>,
+}
+
+/// Structured diff op-stream shared by the text renderer and structured IPC (P5).
+#[derive(Clone, Copy, PartialEq)]
+pub enum DiffOp {
+    Keep,
+    Remove,
+    Add,
+}
+
+/// LCS diff between two line slices, as an op stream.
+pub fn diff_ops<'a>(a: &[&'a str], b: &[&'a str]) -> Vec<(DiffOp, &'a str)> {
     let n = a.len();
     let m = b.len();
 
-    // For small files, use full DP. For large files, just show all changes.
+    // For large files, fall back to full remove+add.
     if n + m > 10_000 {
-        // Fallback: show everything as remove+add
-        let mut out = String::new();
-        out.push_str(&format!("@@ -1,{} +1,{} @@\n", n, m));
+        let mut ops = Vec::with_capacity(n + m);
         for line in a {
-            out.push_str(&format!("-{}\n", line));
+            ops.push((DiffOp::Remove, *line));
         }
         for line in b {
-            out.push_str(&format!("+{}\n", line));
+            ops.push((DiffOp::Add, *line));
         }
-        return out;
+        return ops;
     }
 
-    // Build edit script via DP
     let mut dp = vec![vec![0u32; m + 1]; n + 1];
     for i in (0..n).rev() {
         for j in (0..m).rev() {
@@ -360,32 +561,31 @@ fn simple_unified_diff(a: &[&str], b: &[&str]) -> String {
         }
     }
 
-    // Generate edit operations
-    #[derive(Clone, Copy)]
-    enum Op { Keep, Remove, Add }
-    let mut ops: Vec<(Op, &str)> = Vec::new();
+    let mut ops: Vec<(DiffOp, &str)> = Vec::new();
     let (mut i, mut j) = (0, 0);
     while i < n || j < m {
         if i < n && j < m && a[i] == b[j] {
-            ops.push((Op::Keep, a[i]));
+            ops.push((DiffOp::Keep, a[i]));
             i += 1;
             j += 1;
         } else if j < m && (i >= n || dp[i][j + 1] >= dp[i + 1][j]) {
-            ops.push((Op::Add, b[j]));
+            ops.push((DiffOp::Add, b[j]));
             j += 1;
         } else {
-            ops.push((Op::Remove, a[i]));
+            ops.push((DiffOp::Remove, a[i]));
             i += 1;
         }
     }
+    ops
+}
 
-    // Format as unified diff hunks (3 lines context)
-    let context = 3;
-    let mut out = String::new();
+fn diff_hunks(a: &[&str], b: &[&str], context: usize) -> Vec<TextHunk> {
+    let ops = diff_ops(a, b);
+    let mut hunks = Vec::new();
     let mut idx = 0;
     while idx < ops.len() {
         // Find next change
-        let change_start = match ops[idx..].iter().position(|(op, _)| !matches!(op, Op::Keep)) {
+        let change_start = match ops[idx..].iter().position(|(op, _)| *op != DiffOp::Keep) {
             Some(pos) => idx + pos,
             None => break,
         };
@@ -396,12 +596,10 @@ fn simple_unified_diff(a: &[&str], b: &[&str]) -> String {
         // Find end of this hunk (include trailing context, merge nearby changes)
         let mut hunk_end = change_start;
         loop {
-            // Skip past changes
-            while hunk_end < ops.len() && !matches!(ops[hunk_end].0, Op::Keep) {
+            while hunk_end < ops.len() && ops[hunk_end].0 != DiffOp::Keep {
                 hunk_end += 1;
             }
-            // Check if next change is within context range
-            let next_change = ops[hunk_end..].iter().position(|(op, _)| !matches!(op, Op::Keep));
+            let next_change = ops[hunk_end..].iter().position(|(op, _)| *op != DiffOp::Keep);
             match next_change {
                 Some(pos) if pos <= context * 2 => {
                     hunk_end += pos;
@@ -409,7 +607,6 @@ fn simple_unified_diff(a: &[&str], b: &[&str]) -> String {
                 _ => break,
             }
         }
-        // Add trailing context
         hunk_end = (hunk_end + context).min(ops.len());
 
         // Calculate line numbers
@@ -417,34 +614,47 @@ fn simple_unified_diff(a: &[&str], b: &[&str]) -> String {
         let mut b_start = 1usize;
         for op in &ops[..hunk_start] {
             match op.0 {
-                Op::Keep => { a_start += 1; b_start += 1; }
-                Op::Remove => { a_start += 1; }
-                Op::Add => { b_start += 1; }
+                DiffOp::Keep => {
+                    a_start += 1;
+                    b_start += 1;
+                }
+                DiffOp::Remove => {
+                    a_start += 1;
+                }
+                DiffOp::Add => {
+                    b_start += 1;
+                }
             }
         }
         let mut a_count = 0usize;
         let mut b_count = 0usize;
-        for op in &ops[hunk_start..hunk_end] {
-            match op.0 {
-                Op::Keep => { a_count += 1; b_count += 1; }
-                Op::Remove => { a_count += 1; }
-                Op::Add => { b_count += 1; }
-            }
-        }
-
-        out.push_str(&format!("@@ -{},{} +{},{} @@\n", a_start, a_count, b_start, b_count));
+        let mut lines = Vec::new();
         for &(op, line) in &ops[hunk_start..hunk_end] {
             match op {
-                Op::Keep => out.push_str(&format!(" {}\n", line)),
-                Op::Remove => out.push_str(&format!("-{}\n", line)),
-                Op::Add => out.push_str(&format!("+{}\n", line)),
+                DiffOp::Keep => {
+                    a_count += 1;
+                    b_count += 1;
+                    lines.push(format!(" {}", line));
+                }
+                DiffOp::Remove => {
+                    a_count += 1;
+                    lines.push(format!("-{}", line));
+                }
+                DiffOp::Add => {
+                    b_count += 1;
+                    lines.push(format!("+{}", line));
+                }
             }
         }
 
+        hunks.push(TextHunk {
+            a_start,
+            a_count,
+            b_start,
+            b_count,
+            lines,
+        });
         idx = hunk_end;
     }
-
-    out
+    hunks
 }
-
-

@@ -15,18 +15,49 @@ const CHECKPOINT_INTERVAL: usize = 100;
 
 // --- Core Editor Operations ---
 
+/// Result of applying a command: divergence-detection data for the frontend
+/// plus checkpoint scheduling info.
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct ApplyResult {
+    /// Number of commands in the log after this apply.
+    pub revision: u64,
+    /// File the command touched (None for multi-file batches).
+    pub file: Option<String>,
+    /// FNV-1a 32 hash of that file's buffer after the apply.
+    pub content_hash: Option<u32>,
+    /// Derived cursor position after the edit.
+    pub cursor: Option<crate::commands::CursorHint>,
+    /// Set when a checkpoint should be saved (caller handles async).
+    #[serde(skip)]
+    pub checkpoint: Option<(PathBuf, usize)>,
+}
+
 /// Apply a command, auto-checkpoint if needed.
-/// Returns checkpoint info if a checkpoint should be saved (caller handles async).
-pub fn apply_command(state: &mut AppState, command: Command) -> Option<(PathBuf, usize)> {
-    state.apply(command);
+/// Fails without mutating if the command's witness doesn't match the buffer —
+/// the caller must resync its view from backend state.
+pub fn apply_command(state: &mut AppState, command: Command) -> Result<ApplyResult, String> {
+    let file = crate::command_file(&command);
+    let cursor = command.cursor_after();
+    state.apply(command)?;
+
+    let content_hash = file
+        .as_ref()
+        .and_then(|f| state.content_hash(&PathBuf::from(f)));
 
     let log_len = state.command_log().len();
+    let mut checkpoint = None;
     if log_len > 0 && log_len % CHECKPOINT_INTERVAL == 0 {
         if let Some(root) = state.project_root().cloned() {
-            return Some((root, log_len));
+            checkpoint = Some((root, log_len));
         }
     }
-    None
+    Ok(ApplyResult {
+        revision: log_len as u64,
+        file,
+        content_hash,
+        cursor,
+        checkpoint,
+    })
 }
 
 /// Open a project: restore state, parse files, return file listing.
@@ -249,7 +280,9 @@ pub fn update_requirement_status(
     }
 
     // Apply as command
-    state.apply(Command::replace(rel_path.clone(), 0, content, new_content.clone()));
+    state
+        .apply(Command::replace(rel_path.clone(), 0, content, new_content.clone()))
+        .map_err(|e| format!("Edit rejected: {}", e))?;
 
     // Write to disk
     std::fs::write(&req_file, &new_content)
@@ -279,7 +312,7 @@ pub fn update_requirement_status(
                 .map_err(|e| format!("Failed to create spec: {}", e))?;
 
             let spec_rel = PathBuf::from(format!("specs/{}.lean", req_id));
-            state.apply(Command::CreateFile { path: spec_rel });
+            let _ = state.apply(Command::CreateFile { path: spec_rel });
 
             return Ok(format!(
                 "Status updated to approved. Spec file created: specs/{}.lean",
@@ -316,7 +349,7 @@ pub fn create_requirement(
 
     let rel_path = PathBuf::from(format!("reqs/{}.md", req_id));
     state.load_file(rel_path.clone(), content);
-    state.apply(Command::CreateFile { path: rel_path });
+    let _ = state.apply(Command::CreateFile { path: rel_path });
 
     Ok(format!("Created requirement: {}", req_id))
 }

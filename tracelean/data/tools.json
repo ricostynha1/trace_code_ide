@@ -9,11 +9,22 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "query": { "type": "string", "description": "Capabilities or keyword phrases." },
-          "max_results": { "type": "integer", "default": 10 }
+          "query": {
+            "type": "string",
+            "description": "Capabilities or keyword phrases."
+          },
+          "max_results": {
+            "type": "integer",
+            "default": 10
+          }
         },
-        "required": ["query"],
+        "required": [
+          "query"
+        ],
         "additionalProperties": false
+      },
+      "example": {
+        "query": "delete a file"
       }
     },
     {
@@ -25,15 +36,36 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "path": { "type": "string", "default": "" },
-          "recursive": { "type": "boolean", "default": false },
-          "max_results": { "type": "integer", "default": 50 },
-          "offset": { "type": "integer", "default": 0 },
-          "file_filter": { "type": "string" },
-          "max_depth": { "type": "integer" }
+          "path": {
+            "type": "string",
+            "default": ""
+          },
+          "recursive": {
+            "type": "boolean",
+            "default": false
+          },
+          "max_results": {
+            "type": "integer",
+            "default": 50
+          },
+          "offset": {
+            "type": "integer",
+            "default": 0
+          },
+          "file_filter": {
+            "type": "string"
+          },
+          "max_depth": {
+            "type": "integer"
+          }
         },
         "required": [],
         "additionalProperties": false
+      },
+      "example": {
+        "path": "src",
+        "recursive": true,
+        "file_filter": "*.rs"
       }
     },
     {
@@ -45,18 +77,53 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "query": { "type": "string" },
-          "mode": { "type": "string", "enum": ["auto", "regex", "semantic"], "default": "auto" },
-          "case_sensitive": { "type": "boolean", "default": false },
-          "max_results": { "type": "integer", "default": 20 },
-          "offset": { "type": "integer", "default": 0 },
-          "path": { "type": "string" },
-          "file_filter": { "type": "string" },
-          "max_depth": { "type": "integer" },
-          "context": { "type": "integer", "default": 1 }
+          "query": {
+            "type": "string"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "regex",
+              "semantic"
+            ],
+            "default": "auto"
+          },
+          "case_sensitive": {
+            "type": "boolean",
+            "default": false
+          },
+          "max_results": {
+            "type": "integer",
+            "default": 20
+          },
+          "offset": {
+            "type": "integer",
+            "default": 0
+          },
+          "path": {
+            "type": "string"
+          },
+          "file_filter": {
+            "type": "string"
+          },
+          "max_depth": {
+            "type": "integer"
+          },
+          "context": {
+            "type": "integer",
+            "default": 1
+          }
         },
-        "required": ["query"],
+        "required": [
+          "query"
+        ],
         "additionalProperties": false
+      },
+      "example": {
+        "query": "fn main",
+        "mode": "regex",
+        "path": "src"
       }
     },
     {
@@ -68,12 +135,27 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "path": { "type": "string" },
-          "offset": { "type": "integer", "default": 0 },
-          "max_results": { "type": "integer", "default": 200 }
+          "path": {
+            "type": "string"
+          },
+          "offset": {
+            "type": "integer",
+            "default": 0
+          },
+          "max_results": {
+            "type": "integer",
+            "default": 200
+          }
         },
-        "required": ["path"],
+        "required": [
+          "path"
+        ],
         "additionalProperties": false
+      },
+      "example": {
+        "path": "src/main.rs",
+        "offset": 0,
+        "max_results": 100
       }
     },
     {
@@ -85,13 +167,32 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "path": { "type": "string" },
-          "text": { "type": "string" },
-          "start": { "type": "integer", "description": "First line to replace (inclusive). Negative = from end." },
-          "end": { "type": "integer", "description": "Last line to replace (exclusive). Negative = from end." }
+          "path": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "start": {
+            "type": "integer",
+            "description": "First line to replace (inclusive). Negative = from end."
+          },
+          "end": {
+            "type": "integer",
+            "description": "Last line to replace (exclusive). Negative = from end."
+          }
         },
-        "required": ["path", "text"],
+        "required": [
+          "path",
+          "text"
+        ],
         "additionalProperties": false
+      },
+      "example": {
+        "path": "src/main.rs",
+        "start": 3,
+        "end": 5,
+        "text": "fn new_code() {\n    todo!()\n}\n"
       }
     },
     {
@@ -103,12 +204,29 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "path": { "type": "string" },
-          "old_str": { "type": "string", "description": "Exact text to find (must match once)." },
-          "new_str": { "type": "string", "description": "Replacement text." }
+          "path": {
+            "type": "string"
+          },
+          "old_str": {
+            "type": "string",
+            "description": "Exact text to find (must match once)."
+          },
+          "new_str": {
+            "type": "string",
+            "description": "Replacement text."
+          }
         },
-        "required": ["path", "old_str", "new_str"],
+        "required": [
+          "path",
+          "old_str",
+          "new_str"
+        ],
         "additionalProperties": false
+      },
+      "example": {
+        "path": "src/main.rs",
+        "old_str": "let x = 1;",
+        "new_str": "let x = 42;"
       }
     },
     {
@@ -120,14 +238,33 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "command": { "type": "string" },
-          "cwd": { "type": "string" },
-          "timeout_secs": { "type": "integer", "default": 30 },
-          "head_lines": { "type": "integer", "default": 50 },
-          "tail_lines": { "type": "integer", "default": 30 }
+          "command": {
+            "type": "string"
+          },
+          "cwd": {
+            "type": "string"
+          },
+          "timeout_secs": {
+            "type": "integer",
+            "default": 30
+          },
+          "head_lines": {
+            "type": "integer",
+            "default": 50
+          },
+          "tail_lines": {
+            "type": "integer",
+            "default": 30
+          }
         },
-        "required": ["command"],
+        "required": [
+          "command"
+        ],
         "additionalProperties": false
+      },
+      "example": {
+        "command": "cargo test",
+        "timeout_secs": 60
       }
     },
     {
@@ -139,10 +276,18 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "tool_name": { "type": "string", "description": "Name of the tool to get help for." }
+          "tool_name": {
+            "type": "string",
+            "description": "Name of the tool to get help for."
+          }
         },
-        "required": ["tool_name"],
+        "required": [
+          "tool_name"
+        ],
         "additionalProperties": false
+      },
+      "example": {
+        "tool_name": "edit_file"
       }
     }
   ],
@@ -156,10 +301,18 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "path": { "type": "string", "description": "Relative file path to delete." }
+          "path": {
+            "type": "string",
+            "description": "Relative file path to delete."
+          }
         },
-        "required": ["path"],
+        "required": [
+          "path"
+        ],
         "additionalProperties": false
+      },
+      "example": {
+        "path": "src/obsolete.rs"
       }
     },
     {
@@ -171,10 +324,18 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "req_id": { "type": "string", "description": "Requirement ID (e.g. REQ-01)." }
+          "req_id": {
+            "type": "string",
+            "description": "Requirement ID (e.g. REQ-01)."
+          }
         },
-        "required": ["req_id"],
+        "required": [
+          "req_id"
+        ],
         "additionalProperties": false
+      },
+      "example": {
+        "req_id": "REQ-01"
       }
     },
     {
@@ -186,11 +347,24 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "file": { "type": "string", "description": "File containing the element." },
-          "name": { "type": "string", "description": "Symbol name." }
+          "file": {
+            "type": "string",
+            "description": "File containing the element."
+          },
+          "name": {
+            "type": "string",
+            "description": "Symbol name."
+          }
         },
-        "required": ["file", "name"],
+        "required": [
+          "file",
+          "name"
+        ],
         "additionalProperties": false
+      },
+      "example": {
+        "file": "src/auth.rs",
+        "name": "login"
       }
     },
     {
@@ -204,7 +378,8 @@
         "properties": {},
         "required": [],
         "additionalProperties": false
-      }
+      },
+      "example": {}
     },
     {
       "name": "get_symbols",
@@ -215,10 +390,18 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "path": { "type": "string", "description": "Relative file path." }
+          "path": {
+            "type": "string",
+            "description": "Relative file path."
+          }
         },
-        "required": ["path"],
+        "required": [
+          "path"
+        ],
         "additionalProperties": false
+      },
+      "example": {
+        "path": "src/types.rs"
       }
     }
   ]

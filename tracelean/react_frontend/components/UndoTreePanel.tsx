@@ -249,8 +249,11 @@ export function UndoTreePanel({ visible, onClose, onNodeJump, onFileSelect, curr
 
   const handleJump = async (nodeId: string, file: string | null) => {
     try {
-      const success = await invoke<boolean>("jump_to_node", { nodeId });
-      if (success) {
+      const outcome = await invoke<{ changed: boolean; cursor: { file: string; char_pos: number } | null }>(
+        "jump_to_node",
+        { nodeId }
+      );
+      if (outcome.changed) {
         // Only switch file if the jump target is a different file than currently active
         if (file && file !== currentFile) onFileSelect(file);
         await refresh();

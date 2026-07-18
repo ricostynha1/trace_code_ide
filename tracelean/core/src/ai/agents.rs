@@ -342,6 +342,7 @@ fn build_request(system_prompt: &str, user_content: &str) -> AiRequest {
         coding_rank: None,
         supports_caching: false,
         supports_tools: false,
+        ..Default::default()
     };
 
     AiRequest {

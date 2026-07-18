@@ -195,7 +195,7 @@ impl AcpClientManager {
         let file_exists = full_path.exists() || state.get_content(&rel_path).is_some();
 
         if !file_exists {
-            state.apply(Command::CreateFile { path: rel_path.clone() });
+            let _ = state.apply(Command::CreateFile { path: rel_path.clone() });
         }
 
         // Get existing content from buffer or disk
@@ -211,7 +211,9 @@ impl AcpClientManager {
         }
 
         // Apply as command
-        state.apply(Command::replace(rel_path.clone(), 0, existing, content.to_string()));
+        state
+            .apply(Command::replace(rel_path.clone(), 0, existing, content.to_string()))
+            .map_err(|e| format!("Edit rejected: {}", e))?;
 
         // Write to disk
         std::fs::write(&full_path, content)

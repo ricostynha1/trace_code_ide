@@ -1,7 +1,7 @@
 //! Integration tests: Surgical Edit ↔ Undo Tree interaction.
 //!
 //! Scenario: user types words, undoes, then agent makes surgical edits.
-//! ALL commands are Insert/Delete only. Undo = apply inverse (Insert↔Delete).
+//! ALL commands are the single Replace primitive. Undo = apply inverse (swap old/new).
 //! Verifies ALL states reachable via undo/redo/jump_to.
 
 use tracelean_core::commands::Command;
@@ -15,15 +15,15 @@ use std::path::PathBuf;
 
 /// Apply surgical edit commands into AppState. Returns node IDs created.
 fn apply_surgical(state: &mut AppState, commands: Vec<Command>) -> Vec<NodeId> {
-    // Validate: only Insert/Delete
+    // Validate: only Replace
     for cmd in &commands {
         match cmd {
-            Command::Insert { .. } | Command::Delete { .. } => {}
-            other => panic!("Surgical edit produced non-Insert/Delete: {:?}", other),
+            Command::Replace { .. } => {}
+            other => panic!("Surgical edit produced non-Replace: {:?}", other),
         }
     }
     commands.into_iter().map(|cmd| {
-        state.apply(cmd);
+        state.apply(cmd).expect("witness must match");
         state.undo_tree().current_node().unwrap().id
     }).collect()
 }
@@ -33,30 +33,31 @@ fn apply_surgical(state: &mut AppState, commands: Vec<Command>) -> Vec<NodeId> {
 #[test]
 fn test_user_edits_undo_agent_edit_all_states_reachable() {
     let mut state = AppState::new();
+    state.set_coalescing(false);
     let path = PathBuf::from("src/main.rs");
     state.load_file(path.clone(), String::new());
 
     // User types "fn " (Insert at 0)
-    state.apply(Command::Insert { file: path.clone(), offset: 0, text: "fn ".into() });
+    state.apply(Command::insert(path.clone(), 0, "fn ".into())).unwrap();
     let node_w1 = state.undo_tree().current_node().unwrap().id;
     assert_eq!(state.get_content(&path).unwrap(), "fn ");
 
     // User types "hello" (Insert at 3)
-    state.apply(Command::Insert { file: path.clone(), offset: 3, text: "hello".into() });
+    state.apply(Command::insert(path.clone(), 3, "hello".into())).unwrap();
     let node_w2 = state.undo_tree().current_node().unwrap().id;
     assert_eq!(state.get_content(&path).unwrap(), "fn hello");
 
     // User types "() {}" (Insert at 8)
-    state.apply(Command::Insert { file: path.clone(), offset: 8, text: "() {}".into() });
+    state.apply(Command::insert(path.clone(), 8, "() {}".into())).unwrap();
     let node_w3 = state.undo_tree().current_node().unwrap().id;
     assert_eq!(state.get_content(&path).unwrap(), "fn hello() {}");
 
     // UNDO "() {}"
-    assert!(state.undo());
+    assert!(state.undo().changed);
     assert_eq!(state.get_content(&path).unwrap(), "fn hello");
 
     // UNDO "hello"
-    assert!(state.undo());
+    assert!(state.undo().changed);
     assert_eq!(state.get_content(&path).unwrap(), "fn ");
 
     // Agent: search&replace "fn " → "fn main() {\n    println!(\"hi\");\n}\n"
@@ -73,13 +74,13 @@ fn test_user_edits_undo_agent_edit_all_states_reachable() {
 
     // Undo all agent commands
     for _ in &agent_nodes {
-        assert!(state.undo());
+        assert!(state.undo().changed);
     }
     assert_eq!(state.get_content(&path).unwrap(), "fn ");
 
     // Redo → goes to agent branch
     for _ in &agent_nodes {
-        assert!(state.redo());
+        assert!(state.redo().changed);
     }
     assert_eq!(state.get_content(&path).unwrap(), "fn main() {\n    println!(\"hi\");\n}\n");
 
@@ -109,15 +110,16 @@ fn test_user_edits_undo_agent_edit_all_states_reachable() {
 #[test]
 fn test_ast_edit_branching_in_undo_tree() {
     let mut state = AppState::new();
+    state.set_coalescing(false);
     let path = PathBuf::from("src/lib.rs");
     state.load_file(path.clone(), "fn alpha() {\n    v1();\n}\n".into());
 
     // User adds beta function
-    state.apply(Command::Insert {
-        file: path.clone(),
-        offset: state.get_content(&path).unwrap().len(),
-        text: "\nfn beta() {\n    original();\n}\n".into(),
-    });
+    state.apply(Command::insert(
+        path.clone(),
+        state.get_content(&path).unwrap().chars().count(),
+        "\nfn beta() {\n    original();\n}\n".into(),
+    )).unwrap();
     let node_beta_added = state.undo_tree().current_node().unwrap().id;
 
     // User modifies beta via search&replace
@@ -129,7 +131,7 @@ fn test_ast_edit_branching_in_undo_tree() {
 
     // Undo all modification commands
     for _ in &mod_nodes {
-        assert!(state.undo());
+        assert!(state.undo().changed);
     }
     assert!(state.get_content(&path).unwrap().contains("original()"));
 
@@ -171,6 +173,7 @@ fn test_ast_edit_branching_in_undo_tree() {
 #[test]
 fn test_patch_edit_undo_roundtrip() {
     let mut state = AppState::new();
+    state.set_coalescing(false);
     let path = PathBuf::from("src/config.rs");
     let original = "const A: u32 = 1;\nconst B: u32 = 2;\nconst C: u32 = 3;\n";
     state.load_file(path.clone(), original.into());
@@ -183,11 +186,11 @@ fn test_patch_edit_undo_roundtrip() {
     assert!(state.get_content(&path).unwrap().contains("const B: u32 = 20;"));
 
     // Undo → back to original
-    for _ in &nodes { assert!(state.undo()); }
+    for _ in &nodes { assert!(state.undo().changed); }
     assert_eq!(state.get_content(&path).unwrap(), original);
 
     // Redo → back to patched
-    for _ in &nodes { assert!(state.redo()); }
+    for _ in &nodes { assert!(state.redo().changed); }
     assert!(state.get_content(&path).unwrap().contains("const B: u32 = 20;"));
 }
 
@@ -196,15 +199,12 @@ fn test_patch_edit_undo_roundtrip() {
 #[test]
 fn test_interleaved_user_and_agent_edits_undo_all() {
     let mut state = AppState::new();
+    state.set_coalescing(false);
     let path = PathBuf::from("src/app.rs");
     state.load_file(path.clone(), "fn start() {}\n".into());
 
     // User edit 1: add function
-    state.apply(Command::Insert {
-        file: path.clone(),
-        offset: 14,
-        text: "\nfn user_fn() {}\n".into(),
-    });
+    state.apply(Command::insert(path.clone(), 14, "\nfn user_fn() {}\n".into())).unwrap();
     let _node_user1 = state.undo_tree().current_node().unwrap().id;
 
     // Agent edit 1: search & replace
@@ -214,11 +214,7 @@ fn test_interleaved_user_and_agent_edits_undo_all() {
     let agent1_nodes = apply_surgical(&mut state, result.commands);
 
     // User edit 2: insert comment
-    state.apply(Command::Insert {
-        file: path.clone(),
-        offset: 0,
-        text: "// app module\n".into(),
-    });
+    state.apply(Command::insert(path.clone(), 0, "// app module\n".into())).unwrap();
 
     // Agent edit 2: AST edit on user_fn
     let content = state.get_content(&path).unwrap().to_string();
@@ -238,40 +234,40 @@ fn test_interleaved_user_and_agent_edits_undo_all() {
 
     // === Undo ALL back to start ===
     // agent2
-    for _ in &agent2_nodes { assert!(state.undo()); }
+    for _ in &agent2_nodes { assert!(state.undo().changed); }
     let content = state.get_content(&path).unwrap();
     assert!(content.contains("fn user_fn() {}"));
     assert!(content.contains("// app module"));
 
     // user2 (comment)
-    assert!(state.undo());
+    assert!(state.undo().changed);
     let content = state.get_content(&path).unwrap();
     assert!(!content.contains("// app module"));
     assert!(content.contains("init()"));
 
     // agent1
-    for _ in &agent1_nodes { assert!(state.undo()); }
+    for _ in &agent1_nodes { assert!(state.undo().changed); }
     let content = state.get_content(&path).unwrap();
     assert!(content.contains("fn start() {}"));
     assert!(content.contains("fn user_fn() {}"));
 
     // user1
-    assert!(state.undo());
+    assert!(state.undo().changed);
     assert_eq!(state.get_content(&path).unwrap(), "fn start() {}\n");
 
     // root
-    assert!(!state.undo());
+    assert!(!state.undo().changed);
 
     // === Redo ALL forward ===
-    assert!(state.redo()); // user1
+    assert!(state.redo().changed); // user1
     assert!(state.get_content(&path).unwrap().contains("fn user_fn() {}"));
-    for _ in &agent1_nodes { assert!(state.redo()); } // agent1
+    for _ in &agent1_nodes { assert!(state.redo().changed); } // agent1
     assert!(state.get_content(&path).unwrap().contains("init()"));
-    assert!(state.redo()); // user2
+    assert!(state.redo().changed); // user2
     assert!(state.get_content(&path).unwrap().contains("// app module"));
-    for _ in &agent2_nodes { assert!(state.redo()); } // agent2
+    for _ in &agent2_nodes { assert!(state.redo().changed); } // agent2
     assert!(state.get_content(&path).unwrap().contains("improved()"));
-    assert!(!state.redo()); // leaf
+    assert!(!state.redo().changed); // leaf
 }
 
 // ─── Branch preservation: old branch reachable after agent branch ────────────
@@ -279,18 +275,19 @@ fn test_interleaved_user_and_agent_edits_undo_all() {
 #[test]
 fn test_undo_branch_agent_edit_preserves_old_branch() {
     let mut state = AppState::new();
+    state.set_coalescing(false);
     let path = PathBuf::from("src/lib.rs");
     state.load_file(path.clone(), "// base\n".into());
 
     // User path A
-    state.apply(Command::Insert { file: path.clone(), offset: 8, text: "line A1\n".into() });
+    state.apply(Command::insert(path.clone(), 8, "line A1\n".into())).unwrap();
     let _node_a1 = state.undo_tree().current_node().unwrap().id;
-    state.apply(Command::Insert { file: path.clone(), offset: 16, text: "line A2\n".into() });
+    state.apply(Command::insert(path.clone(), 16, "line A2\n".into())).unwrap();
     let node_a2 = state.undo_tree().current_node().unwrap().id;
 
     // Undo both
-    assert!(state.undo());
-    assert!(state.undo());
+    assert!(state.undo().changed);
+    assert!(state.undo().changed);
     assert_eq!(state.get_content(&path).unwrap(), "// base\n");
 
     // Agent creates branch B
@@ -322,6 +319,7 @@ fn test_undo_branch_agent_edit_preserves_old_branch() {
 #[test]
 fn test_consecutive_agent_edits_undo_each() {
     let mut state = AppState::new();
+    state.set_coalescing(false);
     let path = PathBuf::from("src/cfg.rs");
     state.load_file(path.clone(), "const A: u32 = 1;\nconst B: u32 = 2;\nconst C: u32 = 3;\n".into());
 
@@ -345,30 +343,30 @@ fn test_consecutive_agent_edits_undo_each() {
     assert!(content.contains("C: u32 = 30"));
 
     // Undo C
-    for _ in &n3 { assert!(state.undo()); }
+    for _ in &n3 { assert!(state.undo().changed); }
     let content = state.get_content(&path).unwrap();
     assert!(content.contains("A: u32 = 10"));
     assert!(content.contains("B: u32 = 20"));
     assert!(content.contains("C: u32 = 3"));
 
     // Undo B
-    for _ in &n2 { assert!(state.undo()); }
+    for _ in &n2 { assert!(state.undo().changed); }
     let content = state.get_content(&path).unwrap();
     assert!(content.contains("A: u32 = 10"));
     assert!(content.contains("B: u32 = 2"));
     assert!(content.contains("C: u32 = 3"));
 
     // Undo A
-    for _ in &n1 { assert!(state.undo()); }
+    for _ in &n1 { assert!(state.undo().changed); }
     let content = state.get_content(&path).unwrap();
     assert!(content.contains("A: u32 = 1"));
     assert!(content.contains("B: u32 = 2"));
     assert!(content.contains("C: u32 = 3"));
 
     // Redo all
-    for _ in &n1 { assert!(state.redo()); }
-    for _ in &n2 { assert!(state.redo()); }
-    for _ in &n3 { assert!(state.redo()); }
+    for _ in &n1 { assert!(state.redo().changed); }
+    for _ in &n2 { assert!(state.redo().changed); }
+    for _ in &n3 { assert!(state.redo().changed); }
     let content = state.get_content(&path).unwrap();
     assert!(content.contains("A: u32 = 10"));
     assert!(content.contains("B: u32 = 20"));
@@ -380,26 +378,23 @@ fn test_consecutive_agent_edits_undo_each() {
 #[test]
 fn test_agent_ast_edit_after_multi_undo() {
     let mut state = AppState::new();
+    state.set_coalescing(false);
     let path = PathBuf::from("src/math.rs");
     state.load_file(path.clone(), "fn add(a: i32, b: i32) -> i32 {\n    a + b\n}\n".into());
 
     // User adds sub
-    state.apply(Command::Insert {
-        file: path.clone(),
-        offset: state.get_content(&path).unwrap().len(),
-        text: "\nfn sub(a: i32, b: i32) -> i32 {\n    a - b\n}\n".into(),
-    });
+    state.apply(Command::insert(
+        path.clone(),
+        state.get_content(&path).unwrap().chars().count(),
+        "\nfn sub(a: i32, b: i32) -> i32 {\n    a - b\n}\n".into(),
+    )).unwrap();
 
     // User adds mul
-    state.apply(Command::Insert {
-        file: path.clone(),
-        offset: state.get_content(&path).unwrap().len(),
-        text: "\nfn mul(a: i32, b: i32) -> i32 {\n    a * b\n}\n".into(),
-    });
+    state.apply(Command::insert(path.clone(), state.get_content(&path).unwrap().chars().count(), "\nfn mul(a: i32, b: i32) -> i32 {\n    a * b\n}\n".into())).unwrap();
     let node_with_mul = state.undo_tree().current_node().unwrap().id;
 
     // Undo mul
-    assert!(state.undo());
+    assert!(state.undo().changed);
     assert!(!state.get_content(&path).unwrap().contains("fn mul"));
 
     // Agent AST-edits add()
@@ -420,7 +415,7 @@ fn test_agent_ast_edit_after_multi_undo() {
     assert!(!content.contains("fn mul"));
 
     // Undo agent
-    for _ in &agent_nodes { assert!(state.undo()); }
+    for _ in &agent_nodes { assert!(state.undo().changed); }
     let content = state.get_content(&path).unwrap();
     assert!(content.contains("a + b"));
     assert!(!content.contains("wrapping_add"));
