@@ -1965,3 +1965,27 @@ html, body, #root {
 .splitter:active {
   background: #56b6c2;
 }
+
+/* --- Log cached/uncached input coloring (bugs.md) --- */
+.ai-log-msg.log-cached {
+  border-left: 3px solid #d7dae0;
+  padding-left: 6px;
+}
+
+.ai-log-msg.log-uncached {
+  border-left: 3px solid #e06c75;
+  padding-left: 6px;
+}
+
+.ai-log-cache-legend {
+  font-size: 11px;
+  color: #888;
+}
+
+.ai-log-cache-legend .legend-cached { color: #d7dae0; }
+.ai-log-cache-legend .legend-uncached { color: #e06c75; }
+
+.ai-log-compact-icon {
+  margin: 0 4px;
+  cursor: help;
+}

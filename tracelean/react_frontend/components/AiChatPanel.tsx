@@ -141,6 +141,13 @@ interface InteractionEntry {
   tools_provided?: number;
   tool_names?: string[];
   tool_schemas?: ToolSchemaInfo[];
+  /** Compaction that ran before this request (bugs.md: log icons + detail). */
+  compaction?: {
+    kind: string; // "summarized" | "trimmed"
+    messages_removed: number;
+    tokens_before: number;
+    tokens_after: number;
+  };
 }
 
 interface Props {
@@ -162,6 +169,41 @@ function compactNum(n: number): string {
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + "M";
   if (n >= 1_000) return (n / 1_000).toFixed(n >= 10_000 ? 0 : 1) + "k";
   return String(n);
+}
+
+/** bugs.md: chars/token ratio for one interaction, from provider-reported
+ * input tokens vs total request chars. Null if usage is unknown. */
+function charsPerToken(e: InteractionEntry): number | null {
+  const totalChars = e.request_messages.reduce(
+    (s, m) =>
+      s +
+      m.content.length +
+      ((m as any).tool_calls ?? []).reduce(
+        (a: number, tc: any) => a + (tc.function?.arguments?.length ?? 0),
+        0
+      ),
+    0
+  );
+  return e.usage.input_tokens > 0 && totalChars > 0 ? totalChars / e.usage.input_tokens : null;
+}
+
+/** Render a size in both units: "~1.1k tokens · 4500 chars". */
+function sizeBoth(chars: number, ratio: number | null): string {
+  if (!ratio) return `${chars} chars`;
+  return `~${compactNum(Math.round(chars / ratio))} tokens · ${chars} chars`;
+}
+
+/** Per-message cached flags: walk messages accumulating estimated tokens
+ * until the provider-reported cached prefix is exhausted. */
+function cachedFlags(e: InteractionEntry): boolean[] {
+  const ratio = charsPerToken(e) ?? 4;
+  let cum = 0;
+  return e.request_messages.map((m) => {
+    const t = m.content.length / ratio;
+    const isCached = e.usage.cached_tokens > 0 && cum + t <= e.usage.cached_tokens;
+    cum += t;
+    return isCached;
+  });
 }
 
 export function AiChatPanel({ visible, onClose }: Props) {
@@ -872,14 +914,38 @@ export function AiChatPanel({ visible, onClose }: Props) {
             <div className="ai-log-detail">
               <button onClick={() => setInspectEntry(null)}>← Back</button>
               <h4>{inspectEntry.agent} — {inspectEntry.model_display_name}</h4>
-              <p className="ai-meta">{inspectEntry.timestamp} | {inspectEntry.duration_ms}ms | ${inspectEntry.cost.total_usd.toFixed(6)}</p>
-              {inspectEntry.was_compacted && (
+              <p className="ai-meta">
+                {inspectEntry.timestamp} | {inspectEntry.duration_ms}ms | ${inspectEntry.cost.total_usd.toFixed(6)}
+                {charsPerToken(inspectEntry) && (
+                  <> | {charsPerToken(inspectEntry)!.toFixed(2)} chars/token</>
+                )}
+              </p>
+              {inspectEntry.compaction ? (
+                <span className="ai-log-compacted-badge">
+                  {inspectEntry.compaction.kind === "summarized"
+                    ? `📝 summarized from ~${compactNum(inspectEntry.compaction.tokens_before)} to ~${compactNum(inspectEntry.compaction.tokens_after)} tokens`
+                    : `✂️ trimmed ${inspectEntry.compaction.messages_removed} messages: ~${compactNum(inspectEntry.compaction.tokens_before)} → ~${compactNum(inspectEntry.compaction.tokens_after)} tokens`}
+                </span>
+              ) : inspectEntry.was_compacted ? (
                 <span className="ai-log-compacted-badge">⚡ compacted</span>
+              ) : null}
+              {inspectEntry.usage.cached_tokens > 0 && (
+                <p className="ai-log-cache-legend">
+                  <span className="legend-cached">■</span> cached input&nbsp;&nbsp;
+                  <span className="legend-uncached">■</span> not cached
+                </p>
               )}
 
               {(inspectEntry.tool_names?.length ?? 0) > 0 && (
                 <details className="ai-log-tools-provided">
-                  <summary>Tools provided: {inspectEntry.tools_provided ?? 0} — [{inspectEntry.tool_names?.join(", ")}]</summary>
+                  <summary>
+                    Tools provided: {inspectEntry.tools_provided ?? 0} (
+                    {sizeBoth(
+                      JSON.stringify(inspectEntry.tool_schemas ?? []).length,
+                      charsPerToken(inspectEntry)
+                    )}
+                    ) — [{inspectEntry.tool_names?.join(", ")}]
+                  </summary>
                   <div className="ai-log-tools-list">
                     {(inspectEntry.tool_schemas ?? []).map((schema, i) => (
                       <div key={i} className="ai-log-tool-schema">
@@ -899,10 +965,19 @@ export function AiChatPanel({ visible, onClose }: Props) {
 
               <h5>Request Messages</h5>
               {inspectEntry.request_messages.map((m, i) => (
-                <div key={i} className="ai-log-msg">
+                <div
+                  key={i}
+                  className={`ai-log-msg ${
+                    inspectEntry.usage.cached_tokens > 0
+                      ? cachedFlags(inspectEntry)[i]
+                        ? "log-cached"
+                        : "log-uncached"
+                      : ""
+                  }`}
+                >
                   {m.role.toUpperCase() === "SYSTEM" ? (
                     <details className="ai-log-system-prompt">
-                      <summary><strong>SYSTEM PROMPT</strong> ({m.content.length} chars)</summary>
+                      <summary><strong>SYSTEM PROMPT</strong> ({sizeBoth(m.content.length, charsPerToken(inspectEntry))})</summary>
                       <pre>{m.content}</pre>
                     </details>
                   ) : (
@@ -958,6 +1033,18 @@ export function AiChatPanel({ visible, onClose }: Props) {
               {log.map((entry) => (
                 <div key={entry.id} className="ai-log-entry" onClick={() => setInspectEntry(entry)}>
                   <span className="ai-log-agent">{entry.agent}</span>
+                  {entry.compaction && (
+                    <span
+                      className="ai-log-compact-icon"
+                      title={
+                        entry.compaction.kind === "summarized"
+                          ? `summarized from ~${compactNum(entry.compaction.tokens_before)} to ~${compactNum(entry.compaction.tokens_after)} tokens`
+                          : `trimmed ${entry.compaction.messages_removed} messages (~${compactNum(entry.compaction.tokens_before)} → ~${compactNum(entry.compaction.tokens_after)} tokens)`
+                      }
+                    >
+                      {entry.compaction.kind === "summarized" ? "📝" : "✂️"}
+                    </span>
+                  )}
                   <span className="ai-log-model">{entry.model_display_name}</span>
                   <span className="ai-log-cost">${entry.cost.total_usd.toFixed(6)}</span>
                   <span className="ai-log-time">{new Date(entry.timestamp).toLocaleTimeString()}</span>

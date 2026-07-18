@@ -40,6 +40,19 @@ pub struct InteractionEntry {
     /// How tools were passed for this request (D9a.3: diagnosable from the Log tab).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub tool_passing: Option<super::provider::ToolPassing>,
+    /// What compaction ran before this request (bugs.md: log icons + detail).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub compaction: Option<CompactionInfo>,
+}
+
+/// Compaction that ran before a request: summarization or trimming (prune).
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct CompactionInfo {
+    /// "summarized" | "trimmed"
+    pub kind: String,
+    pub messages_removed: usize,
+    pub tokens_before: usize,
+    pub tokens_after: usize,
 }
 
 /// Persistent interaction log.
@@ -104,6 +117,7 @@ impl InteractionLog {
             tool_names,
             tool_schemas,
             tool_passing: Some(request.model.tool_passing),
+            compaction: None,
         };
 
         self.entries.push(entry);
@@ -148,10 +162,19 @@ impl InteractionLog {
             tool_names,
             tool_schemas,
             tool_passing: Some(request.model.tool_passing),
+            compaction: None,
         };
 
         self.entries.push(entry);
         self.trim();
+    }
+
+    /// Attach compaction metadata to the most recent entry (set right after
+    /// record_success for the request that followed the compaction).
+    pub fn attach_compaction_to_last(&mut self, info: CompactionInfo) {
+        if let Some(last) = self.entries.last_mut() {
+            last.compaction = Some(info);
+        }
     }
 
     /// Mark the last entry as having used compacted context.

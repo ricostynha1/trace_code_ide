@@ -157,15 +157,21 @@ async fn run_agent_turn_inner(
         }
 
         // Cost-aware context compaction (prune/summarize if profitable)
-        let was_compacted = if loop_i > 0 {
-            let saved = cost_aware_compact(ctx, &mut messages, &model, provider.as_ref()).await;
-            if ctx.verbose && saved > 0 {
-                eprintln!("[compaction] freed ~{} tokens", saved);
+        let compaction_info = if loop_i > 0 {
+            let info = cost_aware_compact(ctx, &mut messages, &model, provider.as_ref()).await;
+            if ctx.verbose {
+                if let Some(i) = &info {
+                    eprintln!(
+                        "[compaction] {} {} messages, ~{} → ~{} tokens",
+                        i.kind, i.messages_removed, i.tokens_before, i.tokens_after
+                    );
+                }
             }
-            saved > 0
+            info
         } else {
-            false
+            None
         };
+        let was_compacted = compaction_info.is_some();
         if was_compacted {
             total_compactions += 1;
         }
@@ -300,6 +306,9 @@ async fn run_agent_turn_inner(
                     log.record_success(&label, &request, &response, duration_ms);
                     if was_compacted {
                         log.mark_last_entry_compacted();
+                    }
+                    if let Some(info) = compaction_info.clone() {
+                        log.attach_compaction_to_last(info);
                     }
                 }
                 {
@@ -895,7 +904,8 @@ async fn cost_aware_compact(
     messages: &mut Vec<ChatMessage>,
     model: &ai::ModelConfig,
     provider: &(dyn AiProvider + Send + Sync),
-) -> usize {
+) -> Option<ai::log::CompactionInfo> {
+    let messages_before = messages.len();
     // Estimate tokens for the prune decision (trivial math, always run).
     let total_tokens_est: usize = messages.iter().map(|m| {
         let content_tokens = m.content.len() / 4;
@@ -923,7 +933,7 @@ async fn cost_aware_compact(
     let (to_prune, to_summarize, tokens_freed) = {
         let mut engine = match ctx.retention_engine.lock() {
             Ok(e) => e,
-            Err(_) => return 0, // can't lock → skip compaction
+            Err(_) => return None, // can't lock → skip compaction
         };
 
         // Update timing
@@ -1078,7 +1088,19 @@ async fn cost_aware_compact(
 
     sanitize_tool_pairing(messages);
 
-    tokens_freed
+    // Report what happened for the interaction log (bugs.md: log icons).
+    let tokens_after: usize = messages.iter().map(estimate_msg_tokens).sum();
+    let summarized = !to_summarize.is_empty();
+    let trimmed = messages.len() < messages_before;
+    if !summarized && !trimmed && tokens_freed == 0 {
+        return None;
+    }
+    Some(ai::log::CompactionInfo {
+        kind: if summarized { "summarized" } else { "trimmed" }.to_string(),
+        messages_removed: messages_before.saturating_sub(messages.len()),
+        tokens_before: total_tokens_est + message_overhead,
+        tokens_after,
+    })
 }
 
 /// Repair the native tool-call pairing invariant after compaction mutates the
