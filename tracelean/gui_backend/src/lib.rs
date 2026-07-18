@@ -263,6 +263,7 @@ pub fn run() {
             ipc::ai_commands::ai_chat_session,
             ipc::ai_commands::reset_chat_session,
             ipc::ai_commands::get_chat_session_messages,
+            ipc::ai_commands::list_chat_sessions,
             ipc::ai_commands::get_chat_session_info,
             ipc::ai_commands::get_prompt_templates,
             ipc::ai_commands::assemble_context_for_requirement,

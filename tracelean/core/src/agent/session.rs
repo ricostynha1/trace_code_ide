@@ -33,6 +33,23 @@ pub struct ChatSession {
     /// How many times context was compacted in this session (P7).
     #[serde(default)]
     pub compaction_count: u32,
+    /// Cumulative cost of this session (P11 — shown in the switcher).
+    #[serde(default)]
+    pub total_cost_usd: f64,
+    /// RFC3339 timestamp of the last completed turn (P11).
+    #[serde(default)]
+    pub updated_at: String,
+}
+
+/// Lightweight session listing entry for the switcher (P11).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ChatSessionSummary {
+    pub id: String,
+    /// First user message (≤50 chars) or "Empty chat".
+    pub label: String,
+    pub message_count: usize,
+    pub total_cost_usd: f64,
+    pub updated_at: String,
 }
 
 /// Context-utilization snapshot for the UI (P7, D7.2).
@@ -60,6 +77,30 @@ impl ChatSession {
             last_prompt_tokens: 0,
             last_completion_tokens: 0,
             compaction_count: 0,
+            total_cost_usd: 0.0,
+            updated_at: String::new(),
+        }
+    }
+
+    /// Switcher label: first user message, truncated (P11).
+    pub fn label(&self) -> String {
+        self.user_view
+            .iter()
+            .find(|m| m.role == crate::ai::provider::MessageRole::User)
+            .map(|m| {
+                let text: String = m.content.chars().take(50).collect();
+                if m.content.chars().count() > 50 { format!("{}…", text) } else { text }
+            })
+            .unwrap_or_else(|| "Empty chat".to_string())
+    }
+
+    pub fn summary(&self) -> ChatSessionSummary {
+        ChatSessionSummary {
+            id: self.id.clone(),
+            label: self.label(),
+            message_count: self.user_view.len(),
+            total_cost_usd: self.total_cost_usd,
+            updated_at: self.updated_at.clone(),
         }
     }
 

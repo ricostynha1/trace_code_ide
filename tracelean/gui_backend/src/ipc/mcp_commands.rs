@@ -197,7 +197,7 @@ pub async fn ai_chat_stream(
             p.review_edits = settings.0.lock().map(|s| s.review_edits).unwrap_or(false);
             p
         },
-        project_root,
+        project_root: project_root.clone(),
         event_sink: std::sync::Arc::new(crate::TauriEventSink { app_handle: app.clone() }),
         spend_cap_usd: spend_cap,
         pause_handler: Some(std::sync::Arc::new(crate::ipc::ai_commands::TauriPauseHandler {
@@ -224,7 +224,18 @@ pub async fn ai_chat_stream(
     });
 
     // Delegate to the single core implementation (tool loop, compaction, etc.)
+    let cost_before = stats.0.lock().map(|s| s.total_cost_usd).unwrap_or(0.0);
     let result = run_agent_turn_session(&ctx, chat_session).await;
+
+    // P11: persist the session every turn (best-effort).
+    if result.is_ok() {
+        let cost_after = stats.0.lock().map(|s| s.total_cost_usd).unwrap_or(cost_before);
+        chat_session.total_cost_usd += (cost_after - cost_before).max(0.0);
+        chat_session.updated_at = chrono::Utc::now().to_rfc3339();
+        if !project_root.as_os_str().is_empty() {
+            tracelean_core::ai::service::save_session(&project_root, chat_session);
+        }
+    }
     match result {
         Ok(turn_result) => {
             // Simulate streaming: emit response content in chunks

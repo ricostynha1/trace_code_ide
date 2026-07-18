@@ -5,6 +5,8 @@ export interface ChatInstance {
   messages: { role: string; content: string; tool_call_id?: string; tool_calls?: any[] }[];
   createdAt: Date;
   label: string;
+  /** P11: cumulative session cost from the persisted session file. */
+  cost?: number;
 }
 
 interface Props {
@@ -84,6 +86,9 @@ export function ChatSwitcher({ chatInstances, activeChatId, onSwitch, onNewChat,
               <div className="chat-switcher-item-preview">{getPreview(inst)}</div>
               <div className="chat-switcher-item-meta">
                 <span>{inst.messages.length} msgs</span>
+                {inst.cost !== undefined && inst.cost > 0 && (
+                  <span className="chat-switcher-cost">${inst.cost.toFixed(4)}</span>
+                )}
                 <span>{formatTime(inst.createdAt)}</span>
               </div>
             </div>

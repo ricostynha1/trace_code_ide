@@ -357,6 +357,32 @@ export function AiChatPanel({ visible, onClose }: Props) {
     if (visible) loadSessionInfo();
   }, [visible, activeChatId]);
 
+  // P11: restore persisted sessions into the switcher on startup.
+  useEffect(() => {
+    (async () => {
+      try {
+        const summaries = await invoke<
+          { id: string; label: string; message_count: number; total_cost_usd: number; updated_at: string }[]
+        >("list_chat_sessions");
+        if (summaries.length === 0) return;
+        const restored: ChatInstance[] = summaries.map((s) => ({
+          id: s.id,
+          messages: [],
+          createdAt: s.updated_at ? new Date(s.updated_at) : new Date(),
+          label: s.label,
+          cost: s.total_cost_usd,
+        }));
+        setChatInstances(restored);
+        const first = restored[0];
+        setActiveChatId(first.id);
+        const msgs = await invoke<ChatMessage[]>("get_chat_session_messages", { sessionId: first.id });
+        setMessages(msgs.filter((m) => m.role !== "system"));
+      } catch (e) {
+        console.error("session restore failed:", e);
+      }
+    })();
+  }, []);
+
   const loadSettings = async () => {
     try {
       const s = await invoke<AiSettings>("get_ai_settings");
@@ -496,7 +522,7 @@ export function AiChatPanel({ visible, onClose }: Props) {
     }
   };
 
-  const switchChat = (id: string) => {
+  const switchChat = async (id: string) => {
     // Save current messages to active instance
     setChatInstances((prev) =>
       prev.map((inst) => inst.id === activeChatId ? { ...inst, messages } : inst)
@@ -504,7 +530,15 @@ export function AiChatPanel({ visible, onClose }: Props) {
     // Load target instance
     const target = chatInstances.find((inst) => inst.id === id);
     if (target) {
-      setMessages(target.messages as ChatMessage[]);
+      let msgs = target.messages as ChatMessage[];
+      // P11: restored sessions carry no local transcript — fetch from backend
+      if (msgs.length === 0) {
+        try {
+          const backendMsgs = await invoke<ChatMessage[]>("get_chat_session_messages", { sessionId: id });
+          msgs = backendMsgs.filter((m) => m.role !== "system");
+        } catch { /* keep empty */ }
+      }
+      setMessages(msgs);
       setActiveChatId(id);
       setError(null);
       setStreamingContent("");

@@ -271,6 +271,28 @@ pub async fn get_chat_session_messages(
     }
 }
 
+/// P11: list persisted + live chat sessions for the switcher (hydrates the
+/// in-memory store from .tracelean/sessions/ on first call after startup).
+#[tauri::command]
+pub async fn list_chat_sessions(
+    app: AppHandle,
+    settings: State<'_, AiSettingsWrapper>,
+    log_state: State<'_, AiLogWrapper>,
+    stats: State<'_, AiSessionStatsWrapper>,
+    mcp_client: State<'_, McpClientWrapper>,
+    state: State<'_, AppStateWrapper>,
+    symbols_state: State<'_, SymbolTableWrapper>,
+    graph_state: State<'_, TraceGraphWrapper>,
+    session_store: State<'_, crate::ChatSessionStoreWrapper>,
+    diffs: State<'_, crate::PendingDiffsWrapper>,
+) -> Result<Vec<tracelean_core::agent::ChatSessionSummary>, String> {
+    let svc = ai_service(
+        &app, &settings, &log_state, &stats, &mcp_client,
+        &state, &symbols_state, &graph_state, &session_store, &diffs,
+    );
+    Ok(svc.list_sessions().await)
+}
+
 /// PauseHandler implementation for Tauri — emits event and waits for user response.
 pub struct TauriPauseHandler {
     pub app_handle: AppHandle,

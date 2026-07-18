@@ -7,7 +7,7 @@
 //! outbound channel.
 
 use std::collections::HashMap;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
 use crate::agent::{run_agent_turn, run_agent_turn_session, AgentContext, AgentTurnResult, PauseHandler};
@@ -100,9 +100,37 @@ impl AiService {
             tool_call_id: None,
             tool_calls: Vec::new(),
         });
-        run_agent_turn_session(&ctx, session)
+        let cost_before = self.stats.lock().map(|s| s.total_cost_usd).unwrap_or(0.0);
+        let result = run_agent_turn_session(&ctx, session)
             .await
-            .map_err(|e| e.to_string())
+            .map_err(|e| e.to_string())?;
+
+        // P11: persist the session every turn (cost delta from session stats).
+        let cost_after = self.stats.lock().map(|s| s.total_cost_usd).unwrap_or(cost_before);
+        session.total_cost_usd += (cost_after - cost_before).max(0.0);
+        session.updated_at = chrono::Utc::now().to_rfc3339();
+        if let Some(root) = self.project_root() {
+            save_session(&root, session);
+        }
+        Ok(result)
+    }
+
+    fn project_root(&self) -> Option<std::path::PathBuf> {
+        self.state.lock().ok().and_then(|s| s.project_root().cloned())
+    }
+
+    /// List sessions for the switcher (P11): hydrates the in-memory store
+    /// from .tracelean/sessions/ so restarts restore prior conversations.
+    pub async fn list_sessions(&self) -> Vec<crate::agent::ChatSessionSummary> {
+        let mut store = self.sessions.lock().await;
+        if let Some(root) = self.project_root() {
+            for session in load_sessions(&root) {
+                store.entry(session.id.clone()).or_insert(session);
+            }
+        }
+        let mut summaries: Vec<_> = store.values().map(|s| s.summary()).collect();
+        summaries.sort_by(|a, b| b.updated_at.cmp(&a.updated_at));
+        summaries
     }
 
     /// Stateless agent turn over explicit messages (legacy chat / one-shots).
@@ -241,4 +269,43 @@ pub fn save_settings(settings: &AiSettings) -> Result<(), String> {
     }
     let json = serde_json::to_string_pretty(settings).map_err(|e| e.to_string())?;
     std::fs::write(&path, json).map_err(|e| e.to_string())
+}
+
+// ─── Session persistence (P11) ───────────────────────────────────────────────
+
+/// Directory where chat sessions persist: {project}/.tracelean/sessions/
+pub fn sessions_dir(project_root: &Path) -> PathBuf {
+    project_root.join(".tracelean").join("sessions")
+}
+
+/// Write a session to disk (best-effort; failures only log).
+pub fn save_session(project_root: &Path, session: &ChatSession) {
+    let dir = sessions_dir(project_root);
+    if let Err(e) = std::fs::create_dir_all(&dir) {
+        eprintln!("[sessions] cannot create {}: {}", dir.display(), e);
+        return;
+    }
+    let path = dir.join(format!("{}.json", session.id));
+    match serde_json::to_string_pretty(session) {
+        Ok(json) => {
+            if let Err(e) = std::fs::write(&path, json) {
+                eprintln!("[sessions] cannot write {}: {}", path.display(), e);
+            }
+        }
+        Err(e) => eprintln!("[sessions] cannot serialize session {}: {}", session.id, e),
+    }
+}
+
+/// Load all persisted sessions (unparseable files are skipped).
+pub fn load_sessions(project_root: &Path) -> Vec<ChatSession> {
+    let dir = sessions_dir(project_root);
+    let Ok(entries) = std::fs::read_dir(&dir) else {
+        return Vec::new();
+    };
+    entries
+        .flatten()
+        .filter(|e| e.path().extension().map(|x| x == "json").unwrap_or(false))
+        .filter_map(|e| std::fs::read_to_string(e.path()).ok())
+        .filter_map(|content| serde_json::from_str::<ChatSession>(&content).ok())
+        .collect()
 }
