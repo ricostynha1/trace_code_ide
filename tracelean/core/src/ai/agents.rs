@@ -353,5 +353,6 @@ fn build_request(system_prompt: &str, user_content: &str) -> AiRequest {
         ],
         stop: None,
         tools: None,
+        cache_breakpoints: Vec::new(),
     }
 }

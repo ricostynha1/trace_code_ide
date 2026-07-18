@@ -104,6 +104,33 @@ impl ProviderCacheRegistry {
     pub fn provider_keys(&self) -> Vec<&String> {
         self.providers.keys().collect()
     }
+
+    /// Parse from a JSON string (same shape as provider_cache.json).
+    pub fn load_from_str(content: &str) -> Result<Self, String> {
+        let file: ProviderCacheFile = serde_json::from_str(content)
+            .map_err(|e| format!("Failed to parse provider cache json: {}", e))?;
+        Ok(Self { providers: file.providers })
+    }
+
+    /// Registry built from the embedded data/provider_cache.json (P9b).
+    pub fn embedded() -> Option<&'static ProviderCacheRegistry> {
+        static REG: std::sync::OnceLock<Option<ProviderCacheRegistry>> = std::sync::OnceLock::new();
+        REG.get_or_init(|| {
+            Self::load_from_str(include_str!("../../../data/provider_cache.json")).ok()
+        })
+        .as_ref()
+    }
+}
+
+/// The provider_cache.json key whose cache dialect a model speaks, if that
+/// provider needs explicit markers (P9b). None = automatic/no markers.
+pub fn provider_cache_key(model: &super::provider::ModelConfig) -> Option<&'static str> {
+    let id = model.model_id.to_lowercase();
+    if id.contains("claude") || id.contains("anthropic") {
+        Some("anthropic_5min")
+    } else {
+        None
+    }
 }
 
 impl ProviderCacheConfig {

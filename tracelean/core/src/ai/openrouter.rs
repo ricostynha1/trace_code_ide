@@ -61,9 +61,68 @@ struct OrRequest {
 #[derive(Serialize)]
 struct OrMessage {
     role: String,
-    content: String,
+    content: OrContent,
     #[serde(skip_serializing_if = "Option::is_none")]
     tool_call_id: Option<String>,
+    /// Structured tool calls on assistant history messages (P9a parity —
+    /// strict providers reject tool results without them).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    tool_calls: Option<Vec<super::provider::ToolCallResponse>>,
+}
+
+/// Message content: plain string normally; content blocks when the message
+/// carries an explicit cache marker (P9b, D9b.2 — Anthropic-style
+/// `cache_control` on the last block, passed through by OpenRouter).
+#[derive(Serialize)]
+#[serde(untagged)]
+enum OrContent {
+    Text(String),
+    Blocks(Vec<OrContentBlock>),
+}
+
+#[derive(Serialize)]
+struct OrContentBlock {
+    #[serde(rename = "type")]
+    block_type: String,
+    text: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    cache_control: Option<serde_json::Value>,
+}
+
+/// Build the wire messages, applying cache markers at the given indexes.
+fn build_or_messages(request: &AiRequest) -> Vec<OrMessage> {
+    request
+        .messages
+        .iter()
+        .enumerate()
+        .map(|(i, m)| {
+            let marked = request.cache_breakpoints.contains(&i);
+            let content = if marked {
+                OrContent::Blocks(vec![OrContentBlock {
+                    block_type: "text".into(),
+                    text: m.content.clone(),
+                    cache_control: Some(serde_json::json!({"type": "ephemeral"})),
+                }])
+            } else {
+                OrContent::Text(m.content.clone())
+            };
+            OrMessage {
+                role: match m.role {
+                    MessageRole::System => "system".into(),
+                    MessageRole::User => "user".into(),
+                    MessageRole::Assistant => "assistant".into(),
+                    MessageRole::Tool => "tool".into(),
+                },
+                content,
+                tool_call_id: m.tool_call_id.clone(),
+                tool_calls: if m.tool_calls.is_empty() {
+                    None
+                } else {
+                    Some(m.tool_calls.clone())
+                },
+            }
+        })
+        .collect()
 }
 
 /// OpenRouter response body.
@@ -145,16 +204,7 @@ fn parse_price_per_m(price_str: &Option<String>) -> f64 {
 #[async_trait::async_trait]
 impl AiProvider for OpenRouterProvider {
     async fn complete(&self, request: &AiRequest) -> Result<AiResponse, AiError> {
-        let messages: Vec<OrMessage> = request.messages.iter().map(|m| OrMessage {
-            role: match m.role {
-                MessageRole::System => "system".into(),
-                MessageRole::User => "user".into(),
-                MessageRole::Assistant => "assistant".into(),
-                MessageRole::Tool => "tool".into(),
-            },
-            content: m.content.clone(),
-            tool_call_id: m.tool_call_id.clone(),
-        }).collect();
+        let messages = build_or_messages(request);
 
         let body = OrRequest {
             model: request.model.model_id.clone(),
@@ -340,5 +390,65 @@ impl AiProvider for OpenRouterProvider {
         }).collect();
 
         Ok(models)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use super::super::provider::{ToolCallFunction, ToolCallResponse};
+
+    fn msg(role: MessageRole, content: &str) -> ChatMessage {
+        ChatMessage { role, content: content.into(), tool_call_id: None, tool_calls: Vec::new() }
+    }
+
+    #[test]
+    fn cache_breakpoints_become_cache_control_blocks() {
+        let request = AiRequest {
+            model: ModelConfig::default(),
+            messages: vec![
+                msg(MessageRole::System, "system prompt"),
+                msg(MessageRole::User, "question"),
+            ],
+            stop: None,
+            tools: None,
+            cache_breakpoints: vec![0],
+        };
+        let wire = build_or_messages(&request);
+        let json = serde_json::to_value(&wire).unwrap();
+        // Marked message → content blocks with ephemeral cache_control
+        assert_eq!(json[0]["content"][0]["type"], "text");
+        assert_eq!(json[0]["content"][0]["text"], "system prompt");
+        assert_eq!(json[0]["content"][0]["cache_control"]["type"], "ephemeral");
+        // Unmarked message → plain string content
+        assert_eq!(json[1]["content"], "question");
+        assert!(json[1].get("cache_control").is_none());
+    }
+
+    #[test]
+    fn assistant_history_keeps_structured_tool_calls() {
+        let mut assistant = msg(MessageRole::Assistant, "");
+        assistant.tool_calls = vec![ToolCallResponse {
+            id: "call_0".into(),
+            call_type: "function".into(),
+            function: ToolCallFunction { name: "read_file".into(), arguments: "{\"path\":\"a.rs\"}".into() },
+        }];
+        let mut tool_result = msg(MessageRole::Tool, "contents");
+        tool_result.tool_call_id = Some("call_0".into());
+
+        let request = AiRequest {
+            model: ModelConfig::default(),
+            messages: vec![msg(MessageRole::User, "read a.rs"), assistant, tool_result],
+            stop: None,
+            tools: None,
+            cache_breakpoints: Vec::new(),
+        };
+        let json = serde_json::to_value(build_or_messages(&request)).unwrap();
+        assert_eq!(json[1]["tool_calls"][0]["id"], "call_0");
+        assert_eq!(json[1]["tool_calls"][0]["function"]["name"], "read_file");
+        assert_eq!(json[2]["role"], "tool");
+        assert_eq!(json[2]["tool_call_id"], "call_0");
+        // No tool_calls key leaks onto messages without calls
+        assert!(json[0].get("tool_calls").is_none());
     }
 }

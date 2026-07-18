@@ -556,6 +556,7 @@ async fn call_llm(messages: &[ChatMessage]) -> String {
         messages: messages.to_vec(),
         stop: None,
         tools: None, // ACP agent uses text-based tool calling via parse_llm_response
+        cache_breakpoints: Vec::new(),
     };
 
     match provider.complete(&request).await {

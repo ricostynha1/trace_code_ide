@@ -366,6 +366,16 @@ impl App {
                         }
                     }
                 }
+                "cache-anomaly" => {
+                    if let Ok(v) = serde_json::from_str::<serde_json::Value>(&payload) {
+                        if let Some(msg) = v.get("message").and_then(|m| m.as_str()) {
+                            self.chat_entries
+                                .lock()
+                                .unwrap()
+                                .push(ChatEntry::Error(format!("cache: {}", msg)));
+                        }
+                    }
+                }
                 "undo-tree-changed" | "files-changed" => {
                     self.refresh_editor_content();
                 }

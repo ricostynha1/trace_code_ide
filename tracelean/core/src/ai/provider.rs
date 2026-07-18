@@ -181,6 +181,10 @@ pub struct AiRequest {
     /// Tools available to the model (OpenAI function calling format)
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub tools: Option<Vec<ToolSchema>>,
+    /// P9b: message indexes after which an explicit cache marker should be
+    /// emitted (providers translate to their wire format; empty = none).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub cache_breakpoints: Vec<usize>,
 }
 
 /// Response from an AI provider.

@@ -173,7 +173,16 @@ pub struct CacheMarkerPlanner {
     pub max_markers: usize,
 }
 
+/// D9b.1 write-if-worth-it value of a marker at `prefix_tokens`:
+/// each expected reuse saves `(1 - read_discount)` of the prefix price;
+/// the one-time write costs the surcharge `(write_multiplier - 1)`.
+fn marker_value(prefix_tokens: usize, read_discount: f64, write_multiplier: f64, n_expected: usize) -> f64 {
+    let p = prefix_tokens as f64;
+    p * (1.0 - read_discount) * n_expected as f64 - p * (write_multiplier - 1.0).max(0.0)
+}
+
 impl CacheMarkerPlanner {
+
     pub fn new(provider: ProviderCacheConfig) -> Self {
         let max_markers = match provider.cache_mode {
             CacheMode::Explicit => 4,
@@ -208,7 +217,7 @@ impl CacheMarkerPlanner {
 
         // Candidate 1: After system prompt
         let pos1 = system_prompt_tokens;
-        let savings1 = pos1 as f64 * d * n_expected as f64 - pos1 as f64 * w;
+        let savings1 = marker_value(pos1, d, w, n_expected);
         if savings1 > 0.0 {
             candidates.push(CacheMarker {
                 position_tokens: pos1,
@@ -219,7 +228,7 @@ impl CacheMarkerPlanner {
 
         // Candidate 2: After system prompt + static tools
         let pos2 = system_prompt_tokens + static_tools_tokens;
-        let savings2 = pos2 as f64 * d * n_expected as f64 - pos2 as f64 * w;
+        let savings2 = marker_value(pos2, d, w, n_expected);
         if savings2 > savings1.max(0.0) {
             candidates.push(CacheMarker {
                 position_tokens: pos2,
@@ -231,7 +240,7 @@ impl CacheMarkerPlanner {
         // Candidate 3: After all tools (if dynamic tools are stable)
         if dynamic_tools_tokens > 0 {
             let pos3 = pos2 + dynamic_tools_tokens;
-            let savings3 = pos3 as f64 * d * n_expected as f64 - pos3 as f64 * w;
+            let savings3 = marker_value(pos3, d, w, n_expected);
             if savings3 > savings2.max(0.0) {
                 candidates.push(CacheMarker {
                     position_tokens: pos3,
@@ -244,7 +253,7 @@ impl CacheMarkerPlanner {
         // Candidate 4: Deep in conversation (stable prefix)
         if stable_conversation_prefix_tokens > 100 {
             let pos4 = pos2 + dynamic_tools_tokens + stable_conversation_prefix_tokens;
-            let savings4 = pos4 as f64 * d * n_expected as f64 - pos4 as f64 * w;
+            let savings4 = marker_value(pos4, d, w, n_expected);
             if savings4 > 0.0 {
                 candidates.push(CacheMarker {
                     position_tokens: pos4,

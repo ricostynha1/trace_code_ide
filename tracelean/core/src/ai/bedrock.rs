@@ -1414,6 +1414,7 @@ mod tests {
             ],
             stop: None,
             tools: Some(sample_tools()),
+            cache_breakpoints: Vec::new(),
         };
 
         let msgs = provider.build_messages(&request);

@@ -104,12 +104,10 @@ async fn run_agent_turn_inner(
     input_messages: Vec<ChatMessage>,
 ) -> Result<AgentTurnResult, AgentError> {
     let (model, provider) = build_provider(ctx)?;
-
     // Load tool registry (static tools always sent)
     const TOOLS_JSON: &str = include_str!("../../../data/tools.json");
     let tool_registry = ToolRegistry::load_from_str(TOOLS_JSON)
         .expect("embedded data/tools.json must parse");
-
     // Build all tools = static + dynamic from registry + extra (e.g. MCP)
     let all_tools = {
         let mut schemas = tool_registry.request_schemas();
@@ -139,6 +137,13 @@ async fn run_agent_turn_inner(
     let mut total_compactions: u32 = 0;
     let mut all_tool_records: Vec<ToolCallRecord> = Vec::new();
 
+    // P9b: explicit-cache marker planning + verification state.
+    let explicit_cache_cfg = ai::provider_cache::provider_cache_key(&model)
+        .and_then(|key| ai::ProviderCacheRegistry::embedded().map(|r| r.get_or_default(key)))
+        .filter(|c| c.requires_markers);
+    let mut cache_verifier = CacheVerifier::new(explicit_cache_cfg.is_some());
+    let mut cache_predictions = ai::cost_model::CachePredictionTracker::new();
+
     loop {
         // Enforce spend cap
         {
@@ -165,11 +170,43 @@ async fn run_agent_turn_inner(
             total_compactions += 1;
         }
 
+        // P9b (D9b.1): plan write-if-worth-it markers for this request.
+        let cache_breakpoints: Vec<usize> = if cache_verifier.enabled {
+            explicit_cache_cfg
+                .as_ref()
+                .map(|cfg| {
+                    let cold_ratio = ctx
+                        .timing_tracker
+                        .lock()
+                        .map(|t| t.cold_turn_ratio())
+                        .unwrap_or(1.0);
+                    plan_cache_breakpoints(cfg, &messages, loop_i, cold_ratio)
+                })
+                .unwrap_or_default()
+        } else {
+            Vec::new()
+        };
+        let sent_prefix_tokens: usize = cache_breakpoints
+            .iter()
+            .max()
+            .map(|&i| messages.iter().take(i + 1).map(estimate_msg_tokens).sum())
+            .unwrap_or(0);
+        // D9b.3: markers sent last request → this one should read from cache.
+        if cache_verifier.predicted_prefix_tokens > 0 {
+            let total_est: usize = messages.iter().map(estimate_msg_tokens).sum();
+            cache_predictions.predict(
+                loop_i as usize,
+                cache_verifier.predicted_prefix_tokens,
+                total_est,
+            );
+        }
+
         let request = AiRequest {
             model: model.clone(),
             messages: messages.clone(),
             stop: None,
             tools: Some(all_tools.clone()),
+            cache_breakpoints,
         };
 
         // Verbose: show what we're sending (markdown format for easy inspection)
@@ -270,6 +307,23 @@ async fn run_agent_turn_inner(
                     s.record(&response.usage, &cost);
                 }
                 ctx.event_sink.emit("ai-stats-updated", "");
+
+                // P9b (D9b.3): verify, don't trust — paid writes must produce
+                // cached reads; two consecutive misses disable markers.
+                if cache_verifier.predicted_prefix_tokens > 0 {
+                    cache_predictions
+                        .record_actual(loop_i as usize, response.usage.cached_tokens as usize);
+                }
+                if let Some(warning) = cache_verifier.observe(response.usage.cached_tokens) {
+                    if ctx.verbose {
+                        eprintln!("[cache-anomaly] {}", warning);
+                    }
+                    ctx.event_sink.emit(
+                        "cache-anomaly",
+                        &serde_json::json!({"turn": loop_i, "message": warning}).to_string(),
+                    );
+                }
+                cache_verifier.predicted_prefix_tokens = sent_prefix_tokens;
 
                 // Verbose: per-iteration cost breakdown
                 if ctx.verbose {
@@ -595,6 +649,102 @@ async fn run_agent_turn_inner(
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
+
+/// Rough token estimate for one message (content + structured tool calls).
+fn estimate_msg_tokens(m: &ChatMessage) -> usize {
+    m.content.len() / 4
+        + m.tool_calls
+            .iter()
+            .map(|tc| tc.function.arguments.len() / 4 + 5)
+            .sum::<usize>()
+}
+
+/// P9b (D9b.3) session cache-marker health: markers stay on only while paid
+/// writes keep producing cached reads.
+struct CacheVerifier {
+    /// Whether markers may be emitted on the next request.
+    enabled: bool,
+    /// Prefix tokens marked on the PREVIOUS request (0 = none sent).
+    predicted_prefix_tokens: usize,
+    consecutive_misses: u32,
+}
+
+impl CacheVerifier {
+    fn new(enabled: bool) -> Self {
+        Self { enabled, predicted_prefix_tokens: 0, consecutive_misses: 0 }
+    }
+
+    /// Feed the cached-token count of the response that followed a marked
+    /// request. Returns a warning message the moment markers get disabled
+    /// (two consecutive paid-write/no-read turns).
+    fn observe(&mut self, actual_cached_tokens: u32) -> Option<String> {
+        if self.predicted_prefix_tokens == 0 {
+            return None;
+        }
+        if actual_cached_tokens > 0 {
+            self.consecutive_misses = 0;
+            return None;
+        }
+        self.consecutive_misses += 1;
+        if self.consecutive_misses >= 2 && self.enabled {
+            self.enabled = false;
+            return Some(format!(
+                "cache markers disabled: paid cache writes on {} turns but got no cached reads",
+                self.consecutive_misses
+            ));
+        }
+        None
+    }
+}
+
+/// P9b (D9b.1): message indexes after which a cache marker pays for itself.
+///
+/// P(reuse within TTL) is the complement of the tracker's cold-turn ratio,
+/// floored at 0.5 mid-conversation (an active loop virtually guarantees a
+/// next request). The planner's marker economics then compare expected read
+/// savings against the one-time write surcharge.
+fn plan_cache_breakpoints(
+    cfg: &ProviderCacheConfig,
+    messages: &[ChatMessage],
+    loop_i: u32,
+    cold_turn_ratio: f64,
+) -> Vec<usize> {
+    use crate::ai::ttl_tracking::{CacheBlock, CacheMarkerPlanner};
+
+    if messages.is_empty() {
+        return Vec::new();
+    }
+
+    // Floored at 0.5: an active agent loop virtually guarantees a next
+    // request, so the write is worth it from the first iteration.
+    let _ = loop_i;
+    let p_reuse = (1.0 - cold_turn_ratio).max(0.5);
+    let n_expected = if p_reuse >= 0.5 { 3 } else { 1 };
+
+    let system_tokens = estimate_msg_tokens(&messages[0]);
+    let stable_prefix_tokens: usize = messages[1..messages.len().saturating_sub(1)]
+        .iter()
+        .map(estimate_msg_tokens)
+        .sum();
+
+    let planner = CacheMarkerPlanner::new(cfg.clone());
+    let markers = planner.plan_markers(system_tokens, 0, 0, 0, stable_prefix_tokens, n_expected);
+
+    let mut idxs: Vec<usize> = markers
+        .iter()
+        .filter_map(|m| match m.after_block {
+            CacheBlock::SystemPrompt => Some(0usize),
+            // The stable prefix ends before the newest message.
+            CacheBlock::ConversationPrefix { .. } => Some(messages.len().saturating_sub(2)),
+            CacheBlock::AfterMessage { index } => Some(index),
+            _ => None,
+        })
+        .filter(|&i| i < messages.len())
+        .collect();
+    idxs.sort_unstable();
+    idxs.dedup();
+    idxs
+}
 
 /// Build a provider from the current AiSettings in the context.
 fn build_provider(
@@ -1019,6 +1169,7 @@ async fn call_summary_llm(
         ],
         stop: None,
         tools: None,
+        cache_breakpoints: Vec::new(),
     };
 
     let provider_ref: &(dyn AiProvider + Send + Sync) = match &provider_to_use {
@@ -1173,5 +1324,107 @@ mod pairing_tests {
         sanitize_tool_pairing(&mut msgs);
         assert!(msgs[0].tool_calls.is_empty());
         assert_eq!(msgs[2].role, MessageRole::User);
+    }
+}
+
+#[cfg(test)]
+mod cache_marker_tests {
+    use super::*;
+    use crate::ai::provider_cache::CacheMode;
+
+    fn anthropic_cfg() -> ProviderCacheConfig {
+        ProviderCacheConfig {
+            cache_mode: CacheMode::Explicit,
+            cache_read_discount: 0.1,
+            cache_write_multiplier: 1.25,
+            ttl_seconds: Some(300),
+            requires_markers: true,
+            notes: None,
+        }
+    }
+
+    fn msg(role: MessageRole, len: usize) -> ChatMessage {
+        ChatMessage {
+            role,
+            content: "x".repeat(len),
+            tool_call_id: None,
+            tool_calls: Vec::new(),
+        }
+    }
+
+    #[test]
+    fn markers_planned_from_first_request() {
+        // Big system prompt + first user message: system-prompt marker pays
+        // for itself even with no timing history (cold_ratio 1.0 → floor 0.5).
+        let messages = vec![msg(MessageRole::System, 8000), msg(MessageRole::User, 200)];
+        let idxs = plan_cache_breakpoints(&anthropic_cfg(), &messages, 0, 1.0);
+        assert_eq!(idxs, vec![0], "system prompt should carry a marker");
+    }
+
+    #[test]
+    fn deep_conversation_marks_stable_prefix() {
+        let mut messages = vec![msg(MessageRole::System, 8000)];
+        for _ in 0..6 {
+            messages.push(msg(MessageRole::User, 2000));
+            messages.push(msg(MessageRole::Assistant, 2000));
+        }
+        let idxs = plan_cache_breakpoints(&anthropic_cfg(), &messages, 3, 0.0);
+        assert!(idxs.contains(&0), "system marker expected");
+        assert!(
+            idxs.contains(&(messages.len() - 2)),
+            "stable conversation prefix marker expected, got {:?}",
+            idxs
+        );
+        assert!(idxs.len() <= 4, "Anthropic allows max 4 breakpoints");
+    }
+
+    #[test]
+    fn automatic_provider_gets_no_markers() {
+        let cfg = ProviderCacheConfig {
+            cache_mode: CacheMode::Automatic,
+            cache_read_discount: 0.5,
+            cache_write_multiplier: 0.0,
+            ttl_seconds: None,
+            requires_markers: false,
+            notes: None,
+        };
+        let messages = vec![msg(MessageRole::System, 8000), msg(MessageRole::User, 200)];
+        assert!(plan_cache_breakpoints(&cfg, &messages, 2, 0.0).is_empty());
+    }
+
+    #[test]
+    fn verifier_disables_after_two_consecutive_misses() {
+        let mut v = CacheVerifier::new(true);
+        // Nothing was marked yet → a 0-cached response is not an anomaly.
+        assert!(v.observe(0).is_none());
+        v.predicted_prefix_tokens = 5000;
+        assert!(v.observe(0).is_none(), "first miss tolerated");
+        assert!(v.enabled);
+        let warning = v.observe(0);
+        assert!(warning.is_some(), "second consecutive miss disables markers");
+        assert!(!v.enabled);
+        // Once disabled it stays disabled and stays quiet.
+        assert!(v.observe(0).is_none());
+        assert!(!v.enabled);
+    }
+
+    #[test]
+    fn verifier_reset_on_cache_hit() {
+        let mut v = CacheVerifier::new(true);
+        v.predicted_prefix_tokens = 5000;
+        assert!(v.observe(0).is_none());
+        assert!(v.observe(4800).is_none(), "hit resets the miss streak");
+        assert!(v.observe(0).is_none(), "streak restarts at one");
+        assert!(v.enabled);
+    }
+
+    #[test]
+    fn anthropic_key_maps_claude_models_only() {
+        use crate::ai::provider_cache::provider_cache_key;
+        let mut m = crate::ai::ModelConfig::default();
+        m.model_id = "anthropic/claude-sonnet-4".into();
+        assert_eq!(provider_cache_key(&m), Some("anthropic_5min"));
+        m.model_id = "MiniMax-M2".into();
+        assert_eq!(provider_cache_key(&m), None);
     }
 }

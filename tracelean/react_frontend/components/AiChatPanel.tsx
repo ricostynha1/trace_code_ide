@@ -240,6 +240,16 @@ export function AiChatPanel({ visible, onClose }: Props) {
     return () => { unlisten.then((fn) => fn()); };
   }, []);
 
+  // P9b (D9b.3): surface cache-marker anomalies (paid writes, no cached reads)
+  useEffect(() => {
+    const unlisten = listen("cache-anomaly", (event) => {
+      const payload = normalizePayload<{ message: string }>(event.payload);
+      if (!payload || typeof payload.message !== "string") return;
+      setMessages((prev) => [...prev, { role: "system", content: `⚠ ${payload.message}` }]);
+    });
+    return () => { unlisten.then((fn) => fn()); };
+  }, []);
+
   // Listen for tool-call lifecycle events: Running appends a chip, Completed/
   // Failed updates the same chip in place (matched by call_id).
   useEffect(() => {
