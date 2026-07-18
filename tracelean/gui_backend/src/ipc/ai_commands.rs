@@ -26,6 +26,7 @@ fn ai_service(
     symbols_state: &State<'_, SymbolTableWrapper>,
     graph_state: &State<'_, TraceGraphWrapper>,
     session_store: &State<'_, crate::ChatSessionStoreWrapper>,
+    diffs: &State<'_, crate::PendingDiffsWrapper>,
 ) -> AiService {
     AiService {
         state: state.0.clone(),
@@ -37,6 +38,7 @@ fn ai_service(
         sessions: session_store.0.clone(),
         mcp_client: mcp_client.0.clone(),
         event_sink: Arc::new(crate::TauriEventSink { app_handle: app.clone() }),
+        pending_diffs: diffs.0.clone(),
     }
 }
 
@@ -160,11 +162,12 @@ pub async fn ai_chat(
     cache: State<'_, UndoTreeCacheWrapper>,
     resume_state: State<'_, ToolLoopResumeWrapper>,
     session_store: State<'_, crate::ChatSessionStoreWrapper>,
+    diffs: State<'_, crate::PendingDiffsWrapper>,
     messages: Vec<ai::provider::ChatMessage>,
 ) -> Result<ai::AiResponse, String> {
     let svc = ai_service(
         &app, &settings, &log_state, &stats, &mcp_client,
-        &state, &symbols_state, &graph_state, &session_store,
+        &state, &symbols_state, &graph_state, &session_store, &diffs,
     );
     let pause = Arc::new(TauriPauseHandler {
         app_handle: app.clone(),
@@ -193,12 +196,13 @@ pub async fn ai_chat_session(
     cache: State<'_, UndoTreeCacheWrapper>,
     resume_state: State<'_, ToolLoopResumeWrapper>,
     session_store: State<'_, crate::ChatSessionStoreWrapper>,
+    diffs: State<'_, crate::PendingDiffsWrapper>,
     session_id: String,
     user_message: String,
 ) -> Result<ai::AiResponse, String> {
     let svc = ai_service(
         &app, &settings, &log_state, &stats, &mcp_client,
-        &state, &symbols_state, &graph_state, &session_store,
+        &state, &symbols_state, &graph_state, &session_store, &diffs,
     );
     let pause = Arc::new(TauriPauseHandler {
         app_handle: app.clone(),
@@ -238,10 +242,19 @@ pub async fn get_chat_session_info(
             None => (128_000, false),
         }
     };
+    println!("Context window {}, known {}", context_window, known);
     let store = session_store.0.lock().await;
     Ok(match store.get(&session_id) {
-        Some(session) => session.info(context_window, known),
-        None => tracelean_core::ChatSession::new(session_id).info(context_window, known),
+        Some(session) => {
+            println!("known session context {:?}",session.info(context_window, known));
+            session.info(context_window, known)
+        }
+            ,
+        None => {
+            println!("Print new session");
+       
+            tracelean_core::ChatSession::new(session_id).info(context_window, known)
+        },
     })
 }
 
@@ -520,6 +533,23 @@ pub fn reject_diff_hunk(
     Err("Hunk not found".into())
 }
 
+/// Accept every hunk of a pending diff in one call (P10 "accept all").
+#[tauri::command]
+pub fn accept_all_hunks(
+    diffs: State<'_, PendingDiffsWrapper>,
+    diff_id: String,
+) -> Result<(), String> {
+    let mut d = diffs.0.lock().map_err(|e| e.to_string())?;
+    let diff = d
+        .iter_mut()
+        .find(|x| x.id == diff_id)
+        .ok_or("Diff not found")?;
+    for hunk in diff.hunks.iter_mut() {
+        hunk.accepted = true;
+    }
+    Ok(())
+}
+
 #[tauri::command]
 pub fn apply_accepted_hunks(
     app: AppHandle,
@@ -539,6 +569,7 @@ pub fn apply_accepted_hunks(
         return Err("No accepted hunks to apply".into());
     }
 
+    let file = diff.file.clone();
     {
         let mut s = state.0.lock().map_err(|e| e.to_string())?;
         for cmd in commands {
@@ -546,10 +577,25 @@ pub fn apply_accepted_hunks(
         }
     }
 
+    // Persist the updated buffer to disk — parity with direct agent edits,
+    // which save after every apply.
+    {
+        let s = state.0.lock().map_err(|e| e.to_string())?;
+        let rel = std::path::PathBuf::from(&file);
+        if let (Some(root), Some(content)) = (s.project_root().cloned(), s.get_content(&rel)) {
+            let full = root.join(&rel);
+            if let Some(parent) = full.parent() {
+                let _ = std::fs::create_dir_all(parent);
+            }
+            std::fs::write(&full, content).map_err(|e| format!("disk write failed: {}", e))?;
+        }
+    }
+
     d.remove(diff_idx);
 
     invalidate_undo_cache(&cache);
     let _ = app.emit("undo-tree-changed", ());
+    let _ = app.emit("files-changed", serde_json::json!({ "files": [file] }));
 
     Ok(format!("Applied {} accepted hunks.", accepted_count))
 }

@@ -158,13 +158,17 @@ pub async fn ai_chat_stream(
     graph_state: State<'_, TraceGraphWrapper>,
     cache: State<'_, UndoTreeCacheWrapper>,
     resume_state: State<'_, ToolLoopResumeWrapper>,
-    messages: Vec<ai::provider::ChatMessage>,
+    diffs: State<'_, crate::PendingDiffsWrapper>,
+    session_store: State<'_, crate::ChatSessionStoreWrapper>,
+    session_id: String,
+    user_message: String,
 ) -> Result<ai::AiResponse, String> {
-    use tracelean_core::agent::{AgentContext, run_agent_turn};
+    use tracelean_core::agent::{AgentContext, run_agent_turn_session, ChatSession};
+    use tracelean_core::ai::provider::{ChatMessage, MessageRole};
 
     let stream_id = uuid::Uuid::new_v4().to_string();
     let mut session = StreamSession::new(stream_id.clone());
-    let _ = app.emit("ai-stream-start", serde_json::json!({ "stream_id": stream_id }));
+    let _ = app.emit("ai-chat-stream", serde_json::json!({ "stream_id": stream_id }));
 
     // Snapshot project root
     let project_root = {
@@ -188,7 +192,11 @@ pub async fn ai_chat_stream(
         stats: stats.0.clone(),
         log: log_state.0.clone(),
         extra_tools,
-        permissions: tracelean_core::AgentPermissions::full_access("chat"),
+        permissions: {
+            let mut p = tracelean_core::AgentPermissions::full_access("chat");
+            p.review_edits = settings.0.lock().map(|s| s.review_edits).unwrap_or(false);
+            p
+        },
         project_root,
         event_sink: std::sync::Arc::new(crate::TauriEventSink { app_handle: app.clone() }),
         spend_cap_usd: spend_cap,
@@ -199,11 +207,24 @@ pub async fn ai_chat_stream(
         verbose: false,
         retention_engine: std::sync::Arc::new(std::sync::Mutex::new(tracelean_core::ai::RetentionEngine::with_defaults())),
         timing_tracker: std::sync::Arc::new(std::sync::Mutex::new(tracelean_core::ai::TurnTimingTracker::new())),
+        pending_diffs: diffs.0.clone(),
     };
 
-    // Delegate to the single core implementation (tool loop, compaction, etc.)
-    let result = run_agent_turn(&ctx, messages).await;
+    // Session-based (bugs.md Bug 1): the store owns the conversation, so the
+    // context bar and compaction state survive across streamed turns too.
+    let mut store = session_store.0.lock().await;
+    let chat_session = store
+        .entry(session_id.clone())
+        .or_insert_with(|| ChatSession::new(session_id.clone()));
+    chat_session.append(ChatMessage {
+        role: MessageRole::User,
+        content: user_message,
+        tool_call_id: None,
+        tool_calls: Vec::new(),
+    });
 
+    // Delegate to the single core implementation (tool loop, compaction, etc.)
+    let result = run_agent_turn_session(&ctx, chat_session).await;
     match result {
         Ok(turn_result) => {
             // Simulate streaming: emit response content in chunks
@@ -222,10 +243,12 @@ pub async fn ai_chat_stream(
             // Invalidate undo cache after tool execution
             invalidate_undo_cache(&cache);
 
+            let _ = app.emit("ai-chat-stream", session.finish());
             Ok(turn_result.response)
         }
         Err(e) => {
             let _ = app.emit("ai-stream-token", session.finish());
+            let _ = app.emit("ai-chat-stream", session.finish());      
             Err(e.to_string())
         }
     }

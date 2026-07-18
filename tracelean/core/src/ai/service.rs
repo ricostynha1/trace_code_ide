@@ -30,6 +30,8 @@ pub struct AiService {
     pub sessions: Arc<tokio::sync::Mutex<HashMap<String, ChatSession>>>,
     pub mcp_client: Arc<tokio::sync::Mutex<McpClientManager>>,
     pub event_sink: Arc<dyn EventSink>,
+    /// P10 review mode: staged agent edits awaiting per-hunk user approval.
+    pub pending_diffs: Arc<Mutex<Vec<crate::PendingDiff>>>,
 }
 
 impl AiService {
@@ -57,7 +59,15 @@ impl AiService {
             stats: self.stats.clone(),
             log: self.log.clone(),
             extra_tools,
-            permissions: crate::AgentPermissions::full_access("chat"),
+            permissions: {
+                let mut p = crate::AgentPermissions::full_access("chat");
+                p.review_edits = self
+                    .settings
+                    .lock()
+                    .map(|s| s.review_edits)
+                    .unwrap_or(false);
+                p
+            },
             project_root,
             event_sink: self.event_sink.clone(),
             spend_cap_usd: spend_cap,
@@ -65,6 +75,7 @@ impl AiService {
             verbose,
             retention_engine: Arc::new(Mutex::new(crate::ai::RetentionEngine::with_defaults())),
             timing_tracker: Arc::new(Mutex::new(crate::ai::TurnTimingTracker::new())),
+            pending_diffs: self.pending_diffs.clone(),
         })
     }
 

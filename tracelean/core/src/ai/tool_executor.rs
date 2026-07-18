@@ -25,6 +25,10 @@ pub struct AgentPermissions {
     pub allow_shell: bool,
     /// Max shell command timeout (seconds).
     pub max_shell_timeout: u64,
+    /// P10 review mode: edit tools stage diffs for user approval instead of
+    /// applying directly to buffers.
+    #[serde(default)]
+    pub review_edits: bool,
 }
 
 impl Default for AgentPermissions {
@@ -37,6 +41,7 @@ impl Default for AgentPermissions {
             writable_paths: vec![],
             allow_shell: true,
             max_shell_timeout: 60,
+            review_edits: false,
         }
     }
 }
@@ -112,6 +117,34 @@ fn glob_match(pattern: &str, path: &str) -> bool {
 
 use super::embeddings::SharedIndex;
 
+/// P10 review mode: where edit tools stage proposed diffs instead of applying.
+pub struct ReviewSink<'a> {
+    pub pending: &'a mut Vec<super::diff_pipeline::PendingDiff>,
+    pub agent: String,
+}
+
+impl ReviewSink<'_> {
+    /// Stage a proposed full-content change and describe it to the agent.
+    fn stage(&mut self, path: &str, original: &str, proposed: &str) -> ToolResult {
+        let diff =
+            super::diff_pipeline::create_pending_diff(path, original, proposed, &self.agent);
+        let n = diff.hunks.len();
+        self.pending.push(diff);
+        ToolResult {
+            success: true,
+            content: format!(
+                "Edit to '{}' staged for user review ({} hunk{} pending approval). \
+                 It is NOT applied yet — the user will accept or reject hunks in the IDE. \
+                 Continue with your remaining work; do not re-apply this edit.",
+                path,
+                n,
+                if n == 1 { "" } else { "s" }
+            ),
+            data: None,
+        }
+    }
+}
+
 /// Execute a tool call. Returns the result.
 /// Requires mutable access to state for write operations.
 pub fn execute_tool(
@@ -143,6 +176,30 @@ pub fn execute_tool_with_index(
     permissions: &AgentPermissions,
     embed_index: &Option<SharedIndex>,
 ) -> ToolResult {
+    execute_tool_reviewed(
+        call,
+        project_root,
+        state,
+        symbols,
+        graph,
+        permissions,
+        embed_index,
+        None,
+    )
+}
+
+/// Execute a tool call, staging edits into `review` instead of applying them
+/// when review mode is active (P10). `review: None` = direct apply.
+pub fn execute_tool_reviewed(
+    call: &ToolCall,
+    project_root: &Path,
+    state: &mut AppState,
+    symbols: &SymbolTable,
+    graph: &TraceGraph,
+    permissions: &AgentPermissions,
+    embed_index: &Option<SharedIndex>,
+    review: Option<&mut ReviewSink>,
+) -> ToolResult {
     // Permission check
     if !permissions.is_tool_allowed(&call.name) {
         return ToolResult {
@@ -157,7 +214,7 @@ pub fn execute_tool_with_index(
 
     match call.name.as_str() {
         "read_file" => execute_read_file(call, project_root, permissions),
-        "edit_file" => execute_edit_file(call, project_root, state, permissions),
+        "edit_file" => execute_edit_file(call, project_root, state, permissions, review),
         //
         "count_lines" => execute_count_lines(call, project_root, permissions),
 
@@ -166,9 +223,9 @@ pub fn execute_tool_with_index(
         // tools.json name "find" routes to grep (semantic mode handled externally)
         "find" => execute_find_grep(call, project_root),
 
-        "str_replace" => execute_str_replace(call, project_root, state, permissions),
+        "str_replace" => execute_str_replace(call, project_root, state, permissions, review),
         // tools.json name "replace_str" → same as str_replace
-        "replace_str" => execute_str_replace(call, project_root, state, permissions),
+        "replace_str" => execute_str_replace(call, project_root, state, permissions, review),
 
         "delete_file" => execute_delete_file(call, project_root, state, permissions),
         "list_files" => execute_list_directory(call, project_root),
@@ -401,6 +458,7 @@ fn execute_edit_file(
     project_root: &Path,
     state: &mut AppState,
     perms: &AgentPermissions,
+    review: Option<&mut ReviewSink>,
 ) -> ToolResult {
     let path = match get_str_arg(call, "path") {
         Some(p) => p,
@@ -470,6 +528,11 @@ fn execute_edit_file(
                     }
                 }
             };
+
+            // P10 review mode: stage the whole-file change instead of applying
+            if let Some(sink) = review {
+                return sink.stage(&path, &old_content, &text);
+            }
 
             // Replace entire content
             if let Err(e) = state.apply(Command::replace(
@@ -584,6 +647,17 @@ fn execute_edit_file(
     end_offset = end_offset.min(content.len());
 
     let old_text = content[start_offset..end_offset].to_string();
+
+    // P10 review mode: stage the line-range change instead of applying
+    if let Some(sink) = review {
+        let proposed = format!(
+            "{}{}{}",
+            &content[..start_offset],
+            text,
+            &content[end_offset..]
+        );
+        return sink.stage(&path, &content, &proposed);
+    }
 
     // Apply as Replace command (positions are char indices, not bytes)
     let at = content[..start_offset].chars().count();
@@ -710,6 +784,7 @@ fn execute_str_replace(
     project_root: &Path,
     state: &mut AppState,
     perms: &AgentPermissions,
+    review: Option<&mut ReviewSink>,
 ) -> ToolResult {
     let path = match get_str_arg(call, "path") {
         Some(p) => p,
@@ -793,6 +868,13 @@ fn execute_str_replace(
     }
 
     let offset = matches[0].0;
+
+    // P10 review mode: stage the replacement instead of applying
+    if let Some(sink) = review {
+        let proposed = content.replacen(&old_str, &new_str, 1);
+        return sink.stage(&path, &content, &proposed);
+    }
+
     let at = content[..offset].chars().count();
     if let Err(e) = state.apply(Command::replace(
         rel_path.clone(),

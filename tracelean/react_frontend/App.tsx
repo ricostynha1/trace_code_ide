@@ -9,6 +9,8 @@ import { RequirementsPanel } from "./components/RequirementsPanel";
 import { AiChatPanel } from "./components/AiChatPanel";
 import { MockPromptWindow } from "./components/MockPromptWindow";
 import { TraceabilityDashboard } from "./components/TraceabilityDashboard";
+import { WhichKeyBar } from "./components/WhichKeyBar";
+import { Splitter } from "./components/Splitter";
 import "./App.css";
 
 function App() {
@@ -92,11 +94,14 @@ function App() {
       />
       <div className="main-content">
         {projectOpen && (
-          <FileTree
-            projectRoot={projectRoot}
-            onFileSelect={handleFileSelectDirect}
-            selectedFile={currentFile}
-          />
+          <>
+            <FileTree
+              projectRoot={projectRoot}
+              onFileSelect={handleFileSelectDirect}
+              selectedFile={currentFile}
+            />
+            <Splitter cssVar="--file-tree-width" side="left" defaultWidth={240} />
+          </>
         )}
         <div className="editor-area">
           {currentFile ? (
@@ -108,11 +113,17 @@ function App() {
             </div>
           )}
         </div>
+        {reqsPanelVisible && (
+          <Splitter cssVar="--reqs-panel-width" side="right" defaultWidth={280} />
+        )}
         <RequirementsPanel
           visible={reqsPanelVisible}
           onClose={() => setReqsPanelVisible(false)}
           onFileSelect={handleFileSelect}
         />
+        {undoTreeVisible && (
+          <Splitter cssVar="--undo-panel-width" side="right" defaultWidth={220} />
+        )}
         <UndoTreePanel
           visible={undoTreeVisible}
           onClose={() => setUndoTreeVisible(false)}
@@ -120,6 +131,9 @@ function App() {
           onFileSelect={handleFileSelect}
           currentFile={currentFile}
         />
+        {aiPanelVisible && (
+          <Splitter cssVar="--ai-panel-width" side="right" defaultWidth={360} />
+        )}
         <AiChatPanel
           visible={aiPanelVisible}
           onClose={() => setAiPanelVisible(false)}
@@ -134,6 +148,7 @@ function App() {
           }}
         />
       </div>
+      <WhichKeyBar />
     </div>
   );
 }

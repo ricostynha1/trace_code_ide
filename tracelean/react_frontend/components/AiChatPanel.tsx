@@ -394,9 +394,12 @@ export function AiChatPanel({ visible, onClose }: Props) {
           }
         );
 
-        // Streaming still uses full messages (TODO: migrate ai_chat_stream to session-based)
-        const apiMessages = newMessages.filter((m) => m.role !== "system" && !m.chip);
-        const response = await invoke<AiResponse>("ai_chat_stream", { messages: apiMessages });
+        // Session-based (bugs.md Bug 1): backend owns conversation state, so
+        // the context bar and compaction survive across streamed turns too.
+        const response = await invoke<AiResponse>("ai_chat_stream", {
+          sessionId: activeChatId,
+          userMessage: input.trim(),
+        });
         unlisten();
         const assistantMsg: ChatMessage = { role: "assistant", content: response.content };
         setMessages((prev) => [...prev, assistantMsg]);

@@ -6,7 +6,7 @@ import { EditorView, keymap, lineNumbers, highlightActiveLine, hoverTooltip, Too
 import { defaultKeymap } from "@codemirror/commands";
 import { oneDark } from "@codemirror/theme-one-dark";
 import { searchKeymap, highlightSelectionMatches } from "@codemirror/search";
-import { mythKeyName, type KeyBindingInfo } from "./mythKeys";
+import { mythKeyName } from "./mythKeys";
 
 interface EditorProps {
   filePath: string;
@@ -327,7 +327,6 @@ export function Editor({ filePath }: EditorProps) {
   const [traceLink, setTraceLink] = useState<string | null>(null);
   const [ctxMenu, setCtxMenu] = useState<MythContextMenu | null>(null);
   const [mythMode, setMythMode] = useState("Main");
-  const [whichKey, setWhichKey] = useState<KeyBindingInfo[]>([]);
   // Read by the DOM capture handler (state would be stale inside CodeMirror callbacks)
   const mythModeRef = useRef("Main");
   const syncingFromBackend = useRef(false);
@@ -731,7 +730,10 @@ export function Editor({ filePath }: EditorProps) {
         const state = res?.state ?? "Main";
         mythModeRef.current = state;
         setMythMode(state);
-        setWhichKey(state !== "Main" ? res?.bindings ?? [] : []);
+        // Which-key renders in the global bottom bar (Emacs-style)
+        window.dispatchEvent(
+          new CustomEvent("myth-mode", { detail: { state, bindings: res?.bindings ?? [] } })
+        );
         if (res?.result?.kind === "dispatch") {
           const head = view.state.selection.main.head;
           const charPos = countCodePoints(view.state.doc.sliceString(0, head));
@@ -775,19 +777,6 @@ export function Editor({ filePath }: EditorProps) {
         onContextMenu={handleContextMenu}
         onKeyDownCapture={handleModeKeyCapture}
       />
-      {whichKey.length > 0 && (
-        <div className="which-key">
-          <div className="which-key-title">{mythMode}</div>
-          {whichKey.map((b) => (
-            <div key={b.key} className="which-key-row">
-              <span className="which-key-key">{b.key}</span>
-              <span className={`which-key-target which-key-${b.kind}`}>
-                {b.kind === "transition" ? `→${b.target}` : b.target.replace(/_/g, " ")}
-              </span>
-            </div>
-          ))}
-        </div>
-      )}
       {ctxMenu && (
         <div
           className="myth-menu"

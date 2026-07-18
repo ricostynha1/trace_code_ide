@@ -34,6 +34,8 @@ pub struct AgentContext {
     pub retention_engine: Arc<Mutex<RetentionEngine>>,
     /// Turn timing tracker (idle time → cache cold detection).
     pub timing_tracker: Arc<Mutex<TurnTimingTracker>>,
+    /// P10 review mode: staged agent edits awaiting per-hunk user approval.
+    pub pending_diffs: Arc<Mutex<Vec<crate::PendingDiff>>>,
 }
 
 /// Abstraction for tool-loop pause behavior.
@@ -61,7 +63,11 @@ impl AgentContext {
             stats: Arc::clone(&app.ai_stats),
             log: Arc::clone(&app.ai_log),
             extra_tools: Vec::new(), // Caller can set MCP tools after construction
-            permissions: AgentPermissions::full_access("chat"),
+            permissions: {
+                let mut p = AgentPermissions::full_access("chat");
+                p.review_edits = app.ai_settings.lock().map(|s| s.review_edits).unwrap_or(false);
+                p
+            },
             project_root,
             event_sink: Arc::clone(&app.event_sink),
             spend_cap_usd: spend_cap,
@@ -69,6 +75,7 @@ impl AgentContext {
             verbose: false,
             retention_engine: Arc::new(Mutex::new(RetentionEngine::with_defaults())),
             timing_tracker: Arc::new(Mutex::new(TurnTimingTracker::new())),
+            pending_diffs: Arc::clone(&app.pending_diffs),
         }
     }
 
@@ -90,6 +97,7 @@ impl AgentContext {
             verbose: false,
             retention_engine: Arc::new(Mutex::new(RetentionEngine::with_defaults())),
             timing_tracker: Arc::new(Mutex::new(TurnTimingTracker::new())),
+            pending_diffs: Arc::new(Mutex::new(Vec::new())),
         }
     }
 }

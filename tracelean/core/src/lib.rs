@@ -144,6 +144,10 @@ pub struct AiSettings {
     /// Hard spend cap per session (USD). Default $1.
     #[serde(default = "default_spend_cap")]
     pub spend_cap_usd: f64,
+    /// P10 review mode: agent edits stage diffs for per-hunk user approval
+    /// instead of applying directly to buffers.
+    #[serde(default)]
+    pub review_edits: bool,
 }
 
 fn default_spend_cap() -> f64 { 1.0 }
@@ -158,6 +162,7 @@ impl Default for AiSettings {
             selected_model: None,
             summary_model: None,
             spend_cap_usd: 1.0,
+            review_edits: false,
         }
     }
 }
@@ -214,6 +219,7 @@ impl SharedApp {
             sessions: self.chat_sessions.clone(),
             mcp_client: self.mcp_client.clone(),
             event_sink: self.event_sink.clone(),
+            pending_diffs: self.pending_diffs.clone(),
         }
     }
 

@@ -32,7 +32,7 @@
 
 /* File Tree */
 .file-tree {
-  width: 240px;
+  width: var(--file-tree-width, 240px);
   min-width: 180px;
   background: #252526;
   border-right: 1px solid #3e3e3e;

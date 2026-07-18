@@ -536,14 +536,45 @@ async fn run_agent_turn_inner(
                             .graph
                             .lock()
                             .map_err(|e| AgentError::Lock(e.to_string()))?;
-                        ai::tool_executor::execute_tool(
-                            &mcp_call,
-                            &ctx.project_root,
-                            &mut s,
-                            &sym,
-                            &g,
-                            &ctx.permissions,
-                        )
+                        // P10: review mode stages edits into pending_diffs
+                        // instead of applying them.
+                        if ctx.permissions.review_edits {
+                            let mut diffs = ctx
+                                .pending_diffs
+                                .lock()
+                                .map_err(|e| AgentError::Lock(e.to_string()))?;
+                            let before = diffs.len();
+                            let mut sink = ai::tool_executor::ReviewSink {
+                                pending: &mut diffs,
+                                agent: ctx.permissions.agent_id.clone(),
+                            };
+                            let result = ai::tool_executor::execute_tool_reviewed(
+                                &mcp_call,
+                                &ctx.project_root,
+                                &mut s,
+                                &sym,
+                                &g,
+                                &ctx.permissions,
+                                &None,
+                                Some(&mut sink),
+                            );
+                            if diffs.len() > before {
+                                ctx.event_sink.emit(
+                                    "pending-diffs-changed",
+                                    &serde_json::json!({"count": diffs.len()}).to_string(),
+                                );
+                            }
+                            result
+                        } else {
+                            ai::tool_executor::execute_tool(
+                                &mcp_call,
+                                &ctx.project_root,
+                                &mut s,
+                                &sym,
+                                &g,
+                                &ctx.permissions,
+                            )
+                        }
                     };
                     let tool_duration = start_tool.elapsed().as_millis() as u64;
 

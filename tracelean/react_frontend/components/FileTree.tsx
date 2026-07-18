@@ -28,7 +28,6 @@ export function FileTree({ projectRoot, onFileSelect, selectedFile }: FileTreePr
   const [hoverBadges, setHoverBadges] = useState<Map<string, HoverBadge>>(new Map());
   const [selIndex, setSelIndex] = useState(0);
   const [mythMode, setMythMode] = useState("Main");
-  const [whichKey, setWhichKey] = useState<KeyBindingInfo[]>([]);
   const expandedRef = useRef<Set<string>>(expanded);
 
   // Keep ref in sync so event listeners can read current expanded set
@@ -218,7 +217,10 @@ export function FileTree({ projectRoot, onFileSelect, selectedFile }: FileTreePr
         bindings: KeyBindingInfo[];
       }>("myth_key_event", { key });
       setMythMode(res.state);
-      setWhichKey(res.state !== "Main" ? res.bindings : []);
+      // Which-key renders in the global bottom bar (Emacs-style)
+      window.dispatchEvent(
+        new CustomEvent("myth-mode", { detail: { state: res.state, bindings: res.bindings } })
+      );
       if (res.result.kind === "dispatch" && res.result.action) {
         await runAction(res.result.action);
       }
@@ -300,19 +302,6 @@ export function FileTree({ projectRoot, onFileSelect, selectedFile }: FileTreePr
       <div className="file-tree-content">
         {rootEntries.map((entry) => renderEntry(entry))}
       </div>
-      {whichKey.length > 0 && (
-        <div className="which-key">
-          <div className="which-key-title">{mythMode}</div>
-          {whichKey.map((b) => (
-            <div key={b.key} className="which-key-row">
-              <span className="which-key-key">{b.key}</span>
-              <span className={`which-key-target which-key-${b.kind}`}>
-                {b.kind === "transition" ? `→${b.target}` : b.target.replace(/_/g, " ")}
-              </span>
-            </div>
-          ))}
-        </div>
-      )}
     </div>
   );
 }

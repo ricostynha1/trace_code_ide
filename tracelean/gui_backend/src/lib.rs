@@ -46,7 +46,7 @@ pub struct AiLogWrapper(pub Arc<Mutex<InteractionLog>>);
 pub struct AiSessionStatsWrapper(pub Arc<Mutex<SessionStats>>);
 pub struct MockPendingWrapper(pub Mutex<Vec<ai::mock::MockPendingRequest>>);
 pub struct MockProviderWrapper(pub Arc<tokio::sync::Mutex<Option<Arc<ai::mock::MockProvider>>>>);
-pub struct PendingDiffsWrapper(pub Mutex<Vec<PendingDiff>>);
+pub struct PendingDiffsWrapper(pub Arc<Mutex<Vec<PendingDiff>>>);
 
 /// Channel for tool loop pause/resume. Frontend sends true=continue, false=abort.
 pub struct ToolLoopResumeWrapper(pub Arc<tokio::sync::Mutex<Option<tokio::sync::oneshot::Sender<bool>>>>);
@@ -195,7 +195,7 @@ pub fn run() {
         .manage(AiSessionStatsWrapper(Arc::new(Mutex::new(SessionStats::default()))))
         .manage(MockPendingWrapper(Mutex::new(Vec::new())))
         .manage(MockProviderWrapper(Arc::new(tokio::sync::Mutex::new(None))))
-        .manage(PendingDiffsWrapper(Mutex::new(Vec::new())))
+        .manage(PendingDiffsWrapper(Arc::new(Mutex::new(Vec::new()))))
         .manage(ToolLoopResumeWrapper(Arc::new(tokio::sync::Mutex::new(None))))
         .manage(ChatSessionStoreWrapper(Arc::new(tokio::sync::Mutex::new(std::collections::HashMap::new()))))
         .manage(McpHostPermissionsWrapper(Mutex::new(AgentPermissions::full_access("mcp-host"))))
@@ -274,6 +274,7 @@ pub fn run() {
             ipc::ai_commands::get_pending_diffs,
             ipc::ai_commands::accept_diff_hunk,
             ipc::ai_commands::reject_diff_hunk,
+            ipc::ai_commands::accept_all_hunks,
             ipc::ai_commands::apply_accepted_hunks,
             ipc::ai_commands::discard_pending_diff,
             ipc::ai_commands::resume_tool_loop,
