@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 
@@ -220,7 +220,8 @@ export function UndoTreePanel({ visible, onClose, onNodeJump, onFileSelect, curr
   const [commandLog, setCommandLog] = useState<CommandLogEntry[]>([]);
   const [activeTab, setActiveTab] = useState<"tree" | "log">("tree");
   const [filterMode, setFilterMode] = useState<FilterMode>("global");
-  const [_diffPreview, setDiffPreview] = useState<string | null>(null);
+  const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hoverSeq = useRef(0);
   const [_hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
@@ -264,22 +265,25 @@ export function UndoTreePanel({ visible, onClose, onNodeJump, onFileSelect, curr
     }
   };
 
-  const handleHover = async (nodeId: string | null) => {
+  // P5 (D5.4): structured hover diff, debounced at 120ms and cancelled on
+  // mouse-out so sweeping the tree doesn't hammer IPC.
+  const handleHover = (nodeId: string | null) => {
     setHoveredNodeId(nodeId);
-    if (nodeId) {
+    if (hoverTimer.current) clearTimeout(hoverTimer.current);
+    const seq = ++hoverSeq.current;
+    if (!nodeId) {
+      window.dispatchEvent(new CustomEvent("undo-hover-diff", { detail: null }));
+      return;
+    }
+    hoverTimer.current = setTimeout(async () => {
       try {
-        const diff = await invoke<string>("get_undo_node_diff", { nodeId });
-        setDiffPreview(diff);
-        // T0: Emit event so Editor can show inline diff view
-        window.dispatchEvent(new CustomEvent("undo-hover-diff", { detail: { diff, nodeId } }));
+        const nodeDiff = await invoke("get_undo_node_diff_structured", { nodeId });
+        if (hoverSeq.current !== seq) return; // stale hover
+        window.dispatchEvent(new CustomEvent("undo-hover-diff", { detail: { nodeDiff, nodeId } }));
       } catch {
-        setDiffPreview(null);
         window.dispatchEvent(new CustomEvent("undo-hover-diff", { detail: null }));
       }
-    } else {
-      setDiffPreview(null);
-      window.dispatchEvent(new CustomEvent("undo-hover-diff", { detail: null }));
-    }
+    }, 120);
   };
 
   if (!visible) return null;

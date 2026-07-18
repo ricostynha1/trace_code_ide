@@ -27,7 +27,7 @@ pub use ai::{InteractionLog, tracking::SessionStats, diff_pipeline::PendingDiff}
 pub use ai::provider::{AiProvider, AiError, AiRequest, AiResponse};
 pub use ai::mcp_client::McpClientManager;
 pub use ai::tool_executor::AgentPermissions;
-pub use agent::{AgentContext, AgentError, AgentTurnResult, PauseHandler, ToolCallRecord, run_agent_turn, run_agent_turn_session, ChatSession};
+pub use agent::{AgentContext, AgentError, AgentTurnResult, PauseHandler, ToolCallRecord, run_agent_turn, run_agent_turn_session, ChatSession, ChatSessionInfo};
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;

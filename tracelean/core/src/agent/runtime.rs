@@ -36,6 +36,8 @@ pub struct AgentTurnResult {
     /// The final state of messages after the tool loop (including compaction, tool calls, results).
     /// Used by session-based API to persist model_view.
     pub final_messages: Vec<ChatMessage>,
+    /// How many loop iterations compacted/pruned context this turn (P7).
+    pub compactions: u32,
 }
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -72,6 +74,11 @@ pub async fn run_agent_turn_session(
     // Persist evolved state: final_messages includes all compaction + tool calls + final response
     // This is the model_view for next call — preserves caching prefix stability.
     session.model_view = result.final_messages.clone();
+
+    // Track real context size for the utilization bar (P7)
+    session.last_prompt_tokens = result.response.usage.input_tokens;
+    session.last_completion_tokens = result.response.usage.output_tokens;
+    session.compaction_count += result.compactions;
 
     // Append only the final assistant response to user_view (user already sees tool calls via events)
     let assistant_msg = ChatMessage {
@@ -129,6 +136,7 @@ async fn run_agent_turn_inner(
     let mut consecutive_failures: u32 = 0;
     let mut loop_i: u32 = 0;
     let mut total_tool_calls: usize = 0;
+    let mut total_compactions: u32 = 0;
     let mut all_tool_records: Vec<ToolCallRecord> = Vec::new();
 
     loop {
@@ -153,6 +161,9 @@ async fn run_agent_turn_inner(
         } else {
             false
         };
+        if was_compacted {
+            total_compactions += 1;
+        }
 
         let request = AiRequest {
             model: model.clone(),
@@ -293,6 +304,7 @@ async fn run_agent_turn_inner(
                         tool_calls_executed: all_tool_records,
                         iterations: loop_i + 1,
                         final_messages: messages,
+                        compactions: total_compactions,
                     });
                 }
 
@@ -558,6 +570,7 @@ async fn run_agent_turn_inner(
                         tool_calls_executed: all_tool_records,
                         iterations: loop_i + 1,
                         final_messages: messages,
+                        compactions: total_compactions,
                     });
                 }
 

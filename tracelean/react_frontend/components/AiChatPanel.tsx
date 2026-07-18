@@ -72,6 +72,16 @@ interface SessionStats {
   total_cost_usd: number;
 }
 
+/** P7: context-utilization snapshot from get_chat_session_info. */
+interface ChatSessionInfo {
+  estimated_context_tokens: number;
+  context_window: number;
+  context_window_known: boolean;
+  turns: number;
+  compaction_count: number;
+  model_view_len: number;
+}
+
 interface ModelConfig {
   provider: string;
   model_id: string;
@@ -176,6 +186,8 @@ export function AiChatPanel({ visible, onClose }: Props) {
   const [activeChatId, setActiveChatId] = useState<string>(chatInstances[0].id);
   const [showSwitcher, setShowSwitcher] = useState(false);
   const [expandedChips, setExpandedChips] = useState<Record<string, boolean>>({});
+  const [sessionInfo, setSessionInfo] = useState<ChatSessionInfo | null>(null);
+  const [confirmReset, setConfirmReset] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const mockPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -280,9 +292,15 @@ export function AiChatPanel({ visible, onClose }: Props) {
   useEffect(() => {
     const unlisten = listen("ai-stats-updated", () => {
       loadStats();
+      loadSessionInfo();
     });
     return () => { unlisten.then((fn) => fn()); };
-  }, []);
+  }, [activeChatId]);
+
+  // P7: refresh context info when panel opens or the active chat changes
+  useEffect(() => {
+    if (visible) loadSessionInfo();
+  }, [visible, activeChatId]);
 
   const loadSettings = async () => {
     try {
@@ -298,6 +316,25 @@ export function AiChatPanel({ visible, onClose }: Props) {
       const s = await invoke<SessionStats>("get_ai_session_stats");
       setStats(s);
     } catch {}
+  };
+
+  const loadSessionInfo = async () => {
+    try {
+      const info = await invoke<ChatSessionInfo>("get_chat_session_info", { sessionId: activeChatId });
+      setSessionInfo(info);
+    } catch {}
+  };
+
+  // P7 (D7.4): reset model context, keep the visible transcript with a divider
+  const resetContext = async () => {
+    setConfirmReset(false);
+    try {
+      await invoke("reset_chat_session", { sessionId: activeChatId });
+      setMessages((prev) => [...prev, { role: "system", content: "— context reset —" }]);
+      loadSessionInfo();
+    } catch (e) {
+      setError(String(e));
+    }
   };
 
   const loadModels = async () => {
@@ -363,6 +400,7 @@ export function AiChatPanel({ visible, onClose }: Props) {
         setMessages((prev) => [...prev, assistantMsg]);
       }
       loadStats();
+      loadSessionInfo();
     } catch (e) {
       setError(String(e));
       setStreamingContent("");
@@ -598,11 +636,45 @@ export function AiChatPanel({ visible, onClose }: Props) {
               <span className="ai-cost-tokens">
                 I{compactNum(stats.total_input_tokens)} O{compactNum(stats.total_output_tokens)} T{compactNum(stats.total_thinking_tokens)}
               </span>
-              {settings?.selected_model && (
-                <span className="ai-cost-context">
-                  {compactNum(stats.total_input_tokens)}/{compactNum(settings.selected_model.max_tokens)} ctx
-                </span>
-              )}
+              {sessionInfo && (() => {
+                // P7 (D7.3): real context utilization vs the model's window
+                const used = sessionInfo.estimated_context_tokens;
+                const win = Math.max(sessionInfo.context_window, 1);
+                const pct = Math.min(100, Math.round((used / win) * 100));
+                const level = pct >= 85 ? "red" : pct >= 60 ? "amber" : "green";
+                const winLabel = `${sessionInfo.context_window_known ? "" : "~"}${compactNum(win)}`;
+                const tooltip =
+                  `Context: ${used.toLocaleString()} of ${sessionInfo.context_window_known ? "" : "~"}${win.toLocaleString()} tokens\n` +
+                  `Messages in model view: ${sessionInfo.model_view_len} | turns: ${sessionInfo.turns} | compactions: ${sessionInfo.compaction_count}`;
+                return (
+                  <span className="ai-ctx-cell" title={tooltip}>
+                    <span className={`ai-ctx-meter ai-ctx-${level}`}>
+                      <span className="ai-ctx-fill" style={{ width: `${pct}%` }} />
+                    </span>
+                    <span className="ai-ctx-text">
+                      {pct}% · {compactNum(used)}/{winLabel}
+                    </span>
+                    {level === "red" && (
+                      <span className="ai-ctx-warning">context nearly full — reset or continue with compaction</span>
+                    )}
+                    {confirmReset ? (
+                      <span className="ai-ctx-reset-confirm">
+                        reset context?
+                        <button onClick={resetContext}>yes</button>
+                        <button onClick={() => setConfirmReset(false)}>no</button>
+                      </span>
+                    ) : (
+                      <button
+                        className="ai-ctx-reset-btn"
+                        title="Reset model context (transcript is kept)"
+                        onClick={() => setConfirmReset(true)}
+                      >
+                        ⟲
+                      </button>
+                    )}
+                  </span>
+                );
+              })()}
             </div>
           )}
         </div>

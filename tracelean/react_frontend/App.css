@@ -1715,3 +1715,113 @@ html, body, #root {
   flex-direction: column;
   gap: 2px;
 }
+
+/* --- P7: context utilization meter + reset --- */
+
+.ai-ctx-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.ai-ctx-meter {
+  display: inline-block;
+  width: 60px;
+  height: 7px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.12);
+  overflow: hidden;
+}
+
+.ai-ctx-fill {
+  display: block;
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.ai-ctx-green .ai-ctx-fill { background: #98c379; }
+.ai-ctx-amber .ai-ctx-fill { background: #e5c07b; }
+.ai-ctx-red .ai-ctx-fill { background: #e06c75; }
+
+.ai-ctx-text {
+  font-size: 11px;
+  color: #9da5b4;
+  white-space: nowrap;
+}
+
+.ai-ctx-warning {
+  font-size: 10px;
+  color: #e06c75;
+  white-space: nowrap;
+}
+
+.ai-ctx-reset-btn {
+  background: none;
+  border: 1px solid rgba(157, 165, 180, 0.35);
+  border-radius: 4px;
+  color: #9da5b4;
+  font-size: 12px;
+  line-height: 1;
+  padding: 2px 6px;
+  cursor: pointer;
+}
+
+.ai-ctx-reset-btn:hover {
+  color: #61afef;
+  border-color: #61afef;
+}
+
+.ai-ctx-reset-confirm {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: #e5c07b;
+}
+
+.ai-ctx-reset-confirm button {
+  background: none;
+  border: 1px solid rgba(229, 192, 123, 0.5);
+  border-radius: 3px;
+  color: inherit;
+  font-size: 10px;
+  padding: 1px 6px;
+  cursor: pointer;
+}
+
+/* --- P5: hover diff — green incoming-lines block in the editor --- */
+
+.cm-diff-added-block {
+  background-color: rgba(40, 160, 40, 0.15);
+  border-left: 3px solid #4ec9b0;
+  font-family: inherit;
+  white-space: pre;
+  opacity: 0.9;
+}
+
+.cm-diff-added-line {
+  padding-left: 4px;
+  color: #98c379;
+}
+
+/* --- P5: file tree hover diff badges --- */
+
+.file-diff-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 6px;
+  font-size: 10px;
+}
+
+.file-diff-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #61afef;
+}
+
+.file-diff-added { color: #98c379; }
+.file-diff-removed { color: #e06c75; }

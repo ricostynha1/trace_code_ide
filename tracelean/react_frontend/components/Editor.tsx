@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { EditorState, StateField, StateEffect, RangeSet } from "@codemirror/state";
-import { EditorView, keymap, lineNumbers, highlightActiveLine, hoverTooltip, Tooltip, Decoration, DecorationSet } from "@codemirror/view";
+import { EditorView, keymap, lineNumbers, highlightActiveLine, hoverTooltip, Tooltip, Decoration, DecorationSet, WidgetType } from "@codemirror/view";
 import { defaultKeymap } from "@codemirror/commands";
 import { oneDark } from "@codemirror/theme-one-dark";
 import { searchKeymap, highlightSelectionMatches } from "@codemirror/search";
@@ -147,7 +147,6 @@ const diffField = StateField.define<DecorationSet>({
   provide: (f) => EditorView.decorations.from(f),
 });
 
-const diffAddedLine = Decoration.line({ attributes: { style: "background-color: rgba(40, 160, 40, 0.15); border-left: 3px solid #4ec9b0;" } });
 const diffRemovedLine = Decoration.line({ attributes: { style: "background-color: rgba(200, 50, 50, 0.15); border-left: 3px solid #e06c75;" } });
 // @ts-expect-error kept for future use
 const _diffContextLine = Decoration.line({ attributes: { style: "opacity: 0.6;" } });
@@ -174,67 +173,93 @@ function buildDecorations(spans: HighlightSpan[], docLen: number): DecorationSet
   return RangeSet.of(builder);
 }
 
-// --- T0: Parse unified diff and create line decorations for the editor ---
+// --- P5: structured hover diff (NodeDiff from get_undo_node_diff_structured) ---
 
-function parseDiffToDecorations(diffText: string, currentFile: string, view: EditorView): DecorationSet {
-  if (!diffText || diffText === "(no changes)") return Decoration.none;
+interface DiffHunkT {
+  current_start_line: number;
+  removed_lines: string[];
+  added_lines: string[];
+}
 
-  const lines = diffText.split("\n");
-  const decos: { from: number; to: number; value: Decoration }[] = [];
-  let inRelevantFile = false;
-  let currentLineNum = 0; // 1-based line in the "a" (current) side
+interface FileDiffT {
+  path: string;
+  added: number;
+  removed: number;
+  hunks: DiffHunkT[];
+}
 
-  // Normalize: strip leading slashes for comparison
+export interface NodeDiffT {
+  files: FileDiffT[];
+}
+
+/** Green block widget showing the lines a jump would insert (D5.2). */
+class AddedLinesWidget extends WidgetType {
+  constructor(readonly lines: string[]) {
+    super();
+  }
+  eq(other: AddedLinesWidget): boolean {
+    return other.lines.length === this.lines.length
+      && other.lines.every((l, i) => l === this.lines[i]);
+  }
+  toDOM(): HTMLElement {
+    const wrap = document.createElement("div");
+    wrap.className = "cm-diff-added-block";
+    for (const line of this.lines) {
+      const el = document.createElement("div");
+      el.className = "cm-diff-added-line";
+      el.textContent = line.length > 0 ? line : " ";
+      wrap.appendChild(el);
+    }
+    return wrap;
+  }
+  get estimatedHeight(): number {
+    return this.lines.length * 18;
+  }
+}
+
+function matchesFile(diffPath: string, currentFile: string): boolean {
+  const normDiff = diffPath.replace(/^\/+/, "");
   const normFile = currentFile.replace(/^\/+/, "");
+  return normDiff === normFile || normFile.endsWith(normDiff) || normDiff.endsWith(normFile);
+}
 
-  for (const line of lines) {
-    // File header: --- a/path
-    if (line.startsWith("--- a/") || line.startsWith("--- ")) {
-      const filePath = line.replace(/^--- a\//, "").replace(/^--- /, "").trim();
-      const normDiff = filePath.replace(/^\/+/, "");
-      inRelevantFile = normDiff === normFile
-        || normFile.endsWith(normDiff)
-        || normDiff.endsWith(normFile);
-      continue;
-    }
-    if (line.startsWith("+++ ")) continue;
+/** Build decorations for the currently open file from a structured NodeDiff:
+ * red line styles on lines that would be removed, green block widgets at
+ * insertion points showing the incoming text. */
+function buildNodeDiffDecorations(nodeDiff: NodeDiffT, currentFile: string, view: EditorView): DecorationSet {
+  const fileDiff = nodeDiff.files.find((f) => matchesFile(f.path, currentFile));
+  if (!fileDiff) return Decoration.none;
 
-    // Hunk header: @@ -startA,countA +startB,countB @@
-    if (line.startsWith("@@")) {
-      const match = line.match(/@@ -(\d+)/);
-      if (match) currentLineNum = parseInt(match[1], 10);
-      continue;
-    }
+  const doc = view.state.doc;
+  const decos: { from: number; to: number; value: Decoration }[] = [];
 
-    if (!inRelevantFile) continue;
-
-    const docLines = view.state.doc.lines;
-
-    if (line.startsWith("-")) {
-      // Removed line — this line exists in current but not at target
-      if (currentLineNum >= 1 && currentLineNum <= docLines) {
-        const lineObj = view.state.doc.line(currentLineNum);
+  for (const hunk of fileDiff.hunks) {
+    for (let i = 0; i < hunk.removed_lines.length; i++) {
+      const lineNum = hunk.current_start_line + i;
+      if (lineNum >= 1 && lineNum <= doc.lines) {
+        const lineObj = doc.line(lineNum);
         decos.push({ from: lineObj.from, to: lineObj.from, value: diffRemovedLine });
       }
-      currentLineNum++;
-    } else if (line.startsWith("+")) {
-      // Added line — exists at target but not current; mark insertion point
-      const targetLine = Math.min(Math.max(currentLineNum, 1), docLines);
-      if (targetLine >= 1) {
-        const lineObj = view.state.doc.line(targetLine);
-        decos.push({ from: lineObj.from, to: lineObj.from, value: diffAddedLine });
-      }
-    } else if (line.startsWith(" ")) {
-      // Context line
-      currentLineNum++;
+    }
+    if (hunk.added_lines.length > 0) {
+      // Incoming lines replace the removed run — show them right after it.
+      const afterLine = hunk.current_start_line + hunk.removed_lines.length;
+      const pos = afterLine <= doc.lines ? doc.line(afterLine).from : doc.length;
+      decos.push({
+        from: pos,
+        to: pos,
+        value: Decoration.widget({
+          widget: new AddedLinesWidget(hunk.added_lines),
+          block: true,
+          side: afterLine <= doc.lines ? -1 : 1,
+        }),
+      });
     }
   }
 
   if (decos.length === 0) return Decoration.none;
   decos.sort((a, b) => a.from - b.from);
-  // Deduplicate by from position
-  const unique = decos.filter((d, i) => i === 0 || d.from !== decos[i - 1].from);
-  return Decoration.set(unique);
+  return Decoration.set(decos);
 }
 
 // --- Symbol hover tooltip ---
@@ -346,19 +371,18 @@ export function Editor({ filePath }: EditorProps) {
     };
   }, [filePath]);
 
-  // T0: Listen for undo tree hover diff — show inline diff decorations in editor
+  // P5: Listen for undo tree hover diff — show structured diff decorations
   useEffect(() => {
     const handler = (e: Event) => {
       const view = viewRef.current;
       if (!view) return;
       const detail = (e as CustomEvent).detail;
-      if (!detail || !detail.diff) {
+      if (!detail || !detail.nodeDiff) {
         // Clear diff decorations
         view.dispatch({ effects: setDiffDecorations.of(Decoration.none) });
         return;
       }
-      // Parse unified diff to find lines relevant to this file
-      const decos = parseDiffToDecorations(detail.diff, filePath, view);
+      const decos = buildNodeDiffDecorations(detail.nodeDiff as NodeDiffT, filePath, view);
       view.dispatch({ effects: setDiffDecorations.of(decos) });
     };
     window.addEventListener("undo-hover-diff", handler);

@@ -287,6 +287,18 @@ pub fn get_undo_node_diff(
     Ok(s.node_content_diff(id))
 }
 
+/// Structured hover diff (P5, D5.1): what changes if we jump to `node_id`.
+#[tauri::command]
+pub fn get_undo_node_diff_structured(
+    state: State<'_, AppStateWrapper>,
+    node_id: String,
+) -> Result<crate::core::state::NodeDiff, String> {
+    let s = state.0.lock().map_err(|e| e.to_string())?;
+    let id = uuid::Uuid::parse_str(&node_id).map_err(|e| e.to_string())?;
+    s.node_diff_structured(id)
+        .ok_or_else(|| "node not found".to_string())
+}
+
 #[tauri::command]
 pub fn parse_file_symbols(
     state: State<'_, AppStateWrapper>,

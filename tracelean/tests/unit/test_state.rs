@@ -484,3 +484,58 @@ proptest! {
         }
     }
 }
+
+// --- P5: structured node diff for hover previews ---
+
+#[test]
+fn node_diff_structured_reports_hunks() {
+    let (mut state, file) = fresh("line1\nline2\nline3\n");
+    state.record_file_open();
+    let base = state.undo_tree().current_node().unwrap().id;
+
+    // Scripted 3-edit history
+    state
+        .apply(Command::replace(file.clone(), 6, "line2".into(), "LINE-TWO".into()))
+        .unwrap();
+    state
+        .apply(Command::insert(file.clone(), 14, "\nextra".into()))
+        .unwrap();
+    state
+        .apply(Command::insert(file.clone(), 0, "header\n".into()))
+        .unwrap();
+    assert_eq!(
+        state.get_content(&file),
+        Some("header\nline1\nLINE-TWO\nextra\nline3\n")
+    );
+
+    // Diff current → base: what changes if we jump back to the start
+    let diff = state.node_diff_structured(base).expect("diff");
+    assert_eq!(diff.files.len(), 1);
+    let fd = &diff.files[0];
+    assert!(fd.path.ends_with("test.rs"));
+    // Jumping back removes header/LINE-TWO/extra and restores line2
+    assert_eq!(fd.removed, 3);
+    assert_eq!(fd.added, 1);
+
+    // First hunk: "header" at current line 1 is removed
+    assert_eq!(fd.hunks[0].current_start_line, 1);
+    assert_eq!(fd.hunks[0].removed_lines, vec!["header".to_string()]);
+    assert!(fd.hunks[0].added_lines.is_empty());
+
+    // Second hunk: LINE-TWO + extra (current lines 3-4) replaced by line2
+    assert_eq!(fd.hunks[1].current_start_line, 3);
+    assert_eq!(
+        fd.hunks[1].removed_lines,
+        vec!["LINE-TWO".to_string(), "extra".to_string()]
+    );
+    assert_eq!(fd.hunks[1].added_lines, vec!["line2".to_string()]);
+}
+
+#[test]
+fn node_diff_structured_same_node_is_empty() {
+    let (mut state, file) = fresh("abc");
+    state.apply(Command::insert(file.clone(), 3, "d".into())).unwrap();
+    let here = state.undo_tree().current_node().unwrap().id;
+    let diff = state.node_diff_structured(here).expect("diff");
+    assert!(diff.files.is_empty());
+}

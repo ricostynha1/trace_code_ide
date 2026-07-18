@@ -409,6 +409,81 @@ impl AppState {
         }
     }
 
+    /// Structured diff between current state and the state at a target node
+    /// (P5, D5.1). Direction: "what changes if I jump there" — removed_lines
+    /// are lines present NOW that would disappear; added_lines are incoming.
+    pub fn node_diff_structured(&self, node_id: NodeId) -> Option<NodeDiff> {
+        let target_buffers = self.buffers_at_node(node_id)?;
+
+        let mut all_paths: Vec<PathBuf> = self.buffers.keys().cloned().collect();
+        for p in target_buffers.keys() {
+            if !all_paths.contains(p) {
+                all_paths.push(p.clone());
+            }
+        }
+        all_paths.sort();
+
+        let mut files = Vec::new();
+        for path in all_paths {
+            let current = self.buffers.get(&path).map(|b| b.content.as_str()).unwrap_or("");
+            let target = target_buffers.get(&path).map(|s| s.as_str()).unwrap_or("");
+            if current == target {
+                continue;
+            }
+            let cur_lines: Vec<&str> = current.lines().collect();
+            let tar_lines: Vec<&str> = target.lines().collect();
+            let ops = diff_ops(&cur_lines, &tar_lines);
+
+            let mut hunks: Vec<DiffHunk> = Vec::new();
+            let mut added = 0u32;
+            let mut removed = 0u32;
+            // 1-indexed line number in the CURRENT document
+            let mut cur_line = 1u32;
+            let mut open: Option<DiffHunk> = None;
+            for (op, line) in ops {
+                match op {
+                    DiffOp::Keep => {
+                        if let Some(h) = open.take() {
+                            hunks.push(h);
+                        }
+                        cur_line += 1;
+                    }
+                    DiffOp::Remove => {
+                        removed += 1;
+                        let h = open.get_or_insert_with(|| DiffHunk {
+                            current_start_line: cur_line,
+                            removed_lines: Vec::new(),
+                            added_lines: Vec::new(),
+                        });
+                        h.removed_lines.push(line.to_string());
+                        cur_line += 1;
+                    }
+                    DiffOp::Add => {
+                        added += 1;
+                        let h = open.get_or_insert_with(|| DiffHunk {
+                            current_start_line: cur_line,
+                            removed_lines: Vec::new(),
+                            added_lines: Vec::new(),
+                        });
+                        h.added_lines.push(line.to_string());
+                    }
+                }
+            }
+            if let Some(h) = open.take() {
+                hunks.push(h);
+            }
+
+            files.push(FileDiff {
+                path: path.to_string_lossy().to_string(),
+                added,
+                removed,
+                hunks,
+            });
+        }
+
+        Some(NodeDiff { files })
+    }
+
     /// Compute the buffer contents at a target node (for structured diffs).
     /// Returns (path -> content) for every buffer that differs from current.
     pub fn buffers_at_node(&self, node_id: NodeId) -> Option<HashMap<PathBuf, String>> {
@@ -478,6 +553,28 @@ impl Default for AppState {
     fn default() -> Self {
         Self::new()
     }
+}
+
+/// Structured node diff shipped to the UI (P5, D5.1).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NodeDiff {
+    pub files: Vec<FileDiff>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FileDiff {
+    pub path: String,
+    pub added: u32,
+    pub removed: u32,
+    pub hunks: Vec<DiffHunk>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DiffHunk {
+    /// 1-indexed line in the CURRENT document where this hunk begins.
+    pub current_start_line: u32,
+    pub removed_lines: Vec<String>,
+    pub added_lines: Vec<String>,
 }
 
 /// FNV-1a 32-bit. Mirrored in the frontend for divergence detection.

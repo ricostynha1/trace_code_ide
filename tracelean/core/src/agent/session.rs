@@ -24,6 +24,29 @@ pub struct ChatSession {
     pub turn: usize,
     /// Whether model_view has diverged from user_view (i.e., compaction happened).
     pub compacted: bool,
+    /// Prompt tokens of the LAST request in the last turn (P7: real context size).
+    #[serde(default)]
+    pub last_prompt_tokens: u32,
+    /// Completion tokens of the last response (P7).
+    #[serde(default)]
+    pub last_completion_tokens: u32,
+    /// How many times context was compacted in this session (P7).
+    #[serde(default)]
+    pub compaction_count: u32,
+}
+
+/// Context-utilization snapshot for the UI (P7, D7.2).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ChatSessionInfo {
+    /// Estimated next-turn context = last prompt + last completion tokens
+    /// (exact for the prefix; new user input adds on top).
+    pub estimated_context_tokens: u32,
+    pub context_window: u32,
+    /// False when the window is the fallback default (UI shows `~`).
+    pub context_window_known: bool,
+    pub turns: usize,
+    pub compaction_count: u32,
+    pub model_view_len: usize,
 }
 
 impl ChatSession {
@@ -34,6 +57,21 @@ impl ChatSession {
             model_view: Vec::new(),
             turn: 0,
             compacted: false,
+            last_prompt_tokens: 0,
+            last_completion_tokens: 0,
+            compaction_count: 0,
+        }
+    }
+
+    /// Build the context-utilization snapshot against a model's window (P7).
+    pub fn info(&self, context_window: u32, context_window_known: bool) -> ChatSessionInfo {
+        ChatSessionInfo {
+            estimated_context_tokens: self.last_prompt_tokens + self.last_completion_tokens,
+            context_window,
+            context_window_known,
+            turns: self.turn,
+            compaction_count: self.compaction_count,
+            model_view_len: self.model_view.len(),
         }
     }
 
@@ -82,5 +120,18 @@ impl ChatSession {
         self.model_view.clear();
         self.turn = 0;
         self.compacted = false;
+        self.last_prompt_tokens = 0;
+        self.last_completion_tokens = 0;
+        self.compaction_count = 0;
+    }
+
+    /// Reset the model context only (P7, D7.4): clears model_view so the next
+    /// request starts from ~system+tools size, but keeps user_view so the UI
+    /// transcript survives (a divider is rendered frontend-side).
+    pub fn reset_context(&mut self) {
+        self.model_view.clear();
+        self.compacted = false;
+        self.last_prompt_tokens = 0;
+        self.last_completion_tokens = 0;
     }
 }

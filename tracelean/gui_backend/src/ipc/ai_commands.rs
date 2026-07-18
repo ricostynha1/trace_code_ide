@@ -305,15 +305,40 @@ pub async fn ai_chat_session(
     Ok(result.response)
 }
 
-/// Reset a chat session (new conversation). Clears both user_view and model_view.
+/// Reset a chat session's model context (P7, D7.4). Clears model_view only —
+/// the visible transcript (user_view) is kept; the frontend inserts a
+/// "— context reset —" divider. Stats/cost totals are not touched.
 #[tauri::command]
 pub async fn reset_chat_session(
     session_store: State<'_, crate::ChatSessionStoreWrapper>,
     session_id: String,
 ) -> Result<(), String> {
     let mut store = session_store.0.lock().await;
-    store.remove(&session_id);
+    if let Some(session) = store.get_mut(&session_id) {
+        session.reset_context();
+    }
     Ok(())
+}
+
+/// Context-utilization snapshot for the chat cost bar (P7, D7.2).
+#[tauri::command]
+pub async fn get_chat_session_info(
+    session_store: State<'_, crate::ChatSessionStoreWrapper>,
+    settings: State<'_, AiSettingsWrapper>,
+    session_id: String,
+) -> Result<tracelean_core::ChatSessionInfo, String> {
+    let (context_window, known) = {
+        let s = settings.0.lock().map_err(|e| e.to_string())?;
+        match &s.selected_model {
+            Some(m) => (m.context_window, m.context_window_known),
+            None => (128_000, false),
+        }
+    };
+    let store = session_store.0.lock().await;
+    Ok(match store.get(&session_id) {
+        Some(session) => session.info(context_window, known),
+        None => tracelean_core::ChatSession::new(session_id).info(context_window, known),
+    })
 }
 
 /// Get the raw user_view messages for a session (what user sees in chat panel).
