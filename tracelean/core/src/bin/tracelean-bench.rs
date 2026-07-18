@@ -363,7 +363,7 @@ fn configure_settings(
         .or_else(|| std::env::var("MODEL_ID").ok())
         .unwrap_or_else(|| "anthropic/claude-sonnet-4-20250514".to_string());
 
-    settings.selected_model = Some(ModelConfig {
+    let mut model = ModelConfig {
         provider: settings.active_provider.clone(),
         model_id,
         display_name: "Bench Model".to_string(),
@@ -378,7 +378,11 @@ fn configure_settings(
         supports_caching: false,
         supports_tools: false,
         ..Default::default()
-    });
+    };
+    // Match the GUI: catalog enrichment decides tool dialect, tool passing,
+    // pricing and context window for the model id.
+    tracelean_core::ai::model_catalog::enrich(&mut model);
+    settings.selected_model = Some(model);
 
     settings.spend_cap_usd = cost_cap;
 }

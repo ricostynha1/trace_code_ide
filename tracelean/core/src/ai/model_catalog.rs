@@ -197,6 +197,13 @@ pub fn enrich(model: &mut super::provider::ModelConfig) {
                 ToolPassing::NativeParam
             }
         });
+
+    // Thinking models routinely spend thousands of tokens inside <think>
+    // spans; a 4096 output budget truncates mid-thought and yields an empty
+    // answer once thinking is stripped.
+    if id.contains("minimax") && model.max_tokens < 16_384 {
+        model.max_tokens = 16_384;
+    }
 }
 
 #[cfg(test)]

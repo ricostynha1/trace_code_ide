@@ -762,7 +762,7 @@ impl AiProvider for BedrockProvider {
                         })
                         .collect();
 
-                    let (tool_calls, content) = if !native_calls.is_empty() {
+                    let (tool_calls, mut content) = if !native_calls.is_empty() {
                         (native_calls, raw_content)
                     } else {
                         // Parse tool calls from text, dialect-first (P2)
@@ -800,6 +800,13 @@ impl AiProvider for BedrockProvider {
 
                         (tool_parsed.calls, content)
                     };
+
+                    // A thinking model can burn the whole output budget inside
+                    // an unterminated <think> span; stripping then leaves
+                    // nothing. Surface that instead of an empty answer.
+                    if truncated && content.is_empty() && tool_calls.is_empty() {
+                        content = "[No answer: the model used its entire output budget on internal thinking before being cut off. Retry, simplify the request, or raise max_tokens.]".to_string();
+                    }
 
                     // Token usage
                     let usage = parsed.usage.as_ref();

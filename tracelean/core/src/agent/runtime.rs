@@ -895,7 +895,74 @@ async fn cost_aware_compact(
         }
     }
 
+    sanitize_tool_pairing(messages);
+
     tokens_freed
+}
+
+/// Repair the native tool-call pairing invariant after compaction mutates the
+/// message list. Providers hard-reject histories where a `role: tool` message
+/// has no preceding assistant message carrying the matching `tool_calls`
+/// entry, or where an assistant `tool_calls` entry has no result. Index-based
+/// pruning can produce both, so: unanswered assistant calls are flattened to
+/// text, and orphaned tool results become user messages.
+fn sanitize_tool_pairing(messages: &mut Vec<ChatMessage>) {
+    use std::collections::HashSet;
+
+    // Pass 1: assistant tool_calls whose results were pruned → flatten the
+    // calls into text content. (Runs first: flattening orphans the surviving
+    // results of that message, which pass 2 then converts.)
+    let n = messages.len();
+    for i in 0..n {
+        if messages[i].role != MessageRole::Assistant || messages[i].tool_calls.is_empty() {
+            continue;
+        }
+        let mut answered: HashSet<String> = HashSet::new();
+        let mut j = i + 1;
+        while j < n && messages[j].role == MessageRole::Tool {
+            if let Some(id) = &messages[j].tool_call_id {
+                answered.insert(id.clone());
+            }
+            j += 1;
+        }
+        if messages[i].tool_calls.iter().any(|tc| !answered.contains(&tc.id)) {
+            let rendered: Vec<String> = messages[i]
+                .tool_calls
+                .iter()
+                .map(|tc| format!("[called {}({})]", tc.function.name, tc.function.arguments))
+                .collect();
+            let msg = &mut messages[i];
+            if !msg.content.is_empty() {
+                msg.content.push('\n');
+            }
+            msg.content.push_str(&rendered.join("\n"));
+            msg.tool_calls.clear();
+        }
+    }
+
+    // Pass 2: tool results with no pending call from the closest preceding
+    // assistant message → user messages (content is kept, role becomes valid).
+    let mut pending: HashSet<String> = HashSet::new();
+    for msg in messages.iter_mut() {
+        match msg.role {
+            MessageRole::Assistant => {
+                pending = msg.tool_calls.iter().map(|tc| tc.id.clone()).collect();
+            }
+            MessageRole::Tool => {
+                let ok = msg
+                    .tool_call_id
+                    .as_ref()
+                    .map(|id| pending.remove(id))
+                    .unwrap_or(false);
+                if !ok {
+                    msg.role = MessageRole::User;
+                    msg.content = format!("[earlier tool result]\n{}", msg.content);
+                    msg.tool_call_id = None;
+                }
+            }
+            _ => pending.clear(),
+        }
+    }
 }
 
 /// Call the summary/compression model to produce a condensed version of conversation entries.
@@ -1015,4 +1082,96 @@ fn build_summary_provider(
     };
 
     Ok(provider)
+}
+
+#[cfg(test)]
+mod pairing_tests {
+    use super::*;
+    use crate::ai::provider::{ToolCallFunction, ToolCallResponse};
+
+    fn call(id: &str, name: &str) -> ToolCallResponse {
+        ToolCallResponse {
+            id: id.into(),
+            call_type: "function".into(),
+            function: ToolCallFunction { name: name.into(), arguments: "{}".into() },
+        }
+    }
+
+    fn assistant(calls: Vec<ToolCallResponse>) -> ChatMessage {
+        ChatMessage { role: MessageRole::Assistant, content: String::new(), tool_call_id: None, tool_calls: calls }
+    }
+
+    fn tool(id: &str, content: &str) -> ChatMessage {
+        ChatMessage { role: MessageRole::Tool, content: content.into(), tool_call_id: Some(id.into()), tool_calls: Vec::new() }
+    }
+
+    fn user(content: &str) -> ChatMessage {
+        ChatMessage { role: MessageRole::User, content: content.into(), tool_call_id: None, tool_calls: Vec::new() }
+    }
+
+    #[test]
+    fn orphan_tool_results_become_user_messages() {
+        // The compaction shape that 400s on Bedrock: prune note followed by
+        // tool results whose assistant message was drained.
+        let mut msgs = vec![
+            user("prompt"),
+            user("[Context compacted]"),
+            tool("call_1", "result one"),
+            tool("call_2", "result two"),
+            assistant(vec![call("call_3", "read_file")]),
+            tool("call_3", "file body"),
+        ];
+        sanitize_tool_pairing(&mut msgs);
+        assert_eq!(msgs[2].role, MessageRole::User);
+        assert!(msgs[2].content.contains("result one"));
+        assert_eq!(msgs[3].role, MessageRole::User);
+        // Intact pair untouched
+        assert_eq!(msgs[4].tool_calls.len(), 1);
+        assert_eq!(msgs[5].role, MessageRole::Tool);
+    }
+
+    #[test]
+    fn unanswered_assistant_calls_are_flattened() {
+        // Assistant made two calls but one result was pruned: calls flatten to
+        // text, the surviving result becomes a user message.
+        let mut msgs = vec![
+            user("prompt"),
+            assistant(vec![call("call_1", "read_file"), call("call_2", "run_shell")]),
+            tool("call_2", "shell output"),
+        ];
+        sanitize_tool_pairing(&mut msgs);
+        assert!(msgs[1].tool_calls.is_empty());
+        assert!(msgs[1].content.contains("read_file"));
+        assert!(msgs[1].content.contains("run_shell"));
+        assert_eq!(msgs[2].role, MessageRole::User);
+        assert!(msgs[2].content.contains("shell output"));
+    }
+
+    #[test]
+    fn intact_history_is_unchanged() {
+        let mut msgs = vec![
+            user("prompt"),
+            assistant(vec![call("call_1", "read_file")]),
+            tool("call_1", "body"),
+            assistant(Vec::new()),
+        ];
+        let before = format!("{:?}", msgs);
+        sanitize_tool_pairing(&mut msgs);
+        assert_eq!(before, format!("{:?}", msgs));
+    }
+
+    #[test]
+    fn user_message_between_pair_orphans_result() {
+        // A message inserted between an assistant call and its result breaks
+        // adjacency; the result must be demoted, and the now-unanswered call
+        // flattened.
+        let mut msgs = vec![
+            assistant(vec![call("call_1", "find")]),
+            user("[Context compacted]"),
+            tool("call_1", "match list"),
+        ];
+        sanitize_tool_pairing(&mut msgs);
+        assert!(msgs[0].tool_calls.is_empty());
+        assert_eq!(msgs[2].role, MessageRole::User);
+    }
 }
