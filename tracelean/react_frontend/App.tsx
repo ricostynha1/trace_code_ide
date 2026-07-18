@@ -12,6 +12,7 @@ import { TraceabilityDashboard } from "./components/TraceabilityDashboard";
 import { WhichKeyBar } from "./components/WhichKeyBar";
 import { Splitter } from "./components/Splitter";
 import { DiffReviewPanel } from "./components/DiffReviewPanel";
+import { TerminalPanel } from "./components/TerminalPanel";
 import "./App.css";
 
 function App() {
@@ -57,6 +58,13 @@ function App() {
     };
     window.addEventListener("tracelean-navigate", handler);
     return () => window.removeEventListener("tracelean-navigate", handler);
+  }, []);
+
+  // P12: "Fix with AI" from the terminal opens the chat panel pre-seeded
+  useEffect(() => {
+    const handler = () => setAiPanelVisible(true);
+    window.addEventListener("fix-with-ai", handler);
+    return () => window.removeEventListener("fix-with-ai", handler);
   }, []);
 
   const handleProjectOpened = (root: string) => {
@@ -150,6 +158,7 @@ function App() {
           }}
         />
       </div>
+      <TerminalPanel projectOpen={projectOpen} />
       <WhichKeyBar />
     </div>
   );

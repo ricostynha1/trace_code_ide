@@ -7,3 +7,4 @@ pub mod ai_commands;
 pub mod mcp_commands;
 pub mod acp_commands;
 pub mod myth_commands;
+pub mod terminal_commands;

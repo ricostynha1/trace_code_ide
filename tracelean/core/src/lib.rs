@@ -13,6 +13,7 @@ pub mod requirements;
 pub mod service;
 pub mod state;
 pub mod surgical_edit;
+pub mod testrun;
 pub mod trace_graph;
 pub mod undo_tree;
 

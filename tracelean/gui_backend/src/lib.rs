@@ -300,6 +300,10 @@ pub fn run() {
             ipc::myth_commands::myth_key_event,
             ipc::myth_commands::myth_which_key,
             ipc::myth_commands::get_surface,
+            // Terminal / test runner (P12)
+            ipc::terminal_commands::get_test_command,
+            ipc::terminal_commands::set_test_command,
+            ipc::terminal_commands::run_project_command,
             // ACP
             ipc::acp_commands::acp_connect_agent,
             ipc::acp_commands::acp_disconnect_agent,

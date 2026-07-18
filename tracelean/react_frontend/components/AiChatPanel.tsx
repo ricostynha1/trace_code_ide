@@ -357,6 +357,19 @@ export function AiChatPanel({ visible, onClose }: Props) {
     if (visible) loadSessionInfo();
   }, [visible, activeChatId]);
 
+  // P12: terminal "Fix with AI" pre-seeds the chat input with failing output.
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail?.prompt) {
+        setTab("chat");
+        setInput(detail.prompt);
+      }
+    };
+    window.addEventListener("fix-with-ai", handler);
+    return () => window.removeEventListener("fix-with-ai", handler);
+  }, []);
+
   // P11: restore persisted sessions into the switcher on startup.
   useEffect(() => {
     (async () => {
