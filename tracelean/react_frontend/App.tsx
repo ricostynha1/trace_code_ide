@@ -11,6 +11,7 @@ import { MockPromptWindow } from "./components/MockPromptWindow";
 import { TraceabilityDashboard } from "./components/TraceabilityDashboard";
 import { WhichKeyBar } from "./components/WhichKeyBar";
 import { Splitter } from "./components/Splitter";
+import { DiffReviewPanel } from "./components/DiffReviewPanel";
 import "./App.css";
 
 function App() {
@@ -112,6 +113,7 @@ function App() {
               <p>Open a project folder to get started (File → Open Folder)</p>
             </div>
           )}
+          <DiffReviewPanel />
         </div>
         {reqsPanelVisible && (
           <Splitter cssVar="--reqs-panel-width" side="right" defaultWidth={280} />

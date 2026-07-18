@@ -106,6 +106,8 @@ interface AiSettings {
   selected_model: ModelConfig | null;
   summary_model: ModelConfig | null;
   spend_cap_usd: number;
+  /** P10: agent edits stage diffs for per-hunk approval instead of applying. */
+  review_edits?: boolean;
 }
 
 interface ToolCallResponse {
@@ -885,6 +887,20 @@ export function AiChatPanel({ visible, onClose }: Props) {
             onChange={(e) => saveSettings({ ...settings, spend_cap_usd: parseFloat(e.target.value) || 1 })}
           />
           <p className="ai-hint">Chat will refuse new requests when session cost exceeds this cap.</p>
+
+          <h3>Edit Review</h3>
+          <label className="ai-checkbox-row">
+            <input
+              type="checkbox"
+              checked={settings.review_edits ?? false}
+              onChange={(e) => saveSettings({ ...settings, review_edits: e.target.checked })}
+            />
+            Review agent edits before applying (diff-first)
+          </label>
+          <p className="ai-hint">
+            When on, agent edits stage as pending diffs — accept or reject hunks in the review
+            panel before they touch your files.
+          </p>
         </div>
       )}
 

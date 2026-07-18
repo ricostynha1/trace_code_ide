@@ -2019,3 +2019,92 @@ mod tests {
         assert!(result.content.contains("main"));
     }
 }
+
+#[cfg(test)]
+mod review_tests {
+    use super::*;
+    use crate::parser::SymbolTable;
+    use crate::trace_graph::TraceGraph;
+    use serde_json::json;
+    use tempfile::TempDir;
+
+    fn exec_reviewed(
+        call: &super::super::tools::ToolCall,
+        root: &Path,
+        state: &mut AppState,
+        pending: &mut Vec<super::super::diff_pipeline::PendingDiff>,
+    ) -> ToolResult {
+        let symbols = SymbolTable::new();
+        let graph = TraceGraph::new();
+        let perms = AgentPermissions::full_access("review-agent");
+        let mut sink = ReviewSink { pending, agent: "review-agent".into() };
+        execute_tool_reviewed(call, root, state, &symbols, &graph, &perms, &None, Some(&mut sink))
+    }
+
+    #[test]
+    fn replace_str_stages_diff_instead_of_applying() {
+        let tmp = TempDir::new().unwrap();
+        std::fs::write(tmp.path().join("a.txt"), "hello world\nsecond line\n").unwrap();
+
+        let mut state = AppState::new();
+        let mut pending = Vec::new();
+        let call = super::super::tools::ToolCall {
+            name: "replace_str".into(),
+            arguments: json!({"path": "a.txt", "old_str": "world", "new_str": "there"}),
+        };
+        let result = exec_reviewed(&call, tmp.path(), &mut state, &mut pending);
+
+        assert!(result.success);
+        assert!(result.content.contains("staged for user review"));
+        // File untouched on disk
+        assert_eq!(
+            std::fs::read_to_string(tmp.path().join("a.txt")).unwrap(),
+            "hello world\nsecond line\n"
+        );
+        // One pending diff with the proposed change
+        assert_eq!(pending.len(), 1);
+        assert_eq!(pending[0].file, "a.txt");
+        assert!(pending[0].proposed.contains("hello there"));
+        assert!(!pending[0].hunks.is_empty());
+        assert!(pending[0].hunks.iter().all(|h| !h.accepted));
+    }
+
+    #[test]
+    fn edit_file_whole_stages_diff() {
+        let tmp = TempDir::new().unwrap();
+        std::fs::write(tmp.path().join("b.txt"), "old content\n").unwrap();
+
+        let mut state = AppState::new();
+        let mut pending = Vec::new();
+        let call = super::super::tools::ToolCall {
+            name: "edit_file".into(),
+            arguments: json!({"path": "b.txt", "text": "new content\n"}),
+        };
+        let result = exec_reviewed(&call, tmp.path(), &mut state, &mut pending);
+
+        assert!(result.success);
+        assert_eq!(
+            std::fs::read_to_string(tmp.path().join("b.txt")).unwrap(),
+            "old content\n"
+        );
+        assert_eq!(pending.len(), 1);
+        assert_eq!(pending[0].proposed, "new content\n");
+    }
+
+    #[test]
+    fn read_tools_unaffected_by_review_mode() {
+        let tmp = TempDir::new().unwrap();
+        std::fs::write(tmp.path().join("c.txt"), "data\n").unwrap();
+
+        let mut state = AppState::new();
+        let mut pending = Vec::new();
+        let call = super::super::tools::ToolCall {
+            name: "read_file".into(),
+            arguments: json!({"path": "c.txt"}),
+        };
+        let result = exec_reviewed(&call, tmp.path(), &mut state, &mut pending);
+        assert!(result.success);
+        assert!(result.content.contains("data"));
+        assert!(pending.is_empty());
+    }
+}
