@@ -139,11 +139,23 @@ pub fn get_file_content(state: State<'_, AppStateWrapper>, path: String) -> Resu
 pub fn open_project(
     state: State<'_, AppStateWrapper>,
     symbols_state: State<'_, SymbolTableWrapper>,
+    ai_settings: State<'_, crate::AiSettingsWrapper>,
     path: String,
 ) -> Result<Vec<String>, String> {
-    let mut s = state.0.lock().map_err(|e| e.to_string())?;
-    let mut sym = symbols_state.0.lock().map_err(|e| e.to_string())?;
-    service::open_project(&mut s, &mut sym, &path)
+    let result = {
+        let mut s = state.0.lock().map_err(|e| e.to_string())?;
+        let mut sym = symbols_state.0.lock().map_err(|e| e.to_string())?;
+        service::open_project(&mut s, &mut sym, &path)?
+    };
+    // Project-scoped config wins over the home fallback loaded at startup.
+    if let Some(project_settings) =
+        crate::core::ai::service::load_settings_from(std::path::Path::new(&path))
+    {
+        if let Ok(mut s) = ai_settings.0.lock() {
+            *s = project_settings;
+        }
+    }
+    Ok(result)
 }
 
 #[tauri::command]

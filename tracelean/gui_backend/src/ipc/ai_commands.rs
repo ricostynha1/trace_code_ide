@@ -65,13 +65,23 @@ pub fn detect_env_keys() -> std::collections::HashMap<String, String> {
 }
 
 #[tauri::command]
-pub fn update_ai_settings(settings: State<'_, AiSettingsWrapper>, new_settings: AiSettings) -> Result<(), String> {
+pub fn update_ai_settings(
+    settings: State<'_, AiSettingsWrapper>,
+    state: State<'_, AppStateWrapper>,
+    new_settings: AiSettings,
+) -> Result<(), String> {
     {
         let mut s = settings.0.lock().map_err(|e| e.to_string())?;
         *s = new_settings.clone();
     }
-    // P8: persist so the selected model/provider survives restarts.
-    if let Err(e) = tracelean_core::ai::service::save_settings(&new_settings) {
+    // Persist so the selected model/provider survives restarts. Project open →
+    // {project}/.tracelean/ai_settings.json; otherwise the home fallback.
+    let root = state.0.lock().ok().and_then(|s| s.project_root().cloned());
+    let result = match &root {
+        Some(root) => tracelean_core::ai::service::save_settings_to(root, &new_settings),
+        None => tracelean_core::ai::service::save_settings(&new_settings),
+    };
+    if let Err(e) = result {
         eprintln!("failed to persist ai settings: {}", e);
     }
     Ok(())

@@ -245,13 +245,22 @@ pub async fn list_models_for(settings: &AiSettings) -> Vec<ModelConfig> {
     models
 }
 
-// ─── Settings persistence (~/.tracelean/ai_settings.json) ────────────────────
+// ─── Settings persistence ────────────────────────────────────────────────────
+// All TraceLean artifacts live in {project}/.tracelean once a project is open;
+// ~/.tracelean/ai_settings.json is only the pre-project fallback (settings
+// load at startup, before any project exists).
 
 fn settings_path() -> Option<PathBuf> {
     std::env::var_os("HOME").map(|h| PathBuf::from(h).join(".tracelean").join("ai_settings.json"))
 }
 
-/// Load persisted settings, falling back to defaults.
+/// Project-scoped settings file: {project}/.tracelean/ai_settings.json
+pub fn settings_path_in(project_root: &Path) -> PathBuf {
+    project_root.join(".tracelean").join("ai_settings.json")
+}
+
+/// Load persisted settings, falling back to defaults (home fallback — used
+/// before a project is open).
 pub fn load_settings() -> AiSettings {
     settings_path()
         .and_then(|p| std::fs::read_to_string(p).ok())
@@ -259,16 +268,35 @@ pub fn load_settings() -> AiSettings {
         .unwrap_or_default()
 }
 
-/// Persist settings (best-effort directory creation).
-pub fn save_settings(settings: &AiSettings) -> Result<(), String> {
-    let Some(path) = settings_path() else {
-        return Err("cannot resolve home directory".into());
-    };
+/// Load settings from a project's .tracelean dir, if present.
+pub fn load_settings_from(project_root: &Path) -> Option<AiSettings> {
+    std::fs::read_to_string(settings_path_in(project_root))
+        .ok()
+        .and_then(|content| serde_json::from_str(&content).ok())
+}
+
+fn write_settings(path: &Path, settings: &AiSettings) -> Result<(), String> {
     if let Some(dir) = path.parent() {
         std::fs::create_dir_all(dir).map_err(|e| e.to_string())?;
     }
     let json = serde_json::to_string_pretty(settings).map_err(|e| e.to_string())?;
-    std::fs::write(&path, json).map_err(|e| e.to_string())
+    std::fs::write(path, json).map_err(|e| e.to_string())
+}
+
+/// Persist settings to the home fallback.
+pub fn save_settings(settings: &AiSettings) -> Result<(), String> {
+    let Some(path) = settings_path() else {
+        return Err("cannot resolve home directory".into());
+    };
+    write_settings(&path, settings)
+}
+
+/// Persist settings into the project's .tracelean dir (and the home fallback,
+/// so a fresh app launch before opening a project keeps the same config).
+pub fn save_settings_to(project_root: &Path, settings: &AiSettings) -> Result<(), String> {
+    write_settings(&settings_path_in(project_root), settings)?;
+    let _ = save_settings(settings);
+    Ok(())
 }
 
 // ─── Session persistence (P11) ───────────────────────────────────────────────
