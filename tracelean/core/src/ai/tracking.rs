@@ -56,6 +56,9 @@ pub struct SessionStats {
     pub total_thinking_tokens: u64,
     pub total_cached_tokens: u64,
     pub total_cost_usd: f64,
+    /// Output-token share of total_cost_usd (lets the UI show output-cost %).
+    #[serde(default)]
+    pub total_output_cost_usd: f64,
 }
 
 impl SessionStats {
@@ -66,5 +69,6 @@ impl SessionStats {
         self.total_thinking_tokens += usage.thinking_tokens as u64;
         self.total_cached_tokens += usage.cached_tokens as u64;
         self.total_cost_usd += cost.total_usd;
+        self.total_output_cost_usd += cost.output_cost;
     }
 }

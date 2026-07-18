@@ -70,6 +70,7 @@ interface SessionStats {
   total_thinking_tokens: number;
   total_cached_tokens: number;
   total_cost_usd: number;
+  total_output_cost_usd: number;
 }
 
 /** P7: context-utilization snapshot from get_chat_session_info. */
@@ -633,9 +634,24 @@ export function AiChatPanel({ visible, onClose }: Props) {
           {stats && (
             <div className="ai-cost-bar">
               <span className="ai-cost-label">Session: ${stats.total_cost_usd.toFixed(4)}</span>
-              <span className="ai-cost-tokens">
-                I{compactNum(stats.total_input_tokens)} O{compactNum(stats.total_output_tokens)} T{compactNum(stats.total_thinking_tokens)}
-              </span>
+              {(() => {
+                // Bug 2: cache-hit % of input tokens and output share of cost
+                // beat raw token counts in a one-line summary.
+                const cachePct = stats.total_input_tokens > 0
+                  ? Math.round((stats.total_cached_tokens / stats.total_input_tokens) * 100)
+                  : 0;
+                const outPct = stats.total_cost_usd > 0
+                  ? Math.round(((stats.total_output_cost_usd ?? 0) / stats.total_cost_usd) * 100)
+                  : 0;
+                const tooltip =
+                  `Input: ${stats.total_input_tokens.toLocaleString()} tokens (${stats.total_cached_tokens.toLocaleString()} cached)\n` +
+                  `Output: ${stats.total_output_tokens.toLocaleString()} tokens ($${(stats.total_output_cost_usd ?? 0).toFixed(4)})`;
+                return (
+                  <span className="ai-cost-tokens" title={tooltip}>
+                    cache {cachePct}% · output {outPct}% of cost
+                  </span>
+                );
+              })()}
               {sessionInfo && (() => {
                 // P7 (D7.3): real context utilization vs the model's window
                 const used = sessionInfo.estimated_context_tokens;
