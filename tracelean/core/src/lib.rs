@@ -6,6 +6,7 @@ pub mod agent;
 pub mod ai;
 pub mod commands;
 pub mod debug_nodes;
+pub mod myth;
 pub mod parser;
 pub mod persistence;
 pub mod requirements;

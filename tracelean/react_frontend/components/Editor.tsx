@@ -42,6 +42,24 @@ interface LeanDiagnostic {
 
 type EditorMode = "code" | "lean" | "requirement";
 
+// Myth (docs/myth_fable.md): the node under a position + the actions its
+// captures carry, from the core binding map.
+interface MythNodeInfo {
+  captures: string[];
+  kind: string;
+  from: number;
+  to: number;
+  text: string;
+}
+
+interface MythContextMenu {
+  x: number;
+  y: number;
+  actions: string[];
+  charPos: number;
+  node: MythNodeInfo | null;
+}
+
 // --- Backend command protocol (P34) ---
 // The backend's only text primitive is Replace { file, at, old, new } where
 // `at` is a Unicode code-point (char) index — NOT a UTF-16 offset. CodeMirror
@@ -306,6 +324,7 @@ export function Editor({ filePath }: EditorProps) {
   const [status, setStatus] = useState("");
   const [leanDiagnostics, setLeanDiagnostics] = useState<LeanDiagnostic[]>([]);
   const [traceLink, setTraceLink] = useState<string | null>(null);
+  const [ctxMenu, setCtxMenu] = useState<MythContextMenu | null>(null);
   const syncingFromBackend = useRef(false);
   const highlightTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const sendQueue = useRef<Promise<void>>(Promise.resolve());
@@ -434,6 +453,11 @@ export function Editor({ filePath }: EditorProps) {
                 key: "Mod-s",
                 run: () => { handleSave(); return true; },
               },
+              // Myth semantic navigation (keymap.json Main mode)
+              { key: "Shift-ArrowUp", run: () => mythKey("S-ArrowUp") },
+              { key: "Shift-ArrowDown", run: () => mythKey("S-ArrowDown") },
+              { key: "Shift-ArrowLeft", run: () => mythKey("S-ArrowLeft") },
+              { key: "Shift-ArrowRight", run: () => mythKey("S-ArrowRight") },
             ]),
             EditorView.updateListener.of((update) => {
               if (update.docChanged && !syncingFromBackend.current) {
@@ -626,6 +650,87 @@ export function Editor({ filePath }: EditorProps) {
     );
   };
 
+  // ─── Myth: capture→action context menu + keymap-driven semantic nav ───────
+
+  const handleContextMenu = async (e: React.MouseEvent) => {
+    const view = viewRef.current;
+    if (!view) return;
+    e.preventDefault();
+    const pos = view.posAtCoords({ x: e.clientX, y: e.clientY });
+    if (pos == null) return;
+    const charPos = countCodePoints(view.state.doc.sliceString(0, pos));
+    try {
+      const res = await invoke<{ actions: string[]; node: MythNodeInfo | null }>(
+        "list_actions_at",
+        { file: filePath, charPos }
+      );
+      setCtxMenu({ x: e.clientX, y: e.clientY, actions: res.actions ?? [], charPos, node: res.node });
+    } catch (err) {
+      console.error("list_actions_at failed:", err);
+      setCtxMenu(null);
+    }
+  };
+
+  const runMythAction = async (action: string, charPos: number, node: MythNodeInfo | null) => {
+    setCtxMenu(null);
+    try {
+      const outcome = await invoke<any>("dispatch_action", {
+        name: action,
+        ctx: {
+          surface: "editor",
+          capture: node?.captures?.[node.captures.length - 1] ?? "",
+          node_text: node?.text ?? "",
+          file: filePath,
+          char_pos: charPos,
+        },
+      });
+      if (outcome?.kind !== "ui") return;
+      const eff = outcome.effect;
+      const view = viewRef.current;
+      if (eff?.kind === "select" && view) {
+        const doc = view.state.doc.toString();
+        view.dispatch({
+          selection: {
+            anchor: Math.min(utf16OffsetOfCharIndex(doc, eff.from), view.state.doc.length),
+            head: Math.min(utf16OffsetOfCharIndex(doc, eff.to), view.state.doc.length),
+          },
+          scrollIntoView: true,
+        });
+        view.focus();
+      } else if (eff?.kind === "copy") {
+        navigator.clipboard?.writeText(eff.text ?? "");
+      } else if (eff?.kind === "undo") {
+        handleUndo();
+      } else if (eff?.kind === "redo") {
+        handleRedo();
+      } else if (eff?.kind === "save_file") {
+        handleSave();
+      }
+    } catch (err) {
+      console.error("dispatch_action failed:", err);
+    }
+  };
+
+  // Route a key through the core keymap mode machine; on Dispatch, run the
+  // action at the cursor. Keeps behavior editable via ui_settings/keymap.json.
+  const mythKey = (keyName: string): boolean => {
+    const view = viewRef.current;
+    if (!view) return false;
+    (async () => {
+      try {
+        const res = await invoke<any>("myth_key_event", { key: keyName });
+        if (res?.result?.kind === "dispatch") {
+          const head = view.state.selection.main.head;
+          const charPos = countCodePoints(view.state.doc.sliceString(0, head));
+          await runMythAction(res.result.action, charPos, null);
+        }
+      } catch (err) {
+        console.error("myth_key_event failed:", err);
+      }
+    })();
+    return true;
+  };
+
   return (
     <div className="editor-container">
       <div className="editor-tab">
@@ -639,7 +744,30 @@ export function Editor({ filePath }: EditorProps) {
           </button>
         )}
       </div>
-      <div className="editor-content" ref={editorRef} />
+      <div className="editor-content" ref={editorRef} onContextMenu={handleContextMenu} />
+      {ctxMenu && (
+        <div
+          className="myth-menu"
+          style={{ left: ctxMenu.x, top: ctxMenu.y }}
+          onMouseLeave={() => setCtxMenu(null)}
+        >
+          {ctxMenu.node && (
+            <div className="myth-menu-header">
+              @{ctxMenu.node.captures[ctxMenu.node.captures.length - 1] ?? ctxMenu.node.kind}
+            </div>
+          )}
+          {ctxMenu.actions.length === 0 && <div className="myth-menu-empty">no actions</div>}
+          {ctxMenu.actions.map((a) => (
+            <div
+              key={a}
+              className="myth-menu-item"
+              onClick={() => runMythAction(a, ctxMenu.charPos, ctxMenu.node)}
+            >
+              {a.replace(/_/g, " ")}
+            </div>
+          ))}
+        </div>
+      )}
       {leanDiagnostics.length > 0 && (
         <div className="lean-diagnostics">
           {leanDiagnostics.map((d, i) => (

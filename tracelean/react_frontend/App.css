@@ -1825,3 +1825,97 @@ html, body, #root {
 
 .file-diff-added { color: #98c379; }
 .file-diff-removed { color: #e06c75; }
+
+/* --- Myth: context menu, which-key, keyboard selection --- */
+
+.myth-menu {
+  position: fixed;
+  z-index: 1000;
+  min-width: 160px;
+  background: #2c313a;
+  border: 1px solid #3e4451;
+  border-radius: 6px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
+  padding: 4px 0;
+  font-size: 12px;
+}
+
+.myth-menu-header {
+  padding: 4px 12px;
+  color: #61afef;
+  font-family: monospace;
+  font-size: 11px;
+  border-bottom: 1px solid #3e4451;
+  margin-bottom: 2px;
+}
+
+.myth-menu-item {
+  padding: 5px 12px;
+  cursor: pointer;
+  color: #abb2bf;
+}
+
+.myth-menu-item:hover {
+  background: #3e4451;
+  color: #fff;
+}
+
+.myth-menu-empty {
+  padding: 5px 12px;
+  color: #5c6370;
+  font-style: italic;
+}
+
+.file-tree:focus {
+  outline: 1px solid #3e4451;
+  outline-offset: -1px;
+}
+
+.file-entry.kb-selected {
+  outline: 1px solid #61afef;
+  outline-offset: -1px;
+}
+
+.myth-mode-badge {
+  background: #61afef;
+  color: #1e222a;
+  border-radius: 3px;
+  padding: 0 6px;
+  font-size: 10px;
+  font-weight: 700;
+  margin-left: auto;
+  margin-right: 6px;
+}
+
+.which-key {
+  border-top: 1px solid #3e4451;
+  background: #21252b;
+  padding: 6px 8px;
+  font-size: 11px;
+  max-height: 40%;
+  overflow-y: auto;
+}
+
+.which-key-title {
+  color: #61afef;
+  font-weight: 700;
+  margin-bottom: 4px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.which-key-row {
+  display: flex;
+  gap: 8px;
+  padding: 1px 0;
+}
+
+.which-key-key {
+  color: #e5c07b;
+  font-family: monospace;
+  min-width: 64px;
+}
+
+.which-key-target { color: #abb2bf; }
+.which-key-transition { color: #c678dd; }

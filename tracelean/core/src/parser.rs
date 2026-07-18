@@ -334,6 +334,110 @@ pub fn get_highlights_query(path: &Path, content: &str) -> Vec<HighlightSpan> {
     spans
 }
 
+// --- Myth: node-at-position, actions-at-position, semantic navigation ---
+
+/// Info about the AST node (or capture) under a position.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NodeRefInfo {
+    /// Capture names covering the position, outermost → innermost.
+    pub captures: Vec<String>,
+    /// Innermost named AST node kind.
+    pub kind: String,
+    /// Char range of the innermost named node.
+    pub from: usize,
+    pub to: usize,
+    pub text: String,
+}
+
+fn char_to_byte_offset(content: &str, char_pos: usize) -> usize {
+    content
+        .char_indices()
+        .nth(char_pos)
+        .map(|(b, _)| b)
+        .unwrap_or(content.len())
+}
+
+fn parse_tree_for(path: &Path, content: &str) -> Option<(Lang, Tree)> {
+    let ext = path.extension()?.to_str()?;
+    let lang = Lang::from_extension(ext)?;
+    let mut parser = Parser::new();
+    parser.set_language(&lang.tree_sitter_language).ok()?;
+    let tree = parser.parse(content, None)?;
+    Some((lang, tree))
+}
+
+/// The node under a char position: innermost named AST node + the highlight
+/// captures covering the position (outermost → innermost, i.e. capture order).
+pub fn node_at(path: &Path, content: &str, char_pos: usize) -> Option<NodeRefInfo> {
+    let byte_pos = char_to_byte_offset(content, char_pos);
+    let (_, tree) = parse_tree_for(path, content)?;
+    let root = tree.root_node();
+    let node = root
+        .named_descendant_for_byte_range(byte_pos, byte_pos)
+        .unwrap_or(root);
+
+    let captures: Vec<String> = get_highlight_captures(path, content)
+        .into_iter()
+        .filter(|c| c.from <= byte_pos && byte_pos < c.to.max(c.from + 1))
+        .map(|c| c.capture_name)
+        .collect();
+
+    let byte_to_char = build_byte_to_char_map(content);
+    Some(NodeRefInfo {
+        captures,
+        kind: node.kind().to_string(),
+        from: byte_to_char_offset(&byte_to_char, node.start_byte()),
+        to: byte_to_char_offset(&byte_to_char, node.end_byte()),
+        text: node.utf8_text(content.as_bytes()).unwrap_or("").to_string(),
+    })
+}
+
+/// Actions available at a position: union of the actions bound to every
+/// capture covering it (fable Q5), in capture order.
+pub fn actions_at(path: &Path, content: &str, char_pos: usize) -> Vec<String> {
+    let Some(info) = node_at(path, content, char_pos) else {
+        return Vec::new();
+    };
+    crate::myth::bindings::union_actions(&info.captures)
+}
+
+/// Semantic movement direction over the AST.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum NavDirection {
+    Parent,
+    Child,
+    PrevSibling,
+    NextSibling,
+}
+
+/// Semantic navigation: from the innermost named node at `char_pos`, move in
+/// `dir` and return the char range of the destination node.
+pub fn semantic_nav(
+    path: &Path,
+    content: &str,
+    char_pos: usize,
+    dir: NavDirection,
+) -> Option<(usize, usize)> {
+    let byte_pos = char_to_byte_offset(content, char_pos);
+    let (_, tree) = parse_tree_for(path, content)?;
+    let root = tree.root_node();
+    let node = root.named_descendant_for_byte_range(byte_pos, byte_pos)?;
+
+    let dest = match dir {
+        NavDirection::Parent => node.parent(),
+        NavDirection::Child => node.named_child(0),
+        NavDirection::PrevSibling => node.prev_named_sibling(),
+        NavDirection::NextSibling => node.next_named_sibling(),
+    }?;
+
+    let byte_to_char = build_byte_to_char_map(content);
+    Some((
+        byte_to_char_offset(&byte_to_char, dest.start_byte()),
+        byte_to_char_offset(&byte_to_char, dest.end_byte()),
+    ))
+}
+
 // --- Symbol Extraction (language-agnostic) ---
 
 /// A symbol extracted from source code

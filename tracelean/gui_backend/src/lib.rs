@@ -201,6 +201,16 @@ pub fn run() {
         .manage(AcpManagerWrapper(std::sync::Arc::new(
             tracelean_core::acp::AcpClientManager::new(Arc::new(tracelean_core::SharedApp::new_headless()))
         )))
+        .manage(ipc::myth_commands::MythKeymapWrapper({
+            let km = tracelean_core::myth::Keymap::load();
+            for problem in km.validate(tracelean_core::myth::actions::registry()) {
+                eprintln!("[myth] keymap problem: {}", problem);
+            }
+            km
+        }))
+        .manage(ipc::myth_commands::MythKeymapStateWrapper(Mutex::new(
+            "Main".to_string(),
+        )))
         .invoke_handler(tauri::generate_handler![
             // Editor
             ipc::editor::apply_command,
@@ -279,6 +289,12 @@ pub fn run() {
             ipc::mcp_commands::ai_chat_stream,
             ipc::mcp_commands::get_agent_tools,
             ipc::mcp_commands::get_agent_tools_prompt,
+            // Myth (surfaces, actions, keymap)
+            ipc::myth_commands::list_actions_at,
+            ipc::myth_commands::dispatch_action,
+            ipc::myth_commands::myth_key_event,
+            ipc::myth_commands::myth_which_key,
+            ipc::myth_commands::get_surface,
             // ACP
             ipc::acp_commands::acp_connect_agent,
             ipc::acp_commands::acp_disconnect_agent,

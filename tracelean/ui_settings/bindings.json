@@ -1,0 +1,10 @@
+{
+  "file": ["open_file", "rename_file", "delete_file", "copy"],
+  "dir": ["create_file", "rename_file", "copy"],
+  "function": ["go_parent", "go_child", "go_prev_sibling", "go_next_sibling", "copy"],
+  "function.method": ["go_parent", "go_child", "go_prev_sibling", "go_next_sibling", "copy"],
+  "type": ["go_parent", "go_child", "go_prev_sibling", "go_next_sibling", "copy"],
+  "variable": ["go_parent", "go_prev_sibling", "go_next_sibling", "copy"],
+  "string": ["copy"],
+  "comment": ["copy"]
+}

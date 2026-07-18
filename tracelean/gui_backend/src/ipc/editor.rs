@@ -45,7 +45,7 @@ pub fn apply_command(
 /// Sync filesystem for file-level operations (CreateFile/DeleteFile/RenameFile) after undo/redo.
 /// Ensures files in buffers exist on disk, and files removed from buffers are deleted from disk.
 /// Only touches files tracked in the undo tree — not a full filesystem scan.
-fn sync_file_operations_to_disk(s: &crate::state::AppState) {
+pub(crate) fn sync_file_operations_to_disk(s: &crate::state::AppState) {
     let root = match s.project_root() {
         Some(r) => r.clone(),
         None => return,

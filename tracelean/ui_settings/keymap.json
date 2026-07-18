@@ -1,0 +1,26 @@
+{
+  "Main": {
+    "C-Space": "→Options",
+    "S-ArrowUp": "go_parent",
+    "S-ArrowDown": "go_child",
+    "S-ArrowLeft": "go_prev_sibling",
+    "S-ArrowRight": "go_next_sibling",
+    "NM": "passthrough"
+  },
+  "Options": {
+    "Escape": "→Main",
+    "f": "→File",
+    "u": "undo",
+    "r": "redo",
+    "s": "save_file",
+    "NM": "→Main"
+  },
+  "File": {
+    "Escape": "→Main",
+    "o": "open_file",
+    "r": "rename_file",
+    "d": "delete_file",
+    "n": "create_file",
+    "NM": "→Main"
+  }
+}
