@@ -29,6 +29,9 @@ pub struct AgentPermissions {
     /// applying directly to buffers.
     #[serde(default)]
     pub review_edits: bool,
+    /// bugs.md Feature 4: run_shell waits for explicit user approval per command.
+    #[serde(default)]
+    pub review_commands: bool,
 }
 
 impl Default for AgentPermissions {
@@ -42,6 +45,7 @@ impl Default for AgentPermissions {
             allow_shell: true,
             max_shell_timeout: 60,
             review_edits: false,
+            review_commands: false,
         }
     }
 }
@@ -236,6 +240,9 @@ pub fn execute_tool_reviewed(
         "list_requirements" => execute_list_requirements(project_root),
         "get_symbols" => execute_get_symbols(call, symbols),
         "run_shell" => execute_run_shell(call, project_root, permissions),
+        // bugs.md Feature 6: web search / URL fetch (fetch saves to a project temp file)
+        "web_search" => execute_web_search(call, project_root),
+        "web_fetch" => execute_web_search(call, project_root),
         // Meta tools — handled inline
         "discover_tools" => execute_discover_tools(call),
         "help_tool" => execute_help_tool(call),
@@ -1063,6 +1070,7 @@ fn execute_help_tool(call: &ToolCall) -> ToolResult {
         "replace_str" => "replace_str(path, old_str, new_str) — Replace exact string in file.",
         "find" => "find(query, mode?, case_sensitive?, max_results?, path?, file_filter?) — Search files by regex or semantic.",
         "run_shell" => "run_shell(command, timeout?) — Run shell command in project root.",
+        "web_search" => "web_search(query, max_results?) — Search the web (terms) or fetch a URL to a project temp file (.tracelean/web/) readable with read_range/find_grep.",
         "discover_tools" => "discover_tools(query) — Find additional tools by capability.",
         _ => "Unknown tool. Available: list_directory, read_file, edit_file, replace_str, find, run_shell, discover_tools, help_tool.",
     };
@@ -1234,6 +1242,236 @@ fn execute_run_shell(call: &ToolCall, project_root: &Path, perms: &AgentPermissi
             content: format!("Shell error: {}", e),
             data: None,
         },
+    }
+}
+
+// ─── web_search (bugs.md Feature 6) ─────────────────────────────────────────
+
+/// Blocking HTTP GET on a dedicated thread (the executor runs inside tokio;
+/// reqwest's blocking client must not be created/dropped on a runtime worker).
+fn http_get(url: &str, timeout_secs: u64) -> Result<String, String> {
+    let url_owned = url.to_string();
+    std::thread::spawn(move || -> Result<String, String> {
+        let client = reqwest::blocking::Client::builder()
+            .timeout(std::time::Duration::from_secs(timeout_secs))
+            .user_agent("Mozilla/5.0 (compatible; TraceLean/0.1)")
+            .build()
+            .map_err(|e| e.to_string())?;
+        let resp = client.get(&url_owned).send().map_err(|e| e.to_string())?;
+        let status = resp.status();
+        let body = resp.text().map_err(|e| e.to_string())?;
+        if !status.is_success() {
+            return Err(format!("HTTP {} for {}", status, url_owned));
+        }
+        Ok(body)
+    })
+    .join()
+    .map_err(|_| "fetch thread panicked".to_string())?
+}
+
+/// Strip HTML down to readable text: drop script/style, remove tags, decode
+/// common entities, collapse blank lines. Crude but enough for grep/read.
+fn html_to_text(html: &str) -> String {
+    // (regex crate has no backreferences — spell each container out)
+    let no_scripts = regex::Regex::new(
+        r"(?is)<script[^>]*>.*?</script>|<style[^>]*>.*?</style>|<noscript[^>]*>.*?</noscript>|<svg[^>]*>.*?</svg>",
+    )
+    .map(|re| re.replace_all(html, " ").into_owned())
+    .unwrap_or_else(|_| html.to_string());
+    let with_breaks = regex::Regex::new(r"(?i)<(br|/p|/div|/li|/h[1-6]|/tr)[^>]*>")
+        .map(|re| re.replace_all(&no_scripts, "\n").into_owned())
+        .unwrap_or(no_scripts);
+    let no_tags = regex::Regex::new(r"(?s)<[^>]+>")
+        .map(|re| re.replace_all(&with_breaks, " ").into_owned())
+        .unwrap_or(with_breaks);
+    let decoded = no_tags
+        .replace("&nbsp;", " ")
+        .replace("&amp;", "&")
+        .replace("&lt;", "<")
+        .replace("&gt;", ">")
+        .replace("&quot;", "\"")
+        .replace("&#x27;", "'")
+        .replace("&#39;", "'");
+    // Collapse per-line whitespace and runs of blank lines.
+    let mut out = String::with_capacity(decoded.len() / 2);
+    let mut blank_run = 0;
+    for line in decoded.lines() {
+        let trimmed: Vec<&str> = line.split_whitespace().collect();
+        if trimmed.is_empty() {
+            blank_run += 1;
+            if blank_run <= 1 {
+                out.push('\n');
+            }
+        } else {
+            blank_run = 0;
+            out.push_str(&trimmed.join(" "));
+            out.push('\n');
+        }
+    }
+    out.trim().to_string()
+}
+
+/// Percent-decode a URL query component (enough for DuckDuckGo's uddg param).
+fn url_decode(s: &str) -> String {
+    let bytes = s.as_bytes();
+    let mut out = Vec::with_capacity(bytes.len());
+    let mut i = 0;
+    while i < bytes.len() {
+        match bytes[i] {
+            b'%' if i + 2 < bytes.len() => {
+                let hex = std::str::from_utf8(&bytes[i + 1..i + 3]).unwrap_or("");
+                if let Ok(b) = u8::from_str_radix(hex, 16) {
+                    out.push(b);
+                    i += 3;
+                } else {
+                    out.push(bytes[i]);
+                    i += 1;
+                }
+            }
+            b'+' => {
+                out.push(b' ');
+                i += 1;
+            }
+            b => {
+                out.push(b);
+                i += 1;
+            }
+        }
+    }
+    String::from_utf8_lossy(&out).into_owned()
+}
+
+fn url_encode(s: &str) -> String {
+    s.bytes()
+        .map(|b| match b {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => {
+                (b as char).to_string()
+            }
+            _ => format!("%{:02X}", b),
+        })
+        .collect()
+}
+
+/// web_search — URL → fetch page as text into {project}/.tracelean/web/ for
+/// the model to read/grep with its file tools; search terms → DuckDuckGo
+/// results (title + URL) returned inline.
+fn execute_web_search(call: &ToolCall, project_root: &Path) -> ToolResult {
+    let query = match get_str_arg(call, "query").or_else(|| get_str_arg(call, "url")) {
+        Some(q) if !q.trim().is_empty() => q.trim().to_string(),
+        _ => {
+            return ToolResult {
+                success: false,
+                content: "Missing 'query' argument. Expected: web_search(query) — search terms or an http(s):// URL to fetch.".into(),
+                data: None,
+            }
+        }
+    };
+
+    if query.starts_with("http://") || query.starts_with("https://") {
+        return web_fetch_to_file(&query, project_root);
+    }
+
+    let max_results = get_int_arg(call, "max_results").unwrap_or(5).clamp(1, 20) as usize;
+    let search_url = format!("https://html.duckduckgo.com/html/?q={}", url_encode(&query));
+    let body = match http_get(&search_url, 20) {
+        Ok(b) => b,
+        Err(e) => {
+            return ToolResult {
+                success: false,
+                content: format!("Web search failed: {}", e),
+                data: None,
+            }
+        }
+    };
+
+    // Result links look like: <a class="result__a" href="//duckduckgo.com/l/?uddg=<encoded>&...">Title</a>
+    let re = regex::Regex::new(r#"(?s)<a[^>]*class="result__a"[^>]*href="([^"]+)"[^>]*>(.*?)</a>"#)
+        .expect("static regex");
+    let mut results = Vec::new();
+    for cap in re.captures_iter(&body).take(max_results) {
+        let href = &cap[1];
+        let url = match href.split("uddg=").nth(1) {
+            Some(enc) => url_decode(enc.split('&').next().unwrap_or(enc)),
+            None => href.to_string(),
+        };
+        let title = html_to_text(&cap[2]);
+        results.push(format!("- {} — {}", title, url));
+    }
+
+    if results.is_empty() {
+        return ToolResult {
+            success: false,
+            content: format!("No web results for '{}'. Try different terms, or pass a URL directly to fetch it.", query),
+            data: None,
+        };
+    }
+    ToolResult {
+        success: true,
+        content: format!(
+            "Web results for '{}':\n{}\n\nCall web_search with one of these URLs to fetch its content to a file.",
+            query,
+            results.join("\n")
+        ),
+        data: None,
+    }
+}
+
+/// Fetch a URL and save its readable text under {project}/.tracelean/web/.
+fn web_fetch_to_file(url: &str, project_root: &Path) -> ToolResult {
+    let body = match http_get(url, 30) {
+        Ok(b) => b,
+        Err(e) => {
+            return ToolResult {
+                success: false,
+                content: format!("Fetch failed: {}", e),
+                data: None,
+            }
+        }
+    };
+    let looks_html = body.trim_start().starts_with('<')
+        || body.contains("<html")
+        || body.contains("<body")
+        || body.contains("</div>");
+    let text = if looks_html { html_to_text(&body) } else { body };
+
+    let dir = project_root.join(".tracelean").join("web");
+    if let Err(e) = std::fs::create_dir_all(&dir) {
+        return ToolResult {
+            success: false,
+            content: format!("Cannot create {}: {}", dir.display(), e),
+            data: None,
+        };
+    }
+    // Stable, readable file name derived from the URL.
+    let slug: String = url
+        .trim_start_matches("https://")
+        .trim_start_matches("http://")
+        .chars()
+        .map(|c| if c.is_ascii_alphanumeric() { c } else { '-' })
+        .collect::<String>()
+        .trim_matches('-')
+        .chars()
+        .take(80)
+        .collect();
+    let rel_path = format!(".tracelean/web/{}.txt", slug);
+    let abs_path = project_root.join(&rel_path);
+    if let Err(e) = std::fs::write(&abs_path, &text) {
+        return ToolResult {
+            success: false,
+            content: format!("Cannot write {}: {}", abs_path.display(), e),
+            data: None,
+        };
+    }
+
+    let lines = text.lines().count();
+    let preview: String = text.chars().take(400).collect();
+    ToolResult {
+        success: true,
+        content: format!(
+            "Fetched {} → saved as '{}' ({} lines, {} chars). Use read_range/find_grep on that path to inspect it.\nPreview:\n{}",
+            url, rel_path, lines, text.len(), preview
+        ),
+        data: None,
     }
 }
 

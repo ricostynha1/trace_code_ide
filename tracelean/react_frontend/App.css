@@ -1488,6 +1488,28 @@ html, body, #root {
   color: #5c6370;
 }
 
+/* bugs.md Feature 2: segmented cost-share bar (cached input / input / output) */
+.ai-cost-split-bar {
+  display: inline-flex;
+  flex: 1;
+  max-width: 160px;
+  height: 8px;
+  margin: 3px 8px 0;
+  border-radius: 4px;
+  overflow: hidden;
+  background: #2c313a;
+  align-self: center;
+}
+
+.ai-costseg {
+  display: inline-block;
+  height: 100%;
+}
+
+.ai-costseg-cached { background: #56b6c2; }
+.ai-costseg-input { background: #e06c75; }
+.ai-costseg-output { background: #e5c07b; }
+
 /* Grouped tool call batch styling */
 .ai-msg-tool-batch {
   display: flex;
@@ -1985,6 +2007,16 @@ html, body, #root {
 .ai-log-cache-legend .legend-cached { color: #d7dae0; }
 .ai-log-cache-legend .legend-uncached { color: #e06c75; }
 
+/* bugs.md Feature 5: collapsed equal-prefix note in log detail */
+.ai-log-equal-note {
+  color: #5c6370;
+  font-style: italic;
+  font-size: 11px;
+  padding: 4px 6px;
+  border-left: 3px dashed #3e4451;
+  margin-bottom: 6px;
+}
+
 .ai-log-compact-icon {
   margin: 0 4px;
   cursor: help;
@@ -2024,6 +2056,54 @@ html, body, #root {
   color: #98c379;
   font-style: italic;
 }
+
+/* Feature 2b: file strip for cycling through files with pending AI edits */
+.diff-review-nav {
+  margin-left: auto;
+  display: flex;
+  gap: 2px;
+}
+
+.diff-review-nav button {
+  background: #2c313a;
+  border: 1px solid #444;
+  color: #abb2bf;
+  border-radius: 3px;
+  font-size: 9px;
+  padding: 1px 5px;
+  cursor: pointer;
+}
+
+.diff-review-files {
+  display: flex;
+  gap: 4px;
+  padding: 3px 10px;
+  overflow-x: auto;
+  border-top: 1px solid #333;
+}
+
+.diff-review-filechip {
+  background: #2c313a;
+  border: 1px solid #444;
+  color: #abb2bf;
+  border-radius: 10px;
+  font-size: 10.5px;
+  padding: 1px 8px;
+  cursor: pointer;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.diff-review-filechip.active {
+  border-color: #61afef;
+  color: #d7dae0;
+  background: #264f78;
+}
+
+.diff-review-filechip .chip-added { color: #98c379; }
+.diff-review-filechip .chip-removed { color: #e06c75; }
 
 .diff-review-file {
   border-top: 1px solid #333;
@@ -2229,4 +2309,49 @@ html, body, #root {
   font-size: 11.5px;
   color: #abb2bf;
   white-space: pre-wrap;
+}
+
+/* bugs.md Feature 4: agent-run shell commands mirrored in the terminal */
+.terminal-agent-badge {
+  margin-left: 6px;
+  font-size: 10px;
+  color: #61afef;
+}
+
+.terminal-agent-log {
+  max-height: 40%;
+  overflow: auto;
+  border-bottom: 1px solid #333;
+  padding: 4px 10px;
+}
+
+.terminal-agent-entry {
+  margin-bottom: 6px;
+  border-left: 3px solid #61afef;
+  padding-left: 6px;
+}
+
+.terminal-agent-entry.fail {
+  border-left-color: #e06c75;
+}
+
+.terminal-agent-cmd {
+  font-family: monospace;
+  font-size: 11.5px;
+  color: #d7dae0;
+}
+
+.terminal-agent-meta {
+  color: #5c6370;
+  font-size: 10px;
+}
+
+.terminal-agent-output {
+  margin: 2px 0 0;
+  font-family: monospace;
+  font-size: 11px;
+  color: #7f848e;
+  white-space: pre-wrap;
+  max-height: 120px;
+  overflow: auto;
 }

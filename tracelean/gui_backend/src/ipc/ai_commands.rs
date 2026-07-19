@@ -268,6 +268,29 @@ pub async fn get_chat_session_info(
     })
 }
 
+/// bugs.md Feature 2: force-summarize a session's model context now
+/// (the button next to context reset in the cost bar).
+#[tauri::command]
+pub async fn summarize_chat_session(
+    app: AppHandle,
+    settings: State<'_, AiSettingsWrapper>,
+    log_state: State<'_, AiLogWrapper>,
+    stats: State<'_, AiSessionStatsWrapper>,
+    mcp_client: State<'_, McpClientWrapper>,
+    state: State<'_, AppStateWrapper>,
+    symbols_state: State<'_, SymbolTableWrapper>,
+    graph_state: State<'_, TraceGraphWrapper>,
+    session_store: State<'_, crate::ChatSessionStoreWrapper>,
+    diffs: State<'_, crate::PendingDiffsWrapper>,
+    session_id: String,
+) -> Result<(), String> {
+    let svc = ai_service(
+        &app, &settings, &log_state, &stats, &mcp_client,
+        &state, &symbols_state, &graph_state, &session_store, &diffs,
+    );
+    svc.summarize_session(&session_id).await
+}
+
 /// Get the raw user_view messages for a session (what user sees in chat panel).
 #[tauri::command]
 pub async fn get_chat_session_messages(
@@ -327,6 +350,23 @@ impl tracelean_core::agent::PauseHandler for TauriPauseHandler {
             Ok(cont) => cont,
             _ => false,
         }
+    }
+
+    /// bugs.md Feature 4: reuses the tool-loop pause UI (Continue/Stop) and
+    /// resume channel for per-command approval.
+    async fn approve_command(&self, command: &str) -> bool {
+        let _ = self.app_handle.emit("tool-loop-pause", serde_json::json!({
+            "loops_completed": 0,
+            "message": format!("Agent wants to run shell command:\n$ {}\nAllow?", command)
+        }));
+
+        let (tx, rx) = tokio::sync::oneshot::channel::<bool>();
+        {
+            let mut guard = self.resume_state.lock().await;
+            *guard = Some(tx);
+        }
+
+        matches!(rx.await, Ok(true))
     }
 }
 

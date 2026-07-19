@@ -372,6 +372,25 @@ pub fn builtin_tool_definitions() -> Vec<ToolDefinition> {
                 required: true,
             }],
         },
+        // --- Web (bugs.md Feature 6) ---
+        ToolDefinition {
+            name: "web_search".into(),
+            description: "Search the web, or fetch a URL. Pass a URL to fetch: the page is saved as text to a temp file inside the project (.tracelean/web/) and you then read/grep it with read_range/find_grep. Pass search terms to get a list of result titles + URLs.\nEx: {\"query\":\"rust tokio watch channel\"} — search\nEx: {\"query\":\"https://docs.rs/tokio\"} — fetch page to file".into(),
+            parameters: vec![
+                ToolParam {
+                    name: "query".into(),
+                    param_type: ParamType::String,
+                    description: "Search terms, or a full http(s):// URL to fetch.".into(),
+                    required: true,
+                },
+                ToolParam {
+                    name: "max_results".into(),
+                    param_type: ParamType::Integer,
+                    description: "Max search results (default: 5, search mode only).".into(),
+                    required: false,
+                },
+            ],
+        },
         // --- Shell ---
         ToolDefinition {
             name: "run_shell".into(),

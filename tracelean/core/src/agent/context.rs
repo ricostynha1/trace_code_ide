@@ -44,6 +44,13 @@ pub struct AgentContext {
 pub trait PauseHandler: Send + Sync {
     /// Called every N tool calls. Return true to continue, false to abort.
     async fn should_continue(&self, tool_calls_so_far: usize) -> bool;
+
+    /// bugs.md Feature 4: ask the user to approve one shell command before it
+    /// runs. Default allows — headless runners and tests are unaffected.
+    async fn approve_command(&self, command: &str) -> bool {
+        let _ = command;
+        true
+    }
 }
 
 impl AgentContext {
@@ -65,7 +72,10 @@ impl AgentContext {
             extra_tools: Vec::new(), // Caller can set MCP tools after construction
             permissions: {
                 let mut p = AgentPermissions::full_access("chat");
-                p.review_edits = app.ai_settings.lock().map(|s| s.review_edits).unwrap_or(false);
+                if let Ok(s) = app.ai_settings.lock() {
+                    p.review_edits = s.review_edits;
+                    p.review_commands = s.review_commands;
+                }
                 p
             },
             project_root,

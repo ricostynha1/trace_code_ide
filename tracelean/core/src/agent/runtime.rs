@@ -156,8 +156,11 @@ async fn run_agent_turn_inner(
             }
         }
 
-        // Cost-aware context compaction (prune/summarize if profitable)
-        let compaction_info = if loop_i > 0 {
+        // Cost-aware context compaction (prune/summarize if profitable).
+        // Runs on every request including the first of a turn — in persistent
+        // sessions that first request carries the whole accumulated history
+        // (bugs.md Bug 5: compaction almost never actuated).
+        let compaction_info = {
             let info = cost_aware_compact(ctx, &mut messages, &model, provider.as_ref()).await;
             if ctx.verbose {
                 if let Some(i) = &info {
@@ -168,8 +171,6 @@ async fn run_agent_turn_inner(
                 }
             }
             info
-        } else {
-            None
         };
         let was_compacted = compaction_info.is_some();
         if was_compacted {
@@ -513,6 +514,54 @@ async fn run_agent_turn_inner(
                         }
                     };
 
+                    // bugs.md Feature 4: shell commands can require explicit
+                    // per-command user approval (mirrors edit review).
+                    if tool_name == "run_shell" && ctx.permissions.review_commands {
+                        let cmd_str = arguments
+                            .get("command")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("")
+                            .to_string();
+                        let approved = match &ctx.pause_handler {
+                            Some(handler) => handler.approve_command(&cmd_str).await,
+                            None => true, // headless: nobody to ask
+                        };
+                        if !approved {
+                            let note = format!(
+                                "[run_shell rejected by user — command was NOT executed: {}]",
+                                cmd_str
+                            );
+                            ctx.event_sink.emit(
+                                "tool-call",
+                                &serde_json::to_string(&ToolCallEvent {
+                                    tool_name: tool_name.clone(),
+                                    status: ToolCallStatus::Failed {
+                                        error: "rejected by user".into(),
+                                    },
+                                    duration_ms: Some(0),
+                                    depth: 0,
+                                    reason: None,
+                                    call_id: Some(tc.id.clone()),
+                                    args_preview: Some(crate::preview_str(&tc.function.arguments, 200)),
+                                    result_preview: Some(crate::preview_str(&note, 200)),
+                                })
+                                .unwrap_or_default(),
+                            );
+                            all_tool_records.push(ToolCallRecord {
+                                tool_name: tool_name.clone(),
+                                success: false,
+                                duration_ms: 0,
+                            });
+                            messages.push(ChatMessage {
+                                role: MessageRole::Tool,
+                                content: note,
+                                tool_call_id: Some(tc.id.clone()),
+                                tool_calls: Vec::new(),
+                            });
+                            continue;
+                        }
+                    }
+
                     // Emit "running" event (chip UI renders these; no prose message)
                     ctx.event_sink.emit(
                         "tool-call",
@@ -586,6 +635,26 @@ async fn run_agent_turn_inner(
                         }
                     };
                     let tool_duration = start_tool.elapsed().as_millis() as u64;
+
+                    // bugs.md Feature 4: agent shell commands show up in the
+                    // bottom terminal panel like user-run commands.
+                    if tool_name == "run_shell" {
+                        let cmd_str = mcp_call
+                            .arguments
+                            .get("command")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("");
+                        ctx.event_sink.emit(
+                            "agent-shell",
+                            &serde_json::json!({
+                                "command": cmd_str,
+                                "output": crate::preview_str(&tool_result.content, 4000),
+                                "success": tool_result.success,
+                                "duration_ms": tool_duration,
+                            })
+                            .to_string(),
+                        );
+                    }
 
                     // Verbose: show tool result
                     if ctx.verbose {
@@ -929,6 +998,15 @@ async fn cost_aware_compact(
         summary_model_cfg.as_ref(),
     );
 
+    // bugs.md Bug 5: once the context outgrows this many estimated tokens,
+    // summarization is forced even when the marginal cost math says keep —
+    // at that size the goal is keeping the session lean, not saving fractions
+    // of a cent. Capped at a quarter of the model window for small models.
+    const FORCE_SUMMARIZE_TOKENS: usize = 12_000;
+    let force_summarize =
+        total_tokens_est + message_overhead
+            > FORCE_SUMMARIZE_TOKENS.min(model.context_window as usize / 4);
+
     // Feed messages into retention engine and get decisions
     let (to_prune, to_summarize, tokens_freed) = {
         let mut engine = match ctx.retention_engine.lock() {
@@ -936,31 +1014,25 @@ async fn cost_aware_compact(
             Err(_) => return None, // can't lock → skip compaction
         };
 
-        // Update timing
-        if let Ok(tracker) = ctx.timing_tracker.lock() {
-            let idle_secs = tracker.last_idle_secs();
-            let _ = idle_secs;
-        }
+        // Rebuild the view from the live message list on every call. The
+        // engine is recreated each chat turn and compaction drains `messages`,
+        // so any incremental count-based mapping between engine entries and
+        // messages desyncs after the first drain (bugs.md Bug 5: compaction
+        // fired once and never again).
+        engine.user_view = crate::ai::retention::UserView::new();
 
-        engine.advance_turn();
-
-        // Only register NEW messages not already tracked by the engine.
-        // The engine.user_view.entries.len() tells us how many we've already added.
-        // Messages layout: [system, ...conversation]. We skip system at [0].
-        let already_registered = engine.user_view.entries.len();
-        let new_msgs = messages.iter().enumerate().skip(1) // skip system
-            .skip(already_registered); // skip already-registered
-
-        for (_i, msg) in new_msgs {
-            let is_tool = msg.role == MessageRole::Tool;
-            let tokens = msg.content.len() / 4;
+        // Infer turns positionally: each assistant message closes one loop
+        // iteration, so older messages land on earlier turns and only the
+        // last few iterations stay protected.
+        let mut turn: usize = 0;
+        for msg in messages.iter().skip(1) {
+            // skip system at [0]
+            let tokens = msg.content.len() / 4
+                + msg.tool_calls.iter().map(|tc| tc.function.arguments.len() / 4 + 5).sum::<usize>();
             if tokens > 0 {
-                // Assign creation turn based on position: older messages get earlier turns.
-                // Each pair of (assistant + tool) messages is roughly 1 turn.
-                let msg_turn = engine.current_turn;
                 engine.add_entry(crate::ai::retention::RetentionEntry {
                     id: 0, // auto-assigned
-                    kind: if is_tool {
+                    kind: if msg.role == MessageRole::Tool {
                         crate::ai::retention::EntryKind::ToolResult
                     } else if msg.role == MessageRole::User {
                         crate::ai::retention::EntryKind::UserMsg
@@ -969,8 +1041,8 @@ async fn cost_aware_compact(
                     },
                     content: msg.content.clone(),
                     resources: Vec::new(),
-                    created_turn: msg_turn,
-                    last_used_turn: msg_turn,
+                    created_turn: turn,
+                    last_used_turn: turn,
                     approx_tokens: tokens,
                     ttl: None,
                     invalidation_events: Vec::new(),
@@ -981,7 +1053,11 @@ async fn cost_aware_compact(
                     offload_path: None,
                 });
             }
+            if msg.role == MessageRole::Assistant {
+                turn += 1;
+            }
         }
+        engine.current_turn = turn;
 
         // Get prune decisions
         let eligible = engine.eligible_for_pruning();
@@ -989,25 +1065,29 @@ async fn cost_aware_compact(
 
         // Get summarization decision
         let summarizable = engine.summarizable_entries();
-        let sum_decision = if !summarizable.is_empty() {
-            summarization_decision(&summarizable, &prune_ctx)
-        } else {
+        let sum_decision = if summarizable.is_empty() {
             CostDecision::Keep { reason: "nothing to summarize".into() }
-        };
-
-        // Collect IDs to summarize
-        let summarize_ids: Vec<u64> = match &sum_decision {
-            CostDecision::Summarize { .. } => {
-                summarizable.iter().map(|e| e.id).collect()
+        } else {
+            let decision = summarization_decision(&summarizable, &prune_ctx);
+            if force_summarize && !decision.is_summarize() {
+                CostDecision::Summarize {
+                    savings_per_turn: 0.0,
+                    total_penalty: 0.0,
+                    summarization_cost: 0.0,
+                    n_expected: prune_ctx.n_expected,
+                    net_benefit: 0.0,
+                }
+            } else {
+                decision
             }
-            _ => Vec::new(),
         };
 
         // Collect content for summarization before pruning
-        let summarize_content: Vec<String> = summarizable.iter()
-            .filter(|e| summarize_ids.contains(&e.id))
-            .map(|e| e.content.clone())
-            .collect();
+        let summarize_content: Vec<String> = if sum_decision.is_summarize() {
+            summarizable.iter().map(|e| e.content.clone()).collect()
+        } else {
+            Vec::new()
+        };
 
         let freed: usize = eligible.iter()
             .filter(|e| prune_ids.contains(&e.id))
@@ -1021,15 +1101,11 @@ async fn cost_aware_compact(
     };
 
     // If there are entries to summarize, call the LLM
+    let mut summarized = false;
     if !to_summarize.is_empty() {
         let summary = call_summary_llm(ctx, model, provider, &to_summarize).await;
         if let Some(summary_text) = summary {
-            // Insert summary into retention engine
-            if let Ok(mut engine) = ctx.retention_engine.lock() {
-                let sum_tokens = summary_text.len() / 4;
-                engine.insert_summary(&[], summary_text.clone(), sum_tokens);
-            }
-
+            summarized = true;
             // Insert summary message into the conversation (after system prompt)
             let summary_msg = ChatMessage {
                 role: MessageRole::User,
@@ -1047,7 +1123,10 @@ async fn cost_aware_compact(
                 messages.insert(1, summary_msg);
             }
         }
-    } else if !to_prune.is_empty() {
+    }
+    // Summary skipped or failed → fall back to pruning so an oversized
+    // context still shrinks instead of being carried to the next request.
+    if !summarized && !to_prune.is_empty() {
         // Aggressive prune: if message count is high, remove old tool-loop pairs.
         // Keep: system[0], user[1], last N messages (recent context).
         // Middle tool-loop messages (assistant with tool_calls + tool results) get dropped.
@@ -1090,7 +1169,6 @@ async fn cost_aware_compact(
 
     // Report what happened for the interaction log (bugs.md: log icons).
     let tokens_after: usize = messages.iter().map(estimate_msg_tokens).sum();
-    let summarized = !to_summarize.is_empty();
     let trimmed = messages.len() < messages_before;
     if !summarized && !trimmed && tokens_freed == 0 {
         return None;
@@ -1099,6 +1177,61 @@ async fn cost_aware_compact(
         kind: if summarized { "summarized" } else { "trimmed" }.to_string(),
         messages_removed: messages_before.saturating_sub(messages.len()),
         tokens_before: total_tokens_est + message_overhead,
+        tokens_after,
+    })
+}
+
+/// bugs.md Feature 2: user-triggered summarization. Summarizes everything but
+/// the system prompt and the last few messages, regardless of cost math —
+/// the user pressed the button, they want a lean context.
+pub async fn force_summarize(
+    ctx: &AgentContext,
+    messages: &mut Vec<ChatMessage>,
+) -> Result<ai::log::CompactionInfo, String> {
+    let (model, provider) = build_provider(ctx).map_err(|e| e.to_string())?;
+    let messages_before = messages.len();
+    let tokens_before: usize = messages.iter().map(estimate_msg_tokens).sum();
+
+    let start = if messages.first().map(|m| m.role == MessageRole::System).unwrap_or(false) {
+        1
+    } else {
+        0
+    };
+    let keep_tail = 4.min(messages.len().saturating_sub(start));
+    let cut_end = messages.len() - keep_tail;
+    if cut_end <= start + 1 {
+        return Err("nothing to summarize — context is already small".into());
+    }
+
+    let contents: Vec<String> = messages[start..cut_end]
+        .iter()
+        .map(|m| {
+            let mut s = format!("{:?}: {}", m.role, m.content);
+            for tc in &m.tool_calls {
+                s.push_str(&format!("\n[called {}({})]", tc.function.name, tc.function.arguments));
+            }
+            s
+        })
+        .collect();
+
+    let summary = call_summary_llm(ctx, &model, provider.as_ref(), &contents)
+        .await
+        .ok_or("summarization call failed")?;
+
+    messages.drain(start..cut_end);
+    messages.insert(start, ChatMessage {
+        role: MessageRole::User,
+        content: format!("[Context Summary]\n{}", summary),
+        tool_call_id: None,
+        tool_calls: Vec::new(),
+    });
+    sanitize_tool_pairing(messages);
+
+    let tokens_after: usize = messages.iter().map(estimate_msg_tokens).sum();
+    Ok(ai::log::CompactionInfo {
+        kind: "summarized".to_string(),
+        messages_removed: messages_before.saturating_sub(messages.len()),
+        tokens_before,
         tokens_after,
     })
 }
@@ -1479,5 +1612,103 @@ mod cache_marker_tests {
         assert_eq!(provider_cache_key(&m), Some("anthropic_5min"));
         m.model_id = "MiniMax-M2".into();
         assert_eq!(provider_cache_key(&m), None);
+    }
+}
+
+#[cfg(test)]
+mod compaction_tests {
+    use super::*;
+    use crate::ai::mock::MockProvider;
+
+    fn history(pairs: usize) -> Vec<ChatMessage> {
+        let mut msgs = vec![
+            ChatMessage {
+                role: MessageRole::System,
+                content: "system prompt".repeat(20),
+                tool_call_id: None,
+                tool_calls: Vec::new(),
+            },
+            ChatMessage {
+                role: MessageRole::User,
+                content: "please fix the bug".into(),
+                tool_call_id: None,
+                tool_calls: Vec::new(),
+            },
+        ];
+        for i in 0..pairs {
+            msgs.push(ChatMessage {
+                role: MessageRole::Assistant,
+                content: format!("looking at file {i} ").repeat(20),
+                tool_call_id: None,
+                tool_calls: Vec::new(),
+            });
+            msgs.push(ChatMessage {
+                role: MessageRole::Tool,
+                content: format!("tool output {i} ").repeat(120),
+                tool_call_id: Some(format!("call_{i}")),
+                tool_calls: Vec::new(),
+            });
+        }
+        msgs
+    }
+
+    /// bugs.md Bug 5: a long accumulated history must compact on the very
+    /// first request of a turn (there is no loop_i gate inside the function,
+    /// and eligibility is rebuilt from the live message list).
+    #[tokio::test]
+    async fn long_history_prunes_on_first_call() {
+        let ctx = AgentContext::from_env(std::env::temp_dir());
+        let model = ai::ModelConfig::default(); // no caching → prune always free
+        let (provider, _rx) = MockProvider::new();
+
+        let mut messages = history(12);
+        let before = messages.len();
+        let info = cost_aware_compact(&ctx, &mut messages, &model, &provider).await;
+
+        assert!(info.is_some(), "12 old tool-loop pairs must trigger compaction");
+        assert!(messages.len() < before, "messages must shrink ({before} → {})", messages.len());
+        assert_eq!(messages[0].role, MessageRole::System, "system prompt survives");
+        assert!(
+            messages.iter().any(|m| m.content.contains("[Context compacted")),
+            "prune note inserted"
+        );
+    }
+
+    /// bugs.md Bug 5 regression: compaction must keep firing on repeated
+    /// calls as the conversation grows again (the old count-based entry
+    /// registration desynced after the first drain and never fired again).
+    #[tokio::test]
+    async fn compaction_fires_again_after_regrowth() {
+        let ctx = AgentContext::from_env(std::env::temp_dir());
+        let model = ai::ModelConfig::default();
+        let (provider, _rx) = MockProvider::new();
+
+        let mut messages = history(12);
+        let first = cost_aware_compact(&ctx, &mut messages, &model, &provider).await;
+        assert!(first.is_some());
+
+        // Conversation grows again: another 12 tool-loop pairs on top.
+        let regrown = history(12);
+        messages.extend(regrown.into_iter().skip(2)); // skip its system+user
+        let before = messages.len();
+        let second = cost_aware_compact(&ctx, &mut messages, &model, &provider).await;
+
+        assert!(second.is_some(), "compaction must fire again after regrowth");
+        assert!(messages.len() < before);
+    }
+
+    /// A short recent conversation must NOT be compacted.
+    #[tokio::test]
+    async fn short_history_left_alone() {
+        let ctx = AgentContext::from_env(std::env::temp_dir());
+        let model = ai::ModelConfig::default();
+        let (provider, _rx) = MockProvider::new();
+
+        let mut messages = history(2);
+        let before = messages.len();
+        let info = cost_aware_compact(&ctx, &mut messages, &model, &provider).await;
+
+        assert!(info.is_none(), "recent turns are protected");
+        assert_eq!(messages.len(), before);
     }
 }

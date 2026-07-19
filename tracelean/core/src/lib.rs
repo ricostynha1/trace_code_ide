@@ -149,6 +149,14 @@ pub struct AiSettings {
     /// instead of applying directly to buffers.
     #[serde(default)]
     pub review_edits: bool,
+    /// bugs.md Feature 4: agent shell commands require user approval before
+    /// they run (mirrors review_edits, but for run_shell).
+    #[serde(default)]
+    pub review_commands: bool,
+    /// bugs.md Feature 5: log detail view collapses request messages that
+    /// were already sent (cached) in the previous request into one line.
+    #[serde(default)]
+    pub log_show_only_diffs: bool,
 }
 
 fn default_spend_cap() -> f64 { 1.0 }
@@ -164,6 +172,8 @@ impl Default for AiSettings {
             summary_model: None,
             spend_cap_usd: 1.0,
             review_edits: false,
+            review_commands: false,
+            log_show_only_diffs: false,
         }
     }
 }

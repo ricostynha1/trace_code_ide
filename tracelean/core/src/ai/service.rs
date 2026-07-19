@@ -61,11 +61,10 @@ impl AiService {
             extra_tools,
             permissions: {
                 let mut p = crate::AgentPermissions::full_access("chat");
-                p.review_edits = self
-                    .settings
-                    .lock()
-                    .map(|s| s.review_edits)
-                    .unwrap_or(false);
+                if let Ok(s) = self.settings.lock() {
+                    p.review_edits = s.review_edits;
+                    p.review_commands = s.review_commands;
+                }
                 p
             },
             project_root,
@@ -113,6 +112,24 @@ impl AiService {
             save_session(&root, session);
         }
         Ok(result)
+    }
+
+    /// bugs.md Feature 2: user-triggered summarization of a session's model
+    /// view (the "summarize now" button next to context reset).
+    pub async fn summarize_session(&self, session_id: &str) -> Result<(), String> {
+        let ctx = self.agent_context(None, false).await?;
+        let mut store = self.sessions.lock().await;
+        let session = store
+            .get_mut(session_id)
+            .ok_or_else(|| format!("no session {}", session_id))?;
+        crate::agent::force_summarize(&ctx, &mut session.model_view).await?;
+        session.compacted = true;
+        session.compaction_count += 1;
+        session.updated_at = chrono::Utc::now().to_rfc3339();
+        if let Some(root) = self.project_root() {
+            save_session(&root, session);
+        }
+        Ok(())
     }
 
     fn project_root(&self) -> Option<std::path::PathBuf> {

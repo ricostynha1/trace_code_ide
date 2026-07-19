@@ -183,10 +183,23 @@ pub fn save_file(
 }
 
 #[tauri::command]
-pub fn save_checkpoint(state: State<'_, AppStateWrapper>) -> Result<(), String> {
-    let s = state.0.lock().map_err(|e| e.to_string())?;
+pub fn save_checkpoint(
+    app: AppHandle,
+    state: State<'_, AppStateWrapper>,
+    cache: State<'_, UndoTreeCacheWrapper>,
+) -> Result<(), String> {
+    let mut s = state.0.lock().map_err(|e| e.to_string())?;
     let root = s.project_root().cloned().ok_or("No project open")?;
-    persistence::save_checkpoint(&root, &s).map_err(|e| e.to_string())
+    // Bug 7: a checkpoint is this app's commit — mark it so the Commits
+    // filter in the undo-tree panel has something to show.
+    s.mark_commit_point(format!(
+        "checkpoint {}",
+        chrono::Local::now().format("%Y-%m-%d %H:%M:%S")
+    ));
+    persistence::save_checkpoint(&root, &s).map_err(|e| e.to_string())?;
+    invalidate_undo_cache(&cache);
+    let _ = app.emit("undo-tree-changed", ());
+    Ok(())
 }
 
 #[tauri::command]

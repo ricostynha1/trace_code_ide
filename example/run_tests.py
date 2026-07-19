@@ -2,9 +2,18 @@
 """
 Script to run all tests for the bubble sort implementation.
 """
-
+# Pois
 import subprocess
 import sys
+
+def fibonacci(n: int) -> int:
+    """Compute the nth Fibonacci number."""
+    if n <= 0:
+        return 0
+    elif n == 1:
+        return 1
+    else:
+        return fibonacci(n - 1) + fibonacci(n - 2)
 
 def run_tests():
     """Run all test suites."""
@@ -44,12 +53,8 @@ def run_tests():
 if __name__ == "__main__":
     run_tests()
 
-Cenas fixes ``
+Oi vize
 
-Fice
+cenas
 
-Vamos la ver
-
-Sim vamos\nHello world
-
-Oi
+# Random cenas d epython to remo

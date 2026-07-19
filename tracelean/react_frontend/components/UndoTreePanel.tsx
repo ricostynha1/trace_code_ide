@@ -31,7 +31,7 @@ interface UndoTreePanelProps {
   currentFile: string | null;
 }
 
-type FilterMode = "global" | "file" | "commits" | "batch";
+type FilterMode = "global" | "file" | "commits";
 
 function cmdMarker(summary: string): string {
   if (summary.startsWith("Insert")) return "I";
@@ -223,6 +223,11 @@ export function UndoTreePanel({ visible, onClose, onNodeJump, onFileSelect, curr
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hoverSeq = useRef(0);
   const [_hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
+  // Feature 2b: right-click pins a node's diff (same view as hover, but it
+  // stays until unpinned) — mirrors the AI edit review visualization.
+  const [pinnedNodeId, setPinnedNodeId] = useState<string | null>(null);
+  const pinnedRef = useRef<string | null>(null);
+  pinnedRef.current = pinnedNodeId;
 
   const refresh = useCallback(async () => {
     try {
@@ -270,6 +275,8 @@ export function UndoTreePanel({ visible, onClose, onNodeJump, onFileSelect, curr
   const handleHover = (nodeId: string | null) => {
     setHoveredNodeId(nodeId);
     if (hoverTimer.current) clearTimeout(hoverTimer.current);
+    // A pinned diff owns the display; hover neither overrides nor clears it.
+    if (pinnedRef.current) return;
     const seq = ++hoverSeq.current;
     if (!nodeId) {
       window.dispatchEvent(new CustomEvent("undo-hover-diff", { detail: null }));
@@ -279,12 +286,41 @@ export function UndoTreePanel({ visible, onClose, onNodeJump, onFileSelect, curr
       try {
         const nodeDiff = await invoke("get_undo_node_diff_structured", { nodeId });
         if (hoverSeq.current !== seq) return; // stale hover
+        if (pinnedRef.current) return;
         window.dispatchEvent(new CustomEvent("undo-hover-diff", { detail: { nodeDiff, nodeId } }));
       } catch {
         window.dispatchEvent(new CustomEvent("undo-hover-diff", { detail: null }));
       }
     }, 120);
   };
+
+  // Feature 2b: right-click toggles a pinned diff view for a node.
+  const handlePin = async (nodeId: string) => {
+    if (pinnedRef.current === nodeId) {
+      setPinnedNodeId(null);
+      window.dispatchEvent(new CustomEvent("undo-hover-diff", { detail: null }));
+      return;
+    }
+    try {
+      const nodeDiff = await invoke("get_undo_node_diff_structured", { nodeId });
+      setPinnedNodeId(nodeId);
+      window.dispatchEvent(new CustomEvent("undo-hover-diff", { detail: { nodeDiff, nodeId } }));
+    } catch {
+      /* node without diff — ignore */
+    }
+  };
+
+  // Escape unpins.
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && pinnedRef.current) {
+        setPinnedNodeId(null);
+        window.dispatchEvent(new CustomEvent("undo-hover-diff", { detail: null }));
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
 
   if (!visible) return null;
 
@@ -298,11 +334,6 @@ export function UndoTreePanel({ visible, onClose, onNodeJump, onFileSelect, curr
     filteredData = {
       ...treeData,
       nodes: treeData.nodes.filter((n) => n.is_commit_point),
-    };
-  } else if (filterMode === "batch" && treeData) {
-    filteredData = {
-      ...treeData,
-      nodes: treeData.nodes.filter((n) => n.command_summary.startsWith("Batch")),
     };
   }
 
@@ -329,8 +360,6 @@ export function UndoTreePanel({ visible, onClose, onNodeJump, onFileSelect, curr
             disabled={!currentFile}>File</button>
           <button className={filterMode === "commits" ? "active" : ""}
             onClick={() => setFilterMode("commits")}>Commits</button>
-          <button className={filterMode === "batch" ? "active" : ""}
-            onClick={() => setFilterMode("batch")}>Batch</button>
           <button className="clear-btn" onClick={async () => {
             try {
               await invoke("clear_undo_tree");
@@ -344,7 +373,8 @@ export function UndoTreePanel({ visible, onClose, onNodeJump, onFileSelect, curr
       <div className="panel-content">
         {activeTab === "tree" ? (
           <>
-            <TreeGraph layout={layout} onJump={handleJump} onHover={handleHover} filterMode={filterMode} />
+            <TreeGraph layout={layout} onJump={handleJump} onHover={handleHover} onPin={handlePin}
+              pinnedNodeId={pinnedNodeId} filterMode={filterMode} />
           </>
         ) : (
           <LogView entries={commandLog} />
@@ -358,11 +388,15 @@ function TreeGraph({
   layout,
   onJump,
   onHover,
+  onPin,
+  pinnedNodeId,
   filterMode,
 }: {
   layout: { nodes: LayoutNode[]; edges: LayoutEdge[]; width: number; height: number };
   onJump: (id: string, file: string | null) => void;
   onHover: (id: string | null) => void;
+  onPin: (id: string) => void;
+  pinnedNodeId: string | null;
   filterMode: string;
 }) {
   if (layout.nodes.length === 0) {
@@ -413,9 +447,14 @@ function TreeGraph({
           return (
             <g key={node.id} style={{ cursor: "pointer" }}
               onClick={() => onJump(node.id, node.file)}
+              onContextMenu={(e) => { e.preventDefault(); onPin(node.id); }}
               onMouseEnter={() => onHover(node.id)}
               onMouseLeave={() => onHover(null)}>
               <title>{shortTooltip(node.summary)}</title>
+              {node.id === pinnedNodeId && (
+                <circle cx={x} cy={y} r={NODE_R + 3}
+                  fill="none" stroke="#e5c07b" strokeWidth={1.5} strokeDasharray="2,2" />
+              )}
               <circle cx={x} cy={y} r={NODE_R}
                 fill={fill} stroke={stroke} strokeWidth={1.5} />
               <text x={x} y={y + 3.5} textAnchor="middle"

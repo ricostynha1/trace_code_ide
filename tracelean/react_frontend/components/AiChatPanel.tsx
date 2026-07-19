@@ -108,6 +108,10 @@ interface AiSettings {
   spend_cap_usd: number;
   /** P10: agent edits stage diffs for per-hunk approval instead of applying. */
   review_edits?: boolean;
+  /** bugs.md Feature 4: agent shell commands require approval before running. */
+  review_commands?: boolean;
+  /** bugs.md Feature 5: log detail hides messages equal to the previous request. */
+  log_show_only_diffs?: boolean;
 }
 
 interface ToolCallResponse {
@@ -173,10 +177,19 @@ function compactNum(n: number): string {
   return String(n);
 }
 
+/** Chars taken up by the tool schemas sent with a request (part of the paid input). */
+function toolSchemaChars(e: InteractionEntry): number {
+  return e.tool_schemas && e.tool_schemas.length > 0
+    ? JSON.stringify(e.tool_schemas).length
+    : 0;
+}
+
 /** bugs.md: chars/token ratio for one interaction, from provider-reported
- * input tokens vs total request chars. Null if usage is unknown. */
+ * input tokens vs total request chars. Tool schemas count — they are part of
+ * the billed input, so omitting them inflates every token estimate.
+ * Null if usage is unknown. */
 function charsPerToken(e: InteractionEntry): number | null {
-  const totalChars = e.request_messages.reduce(
+  const msgChars = e.request_messages.reduce(
     (s, m) =>
       s +
       m.content.length +
@@ -186,6 +199,7 @@ function charsPerToken(e: InteractionEntry): number | null {
       ),
     0
   );
+  const totalChars = msgChars + toolSchemaChars(e);
   return e.usage.input_tokens > 0 && totalChars > 0 ? totalChars / e.usage.input_tokens : null;
 }
 
@@ -196,12 +210,20 @@ function sizeBoth(chars: number, ratio: number | null): string {
 }
 
 /** Per-message cached flags: walk messages accumulating estimated tokens
- * until the provider-reported cached prefix is exhausted. */
+ * until the provider-reported cached prefix is exhausted. Tool schemas sit
+ * before the messages in the request, so they consume the cached prefix
+ * first — seed the accumulator with them or every message looks cached. */
 function cachedFlags(e: InteractionEntry): boolean[] {
   const ratio = charsPerToken(e) ?? 4;
-  let cum = 0;
+  let cum = toolSchemaChars(e) / ratio;
   return e.request_messages.map((m) => {
-    const t = m.content.length / ratio;
+    const t =
+      (m.content.length +
+        ((m as any).tool_calls ?? []).reduce(
+          (a: number, tc: any) => a + (tc.function?.arguments?.length ?? 0),
+          0
+        )) /
+      ratio;
     const isCached = e.usage.cached_tokens > 0 && cum + t <= e.usage.cached_tokens;
     cum += t;
     return isCached;
@@ -233,6 +255,7 @@ export function AiChatPanel({ visible, onClose }: Props) {
   const [expandedChips, setExpandedChips] = useState<Record<string, boolean>>({});
   const [sessionInfo, setSessionInfo] = useState<ChatSessionInfo | null>(null);
   const [confirmReset, setConfirmReset] = useState(false);
+  const [summarizing, setSummarizing] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const mockPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -428,6 +451,21 @@ export function AiChatPanel({ visible, onClose }: Props) {
       loadSessionInfo();
     } catch (e) {
       setError(String(e));
+    }
+  };
+
+  // bugs.md Feature 2: user-forced summarization of the model context.
+  const summarizeContext = async () => {
+    if (summarizing) return;
+    setSummarizing(true);
+    try {
+      await invoke("summarize_chat_session", { sessionId: activeChatId });
+      setMessages((prev) => [...prev, { role: "system", content: "— context summarized —" }]);
+      loadSessionInfo();
+    } catch (e) {
+      setError(String(e));
+    } finally {
+      setSummarizing(false);
     }
   };
 
@@ -739,20 +777,34 @@ export function AiChatPanel({ visible, onClose }: Props) {
             <div className="ai-cost-bar">
               <span className="ai-cost-label">Session: ${stats.total_cost_usd.toFixed(4)}</span>
               {(() => {
-                // Bug 2: cache-hit % of input tokens and output share of cost
-                // beat raw token counts in a one-line summary.
-                const cachePct = stats.total_input_tokens > 0
-                  ? Math.round((stats.total_cached_tokens / stats.total_input_tokens) * 100)
-                  : 0;
-                const outPct = stats.total_cost_usd > 0
-                  ? Math.round(((stats.total_output_cost_usd ?? 0) / stats.total_cost_usd) * 100)
-                  : 0;
-                const tooltip =
-                  `Input: ${stats.total_input_tokens.toLocaleString()} tokens (${stats.total_cached_tokens.toLocaleString()} cached)\n` +
-                  `Output: ${stats.total_output_tokens.toLocaleString()} tokens ($${(stats.total_output_cost_usd ?? 0).toFixed(4)})`;
+                // bugs.md Feature 2: a segmented bar where each cost category
+                // occupies its share of the width — cached input, input, output.
+                const rates = settings?.selected_model;
+                const cachedCost =
+                  (stats.total_cached_tokens / 1_000_000) * (rates?.cached_input_cost_per_m ?? 0);
+                const outputCost = stats.total_output_cost_usd ?? 0;
+                const inputCost = Math.max(0, stats.total_cost_usd - cachedCost - outputCost);
+                const total = cachedCost + inputCost + outputCost;
+                if (total <= 0) return null;
+                const segments = [
+                  { key: "cached", label: "Cached input", cost: cachedCost, cls: "ai-costseg-cached" },
+                  { key: "input", label: "Input (not cached)", cost: inputCost, cls: "ai-costseg-input" },
+                  { key: "output", label: "Output", cost: outputCost, cls: "ai-costseg-output" },
+                ];
                 return (
-                  <span className="ai-cost-tokens" title={tooltip}>
-                    cache {cachePct}% · output {outPct}% of cost
+                  <span className="ai-cost-split-bar">
+                    {segments.map((s) => {
+                      const pct = (s.cost / total) * 100;
+                      if (pct <= 0) return null;
+                      return (
+                        <span
+                          key={s.key}
+                          className={`ai-costseg ${s.cls}`}
+                          style={{ width: `${pct}%` }}
+                          title={`${s.label}: $${s.cost.toFixed(4)} (${pct.toFixed(0)}% of cost)`}
+                        />
+                      );
+                    })}
                   </span>
                 );
               })()}
@@ -792,6 +844,14 @@ export function AiChatPanel({ visible, onClose }: Props) {
                         ⟲
                       </button>
                     )}
+                    <button
+                      className="ai-ctx-reset-btn"
+                      title="Summarize model context now (uses the summary model)"
+                      disabled={summarizing}
+                      onClick={summarizeContext}
+                    >
+                      {summarizing ? "◌" : "Σ"}
+                    </button>
                   </span>
                 );
               })()}
@@ -948,6 +1008,34 @@ export function AiChatPanel({ visible, onClose }: Props) {
             When on, agent edits stage as pending diffs — accept or reject hunks in the review
             panel before they touch your files.
           </p>
+
+          <h3>Command Review</h3>
+          <label className="ai-checkbox-row">
+            <input
+              type="checkbox"
+              checked={settings.review_commands ?? false}
+              onChange={(e) => saveSettings({ ...settings, review_commands: e.target.checked })}
+            />
+            Ask before the agent runs shell commands
+          </label>
+          <p className="ai-hint">
+            When on, every agent run_shell command waits for your approval before executing.
+          </p>
+
+          <h3>Log View</h3>
+          <label className="ai-checkbox-row">
+            <input
+              type="checkbox"
+              checked={settings.log_show_only_diffs ?? false}
+              onChange={(e) => saveSettings({ ...settings, log_show_only_diffs: e.target.checked })}
+            />
+            Log: show only diffs vs previous request
+          </label>
+          <p className="ai-hint">
+            In the log detail, request messages already sent (and cached) in the previous
+            request collapse into one "[N previous messages equal]" line — what remains is
+            what this request actually paid for.
+          </p>
         </div>
       )}
 
@@ -965,6 +1053,11 @@ export function AiChatPanel({ visible, onClose }: Props) {
                   <tr><td>Requests</td><td>{log.length}</td></tr>
                   <tr><td>Input tokens</td><td>{log.reduce((s, e) => s + e.usage.input_tokens, 0).toLocaleString()}</td></tr>
                   <tr><td>Cached tokens</td><td>{log.reduce((s, e) => s + e.usage.cached_tokens, 0).toLocaleString()}</td></tr>
+                  <tr><td>Cache hit %</td><td>{(() => {
+                    const inp = log.reduce((s, e) => s + e.usage.input_tokens, 0);
+                    const cached = log.reduce((s, e) => s + e.usage.cached_tokens, 0);
+                    return inp > 0 ? ((cached / inp) * 100).toFixed(1) + "%" : "—";
+                  })()}</td></tr>
                   <tr><td>Output tokens</td><td>{log.reduce((s, e) => s + e.usage.output_tokens, 0).toLocaleString()}</td></tr>
                   <tr><td>Thinking tokens</td><td>{log.reduce((s, e) => s + e.usage.thinking_tokens, 0).toLocaleString()}</td></tr>
                   <tr><td>Total cost</td><td><strong>${log.reduce((s, e) => s + e.cost.total_usd, 0).toFixed(6)}</strong></td></tr>
@@ -1027,8 +1120,39 @@ export function AiChatPanel({ visible, onClose }: Props) {
               )}
 
               <h5>Request Messages</h5>
-              {inspectEntry.request_messages.map((m, i) => (
-                <div
+              {(() => {
+                // bugs.md Feature 5: collapse the message prefix already sent
+                // in the previous request (log is newest-first, so the
+                // previous request lives at index + 1).
+                let skip = 0;
+                if (settings?.log_show_only_diffs) {
+                  const idx = log.findIndex((e) => e.id === inspectEntry.id);
+                  const prev = idx >= 0 ? log[idx + 1] : undefined;
+                  if (prev) {
+                    const key = (m: any) =>
+                      JSON.stringify([m.role, m.content, m.tool_calls ?? [], m.tool_call_id ?? null]);
+                    const cur = inspectEntry.request_messages;
+                    const old = prev.request_messages;
+                    while (
+                      skip < cur.length - 1 &&
+                      skip < old.length &&
+                      key(cur[skip]) === key(old[skip])
+                    ) {
+                      skip++;
+                    }
+                  }
+                }
+                return (
+                  <>
+                    {skip > 0 && (
+                      <div className="ai-log-equal-note">
+                        [{skip} previous message{skip === 1 ? "" : "s"} equal — hidden]
+                      </div>
+                    )}
+                    {inspectEntry.request_messages.slice(skip).map((m, i0) => {
+                      const i = i0 + skip;
+                      return (
+              <div
                   key={i}
                   className={`ai-log-msg ${
                     inspectEntry.usage.cached_tokens > 0
@@ -1060,7 +1184,11 @@ export function AiChatPanel({ visible, onClose }: Props) {
                     <span className="ai-log-tool-id">[tool_call_id: {(m as any).tool_call_id}]</span>
                   )}
                 </div>
-              ))}
+                      );
+                    })}
+                  </>
+                );
+              })()}
 
               <h5>Response</h5>
               {inspectEntry.response_tool_calls?.length > 0 ? (

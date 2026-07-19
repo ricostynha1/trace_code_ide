@@ -82,7 +82,9 @@ export OPENROUTER_API_KEY=sk-or-...        # or OpenRouter
 cargo run --bin tracelean-bench -- -p bedrock --list-models
 
 # Run one task, verbose, with a $0.10 spend cap
-cargo run --bin tracelean-bench -- -p bedrock -m minimax.minimax-m2.5 hello-world -v --cap 0.1
+cargo run --bin tracelean-bench -- \
+  -p bedrock -m minimax.minimax-m2.5 hello-world -v --cap 0.1 \
+  2>&1 | tee trace.log
 
 # Run the whole 10-task Exercism suite with a $2 cap
 cargo run --bin tracelean-bench -- -p bedrock -m qwen.qwen3-coder-480b-a35b-instruct --cap 2.00 --all

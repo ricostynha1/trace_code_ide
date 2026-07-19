@@ -110,6 +110,11 @@ fn get_enrichment(tool_name: &str) -> ToolEnrichment {
             aliases: &["execute shell", "terminal", "run command", "bash", "compile", "build", "test", "make"],
             examples: &["Run cargo build", "Execute tests", "Compile the project", "Run make", "Check linting"],
         },
+        "web_search" => ToolEnrichment {
+            category: "web",
+            aliases: &["search web", "google", "look up online", "fetch url", "download page", "web fetch", "documentation lookup"],
+            examples: &["Search for tokio watch channel docs", "Fetch https://docs.rs/serde", "Look up the latest reqwest API"],
+        },
         _ => ToolEnrichment {
             category: "other",
             aliases: &[],

@@ -504,6 +504,8 @@ async fn call_llm(messages: &[ChatMessage]) -> String {
             ai::ProviderKind::Mock
         },
         review_edits: false,
+        review_commands: false,
+        log_show_only_diffs: false,
         openrouter_api_key: std::env::var("OPENROUTER_API_KEY").ok(),
         bedrock_api_key: std::env::var("AWS_BEARER_TOKEN_BEDROCK").ok(),
         bedrock_region: std::env::var("AWS_REGION").ok().or(Some("eu-west-1".to_string())),

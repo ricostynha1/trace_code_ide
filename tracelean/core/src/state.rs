@@ -318,6 +318,17 @@ impl AppState {
         &self.undo_tree
     }
 
+    /// Mark the current undo-tree node as a commit point (named snapshot).
+    /// Bug 7: the Commits filter in the undo-tree panel shows only these.
+    pub fn mark_commit_point(&mut self, name: String) {
+        self.undo_tree.set_commit_point(crate::undo_tree::CommitPoint {
+            name,
+            timestamp: chrono::Utc::now(),
+            coverage: None,
+            spec_conformance: None,
+        });
+    }
+
     /// Get command log (for persistence)
     pub fn command_log(&self) -> &[Command] {
         &self.command_log
