@@ -1,4 +1,7 @@
 {
+  "conventions": {
+    "pagination_hint": "{shown} of {total} matches shown, call again with offset={next_offset} to see the rest"
+  },
   "tools": [
     {
       "name": "discover_tools",
@@ -25,7 +28,8 @@
       },
       "example": {
         "query": "delete a file"
-      }
+      },
+      "short_help": "discover_tools(query, max_results?) — Find and load additional tools by capability."
     },
     {
       "name": "list_directory",
@@ -66,14 +70,15 @@
         "path": "src",
         "recursive": true,
         "file_filter": "*.rs"
-      }
+      },
+      "short_help": "list_directory(path?, recursive?, max_results?, offset?, file_filter?, max_depth?) — List files/dirs. Paginated."
     },
     {
       "name": "find",
       "tier": "static",
       "category": "search",
-      "description": "Search project files by regex or semantic similarity. Returns matching lines with context.",
-      "embedded_txt": "Unified search tool combining regex grep and semantic embedding search. Mode auto picks regex if query looks like a pattern, semantic otherwise. Regex mode: fast text/pattern matching across files like grep. Semantic mode: natural language search using embeddings, finds code by meaning not exact text. Supports pagination, file filtering by glob, case sensitivity, context lines around matches. Use instead of run_shell for any file search task. Examples: find all TODO comments, search for authentication handling logic, locate where a function is defined, find files importing a module.",
+      "description": "Search files with auto regex or semantic similarity. regex mode: fast pattern/text matching (case-insensitive fallback by default) — use for exact symbols, strings, comments, imports; escape special chars like . * ( for a literal match. semantic mode: natural-language, meaning-based search using embeddings — use for finding concepts, similar logic, or when a regex search returns no results. auto: tries regex first (then case-insensitive); if both fail, falls back to semantic.",
+      "embedded_txt": "Unified search tool combining regex grep and semantic embedding search. Regex mode: fast text/pattern matching across files like grep, for exact symbols, strings, comments, imports — escape special chars like . * ( for literal matches; falls back to case-insensitive automatically. Semantic mode: natural language search using embeddings, finds code by meaning not exact text — use for concepts, similar logic, or when regex finds nothing. Auto mode tries regex, then case-insensitive, then semantic, and reports which strategy produced the results. Supports pagination via offset/max_results, file filtering by glob, case sensitivity, context lines around matches. Use instead of run_shell for any file search task. Examples: find all TODO comments, search for authentication handling logic, locate where a function is defined, find files importing a module.",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -124,7 +129,8 @@
         "query": "fn main",
         "mode": "regex",
         "path": "src"
-      }
+      },
+      "short_help": "find(query, mode?, case_sensitive?, max_results?, offset?, path?, file_filter?) — Search files by regex or semantic; auto falls back regex → case-insensitive → semantic."
     },
     {
       "name": "read_file",
@@ -156,14 +162,15 @@
         "path": "src/main.rs",
         "offset": 0,
         "max_results": 100
-      }
+      },
+      "short_help": "read_file(path, offset?, max_results?) — Read file lines. Paginated. max_results=0 returns metadata only."
     },
     {
       "name": "edit_file",
       "tier": "static",
       "category": "editing",
       "description": "Replace line range [start, end) with text. start==end inserts. Both omitted replaces whole file. Creates file if not exists.",
-      "embedded_txt": "Edit a file by replacing a line range with new text. Versatile: start==end means pure insert at that line (no removal). Both start and end omitted means replace entire file content. If file does not exist, creates it. Supports negative indexing (-1 = last line). Use for: inserting code at specific locations, replacing function bodies, creating new files, appending content. For single unique-string replacements, prefer replace_str instead. Examples: insert import at line 0, replace lines 5-10 with new implementation, create a new config file, append test at end of file.",
+      "embedded_txt": "Edit a file by replacing a line range with new text. Versatile: start==end means pure insert at that line (no removal). Both start and end omitted means replace entire file content. If file does not exist, creates it. Supports negative indexing (-1 = last line). Use for: inserting code at specific locations, replacing function bodies, creating new files, appending content. For single unique-string replacements, prefer replace_str instead. To edit multiple occurrences in one pass, apply the edits back-to-front — highest line number first — so earlier line numbers don't shift. Examples: insert import at line 0, replace lines 5-10 with new implementation, create a new config file, append test at end of file.",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -193,14 +200,15 @@
         "start": 3,
         "end": 5,
         "text": "fn new_code() {\n    todo!()\n}\n"
-      }
+      },
+      "short_help": "edit_file(path, text, start?, end?) — Replace line range [start,end) with text. start==end inserts; omit both to replace whole file."
     },
     {
       "name": "replace_str",
       "tier": "static",
       "category": "editing",
-      "description": "Replace a unique string occurrence in a file. Fails if not exactly one match.",
-      "embedded_txt": "Find and replace an exact string in a file. The old_str must match exactly once in the file — fails with error if zero or multiple matches found. This is the safest edit operation when you know the exact text to change. Preferred over edit_file for: renaming functions/variables, fixing typos, updating import paths, changing single values. Does not use regex — literal string match only. Examples: rename a function, fix a typo in a comment, update a dependency version string, change a constant value.",
+      "description": "Replace a unique string occurrence in a file. Fails if not exactly one match; failure errors include line numbers of near/duplicate matches — use them with edit_file as the fallback.",
+      "embedded_txt": "Find and replace an exact string in a file. The old_str must match exactly once in the file — fails with error if zero or multiple matches found. On failure the error lists the closest matching lines (0 matches) or every match's line number (multiple matches); fall back to edit_file with those line numbers when the string can't be made unique. This is the safest edit operation when you know the exact text to change. Preferred over edit_file for: renaming functions/variables, fixing typos, updating import paths, changing single values. Does not use regex — literal string match only. Examples: rename a function, fix a typo in a comment, update a dependency version string, change a constant value.",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -227,7 +235,8 @@
         "path": "src/main.rs",
         "old_str": "let x = 1;",
         "new_str": "let x = 42;"
-      }
+      },
+      "short_help": "replace_str(path, old_str, new_str) — Replace exact string in file (must match exactly once)."
     },
     {
       "name": "run_shell",
@@ -265,7 +274,60 @@
       "example": {
         "command": "cargo test",
         "timeout_secs": 60
-      }
+      },
+      "short_help": "run_shell(command, cwd?, timeout_secs?) — Run shell command in project root."
+    },
+    {
+      "name": "web_search",
+      "tier": "static",
+      "category": "web",
+      "description": "Search the web. Returns result titles and URLs; fetch one with web_fetch.",
+      "embedded_txt": "Search the web with a terms query (DuckDuckGo backend). Returns a list of result titles and URLs. To read a page's content, pass one of the returned URLs to web_fetch, which saves the page text into the project (.tracelean/web/) where read_file and find can inspect it. Use for: looking up library documentation, error messages, API references, current information not in the codebase. Examples: search for tokio watch channel docs, look up a compiler error, find the latest reqwest API.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "Search terms (or a full http(s):// URL, which is fetched directly)."
+          },
+          "max_results": {
+            "type": "integer",
+            "default": 5
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "additionalProperties": false
+      },
+      "example": {
+        "query": "rust tokio watch channel"
+      },
+      "short_help": "web_search(query, max_results?) — Search the web; returns result titles + URLs."
+    },
+    {
+      "name": "web_fetch",
+      "tier": "static",
+      "category": "web",
+      "description": "Fetch a URL; its readable text is saved to a project temp file for read_file/find.",
+      "embedded_txt": "Fetch a web page by URL. The page is downloaded, HTML is stripped to readable text, and the result is saved under .tracelean/web/ inside the project. The tool returns the saved path, line count, and a short preview — use read_file or find on that path to inspect the content. Use after web_search returns candidate URLs, or directly when you already know the URL. Examples: fetch https://docs.rs/tokio, download a changelog page, read an API reference page.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "Full http(s):// URL to fetch."
+          }
+        },
+        "required": [
+          "url"
+        ],
+        "additionalProperties": false
+      },
+      "example": {
+        "url": "https://docs.rs/tokio"
+      },
+      "short_help": "web_fetch(url) — Fetch a URL as text into .tracelean/web/ readable with read_file/find."
     },
     {
       "name": "help_tool",
@@ -288,7 +350,8 @@
       },
       "example": {
         "tool_name": "edit_file"
-      }
+      },
+      "short_help": "help_tool(tool_name) — Get detailed usage info for any tool."
     }
   ],
   "dynamic_tools": [
@@ -313,7 +376,8 @@
       },
       "example": {
         "path": "src/obsolete.rs"
-      }
+      },
+      "short_help": "delete_file(path) — Delete a file (reversible via undo)."
     },
     {
       "name": "query_trace_graph",
@@ -336,7 +400,8 @@
       },
       "example": {
         "req_id": "REQ-01"
-      }
+      },
+      "short_help": "query_trace_graph(req_id) — Linked specs, code, tests for a requirement."
     },
     {
       "name": "query_code_element",
@@ -365,7 +430,8 @@
       "example": {
         "file": "src/auth.rs",
         "name": "login"
-      }
+      },
+      "short_help": "query_code_element(file, name) — Requirements/specs linked to a code element."
     },
     {
       "name": "list_requirements",
@@ -379,7 +445,8 @@
         "required": [],
         "additionalProperties": false
       },
-      "example": {}
+      "example": {},
+      "short_help": "list_requirements() — List all requirements with ID, title, status."
     },
     {
       "name": "get_symbols",
@@ -402,7 +469,8 @@
       },
       "example": {
         "path": "src/types.rs"
-      }
+      },
+      "short_help": "get_symbols(path) — Parsed symbols (functions, structs, classes) from a file."
     }
   ]
 }

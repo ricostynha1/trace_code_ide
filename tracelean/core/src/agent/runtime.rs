@@ -10,7 +10,7 @@ use crate::ai::{
     provider::{AiProvider, AiRequest, ChatMessage, MessageRole},
     ToolCall, ToolRegistry,
     batch_prune_decisions, summarization_decision, CostDecision, PruneContext,
-    provider_cache::{CacheMode, ProviderCacheConfig},
+    provider_cache::ProviderCacheConfig,
 };
 use crate::{ToolCallEvent, ToolCallStatus};
 
@@ -38,6 +38,9 @@ pub struct AgentTurnResult {
     pub final_messages: Vec<ChatMessage>,
     /// How many loop iterations compacted/pruned context this turn (P7).
     pub compactions: u32,
+    /// Dynamic tools loaded at the end of the turn (bugs.md Feature 3) —
+    /// persisted on the session so discovered tools survive across turns.
+    pub dynamic_tools: Vec<String>,
 }
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -55,7 +58,7 @@ pub async fn run_agent_turn(
     ctx: &AgentContext,
     messages: Vec<ChatMessage>,
 ) -> Result<AgentTurnResult, AgentError> {
-    run_agent_turn_inner(ctx, messages).await
+    run_agent_turn_inner(ctx, messages, Vec::new()).await
 }
 
 /// Run one agent turn with persistent session state.
@@ -69,11 +72,13 @@ pub async fn run_agent_turn_session(
 
     // Use model_view as the messages for LLM (already compacted from prior turns)
     let messages = session.model_view.clone();
-    let result = run_agent_turn_inner(ctx, messages).await?;
+    let result = run_agent_turn_inner(ctx, messages, session.dynamic_tools.clone()).await?;
 
     // Persist evolved state: final_messages includes all compaction + tool calls + final response
     // This is the model_view for next call — preserves caching prefix stability.
     session.model_view = result.final_messages.clone();
+    // Feature 3: discovered tools persist with the session.
+    session.dynamic_tools = result.dynamic_tools.clone();
 
     // Track real context size for the utilization bar (P7)
     session.last_prompt_tokens = result.response.usage.input_tokens;
@@ -102,15 +107,20 @@ pub async fn run_agent_turn_session(
 async fn run_agent_turn_inner(
     ctx: &AgentContext,
     input_messages: Vec<ChatMessage>,
+    initial_dynamic_tools: Vec<String>,
 ) -> Result<AgentTurnResult, AgentError> {
     let (model, provider) = build_provider(ctx)?;
     // Load tool registry (static tools always sent)
     const TOOLS_JSON: &str = include_str!("../../../data/tools.json");
-    let tool_registry = ToolRegistry::load_from_str(TOOLS_JSON)
+    let mut tool_registry = ToolRegistry::load_from_str(TOOLS_JSON)
         .expect("embedded data/tools.json must parse");
-    // Build all tools = static + dynamic from registry + extra (e.g. MCP)
-    let all_tools = {
-        let mut schemas = tool_registry.request_schemas();
+    // Feature 3: restore this session's previously discovered tools.
+    tool_registry.load_dynamic_tools(&initial_dynamic_tools);
+    // Static tool set = registry static + extra (e.g. MCP). This is the FROZEN
+    // prefix: it must not change during the session (Feature 3), so discovered
+    // tools travel separately in AiRequest::dynamic_tools.
+    let static_tools = {
+        let mut schemas = tool_registry.static_schemas().to_vec();
         for tool in &ctx.extra_tools {
             schemas.push(tool.to_tool_schema());
         }
@@ -131,6 +141,14 @@ async fn run_agent_turn_inner(
         full
     };
 
+    // T12: the shell executor polls this flag so Stop can kill an in-flight
+    // child process, not just wait for it to finish.
+    let exec_permissions = {
+        let mut p = ctx.permissions.clone();
+        p.cancel_flag = Some(ctx.cancel.flag_handle());
+        p
+    };
+
     let mut consecutive_failures: u32 = 0;
     let mut loop_i: u32 = 0;
     let mut total_tool_calls: usize = 0;
@@ -145,6 +163,12 @@ async fn run_agent_turn_inner(
     let mut cache_predictions = ai::cost_model::CachePredictionTracker::new();
 
     loop {
+        // T12: hard stop — checked at the top of every iteration so a Stop
+        // clicked between requests takes effect immediately.
+        if ctx.cancel.is_cancelled() {
+            return Err(AgentError::StoppedByUser(total_tool_calls));
+        }
+
         // Enforce spend cap
         {
             let s = ctx.stats.lock().map_err(|e| AgentError::Lock(e.to_string()))?;
@@ -208,11 +232,18 @@ async fn run_agent_turn_inner(
             );
         }
 
+        let dynamic_schemas: Vec<crate::ai::provider::ToolSchema> =
+            tool_registry.dynamic_schemas().into_iter().cloned().collect();
         let request = AiRequest {
             model: model.clone(),
             messages: messages.clone(),
             stop: None,
-            tools: Some(all_tools.clone()),
+            tools: Some(static_tools.clone()),
+            dynamic_tools: if dynamic_schemas.is_empty() {
+                None
+            } else {
+                Some(dynamic_schemas)
+            },
             cache_breakpoints,
         };
 
@@ -255,7 +286,16 @@ async fn run_agent_turn_inner(
         }
 
         let start = std::time::Instant::now();
-        let result = provider.complete(&request).await;
+        // T12: race the LLM request against the hard-stop token so an
+        // in-flight streaming call aborts promptly (dropping the future
+        // cancels the underlying HTTP request) instead of waiting for the
+        // next tool-call-boundary checkpoint.
+        let result = tokio::select! {
+            r = provider.complete(&request) => r,
+            _ = ctx.cancel.cancelled() => {
+                return Err(AgentError::StoppedByUser(total_tool_calls));
+            }
+        };
         let duration_ms = start.elapsed().as_millis() as u64;
 
         // Record response timing
@@ -354,6 +394,15 @@ async fn run_agent_turn_inner(
                     eprintln!("");
                 }
 
+                // bugs.md Bug 1.8: surface reasoning/thinking text in the chat
+                // (rendered as a collapsed block by the frontend).
+                if let Some(t) = response.thinking.as_ref().filter(|t| !t.trim().is_empty()) {
+                    ctx.event_sink.emit(
+                        "ai-chat-message",
+                        &serde_json::json!({"role": "thinking", "content": t}).to_string(),
+                    );
+                }
+
                 // No tool calls → final response
                 if response.tool_calls.is_empty() {
                     // Append final assistant response to messages for session persistence
@@ -363,12 +412,15 @@ async fn run_agent_turn_inner(
                         tool_call_id: None,
                         tool_calls: Vec::new(),
                     });
+                    let dynamic_tools =
+                        tool_registry.dynamic_tools.iter().map(|d| d.name.clone()).collect();
                     return Ok(AgentTurnResult {
                         response,
                         tool_calls_executed: all_tool_records,
                         iterations: loop_i + 1,
                         final_messages: messages,
                         compactions: total_compactions,
+                        dynamic_tools,
                     });
                 }
 
@@ -448,6 +500,11 @@ async fn run_agent_turn_inner(
                 for tc in &response.tool_calls {
                     let tool_name = &tc.function.name;
 
+                    // T12: hard stop between tool calls of the same batch.
+                    if ctx.cancel.is_cancelled() {
+                        return Err(AgentError::StoppedByUser(total_tool_calls));
+                    }
+
                     // Pause every N tool calls
                     total_tool_calls += 1;
                     if total_tool_calls > 0
@@ -514,19 +571,97 @@ async fn run_agent_turn_inner(
                         }
                     };
 
+                    // bugs.md Feature 3: discover_tools is handled here (not in
+                    // the executor) because it mutates the session's dynamic
+                    // tool set — matches are LOADED and become callable on the
+                    // next iteration via AiRequest::dynamic_tools.
+                    if tool_name == "discover_tools" {
+                        let query = arguments
+                            .get("query")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("")
+                            .to_string();
+                        let max = arguments
+                            .get("max_results")
+                            .and_then(|v| v.as_i64())
+                            .unwrap_or(10)
+                            .clamp(1, 20) as usize;
+                        let matches = tool_registry.discover_tools(&query, max);
+                        let added = tool_registry.load_dynamic_tools(&matches);
+                        let content = if matches.is_empty() {
+                            format!(
+                                "No additional tools match '{}'. Available additional tools: {}.",
+                                query,
+                                tool_registry.available_dynamic_names().join(", ")
+                            )
+                        } else {
+                            let lines: Vec<String> = matches
+                                .iter()
+                                .map(|n| {
+                                    format!(
+                                        "- {}",
+                                        tool_registry.short_help_for(n).unwrap_or(n)
+                                    )
+                                })
+                                .collect();
+                            format!(
+                                "{} tool(s) now loaded and callable like any other tool:\n{}",
+                                added.len().max(matches.len()),
+                                lines.join("\n")
+                            )
+                        };
+                        ctx.event_sink.emit(
+                            "tool-call",
+                            &serde_json::to_string(&ToolCallEvent {
+                                tool_name: tool_name.clone(),
+                                status: ToolCallStatus::Completed,
+                                duration_ms: Some(0),
+                                depth: 0,
+                                reason: None,
+                                call_id: Some(tc.id.clone()),
+                                args_preview: Some(crate::preview_str(&tc.function.arguments, 200)),
+                                result_preview: Some(crate::preview_str(&content, 200)),
+                            })
+                            .unwrap_or_default(),
+                        );
+                        all_tool_records.push(ToolCallRecord {
+                            tool_name: tool_name.clone(),
+                            success: true,
+                            duration_ms: 0,
+                        });
+                        messages.push(ChatMessage {
+                            role: MessageRole::Tool,
+                            content,
+                            tool_call_id: Some(tc.id.clone()),
+                            tool_calls: Vec::new(),
+                        });
+                        consecutive_failures = 0;
+                        continue;
+                    }
+
+                    // Keep discovered tools warm while the model uses them.
+                    tool_registry.mark_tool_used(tool_name);
+
                     // bugs.md Feature 4: shell commands can require explicit
-                    // per-command user approval (mirrors edit review).
+                    // per-command user approval (mirrors edit review). The
+                    // approval also carries the sandbox network grant (T4).
+                    let mut shell_network_granted = false;
                     if tool_name == "run_shell" && ctx.permissions.review_commands {
                         let cmd_str = arguments
                             .get("command")
                             .and_then(|v| v.as_str())
                             .unwrap_or("")
                             .to_string();
-                        let approved = match &ctx.pause_handler {
+                        let approval = match &ctx.pause_handler {
                             Some(handler) => handler.approve_command(&cmd_str).await,
-                            None => true, // headless: nobody to ask
+                            // headless: nobody to ask
+                            None => super::context::CommandApproval {
+                                approved: true,
+                                allow_network: false,
+                            },
                         };
-                        if !approved {
+                        shell_network_granted = approval.allow_network;
+                        if !approval.approved {
                             let note = format!(
                                 "[run_shell rejected by user — command was NOT executed: {}]",
                                 cmd_str
@@ -584,6 +719,13 @@ async fn run_agent_turn_inner(
                         name: tool_name.clone(),
                         arguments,
                     };
+                    // Per-command permissions: carries the one-shot network
+                    // grant from the approval prompt into the sandbox.
+                    let call_permissions = {
+                        let mut p = exec_permissions.clone();
+                        p.shell_network_once = shell_network_granted;
+                        p
+                    };
                     let tool_result = {
                         let mut s = ctx.state.lock().map_err(|e| AgentError::Lock(e.to_string()))?;
                         let sym = ctx
@@ -612,14 +754,34 @@ async fn run_agent_turn_inner(
                                 &mut s,
                                 &sym,
                                 &g,
-                                &ctx.permissions,
+                                &call_permissions,
                                 &None,
                                 Some(&mut sink),
                             );
                             if diffs.len() > before {
+                                // bugs.md: the chat surfaces staged edits like
+                                // approval prompts and opens the first file —
+                                // it needs to know *which* files were staged.
+                                let new_files: Vec<serde_json::Value> = diffs[before..]
+                                    .iter()
+                                    .map(|d| {
+                                        serde_json::json!({
+                                            "file": d.file,
+                                            "hunks": d.hunks.len(),
+                                            "first_line": d
+                                                .hunks
+                                                .first()
+                                                .map(|h| h.original_start + 1),
+                                        })
+                                    })
+                                    .collect();
                                 ctx.event_sink.emit(
                                     "pending-diffs-changed",
-                                    &serde_json::json!({"count": diffs.len()}).to_string(),
+                                    &serde_json::json!({
+                                        "count": diffs.len(),
+                                        "new_files": new_files,
+                                    })
+                                    .to_string(),
                                 );
                             }
                             result
@@ -630,11 +792,26 @@ async fn run_agent_turn_inner(
                                 &mut s,
                                 &sym,
                                 &g,
-                                &ctx.permissions,
+                                &call_permissions,
                             )
                         }
                     };
                     let tool_duration = start_tool.elapsed().as_millis() as u64;
+
+                    // sandboxing_better.md T2: sandbox-materialized file
+                    // changes just became real undo-tree events — refresh UI.
+                    if tool_name == "run_shell" {
+                        let n_mutations = tool_result
+                            .data
+                            .as_ref()
+                            .and_then(|d| d.get("fs_mutations"))
+                            .and_then(|v| v.as_u64())
+                            .unwrap_or(0);
+                        if n_mutations > 0 {
+                            ctx.event_sink.emit("undo-tree-changed", "");
+                            ctx.event_sink.emit("files-changed", "");
+                        }
+                    }
 
                     // bugs.md Feature 4: agent shell commands show up in the
                     // bottom terminal panel like user-run commands.
@@ -722,8 +899,11 @@ async fn run_agent_turn_inner(
                         "{}\n\n[Tool execution stopped: {} consecutive failures. Please provide additional guidance.]",
                         response.content, consecutive_failures
                     );
+                    let dynamic_tools =
+                        tool_registry.dynamic_tools.iter().map(|d| d.name.clone()).collect();
                     return Ok(AgentTurnResult {
                         response: ai::AiResponse {
+                            thinking: None,
                             content: failure_msg,
                             usage: response.usage.clone(),
                             raw_response: response.raw_response.clone(),
@@ -734,6 +914,7 @@ async fn run_agent_turn_inner(
                         iterations: loop_i + 1,
                         final_messages: messages,
                         compactions: total_compactions,
+                        dynamic_tools,
                     });
                 }
 
@@ -753,6 +934,10 @@ async fn run_agent_turn_inner(
             }
         }
 
+        // Dynamic-tool retention bookkeeping (Feature 3): unused discovered
+        // tools become eligible for removal after the retention window.
+        tool_registry.advance_turn();
+
         loop_i += 1;
     }
 }
@@ -760,7 +945,7 @@ async fn run_agent_turn_inner(
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 /// Rough token estimate for one message (content + structured tool calls).
-fn estimate_msg_tokens(m: &ChatMessage) -> usize {
+pub(crate) fn estimate_msg_tokens(m: &ChatMessage) -> usize {
     m.content.len() / 4
         + m.tool_calls
             .iter()
@@ -932,31 +1117,11 @@ fn extract_user_query(messages: &[ChatMessage]) -> String {
 
 // ─── Cost-Aware Context Compaction ────────────────────────────────────────────
 
-/// Derive a ProviderCacheConfig from ModelConfig (best-effort from pricing data).
+/// Derive the ProviderCacheConfig the cost model uses for this model —
+/// model pricing first, then provider_cache.json, then a conservative default
+/// (never "prune is free"; see trimmed_summarization_problem.md, problem 1).
 fn cache_config_from_model(model: &ai::ModelConfig) -> ProviderCacheConfig {
-    let has_cache = model.supports_caching && model.cached_input_cost_per_m > 0.0;
-    if has_cache {
-        // Derive read discount from pricing ratio
-        let discount = model.cached_input_cost_per_m / model.input_cost_per_m.max(0.001);
-        ProviderCacheConfig {
-            cache_mode: CacheMode::Automatic,
-            cache_read_discount: discount.clamp(0.01, 0.99),
-            cache_write_multiplier: 0.0,
-            ttl_seconds: Some(300), // conservative default
-            requires_markers: false,
-            notes: None,
-        }
-    } else {
-        // No caching — prune is always free
-        ProviderCacheConfig {
-            cache_mode: CacheMode::Automatic,
-            cache_read_discount: 0.0,
-            cache_write_multiplier: 0.0,
-            ttl_seconds: Some(0), // always cold → prune always profitable
-            requires_markers: false,
-            notes: None,
-        }
-    }
+    ai::provider_cache::resolve_cache_config(model).0
 }
 
 /// Run cost-aware context compaction before sending messages to the LLM.
@@ -992,23 +1157,24 @@ async fn cost_aware_compact(
         .ok()
         .and_then(|s| s.summary_model.clone());
 
-    let prune_ctx = PruneContext::from_models(
+    let mut prune_ctx = PruneContext::from_models(
         cache_cfg,
         model,
         summary_model_cfg.as_ref(),
     );
-
-    // bugs.md Bug 5: once the context outgrows this many estimated tokens,
-    // summarization is forced even when the marginal cost math says keep —
-    // at that size the goal is keeping the session lean, not saving fractions
-    // of a cent. Capped at a quarter of the model window for small models.
-    const FORCE_SUMMARIZE_TOKENS: usize = 12_000;
-    let force_summarize =
-        total_tokens_est + message_overhead
-            > FORCE_SUMMARIZE_TOKENS.min(model.context_window as usize / 4);
+    // bugs.md Bug 1: N (expected remaining rounds) is the tuning knob for how
+    // aggressively context is trimmed/summarized. It comes from settings
+    // (default 8) — the old 1/4-context force-summarize escape hatch is gone.
+    prune_ctx.n_expected = ctx
+        .settings
+        .lock()
+        .ok()
+        .map(|s| s.n_expected_rounds)
+        .unwrap_or(8)
+        .max(1);
 
     // Feed messages into retention engine and get decisions
-    let (to_prune, to_summarize, tokens_freed) = {
+    let (to_prune, to_summarize, tokens_freed, mut details) = {
         let mut engine = match ctx.retention_engine.lock() {
             Ok(e) => e,
             Err(_) => return None, // can't lock → skip compaction
@@ -1030,15 +1196,25 @@ async fn cost_aware_compact(
             let tokens = msg.content.len() / 4
                 + msg.tool_calls.iter().map(|tc| tc.function.arguments.len() / 4 + 5).sum::<usize>();
             if tokens > 0 {
+                let kind = if msg.role == MessageRole::Tool {
+                    crate::ai::retention::EntryKind::ToolResult
+                } else if msg.role == MessageRole::User {
+                    crate::ai::retention::EntryKind::UserMsg
+                } else {
+                    crate::ai::retention::EntryKind::AssistantMsg
+                };
                 engine.add_entry(crate::ai::retention::RetentionEntry {
                     id: 0, // auto-assigned
-                    kind: if msg.role == MessageRole::Tool {
-                        crate::ai::retention::EntryKind::ToolResult
-                    } else if msg.role == MessageRole::User {
-                        crate::ai::retention::EntryKind::UserMsg
+                    // bugs.md Bug 1: user questions must never be pruned — the
+                    // aggressive trim was erasing mid-conversation questions.
+                    // (Summarization still covers them: the summary keeps the
+                    // information; pruning just deletes it.)
+                    action: if kind == crate::ai::retention::EntryKind::UserMsg {
+                        crate::ai::retention::RetentionAction::Keep
                     } else {
-                        crate::ai::retention::EntryKind::AssistantMsg
+                        crate::ai::retention::RetentionAction::Eligible
                     },
+                    kind,
                     content: msg.content.clone(),
                     resources: Vec::new(),
                     created_turn: turn,
@@ -1046,7 +1222,6 @@ async fn cost_aware_compact(
                     approx_tokens: tokens,
                     ttl: None,
                     invalidation_events: Vec::new(),
-                    action: crate::ai::retention::RetentionAction::Eligible,
                     args_hash: None,
                     ephemeral: false,
                     offloaded: false,
@@ -1063,27 +1238,37 @@ async fn cost_aware_compact(
         let eligible = engine.eligible_for_pruning();
         let (prune_ids, _logs) = batch_prune_decisions(&eligible, &prune_ctx, engine.current_turn);
 
-        // Get summarization decision
+        // Feature 1.1: record which messages were CANDIDATES for trimming but
+        // survived the cost math — the log shows them with a distinct marker.
+        let mut details: Vec<ai::log::CompactionMessageDetail> = eligible
+            .iter()
+            .filter(|e| !prune_ids.contains(&e.id))
+            .map(|e| ai::log::CompactionMessageDetail {
+                role: format!("{:?}", e.kind),
+                preview: crate::preview_str(&e.content, 160),
+                tokens: e.approx_tokens,
+                action: "trim_candidate".to_string(),
+            })
+            .collect();
+
+        // Get summarization decision (pure cost math — the old 1/4-context
+        // force-summarize hatch was removed per bugs.md Bug 1; tune
+        // n_expected_rounds in settings instead).
         let summarizable = engine.summarizable_entries();
         let sum_decision = if summarizable.is_empty() {
             CostDecision::Keep { reason: "nothing to summarize".into() }
         } else {
-            let decision = summarization_decision(&summarizable, &prune_ctx);
-            if force_summarize && !decision.is_summarize() {
-                CostDecision::Summarize {
-                    savings_per_turn: 0.0,
-                    total_penalty: 0.0,
-                    summarization_cost: 0.0,
-                    n_expected: prune_ctx.n_expected,
-                    net_benefit: 0.0,
-                }
-            } else {
-                decision
-            }
+            summarization_decision(&summarizable, &prune_ctx)
         };
 
         // Collect content for summarization before pruning
         let summarize_content: Vec<String> = if sum_decision.is_summarize() {
+            details.extend(summarizable.iter().map(|e| ai::log::CompactionMessageDetail {
+                role: format!("{:?}", e.kind),
+                preview: crate::preview_str(&e.content, 160),
+                tokens: e.approx_tokens,
+                action: "summarized".to_string(),
+            }));
             summarizable.iter().map(|e| e.content.clone()).collect()
         } else {
             Vec::new()
@@ -1097,7 +1282,7 @@ async fn cost_aware_compact(
         // Apply prune
         engine.prune_entries(&prune_ids);
 
-        (prune_ids, summarize_content, freed)
+        (prune_ids, summarize_content, freed, details)
     };
 
     // If there are entries to summarize, call the LLM
@@ -1127,37 +1312,73 @@ async fn cost_aware_compact(
     // Summary skipped or failed → fall back to pruning so an oversized
     // context still shrinks instead of being carried to the next request.
     if !summarized && !to_prune.is_empty() {
-        // Aggressive prune: if message count is high, remove old tool-loop pairs.
-        // Keep: system[0], user[1], last N messages (recent context).
-        // Middle tool-loop messages (assistant with tool_calls + tool results) get dropped.
+        // Prune old tool-loop traffic from the middle of the conversation.
+        // Keep: system[0], the last N messages, and EVERY real user message —
+        // bugs.md Bug 1: the old positional drain erased mid-conversation user
+        // questions, leaving only the first one.
         let keep_tail = 8.min(messages.len().saturating_sub(2)); // keep last 8 msgs
         let keep_head = 2; // system + original user prompt
         if messages.len() > keep_head + keep_tail {
             let cut_start = keep_head;
             let cut_end = messages.len() - keep_tail;
-            // Build a brief summary of what was pruned
-            let pruned_count = cut_end - cut_start;
-            let pruned_tools: Vec<String> = messages[cut_start..cut_end].iter()
-                .filter(|m| !m.tool_calls.is_empty())
-                .flat_map(|m| m.tool_calls.iter().map(|tc| tc.function.name.clone()))
-                .collect();
+            let mut kept_users: Vec<ChatMessage> = Vec::new();
+            let mut pruned_count = 0usize;
+            let mut pruned_tools: Vec<String> = Vec::new();
+            for m in messages.drain(cut_start..cut_end) {
+                // Real user input (not synthetic notes like "[Context …]" or
+                // "[earlier tool result]") survives the trim.
+                let is_real_user =
+                    m.role == MessageRole::User && !m.content.starts_with('[');
+                if is_real_user {
+                    kept_users.push(m);
+                } else {
+                    pruned_count += 1;
+                    pruned_tools
+                        .extend(m.tool_calls.iter().map(|tc| tc.function.name.clone()));
+                    details.push(ai::log::CompactionMessageDetail {
+                        role: format!("{:?}", m.role).to_lowercase(),
+                        preview: crate::preview_str(&m.content, 160),
+                        tokens: estimate_msg_tokens(&m),
+                        action: "trimmed".to_string(),
+                    });
+                }
+            }
+            for m in &kept_users {
+                details.push(ai::log::CompactionMessageDetail {
+                    role: "user".to_string(),
+                    preview: crate::preview_str(&m.content, 160),
+                    tokens: estimate_msg_tokens(m),
+                    action: "kept_user".to_string(),
+                });
+            }
             let prune_note = format!(
                 "[Context compacted: {} messages pruned. Tools called: {}]",
                 pruned_count,
                 if pruned_tools.is_empty() { "none".to_string() } else { pruned_tools.join(", ") }
             );
-            messages.drain(cut_start..cut_end);
-            messages.insert(cut_start, ChatMessage {
+            let mut insert_at = cut_start;
+            messages.insert(insert_at, ChatMessage {
                 role: MessageRole::User,
                 content: prune_note,
                 tool_call_id: None,
                 tool_calls: Vec::new(),
             });
+            insert_at += 1;
+            for m in kept_users {
+                messages.insert(insert_at, m);
+                insert_at += 1;
+            }
         } else {
             // Not enough to drain — just truncate tool results
             let cut_point = messages.len().saturating_sub(keep_tail);
             for msg in messages[1..cut_point].iter_mut() {
                 if msg.role == MessageRole::Tool && msg.content.len() > 200 {
+                    details.push(ai::log::CompactionMessageDetail {
+                        role: "tool".to_string(),
+                        preview: crate::preview_str(&msg.content, 160),
+                        tokens: msg.content.len() / 4,
+                        action: "trimmed".to_string(),
+                    });
                     msg.content.truncate(200);
                     msg.content.push_str("... [pruned]");
                 }
@@ -1175,9 +1396,16 @@ async fn cost_aware_compact(
     }
     Some(ai::log::CompactionInfo {
         kind: if summarized { "summarized" } else { "trimmed" }.to_string(),
-        messages_removed: messages_before.saturating_sub(messages.len()),
+        // Per-message count of what was actually dropped from context. The net
+        // length delta undercounts: pruning re-inserts kept user messages plus a
+        // prune note, so "trimmed 0 messages" showed up while tokens changed.
+        messages_removed: details
+            .iter()
+            .filter(|d| d.action == "trimmed" || d.action == "summarized")
+            .count(),
         tokens_before: total_tokens_est + message_overhead,
         tokens_after,
+        details,
     })
 }
 
@@ -1189,7 +1417,6 @@ pub async fn force_summarize(
     messages: &mut Vec<ChatMessage>,
 ) -> Result<ai::log::CompactionInfo, String> {
     let (model, provider) = build_provider(ctx).map_err(|e| e.to_string())?;
-    let messages_before = messages.len();
     let tokens_before: usize = messages.iter().map(estimate_msg_tokens).sum();
 
     let start = if messages.first().map(|m| m.role == MessageRole::System).unwrap_or(false) {
@@ -1214,6 +1441,17 @@ pub async fn force_summarize(
         })
         .collect();
 
+    // Feature 1.1: record what went into the summary for the Log tab.
+    let details: Vec<ai::log::CompactionMessageDetail> = messages[start..cut_end]
+        .iter()
+        .map(|m| ai::log::CompactionMessageDetail {
+            role: format!("{:?}", m.role).to_lowercase(),
+            preview: crate::preview_str(&m.content, 160),
+            tokens: estimate_msg_tokens(m),
+            action: "summarized".to_string(),
+        })
+        .collect();
+
     let summary = call_summary_llm(ctx, &model, provider.as_ref(), &contents)
         .await
         .ok_or("summarization call failed")?;
@@ -1230,9 +1468,12 @@ pub async fn force_summarize(
     let tokens_after: usize = messages.iter().map(estimate_msg_tokens).sum();
     Ok(ai::log::CompactionInfo {
         kind: "summarized".to_string(),
-        messages_removed: messages_before.saturating_sub(messages.len()),
+        // Count the messages that actually went into the summary, not the net
+        // length delta (the inserted summary message masks one removal).
+        messages_removed: details.iter().filter(|d| d.action == "summarized").count(),
         tokens_before,
         tokens_after,
+        details,
     })
 }
 
@@ -1338,6 +1579,7 @@ async fn call_summary_llm(
         };
 
     let request = AiRequest {
+        dynamic_tools: None,
         model: model_to_use,
         messages: vec![
             ChatMessage {
@@ -1605,12 +1847,18 @@ mod cache_marker_tests {
     }
 
     #[test]
-    fn anthropic_key_maps_claude_models_only() {
+    fn provider_cache_key_maps_known_providers() {
         use crate::ai::provider_cache::provider_cache_key;
         let mut m = crate::ai::ModelConfig::default();
         m.model_id = "anthropic/claude-sonnet-4".into();
         assert_eq!(provider_cache_key(&m), Some("anthropic_5min"));
+        // MiniMax has a passive automatic cache (80% read discount) — mapping
+        // it means the cost model stops pricing prefix trims as free.
         m.model_id = "MiniMax-M2".into();
+        assert_eq!(provider_cache_key(&m), Some("minimax_passive"));
+        m.model_id = "minimax.minimax-m2.5".into();
+        assert_eq!(provider_cache_key(&m), Some("minimax_passive"));
+        m.model_id = "some-unknown-model".into();
         assert_eq!(provider_cache_key(&m), None);
     }
 }
@@ -1656,7 +1904,11 @@ mod compaction_tests {
     /// first request of a turn (there is no loop_i gate inside the function,
     /// and eligibility is rebuilt from the live message list).
     #[tokio::test]
-    async fn long_history_prunes_on_first_call() {
+    async fn long_history_compacts_on_first_call() {
+        // Zero-cost ModelConfig makes should_summarize pick "Summarize"; without
+        // auto-answers the mock summary call blocks on its response channel for
+        // up to 10 minutes. Same pattern as tui/tests/smoke.rs.
+        std::env::set_var("TRACELEAN_MOCK_AUTO", "mock summary");
         let ctx = AgentContext::from_env(std::env::temp_dir());
         let model = ai::ModelConfig::default(); // no caching → prune always free
         let (provider, _rx) = MockProvider::new();
@@ -1668,9 +1920,14 @@ mod compaction_tests {
         assert!(info.is_some(), "12 old tool-loop pairs must trigger compaction");
         assert!(messages.len() < before, "messages must shrink ({before} → {})", messages.len());
         assert_eq!(messages[0].role, MessageRole::System, "system prompt survives");
+        // Which branch fires depends on the summary call: with the mock
+        // auto-answering, summarization succeeds and leaves "[Context Summary]";
+        // if it ever fails, the prune fallback leaves "[Context compacted".
+        // Either way a marker must record that compaction happened.
         assert!(
-            messages.iter().any(|m| m.content.contains("[Context compacted")),
-            "prune note inserted"
+            messages.iter().any(|m| m.content.contains("[Context Summary]")
+                || m.content.contains("[Context compacted")),
+            "compaction marker inserted"
         );
     }
 
@@ -1679,6 +1936,7 @@ mod compaction_tests {
     /// registration desynced after the first drain and never fired again).
     #[tokio::test]
     async fn compaction_fires_again_after_regrowth() {
+        std::env::set_var("TRACELEAN_MOCK_AUTO", "mock summary");
         let ctx = AgentContext::from_env(std::env::temp_dir());
         let model = ai::ModelConfig::default();
         let (provider, _rx) = MockProvider::new();

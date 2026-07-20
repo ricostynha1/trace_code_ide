@@ -499,7 +499,7 @@ mod tests {
     }
 
     #[test]
-    fn selects_search_tools_for_search_query() {
+    fn selects_discover_tools_for_search_query() {
         let schemas = builtin_tool_schemas();
         let index = ToolIndex::new(&schemas);
         let selected = index.select("find all uses of 'TODO' in the codebase", None);

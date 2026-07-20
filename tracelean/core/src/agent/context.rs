@@ -28,6 +28,10 @@ pub struct AgentContext {
     pub spend_cap_usd: f64,
     /// Optional channel for tool-loop pause/resume (UI can inject).
     pub pause_handler: Option<Arc<dyn PauseHandler>>,
+    /// Hard-stop token (T12): checked every loop iteration, raced against the
+    /// in-flight LLM request, and polled during shell execution. Callers
+    /// starting a new run must `reset()` it first.
+    pub cancel: super::CancelToken,
     /// Print prompts, responses, and tool calls to stderr.
     pub verbose: bool,
     /// Cost-aware retention engine for context compaction decisions.
@@ -38,6 +42,15 @@ pub struct AgentContext {
     pub pending_diffs: Arc<Mutex<Vec<crate::PendingDiff>>>,
 }
 
+/// User's answer to a per-command shell approval prompt (bugs.md Feature 4 +
+/// sandboxing_better.md T4: the prompt carries a network opt-in checkbox).
+#[derive(Debug, Clone, Copy)]
+pub struct CommandApproval {
+    pub approved: bool,
+    /// Grant network access to this one command (sandbox policy "ask").
+    pub allow_network: bool,
+}
+
 /// Abstraction for tool-loop pause behavior.
 /// GUI injects one that emits events + waits for user; headless returns true always.
 #[async_trait::async_trait]
@@ -46,10 +59,11 @@ pub trait PauseHandler: Send + Sync {
     async fn should_continue(&self, tool_calls_so_far: usize) -> bool;
 
     /// bugs.md Feature 4: ask the user to approve one shell command before it
-    /// runs. Default allows — headless runners and tests are unaffected.
-    async fn approve_command(&self, command: &str) -> bool {
+    /// runs. Default allows without a network grant — headless runners and
+    /// tests are unaffected.
+    async fn approve_command(&self, command: &str) -> CommandApproval {
         let _ = command;
-        true
+        CommandApproval { approved: true, allow_network: false }
     }
 }
 
@@ -75,6 +89,8 @@ impl AgentContext {
                 if let Ok(s) = app.ai_settings.lock() {
                     p.review_edits = s.review_edits;
                     p.review_commands = s.review_commands;
+                    p.shell_sandbox = s.shell_sandbox.clone();
+                    p.shell_network = s.shell_network.clone();
                 }
                 p
             },
@@ -82,6 +98,7 @@ impl AgentContext {
             event_sink: Arc::clone(&app.event_sink),
             spend_cap_usd: spend_cap,
             pause_handler: None,
+            cancel: app.agent_cancel.clone(),
             verbose: false,
             retention_engine: Arc::new(Mutex::new(RetentionEngine::with_defaults())),
             timing_tracker: Arc::new(Mutex::new(TurnTimingTracker::new())),
@@ -104,6 +121,7 @@ impl AgentContext {
             event_sink: Arc::new(NullSink),
             spend_cap_usd: 1.0,
             pause_handler: None,
+            cancel: super::CancelToken::new(),
             verbose: false,
             retention_engine: Arc::new(Mutex::new(RetentionEngine::with_defaults())),
             timing_tracker: Arc::new(Mutex::new(TurnTimingTracker::new())),

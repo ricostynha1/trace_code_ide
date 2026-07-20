@@ -32,6 +32,8 @@ pub struct AiService {
     pub event_sink: Arc<dyn EventSink>,
     /// P10 review mode: staged agent edits awaiting per-hunk user approval.
     pub pending_diffs: Arc<Mutex<Vec<crate::PendingDiff>>>,
+    /// Hard-stop token (T12) shared with the stop_agent_run entry point.
+    pub cancel: crate::agent::CancelToken,
 }
 
 impl AiService {
@@ -71,6 +73,7 @@ impl AiService {
             event_sink: self.event_sink.clone(),
             spend_cap_usd: spend_cap,
             pause_handler,
+            cancel: self.cancel.clone(),
             verbose,
             retention_engine: Arc::new(Mutex::new(crate::ai::RetentionEngine::with_defaults())),
             timing_tracker: Arc::new(Mutex::new(crate::ai::TurnTimingTracker::new())),
@@ -87,6 +90,8 @@ impl AiService {
         pause_handler: Option<Arc<dyn PauseHandler>>,
         verbose: bool,
     ) -> Result<AgentTurnResult, String> {
+        // A fresh run must not inherit a stale Stop from the previous one.
+        self.cancel.reset();
         let ctx = self.agent_context(pause_handler, verbose).await?;
 
         let mut store = self.sessions.lock().await;
@@ -125,6 +130,14 @@ impl AiService {
         crate::agent::force_summarize(&ctx, &mut session.model_view).await?;
         session.compacted = true;
         session.compaction_count += 1;
+        // bugs.md Bug 1.4: refresh the context-size estimate NOW so the chat
+        // panel's context bar updates immediately instead of on the next turn.
+        session.last_prompt_tokens = session
+            .model_view
+            .iter()
+            .map(crate::agent::runtime::estimate_msg_tokens)
+            .sum::<usize>() as u32;
+        session.last_completion_tokens = 0;
         session.updated_at = chrono::Utc::now().to_rfc3339();
         if let Some(root) = self.project_root() {
             save_session(&root, session);
@@ -157,6 +170,7 @@ impl AiService {
         pause_handler: Option<Arc<dyn PauseHandler>>,
         verbose: bool,
     ) -> Result<AiResponse, String> {
+        self.cancel.reset();
         let ctx = self.agent_context(pause_handler, verbose).await?;
         run_agent_turn(&ctx, messages)
             .await

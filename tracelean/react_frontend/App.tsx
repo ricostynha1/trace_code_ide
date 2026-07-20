@@ -17,7 +17,12 @@ import "./App.css";
 
 function App() {
   const [projectOpen, setProjectOpen] = useState(false);
+  // App-wide warning toast (bugs.md: hover view dropped by an AI edit, …).
+  const [warning, setWarning] = useState<string | null>(null);
+  const warningTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [currentFile, setCurrentFile] = useState<string | null>(null);
+  // 1-based line the editor should reveal after navigation (diff bar, bug 0.7)
+  const [navLine, setNavLine] = useState<number | null>(null);
   const [projectRoot, setProjectRoot] = useState<string>("");
   const [undoTreeVisible, setUndoTreeVisible] = useState(false);
   const [reqsPanelVisible, setReqsPanelVisible] = useState(false);
@@ -48,12 +53,13 @@ function App() {
     return () => { unlistenStart.then((fn) => fn()); };
   }, []);
 
-  // Listen for trace navigation events from Editor
+  // Listen for trace navigation events from Editor / diff bar
   useEffect(() => {
     const handler = (e: Event) => {
       const detail = (e as CustomEvent).detail;
       if (detail?.path) {
         setCurrentFile(detail.path);
+        setNavLine(typeof detail.line === "number" ? detail.line : null);
       }
     };
     window.addEventListener("tracelean-navigate", handler);
@@ -65,6 +71,22 @@ function App() {
     const handler = () => setAiPanelVisible(true);
     window.addEventListener("fix-with-ai", handler);
     return () => window.removeEventListener("fix-with-ai", handler);
+  }, []);
+
+  // Any component can raise a transient warning banner.
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const msg = (e as CustomEvent).detail?.message;
+      if (!msg) return;
+      setWarning(String(msg));
+      if (warningTimer.current) clearTimeout(warningTimer.current);
+      warningTimer.current = setTimeout(() => setWarning(null), 8000);
+    };
+    window.addEventListener("tracelean-warning", handler);
+    return () => {
+      window.removeEventListener("tracelean-warning", handler);
+      if (warningTimer.current) clearTimeout(warningTimer.current);
+    };
   }, []);
 
   const handleProjectOpened = (root: string) => {
@@ -114,7 +136,7 @@ function App() {
         )}
         <div className="editor-area">
           {currentFile ? (
-            <Editor key={`${currentFile}-${editorKey}`} filePath={currentFile} />
+            <Editor key={`${currentFile}-${editorKey}`} filePath={currentFile} initialLine={navLine} />
           ) : (
             <div className="welcome">
               <h2>TraceLean IDE</h2>
@@ -160,6 +182,11 @@ function App() {
       </div>
       <TerminalPanel projectOpen={projectOpen} />
       <WhichKeyBar />
+      {warning && (
+        <div className="app-warning-toast" onClick={() => setWarning(null)} title="Dismiss">
+          ⚠ {warning}
+        </div>
+      )}
     </div>
   );
 }

@@ -24,6 +24,7 @@ pub mod diff_pipeline;
 pub mod agents;
 pub mod tools;
 pub mod tool_executor;
+pub mod shell_sandbox;
 pub mod tool_selector;
 pub mod mcp_host;
 pub mod mcp_client;

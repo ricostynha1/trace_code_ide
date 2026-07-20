@@ -222,7 +222,9 @@ export function UndoTreePanel({ visible, onClose, onNodeJump, onFileSelect, curr
   const [filterMode, setFilterMode] = useState<FilterMode>("global");
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hoverSeq = useRef(0);
-  const [_hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
+  const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
+  const hoveredRef = useRef<string | null>(null);
+  hoveredRef.current = hoveredNodeId;
   // Feature 2b: right-click pins a node's diff (same view as hover, but it
   // stays until unpinned) — mirrors the AI edit review visualization.
   const [pinnedNodeId, setPinnedNodeId] = useState<string | null>(null);
@@ -294,7 +296,9 @@ export function UndoTreePanel({ visible, onClose, onNodeJump, onFileSelect, curr
     }, 120);
   };
 
-  // Feature 2b: right-click toggles a pinned diff view for a node.
+  // Feature 2b / bug 0.75: right-click toggles a pinned diff view for a node.
+  // `pinned: true` makes the editor open its diff merge bar (EditorDiffBar),
+  // the same review surface AI edits use — not just the hover decorations.
   const handlePin = async (nodeId: string) => {
     if (pinnedRef.current === nodeId) {
       setPinnedNodeId(null);
@@ -304,11 +308,46 @@ export function UndoTreePanel({ visible, onClose, onNodeJump, onFileSelect, curr
     try {
       const nodeDiff = await invoke("get_undo_node_diff_structured", { nodeId });
       setPinnedNodeId(nodeId);
-      window.dispatchEvent(new CustomEvent("undo-hover-diff", { detail: { nodeDiff, nodeId } }));
+      window.dispatchEvent(
+        new CustomEvent("undo-hover-diff", { detail: { nodeDiff, nodeId, pinned: true } })
+      );
     } catch {
       /* node without diff — ignore */
     }
   };
+
+  // bugs.md (hover + AI edit): an AI staged an edit while the user was
+  // previewing a hover/pinned node diff. The preview no longer reflects what
+  // review mode shows, and the AI edit was staged against the *original*
+  // buffer (hover/pin is a view, not a checkout). Drop the preview back to
+  // the original state and tell the user why.
+  useEffect(() => {
+    const unlisten = listen("pending-diffs-changed", () => {
+      if (!pinnedRef.current && !hoveredRef.current) return;
+      if (hoverTimer.current) clearTimeout(hoverTimer.current);
+      hoverSeq.current++; // invalidate any in-flight hover fetch
+      setPinnedNodeId(null);
+      setHoveredNodeId(null);
+      window.dispatchEvent(new CustomEvent("undo-unpin"));
+      window.dispatchEvent(new CustomEvent("undo-hover-diff", { detail: null }));
+      window.dispatchEvent(
+        new CustomEvent("tracelean-warning", {
+          detail: {
+            message:
+              "An AI edited or wants to edit — the view returned to the original state (not the hovered diff). The AI edits were staged against that original snapshot.",
+          },
+        })
+      );
+    });
+    return () => { unlisten.then((fn) => fn()); };
+  }, []);
+
+  // The editor's diff bar unpins via this event (close / jump-here buttons).
+  useEffect(() => {
+    const handler = () => setPinnedNodeId(null);
+    window.addEventListener("undo-unpin", handler);
+    return () => window.removeEventListener("undo-unpin", handler);
+  }, []);
 
   // Escape unpins.
   useEffect(() => {
@@ -374,7 +413,7 @@ export function UndoTreePanel({ visible, onClose, onNodeJump, onFileSelect, curr
         {activeTab === "tree" ? (
           <>
             <TreeGraph layout={layout} onJump={handleJump} onHover={handleHover} onPin={handlePin}
-              pinnedNodeId={pinnedNodeId} filterMode={filterMode} />
+              pinnedNodeId={pinnedNodeId} hoveredNodeId={hoveredNodeId} filterMode={filterMode} />
           </>
         ) : (
           <LogView entries={commandLog} />
@@ -390,6 +429,7 @@ function TreeGraph({
   onHover,
   onPin,
   pinnedNodeId,
+  hoveredNodeId,
   filterMode,
 }: {
   layout: { nodes: LayoutNode[]; edges: LayoutEdge[]; width: number; height: number };
@@ -397,6 +437,7 @@ function TreeGraph({
   onHover: (id: string | null) => void;
   onPin: (id: string) => void;
   pinnedNodeId: string | null;
+  hoveredNodeId: string | null;
   filterMode: string;
 }) {
   if (layout.nodes.length === 0) {
@@ -451,9 +492,23 @@ function TreeGraph({
               onMouseEnter={() => onHover(node.id)}
               onMouseLeave={() => onHover(null)}>
               <title>{shortTooltip(node.summary)}</title>
-              {node.id === pinnedNodeId && (
+              {/* Hover ring: subtle white halo, so the node under the cursor
+                  is identifiable while sweeping the tree. */}
+              {node.id === hoveredNodeId && node.id !== pinnedNodeId && (
                 <circle cx={x} cy={y} r={NODE_R + 3}
-                  fill="none" stroke="#e5c07b" strokeWidth={1.5} strokeDasharray="2,2" />
+                  fill="none" stroke="#e8e8e8" strokeWidth={1.5} opacity={0.7} />
+              )}
+              {/* Pinned ring: vibrant solid magenta with a soft glow — a color
+                  used nowhere else in the tree (branch edges are muted gold,
+                  current is blue, commit points teal), so the pinned diff
+                  reads unambiguously as "selected". */}
+              {node.id === pinnedNodeId && (
+                <>
+                  <circle cx={x} cy={y} r={NODE_R + 5}
+                    fill="none" stroke="#ff6ac1" strokeWidth={5} opacity={0.25} />
+                  <circle cx={x} cy={y} r={NODE_R + 3}
+                    fill="none" stroke="#ff6ac1" strokeWidth={2.5} />
+                </>
               )}
               <circle cx={x} cy={y} r={NODE_R}
                 fill={fill} stroke={stroke} strokeWidth={1.5} />

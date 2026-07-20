@@ -7,9 +7,13 @@ import { defaultKeymap } from "@codemirror/commands";
 import { oneDark } from "@codemirror/theme-one-dark";
 import { searchKeymap, highlightSelectionMatches } from "@codemirror/search";
 import { mythKeyName } from "./mythKeys";
+import { EditorDiffBar } from "./EditorDiffBar";
+import { diffViewCache } from "./diffViewStore";
 
 interface EditorProps {
   filePath: string;
+  /** 1-based line to scroll to once the file is loaded (diff navigation). */
+  initialLine?: number | null;
 }
 
 interface SymbolInfo {
@@ -319,7 +323,7 @@ function symbolHoverTooltip(filePath: string) {
   }, { hoverTime: 300 });
 }
 
-export function Editor({ filePath }: EditorProps) {
+export function Editor({ filePath, initialLine }: EditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const [status, setStatus] = useState("");
@@ -401,8 +405,18 @@ export function Editor({ filePath }: EditorProps) {
       if (!view) return;
       const detail = (e as CustomEvent).detail;
       if (!detail || !detail.nodeDiff) {
-        // Clear diff decorations
-        view.dispatch({ effects: setDiffDecorations.of(Decoration.none) });
+        // Hover/pin/AI-pending cleared — fall back to whatever durable diff
+        // still applies (pinned node diff, else AI pending edits) instead of
+        // blanking; the module-scope diffViewStore listener has already
+        // processed this same event, so the cache reflects the clear.
+        const fallback = diffViewCache.undoPin?.diff ?? diffViewCache.aiPending;
+        view.dispatch({
+          effects: setDiffDecorations.of(
+            fallback
+              ? buildNodeDiffDecorations(fallback, filePath, view)
+              : Decoration.none
+          ),
+        });
         return;
       }
       const decos = buildNodeDiffDecorations(detail.nodeDiff as NodeDiffT, filePath, view);
@@ -486,6 +500,28 @@ export function Editor({ filePath }: EditorProps) {
 
         // Initial highlights
         applyHighlights(view);
+
+        // A pinned undo diff or AI pending edits must survive the remount
+        // file navigation causes: the `undo-hover-diff` event that painted
+        // the decorations fired long ago, so re-derive this file's
+        // decorations from the durable cache (bugs.md Bug 1).
+        const cachedDiff = diffViewCache.undoPin?.diff ?? diffViewCache.aiPending;
+        if (cachedDiff) {
+          view.dispatch({
+            effects: setDiffDecorations.of(
+              buildNodeDiffDecorations(cachedDiff, filePath, view)
+            ),
+          });
+        }
+
+        // Diff navigation opened this file at a specific line (bug 0.7).
+        if (initialLine && initialLine > 0) {
+          const ln = Math.min(initialLine, view.state.doc.lines);
+          view.dispatch({
+            selection: { anchor: view.state.doc.line(ln).from },
+            scrollIntoView: true,
+          });
+        }
       } catch (e) {
         console.error("Failed to open file:", e);
         setStatus(`Error: ${e}`);
@@ -573,6 +609,18 @@ export function Editor({ filePath }: EditorProps) {
         applyHighlights(view);
       }
     }
+  };
+
+  // Scroll the editor to a 1-based line (diff bar navigation, bug 0.7).
+  const gotoLine = (line: number) => {
+    const view = viewRef.current;
+    if (!view) return;
+    const ln = Math.max(1, Math.min(line, view.state.doc.lines));
+    view.dispatch({
+      selection: { anchor: view.state.doc.line(ln).from },
+      scrollIntoView: true,
+    });
+    view.focus();
   };
 
   // Place the CodeMirror cursor from a backend char-index hint and scroll it
@@ -771,6 +819,13 @@ export function Editor({ filePath }: EditorProps) {
           </button>
         )}
       </div>
+      <EditorDiffBar
+        filePath={filePath}
+        onGotoLine={gotoLine}
+        onFileSync={async () => {
+          await syncFromBackend();
+        }}
+      />
       <div
         className="editor-content"
         ref={editorRef}

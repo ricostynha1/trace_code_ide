@@ -32,7 +32,25 @@ pub struct AgentPermissions {
     /// bugs.md Feature 4: run_shell waits for explicit user approval per command.
     #[serde(default)]
     pub review_commands: bool,
+    /// T12 hard stop: polled while a shell command runs so Stop can kill the
+    /// in-flight child process. Runtime-only — never part of the serialized
+    /// permission config.
+    #[serde(skip)]
+    pub cancel_flag: Option<std::sync::Arc<std::sync::atomic::AtomicBool>>,
+    /// sandboxing_better.md: shell sandbox mode ("off" | "detect" | "strict").
+    #[serde(default = "default_shell_sandbox_mode")]
+    pub shell_sandbox: String,
+    /// Sandbox network policy ("deny" | "ask" | "allow").
+    #[serde(default = "default_shell_network_policy")]
+    pub shell_network: String,
+    /// Per-command network grant from the approval prompt (policy "ask").
+    /// Runtime-only, set by the agent loop just before dispatching run_shell.
+    #[serde(skip)]
+    pub shell_network_once: bool,
 }
+
+fn default_shell_sandbox_mode() -> String { "detect".to_string() }
+fn default_shell_network_policy() -> String { "ask".to_string() }
 
 impl Default for AgentPermissions {
     fn default() -> Self {
@@ -46,6 +64,10 @@ impl Default for AgentPermissions {
             max_shell_timeout: 60,
             review_edits: false,
             review_commands: false,
+            cancel_flag: None,
+            shell_sandbox: default_shell_sandbox_mode(),
+            shell_network: default_shell_network_policy(),
+            shell_network_once: false,
         }
     }
 }
@@ -222,10 +244,10 @@ pub fn execute_tool_reviewed(
         //
         "count_lines" => execute_count_lines(call, project_root, permissions),
 
-        "find_grep" => execute_find_grep(call, project_root),
+        "find_grep" => execute_find(call, project_root, embed_index),
         "find_embed" => execute_find_embed(call, embed_index),
-        // tools.json name "find" routes to grep (semantic mode handled externally)
-        "find" => execute_find_grep(call, project_root),
+        // tools.json name "find": mode-dispatched (auto|regex|semantic) with fallback chain
+        "find" => execute_find(call, project_root, embed_index),
 
         "str_replace" => execute_str_replace(call, project_root, state, permissions, review),
         // tools.json name "replace_str" → same as str_replace
@@ -239,18 +261,21 @@ pub fn execute_tool_reviewed(
         "query_code_element" => execute_query_code(call, graph),
         "list_requirements" => execute_list_requirements(project_root),
         "get_symbols" => execute_get_symbols(call, symbols),
-        "run_shell" => execute_run_shell(call, project_root, permissions),
+        "run_shell" => execute_run_shell(call, project_root, state, permissions, review),
         // bugs.md Feature 6: web search / URL fetch (fetch saves to a project temp file)
         "web_search" => execute_web_search(call, project_root),
-        "web_fetch" => execute_web_search(call, project_root),
+        "web_fetch" => execute_web_fetch(call, project_root),
         // Meta tools — handled inline
         "discover_tools" => execute_discover_tools(call),
         "help_tool" => execute_help_tool(call),
         _ => ToolResult {
             success: false,
             content: format!(
-                "Unknown tool: {}. Consider using discover_tools(\"{}\") to find a tool that fulfills what you want.",
+                "Unknown tool: {}. Available: {}. Consider using discover_tools(\"{}\") to find a tool that fulfills what you want.",
                 call.name,
+                super::tool_registry::ToolRegistry::embedded()
+                    .map(|r| r.static_tool_names().join(", "))
+                    .unwrap_or_default(),
                 call.name.replace('_', " ")
             ),
             data: None,
@@ -857,19 +882,47 @@ fn execute_str_replace(
     // Find the occurrence — must be unique
     let matches: Vec<_> = content.match_indices(&old_str).collect();
     if matches.is_empty() {
+        let near = near_match_lines(&content, &old_str, 3);
+        let mut msg = format!("old_str not found in '{}'.", path);
+        if near.is_empty() {
+            msg.push_str(" No similar lines found either — re-read the file to get its current content.");
+        } else {
+            msg.push_str(" Closest matching line(s):\n");
+            for (line_no, text) in &near {
+                msg.push_str(&format!("  line {}: {}\n", line_no, text));
+            }
+            msg.push_str(
+                "Check exact whitespace/indentation and invisible characters against these lines, \
+                 or use edit_file(path, text, start, end) with the line numbers above instead.",
+            );
+        }
         return ToolResult {
             success: false,
-            content: "old_str not found in file.".into(),
+            content: msg,
             data: None,
         };
     }
     if matches.len() > 1 {
+        let mut msg = format!(
+            "old_str matches {} times — must be unique. Matches at:\n",
+            matches.len()
+        );
+        for (offset, _) in matches.iter().take(10) {
+            let line_no = content[..*offset].matches('\n').count() + 1;
+            let line_text = content.lines().nth(line_no - 1).unwrap_or("").trim();
+            msg.push_str(&format!("  line {}: {}\n", line_no, line_text));
+        }
+        if matches.len() > 10 {
+            msg.push_str(&format!("  ... and {} more\n", matches.len() - 10));
+        }
+        msg.push_str(
+            "Add more surrounding context to old_str to disambiguate, or use edit_file with a \
+             line range from the list above — when editing multiple occurrences, go back-to-front \
+             (highest line number first) so earlier line numbers don't shift.",
+        );
         return ToolResult {
             success: false,
-            content: format!(
-                "old_str matches {} times — must be unique. Add more context.",
-                matches.len()
-            ),
+            content: msg,
             data: None,
         };
     }
@@ -913,6 +966,68 @@ fn execute_str_replace(
             data: None,
         },
     }
+}
+
+/// Find lines resembling a failed `old_str` so replace_str's 0-match error can
+/// show the model *why* the match failed (wrong whitespace, small typo, stale
+/// content) and where the intended text actually lives. Tries progressively
+/// looser matches on the first non-empty line of `old_str`: exact substring →
+/// case-insensitive → whitespace-normalized → token overlap.
+fn near_match_lines(content: &str, old_str: &str, max: usize) -> Vec<(usize, String)> {
+    let needle = match old_str.lines().map(str::trim).find(|l| !l.is_empty()) {
+        Some(n) => n,
+        None => return Vec::new(),
+    };
+    let lines: Vec<&str> = content.lines().collect();
+    let snippet = |i: usize| (i + 1, lines[i].trim().to_string());
+
+    // Pass 1: exact substring.
+    let hits: Vec<_> = lines.iter().enumerate()
+        .filter(|(_, l)| l.contains(needle))
+        .take(max).map(|(i, _)| snippet(i)).collect();
+    if !hits.is_empty() {
+        return hits;
+    }
+
+    // Pass 2: case-insensitive.
+    let needle_lower = needle.to_lowercase();
+    let hits: Vec<_> = lines.iter().enumerate()
+        .filter(|(_, l)| l.to_lowercase().contains(&needle_lower))
+        .take(max).map(|(i, _)| snippet(i)).collect();
+    if !hits.is_empty() {
+        return hits;
+    }
+
+    // Pass 3: whitespace-normalized (runs of whitespace collapse to one space).
+    let normalize = |s: &str| s.split_whitespace().collect::<Vec<_>>().join(" ");
+    let needle_norm = normalize(needle);
+    if !needle_norm.is_empty() {
+        let hits: Vec<_> = lines.iter().enumerate()
+            .filter(|(_, l)| normalize(l).contains(&needle_norm))
+            .take(max).map(|(i, _)| snippet(i)).collect();
+        if !hits.is_empty() {
+            return hits;
+        }
+    }
+
+    // Pass 4: token overlap — lines sharing most alphanumeric tokens with the needle.
+    let tokens: Vec<String> = needle
+        .split(|c: char| !c.is_alphanumeric() && c != '_')
+        .filter(|t| t.len() >= 3)
+        .map(str::to_lowercase)
+        .collect();
+    if tokens.is_empty() {
+        return Vec::new();
+    }
+    let mut scored: Vec<(usize, usize)> = lines.iter().enumerate()
+        .map(|(i, l)| {
+            let ll = l.to_lowercase();
+            (tokens.iter().filter(|t| ll.contains(t.as_str())).count(), i)
+        })
+        .filter(|(score, _)| *score * 2 >= tokens.len().max(1))
+        .collect();
+    scored.sort_by(|a, b| b.0.cmp(&a.0));
+    scored.into_iter().take(max).map(|(_, i)| snippet(i)).collect()
 }
 
 // insert_lines removed — use edit_file(start==end) instead
@@ -1049,35 +1164,80 @@ fn matches_glob_simple(pattern: &str, name: &str) -> bool {
     }
 }
 
-/// discover_tools — returns available dynamic tools (stub for now; returns static list).
-fn execute_discover_tools(_call: &ToolCall) -> ToolResult {
-    // In the benchmark/headless context, all tools are already provided.
-    // Return a helpful message listing available tools.
+/// discover_tools — search the registry for dynamic tools matching a
+/// capability query. NOTE: the agent runtime intercepts discover_tools and
+/// additionally LOADS the matches into the session's dynamic tool set; this
+/// executor path serves direct/MCP callers and returns the matches only.
+fn execute_discover_tools(call: &ToolCall) -> ToolResult {
+    let registry = match super::tool_registry::ToolRegistry::embedded() {
+        Some(r) => r,
+        None => {
+            return ToolResult {
+                success: false,
+                content: "Tool registry unavailable.".into(),
+                data: None,
+            }
+        }
+    };
+    let query = get_str_arg(call, "query").unwrap_or_default();
+    if query.trim().is_empty() {
+        return ToolResult {
+            success: false,
+            content: format!(
+                "Missing 'query' argument. Available additional tools: {}.",
+                registry.available_dynamic_names().join(", ")
+            ),
+            data: None,
+        };
+    }
+    let max = get_int_arg(call, "max_results").unwrap_or(10).clamp(1, 20) as usize;
+    let matches = registry.discover_tools(&query, max);
+    if matches.is_empty() {
+        return ToolResult {
+            success: true,
+            content: format!(
+                "No additional tools match '{}'. Available additional tools: {}.",
+                query,
+                registry.available_dynamic_names().join(", ")
+            ),
+            data: None,
+        };
+    }
+    let lines: Vec<String> = matches
+        .iter()
+        .map(|name| {
+            format!("- {}", registry.short_help_for(name).unwrap_or(name))
+        })
+        .collect();
     ToolResult {
         success: true,
-        content: "All available tools are already in your tool set. Use list_directory, read_file, edit_file, replace_str, find, run_shell, help_tool.".into(),
-        data: None,
+        content: format!("Tools matching '{}':\n{}", query, lines.join("\n")),
+        data: Some(serde_json::json!({ "matched_tools": matches })),
     }
 }
 
-/// help_tool — returns usage info for a specific tool.
+/// help_tool — full usage info for a tool, read from tools.json via the
+/// registry (bugs.md Bug 2: no hardcoded tool help).
 fn execute_help_tool(call: &ToolCall) -> ToolResult {
     let tool_name = get_str_arg(call, "tool_name").unwrap_or_default();
-    let help = match tool_name.as_str() {
-        "list_directory" => "list_directory(path?, recursive?, max_results?, offset?, file_filter?, max_depth?) — List files/dirs. Paginated.",
-        "read_file" => "read_file(path, offset?, max_results?) — Read file lines. Paginated. max_results=0 returns metadata only.",
-        "edit_file" => "edit_file(path, content) — Write full file content.",
-        "replace_str" => "replace_str(path, old_str, new_str) — Replace exact string in file.",
-        "find" => "find(query, mode?, case_sensitive?, max_results?, path?, file_filter?) — Search files by regex or semantic.",
-        "run_shell" => "run_shell(command, timeout?) — Run shell command in project root.",
-        "web_search" => "web_search(query, max_results?) — Search the web (terms) or fetch a URL to a project temp file (.tracelean/web/) readable with read_range/find_grep.",
-        "discover_tools" => "discover_tools(query) — Find additional tools by capability.",
-        _ => "Unknown tool. Available: list_directory, read_file, edit_file, replace_str, find, run_shell, discover_tools, help_tool.",
-    };
-    ToolResult {
-        success: true,
-        content: help.to_string(),
-        data: None,
+    let registry = super::tool_registry::ToolRegistry::embedded();
+    match registry.and_then(|r| r.help_tool(&tool_name)) {
+        Some(text) => ToolResult { success: true, content: text, data: None },
+        None => ToolResult {
+            success: false,
+            content: format!(
+                "Unknown tool '{}'. Available: {}.",
+                tool_name,
+                registry
+                    .map(|r| {
+                        let mut names: Vec<&str> = r.static_tool_names();
+                        names.extend(r.available_dynamic_names());
+                        names.join(", ")
+                    })
+                    .unwrap_or_default()
+            ),
+            data: None,
+        },
     }
 }
 
@@ -1191,7 +1351,13 @@ fn execute_get_symbols(call: &ToolCall, symbols: &SymbolTable) -> ToolResult {
     }
 }
 
-fn execute_run_shell(call: &ToolCall, project_root: &Path, perms: &AgentPermissions) -> ToolResult {
+fn execute_run_shell(
+    call: &ToolCall,
+    project_root: &Path,
+    state: &mut AppState,
+    perms: &AgentPermissions,
+    review: Option<&mut ReviewSink>,
+) -> ToolResult {
     if !perms.allow_shell {
         return ToolResult {
             success: false,
@@ -1211,37 +1377,283 @@ fn execute_run_shell(call: &ToolCall, project_root: &Path, perms: &AgentPermissi
         }
     };
 
-    let _timeout = get_int_arg(call, "timeout_secs")
+    let timeout_secs = get_int_arg(call, "timeout_secs")
         .unwrap_or(30)
-        .min(perms.max_shell_timeout as i64) as u64;
+        .clamp(1, perms.max_shell_timeout as i64) as u64;
 
-    // Run synchronously (agents run in tokio, but shell is blocking)
-    let output = std::process::Command::new("sh")
-        .arg("-c")
-        .arg(&command)
-        .current_dir(project_root)
-        .output();
+    use super::shell_sandbox::{self, NetworkPolicy, SandboxMode};
 
-    match output {
-        Ok(out) => {
-            let stdout = String::from_utf8_lossy(&out.stdout).to_string();
-            let stderr = String::from_utf8_lossy(&out.stderr).to_string();
-            let combined = if stderr.is_empty() {
-                stdout
-            } else {
-                format!("{}\n--- stderr ---\n{}", stdout, stderr)
-            };
-            ToolResult {
-                success: out.status.success(),
-                content: combined,
-                data: None,
+    let mode = SandboxMode::from_setting(&perms.shell_sandbox);
+    let allow_network = match NetworkPolicy::from_setting(&perms.shell_network) {
+        NetworkPolicy::Allow => true,
+        NetworkPolicy::Deny => false,
+        // "ask": granted per command by the approval prompt's checkbox; with
+        // approvals off nobody can grant it, so it behaves like deny.
+        NetworkPolicy::Ask => perms.shell_network_once,
+    };
+    let cancel = perms.cancel_flag.clone();
+
+    // Mode off: legacy direct execution against the real tree.
+    if mode == SandboxMode::Off {
+        return run_shell_direct(&command, project_root, timeout_secs, cancel.as_ref(), None);
+    }
+
+    // T1: overlay-backed sandbox — containment and diffing in one mechanism.
+    if shell_sandbox::overlay_available() {
+        match shell_sandbox::run_overlay(
+            &command,
+            project_root,
+            timeout_secs,
+            cancel.as_ref(),
+            allow_network,
+        ) {
+            Ok(run) => return materialize_sandbox_run(run, project_root, state, review),
+            Err(e) => {
+                if mode == SandboxMode::Strict {
+                    return ToolResult {
+                        success: false,
+                        content: format!(
+                            "Sandbox error (shell_sandbox=strict, command NOT executed): {}",
+                            e
+                        ),
+                        data: None,
+                    };
+                }
+                eprintln!("[shell-sandbox] overlay run failed, falling back: {}", e);
             }
         }
+    } else if mode == SandboxMode::Strict {
+        return ToolResult {
+            success: false,
+            content: "shell_sandbox=strict, but the overlay sandbox is unavailable (needs \
+                      bwrap with --overlay-src support and kernel ≥ 5.11 with unprivileged \
+                      user namespaces). Command NOT executed."
+                .into(),
+            data: None,
+        };
+    }
+
+    // T3: strace fallback — no containment, but mutated project files are
+    // recovered from the syscall trace and still become visible events.
+    if shell_sandbox::strace_available() {
+        // The shell writes disk only, so open buffers still hold pre-run
+        // content — snapshot them as the pre-image source.
+        let pre_images: std::collections::HashMap<PathBuf, String> = state
+            .open_files()
+            .into_iter()
+            .cloned()
+            .collect::<Vec<PathBuf>>()
+            .into_iter()
+            .filter_map(|p| state.get_content(&p).map(|c| (p.clone(), c.to_string())))
+            .collect();
+        let lookup = move |rel: &Path| pre_images.get(rel).cloned();
+        match shell_sandbox::run_strace(
+            &command,
+            project_root,
+            timeout_secs,
+            cancel.as_ref(),
+            &lookup,
+        ) {
+            Ok(mut run) => {
+                run.output = format!(
+                    "[sandbox notice: overlay sandbox unavailable — ran via strace fallback; \
+                     the command wrote the REAL project tree]\n{}",
+                    run.output
+                );
+                return materialize_sandbox_run(run, project_root, state, review);
+            }
+            Err(e) => eprintln!("[shell-sandbox] strace run failed, falling back: {}", e),
+        }
+    }
+
+    // Last resort in detect mode: unsandboxed, with a visible notice.
+    run_shell_direct(
+        &command,
+        project_root,
+        timeout_secs,
+        cancel.as_ref(),
+        Some(
+            "[sandbox notice: no sandbox backend available (bwrap overlay and strace both \
+             missing) — command ran UNSANDBOXED against the real tree]",
+        ),
+    )
+}
+
+/// Direct (unsandboxed) shell execution — sandbox mode `off` and the final
+/// detect-mode fallback.
+fn run_shell_direct(
+    command: &str,
+    project_root: &Path,
+    timeout_secs: u64,
+    cancel_flag: Option<&std::sync::Arc<std::sync::atomic::AtomicBool>>,
+    notice: Option<&str>,
+) -> ToolResult {
+    let mut cmd = std::process::Command::new("sh");
+    cmd.arg("-c").arg(command).current_dir(project_root);
+    match super::shell_sandbox::run_process(&mut cmd, timeout_secs, cancel_flag) {
         Err(e) => ToolResult {
             success: false,
             content: format!("Shell error: {}", e),
             data: None,
         },
+        Ok(out) => {
+            let mut content = match &out.killed_reason {
+                Some(reason) => {
+                    format!("Command killed ({}). Partial output:\n{}", reason, out.output)
+                }
+                None => out.output.clone(),
+            };
+            if let Some(n) = notice {
+                content = format!("{}\n{}", n, content);
+            }
+            ToolResult {
+                success: out.status_success.unwrap_or(false) && out.killed_reason.is_none(),
+                content,
+                data: None,
+            }
+        }
+    }
+}
+
+/// T2: turn a sandbox run's captured mutations into the same visible, undoable
+/// events an edit tool produces (R6). Overlay runs left the real tree
+/// untouched, so changes are materialized through Command apply + save (or
+/// staged into review); strace runs already hit disk, so they are only
+/// recorded (buffers + undo tree brought in line with reality).
+fn materialize_sandbox_run(
+    run: super::shell_sandbox::SandboxRun,
+    project_root: &Path,
+    state: &mut AppState,
+    mut review: Option<&mut ReviewSink>,
+) -> ToolResult {
+    use super::shell_sandbox::{Backend, MutationKind};
+
+    let overlay = run.backend == Backend::Overlay;
+    let mut notes: Vec<String> = Vec::new();
+    let mut staged = 0usize;
+    let mut batch: Vec<Command> = Vec::new();
+    let mut to_save: Vec<PathBuf> = Vec::new();
+    let mut to_remove: Vec<PathBuf> = Vec::new();
+
+    for m in &run.mutations {
+        let rel = m.path.clone();
+        let path_str = rel.to_string_lossy().to_string();
+        match m.kind {
+            MutationKind::Created | MutationKind::Modified => {
+                let post = m.post.clone().unwrap_or_default();
+                let kind_str = if m.kind == MutationKind::Created { "created" } else { "modified" };
+                // R2/R6: with the overlay, review mode routes shell writes
+                // through the exact staging pipeline edit tools use — nothing
+                // touches the real tree until the user accepts hunks.
+                if overlay {
+                    if let Some(sink) = review.as_deref_mut() {
+                        sink.stage(&path_str, m.pre.as_deref().unwrap_or(""), &post);
+                        staged += 1;
+                        notes.push(format!("{} ({}) → staged for review", path_str, kind_str));
+                        continue;
+                    }
+                }
+                let old = if let Some(cur) = state.get_content(&rel) {
+                    cur.to_string()
+                } else if let Some(pre) = &m.pre {
+                    state.load_file(rel.clone(), pre.clone());
+                    pre.clone()
+                } else {
+                    batch.push(Command::CreateFile { path: rel.clone() });
+                    String::new()
+                };
+                if old != post {
+                    batch.push(Command::Replace { file: rel.clone(), at: 0, old, new: post });
+                }
+                if overlay {
+                    to_save.push(rel.clone());
+                }
+                notes.push(format!("{} ({})", path_str, kind_str));
+            }
+            MutationKind::Deleted => {
+                let old = state
+                    .get_content(&rel)
+                    .map(|c| c.to_string())
+                    .or_else(|| m.pre.clone())
+                    .unwrap_or_default();
+                batch.push(Command::DeleteFile { path: rel.clone(), content: old });
+                if overlay {
+                    to_remove.push(rel.clone());
+                }
+                notes.push(format!("{} (deleted — undoable in the undo tree)", path_str));
+            }
+        }
+    }
+
+    let mut apply_error: Option<String> = None;
+    if !batch.is_empty() {
+        let cmd = if batch.len() == 1 {
+            batch.remove(0)
+        } else {
+            Command::Batch { commands: batch }
+        };
+        match state.apply(cmd) {
+            Ok(_) => {
+                for rel in &to_save {
+                    if let Some(parent) = project_root.join(rel).parent() {
+                        let _ = std::fs::create_dir_all(parent);
+                    }
+                    if let Err(e) = save_eff(state, project_root, rel) {
+                        apply_error = Some(format!("saving {}: {}", rel.display(), e));
+                    }
+                }
+                for rel in &to_remove {
+                    let _ = std::fs::remove_file(project_root.join(rel));
+                }
+            }
+            Err(e) => apply_error = Some(e),
+        }
+    }
+
+    let mut content = match &run.killed_reason {
+        Some(reason) => format!("Command killed ({}). Partial output:\n{}", reason, run.output),
+        None => run.output.clone(),
+    };
+    let mut sections: Vec<String> = Vec::new();
+    if !notes.is_empty() {
+        sections.push(format!(
+            "[sandbox] project file changes ({}):\n  {}",
+            notes.len(),
+            notes.join("\n  ")
+        ));
+    }
+    if !run.blocked.is_empty() {
+        sections.push(format!(
+            "[sandbox] writes under protected paths were discarded: {}",
+            run.blocked.join(", ")
+        ));
+    }
+    if !run.skipped.is_empty() {
+        sections.push(format!(
+            "[sandbox] changed but not captured as undoable text edits:\n  {}",
+            run.skipped.join("\n  ")
+        ));
+    }
+    if let Some(e) = &apply_error {
+        sections.push(format!("[sandbox] ERROR materializing changes: {}", e));
+    }
+    if !sections.is_empty() {
+        content = format!("{}\n\n{}", content.trim_end(), sections.join("\n"));
+    }
+
+    ToolResult {
+        success: run.success && run.killed_reason.is_none() && apply_error.is_none(),
+        content,
+        data: Some(serde_json::json!({
+            "sandbox_backend": match run.backend {
+                Backend::Overlay => "overlay",
+                Backend::Strace => "strace",
+                Backend::None => "none",
+            },
+            "fs_mutations": notes.len(),
+            "staged": staged,
+            "blocked": run.blocked,
+        })),
     }
 }
 
@@ -1416,6 +1828,27 @@ fn execute_web_search(call: &ToolCall, project_root: &Path) -> ToolResult {
     }
 }
 
+/// web_fetch — always fetches (never falls back to search). Accepts `url` or
+/// `query`; a missing scheme gets https:// prepended.
+fn execute_web_fetch(call: &ToolCall, project_root: &Path) -> ToolResult {
+    let url = match get_str_arg(call, "url").or_else(|| get_str_arg(call, "query")) {
+        Some(u) if !u.trim().is_empty() => u.trim().to_string(),
+        _ => {
+            return ToolResult {
+                success: false,
+                content: "Missing 'url' argument. Expected: web_fetch(url) — full http(s):// URL to fetch.".into(),
+                data: None,
+            }
+        }
+    };
+    let url = if url.starts_with("http://") || url.starts_with("https://") {
+        url
+    } else {
+        format!("https://{}", url)
+    };
+    web_fetch_to_file(&url, project_root)
+}
+
 /// Fetch a URL and save its readable text under {project}/.tracelean/web/.
 fn web_fetch_to_file(url: &str, project_root: &Path) -> ToolResult {
     let body = match http_get(url, 30) {
@@ -1475,18 +1908,189 @@ fn web_fetch_to_file(url: &str, project_root: &Path) -> ToolResult {
     }
 }
 
-fn execute_find_grep(call: &ToolCall, project_root: &Path) -> ToolResult {
+/// Dispatcher for the `find` tool. Routes on the schema's `mode` parameter
+/// (auto | regex | semantic) and implements the auto fallback chain:
+/// exact regex → case-insensitive regex → semantic. Explicit modes that come
+/// up empty suggest the other mode instead of failing silently.
+fn execute_find(
+    call: &ToolCall,
+    project_root: &Path,
+    embed_index: &Option<SharedIndex>,
+) -> ToolResult {
     // Accept both 'pattern' (internal name) and 'query' (schema name from tools.json)
     let pattern = match get_str_arg(call, "pattern").or_else(|| get_str_arg(call, "query")) {
         Some(p) => p,
         None => {
             return ToolResult {
                 success: false,
-                content: "Missing 'query' argument. Expected: find(query, mode?, case_sensitive?, max_results?, path?, file_filter?)".into(),
+                content: "Missing 'query' argument. Expected: find(query, mode?, case_sensitive?, max_results?, offset?, path?, file_filter?)".into(),
                 data: None,
             }
         }
     };
+    let mode = get_str_arg(call, "mode").unwrap_or_else(|| "auto".to_string());
+
+    match mode.as_str() {
+        "semantic" => {
+            let res = execute_find_embed(call, embed_index);
+            if res.success && res.content.starts_with("No semantic matches") {
+                ToolResult {
+                    success: true,
+                    content: format!(
+                        "{} Try mode=\"regex\" if you are looking for an exact symbol, string, or pattern.",
+                        res.content
+                    ),
+                    data: None,
+                }
+            } else {
+                res
+            }
+        }
+        "regex" => match regex_find(call, project_root, &pattern) {
+            Err(err) => err,
+            Ok(Some(content)) => ToolResult { success: true, content, data: None },
+            Ok(None) => ToolResult {
+                success: true,
+                content: "No matches found (exact or case-insensitive). Try mode=\"semantic\" for a meaning-based search, or check the pattern — special chars like . * ( must be escaped for a literal match.".into(),
+                data: None,
+            },
+        },
+        // "auto" (and anything unrecognized): regex → case-insensitive → semantic
+        _ => {
+            match regex_find(call, project_root, &pattern) {
+                Err(err) => return err,
+                Ok(Some(content)) => return ToolResult { success: true, content, data: None },
+                Ok(None) => {}
+            }
+            let sem = execute_find_embed(call, embed_index);
+            if sem.success && !sem.content.starts_with("No semantic matches") {
+                ToolResult {
+                    success: true,
+                    content: format!(
+                        "regex and case-insensitive search found nothing; falling back to semantic search:\n{}",
+                        sem.content
+                    ),
+                    data: None,
+                }
+            } else if !sem.success {
+                ToolResult {
+                    success: true,
+                    content: format!(
+                        "No matches found (exact or case-insensitive; semantic fallback unavailable: {})",
+                        sem.content
+                    ),
+                    data: None,
+                }
+            } else {
+                ToolResult {
+                    success: true,
+                    content: "No matches found — regex, case-insensitive, and semantic search all came up empty. Try a broader or simpler query.".into(),
+                    data: None,
+                }
+            }
+        }
+    }
+}
+
+/// Hard cap on how many matches a single grep pass will count before stopping
+/// the scan — bounds cost on pathological queries while still letting the
+/// pagination hint report a meaningful total.
+const GREP_SCAN_CAP: usize = 2000;
+
+/// Collects grep matches for one `offset`/`max_results` window while counting
+/// every match, so responses can say "N of M matches" and how to page.
+struct GrepCollector {
+    offset: usize,
+    max_results: usize,
+    /// Total matches seen so far (capped at GREP_SCAN_CAP).
+    total: usize,
+    results: Vec<String>,
+}
+
+impl GrepCollector {
+    fn push(&mut self, entry: String) {
+        if self.total >= self.offset && self.results.len() < self.max_results {
+            self.results.push(entry);
+        }
+        self.total += 1;
+    }
+    fn scan_done(&self) -> bool {
+        self.total >= GREP_SCAN_CAP
+    }
+}
+
+/// Run the regex leg of `find`, including the case-insensitive retry and the
+/// pagination hint. Returns:
+/// - `Err(result)` — invalid regex, ready to return to the model;
+/// - `Ok(Some(content))` — matches found (content includes any annotations);
+/// - `Ok(None)` — genuinely zero matches, caller decides the fallback.
+fn regex_find(
+    call: &ToolCall,
+    project_root: &Path,
+    pattern: &str,
+) -> Result<Option<String>, ToolResult> {
+    let case_sensitive = call
+        .arguments
+        .get("case_sensitive")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
+    let offset = get_int_arg(call, "offset").unwrap_or(0).max(0) as usize;
+
+    let re = regex::Regex::new(pattern).map_err(|e| ToolResult {
+        success: false,
+        content: format!(
+            "Invalid regex '{}': {} — escape special chars like . * ( for a literal match.",
+            pattern, e
+        ),
+        data: None,
+    })?;
+
+    let mut coll = run_grep(call, project_root, &re);
+    let mut note = "";
+    if coll.total == 0 && !case_sensitive {
+        // Exact case found nothing — retry case-insensitively before giving up.
+        if let Ok(ci_re) = regex::Regex::new(&format!("(?i){}", pattern)) {
+            let ci_coll = run_grep(call, project_root, &ci_re);
+            if ci_coll.total > 0 {
+                note = "exact-case match found nothing; case-insensitive search found these:\n";
+                coll = ci_coll;
+            }
+        }
+    }
+
+    if coll.total == 0 {
+        return Ok(None);
+    }
+    if coll.results.is_empty() {
+        // offset beyond the matches that exist
+        return Ok(Some(format!(
+            "offset {} is beyond the {} matches found — call again with a smaller offset.",
+            offset, coll.total
+        )));
+    }
+
+    let mut content = format!("{}{}", note, coll.results.join("\n"));
+    let shown_through = offset + coll.results.len();
+    if coll.total > shown_through {
+        let total_str = if coll.scan_done() {
+            format!("{}+", GREP_SCAN_CAP)
+        } else {
+            coll.total.to_string()
+        };
+        content.push_str(&format!(
+            "\n{}",
+            super::tool_registry::ToolRegistry::pagination_hint(
+                coll.results.len(),
+                &total_str,
+                shown_through
+            )
+        ));
+    }
+    Ok(Some(content))
+}
+
+/// One full grep pass over the target path with the given (pre-compiled) regex.
+fn run_grep(call: &ToolCall, project_root: &Path, re: &regex::Regex) -> GrepCollector {
     let search_path = get_str_arg(call, "path").unwrap_or_default();
     let recursive = call
         .arguments
@@ -1494,20 +2098,12 @@ fn execute_find_grep(call: &ToolCall, project_root: &Path) -> ToolResult {
         .and_then(|v| v.as_bool())
         .unwrap_or(true);
     let max_results = get_int_arg(call, "max_results").unwrap_or(20) as usize;
-    let context_lines = get_int_arg(call, "context_lines").unwrap_or(0) as usize;
+    // Schema name is 'context'; 'context_lines' kept for internal callers.
+    let context_lines = get_int_arg(call, "context_lines")
+        .or_else(|| get_int_arg(call, "context"))
+        .unwrap_or(0) as usize;
     let file_filter = get_str_arg(call, "file_filter").unwrap_or_default();
-
-    // Compile regex
-    let re = match regex::Regex::new(&pattern) {
-        Ok(r) => r,
-        Err(e) => {
-            return ToolResult {
-                success: false,
-                content: format!("Invalid regex '{}': {}", pattern, e),
-                data: None,
-            }
-        }
-    };
+    let offset = get_int_arg(call, "offset").unwrap_or(0).max(0) as usize;
 
     let target = if search_path.is_empty() {
         project_root.to_path_buf()
@@ -1515,49 +2111,28 @@ fn execute_find_grep(call: &ToolCall, project_root: &Path) -> ToolResult {
         project_root.join(&search_path)
     };
 
-    let mut results: Vec<String> = Vec::new();
+    let mut coll = GrepCollector {
+        offset,
+        max_results,
+        total: 0,
+        results: Vec::new(),
+    };
 
     if target.is_file() {
-        grep_file(
-            &target,
-            project_root,
-            &re,
-            context_lines,
-            max_results,
-            &mut results,
-        );
+        grep_file(&target, project_root, re, context_lines, &mut coll);
     } else {
         grep_dir(
             &target,
             project_root,
-            &re,
+            re,
             &file_filter,
             recursive,
             context_lines,
-            max_results,
-            &mut results,
+            &mut coll,
             0,
         );
     }
-
-    if results.is_empty() {
-        ToolResult {
-            success: true,
-            content: "No matches found.".into(),
-            data: None,
-        }
-    } else {
-        let truncated = results.len() >= max_results;
-        let mut content = results.join("\n");
-        if truncated {
-            content.push_str(&format!("\n... (capped at {} results)", max_results));
-        }
-        ToolResult {
-            success: true,
-            content,
-            data: None,
-        }
-    }
+    coll
 }
 
 fn grep_file(
@@ -1565,10 +2140,9 @@ fn grep_file(
     root: &Path,
     re: &regex::Regex,
     context_lines: usize,
-    max_results: usize,
-    results: &mut Vec<String>,
+    coll: &mut GrepCollector,
 ) {
-    if results.len() >= max_results {
+    if coll.scan_done() {
         return;
     }
     let Ok(content) = std::fs::read_to_string(file_path) else {
@@ -1580,7 +2154,7 @@ fn grep_file(
     for (line_num, line) in all_lines.iter().enumerate() {
         if re.is_match(line) {
             if context_lines == 0 {
-                results.push(format!(
+                coll.push(format!(
                     "{}:{}: {}",
                     rel.display(),
                     line_num + 1,
@@ -1594,9 +2168,9 @@ fn grep_file(
                     let marker = if i == line_num { ">" } else { " " };
                     block.push_str(&format!("{}{:>4}| {}\n", marker, i + 1, all_lines[i]));
                 }
-                results.push(block);
+                coll.push(block);
             }
-            if results.len() >= max_results {
+            if coll.scan_done() {
                 return;
             }
         }
@@ -1610,11 +2184,10 @@ fn grep_dir(
     file_filter: &str,
     recursive: bool,
     context_lines: usize,
-    max_results: usize,
-    results: &mut Vec<String>,
+    coll: &mut GrepCollector,
     depth: usize,
 ) {
-    if depth > 15 || results.len() >= max_results {
+    if depth > 15 || coll.scan_done() {
         return;
     }
     let Ok(entries) = std::fs::read_dir(dir) else {
@@ -1635,8 +2208,7 @@ fn grep_dir(
                     file_filter,
                     recursive,
                     context_lines,
-                    max_results,
-                    results,
+                    coll,
                     depth + 1,
                 );
             }
@@ -1649,7 +2221,7 @@ fn grep_dir(
                     }
                 }
             }
-            grep_file(&path, root, re, context_lines, max_results, results);
+            grep_file(&path, root, re, context_lines, coll);
         }
     }
 }

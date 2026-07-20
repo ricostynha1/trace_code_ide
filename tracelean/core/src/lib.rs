@@ -157,9 +157,29 @@ pub struct AiSettings {
     /// were already sent (cached) in the previous request into one line.
     #[serde(default)]
     pub log_show_only_diffs: bool,
+    /// bugs.md Bug 1: expected remaining conversation rounds — the N in the
+    /// prune/summarize break-even math (N · Δ · d ≥ penalty). Higher = keep
+    /// more context (trim/summarize later); this replaces the removed
+    /// 1/4-context force-summarize escape hatch as THE tuning knob.
+    #[serde(default = "default_n_expected_rounds")]
+    pub n_expected_rounds: usize,
+    /// Shell sandbox mode (sandboxing_better.md): "off" | "detect" | "strict".
+    /// detect = overlay+bwrap when available, else strace fallback with a
+    /// visible notice; strict = refuse to run without the overlay sandbox.
+    #[serde(default = "default_shell_sandbox")]
+    pub shell_sandbox: String,
+    /// Sandbox network policy (R5): "deny" | "ask" | "allow". "ask" grants
+    /// network per command via the approval prompt's checkbox (needs
+    /// review_commands on; otherwise behaves like deny).
+    #[serde(default = "default_shell_network")]
+    pub shell_network: String,
 }
 
+fn default_shell_sandbox() -> String { "detect".to_string() }
+fn default_shell_network() -> String { "ask".to_string() }
+
 fn default_spend_cap() -> f64 { 1.0 }
+fn default_n_expected_rounds() -> usize { 8 }
 
 impl Default for AiSettings {
     fn default() -> Self {
@@ -174,6 +194,9 @@ impl Default for AiSettings {
             review_edits: false,
             review_commands: false,
             log_show_only_diffs: false,
+            n_expected_rounds: default_n_expected_rounds(),
+            shell_sandbox: default_shell_sandbox(),
+            shell_network: default_shell_network(),
         }
     }
 }
@@ -197,6 +220,8 @@ pub struct SharedApp {
     pub chat_sessions: Arc<tokio::sync::Mutex<HashMap<String, agent::ChatSession>>>,
     /// ACP client manager — connects to external ACP agents.
     pub acp: Option<Arc<acp::AcpClientManager>>,
+    /// Hard-stop token for the running agent turn (T12).
+    pub agent_cancel: agent::CancelToken,
 }
 
 impl SharedApp {
@@ -215,6 +240,7 @@ impl SharedApp {
             event_sink,
             chat_sessions: Arc::new(tokio::sync::Mutex::new(HashMap::new())),
             acp: None, // Initialized lazily when first agent connects
+            agent_cancel: agent::CancelToken::new(),
         }
     }
 
@@ -231,6 +257,7 @@ impl SharedApp {
             mcp_client: self.mcp_client.clone(),
             event_sink: self.event_sink.clone(),
             pending_diffs: self.pending_diffs.clone(),
+            cancel: self.agent_cancel.clone(),
         }
     }
 

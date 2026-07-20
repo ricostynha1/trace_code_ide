@@ -506,6 +506,7 @@ async fn call_llm(messages: &[ChatMessage]) -> String {
         review_edits: false,
         review_commands: false,
         log_show_only_diffs: false,
+        n_expected_rounds: 8,
         openrouter_api_key: std::env::var("OPENROUTER_API_KEY").ok(),
         bedrock_api_key: std::env::var("AWS_BEARER_TOKEN_BEDROCK").ok(),
         bedrock_region: std::env::var("AWS_REGION").ok().or(Some("eu-west-1".to_string())),
@@ -515,6 +516,7 @@ async fn call_llm(messages: &[ChatMessage]) -> String {
             .ok()
             .and_then(|s| s.parse().ok())
             .unwrap_or(1.0),
+        ..Default::default()
     };
 
     // Pick a default model if none configured
@@ -555,6 +557,7 @@ async fn call_llm(messages: &[ChatMessage]) -> String {
     };
 
     let request = ai::AiRequest {
+        dynamic_tools: None,
         model,
         messages: messages.to_vec(),
         stop: None,

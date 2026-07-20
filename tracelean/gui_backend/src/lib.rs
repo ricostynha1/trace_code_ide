@@ -48,8 +48,16 @@ pub struct MockPendingWrapper(pub Mutex<Vec<ai::mock::MockPendingRequest>>);
 pub struct MockProviderWrapper(pub Arc<tokio::sync::Mutex<Option<Arc<ai::mock::MockProvider>>>>);
 pub struct PendingDiffsWrapper(pub Arc<Mutex<Vec<PendingDiff>>>);
 
-/// Channel for tool loop pause/resume. Frontend sends true=continue, false=abort.
-pub struct ToolLoopResumeWrapper(pub Arc<tokio::sync::Mutex<Option<tokio::sync::oneshot::Sender<bool>>>>);
+/// Channel for tool loop pause/resume and per-command shell approval.
+/// Frontend sends (continue/approve, allow_network) — the second flag is the
+/// sandbox network grant from the approval prompt (sandboxing_better.md T4)
+/// and is false for plain pause prompts.
+pub struct ToolLoopResumeWrapper(
+    pub Arc<tokio::sync::Mutex<Option<tokio::sync::oneshot::Sender<(bool, bool)>>>>,
+);
+
+/// T12: hard-stop token for the running agent turn (Stop button).
+pub struct AgentCancelWrapper(pub tracelean_core::agent::CancelToken);
 
 /// Persistent chat session store — maps session_id → ChatSession.
 /// Sessions hold both user_view (raw) and model_view (compacted) across calls.
@@ -197,6 +205,7 @@ pub fn run() {
         .manage(MockProviderWrapper(Arc::new(tokio::sync::Mutex::new(None))))
         .manage(PendingDiffsWrapper(Arc::new(Mutex::new(Vec::new()))))
         .manage(ToolLoopResumeWrapper(Arc::new(tokio::sync::Mutex::new(None))))
+        .manage(AgentCancelWrapper(tracelean_core::agent::CancelToken::new()))
         .manage(ChatSessionStoreWrapper(Arc::new(tokio::sync::Mutex::new(std::collections::HashMap::new()))))
         .manage(McpHostPermissionsWrapper(Mutex::new(AgentPermissions::full_access("mcp-host"))))
         .manage(McpClientWrapper(Arc::new(tokio::sync::Mutex::new(McpClientManager::new()))))
@@ -251,6 +260,7 @@ pub fn run() {
             ipc::trace::navigate_trace_link,
             // AI
             ipc::ai_commands::get_ai_settings,
+            ipc::ai_commands::get_model_characteristics,
             ipc::ai_commands::detect_env_keys,
             ipc::ai_commands::update_ai_settings,
             ipc::ai_commands::get_ai_models,
@@ -280,6 +290,7 @@ pub fn run() {
             ipc::ai_commands::apply_accepted_hunks,
             ipc::ai_commands::discard_pending_diff,
             ipc::ai_commands::resume_tool_loop,
+            ipc::ai_commands::stop_agent_run,
             // MCP & Permissions & Streaming
             ipc::mcp_commands::mcp_list_tools,
             ipc::mcp_commands::mcp_call_tool,

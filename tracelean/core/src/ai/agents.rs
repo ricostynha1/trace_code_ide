@@ -346,6 +346,7 @@ fn build_request(system_prompt: &str, user_content: &str) -> AiRequest {
     };
 
     AiRequest {
+        dynamic_tools: None,
         model,
         messages: vec![
             ChatMessage { role: MessageRole::System, content: system_prompt.to_string(), tool_call_id: None, tool_calls: Vec::new() },

@@ -206,9 +206,18 @@ impl AiProvider for OpenRouterProvider {
     async fn complete(&self, request: &AiRequest) -> Result<AiResponse, AiError> {
         let messages = build_or_messages(request);
 
+        // Feature 3: OpenAI-compatible Chat Completions has no defer_loading —
+        // dynamic tools merge into the tools param (native-path add).
+        let tools = {
+            let mut all = request.tools.clone().unwrap_or_default();
+            if let Some(dyn_tools) = &request.dynamic_tools {
+                all.extend(dyn_tools.iter().cloned());
+            }
+            if all.is_empty() { None } else { Some(all) }
+        };
         let body = OrRequest {
             model: request.model.model_id.clone(),
-            tools: request.tools.clone(),
+            tools,
             messages,
             max_tokens: request.model.max_tokens,
             temperature: request.model.temperature,
@@ -310,6 +319,7 @@ impl AiProvider for OpenRouterProvider {
                     };
 
                     return Ok(AiResponse {
+                        thinking: None,
                         content,
                         usage: token_usage,
                         raw_response: Some(raw_text),
@@ -371,15 +381,18 @@ impl AiProvider for OpenRouterProvider {
 
         let models = body.data.into_iter().map(|m| {
             let pricing = m.pricing.unwrap_or_default();
+            let input_cost = parse_price_per_m(&pricing.prompt);
+            let cached_cost =
+                super::provider_cache::default_cached_price_per_m(&m.id, input_cost);
             ModelConfig {
                 provider: ProviderKind::OpenRouter,
                 model_id: m.id.clone(),
                 display_name: m.name.unwrap_or(m.id),
                 max_tokens: m.context_length.unwrap_or(4096).min(8192) as u32,
                 temperature: 0.3,
-                input_cost_per_m: parse_price_per_m(&pricing.prompt),
+                input_cost_per_m: input_cost,
                 output_cost_per_m: parse_price_per_m(&pricing.completion),
-                cached_input_cost_per_m: parse_price_per_m(&pricing.prompt) * 0.1, // estimate ~10% of input price for cached
+                cached_input_cost_per_m: cached_cost,
                 extra_params: None,
                 coding_index: None,
                 coding_rank: None,
@@ -405,6 +418,7 @@ mod tests {
     #[test]
     fn cache_breakpoints_become_cache_control_blocks() {
         let request = AiRequest {
+            dynamic_tools: None,
             model: ModelConfig::default(),
             messages: vec![
                 msg(MessageRole::System, "system prompt"),
@@ -437,6 +451,7 @@ mod tests {
         tool_result.tool_call_id = Some("call_0".into());
 
         let request = AiRequest {
+            dynamic_tools: None,
             model: ModelConfig::default(),
             messages: vec![msg(MessageRole::User, "read a.rs"), assistant, tool_result],
             stop: None,

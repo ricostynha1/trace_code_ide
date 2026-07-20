@@ -24,6 +24,14 @@ fn test_data_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).parent().unwrap().join("data")
 }
 
+/// Number of static tools declared in data/tools.json, read straight from the
+/// file so the assertions below track tools.json instead of a hardcoded literal.
+fn static_tool_count() -> usize {
+    let raw = std::fs::read_to_string(test_data_dir().join("tools.json")).unwrap();
+    let json: serde_json::Value = serde_json::from_str(&raw).unwrap();
+    json["tools"].as_array().unwrap().len()
+}
+
 fn make_auto_provider() -> ProviderCacheConfig {
     ProviderCacheConfig {
         cache_mode: CacheMode::Automatic,
@@ -73,8 +81,8 @@ fn test_load_tool_registry_from_data() {
     let data_dir = test_data_dir();
     let registry = ToolRegistry::load_default(&data_dir).unwrap();
 
-    // Should have 8 static tools
-    assert_eq!(registry.static_tools.len(), 8);
+    // Static tool count must match what data/tools.json declares
+    assert_eq!(registry.static_tools.len(), static_tool_count());
 
     // Check key static tools exist
     let names: Vec<&str> = registry.static_tools.iter()
@@ -130,7 +138,7 @@ fn test_multi_turn_dynamic_tool_lifecycle() {
     // Turn 0: load dynamic tools
     let added = registry.load_dynamic_tools(&["delete_file".to_string(), "get_symbols".to_string()]);
     assert_eq!(added.len(), 2);
-    assert_eq!(registry.request_schemas().len(), 10); // 8 static + 2 dynamic
+    assert_eq!(registry.request_schemas().len(), static_tool_count() + 2); // static + 2 dynamic
 
     // Turn 1: use delete_file
     registry.advance_turn();

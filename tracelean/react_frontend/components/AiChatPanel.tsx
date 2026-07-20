@@ -4,7 +4,7 @@ import { listen } from "@tauri-apps/api/event";
 import { ChatSwitcher, ChatInstance } from "./ChatSwitcher";
 
 interface ChatMessage {
-  role: "system" | "user" | "assistant" | "tool";
+  role: "system" | "user" | "assistant" | "tool" | "thinking";
   content: string;
   tool_call_id?: string;
   tool_calls?: ToolCallResponse[];
@@ -112,6 +112,13 @@ interface AiSettings {
   review_commands?: boolean;
   /** bugs.md Feature 5: log detail hides messages equal to the previous request. */
   log_show_only_diffs?: boolean;
+  /** bugs.md Bug 1: expected remaining rounds (N) in the trim/summarize
+   * break-even math. Higher = keep more context. */
+  n_expected_rounds?: number;
+  /** sandboxing_better.md: shell sandbox mode ("off" | "detect" | "strict"). */
+  shell_sandbox?: string;
+  /** Sandbox network policy ("deny" | "ask" | "allow"). */
+  shell_network?: string;
 }
 
 interface ToolCallResponse {
@@ -137,6 +144,7 @@ interface InteractionEntry {
   model_display_name: string;
   request_messages: ChatMessage[];
   response_content: string | null;
+  response_thinking?: string | null;
   response_tool_calls: ToolCallResponse[];
   error: string | null;
   usage: TokenUsage;
@@ -153,6 +161,13 @@ interface InteractionEntry {
     messages_removed: number;
     tokens_before: number;
     tokens_after: number;
+    /** Feature 1.1: per-message decisions (trimmed / trim_candidate / summarized / kept_user). */
+    details?: {
+      role: string;
+      preview: string;
+      tokens: number;
+      action: string;
+    }[];
   };
 }
 
@@ -168,7 +183,27 @@ interface MockPendingRequest {
   timestamp: string;
 }
 
-type Tab = "chat" | "settings" | "log" | "stats";
+type Tab = "chat" | "settings" | "log" | "stats" | "model";
+
+/** T14: characteristics of the picked model, from get_model_characteristics. */
+interface ModelCharacteristics {
+  model: ModelConfig & {
+    context_window?: number;
+    context_window_known?: boolean;
+    tool_call_format?: string;
+    tool_passing?: string;
+  };
+  cache_config: {
+    cache_mode: string;
+    cache_read_discount: number;
+    cache_write_multiplier: number;
+    ttl_seconds: number | null;
+    requires_markers: boolean;
+    notes: string | null;
+  };
+  cache_source: string;
+  summary_model: ModelConfig | null;
+}
 
 /** Format token count compactly: 1234 -> '1.2k', 1234567 -> '1.2M' */
 function compactNum(n: number): string {
@@ -248,7 +283,15 @@ export function AiChatPanel({ visible, onClose }: Props) {
   const [modelFetchLoading, setModelFetchLoading] = useState(false);
   const [modelFetchError, setModelFetchError] = useState<string | null>(null);
   const [envKeys, setEnvKeys] = useState<Record<string, string>>({});
-  const [toolLoopPaused, setToolLoopPaused] = useState<string | null>(null);
+  const [toolLoopPaused, setToolLoopPaused] = useState<{
+    message: string;
+    kind?: string;
+    command?: string;
+    annotations?: string[];
+    networkPolicy?: string;
+  } | null>(null);
+  // Sandbox network checkbox in a shell-approval prompt (sandboxing_better.md T4).
+  const [approveWithNetwork, setApproveWithNetwork] = useState(false);
   const [chatInstances, setChatInstances] = useState<ChatInstance[]>([{ id: crypto.randomUUID(), messages: [], createdAt: new Date(), label: "Chat 1" }]);
   const [activeChatId, setActiveChatId] = useState<string>(chatInstances[0].id);
   const [showSwitcher, setShowSwitcher] = useState(false);
@@ -256,6 +299,9 @@ export function AiChatPanel({ visible, onClose }: Props) {
   const [sessionInfo, setSessionInfo] = useState<ChatSessionInfo | null>(null);
   const [confirmReset, setConfirmReset] = useState(false);
   const [summarizing, setSummarizing] = useState(false);
+  // T14: characteristics of the picked model (Model tab)
+  const [modelInfo, setModelInfo] = useState<ModelCharacteristics | null>(null);
+  const [modelInfoError, setModelInfoError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const mockPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -302,7 +348,7 @@ export function AiChatPanel({ visible, onClose }: Props) {
       if (!payload || typeof payload.content !== "string") return;
       // T3.2: Reset streaming content so intermediate messages appear separately
       setStreamingContent("");
-      setMessages((prev) => [...prev, { role: payload.role as "system" | "user" | "assistant", content: payload.content }]);
+      setMessages((prev) => [...prev, { role: payload.role as ChatMessage["role"], content: payload.content }]);
     });
     return () => { unlisten.then((fn) => fn()); };
   }, []);
@@ -313,6 +359,36 @@ export function AiChatPanel({ visible, onClose }: Props) {
       const payload = normalizePayload<{ message: string }>(event.payload);
       if (!payload || typeof payload.message !== "string") return;
       setMessages((prev) => [...prev, { role: "system", content: `⚠ ${payload.message}` }]);
+    });
+    return () => { unlisten.then((fn) => fn()); };
+  }, []);
+
+  // bugs.md: a staged edit is easy to miss inside a tool-result preview.
+  // Surface it in the chat like an approval prompt, and open the (first)
+  // edited file so the pending hunks are in front of the user.
+  useEffect(() => {
+    const unlisten = listen("pending-diffs-changed", (event) => {
+      const payload = normalizePayload<{
+        count: number;
+        new_files?: { file: string; hunks: number; first_line?: number | null }[];
+      }>(event.payload);
+      if (!payload || !payload.new_files || payload.new_files.length === 0) return;
+      const lines = payload.new_files.map(
+        (f) => `📝 ${f.file} — ${f.hunks} hunk${f.hunks === 1 ? "" : "s"} staged for review`
+      );
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "system",
+          content: `${lines.join("\n")}\nAccept or reject the hunks in the editor's diff bar (nothing is applied until you do).`,
+        },
+      ]);
+      const first = payload.new_files[0];
+      window.dispatchEvent(
+        new CustomEvent("tracelean-navigate", {
+          detail: { path: first.file, line: first.first_line ?? null },
+        })
+      );
     });
     return () => { unlisten.then((fn) => fn()); };
   }, []);
@@ -340,12 +416,16 @@ export function AiChatPanel({ visible, onClose }: Props) {
 
       setStreamingContent("");
       setMessages((prev) => {
-        // Update the matching running chip in place if we have a call_id
+        // Update the matching running chip in place if we have a call_id.
+        // bugs.md Bug 1.5: text-parsed tool calls reuse ids (call_0, call_1 …)
+        // across iterations — if the newest chip with this id is already
+        // final, this event belongs to a NEW call, so append a fresh chip
+        // instead of dropping the event.
         if (chip.callId) {
           for (let i = prev.length - 1; i >= 0; i--) {
             const existing = prev[i].chip;
             if (existing && existing.callId === chip.callId) {
-              if (existing.status !== "running") return prev; // already final
+              if (existing.status !== "running") break; // id reused → new chip below
               const next = [...prev];
               next[i] = { ...prev[i], chip: { ...existing, ...chip } };
               return next;
@@ -358,10 +438,26 @@ export function AiChatPanel({ visible, onClose }: Props) {
     return () => { unlisten.then((fn) => fn()); };
   }, []);
 
-  // Listen for tool loop pause (Bug 3: user-prompted pause instead of hard abort)
+  // Listen for tool loop pause (Bug 3: user-prompted pause instead of hard
+  // abort) and shell-approval prompts (sandboxing_better.md T4/T5).
   useEffect(() => {
-    const unlisten = listen<{ loops_completed: number; message: string }>("tool-loop-pause", (event) => {
-      setToolLoopPaused(event.payload.message);
+    const unlisten = listen<{
+      loops_completed: number;
+      message: string;
+      kind?: string;
+      command?: string;
+      annotations?: string[];
+      network_policy?: string;
+    }>("tool-loop-pause", (event) => {
+      const p = event.payload;
+      setApproveWithNetwork(false);
+      setToolLoopPaused({
+        message: p.message,
+        kind: p.kind,
+        command: p.command,
+        annotations: p.annotations,
+        networkPolicy: p.network_policy,
+      });
     });
     return () => { unlisten.then((fn) => fn()); };
   }, []);
@@ -555,12 +651,39 @@ export function AiChatPanel({ visible, onClose }: Props) {
     }
   };
 
-  const resumeToolLoop = async (shouldContinue: boolean) => {
+  const resumeToolLoop = async (shouldContinue: boolean, allowNetwork = false) => {
     setToolLoopPaused(null);
+    setApproveWithNetwork(false);
     try {
-      await invoke("resume_tool_loop", { shouldContinue });
+      await invoke("resume_tool_loop", { shouldContinue, allowNetwork });
     } catch (e) {
       setError(String(e));
+    }
+  };
+
+  // T12: hard stop — cancels the run's token (aborts the in-flight LLM
+  // request, kills a running shell command) and answers any pending
+  // pause/approval prompt with "stop". The chat invoke then returns an error
+  // ("Stopped by user…"), which the normal send path surfaces and clears
+  // `loading` with.
+  const stopAgentRun = async () => {
+    setToolLoopPaused(null);
+    try {
+      await invoke("stop_agent_run");
+    } catch (e) {
+      setError(String(e));
+    }
+  };
+
+  // T14: load the picked model's characteristics for the Model tab.
+  const loadModelInfo = async () => {
+    setModelInfoError(null);
+    try {
+      const info = await invoke<ModelCharacteristics>("get_model_characteristics");
+      setModelInfo(info);
+    } catch (e) {
+      setModelInfo(null);
+      setModelInfoError(String(e));
     }
   };
 
@@ -619,6 +742,7 @@ export function AiChatPanel({ visible, onClose }: Props) {
           <button className={tab === "chat" ? "active" : ""} onClick={() => setTab("chat")}>Chat</button>
           <button className={tab === "settings" ? "active" : ""} onClick={() => { setTab("settings"); loadModels(); }}>Settings</button>
           <button className={tab === "log" ? "active" : ""} onClick={() => { setTab("log"); loadLog(); }}>Log</button>
+          <button className={tab === "model" ? "active" : ""} onClick={() => { setTab("model"); loadModelInfo(); }}>Model</button>
           <button className={tab === "stats" ? "active" : ""} onClick={() => { setTab("stats"); loadStats(); }}>Stats</button>
           <button className="ai-new-session-btn" onClick={() => setShowSwitcher(true)} title="Switch chat session">+</button>
         </div>
@@ -660,7 +784,10 @@ export function AiChatPanel({ visible, onClose }: Props) {
 
               const renderChip = (msg: ChatMessage, idx: number) => {
                 const chip = msg.chip!;
-                const key = chip.callId ?? `chip-${idx}`;
+                // callIds are deliberately reused across tool-loop iterations, so the
+                // message index must be part of the key or expanding one chip expands
+                // every chip sharing that callId (and duplicate React keys collide).
+                const key = `${idx}-${chip.callId ?? "none"}`;
                 const expanded = !!expandedChips[key];
                 return (
                   <div key={key} className={`ai-tool-chip ai-tool-chip-${chip.status}`}>
@@ -725,6 +852,15 @@ export function AiChatPanel({ visible, onClose }: Props) {
                   );
                 }
                 const m = entry.msg;
+                if (m.role === "thinking") {
+                  // bugs.md Bug 1.8: model reasoning, collapsed by default.
+                  return (
+                    <details key={entry.idx} className="ai-msg ai-msg-thinking">
+                      <summary>💭 thinking ({m.content.length} chars)</summary>
+                      <pre className="ai-msg-content">{m.content}</pre>
+                    </details>
+                  );
+                }
                 return (
                   <div key={entry.idx} className={`ai-msg ai-msg-${m.role}`}>
                     {m.role === "system" ? (
@@ -751,15 +887,45 @@ export function AiChatPanel({ visible, onClose }: Props) {
                 Mock mode — respond in the prompt window overlay.
               </div>
             )}
-            {toolLoopPaused && (
-              <div className="ai-msg ai-msg-pause">
-                <span>{toolLoopPaused}</span>
-                <div className="ai-pause-buttons">
-                  <button onClick={() => resumeToolLoop(true)}>Continue</button>
-                  <button onClick={() => resumeToolLoop(false)}>Stop</button>
+            {toolLoopPaused && (() => {
+              const isShell = toolLoopPaused.kind === "shell-approval";
+              const netAsk = toolLoopPaused.networkPolicy === "ask";
+              return (
+                <div className="ai-msg ai-msg-pause">
+                  {isShell && toolLoopPaused.command ? (
+                    <>
+                      <span>Agent wants to run a shell command:</span>
+                      <pre className="ai-shell-approval-cmd">$ {toolLoopPaused.command}</pre>
+                    </>
+                  ) : (
+                    <span>{toolLoopPaused.message}</span>
+                  )}
+                  {isShell && (toolLoopPaused.annotations?.length ?? 0) > 0 && (
+                    <ul className="ai-shell-approval-warnings">
+                      {toolLoopPaused.annotations!.map((a, i) => (
+                        <li key={i}>⚠ {a}</li>
+                      ))}
+                    </ul>
+                  )}
+                  {isShell && netAsk && (
+                    <label className="ai-shell-approval-net">
+                      <input
+                        type="checkbox"
+                        checked={approveWithNetwork}
+                        onChange={(e) => setApproveWithNetwork(e.target.checked)}
+                      />
+                      Allow network access for this command
+                    </label>
+                  )}
+                  <div className="ai-pause-buttons">
+                    <button onClick={() => resumeToolLoop(true, isShell && netAsk ? approveWithNetwork : false)}>
+                      {isShell ? "Allow" : "Continue"}
+                    </button>
+                    <button onClick={() => resumeToolLoop(false)}>{isShell ? "Deny" : "Stop"}</button>
+                  </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
             {error && <div className="ai-msg ai-msg-error">{error}</div>}
             <div ref={messagesEndRef} />
           </div>
@@ -851,6 +1017,14 @@ export function AiChatPanel({ visible, onClose }: Props) {
                       onClick={summarizeContext}
                     >
                       {summarizing ? "◌" : "Σ"}
+                    </button>
+                    <button
+                      className="ai-ctx-reset-btn ai-stop-btn"
+                      title="Hard stop the running agent (aborts the in-flight request and kills running shell commands)"
+                      disabled={!loading}
+                      onClick={stopAgentRun}
+                    >
+                      ⏹
                     </button>
                   </span>
                 );
@@ -995,6 +1169,22 @@ export function AiChatPanel({ visible, onClose }: Props) {
           />
           <p className="ai-hint">Chat will refuse new requests when session cost exceeds this cap.</p>
 
+          <h3>Context Trimming</h3>
+          <label>Expected remaining rounds (N)</label>
+          <input
+            type="number"
+            step="1"
+            min="1"
+            value={settings.n_expected_rounds ?? 8}
+            onChange={(e) =>
+              saveSettings({ ...settings, n_expected_rounds: Math.max(1, parseInt(e.target.value) || 8) })
+            }
+          />
+          <p className="ai-hint">
+            The N in the trim/summarize break-even math (N · savings ≥ penalty). Higher keeps
+            more context and trims/summarizes later; lower is more aggressive. Default 8.
+          </p>
+
           <h3>Edit Review</h3>
           <label className="ai-checkbox-row">
             <input
@@ -1022,6 +1212,41 @@ export function AiChatPanel({ visible, onClose }: Props) {
             When on, every agent run_shell command waits for your approval before executing.
           </p>
 
+          <h3>Shell Sandbox</h3>
+          <label className="ai-select-row">
+            Containment
+            <select
+              value={settings.shell_sandbox ?? "detect"}
+              onChange={(e) => saveSettings({ ...settings, shell_sandbox: e.target.value })}
+            >
+              <option value="off">Off — run directly (no containment, no diff)</option>
+              <option value="detect">Detect — overlay if available, else strace fallback</option>
+              <option value="strict">Strict — require the overlay sandbox or refuse</option>
+            </select>
+          </label>
+          <p className="ai-hint">
+            Runs agent shell commands in a bubblewrap overlay: the project is read-only, so
+            shell writes are captured as ordinary undoable edits instead of silently mutating
+            files. <code>.git/</code> and <code>.tracelean/</code> stay protected; build dirs
+            (<code>target/</code>, <code>node_modules/</code>, …) stay writable. Needs Linux with
+            bwrap <code>--overlay-src</code> and kernel ≥ 5.11.
+          </p>
+          <label className="ai-select-row">
+            Network
+            <select
+              value={settings.shell_network ?? "ask"}
+              onChange={(e) => saveSettings({ ...settings, shell_network: e.target.value })}
+            >
+              <option value="deny">Deny — no network in the sandbox</option>
+              <option value="ask">Ask — grant per command (needs command review on)</option>
+              <option value="allow">Allow — sandbox always has network</option>
+            </select>
+          </label>
+          <p className="ai-hint">
+            "Ask" adds a network checkbox to the shell-approval prompt, so package installs and
+            fetches only reach the network when you say so.
+          </p>
+
           <h3>Log View</h3>
           <label className="ai-checkbox-row">
             <input
@@ -1036,6 +1261,72 @@ export function AiChatPanel({ visible, onClose }: Props) {
             request collapse into one "[N previous messages equal]" line — what remains is
             what this request actually paid for.
           </p>
+        </div>
+      )}
+
+      {tab === "model" && (
+        <div className="ai-model-info">
+          <h3>Picked model</h3>
+          {modelInfoError && <div className="ai-msg ai-msg-error">{modelInfoError}</div>}
+          {!modelInfoError && !modelInfo && <p>Loading…</p>}
+          {modelInfo && (() => {
+            const m = modelInfo.model;
+            const c = modelInfo.cache_config;
+            const guessed = modelInfo.cache_source.includes("conservative default");
+            const provider = typeof m.provider === "string" ? m.provider : JSON.stringify(m.provider);
+            return (
+              <>
+                <table className="ai-stats-table">
+                  <tbody>
+                    <tr><td>Model</td><td><strong>{m.display_name}</strong></td></tr>
+                    <tr><td>Model ID</td><td><code>{m.model_id}</code></td></tr>
+                    <tr><td>Provider</td><td>{provider}</td></tr>
+                    <tr><td>Context window</td><td>{m.context_window_known ? "" : "~"}{(m.context_window ?? 0).toLocaleString()} tokens{m.context_window_known ? "" : " (fallback guess)"}</td></tr>
+                    <tr><td>Max output tokens</td><td>{m.max_tokens.toLocaleString()}</td></tr>
+                    <tr><td>Tool calling</td><td>{m.supports_tools ? "yes" : "no"}{m.tool_call_format ? ` (${m.tool_call_format})` : ""}{m.tool_passing ? `, passed via ${m.tool_passing}` : ""}</td></tr>
+                    {m.coding_rank != null && <tr><td>Coding rank</td><td>#{m.coding_rank}</td></tr>}
+                  </tbody>
+                </table>
+                <h3>Pricing</h3>
+                <table className="ai-stats-table">
+                  <tbody>
+                    <tr><td>Input</td><td>${m.input_cost_per_m.toFixed(3)} / M tokens</td></tr>
+                    <tr><td>Output</td><td>${m.output_cost_per_m.toFixed(3)} / M tokens</td></tr>
+                    <tr><td>Cached input</td><td>{m.cached_input_cost_per_m > 0 ? `$${m.cached_input_cost_per_m.toFixed(3)} / M tokens` : "not in catalog"}</td></tr>
+                  </tbody>
+                </table>
+                <h3>Cache model (used by the compaction cost math)</h3>
+                {guessed && (
+                  <div className="ai-model-cache-warning">
+                    ⚠ Unknown provider — the values below are a conservative guess, not this
+                    provider's real cache pricing. Add it to provider_cache.json.
+                  </div>
+                )}
+                <table className="ai-stats-table">
+                  <tbody>
+                    <tr><td>Source</td><td>{modelInfo.cache_source}</td></tr>
+                    <tr><td>Mode</td><td>{c.cache_mode}</td></tr>
+                    <tr><td>Cached reads</td><td>billed at {(c.cache_read_discount * 100).toFixed(0)}% of input price ({(100 - c.cache_read_discount * 100).toFixed(0)}% discount)</td></tr>
+                    <tr><td>Write surcharge</td><td>{c.cache_write_multiplier > 0 ? `${((c.cache_write_multiplier - 1) * 100).toFixed(0)}%` : "none"}</td></tr>
+                    <tr><td>TTL</td><td>{c.ttl_seconds != null ? `${c.ttl_seconds}s` : "unknown"}</td></tr>
+                    <tr><td>Explicit markers</td><td>{c.requires_markers ? "required" : "not needed"}</td></tr>
+                    {c.notes && <tr><td>Notes</td><td>{c.notes}</td></tr>}
+                  </tbody>
+                </table>
+                {modelInfo.summary_model && (
+                  <>
+                    <h3>Summary model</h3>
+                    <table className="ai-stats-table">
+                      <tbody>
+                        <tr><td>Model</td><td>{modelInfo.summary_model.display_name}</td></tr>
+                        <tr><td>Input / output</td><td>${modelInfo.summary_model.input_cost_per_m.toFixed(3)} / ${modelInfo.summary_model.output_cost_per_m.toFixed(3)} per M</td></tr>
+                      </tbody>
+                    </table>
+                  </>
+                )}
+              </>
+            );
+          })()}
         </div>
       )}
 
@@ -1077,11 +1368,41 @@ export function AiChatPanel({ visible, onClose }: Props) {
                 )}
               </p>
               {inspectEntry.compaction ? (
-                <span className="ai-log-compacted-badge">
-                  {inspectEntry.compaction.kind === "summarized"
-                    ? `📝 summarized from ~${compactNum(inspectEntry.compaction.tokens_before)} to ~${compactNum(inspectEntry.compaction.tokens_after)} tokens`
-                    : `✂️ trimmed ${inspectEntry.compaction.messages_removed} messages: ~${compactNum(inspectEntry.compaction.tokens_before)} → ~${compactNum(inspectEntry.compaction.tokens_after)} tokens`}
-                </span>
+                <>
+                  <span className="ai-log-compacted-badge">
+                    {inspectEntry.compaction.kind === "summarized"
+                      ? `📝 summarized from ~${compactNum(inspectEntry.compaction.tokens_before)} to ~${compactNum(inspectEntry.compaction.tokens_after)} tokens`
+                      : `✂️ trimmed ${inspectEntry.compaction.messages_removed} messages: saved ~${compactNum(Math.max(0, inspectEntry.compaction.tokens_before - inspectEntry.compaction.tokens_after))} tokens`}
+                  </span>
+                  {(inspectEntry.compaction.details?.length ?? 0) > 0 && (
+                    /* Feature 1.1: what the compactor decided, per message */
+                    <details className="ai-log-compaction-details">
+                      <summary>
+                        compaction decisions ({inspectEntry.compaction.details!.length} messages)
+                      </summary>
+                      {inspectEntry.compaction.details!.map((det, i) => {
+                        const icon =
+                          det.action === "trimmed" ? "✂️"
+                          : det.action === "summarized" ? "📝"
+                          : det.action === "trim_candidate" ? "◔"
+                          : "🔒";
+                        const label =
+                          det.action === "trimmed" ? "trimmed"
+                          : det.action === "summarized" ? "folded into summary"
+                          : det.action === "trim_candidate" ? "candidate (kept — cost math)"
+                          : "kept (user message)";
+                        return (
+                          <div key={i} className={`ai-compact-det ai-compact-${det.action}`}>
+                            <span className="ai-compact-icon" title={label}>{icon}</span>
+                            <span className="ai-compact-role">{det.role}</span>
+                            <span className="ai-compact-tokens">~{compactNum(det.tokens)} tok</span>
+                            <span className="ai-compact-preview">{det.preview}</span>
+                          </div>
+                        );
+                      })}
+                    </details>
+                  )}
+                </>
               ) : inspectEntry.was_compacted ? (
                 <span className="ai-log-compacted-badge">⚡ compacted</span>
               ) : null}
@@ -1191,6 +1512,12 @@ export function AiChatPanel({ visible, onClose }: Props) {
               })()}
 
               <h5>Response</h5>
+              {inspectEntry.response_thinking && (
+                <details className="ai-log-thinking">
+                  <summary>💭 thinking ({inspectEntry.response_thinking.length} chars)</summary>
+                  <pre>{inspectEntry.response_thinking}</pre>
+                </details>
+              )}
               {inspectEntry.response_tool_calls?.length > 0 ? (
                 <div className="ai-log-response-tools">
                   {inspectEntry.response_content && <pre>{inspectEntry.response_content}</pre>}
@@ -1230,7 +1557,7 @@ export function AiChatPanel({ visible, onClose }: Props) {
                       title={
                         entry.compaction.kind === "summarized"
                           ? `summarized from ~${compactNum(entry.compaction.tokens_before)} to ~${compactNum(entry.compaction.tokens_after)} tokens`
-                          : `trimmed ${entry.compaction.messages_removed} messages (~${compactNum(entry.compaction.tokens_before)} → ~${compactNum(entry.compaction.tokens_after)} tokens)`
+                          : `trimmed ${entry.compaction.messages_removed} messages (saved ~${compactNum(Math.max(0, entry.compaction.tokens_before - entry.compaction.tokens_after))} tokens)`
                       }
                     >
                       {entry.compaction.kind === "summarized" ? "📝" : "✂️"}

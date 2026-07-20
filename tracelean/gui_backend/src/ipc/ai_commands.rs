@@ -28,6 +28,7 @@ fn ai_service(
     session_store: &State<'_, crate::ChatSessionStoreWrapper>,
     diffs: &State<'_, crate::PendingDiffsWrapper>,
 ) -> AiService {
+    use tauri::Manager;
     AiService {
         state: state.0.clone(),
         symbols: symbols_state.0.clone(),
@@ -39,6 +40,9 @@ fn ai_service(
         mcp_client: mcp_client.0.clone(),
         event_sink: Arc::new(crate::TauriEventSink { app_handle: app.clone() }),
         pending_diffs: diffs.0.clone(),
+        // T12: shared hard-stop token, resolved from managed state so every
+        // service instance controls (and is controlled by) the same token.
+        cancel: app.state::<crate::AgentCancelWrapper>().0.clone(),
     }
 }
 
@@ -48,6 +52,29 @@ fn ai_service(
 pub fn get_ai_settings(settings: State<'_, AiSettingsWrapper>) -> Result<AiSettings, String> {
     let s = settings.0.lock().map_err(|e| e.to_string())?;
     Ok(s.clone())
+}
+
+/// T14: characteristics of the currently selected model — pricing, context
+/// window, tool-call dialect, and the cache config the cost model will use
+/// (with its source) — so cache-config mispricing is visible in the UI
+/// instead of only in bad compaction decisions.
+#[tauri::command]
+pub fn get_model_characteristics(
+    settings: State<'_, AiSettingsWrapper>,
+) -> Result<serde_json::Value, String> {
+    let s = settings.0.lock().map_err(|e| e.to_string())?;
+    let model = s
+        .selected_model
+        .clone()
+        .ok_or("No model selected")?;
+    let (cache_cfg, cache_source) =
+        tracelean_core::ai::provider_cache::resolve_cache_config(&model);
+    Ok(serde_json::json!({
+        "model": model,
+        "cache_config": cache_cfg,
+        "cache_source": cache_source,
+        "summary_model": s.summary_model,
+    }))
 }
 
 /// Check which API keys are available via environment variables.
@@ -329,7 +356,7 @@ pub async fn list_chat_sessions(
 /// PauseHandler implementation for Tauri — emits event and waits for user response.
 pub struct TauriPauseHandler {
     pub app_handle: AppHandle,
-    pub resume_state: Arc<tokio::sync::Mutex<Option<tokio::sync::oneshot::Sender<bool>>>>,
+    pub resume_state: Arc<tokio::sync::Mutex<Option<tokio::sync::oneshot::Sender<(bool, bool)>>>>,
 }
 
 #[async_trait::async_trait]
@@ -340,47 +367,91 @@ impl tracelean_core::agent::PauseHandler for TauriPauseHandler {
             "message": format!("{} tool calls executed. Continue?", tool_calls_so_far)
         }));
 
-        let (tx, rx) = tokio::sync::oneshot::channel::<bool>();
+        let (tx, rx) = tokio::sync::oneshot::channel::<(bool, bool)>();
         {
             let mut guard = self.resume_state.lock().await;
             *guard = Some(tx);
         }
 
         match rx.await {
-            Ok(cont) => cont,
+            Ok((cont, _)) => cont,
             _ => false,
         }
     }
 
-    /// bugs.md Feature 4: reuses the tool-loop pause UI (Continue/Stop) and
-    /// resume channel for per-command approval.
-    async fn approve_command(&self, command: &str) -> bool {
+    /// bugs.md Feature 4: reuses the tool-loop pause UI and resume channel for
+    /// per-command approval. The payload carries static-screening annotations
+    /// (sandboxing_better.md T5) and whether a network checkbox is relevant
+    /// (T4); the answer carries the per-command network grant.
+    async fn approve_command(
+        &self,
+        command: &str,
+    ) -> tracelean_core::agent::CommandApproval {
+        use tauri::Manager;
+        let annotations = tracelean_core::ai::shell_sandbox::screen_command(command);
+        let settings_network = {
+            // Best-effort read of the network policy for the prompt UI.
+            self.app_handle
+                .try_state::<AiSettingsWrapper>()
+                .and_then(|s| s.0.lock().ok().map(|s| s.shell_network.clone()))
+                .unwrap_or_else(|| "ask".to_string())
+        };
         let _ = self.app_handle.emit("tool-loop-pause", serde_json::json!({
             "loops_completed": 0,
+            "kind": "shell-approval",
+            "command": command,
+            "annotations": annotations,
+            "network_policy": settings_network,
             "message": format!("Agent wants to run shell command:\n$ {}\nAllow?", command)
         }));
 
-        let (tx, rx) = tokio::sync::oneshot::channel::<bool>();
+        let (tx, rx) = tokio::sync::oneshot::channel::<(bool, bool)>();
         {
             let mut guard = self.resume_state.lock().await;
             *guard = Some(tx);
         }
 
-        matches!(rx.await, Ok(true))
+        match rx.await {
+            Ok((approved, allow_network)) => {
+                tracelean_core::agent::CommandApproval { approved, allow_network }
+            }
+            _ => tracelean_core::agent::CommandApproval { approved: false, allow_network: false },
+        }
     }
 }
 
 // --- Tool Loop Resume ---
 
-/// Called by frontend when user clicks "Continue" or "Stop" on tool loop pause prompt.
+/// Called by frontend when user clicks "Continue"/"Allow" or "Stop"/"Deny" on
+/// a pause or shell-approval prompt. `allow_network` is the approval prompt's
+/// network checkbox (ignored for plain pause prompts).
 #[tauri::command]
 pub async fn resume_tool_loop(
     resume_state: State<'_, ToolLoopResumeWrapper>,
     should_continue: bool,
+    allow_network: Option<bool>,
 ) -> Result<(), String> {
     let mut guard = resume_state.0.lock().await;
     if let Some(tx) = guard.take() {
-        let _ = tx.send(should_continue);
+        let _ = tx.send((should_continue, allow_network.unwrap_or(false)));
+    }
+    Ok(())
+}
+
+/// T12: hard stop for the running agent turn (the ⏹ button). Unlike the
+/// cooperative pause above, this cancels the shared token — checked every
+/// loop iteration, raced against the in-flight LLM request, and polled by
+/// run_shell's child-process loop — and also answers any pending
+/// pause/approval prompt with "stop" so a blocked loop unblocks immediately.
+#[tauri::command]
+pub async fn stop_agent_run(
+    cancel: State<'_, crate::AgentCancelWrapper>,
+    resume_state: State<'_, ToolLoopResumeWrapper>,
+) -> Result<(), String> {
+    cancel.0.cancel();
+    let mut guard = resume_state.0.lock().await;
+    if let Some(tx) = guard.take() {
+        let _ = tx.send((false, false));
     }
     Ok(())
 }

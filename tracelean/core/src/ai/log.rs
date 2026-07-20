@@ -15,6 +15,10 @@ pub struct InteractionEntry {
     pub model_display_name: String,
     pub request_messages: Vec<super::provider::ChatMessage>,
     pub response_content: Option<String>,
+    /// Reasoning/thinking text from the model, when the provider exposes it
+    /// (bugs.md Bug 1.8).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub response_thinking: Option<String>,
     /// Tool calls returned by the model (if any).
     #[serde(default)]
     pub response_tool_calls: Vec<super::provider::ToolCallResponse>,
@@ -53,6 +57,39 @@ pub struct CompactionInfo {
     pub messages_removed: usize,
     pub tokens_before: usize,
     pub tokens_after: usize,
+    /// Per-message record of what the compactor decided (bugs.md Feature 1.1:
+    /// the Log tab shows candidates vs actually removed, color-coded).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub details: Vec<CompactionMessageDetail>,
+}
+
+/// One message the compactor looked at, and what happened to it.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct CompactionMessageDetail {
+    /// "user" | "assistant" | "tool" | "system"
+    pub role: String,
+    /// First ~160 chars of the message content.
+    pub preview: String,
+    pub tokens: usize,
+    /// "trimmed" — removed from context;
+    /// "trim_candidate" — eligible but kept (cost math said keep);
+    /// "summarized" — folded into a [Context Summary];
+    /// "kept_user" — inside the trim window but preserved (user question).
+    pub action: String,
+}
+
+/// Static + dynamic tools of a request, flattened for logging. Dynamic tool
+/// names get a `+` prefix so the Log tab shows how each was passed.
+fn tools_of(request: &AiRequest) -> (u32, Vec<String>, Vec<ToolSchema>) {
+    let mut names: Vec<String> = request.tools.as_ref()
+        .map(|t| t.iter().map(|s| s.function.name.clone()).collect())
+        .unwrap_or_default();
+    let mut schemas: Vec<ToolSchema> = request.tools.clone().unwrap_or_default();
+    if let Some(dyn_tools) = &request.dynamic_tools {
+        names.extend(dyn_tools.iter().map(|s| format!("+{}", s.function.name)));
+        schemas.extend(dyn_tools.iter().cloned());
+    }
+    (schemas.len() as u32, names, schemas)
 }
 
 /// Persistent interaction log.
@@ -85,11 +122,7 @@ impl InteractionLog {
             request.model.cached_input_cost_per_m,
         );
 
-        let tools_provided = request.tools.as_ref().map(|t| t.len() as u32).unwrap_or(0);
-        let tool_names: Vec<String> = request.tools.as_ref()
-            .map(|t| t.iter().map(|s| s.function.name.clone()).collect())
-            .unwrap_or_default();
-        let tool_schemas: Vec<ToolSchema> = request.tools.clone().unwrap_or_default();
+        let (tools_provided, tool_names, tool_schemas) = tools_of(request);
 
         // If model returned tool_calls with no text content, store None (not empty string)
         let response_content = if response.content.is_empty() && !response.tool_calls.is_empty() {
@@ -106,6 +139,7 @@ impl InteractionLog {
             model_display_name: request.model.display_name.clone(),
             request_messages: request.messages.clone(),
             response_content,
+            response_thinking: response.thinking.clone(),
             response_tool_calls: response.tool_calls.clone(),
             error: None,
             usage: response.usage.clone(),
@@ -132,11 +166,7 @@ impl InteractionLog {
         error: &AiError,
         duration_ms: u64,
     ) {
-        let tools_provided = request.tools.as_ref().map(|t| t.len() as u32).unwrap_or(0);
-        let tool_names: Vec<String> = request.tools.as_ref()
-            .map(|t| t.iter().map(|s| s.function.name.clone()).collect())
-            .unwrap_or_default();
-        let tool_schemas: Vec<ToolSchema> = request.tools.clone().unwrap_or_default();
+        let (tools_provided, tool_names, tool_schemas) = tools_of(request);
 
         let entry = InteractionEntry {
             id: uuid::Uuid::new_v4().to_string(),
@@ -146,6 +176,7 @@ impl InteractionLog {
             model_display_name: request.model.display_name.clone(),
             request_messages: request.messages.clone(),
             response_content: None,
+            response_thinking: None,
             response_tool_calls: Vec::new(),
             error: Some(error.message.clone()),
             usage: TokenUsage::default(),

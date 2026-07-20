@@ -122,15 +122,93 @@ impl ProviderCacheRegistry {
     }
 }
 
-/// The provider_cache.json key whose cache dialect a model speaks, if that
-/// provider needs explicit markers (P9b). None = automatic/no markers.
+/// The provider_cache.json key describing a model's cache behavior, if known.
+/// Consumers that only care about explicit markers (P9b) filter on
+/// `requires_markers`; the cost model uses the entry's read discount so
+/// trimming a warm prefix is never priced as free. None = unknown provider.
 pub fn provider_cache_key(model: &super::provider::ModelConfig) -> Option<&'static str> {
-    let id = model.model_id.to_lowercase();
+    provider_cache_key_for_id(&model.model_id)
+}
+
+/// Same mapping as [`provider_cache_key`], usable before a `ModelConfig` exists
+/// (e.g. while building catalog entries from a provider's model list).
+pub fn provider_cache_key_for_id(model_id: &str) -> Option<&'static str> {
+    let id = model_id.to_lowercase();
     if id.contains("claude") || id.contains("anthropic") {
         Some("anthropic_5min")
+    } else if id.contains("minimax") {
+        // Passive automatic cache; cached reads billed at 20% of input price
+        // (80% discount) — see provider_cache.json.
+        Some("minimax_passive")
+    } else if id.contains("deepseek") {
+        Some("deepseek")
+    } else if id.contains("qwen") {
+        Some("qwen")
+    } else if id.contains("gpt") || id.contains("openai") {
+        Some("openai")
     } else {
         None
     }
+}
+
+/// Default cached-input price per M tokens for a model whose provider doesn't
+/// report one: input price × the provider's known cache read discount
+/// (provider_cache.json), falling back to 10% for unknown providers. Keeps the
+/// displayed cached price consistent with the discount the cost model uses
+/// (bugs.md: MiniMax showed $0.030/M — 10% — while the cache model bills 20%).
+pub fn default_cached_price_per_m(model_id: &str, input_cost_per_m: f64) -> f64 {
+    let discount = provider_cache_key_for_id(model_id)
+        .and_then(|key| ProviderCacheRegistry::embedded().and_then(|r| r.get(key).cloned()))
+        .map(|cfg| cfg.cache_read_discount)
+        .unwrap_or(0.1);
+    input_cost_per_m * discount
+}
+
+/// Resolve the cache config the cost model uses for `model`, plus a
+/// human-readable source tag (surfaced in the chat panel's Model tab so a
+/// missing/guessed cache config is visible instead of silently mispricing
+/// compaction decisions).
+pub fn resolve_cache_config(
+    model: &super::provider::ModelConfig,
+) -> (ProviderCacheConfig, String) {
+    let has_cache = model.supports_caching && model.cached_input_cost_per_m > 0.0;
+    if has_cache {
+        // Derive read discount from the model's own pricing ratio.
+        let discount = model.cached_input_cost_per_m / model.input_cost_per_m.max(0.001);
+        return (
+            ProviderCacheConfig {
+                cache_mode: CacheMode::Automatic,
+                cache_read_discount: discount.clamp(0.01, 0.99),
+                cache_write_multiplier: 0.0,
+                ttl_seconds: Some(300),
+                requires_markers: false,
+                notes: None,
+            },
+            "derived from model pricing".to_string(),
+        );
+    }
+    // No cached pricing on the model entry — use the provider's known config
+    // from provider_cache.json (e.g. MiniMax's passive 80%-discount cache).
+    if let Some(key) = provider_cache_key(model) {
+        if let Some(reg) = ProviderCacheRegistry::embedded() {
+            return (reg.get_or_default(key), format!("provider_cache.json: {}", key));
+        }
+    }
+    // Truly unknown provider: assume a conservative automatic cache instead of
+    // "prune is free". Treating an unknown cache as absent is what let the
+    // compactor destroy warm prefixes to save a few tokens
+    // (trimmed_summarization_problem.md, problem 1).
+    (
+        ProviderCacheConfig {
+            cache_mode: CacheMode::Automatic,
+            cache_read_discount: 0.5,
+            cache_write_multiplier: 0.0,
+            ttl_seconds: Some(300),
+            requires_markers: false,
+            notes: None,
+        },
+        "conservative default (unknown provider)".to_string(),
+    )
 }
 
 impl ProviderCacheConfig {

@@ -506,22 +506,40 @@ fn extract_tool_call(parsed: &serde_json::Value, idx: &mut u32) -> Result<ToolCa
 /// Strip `<think>…</think>` spans (D2.6): MiniMax emits them in its native
 /// dialect. An unterminated `<think>` drops the rest of the content (it is
 /// all thinking).
+#[cfg(test)]
 fn strip_think_tags(content: &str) -> String {
+    extract_think_tags(content).0
+}
+
+/// Like `strip_think_tags`, but also returns the captured thinking text
+/// (bugs.md Bug 1.8: surfaced in the chat UI instead of silently dropped).
+fn extract_think_tags(content: &str) -> (String, Option<String>) {
     let mut result = content.to_string();
+    let mut thinking = String::new();
     loop {
         let Some(open) = result.find("<think>") else { break };
+        let inner_start = open + "<think>".len();
         match result[open..].find("</think>") {
             Some(rel) => {
                 let end = open + rel + "</think>".len();
+                if !thinking.is_empty() {
+                    thinking.push('\n');
+                }
+                thinking.push_str(result[inner_start..open + rel].trim());
                 result.replace_range(open..end, "");
             }
             None => {
+                if !thinking.is_empty() {
+                    thinking.push('\n');
+                }
+                thinking.push_str(result[inner_start..].trim());
                 result.truncate(open);
                 break;
             }
         }
     }
-    result.trim().to_string()
+    let thinking = if thinking.trim().is_empty() { None } else { Some(thinking) };
+    (result.trim().to_string(), thinking)
 }
 
 /// Strip tool call blocks from content (both <tool_call> tags and [TOOL_CALL] sections).
@@ -664,7 +682,10 @@ impl AiProvider for BedrockProvider {
             eprintln!("--- [bedrock] END PAYLOAD ---\n");
         }
 
-        // Native tool passing (P9a): tools go in the request field
+        // Native tool passing (P9a): tools go in the request field.
+        // Dynamic tools (bugs.md Feature 3) merge into the param on the native
+        // path — Chat Completions has no defer_loading, so this is the only
+        // native option and carries the documented invalidation cost.
         let native = request.model.tool_passing == ToolPassing::NativeParam;
         let body = ChatRequest {
             model: request.model.model_id.clone(),
@@ -673,7 +694,11 @@ impl AiProvider for BedrockProvider {
             temperature: request.model.temperature,
             stop: request.stop.clone(),
             tools: if native {
-                request.tools.clone().filter(|t| !t.is_empty())
+                let mut all = request.tools.clone().unwrap_or_default();
+                if let Some(dyn_tools) = &request.dynamic_tools {
+                    all.extend(dyn_tools.iter().cloned());
+                }
+                if all.is_empty() { None } else { Some(all) }
             } else {
                 None
             },
@@ -749,9 +774,15 @@ impl AiProvider for BedrockProvider {
                         retryable: false,
                     })?;
 
-                    // Strip <think>…</think> before tool parsing and display (D2.6)
-                    let raw_content =
-                        strip_think_tags(&message.content.clone().unwrap_or_default());
+                    // Strip <think>…</think> before tool parsing and display
+                    // (D2.6), capturing the thinking text for the UI (Bug 1.8).
+                    let (raw_content, think_text) =
+                        extract_think_tags(&message.content.clone().unwrap_or_default());
+                    let thinking = message
+                        .reasoning
+                        .clone()
+                        .filter(|r| !r.trim().is_empty())
+                        .or(think_text);
                     let truncated = choice.finish_reason.as_deref() == Some("length");
 
                     // Native tool calls take precedence (D9a.2); text parsing
@@ -827,8 +858,9 @@ impl AiProvider for BedrockProvider {
                         .and_then(|d| d.cached_tokens)
                         .unwrap_or(0);
 
-                    // Count reasoning/thinking tokens if present
-                    let thinking_tokens = message.reasoning.as_ref()
+                    // Count reasoning/thinking tokens if present (covers both
+                    // the `reasoning` field and captured <think> spans)
+                    let thinking_tokens = thinking.as_ref()
                         .map(|r| (r.len() as u32) / 4) // rough estimate: ~4 chars per token
                         .unwrap_or(0);
 
@@ -845,6 +877,7 @@ impl AiProvider for BedrockProvider {
                         raw_response: Some(raw_text),
                         truncated,
                         tool_calls,
+                        thinking,
                     });
                 }
                 Err(e) => {
@@ -925,7 +958,9 @@ impl AiProvider for BedrockProvider {
                     temperature: 0.3,
                     input_cost_per_m: input_cost,
                     output_cost_per_m: output_cost,
-                    cached_input_cost_per_m: input_cost * 0.1,
+                    cached_input_cost_per_m: super::provider_cache::default_cached_price_per_m(
+                        &m.id, input_cost,
+                    ),
                     extra_params: None,
                     coding_index: None,
                     coding_rank: None,
@@ -1049,6 +1084,17 @@ impl BedrockProvider {
             if let Some(tt) = tools_text {
                 out.insert(0, ChatMsg::text("system", tt));
             }
+        }
+
+        // bugs.md Feature 3: dynamically discovered tools are injected as a
+        // trailing user message — the system prompt / static tools prefix stays
+        // byte-stable, so the provider prompt cache is preserved.
+        if let Some(dyn_tools) = request.dynamic_tools.as_ref().filter(|t| !t.is_empty()) {
+            let mut txt = String::from(
+                "[Additional tools loaded via discover_tools — callable exactly like the tools above]\n",
+            );
+            txt.push_str(&render_tools_as_text(dyn_tools, format));
+            out.push(ChatMsg::text("user", txt));
         }
 
         self.append_batching_reminder(request, &mut out);
@@ -1390,6 +1436,7 @@ mod tests {
         model.tool_passing = ToolPassing::SystemPromptEmbed;
 
         let request = AiRequest {
+            dynamic_tools: None,
             model,
             messages: vec![
                 ChatMessage {

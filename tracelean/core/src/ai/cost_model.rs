@@ -359,6 +359,30 @@ pub fn summarization_decision(
     should_summarize(entries, 0, ctx)
 }
 
+// ─── Dynamic tool injection cost (bugs.md Feature 3) ─────────────────────────
+
+/// Cache-invalidation penalty of ADDING a dynamic tool schema.
+///
+/// Body-injected schemas (embedded-text path: the schema rides in a trailing
+/// user message) are ordinary appended content — the cached prefix is
+/// untouched, so the penalty is 0 regardless of prefix size.
+///
+/// Native-path additions (schema merged into the `tools` request param) change
+/// the prefix itself, so the whole cached prefix re-processes at the usual
+/// `P_invalidated · (1 − d + w) · c` rate.
+pub fn dynamic_tool_add_penalty(
+    body_injected: bool,
+    cached_prefix_tokens: usize,
+    ctx: &PruneContext,
+) -> f64 {
+    if body_injected || ctx.cache_is_cold() {
+        return 0.0;
+    }
+    let d = ctx.provider.cache_read_discount;
+    let w = ctx.provider.cache_write_multiplier;
+    cached_prefix_tokens as f64 * (1.0 - d + w) * ctx.cost_per_token
+}
+
 // ─── Token Prediction & Anomaly Detection ─────────────────────────────────────
 
 /// Tracks predicted vs actual cached tokens for anomaly detection.
@@ -584,6 +608,28 @@ mod tests {
 
         // Entry after prefix (conversation body)
         assert_eq!(estimate_prefix_invalidation(&entry, 1000, 1500), 0);
+    }
+
+    #[test]
+    fn dynamic_tool_body_injection_is_free() {
+        // Feature 3: schemas appended in the message body never invalidate
+        // the cached prefix — penalty must be exactly 0 even with a huge
+        // warm prefix.
+        let mut ctx = PruneContext::default_for_provider(explicit_provider(), 0.00001);
+        ctx.time_since_last_request_secs = 10; // warm cache
+        assert_eq!(dynamic_tool_add_penalty(true, 100_000, &ctx), 0.0);
+    }
+
+    #[test]
+    fn dynamic_tool_native_add_pays_invalidation() {
+        let mut ctx = PruneContext::default_for_provider(explicit_provider(), 0.00001);
+        ctx.time_since_last_request_secs = 10; // warm cache
+        let p = dynamic_tool_add_penalty(false, 10_000, &ctx);
+        // 10_000 * (1 - 0.1 + 1.25) * 0.00001 = 0.215
+        assert!((p - 0.215).abs() < 1e-9, "penalty {}", p);
+        // …but a cold cache makes even the native add free.
+        ctx.time_since_last_request_secs = 400;
+        assert_eq!(dynamic_tool_add_penalty(false, 10_000, &ctx), 0.0);
     }
 
     #[test]

@@ -184,6 +184,13 @@ pub async fn ai_chat_stream(
 
     let spend_cap = settings.0.lock().map_err(|e| e.to_string())?.spend_cap_usd;
 
+    // T12: shared hard-stop token; a fresh run must not inherit a stale Stop.
+    let cancel = {
+        use tauri::Manager;
+        app.state::<crate::AgentCancelWrapper>().0.clone()
+    };
+    cancel.reset();
+
     let ctx = AgentContext {
         state: state.0.clone(),
         symbols: symbols_state.0.clone(),
@@ -194,7 +201,16 @@ pub async fn ai_chat_stream(
         extra_tools,
         permissions: {
             let mut p = tracelean_core::AgentPermissions::full_access("chat");
-            p.review_edits = settings.0.lock().map(|s| s.review_edits).unwrap_or(false);
+            if let Ok(s) = settings.0.lock() {
+                p.review_edits = s.review_edits;
+                // bugs.md Bug 0.8: the streaming path (the default chat path)
+                // never propagated review_commands, so "Review commands" was
+                // silently ignored and shell commands auto-executed.
+                p.review_commands = s.review_commands;
+                // sandboxing_better.md: same path must carry the sandbox config.
+                p.shell_sandbox = s.shell_sandbox.clone();
+                p.shell_network = s.shell_network.clone();
+            }
             p
         },
         project_root: project_root.clone(),
@@ -204,6 +220,7 @@ pub async fn ai_chat_stream(
             app_handle: app.clone(),
             resume_state: resume_state.0.clone(),
         })),
+        cancel,
         verbose: false,
         retention_engine: std::sync::Arc::new(std::sync::Mutex::new(tracelean_core::ai::RetentionEngine::with_defaults())),
         timing_tracker: std::sync::Arc::new(std::sync::Mutex::new(tracelean_core::ai::TurnTimingTracker::new())),

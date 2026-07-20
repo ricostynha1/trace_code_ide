@@ -39,6 +39,10 @@ pub struct ChatSession {
     /// RFC3339 timestamp of the last completed turn (P11).
     #[serde(default)]
     pub updated_at: String,
+    /// Names of dynamically discovered tools loaded in this session
+    /// (bugs.md Feature 3) — restored into the ToolRegistry each turn.
+    #[serde(default)]
+    pub dynamic_tools: Vec<String>,
 }
 
 /// Lightweight session listing entry for the switcher (P11).
@@ -79,6 +83,7 @@ impl ChatSession {
             compaction_count: 0,
             total_cost_usd: 0.0,
             updated_at: String::new(),
+            dynamic_tools: Vec::new(),
         }
     }
 
@@ -164,6 +169,7 @@ impl ChatSession {
         self.last_prompt_tokens = 0;
         self.last_completion_tokens = 0;
         self.compaction_count = 0;
+        self.dynamic_tools.clear();
     }
 
     /// Reset the model context only (P7, D7.4): clears model_view so the next

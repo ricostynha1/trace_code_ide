@@ -178,9 +178,17 @@ pub struct AiRequest {
     pub messages: Vec<ChatMessage>,
     /// Optional stop sequences
     pub stop: Option<Vec<String>>,
-    /// Tools available to the model (OpenAI function calling format)
+    /// Tools available to the model (OpenAI function calling format).
+    /// This is the STATIC set — it must stay byte-stable across a session so
+    /// the provider prompt cache prefix survives (bugs.md Feature 3).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub tools: Option<Vec<ToolSchema>>,
+    /// Dynamically discovered tools (bugs.md Feature 3). Providers inject these
+    /// WITHOUT touching the cached prefix where possible: the embedded-text
+    /// path appends them as a trailing user message; native paths merge them
+    /// into the tools param (accepting that path's invalidation cost).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub dynamic_tools: Option<Vec<ToolSchema>>,
     /// P9b: message indexes after which an explicit cache marker should be
     /// emitted (providers translate to their wire format; empty = none).
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -199,6 +207,10 @@ pub struct AiResponse {
     /// Tool calls requested by the model (empty if none)
     #[serde(default)]
     pub tool_calls: Vec<ToolCallResponse>,
+    /// Reasoning/thinking text the model produced before the answer, when the
+    /// provider exposes it (bugs.md Bug 1.8: shown in the chat UI).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub thinking: Option<String>,
 }
 
 /// Errors from provider calls.

@@ -192,6 +192,7 @@ impl AiProvider for MockProvider {
                 raw_response: None,
                 truncated: false,
                 tool_calls: Vec::new(),
+                thinking: None,
             });
         }
 
@@ -250,6 +251,7 @@ impl AiProvider for MockProvider {
         let output_tokens = content.len() as u32 / 4;
 
         Ok(AiResponse {
+            thinking: None,
             content,
             usage: TokenUsage {
                 input_tokens,

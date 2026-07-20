@@ -43,6 +43,21 @@ pub struct ToolJsonEntry {
     /// it produces a malformed call for this tool.
     #[serde(default)]
     pub example: Option<serde_json::Value>,
+    /// One-line signature help, e.g. "read_file(path, offset?) — Read file lines."
+    /// The single source for help/error text (bugs.md Bug 2: no hardcoded copies).
+    #[serde(default)]
+    pub short_help: Option<String>,
+}
+
+/// Shared response-message conventions declared in tools.json, so every tool
+/// phrases cross-cutting messages (e.g. how to page through capped results)
+/// the same way instead of hand-rolling per tool.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct ToolConventions {
+    /// Template for "results were capped" messages. Placeholders:
+    /// {shown}, {total}, {next_offset}.
+    #[serde(default)]
+    pub pagination_hint: Option<String>,
 }
 
 /// The full tools.json structure.
@@ -50,6 +65,8 @@ pub struct ToolJsonEntry {
 pub struct ToolsConfig {
     pub tools: Vec<ToolJsonEntry>,
     pub dynamic_tools: Vec<ToolJsonEntry>,
+    #[serde(default)]
+    pub conventions: ToolConventions,
 }
 
 /// A dynamically-loaded tool tracked by the registry.
@@ -76,6 +93,8 @@ pub struct ToolRegistry {
     pub dynamic_tools: Vec<DynamicEntry>,
     /// Configuration.
     pub config: DynamicToolConfig,
+    /// Shared response-message conventions from tools.json.
+    pub conventions: ToolConventions,
     /// Current turn counter.
     pub current_turn: usize,
 }
@@ -109,6 +128,7 @@ impl ToolRegistry {
             all_entries,
             dynamic_tools: Vec::new(),
             config: DynamicToolConfig::default(),
+            conventions: config.conventions,
             current_turn: 0,
         })
     }
@@ -132,6 +152,7 @@ impl ToolRegistry {
             all_entries,
             dynamic_tools: Vec::new(),
             config: DynamicToolConfig::default(),
+            conventions: config.conventions,
             current_turn: 0,
         })
     }
@@ -139,6 +160,20 @@ impl ToolRegistry {
     /// Load with default path (relative to project data dir).
     pub fn load_default(data_dir: &Path) -> Result<Self, String> {
         Self::load_from_file(&data_dir.join("tools.json"))
+    }
+
+    /// Format the shared "results were capped" message from the tools.json
+    /// convention template (with a hardcoded fallback). `total` is a string so
+    /// callers can pass e.g. "2000+" when the scan itself was capped.
+    pub fn pagination_hint(shown: usize, total: &str, next_offset: usize) -> String {
+        const DEFAULT: &str =
+            "{shown} of {total} matches shown, call again with offset={next_offset} to see the rest";
+        let tpl = Self::embedded()
+            .and_then(|r| r.conventions.pagination_hint.clone())
+            .unwrap_or_else(|| DEFAULT.to_string());
+        tpl.replace("{shown}", &shown.to_string())
+            .replace("{total}", total)
+            .replace("{next_offset}", &next_offset.to_string())
     }
 
     /// Get all tool schemas for the current request (static + active dynamic).
@@ -230,8 +265,9 @@ impl ToolRegistry {
     pub fn help_tool(&self, tool_name: &str) -> Option<String> {
         // Check all_entries (static + dynamic available)
         if let Some(entry) = self.all_entries.iter().find(|e| e.name == tool_name) {
-            return Some(format!("# {}\n\n{}\n\n## Schema\n```json\n{}\n```",
-                entry.name, entry.embedded_txt,
+            let sig = entry.short_help.as_deref().unwrap_or(&entry.description);
+            return Some(format!("# {}\n\n{}\n\n{}\n\n## Schema\n```json\n{}\n```",
+                entry.name, sig, entry.embedded_txt,
                 serde_json::to_string_pretty(&entry.input_schema).unwrap_or_default()
             ));
         }
@@ -240,6 +276,81 @@ impl ToolRegistry {
             return Some(entry.embedded_txt.clone());
         }
         None
+    }
+
+    /// One-line signature help from tools.json (falls back to the description).
+    pub fn short_help_for(&self, tool_name: &str) -> Option<&str> {
+        self.all_entries
+            .iter()
+            .find(|e| e.name == tool_name)
+            .map(|e| e.short_help.as_deref().unwrap_or(&e.description))
+    }
+
+    /// Names of the static (core) tools, in tools.json order.
+    pub fn static_tool_names(&self) -> Vec<&str> {
+        self.static_tools.iter().map(|s| s.function.name.as_str()).collect()
+    }
+
+    /// Names of dynamic tools available for discovery (not necessarily loaded).
+    pub fn available_dynamic_names(&self) -> Vec<&str> {
+        self.all_entries
+            .iter()
+            .filter(|e| e.tier == "dynamic")
+            .map(|e| e.name.as_str())
+            .collect()
+    }
+
+    /// Retrieval for discover_tools: rank available (non-static) tools against a
+    /// free-text capability query. Scores keyword overlap over name, description
+    /// and embedded_txt, with a strong boost for name (sub)matches.
+    /// Returns matching tool names, best first, score-thresholded.
+    pub fn discover_tools(&self, query: &str, max_results: usize) -> Vec<String> {
+        let q_tokens = search_tokenize(query);
+        if q_tokens.is_empty() {
+            return Vec::new();
+        }
+        let q_lower = query.to_lowercase();
+
+        let mut scored: Vec<(f64, &str)> = self
+            .all_entries
+            .iter()
+            .filter(|e| e.tier == "dynamic")
+            .map(|e| {
+                let mut score = 0.0f64;
+                let name_lower = e.name.to_lowercase();
+                let name_spaced = name_lower.replace('_', " ");
+                // Exact/substring name match dominates
+                if q_lower.contains(&name_lower) || q_lower.contains(&name_spaced) {
+                    score += 3.0;
+                }
+                // Per-token hits, weighted by where they land
+                let desc = e.description.to_lowercase();
+                let long = e.embedded_txt.to_lowercase();
+                for t in &q_tokens {
+                    if name_spaced.split(' ').any(|p| p == t) {
+                        score += 1.5;
+                    }
+                    if desc.contains(t.as_str()) {
+                        score += 0.8;
+                    }
+                    if long.contains(t.as_str()) {
+                        score += 0.3;
+                    }
+                }
+                // Normalize slightly by query length so long queries don't
+                // trivially clear the threshold on embedded_txt noise.
+                score /= (q_tokens.len() as f64).sqrt();
+                (score, e.name.as_str())
+            })
+            .filter(|(score, _)| *score >= 0.5)
+            .collect();
+
+        scored.sort_by(|a, b| b.0.partial_cmp(&a.0).unwrap_or(std::cmp::Ordering::Equal));
+        scored
+            .into_iter()
+            .take(max_results.max(1))
+            .map(|(_, name)| name.to_string())
+            .collect()
     }
 
     /// Get combined schema chars of all dynamic tools.
@@ -285,6 +396,19 @@ impl ToolRegistry {
             self.dynamic_tools.remove(oldest_idx);
         }
     }
+}
+
+/// Lowercased alphanumeric tokens ≥3 chars, minus generic filler words.
+fn search_tokenize(text: &str) -> Vec<String> {
+    const STOP: &[&str] = &[
+        "the", "and", "for", "with", "from", "that", "this", "what", "which",
+        "need", "want", "how", "can", "use", "tool", "tools", "please", "get",
+    ];
+    text.to_lowercase()
+        .split(|c: char| !c.is_alphanumeric())
+        .filter(|w| w.len() >= 3 && !STOP.contains(w))
+        .map(|w| w.to_string())
+        .collect()
 }
 
 /// Convert a ToolJsonEntry to a ToolSchema (OpenAI-compatible function calling format).
@@ -406,6 +530,80 @@ mod tests {
         registry.purge_all_dynamic();
         assert_eq!(registry.dynamic_tools.len(), 0);
         assert_eq!(registry.request_schemas().len(), 2);
+    }
+
+    // ── discover_tools retrieval over the real embedded tools.json ──────────
+    // (bugs.md Bug 0.5: the retrieval "did not catch well the tool lists")
+
+    fn real_registry() -> &'static ToolRegistry {
+        ToolRegistry::embedded().expect("embedded tools.json parses")
+    }
+
+    #[test]
+    fn embedded_registry_has_web_tools_in_core() {
+        // bugs.md Bug 0: web_search/web_fetch must be static (core) tools.
+        let names = real_registry().static_tool_names();
+        assert!(names.contains(&"web_search"), "core tools: {:?}", names);
+        assert!(names.contains(&"web_fetch"), "core tools: {:?}", names);
+    }
+
+    #[test]
+    fn embedded_registry_all_entries_have_short_help() {
+        for entry in real_registry().all_tool_entries() {
+            assert!(
+                entry.short_help.as_deref().map(|s| !s.is_empty()).unwrap_or(false),
+                "tool `{}` missing short_help in tools.json",
+                entry.name
+            );
+        }
+    }
+
+    #[test]
+    fn search_finds_delete_file() {
+        for q in ["delete a file", "remove obsolete file", "delete_file"] {
+            let hits = real_registry().discover_tools(q, 5);
+            assert!(hits.contains(&"delete_file".to_string()), "query {:?} → {:?}", q, hits);
+        }
+    }
+
+    #[test]
+    fn search_finds_trace_tools() {
+        let hits = real_registry().discover_tools("what code implements requirement REQ-01", 5);
+        assert!(hits.contains(&"query_trace_graph".to_string()), "{:?}", hits);
+
+        let hits = real_registry().discover_tools("which requirements does this function satisfy", 5);
+        assert!(hits.contains(&"query_code_element".to_string()), "{:?}", hits);
+    }
+
+    #[test]
+    fn search_finds_symbols_and_requirements() {
+        let hits = real_registry().discover_tools("list functions and structs in a file", 5);
+        assert!(hits.contains(&"get_symbols".to_string()), "{:?}", hits);
+
+        let hits = real_registry().discover_tools("show all project requirements and status", 5);
+        assert!(hits.contains(&"list_requirements".to_string()), "{:?}", hits);
+    }
+
+    #[test]
+    fn search_returns_nothing_for_unrelated_query() {
+        let hits = real_registry().discover_tools("capital of portugal", 5);
+        assert!(hits.is_empty(), "unrelated query must not load tools: {:?}", hits);
+    }
+
+    #[test]
+    fn search_respects_max_results() {
+        let hits = real_registry().discover_tools("file requirements symbols trace", 2);
+        assert!(hits.len() <= 2);
+    }
+
+    #[test]
+    fn search_then_load_makes_tool_available() {
+        // End-to-end discover flow: search → load → present in request set.
+        let mut reg = ToolRegistry::load_from_str(include_str!("../../../data/tools.json")).unwrap();
+        let hits = reg.discover_tools("delete a file", 3);
+        let added = reg.load_dynamic_tools(&hits);
+        assert!(added.contains(&"delete_file".to_string()));
+        assert!(reg.dynamic_schemas().iter().any(|s| s.function.name == "delete_file"));
     }
 
     #[test]
