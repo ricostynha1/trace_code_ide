@@ -12,7 +12,7 @@ use std::sync::{Arc, Mutex};
 
 use crate::agent::{run_agent_turn, run_agent_turn_session, AgentContext, AgentTurnResult, PauseHandler};
 use crate::ai::mcp_client::McpClientManager;
-use crate::ai::provider::{AiProvider, AiResponse, ChatMessage, MessageRole, ModelConfig};
+use crate::ai::provider::{AiProvider, AiResponse, ChatMessage, MessageRole, ModelConfig, ProviderKind};
 use crate::ai::tracking::SessionStats;
 use crate::ai::InteractionLog;
 use crate::state::AppState;
@@ -228,6 +228,73 @@ impl AiService {
     }
 }
 
+/// Rebuild a model's full `ModelConfig` from just its identity
+/// (provider + model_id) — no network call. Bedrock and Mock have local
+/// catalog/pricing data (`bedrock_pricing`, `provider_cache`, `model_catalog`)
+/// and resolve to accurate, up-to-date figures; OpenRouter has no local
+/// pricing source (its own `/models` response IS the source of truth), so it
+/// resolves to an identity-only placeholder until `list_models_for` next runs.
+///
+/// This is what makes it safe to persist only `{provider, model_id}` in
+/// settings (see `persisted_model_ref` below) instead of a frozen pricing
+/// snapshot that goes stale the moment the catalog data improves.
+pub fn resolve_model_config(provider: &ProviderKind, model_id: &str) -> ModelConfig {
+    match provider {
+        ProviderKind::Mock => crate::ai::mock::model_for_id(model_id),
+        ProviderKind::Bedrock => crate::ai::bedrock::model_for_id(model_id),
+        ProviderKind::OpenRouter => crate::ai::openrouter::model_for_id(model_id),
+    }
+}
+
+/// bugs.md: the settings *file* must only ever contain a model's identity
+/// (provider + model_id), never its pricing/catalog snapshot — otherwise a
+/// selection made before a pricing fix keeps showing the stale number
+/// forever (MiniMax's cached price stayed wrong in settings after the
+/// discount table was corrected, because the whole `ModelConfig` — including
+/// the old price — round-tripped to/from disk verbatim). This is deliberately
+/// a JSON-`Value` transform applied only at the file I/O boundary in
+/// `write_settings`/`load_settings`/`load_settings_from` below, not a change
+/// to `AiSettings`'s own (de)serialization — IPC callers (the frontend) still
+/// get/send the full `ModelConfig` they need to display pricing.
+mod persisted_model_fields {
+    const KEYS: [&str; 2] = ["selected_model", "summary_model"];
+
+    /// Before writing to disk: collapse each model field down to identity.
+    pub fn strip_pricing(settings_json: &mut serde_json::Value) {
+        let Some(obj) = settings_json.as_object_mut() else { return };
+        for key in KEYS {
+            let Some(model) = obj.get(key).and_then(|v| v.as_object()) else { continue };
+            let mut identity = serde_json::Map::new();
+            if let Some(p) = model.get("provider") {
+                identity.insert("provider".to_string(), p.clone());
+            }
+            if let Some(id) = model.get("model_id") {
+                identity.insert("model_id".to_string(), id.clone());
+            }
+            obj.insert(key.to_string(), serde_json::Value::Object(identity));
+        }
+    }
+
+    /// After reading from disk: rebuild each model field's full pricing from
+    /// its identity, via `resolve_model_config`, before deserializing into
+    /// `AiSettings` (which expects the full `ModelConfig` shape).
+    pub fn resolve_pricing(settings_json: &mut serde_json::Value) {
+        let Some(obj) = settings_json.as_object_mut() else { return };
+        for key in KEYS {
+            let Some(model) = obj.get(key) else { continue };
+            let (provider, model_id) = match (model.get("provider"), model.get("model_id").and_then(|v| v.as_str())) {
+                (Some(p), Some(id)) => (p.clone(), id.to_string()),
+                _ => continue,
+            };
+            let Ok(provider) = serde_json::from_value::<super::ProviderKind>(provider) else { continue };
+            let resolved = super::resolve_model_config(&provider, &model_id);
+            if let Ok(value) = serde_json::to_value(resolved) {
+                obj.insert(key.to_string(), value);
+            }
+        }
+    }
+}
+
 /// List models for a settings snapshot (mock + OpenRouter + Bedrock, keys
 /// from settings or environment), catalog-enriched, sorted by coding rank.
 pub async fn list_models_for(settings: &AiSettings) -> Vec<ModelConfig> {
@@ -290,27 +357,37 @@ pub fn settings_path_in(project_root: &Path) -> PathBuf {
     project_root.join(".tracelean").join("ai_settings.json")
 }
 
+/// Parse a settings JSON string, resolving `selected_model`/`summary_model`
+/// pricing fresh from their persisted identity (bugs.md — see
+/// `persisted_model_fields`) before deserializing into `AiSettings`.
+fn parse_settings(content: &str) -> Option<AiSettings> {
+    let mut value: serde_json::Value = serde_json::from_str(content).ok()?;
+    persisted_model_fields::resolve_pricing(&mut value);
+    serde_json::from_value(value).ok()
+}
+
 /// Load persisted settings, falling back to defaults (home fallback — used
 /// before a project is open).
 pub fn load_settings() -> AiSettings {
     settings_path()
         .and_then(|p| std::fs::read_to_string(p).ok())
-        .and_then(|content| serde_json::from_str(&content).ok())
+        .and_then(|content| parse_settings(&content))
         .unwrap_or_default()
 }
 
 /// Load settings from a project's .tracelean dir, if present.
 pub fn load_settings_from(project_root: &Path) -> Option<AiSettings> {
-    std::fs::read_to_string(settings_path_in(project_root))
-        .ok()
-        .and_then(|content| serde_json::from_str(&content).ok())
+    let content = std::fs::read_to_string(settings_path_in(project_root)).ok()?;
+    parse_settings(&content)
 }
 
 fn write_settings(path: &Path, settings: &AiSettings) -> Result<(), String> {
     if let Some(dir) = path.parent() {
         std::fs::create_dir_all(dir).map_err(|e| e.to_string())?;
     }
-    let json = serde_json::to_string_pretty(settings).map_err(|e| e.to_string())?;
+    let mut value = serde_json::to_value(settings).map_err(|e| e.to_string())?;
+    persisted_model_fields::strip_pricing(&mut value);
+    let json = serde_json::to_string_pretty(&value).map_err(|e| e.to_string())?;
     std::fs::write(path, json).map_err(|e| e.to_string())
 }
 
@@ -367,4 +444,74 @@ pub fn load_sessions(project_root: &Path) -> Vec<ChatSession> {
         .filter_map(|e| std::fs::read_to_string(e.path()).ok())
         .filter_map(|content| serde_json::from_str::<ChatSession>(&content).ok())
         .collect()
+}
+
+#[cfg(test)]
+mod persisted_model_tests {
+    use super::*;
+
+    fn temp_project() -> PathBuf {
+        let dir = std::env::temp_dir().join(format!("tracelean-settings-test-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&dir).unwrap();
+        dir
+    }
+
+    #[test]
+    fn saved_settings_file_never_carries_pricing_fields() {
+        let project = temp_project();
+        let mut settings = AiSettings::default();
+        settings.selected_model = Some(crate::ai::bedrock::model_for_id("minimax.minimax-m2.5"));
+        // write_settings directly (not save_settings_to): the latter also
+        // writes the real ~/.tracelean/ai_settings.json home fallback, which
+        // a test must never touch.
+        write_settings(&settings_path_in(&project), &settings).unwrap();
+
+        let on_disk = std::fs::read_to_string(settings_path_in(&project)).unwrap();
+        assert!(!on_disk.contains("cached_input_cost_per_m"), "pricing must never hit disk: {on_disk}");
+        assert!(!on_disk.contains("input_cost_per_m"), "pricing must never hit disk: {on_disk}");
+        assert!(on_disk.contains("minimax.minimax-m2.5"), "identity must still be persisted: {on_disk}");
+    }
+
+    #[test]
+    fn loading_settings_resolves_pricing_fresh_even_if_disk_has_a_stale_value() {
+        // Regression: a hand-edited (or pre-fix) settings file with a stale
+        // cached_input_cost_per_m must not survive a load — the field is
+        // ignored entirely; only provider+model_id are read back and
+        // re-resolved from the current catalog/pricing tables.
+        let project = temp_project();
+        std::fs::create_dir_all(settings_path_in(&project).parent().unwrap()).unwrap();
+        std::fs::write(
+            settings_path_in(&project),
+            r#"{
+                "active_provider": "bedrock",
+                "openrouter_api_key": null,
+                "bedrock_api_key": null,
+                "bedrock_region": null,
+                "selected_model": {
+                    "provider": "bedrock",
+                    "model_id": "minimax.minimax-m2.5",
+                    "cached_input_cost_per_m": 0.001
+                }
+            }"#,
+        )
+        .unwrap();
+
+        let settings = load_settings_from(&project).expect("parses");
+        let model = settings.selected_model.expect("model resolved");
+        assert_eq!(model.cached_input_cost_per_m, 0.06, "must be freshly resolved, not the stale 0.001 on disk");
+        assert_eq!(model.input_cost_per_m, 0.30);
+    }
+
+    #[test]
+    fn round_trip_through_save_and_load_resolves_current_pricing() {
+        let project = temp_project();
+        let mut settings = AiSettings::default();
+        settings.selected_model = Some(crate::ai::bedrock::model_for_id("minimax.minimax-m2.5"));
+        write_settings(&settings_path_in(&project), &settings).unwrap();
+
+        let loaded = load_settings_from(&project).expect("parses");
+        let model = loaded.selected_model.expect("model resolved");
+        assert_eq!(model.model_id, "minimax.minimax-m2.5");
+        assert_eq!(model.cached_input_cost_per_m, 0.06);
+    }
 }

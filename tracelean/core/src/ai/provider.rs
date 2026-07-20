@@ -111,7 +111,7 @@ impl Default for ModelConfig {
 }
 
 /// A message in a conversation.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ChatMessage {
     pub role: MessageRole,
     pub content: String,
@@ -135,7 +135,7 @@ pub enum MessageRole {
 
 /// Tool schema in OpenAI-compatible function calling format.
 /// This is what models were trained on.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ToolSchema {
     /// "function" (only type supported)
     #[serde(rename = "type")]
@@ -144,7 +144,7 @@ pub struct ToolSchema {
 }
 
 /// Function definition inside a ToolSchema.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ToolFunction {
     pub name: String,
     pub description: String,
@@ -153,7 +153,7 @@ pub struct ToolFunction {
 }
 
 /// A tool call returned by the model in its response.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ToolCallResponse {
     /// Unique ID for this tool call (assigned by model)
     pub id: String,
@@ -164,7 +164,7 @@ pub struct ToolCallResponse {
 }
 
 /// Function call details in a tool call response.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ToolCallFunction {
     pub name: String,
     /// JSON-encoded arguments string (as OpenAI returns it)

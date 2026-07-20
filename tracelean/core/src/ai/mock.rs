@@ -272,21 +272,28 @@ impl AiProvider for MockProvider {
     }
 
     async fn list_models(&self) -> Result<Vec<ModelConfig>, AiError> {
-        Ok(vec![ModelConfig {
-            provider: ProviderKind::Mock,
-            model_id: "mock-debug".into(),
-            display_name: "Mock Agent (Debug)".into(),
-            max_tokens: 99999,
-            temperature: 0.0,
-            input_cost_per_m: 15.0,
-            output_cost_per_m: 75.0,
-            cached_input_cost_per_m: 1.875,
-            extra_params: None,
-                coding_index: None,
-                coding_rank: None,
-                supports_caching: false,
-                supports_tools: false,
-            ..Default::default()
-        }])
+        Ok(vec![model_for_id("mock-debug")])
+    }
+}
+
+/// The single static mock model config — no network, no id lookup needed
+/// (there's only ever one). Used both by `list_models` and to re-derive a
+/// persisted settings selection on load.
+pub fn model_for_id(_model_id: &str) -> ModelConfig {
+    ModelConfig {
+        provider: ProviderKind::Mock,
+        model_id: "mock-debug".into(),
+        display_name: "Mock Agent (Debug)".into(),
+        max_tokens: 99999,
+        temperature: 0.0,
+        input_cost_per_m: 15.0,
+        output_cost_per_m: 75.0,
+        cached_input_cost_per_m: 1.875,
+        extra_params: None,
+        coding_index: None,
+        coding_rank: None,
+        supports_caching: false,
+        supports_tools: false,
+        ..Default::default()
     }
 }

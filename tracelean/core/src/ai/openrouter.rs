@@ -411,6 +411,21 @@ impl AiProvider for OpenRouterProvider {
     }
 }
 
+/// Identity-only placeholder for a persisted OpenRouter model selection.
+/// Unlike Bedrock, OpenRouter has no local pricing table — its own `/models`
+/// response IS the source of truth, so pricing can't be re-derived without a
+/// network call. Returns zero pricing rather than trusting a stale saved
+/// number; the real figures come back the next time `list_models` runs
+/// (opening Settings), which the UI already does for the model picker.
+pub fn model_for_id(model_id: &str) -> ModelConfig {
+    ModelConfig {
+        provider: ProviderKind::OpenRouter,
+        model_id: model_id.to_string(),
+        display_name: model_id.to_string(),
+        ..Default::default()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

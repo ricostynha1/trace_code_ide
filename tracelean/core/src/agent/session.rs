@@ -43,6 +43,14 @@ pub struct ChatSession {
     /// (bugs.md Feature 3) — restored into the ToolRegistry each turn.
     #[serde(default)]
     pub dynamic_tools: Vec<String>,
+    /// bugs.md: exactly what was sent (messages + tool schemas) in the last
+    /// request of the previous turn — carried across turns (not reset
+    /// per-turn like a local variable would be) so automatic/passive-caching
+    /// providers (Bedrock/MiniMax, no explicit cache markers) still get a
+    /// cache-health prediction on ordinary single-request turns, not just
+    /// multi-iteration tool loops within one turn.
+    #[serde(default)]
+    pub last_sent: super::runtime::SentRequestSnapshot,
 }
 
 /// Lightweight session listing entry for the switcher (P11).
@@ -84,6 +92,7 @@ impl ChatSession {
             total_cost_usd: 0.0,
             updated_at: String::new(),
             dynamic_tools: Vec::new(),
+            last_sent: super::runtime::SentRequestSnapshot::default(),
         }
     }
 

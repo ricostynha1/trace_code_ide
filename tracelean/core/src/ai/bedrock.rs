@@ -954,33 +954,40 @@ impl AiProvider for BedrockProvider {
 
         let models = body.data.into_iter()
             .filter(|m| m.status.as_deref() != Some("unavailable"))
-            .map(|m| {
-                let (input_cost, output_cost) = bedrock_pricing(&m.id);
-                let mut model = ModelConfig {
-                    provider: ProviderKind::Bedrock,
-                    model_id: m.id.clone(),
-                    display_name: m.id.clone(),
-                    max_tokens: 4096,
-                    temperature: 0.3,
-                    input_cost_per_m: input_cost,
-                    output_cost_per_m: output_cost,
-                    cached_input_cost_per_m: super::provider_cache::default_cached_price_per_m(
-                        &m.id, input_cost,
-                    ),
-                    extra_params: None,
-                    coding_index: None,
-                    coding_rank: None,
-                    supports_caching: false,
-                    supports_tools: true,
-                    ..Default::default()
-                };
-                super::model_catalog::enrich(&mut model);
-                model
-            })
+            .map(|m| model_for_id(&m.id))
             .collect();
 
         Ok(models)
     }
+}
+
+/// Build a Bedrock model's `ModelConfig` from just its id — no network call.
+/// Pricing/catalog data (`bedrock_pricing`, `provider_cache`, `model_catalog`)
+/// is all compiled-in static data, so this is cheap to call anytime a
+/// Bedrock model's up-to-date info is needed (e.g. re-deriving a persisted
+/// settings selection on load, instead of trusting a stale saved snapshot —
+/// bugs.md: MiniMax's cached price stayed wrong in a saved selection after
+/// the pricing table was fixed).
+pub fn model_for_id(model_id: &str) -> ModelConfig {
+    let (input_cost, output_cost) = bedrock_pricing(model_id);
+    let mut model = ModelConfig {
+        provider: ProviderKind::Bedrock,
+        model_id: model_id.to_string(),
+        display_name: model_id.to_string(),
+        max_tokens: 4096,
+        temperature: 0.3,
+        input_cost_per_m: input_cost,
+        output_cost_per_m: output_cost,
+        cached_input_cost_per_m: super::provider_cache::default_cached_price_per_m(model_id, input_cost),
+        extra_params: None,
+        coding_index: None,
+        coding_rank: None,
+        supports_caching: false,
+        supports_tools: true,
+        ..Default::default()
+    };
+    super::model_catalog::enrich(&mut model);
+    model
 }
 
 // ---------------------------------------------------------------------------

@@ -780,6 +780,13 @@ html, body, #root {
   white-space: nowrap;
 }
 
+.ai-log-cache-health-badge {
+  color: #888;
+  font-size: 10px;
+  font-family: monospace;
+  white-space: nowrap;
+}
+
 .ai-log-cost {
   color: #4ec9b0;
   font-family: monospace;
@@ -2103,12 +2110,6 @@ html, body, #root {
 
 .ai-log-cache-legend .legend-cached { color: #d7dae0; }
 .ai-log-cache-legend .legend-uncached { color: #e06c75; }
-
-/* bugs.md Bug 3: predicted vs. actual cache hit rate */
-.ai-log-cache-health {
-  font-size: 11px;
-  color: #d19a66;
-}
 
 /* bugs.md Bug 3: copy raw request button, inline with the h5 it sits in */
 .ai-copy-raw-request-btn {

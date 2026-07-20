@@ -41,6 +41,27 @@ pub struct AgentTurnResult {
     /// Dynamic tools loaded at the end of the turn (bugs.md Feature 3) —
     /// persisted on the session so discovered tools survive across turns.
     pub dynamic_tools: Vec<String>,
+    /// bugs.md: exactly what was sent in the last request of this turn
+    /// (messages + tool schemas) — the session persists this so the *next*
+    /// turn's automatic-cache prediction has something to diff against (see
+    /// `ChatSession::last_sent`).
+    pub last_sent: SentRequestSnapshot,
+}
+
+/// bugs.md: snapshot of the last request actually sent to the provider —
+/// messages AND tool schemas. Automatic (non-explicit-marker) caching keys
+/// off the whole wire prefix, not just the conversation messages: tool
+/// schemas are sent as separate `AiRequest` fields but still occupy prompt
+/// tokens and are just as cache-eligible when unchanged turn to turn. Kept
+/// out of `AgentTurnResult`'s `Debug`-only default so it round-trips through
+/// `ChatSession`'s on-disk JSON too.
+#[derive(Debug, Clone, Default, Serialize, serde::Deserialize)]
+pub struct SentRequestSnapshot {
+    pub messages: Vec<ChatMessage>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tools: Option<Vec<crate::ai::provider::ToolSchema>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub dynamic_tools: Option<Vec<crate::ai::provider::ToolSchema>>,
 }
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -58,7 +79,7 @@ pub async fn run_agent_turn(
     ctx: &AgentContext,
     messages: Vec<ChatMessage>,
 ) -> Result<AgentTurnResult, AgentError> {
-    run_agent_turn_inner(ctx, messages, Vec::new()).await
+    run_agent_turn_inner(ctx, messages, Vec::new(), None).await
 }
 
 /// Run one agent turn with persistent session state.
@@ -72,13 +93,23 @@ pub async fn run_agent_turn_session(
 
     // Use model_view as the messages for LLM (already compacted from prior turns)
     let messages = session.model_view.clone();
-    let result = run_agent_turn_inner(ctx, messages, session.dynamic_tools.clone()).await?;
+    let prev_sent = if session.last_sent.messages.is_empty() {
+        None
+    } else {
+        Some(session.last_sent.clone())
+    };
+    let result = run_agent_turn_inner(ctx, messages, session.dynamic_tools.clone(), prev_sent).await?;
 
     // Persist evolved state: final_messages includes all compaction + tool calls + final response
     // This is the model_view for next call — preserves caching prefix stability.
     session.model_view = result.final_messages.clone();
     // Feature 3: discovered tools persist with the session.
     session.dynamic_tools = result.dynamic_tools.clone();
+    // bugs.md: carry the last-sent request across turns so the next turn's
+    // automatic-cache prediction (Bedrock/MiniMax etc.) has a prefix to diff
+    // against — this was previously a local variable reset every turn, which
+    // meant single-request turns (the common case) never got a prediction.
+    session.last_sent = result.last_sent.clone();
 
     // Track real context size for the utilization bar (P7)
     session.last_prompt_tokens = result.response.usage.input_tokens;
@@ -108,6 +139,7 @@ async fn run_agent_turn_inner(
     ctx: &AgentContext,
     input_messages: Vec<ChatMessage>,
     initial_dynamic_tools: Vec<String>,
+    prev_sent_init: Option<SentRequestSnapshot>,
 ) -> Result<AgentTurnResult, AgentError> {
     let (model, provider) = build_provider(ctx)?;
     // Load tool registry (static tools always sent)
@@ -165,6 +197,15 @@ async fn run_agent_turn_inner(
     // actually served from cache last response — the real signal the
     // cut-point cost model needs, fed in place of the constant 0.
     let mut last_cached_tokens: usize = 0;
+    // bugs.md Bug 3: what was actually sent (messages + tool schemas) in the
+    // last successful request, so automatic-caching providers (no explicit
+    // markers at all — Bedrock/MiniMax) still get a cache-health prediction,
+    // not just the explicit-marker path.
+    let mut prev_sent_messages: Option<Vec<ChatMessage>> = prev_sent_init.as_ref().map(|s| s.messages.clone());
+    let mut prev_sent_tools: Option<Vec<crate::ai::provider::ToolSchema>> =
+        prev_sent_init.as_ref().and_then(|s| s.tools.clone());
+    let mut prev_sent_dynamic_tools: Option<Vec<crate::ai::provider::ToolSchema>> =
+        prev_sent_init.as_ref().and_then(|s| s.dynamic_tools.clone());
 
     loop {
         // T12: hard stop — checked at the top of every iteration so a Stop
@@ -226,6 +267,14 @@ async fn run_agent_turn_inner(
             .max()
             .map(|&i| messages.iter().take(i + 1).map(estimate_msg_tokens).sum())
             .unwrap_or(0);
+        let dynamic_schemas: Vec<crate::ai::provider::ToolSchema> =
+            tool_registry.dynamic_schemas().into_iter().cloned().collect();
+        let dynamic_tools_this_turn = if dynamic_schemas.is_empty() {
+            None
+        } else {
+            Some(dynamic_schemas.clone())
+        };
+
         // D9b.3: markers sent last request → this one should read from cache.
         // bugs.md Bug 3: remember the prediction so the log entry for this
         // exact request can show predicted vs. actual cache health.
@@ -237,22 +286,48 @@ async fn run_agent_turn_inner(
                 total_est,
             );
             Some(cache_verifier.predicted_prefix_tokens)
+        } else if !cache_verifier.enabled {
+            // No explicit markers for this provider at all (e.g. Bedrock's
+            // MiniMax) — predict from the shared prefix with the last request
+            // instead of leaving cache health unmeasured for every automatic
+            // (passive) caching provider. `Some(0)` (prefix fully diverged,
+            // e.g. right after compaction) is a real prediction and must
+            // still show up as "0 predicted" — only `None` (no previous
+            // request to compare against yet, i.e. the very first turn) means
+            // no prediction was possible at all.
+            //
+            // bugs.md: the message list alone undercounts the real cache
+            // prefix — the system prompt is a message so that part was
+            // already covered, but the *tool schemas* (static + dynamic) are
+            // sent as separate `AiRequest` fields, not messages, and were
+            // never added to the prediction even though providers place them
+            // at the front of the wire prompt (so they're cached identically
+            // to a matching message prefix whenever the tool set itself is
+            // unchanged from the previous request).
+            prev_sent_messages.as_ref().map(|prev| {
+                let msg_tokens = common_prefix_tokens(prev, &messages);
+                let static_tokens = if prev_sent_tools.as_ref() == Some(&static_tools) {
+                    estimate_tools_tokens(&Some(static_tools.clone()))
+                } else {
+                    0
+                };
+                let dynamic_tokens = if prev_sent_dynamic_tools == dynamic_tools_this_turn {
+                    estimate_tools_tokens(&dynamic_tools_this_turn)
+                } else {
+                    0
+                };
+                msg_tokens + static_tokens + dynamic_tokens
+            })
         } else {
             None
         };
 
-        let dynamic_schemas: Vec<crate::ai::provider::ToolSchema> =
-            tool_registry.dynamic_schemas().into_iter().cloned().collect();
         let request = AiRequest {
             model: model.clone(),
             messages: messages.clone(),
             stop: None,
             tools: Some(static_tools.clone()),
-            dynamic_tools: if dynamic_schemas.is_empty() {
-                None
-            } else {
-                Some(dynamic_schemas)
-            },
+            dynamic_tools: dynamic_tools_this_turn.clone(),
             cache_breakpoints,
         };
 
@@ -370,6 +445,9 @@ async fn run_agent_turn_inner(
                 }
                 ctx.event_sink.emit("ai-stats-updated", "");
                 last_cached_tokens = response.usage.cached_tokens as usize;
+                prev_sent_messages = Some(request.messages.clone());
+                prev_sent_tools = request.tools.clone();
+                prev_sent_dynamic_tools = request.dynamic_tools.clone();
 
                 // P9b (D9b.3): verify, don't trust — paid writes must produce
                 // cached reads; two consecutive misses disable markers.
@@ -434,6 +512,11 @@ async fn run_agent_turn_inner(
                         final_messages: messages,
                         compactions: total_compactions,
                         dynamic_tools,
+                        last_sent: SentRequestSnapshot {
+                            messages: prev_sent_messages.clone().unwrap_or_default(),
+                            tools: prev_sent_tools.clone(),
+                            dynamic_tools: prev_sent_dynamic_tools.clone(),
+                        },
                     });
                 }
 
@@ -948,6 +1031,11 @@ async fn run_agent_turn_inner(
                         final_messages: messages,
                         compactions: total_compactions,
                         dynamic_tools,
+                        last_sent: SentRequestSnapshot {
+                            messages: prev_sent_messages.clone().unwrap_or_default(),
+                            tools: prev_sent_tools.clone(),
+                            dynamic_tools: prev_sent_dynamic_tools.clone(),
+                        },
                     });
                 }
 
@@ -984,6 +1072,41 @@ pub(crate) fn estimate_msg_tokens(m: &ChatMessage) -> usize {
             .iter()
             .map(|tc| tc.function.arguments.len() / 4 + 5)
             .sum::<usize>()
+}
+
+/// bugs.md: tool schemas (static + dynamic) are sent as separate `AiRequest`
+/// fields, not `ChatMessage`s, but still occupy real prompt tokens and — when
+/// unchanged from the previous request — are just as cacheable as a matching
+/// message prefix. Left out of `common_prefix_tokens`, the automatic-cache
+/// prediction undercounted every turn by the full size of the tool schemas.
+pub(crate) fn estimate_tools_tokens(tools: &Option<Vec<crate::ai::provider::ToolSchema>>) -> usize {
+    tools
+        .as_ref()
+        .map(|ts| {
+            ts.iter()
+                .map(|t| {
+                    (t.function.name.len()
+                        + t.function.description.len()
+                        + t.function.parameters.to_string().len())
+                        / 4
+                })
+                .sum()
+        })
+        .unwrap_or(0)
+}
+
+/// bugs.md Bug 3: predicted cached tokens for providers with AUTOMATIC
+/// (non-explicit-marker) caching — e.g. Bedrock/MiniMax, which have no
+/// `cache_breakpoints` mechanism at all. Automatic caching keys off exactly
+/// this: the provider hits cache for however much of the new request's
+/// message prefix is byte-identical to what it cached from the previous
+/// request; anything from the first divergence onward is a fresh write.
+pub(crate) fn common_prefix_tokens(prev: &[ChatMessage], current: &[ChatMessage]) -> usize {
+    prev.iter()
+        .zip(current.iter())
+        .take_while(|(a, b)| a == b)
+        .map(|(m, _)| estimate_msg_tokens(m))
+        .sum()
 }
 
 /// P9b (D9b.3) session cache-marker health: markers stay on only while paid
@@ -1751,6 +1874,48 @@ mod pairing_tests {
         sanitize_tool_pairing(&mut msgs);
         assert!(msgs[0].tool_calls.is_empty());
         assert_eq!(msgs[2].role, MessageRole::User);
+    }
+}
+
+#[cfg(test)]
+mod common_prefix_tests {
+    use super::*;
+
+    fn msg(role: MessageRole, content: &str) -> ChatMessage {
+        ChatMessage { role, content: content.to_string(), tool_call_id: None, tool_calls: Vec::new() }
+    }
+
+    #[test]
+    fn full_overlap_when_only_a_message_was_appended() {
+        let prev = vec![msg(MessageRole::System, "sys prompt"), msg(MessageRole::User, "hello there")];
+        let mut current = prev.clone();
+        current.push(msg(MessageRole::Assistant, "hi, how can I help"));
+        let expected: usize = prev.iter().map(estimate_msg_tokens).sum();
+        assert_eq!(common_prefix_tokens(&prev, &current), expected);
+    }
+
+    #[test]
+    fn zero_when_first_message_changed() {
+        // bugs.md: a real prediction of 0 (prefix fully invalidated, e.g.
+        // right after compaction) must be distinguishable from "no
+        // prediction was made" — this returns Some(0) upstream, not None.
+        let prev = vec![msg(MessageRole::System, "sys prompt v1")];
+        let current = vec![msg(MessageRole::System, "sys prompt v2")];
+        assert_eq!(common_prefix_tokens(&prev, &current), 0);
+    }
+
+    #[test]
+    fn partial_overlap_stops_at_first_divergence() {
+        let prev = vec![
+            msg(MessageRole::System, "sys"),
+            msg(MessageRole::User, "question one"),
+            msg(MessageRole::Assistant, "answer one"),
+        ];
+        let mut current = prev.clone();
+        current[2] = msg(MessageRole::Assistant, "a DIFFERENT answer one");
+        current.push(msg(MessageRole::User, "question two"));
+        let expected: usize = prev[..2].iter().map(estimate_msg_tokens).sum();
+        assert_eq!(common_prefix_tokens(&prev, &current), expected);
     }
 }
 

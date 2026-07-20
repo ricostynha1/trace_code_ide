@@ -138,6 +138,12 @@ pub struct AiSettings {
     pub bedrock_api_key: Option<String>,
     /// Bedrock region (defaults to "eu-west-1")
     pub bedrock_region: Option<String>,
+    /// bugs.md: the full `ModelConfig` here (pricing, catalog metadata) is
+    /// what runtime/IPC consumers use, but only its identity (provider +
+    /// model_id) is ever written to the settings *file* on disk — see
+    /// `ai::service::write_settings`/`load_settings`, which rebuild the rest
+    /// fresh from `tracelean/data` on every load instead of trusting a
+    /// pricing snapshot that can go stale.
     pub selected_model: Option<ai::ModelConfig>,
     /// Cheaper model used for log summarisation / context compression.
     #[serde(default)]

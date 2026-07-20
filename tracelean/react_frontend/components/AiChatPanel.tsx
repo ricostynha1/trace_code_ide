@@ -1409,6 +1409,41 @@ export function AiChatPanel({ visible, onClose }: Props) {
                   <tr><td>Thinking tokens</td><td>{log.reduce((s, e) => s + e.usage.thinking_tokens, 0).toLocaleString()}</td></tr>
                   <tr><td>Total cost</td><td><strong>${log.reduce((s, e) => s + e.cost.total_usd, 0).toFixed(6)}</strong></td></tr>
                   <tr><td>Cache savings</td><td>${log.reduce((s, e) => s + e.cost.cached_savings, 0).toFixed(6)}</td></tr>
+                  {(() => {
+                    // bugs.md Bug 3: predicted-vs-actual cache health, summed
+                    // over every entry that got a prediction (automatic-cache
+                    // providers included) — relative % and the absolute
+                    // expected-tokens figure it's relative to. A prediction of
+                    // 0 (e.g. the very first request, nothing to compare a
+                    // prefix against yet) is still a real prediction — show it
+                    // rather than hiding the row; only entries that never got
+                    // a prediction at all (no provider cache config) are
+                    // excluded from the sum. Always render the row — "unknown"
+                    // when nothing could be predicted makes it visible that
+                    // the feature ran (vs. silently missing).
+                    const predictedEntries = log.filter((e) => typeof e.predicted_cached_tokens === "number");
+                    if (predictedEntries.length === 0) {
+                      return (
+                        <tr>
+                          <td>Cache health</td>
+                          <td>unknown</td>
+                        </tr>
+                      );
+                    }
+                    const predicted = predictedEntries.reduce((s, e) => s + (e.predicted_cached_tokens ?? 0), 0);
+                    const actualForPredicted = predictedEntries.reduce((s, e) => s + e.usage.cached_tokens, 0);
+                    return (
+                      <tr>
+                        <td>Cache health</td>
+                        <td>
+                          {predicted > 0
+                            ? `${Math.round((actualForPredicted / predicted) * 100)}% obtained/expected `
+                            : ""}
+                          (expected {predicted.toLocaleString()} tokens, got {actualForPredicted.toLocaleString()})
+                        </td>
+                      </tr>
+                    );
+                  })()}
                 </tbody>
               </table>
             </div>
@@ -1470,16 +1505,6 @@ export function AiChatPanel({ visible, onClose }: Props) {
                   <span className="legend-uncached">■</span> not cached
                 </p>
               )}
-              {typeof inspectEntry.predicted_cached_tokens === "number" && inspectEntry.predicted_cached_tokens > 0 && (
-                <p
-                  className="ai-log-cache-health"
-                  title="bugs.md Bug 3: actual cached tokens this turn vs. what the cost model predicted — a low % without a recent context change suggests the provider (not us) is dropping cache"
-                >
-                  Cache health: {Math.round((inspectEntry.usage.cached_tokens / inspectEntry.predicted_cached_tokens) * 100)}%
-                  {" "}({inspectEntry.usage.cached_tokens.toLocaleString()} actual / {inspectEntry.predicted_cached_tokens.toLocaleString()} expected)
-                </p>
-              )}
-
               {(inspectEntry.tool_names?.length ?? 0) > 0 && (
                 <details className="ai-log-tools-provided">
                   <summary>
@@ -1620,6 +1645,23 @@ export function AiChatPanel({ visible, onClose }: Props) {
                   <tr><td>Thinking</td><td>{inspectEntry.usage.thinking_tokens}</td><td>${(inspectEntry.usage.thinking_tokens / 1_000_000 * (settings?.selected_model?.output_cost_per_m ?? 0)).toFixed(6)}</td></tr>
                   <tr><td><strong>Total</strong></td><td></td><td><strong>${inspectEntry.cost.total_usd.toFixed(6)}</strong></td></tr>
                   <tr><td>Cache savings</td><td></td><td>${inspectEntry.cost.cached_savings.toFixed(6)}</td></tr>
+                  <tr
+                    title="bugs.md Bug 3: actual cached tokens this turn vs. what the cost model predicted — a low % without a recent context change suggests the provider (not us) is dropping cache. 'unknown' means no prediction was possible this turn (e.g. the very first request of a session, nothing to diff a prefix against yet)."
+                  >
+                    <td>Cache health</td>
+                    <td>
+                      {typeof inspectEntry.predicted_cached_tokens === "number"
+                        ? `expected ${inspectEntry.predicted_cached_tokens.toLocaleString()}`
+                        : ""}
+                    </td>
+                    <td>
+                      {typeof inspectEntry.predicted_cached_tokens !== "number"
+                        ? "unknown"
+                        : inspectEntry.predicted_cached_tokens > 0
+                        ? `${Math.round((inspectEntry.usage.cached_tokens / inspectEntry.predicted_cached_tokens) * 100)}% obtained/expected (got ${inspectEntry.usage.cached_tokens.toLocaleString()})`
+                        : `0 predicted cached tokens (got ${inspectEntry.usage.cached_tokens.toLocaleString()})`}
+                    </td>
+                  </tr>
                 </tbody>
               </table>
             </div>
@@ -1644,6 +1686,20 @@ export function AiChatPanel({ visible, onClose }: Props) {
                     </span>
                   )}
                   <span className="ai-log-model">{entry.model_display_name}</span>
+                  <span
+                    className="ai-log-cache-health-badge"
+                    title={
+                      typeof entry.predicted_cached_tokens === "number"
+                        ? `Cache health: expected ${entry.predicted_cached_tokens.toLocaleString()} cached tokens, got ${entry.usage.cached_tokens.toLocaleString()}`
+                        : "Cache health: unknown — no prediction was possible for this request (e.g. first request of the session)"
+                    }
+                  >
+                    {typeof entry.predicted_cached_tokens === "number"
+                      ? entry.predicted_cached_tokens > 0
+                        ? `🗄 ${Math.round((entry.usage.cached_tokens / entry.predicted_cached_tokens) * 100)}%`
+                        : "🗄 0 predicted"
+                      : "🗄 unknown"}
+                  </span>
                   <span className="ai-log-cost">${entry.cost.total_usd.toFixed(6)}</span>
                   <span className="ai-log-time">{new Date(entry.timestamp).toLocaleTimeString()}</span>
                 </div>
