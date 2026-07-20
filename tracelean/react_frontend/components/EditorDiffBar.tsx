@@ -55,6 +55,11 @@ export function EditorDiffBar({ filePath, onGotoLine, onFileSync }: Props) {
   // ── AI pending diffs (P10 review mode) ──────────────────────────────────
   const [diffs, setDiffs] = useState<PendingDiff[]>(() => cachedPendingDiffs);
   const [hunkIdx, setHunkIdx] = useState(0);
+  // bugs.md Bug 1: apply/accept/reject failures (most commonly the witness
+  // check rejecting a stale diff whose buffer moved since it was staged)
+  // used to be silently swallowed (console.error only) — the user saw
+  // nothing and assumed the accept worked. Surface it instead.
+  const [actionError, setActionError] = useState<string | null>(null);
   // ── Pinned undo-node diff (Feature 2b / bug 0.75) ───────────────────────
   // Initialized from diffViewCache: the pin is delivered by a one-shot window
   // event, so after a remount (file navigation) only the cache still has it.
@@ -120,6 +125,11 @@ export function EditorDiffBar({ filePath, onGotoLine, onFileSync }: Props) {
     setHunkIdx((h) => Math.min(h, Math.max(0, (current?.hunks.length ?? 1) - 1)));
   }, [current?.id, current?.hunks.length]);
 
+  // A stale error shouldn't linger once the user has moved to a different diff.
+  useEffect(() => {
+    setActionError(null);
+  }, [current?.id]);
+
   const gotoHunk = useCallback(
     (idx: number) => {
       if (!current || current.hunks.length === 0) return;
@@ -144,11 +154,13 @@ export function EditorDiffBar({ filePath, onGotoLine, onFileSync }: Props) {
         diffId: current.id,
         hunkId: hunk.id,
       });
+      setActionError(null);
       await refresh();
       notifyChanged();
       if (hunkIdx < current.hunks.length - 1) gotoHunk(hunkIdx + 1);
     } catch (e) {
       console.error(e);
+      setActionError(String(e));
     }
   };
 
@@ -156,11 +168,13 @@ export function EditorDiffBar({ filePath, onGotoLine, onFileSync }: Props) {
     if (!current) return;
     try {
       await invoke<string>("apply_accepted_hunks", { diffId: current.id });
+      setActionError(null);
       await refresh();
       notifyChanged();
       await onFileSync();
     } catch (e) {
       console.error(e);
+      setActionError(String(e));
     }
   };
 
@@ -169,11 +183,13 @@ export function EditorDiffBar({ filePath, onGotoLine, onFileSync }: Props) {
     try {
       await invoke("accept_all_hunks", { diffId: current.id });
       await invoke<string>("apply_accepted_hunks", { diffId: current.id });
+      setActionError(null);
       await refresh();
       notifyChanged();
       await onFileSync();
     } catch (e) {
       console.error(e);
+      setActionError(String(e));
     }
   };
 
@@ -181,10 +197,12 @@ export function EditorDiffBar({ filePath, onGotoLine, onFileSync }: Props) {
     if (!current) return;
     try {
       await invoke("discard_pending_diff", { diffId: current.id });
+      setActionError(null);
       await refresh();
       notifyChanged();
     } catch (e) {
       console.error(e);
+      setActionError(String(e));
     }
   };
 
@@ -250,6 +268,13 @@ export function EditorDiffBar({ filePath, onGotoLine, onFileSync }: Props) {
     <>
       {current && (
         <div className="editor-diffbar editor-diffbar-ai">
+          {actionError && (
+            <div className="diffbar-error" title={actionError}>
+              ⚠ {actionError.includes("integrity") || actionError.includes("diverged")
+                ? "This diff no longer matches the file (it changed since this was staged) — discard it and let the agent re-propose the edit."
+                : `Action failed: ${actionError}`}
+            </div>
+          )}
           <span className="diffbar-label">AI edit</span>
           <span className="diffbar-info">
             hunk {Math.min(hunkIdx + 1, current.hunks.length)}/{current.hunks.length}

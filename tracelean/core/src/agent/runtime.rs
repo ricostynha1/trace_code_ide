@@ -160,7 +160,11 @@ async fn run_agent_turn_inner(
         .and_then(|key| ai::ProviderCacheRegistry::embedded().map(|r| r.get_or_default(key)))
         .filter(|c| c.requires_markers);
     let mut cache_verifier = CacheVerifier::new(explicit_cache_cfg.is_some());
-    let mut cache_predictions = ai::cost_model::CachePredictionTracker::new();
+    let mut cache_predictions = ai::cost_trimmed_summary_model::CachePredictionTracker::new();
+    // trimmed_summary_auto_decision.md item 2: how many prefix tokens were
+    // actually served from cache last response — the real signal the
+    // cut-point cost model needs, fed in place of the constant 0.
+    let mut last_cached_tokens: usize = 0;
 
     loop {
         // T12: hard stop — checked at the top of every iteration so a Stop
@@ -185,7 +189,7 @@ async fn run_agent_turn_inner(
         // sessions that first request carries the whole accumulated history
         // (bugs.md Bug 5: compaction almost never actuated).
         let compaction_info = {
-            let info = cost_aware_compact(ctx, &mut messages, &model, provider.as_ref()).await;
+            let info = cost_aware_compact(ctx, &mut messages, &model, provider.as_ref(), last_cached_tokens).await;
             if ctx.verbose {
                 if let Some(i) = &info {
                     eprintln!(
@@ -223,14 +227,19 @@ async fn run_agent_turn_inner(
             .map(|&i| messages.iter().take(i + 1).map(estimate_msg_tokens).sum())
             .unwrap_or(0);
         // D9b.3: markers sent last request → this one should read from cache.
-        if cache_verifier.predicted_prefix_tokens > 0 {
+        // bugs.md Bug 3: remember the prediction so the log entry for this
+        // exact request can show predicted vs. actual cache health.
+        let predicted_cache_this_turn = if cache_verifier.predicted_prefix_tokens > 0 {
             let total_est: usize = messages.iter().map(estimate_msg_tokens).sum();
             cache_predictions.predict(
                 loop_i as usize,
                 cache_verifier.predicted_prefix_tokens,
                 total_est,
             );
-        }
+            Some(cache_verifier.predicted_prefix_tokens)
+        } else {
+            None
+        };
 
         let dynamic_schemas: Vec<crate::ai::provider::ToolSchema> =
             tool_registry.dynamic_schemas().into_iter().cloned().collect();
@@ -351,12 +360,16 @@ async fn run_agent_turn_inner(
                     if let Some(info) = compaction_info.clone() {
                         log.attach_compaction_to_last(info);
                     }
+                    if let Some(predicted) = predicted_cache_this_turn {
+                        log.set_last_entry_predicted_cache(predicted);
+                    }
                 }
                 {
                     let mut s = ctx.stats.lock().map_err(|e| AgentError::Lock(e.to_string()))?;
                     s.record(&response.usage, &cost);
                 }
                 ctx.event_sink.emit("ai-stats-updated", "");
+                last_cached_tokens = response.usage.cached_tokens as usize;
 
                 // P9b (D9b.3): verify, don't trust — paid writes must produce
                 // cached reads; two consecutive misses disable markers.
@@ -726,6 +739,12 @@ async fn run_agent_turn_inner(
                         p.shell_network_once = shell_network_granted;
                         p
                     };
+                    // bugs.md Bug 0: if this tool call stages new pending
+                    // diffs (review mode covers both edit_file and
+                    // run_shell's sandbox-materialized mutations), record the
+                    // pre-call count so we can block below until the user
+                    // resolves them.
+                    let mut review_wait_target: Option<usize> = None;
                     let tool_result = {
                         let mut s = ctx.state.lock().map_err(|e| AgentError::Lock(e.to_string()))?;
                         let sym = ctx
@@ -783,6 +802,7 @@ async fn run_agent_turn_inner(
                                     })
                                     .to_string(),
                                 );
+                                review_wait_target = Some(before);
                             }
                             result
                         } else {
@@ -882,6 +902,18 @@ async fn run_agent_turn_inner(
                         tool_calls: Vec::new(),
                     });
 
+                    // bugs.md Bug 0: don't let the agent keep calling tools
+                    // (or start a new turn) against a project state the
+                    // staged hunks haven't actually reached yet — block
+                    // until the user accepts/rejects them, or aborts the run.
+                    if let Some(target) = review_wait_target {
+                        if let Some(ref handler) = ctx.pause_handler {
+                            if !handler.wait_for_review(target).await {
+                                return Err(AgentError::StoppedByUser(total_tool_calls));
+                            }
+                        }
+                    }
+
                     // Track consecutive failures
                     if tool_result.success {
                         consecutive_failures = 0;
@@ -907,6 +939,7 @@ async fn run_agent_turn_inner(
                             content: failure_msg,
                             usage: response.usage.clone(),
                             raw_response: response.raw_response.clone(),
+                            raw_request: response.raw_request.clone(),
                             truncated: response.truncated,
                             tool_calls: Vec::new(),
                         },
@@ -1138,7 +1171,16 @@ async fn cost_aware_compact(
     messages: &mut Vec<ChatMessage>,
     model: &ai::ModelConfig,
     provider: &(dyn AiProvider + Send + Sync),
+    cached_prefix_tokens_hint: usize,
 ) -> Option<ai::log::CompactionInfo> {
+    // bugs.md Bug 2: an explicit, user-facing settings toggle to fully
+    // disable trimming/summarization (for isolating caching problems with a
+    // stable context) — unlike a guessed code-level threshold, this is an
+    // inspectable on/off switch the user controls directly.
+    if ctx.settings.lock().map(|s| s.disable_context_trimming).unwrap_or(false) {
+        return None;
+    }
+
     let messages_before = messages.len();
     // Estimate tokens for the prune decision (trivial math, always run).
     let total_tokens_est: usize = messages.iter().map(|m| {
@@ -1147,7 +1189,16 @@ async fn cost_aware_compact(
         content_tokens + tc_tokens
     }).sum();
     let message_overhead = messages.len() * 4;
-    let _effective_estimate = total_tokens_est + message_overhead;
+
+    // The decision runs every turn (no "context is still small, skip this
+    // pass" gate here — that kind of shortcut has to be a rule in the rules
+    // table, inspectable and applied per-message, not a code-level trick
+    // that skips the whole cost model based on a guessed threshold). What
+    // actually protects small/recent conversations is the rules table's own
+    // recent-turns-protected window (`trimmed_rules_table` /
+    // `RetentionEngine::eligible_for_pruning`): nothing is even a candidate
+    // until it ages out of it, so a two-turn conversation naturally has an
+    // empty eligible set and this function is a no-op below.
 
     let cache_cfg = cache_config_from_model(model);
 
@@ -1172,9 +1223,20 @@ async fn cost_aware_compact(
         .map(|s| s.n_expected_rounds)
         .unwrap_or(8)
         .max(1);
+    // trimmed_summary_auto_decision.md item 2: feed the cut-point model the
+    // actual warm-prefix size (from the previous response's usage) instead of
+    // the constant 0 that made the invalidation penalty always vanish.
+    prune_ctx.cached_prefix_tokens = cached_prefix_tokens_hint;
+    prune_ctx.time_since_last_request_secs = ctx
+        .timing_tracker
+        .lock()
+        .map(|t| t.last_idle_secs())
+        .unwrap_or(0);
 
-    // Feed messages into retention engine and get decisions
-    let (to_prune, to_summarize, tokens_freed, mut details) = {
+    // Classify every message against the rules table (trimmed_rules_table:
+    // type-based Keep/Eligible + turn assignment), then let the cost model
+    // decide whether/where to cut among what the table allowed.
+    let (to_prune, to_summarize, tokens_freed, mut details, entry_to_msg_idx) = {
         let mut engine = match ctx.retention_engine.lock() {
             Ok(e) => e,
             Err(_) => return None, // can't lock → skip compaction
@@ -1185,58 +1247,17 @@ async fn cost_aware_compact(
         // so any incremental count-based mapping between engine entries and
         // messages desyncs after the first drain (bugs.md Bug 5: compaction
         // fired once and never again).
-        engine.user_view = crate::ai::retention::UserView::new();
+        let classified = ai::trimmed_rules_table::classify_messages(messages);
+        let entry_to_msg_idx = classified.entry_to_msg_idx;
+        engine.user_view.entries = classified.entries;
+        engine.current_turn = classified.current_turn;
 
-        // Infer turns positionally: each assistant message closes one loop
-        // iteration, so older messages land on earlier turns and only the
-        // last few iterations stay protected.
-        let mut turn: usize = 0;
-        for msg in messages.iter().skip(1) {
-            // skip system at [0]
-            let tokens = msg.content.len() / 4
-                + msg.tool_calls.iter().map(|tc| tc.function.arguments.len() / 4 + 5).sum::<usize>();
-            if tokens > 0 {
-                let kind = if msg.role == MessageRole::Tool {
-                    crate::ai::retention::EntryKind::ToolResult
-                } else if msg.role == MessageRole::User {
-                    crate::ai::retention::EntryKind::UserMsg
-                } else {
-                    crate::ai::retention::EntryKind::AssistantMsg
-                };
-                engine.add_entry(crate::ai::retention::RetentionEntry {
-                    id: 0, // auto-assigned
-                    // bugs.md Bug 1: user questions must never be pruned — the
-                    // aggressive trim was erasing mid-conversation questions.
-                    // (Summarization still covers them: the summary keeps the
-                    // information; pruning just deletes it.)
-                    action: if kind == crate::ai::retention::EntryKind::UserMsg {
-                        crate::ai::retention::RetentionAction::Keep
-                    } else {
-                        crate::ai::retention::RetentionAction::Eligible
-                    },
-                    kind,
-                    content: msg.content.clone(),
-                    resources: Vec::new(),
-                    created_turn: turn,
-                    last_used_turn: turn,
-                    approx_tokens: tokens,
-                    ttl: None,
-                    invalidation_events: Vec::new(),
-                    args_hash: None,
-                    ephemeral: false,
-                    offloaded: false,
-                    offload_path: None,
-                });
-            }
-            if msg.role == MessageRole::Assistant {
-                turn += 1;
-            }
-        }
-        engine.current_turn = turn;
-
-        // Get prune decisions
+        // Get prune decisions (D0 fix: a single cut-point scan, not a sum of
+        // independent per-message votes — see cost_trimmed_summary_model's
+        // batch_prune_decisions).
+        let all_entries: Vec<&crate::ai::retention::RetentionEntry> = engine.user_view.entries.iter().collect();
         let eligible = engine.eligible_for_pruning();
-        let (prune_ids, _logs) = batch_prune_decisions(&eligible, &prune_ctx, engine.current_turn);
+        let (prune_ids, _logs) = batch_prune_decisions(&all_entries, &eligible, &prune_ctx, engine.current_turn);
 
         // Feature 1.1: record which messages were CANDIDATES for trimming but
         // survived the cost math — the log shows them with a distinct marker.
@@ -1282,7 +1303,7 @@ async fn cost_aware_compact(
         // Apply prune
         engine.prune_entries(&prune_ids);
 
-        (prune_ids, summarize_content, freed, details)
+        (prune_ids, summarize_content, freed, details, entry_to_msg_idx)
     };
 
     // If there are entries to summarize, call the LLM
@@ -1311,78 +1332,46 @@ async fn cost_aware_compact(
     }
     // Summary skipped or failed → fall back to pruning so an oversized
     // context still shrinks instead of being carried to the next request.
+    //
+    // trimmed_summary_auto_decision.md item 3 (fixes D3): actuate exactly
+    // what the cut-point decision selected — map `to_prune` (retention-engine
+    // entry ids) through `entry_to_msg_idx` to the real `messages` indices
+    // and remove precisely those, instead of a positional keep_head/keep_tail
+    // heuristic that was decoupled from the cost model's own output. The
+    // selected set is not necessarily contiguous (kept user messages and
+    // recent-turn-protected entries can sit between pruned ones), which is
+    // exactly the shape the cut-point model can produce.
     if !summarized && !to_prune.is_empty() {
-        // Prune old tool-loop traffic from the middle of the conversation.
-        // Keep: system[0], the last N messages, and EVERY real user message —
-        // bugs.md Bug 1: the old positional drain erased mid-conversation user
-        // questions, leaving only the first one.
-        let keep_tail = 8.min(messages.len().saturating_sub(2)); // keep last 8 msgs
-        let keep_head = 2; // system + original user prompt
-        if messages.len() > keep_head + keep_tail {
-            let cut_start = keep_head;
-            let cut_end = messages.len() - keep_tail;
-            let mut kept_users: Vec<ChatMessage> = Vec::new();
-            let mut pruned_count = 0usize;
-            let mut pruned_tools: Vec<String> = Vec::new();
-            for m in messages.drain(cut_start..cut_end) {
-                // Real user input (not synthetic notes like "[Context …]" or
-                // "[earlier tool result]") survives the trim.
-                let is_real_user =
-                    m.role == MessageRole::User && !m.content.starts_with('[');
-                if is_real_user {
-                    kept_users.push(m);
-                } else {
-                    pruned_count += 1;
-                    pruned_tools
-                        .extend(m.tool_calls.iter().map(|tc| tc.function.name.clone()));
-                    details.push(ai::log::CompactionMessageDetail {
-                        role: format!("{:?}", m.role).to_lowercase(),
-                        preview: crate::preview_str(&m.content, 160),
-                        tokens: estimate_msg_tokens(&m),
-                        action: "trimmed".to_string(),
-                    });
-                }
-            }
-            for m in &kept_users {
+        let mut prune_indices: Vec<usize> = to_prune
+            .iter()
+            .filter_map(|id| entry_to_msg_idx.get(*id as usize).copied())
+            .collect();
+        prune_indices.sort_unstable();
+        prune_indices.dedup();
+
+        if !prune_indices.is_empty() {
+            for &i in &prune_indices {
+                let m = &messages[i];
                 details.push(ai::log::CompactionMessageDetail {
-                    role: "user".to_string(),
+                    role: format!("{:?}", m.role).to_lowercase(),
                     preview: crate::preview_str(&m.content, 160),
                     tokens: estimate_msg_tokens(m),
-                    action: "kept_user".to_string(),
+                    action: "trimmed".to_string(),
                 });
             }
-            let prune_note = format!(
-                "[Context compacted: {} messages pruned. Tools called: {}]",
-                pruned_count,
-                if pruned_tools.is_empty() { "none".to_string() } else { pruned_tools.join(", ") }
-            );
-            let mut insert_at = cut_start;
-            messages.insert(insert_at, ChatMessage {
-                role: MessageRole::User,
-                content: prune_note,
-                tool_call_id: None,
-                tool_calls: Vec::new(),
+            // No note is inserted: a pruned message simply disappears from
+            // context, same as if it had never been sent. A "[Context
+            // compacted...]" marker would itself be a message occupying
+            // context/cache space for something that carries no information
+            // the model needs.
+            let prune_set: std::collections::HashSet<usize> =
+                prune_indices.iter().copied().collect();
+            let mut i = 0;
+            messages.retain(|_| {
+                let keep = !prune_set.contains(&i);
+                i += 1;
+                keep
             });
-            insert_at += 1;
-            for m in kept_users {
-                messages.insert(insert_at, m);
-                insert_at += 1;
-            }
-        } else {
-            // Not enough to drain — just truncate tool results
-            let cut_point = messages.len().saturating_sub(keep_tail);
-            for msg in messages[1..cut_point].iter_mut() {
-                if msg.role == MessageRole::Tool && msg.content.len() > 200 {
-                    details.push(ai::log::CompactionMessageDetail {
-                        role: "tool".to_string(),
-                        preview: crate::preview_str(&msg.content, 160),
-                        tokens: msg.content.len() / 4,
-                        action: "trimmed".to_string(),
-                    });
-                    msg.content.truncate(200);
-                    msg.content.push_str("... [pruned]");
-                }
-            }
         }
     }
 
@@ -1391,14 +1380,24 @@ async fn cost_aware_compact(
     // Report what happened for the interaction log (bugs.md: log icons).
     let tokens_after: usize = messages.iter().map(estimate_msg_tokens).sum();
     let trimmed = messages.len() < messages_before;
-    if !summarized && !trimmed && tokens_freed == 0 {
+    // bugs.md Bug 5: a turn with nothing pruned/summarized can still have
+    // trim_candidate details (eligible entries the cost math chose to keep)
+    // — those are worth surfacing in the log too, not just discarded here.
+    if !summarized && !trimmed && tokens_freed == 0 && details.is_empty() {
         return None;
     }
     Some(ai::log::CompactionInfo {
-        kind: if summarized { "summarized" } else { "trimmed" }.to_string(),
+        kind: if summarized {
+            "summarized"
+        } else if trimmed {
+            "trimmed"
+        } else {
+            "candidates"
+        }
+        .to_string(),
         // Per-message count of what was actually dropped from context. The net
-        // length delta undercounts: pruning re-inserts kept user messages plus a
-        // prune note, so "trimmed 0 messages" showed up while tokens changed.
+        // length delta undercounts: pruning re-inserts kept user messages, so
+        // "trimmed 0 messages" showed up while tokens changed.
         messages_removed: details
             .iter()
             .filter(|d| d.action == "trimmed" || d.action == "summarized")
@@ -1915,7 +1914,7 @@ mod compaction_tests {
 
         let mut messages = history(12);
         let before = messages.len();
-        let info = cost_aware_compact(&ctx, &mut messages, &model, &provider).await;
+        let info = cost_aware_compact(&ctx, &mut messages, &model, &provider, 0).await;
 
         assert!(info.is_some(), "12 old tool-loop pairs must trigger compaction");
         assert!(messages.len() < before, "messages must shrink ({before} → {})", messages.len());
@@ -1942,14 +1941,14 @@ mod compaction_tests {
         let (provider, _rx) = MockProvider::new();
 
         let mut messages = history(12);
-        let first = cost_aware_compact(&ctx, &mut messages, &model, &provider).await;
+        let first = cost_aware_compact(&ctx, &mut messages, &model, &provider, 0).await;
         assert!(first.is_some());
 
         // Conversation grows again: another 12 tool-loop pairs on top.
         let regrown = history(12);
         messages.extend(regrown.into_iter().skip(2)); // skip its system+user
         let before = messages.len();
-        let second = cost_aware_compact(&ctx, &mut messages, &model, &provider).await;
+        let second = cost_aware_compact(&ctx, &mut messages, &model, &provider, 0).await;
 
         assert!(second.is_some(), "compaction must fire again after regrowth");
         assert!(messages.len() < before);
@@ -1964,9 +1963,64 @@ mod compaction_tests {
 
         let mut messages = history(2);
         let before = messages.len();
-        let info = cost_aware_compact(&ctx, &mut messages, &model, &provider).await;
+        let info = cost_aware_compact(&ctx, &mut messages, &model, &provider, 0).await;
 
         assert!(info.is_none(), "recent turns are protected");
         assert_eq!(messages.len(), before);
+    }
+
+    /// bugs.md Bug 5: a turn where entries are eligible (aged out of the
+    /// protected window) but the cost math keeps all of them — because a
+    /// huge assumed cached prefix makes every cut unprofitable, and a low
+    /// n_expected makes summarization unprofitable too — must still surface
+    /// those as "candidates" in the log instead of being discarded as `None`.
+    #[tokio::test]
+    async fn eligible_but_kept_reports_candidates_not_none() {
+        let ctx = AgentContext::from_env(std::env::temp_dir());
+        {
+            let mut settings = ctx.settings.lock().unwrap();
+            settings.n_expected_rounds = 1;
+        }
+        let model = ai::ModelConfig {
+            input_cost_per_m: 3.0,
+            output_cost_per_m: 15.0,
+            ..ai::ModelConfig::default()
+        };
+        let (provider, _rx) = MockProvider::new();
+
+        let mut messages = history(12);
+        let before = messages.len();
+        // A huge assumed cached prefix makes invalidating any of it (pruning
+        // or summarizing) far more expensive than the tiny per-turn savings.
+        let info = cost_aware_compact(&ctx, &mut messages, &model, &provider, 10_000_000).await;
+
+        let info = info.expect("eligible candidates must still produce a CompactionInfo");
+        assert_eq!(info.kind, "candidates");
+        assert!(
+            info.details.iter().any(|d| d.action == "trim_candidate"),
+            "kept-eligible entries must be recorded as trim_candidate"
+        );
+        assert_eq!(messages.len(), before, "nothing actually removed");
+    }
+
+    /// bugs.md Bug 2: the settings toggle must make compaction a strict no-op,
+    /// even on a history that would otherwise trigger it (long_history_compacts_on_first_call).
+    #[tokio::test]
+    async fn disable_context_trimming_setting_is_a_full_no_op() {
+        std::env::set_var("TRACELEAN_MOCK_AUTO", "mock summary");
+        let ctx = AgentContext::from_env(std::env::temp_dir());
+        {
+            let mut settings = ctx.settings.lock().unwrap();
+            settings.disable_context_trimming = true;
+        }
+        let model = ai::ModelConfig::default();
+        let (provider, _rx) = MockProvider::new();
+
+        let mut messages = history(12);
+        let before = messages.len();
+        let info = cost_aware_compact(&ctx, &mut messages, &model, &provider, 0).await;
+
+        assert!(info.is_none(), "trimming must be fully disabled by the setting");
+        assert_eq!(messages.len(), before, "messages must be untouched");
     }
 }

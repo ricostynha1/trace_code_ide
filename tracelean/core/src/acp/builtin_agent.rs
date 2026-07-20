@@ -65,6 +65,16 @@ struct ConversationEntry {
 /// Uses the cost model to decide what to prune based on cache economics.
 /// Falls back to simple truncation if cost model shows Keep for everything.
 fn compact_context(system_prompt: &str, entries: &mut Vec<ConversationEntry>) {
+    // bugs.md Bug 2: mirrors the AiSettings.disable_context_trimming toggle
+    // in the GUI path (agent/runtime.rs::cost_aware_compact). This ACP
+    // subprocess doesn't have the GUI's settings struct in scope, so the
+    // launcher threads the same on/off switch through an env var, matching
+    // how this function already reads its pricing from MODEL_INPUT_COST_PER_M
+    // and friends below.
+    if std::env::var("TRACELEAN_DISABLE_CONTEXT_TRIMMING").as_deref() == Ok("1") {
+        return;
+    }
+
     let total_chars: usize = system_prompt.len() + entries.iter().map(|e| e.content.len()).sum::<usize>();
     if total_chars < COMPACTION_THRESHOLD {
         return;
@@ -72,7 +82,7 @@ fn compact_context(system_prompt: &str, entries: &mut Vec<ConversationEntry>) {
 
     use crate::ai::{
         retention::{RetentionEntry, EntryKind, RetentionAction},
-        cost_model::{batch_prune_decisions, PruneContext},
+        cost_trimmed_summary_model::{batch_prune_decisions, PruneContext},
         provider_cache::{CacheMode, ProviderCacheConfig},
     };
 
@@ -144,7 +154,10 @@ fn compact_context(system_prompt: &str, entries: &mut Vec<ConversationEntry>) {
         .collect();
 
     let refs: Vec<&RetentionEntry> = older_entries.iter().collect();
-    let (prune_ids, _logs) = batch_prune_decisions(&refs, &prune_ctx, 1);
+    // Every entry here is already Eligible (there's no separate "kept" set
+    // in this older/simpler ACP path), so the full-stream list and the
+    // eligible list are the same slice.
+    let (prune_ids, _logs) = batch_prune_decisions(&refs, &refs, &prune_ctx, 1);
 
     // Apply prune decisions
     let mut pruned_any = false;

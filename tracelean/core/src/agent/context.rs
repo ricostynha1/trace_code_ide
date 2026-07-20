@@ -65,6 +65,19 @@ pub trait PauseHandler: Send + Sync {
         let _ = command;
         CommandApproval { approved: true, allow_network: false }
     }
+
+    /// bugs.md Bug 0: block the tool loop after a tool call stages new
+    /// pending diffs (an `edit_file`/`run_shell` in review mode), until the
+    /// user has accepted or rejected all of them. Without this, the agent
+    /// keeps calling tools — and can read/edit files — against a project
+    /// state the staged hunks haven't actually reached yet.
+    /// `target_count` is the pending-diff count to wait for (the count
+    /// before this tool call staged anything); returns false to abort the
+    /// run (user hit Stop while reviewing).
+    async fn wait_for_review(&self, target_count: usize) -> bool {
+        let _ = target_count;
+        true
+    }
 }
 
 impl AgentContext {

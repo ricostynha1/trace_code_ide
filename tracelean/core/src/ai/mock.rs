@@ -190,6 +190,7 @@ impl AiProvider for MockProvider {
                 content: auto,
                 usage: TokenUsage::default(),
                 raw_response: None,
+                raw_request: Some(build_raw_request_json(request)),
                 truncated: false,
                 tool_calls: Vec::new(),
                 thinking: None,
@@ -260,6 +261,7 @@ impl AiProvider for MockProvider {
                 cached_tokens: 0,
             },
             raw_response: Some(raw_response),
+            raw_request: Some(raw_request_json),
             truncated: false,
             tool_calls,
         })

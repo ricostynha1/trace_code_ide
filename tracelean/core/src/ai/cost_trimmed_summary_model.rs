@@ -1,9 +1,19 @@
-//! Cost Model — unified formalization for cache-aware prune/summarize decisions.
+//! Cost/Trim/Summary Model — decides *whether* it is worth cutting the
+//! context, and *where*, among the candidates `trimmed_rules_table` already
+//! marked prunable. Does not decide eligibility itself — that's the rules
+//! table's job (see `super::trimmed_rules_table`).
 //!
 //! Explicit-cache is the GENERAL case. Automatic-cache is special case with w=0.
 //! All decisions use the same break-even formula:
 //!   N · Δ · d ≥ P_invalidated · (1 - d + w)   [when cache warm]
 //!   Always profitable                           [when cache cold]
+//!
+//! Pruning is a **cut-point optimization**, not a sum of independent
+//! per-message votes (see `batch_prune_decisions`): the cache-miss penalty
+//! belongs to *where* you cut, shared by everything behind it, while savings
+//! are additive over whatever gets pruned. `should_prune` below tests the
+//! break-even formula for a single entry in isolation — useful on its own,
+//! but not how `batch_prune_decisions` decides the batch.
 //!
 //! TTL expiry tracking is critical: if user idle time > provider TTL,
 //! cache was already cold → penalty = 0 → always profitable to prune.
@@ -296,54 +306,110 @@ pub fn estimate_prefix_invalidation(
     }
 }
 
-/// Run cost-based decisions on a batch of eligible entries.
-/// Returns (entries_to_prune, decision_logs).
+/// A single eligible entry positioned at its cumulative token offset within
+/// the full ordered stream (system prompt excluded — it's never a candidate
+/// and never invalidated).
+struct CutCandidate<'a> {
+    entry: &'a RetentionEntry,
+    offset_tokens: usize,
+}
+
+/// Run the cost-based decision on a batch of eligible entries.
+///
+/// This is a **cut-point scan** (trimmed_summary_auto_decision.md D0), not a
+/// sum of independent per-entry votes: `savings(x)` is additive over every
+/// eligible entry at or after cut `x`, while `penalty(x)` is the cached
+/// suffix that cutting at `x` invalidates — a property of the cut position,
+/// charged once, not per entry. Candidate cut points are exactly the
+/// eligible entries' offsets, so this is an O(#eligible) scan. Acts only if
+/// the best net benefit found is positive; otherwise nothing is pruned.
+///
+/// `all_entries_ordered` must be every entry (kept + eligible) in stream
+/// order — kept entries still occupy cache space, so they count toward each
+/// candidate's offset even though they're never pruned themselves.
+/// `eligible` is the subset the rules table (`trimmed_rules_table`) already
+/// marked as candidates; this function only decides *whether* and *how far*
+/// to cut among them.
 pub fn batch_prune_decisions(
+    all_entries_ordered: &[&RetentionEntry],
     eligible: &[&RetentionEntry],
     ctx: &PruneContext,
     current_turn: usize,
 ) -> (Vec<u64>, Vec<DecisionLog>) {
+    if eligible.is_empty() {
+        return (Vec::new(), Vec::new());
+    }
+
+    let eligible_ids: std::collections::HashSet<u64> = eligible.iter().map(|e| e.id).collect();
+
+    let mut offset = 0usize;
+    let mut candidates: Vec<CutCandidate> = Vec::with_capacity(eligible.len());
+    for entry in all_entries_ordered {
+        if eligible_ids.contains(&entry.id) {
+            candidates.push(CutCandidate { entry, offset_tokens: offset });
+        }
+        offset += entry.approx_tokens;
+    }
+
+    let d = ctx.provider.cache_read_discount;
+    let w = ctx.provider.cache_write_multiplier;
+    let c = ctx.cost_per_token;
+    let n = ctx.n_expected as f64;
+    let cache_cold = ctx.cache_is_cold();
+
+    let penalty_at = |cand: &CutCandidate| -> f64 {
+        if cache_cold {
+            0.0
+        } else {
+            let p_invalidated = estimate_prefix_invalidation(cand.entry, ctx.cached_prefix_tokens, cand.offset_tokens);
+            p_invalidated as f64 * (1.0 - d + w) * c
+        }
+    };
+
+    // Scan newest→oldest so `running_savings` is a running suffix sum over
+    // candidates at-or-after the cut being considered; track the best net
+    // benefit and the cut (a candidate index) that achieves it. "Prune
+    // nothing" is always a valid zero-net baseline.
+    let mut running_savings = 0.0f64;
+    let mut best_net = 0.0f64;
+    let mut best_cut_idx: Option<usize> = None;
+    for (idx, cand) in candidates.iter().enumerate().rev() {
+        running_savings += n * cand.entry.approx_tokens as f64 * d * c;
+        let net = running_savings - penalty_at(cand);
+        if net > best_net {
+            best_net = net;
+            best_cut_idx = Some(idx);
+        }
+    }
+
     let mut to_prune: Vec<u64> = Vec::new();
     let mut logs: Vec<DecisionLog> = Vec::new();
-
-    for entry in eligible {
-        // Estimate prefix invalidation (most entries are in conversation body = 0)
-        let p_invalidated = estimate_prefix_invalidation(entry, ctx.cached_prefix_tokens, 0);
-
-        let decision = should_prune(entry, p_invalidated, ctx);
-
-        let log = DecisionLog {
+    for (idx, cand) in candidates.iter().enumerate() {
+        let pruned = best_cut_idx.map(|cut| idx >= cut).unwrap_or(false);
+        let penalty = penalty_at(cand);
+        if pruned {
+            to_prune.push(cand.entry.id);
+        }
+        logs.push(DecisionLog {
             turn: current_turn,
-            entry_id: entry.id,
-            entry_kind: format!("{:?}", entry.kind),
-            resource: entry.resources.first()
+            entry_id: cand.entry.id,
+            entry_kind: format!("{:?}", cand.entry.kind),
+            resource: cand.entry.resources.first()
                 .map(|r| format!("{:?}", r))
                 .unwrap_or_else(|| "none".to_string()),
-            tokens: entry.approx_tokens,
-            decision: match &decision {
-                CostDecision::Prune { .. } => "prune".to_string(),
-                CostDecision::Keep { reason } => format!("keep: {}", reason),
-                CostDecision::Summarize { .. } => "summarize".to_string(),
+            tokens: cand.entry.approx_tokens,
+            decision: if pruned {
+                "prune".to_string()
+            } else {
+                "keep: below best cut-point's net benefit".to_string()
             },
-            savings_per_turn: match &decision {
-                CostDecision::Prune { savings_per_turn, .. } => *savings_per_turn,
-                _ => 0.0,
-            },
-            penalty: match &decision {
-                CostDecision::Prune { penalty, .. } => *penalty,
-                _ => 0.0,
-            },
+            savings_per_turn: n * cand.entry.approx_tokens as f64 * d * c,
+            penalty,
             n_expected: ctx.n_expected,
             provider: format!("{:?}", ctx.provider.cache_mode),
-            cache_was_cold: ctx.cache_is_cold(),
+            cache_was_cold: cache_cold,
             time_since_last_request_s: ctx.time_since_last_request_secs,
-        };
-
-        if decision.is_prune() {
-            to_prune.push(entry.id);
-        }
-
-        logs.push(log);
+        });
     }
 
     (to_prune, logs)
@@ -630,6 +696,67 @@ mod tests {
         // …but a cold cache makes even the native add free.
         ctx.time_since_last_request_secs = 400;
         assert_eq!(dynamic_tool_add_penalty(false, 10_000, &ctx), 0.0);
+    }
+
+    fn entry_at(id: u64, tokens: usize, action: RetentionAction) -> RetentionEntry {
+        let mut e = test_entry(tokens);
+        e.id = id;
+        e.action = action;
+        e
+    }
+
+    /// trimmed_summary_auto_decision.md worked example (D0): the sweet spot
+    /// is frequently interior, not "prune everything eligible" nor "only
+    /// prune what's past the cache boundary". Stream (oldest→newest):
+    /// T1(100) O1(1000, kept) T2(100) O3(50, kept) T3(100) | cache boundary
+    /// at 1350 | O4(50, kept) T4(100). Cutting at T1 pays a penalty on the
+    /// whole warm prefix that outweighs its own extra savings; cutting only
+    /// at T4 leaves easy free savings on the table. The scan must land
+    /// somewhere in between, keeping the earliest eligible entry.
+    #[test]
+    fn cut_point_prefers_interior_optimum() {
+        let t1 = entry_at(0, 100, RetentionAction::Eligible);
+        let o1 = entry_at(1, 1000, RetentionAction::Keep);
+        let t2 = entry_at(2, 100, RetentionAction::Eligible);
+        let o3 = entry_at(3, 50, RetentionAction::Keep);
+        let t3 = entry_at(4, 100, RetentionAction::Eligible);
+        let o4 = entry_at(5, 50, RetentionAction::Keep);
+        let t4 = entry_at(6, 100, RetentionAction::Eligible);
+
+        let all_owned = vec![t1, o1, t2, o3, t3, o4, t4];
+        let all: Vec<&RetentionEntry> = all_owned.iter().collect();
+        let eligible: Vec<&RetentionEntry> = all_owned.iter()
+            .filter(|e| e.action == RetentionAction::Eligible)
+            .collect();
+
+        let mut ctx = PruneContext::default_for_provider(auto_provider(), 0.00001);
+        ctx.n_expected = 4;
+        // Cache covers exactly through T3 (offset 1350): T1+O1+T2+O3+T3.
+        ctx.cached_prefix_tokens = 100 + 1000 + 100 + 50 + 100;
+
+        let (to_prune, _logs) = batch_prune_decisions(&all, &eligible, &ctx, 0);
+
+        assert!(!to_prune.contains(&0), "T1 should survive — pruning it burns the whole warm prefix");
+        assert!(to_prune.contains(&2), "T2 is part of the profitable cut");
+        assert!(to_prune.contains(&4), "T3 is part of the profitable cut");
+        assert!(to_prune.contains(&6), "T4 is past the cache boundary — always free to prune");
+    }
+
+    #[test]
+    fn cut_point_prunes_nothing_when_all_candidates_unprofitable() {
+        // A single tiny eligible entry sitting deep inside a huge warm
+        // prefix: no cut point is worth it, so nothing should be pruned.
+        let tiny = entry_at(0, 5, RetentionAction::Eligible);
+        let all_owned = vec![tiny];
+        let all: Vec<&RetentionEntry> = all_owned.iter().collect();
+        let eligible: Vec<&RetentionEntry> = all_owned.iter().collect();
+
+        let mut ctx = PruneContext::default_for_provider(auto_provider(), 0.00001);
+        ctx.n_expected = 4;
+        ctx.cached_prefix_tokens = 1_000_000;
+
+        let (to_prune, _logs) = batch_prune_decisions(&all, &eligible, &ctx, 0);
+        assert!(to_prune.is_empty());
     }
 
     #[test]

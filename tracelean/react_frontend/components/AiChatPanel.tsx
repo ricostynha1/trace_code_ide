@@ -119,6 +119,9 @@ interface AiSettings {
   shell_sandbox?: string;
   /** Sandbox network policy ("deny" | "ask" | "allow"). */
   shell_network?: string;
+  /** bugs.md Bug 2: fully disable automatic context trimming/summarization
+   * (for isolating caching problems with a stable context). */
+  disable_context_trimming?: boolean;
 }
 
 interface ToolCallResponse {
@@ -155,9 +158,13 @@ interface InteractionEntry {
   tools_provided?: number;
   tool_names?: string[];
   tool_schemas?: ToolSchemaInfo[];
+  /** bugs.md Bug 3: exact wire request body, for the "copy raw request" button. */
+  request_raw?: string | null;
+  /** bugs.md Bug 3: predicted cached tokens for this turn (cache health = actual/predicted). */
+  predicted_cached_tokens?: number | null;
   /** Compaction that ran before this request (bugs.md: log icons + detail). */
   compaction?: {
-    kind: string; // "summarized" | "trimmed"
+    kind: string; // "summarized" | "trimmed" | "candidates"
     messages_removed: number;
     tokens_before: number;
     tokens_after: number;
@@ -302,6 +309,12 @@ export function AiChatPanel({ visible, onClose }: Props) {
   // T14: characteristics of the picked model (Model tab)
   const [modelInfo, setModelInfo] = useState<ModelCharacteristics | null>(null);
   const [modelInfoError, setModelInfoError] = useState<string | null>(null);
+  // bugs.md Bug 1: which sandbox backend "Detect" actually resolves to here.
+  const [sandboxCaps, setSandboxCaps] = useState<{
+    overlay_available: boolean;
+    strace_available: boolean;
+    detect_backend: string;
+  } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const mockPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -675,6 +688,20 @@ export function AiChatPanel({ visible, onClose }: Props) {
     }
   };
 
+  // bugs.md Bug 1: probe overlay/strace availability for the Settings tab.
+  const loadSandboxCapabilities = async () => {
+    try {
+      const caps = await invoke<{
+        overlay_available: boolean;
+        strace_available: boolean;
+        detect_backend: string;
+      }>("get_sandbox_capabilities");
+      setSandboxCaps(caps);
+    } catch {
+      setSandboxCaps(null);
+    }
+  };
+
   // T14: load the picked model's characteristics for the Model tab.
   const loadModelInfo = async () => {
     setModelInfoError(null);
@@ -740,7 +767,7 @@ export function AiChatPanel({ visible, onClose }: Props) {
       <div className="ai-panel-header">
         <div className="ai-tabs">
           <button className={tab === "chat" ? "active" : ""} onClick={() => setTab("chat")}>Chat</button>
-          <button className={tab === "settings" ? "active" : ""} onClick={() => { setTab("settings"); loadModels(); }}>Settings</button>
+          <button className={tab === "settings" ? "active" : ""} onClick={() => { setTab("settings"); loadModels(); loadSandboxCapabilities(); }}>Settings</button>
           <button className={tab === "log" ? "active" : ""} onClick={() => { setTab("log"); loadLog(); }}>Log</button>
           <button className={tab === "model" ? "active" : ""} onClick={() => { setTab("model"); loadModelInfo(); }}>Model</button>
           <button className={tab === "stats" ? "active" : ""} onClick={() => { setTab("stats"); loadStats(); }}>Stats</button>
@@ -1170,11 +1197,24 @@ export function AiChatPanel({ visible, onClose }: Props) {
           <p className="ai-hint">Chat will refuse new requests when session cost exceeds this cap.</p>
 
           <h3>Context Trimming</h3>
+          <label className="ai-checkbox-row">
+            <input
+              type="checkbox"
+              checked={settings.disable_context_trimming ?? false}
+              onChange={(e) => saveSettings({ ...settings, disable_context_trimming: e.target.checked })}
+            />
+            Disable automatic trimming and summarization
+          </label>
+          <p className="ai-hint">
+            When on, context is never pruned or summarized — useful for isolating caching issues
+            with a stable, unchanging context.
+          </p>
           <label>Expected remaining rounds (N)</label>
           <input
             type="number"
             step="1"
             min="1"
+            disabled={settings.disable_context_trimming ?? false}
             value={settings.n_expected_rounds ?? 8}
             onChange={(e) =>
               saveSettings({ ...settings, n_expected_rounds: Math.max(1, parseInt(e.target.value) || 8) })
@@ -1224,6 +1264,22 @@ export function AiChatPanel({ visible, onClose }: Props) {
               <option value="strict">Strict — require the overlay sandbox or refuse</option>
             </select>
           </label>
+          {sandboxCaps ? (
+            <p className={`ai-hint ${sandboxCaps.overlay_available ? "ai-hint-ok" : "ai-hint-warn"}`}>
+              {sandboxCaps.overlay_available ? (
+                <>✓ Overlay sandbox supported on this system — full containment + diff.</>
+              ) : sandboxCaps.strace_available ? (
+                <>⚠ Overlay sandbox not supported here (needs Linux + bwrap <code>--overlay-src</code> +
+                kernel ≥ 5.11). Falling back to <code>strace</code>: writes hit the real project
+                directly, but mutated paths are still recovered. "Strict" will refuse to run.</>
+              ) : (
+                <>✗ Neither overlay nor <code>strace</code> is available on this system. "Detect" runs
+                shell commands unsandboxed with a visible notice; "Strict" will refuse to run.</>
+              )}
+            </p>
+          ) : (
+            <p className="ai-hint">Checking sandbox support…</p>
+          )}
           <p className="ai-hint">
             Runs agent shell commands in a bubblewrap overlay: the project is read-only, so
             shell writes are captured as ordinary undoable edits instead of silently mutating
@@ -1372,7 +1428,9 @@ export function AiChatPanel({ visible, onClose }: Props) {
                   <span className="ai-log-compacted-badge">
                     {inspectEntry.compaction.kind === "summarized"
                       ? `📝 summarized from ~${compactNum(inspectEntry.compaction.tokens_before)} to ~${compactNum(inspectEntry.compaction.tokens_after)} tokens`
-                      : `✂️ trimmed ${inspectEntry.compaction.messages_removed} messages: saved ~${compactNum(Math.max(0, inspectEntry.compaction.tokens_before - inspectEntry.compaction.tokens_after))} tokens`}
+                      : inspectEntry.compaction.kind === "trimmed"
+                      ? `✂️ trimmed ${inspectEntry.compaction.messages_removed} messages: saved ~${compactNum(Math.max(0, inspectEntry.compaction.tokens_before - inspectEntry.compaction.tokens_after))} tokens`
+                      : `◔ ${inspectEntry.compaction.details?.length ?? 0} message(s) eligible for trimming, kept this turn`}
                   </span>
                   {(inspectEntry.compaction.details?.length ?? 0) > 0 && (
                     /* Feature 1.1: what the compactor decided, per message */
@@ -1412,6 +1470,15 @@ export function AiChatPanel({ visible, onClose }: Props) {
                   <span className="legend-uncached">■</span> not cached
                 </p>
               )}
+              {typeof inspectEntry.predicted_cached_tokens === "number" && inspectEntry.predicted_cached_tokens > 0 && (
+                <p
+                  className="ai-log-cache-health"
+                  title="bugs.md Bug 3: actual cached tokens this turn vs. what the cost model predicted — a low % without a recent context change suggests the provider (not us) is dropping cache"
+                >
+                  Cache health: {Math.round((inspectEntry.usage.cached_tokens / inspectEntry.predicted_cached_tokens) * 100)}%
+                  {" "}({inspectEntry.usage.cached_tokens.toLocaleString()} actual / {inspectEntry.predicted_cached_tokens.toLocaleString()} expected)
+                </p>
+              )}
 
               {(inspectEntry.tool_names?.length ?? 0) > 0 && (
                 <details className="ai-log-tools-provided">
@@ -1440,7 +1507,18 @@ export function AiChatPanel({ visible, onClose }: Props) {
                 </details>
               )}
 
-              <h5>Request Messages</h5>
+              <h5>
+                Request Messages
+                {inspectEntry.request_raw && (
+                  <button
+                    className="ai-copy-raw-request-btn"
+                    onClick={() => navigator.clipboard.writeText(inspectEntry.request_raw!)}
+                    title="Copy the exact wire request body sent to the provider, for pasting into a plain text document"
+                  >
+                    📋 Copy raw request
+                  </button>
+                )}
+              </h5>
               {(() => {
                 // bugs.md Feature 5: collapse the message prefix already sent
                 // in the previous request (log is newest-first, so the
@@ -1557,10 +1635,12 @@ export function AiChatPanel({ visible, onClose }: Props) {
                       title={
                         entry.compaction.kind === "summarized"
                           ? `summarized from ~${compactNum(entry.compaction.tokens_before)} to ~${compactNum(entry.compaction.tokens_after)} tokens`
-                          : `trimmed ${entry.compaction.messages_removed} messages (saved ~${compactNum(Math.max(0, entry.compaction.tokens_before - entry.compaction.tokens_after))} tokens)`
+                          : entry.compaction.kind === "trimmed"
+                          ? `trimmed ${entry.compaction.messages_removed} messages (saved ~${compactNum(Math.max(0, entry.compaction.tokens_before - entry.compaction.tokens_after))} tokens)`
+                          : `${entry.compaction.details?.length ?? 0} message(s) eligible for trimming, kept this turn (cost math said not worth it yet)`
                       }
                     >
-                      {entry.compaction.kind === "summarized" ? "📝" : "✂️"}
+                      {entry.compaction.kind === "summarized" ? "📝" : entry.compaction.kind === "trimmed" ? "✂️" : "◔"}
                     </span>
                   )}
                   <span className="ai-log-model">{entry.model_display_name}</span>

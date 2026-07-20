@@ -219,6 +219,8 @@ pub async fn ai_chat_stream(
         pause_handler: Some(std::sync::Arc::new(crate::ipc::ai_commands::TauriPauseHandler {
             app_handle: app.clone(),
             resume_state: resume_state.0.clone(),
+            pending_diffs: diffs.0.clone(),
+            cancel: cancel.clone(),
         })),
         cancel,
         verbose: false,

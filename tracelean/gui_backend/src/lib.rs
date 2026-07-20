@@ -261,6 +261,7 @@ pub fn run() {
             // AI
             ipc::ai_commands::get_ai_settings,
             ipc::ai_commands::get_model_characteristics,
+            ipc::ai_commands::get_sandbox_capabilities,
             ipc::ai_commands::detect_env_keys,
             ipc::ai_commands::update_ai_settings,
             ipc::ai_commands::get_ai_models,

@@ -539,3 +539,58 @@ fn node_diff_structured_same_node_is_empty() {
     let diff = state.node_diff_structured(here).expect("diff");
     assert!(diff.files.is_empty());
 }
+
+// bugs.md Bug 1: accept-edits diff review — a stale PendingDiff (buffer moved
+// since it was staged) must be rejected by the witness check, not silently
+// mis-applied. This exercises diff_pipeline + AppState together exactly as
+// `apply_accepted_hunks` (gui_backend/src/ipc/ai_commands.rs) does, without
+// any Tauri/CLI coupling.
+mod ai_diff_review {
+    use super::*;
+    use tracelean_lib::ai::diff_pipeline::{accepted_hunks_to_commands, create_pending_diff};
+
+    #[test]
+    fn accepted_diff_applies_cleanly_when_buffer_unchanged() {
+        let original = "fn main() {\n    old();\n}\n";
+        let proposed = "fn main() {\n    new();\n}\n";
+        let (mut state, file) = fresh(original);
+
+        let mut diff = create_pending_diff(&file.to_string_lossy(), original, proposed, "agent");
+        for h in &mut diff.hunks {
+            h.accepted = true;
+        }
+        let commands = accepted_hunks_to_commands(&diff);
+        for cmd in commands {
+            state.apply(cmd).expect("buffer matches the diff's base — must apply");
+        }
+        assert_eq!(state.get_content(&file), Some(proposed));
+    }
+
+    #[test]
+    fn stale_diff_is_rejected_without_mutating_the_buffer() {
+        let original = "fn main() {\n    old();\n}\n";
+        let proposed = "fn main() {\n    new();\n}\n";
+        let (mut state, file) = fresh(original);
+
+        let mut diff = create_pending_diff(&file.to_string_lossy(), original, proposed, "agent");
+        for h in &mut diff.hunks {
+            h.accepted = true;
+        }
+
+        // The user kept typing after the diff was staged — the live buffer no
+        // longer matches `diff.original`.
+        state
+            .apply(Command::insert(file.clone(), 0, "// edited\n".into()))
+            .unwrap();
+        let drifted_content = state.get_content(&file).unwrap().to_string();
+
+        let commands = accepted_hunks_to_commands(&diff);
+        for cmd in commands {
+            let err = state.apply(cmd);
+            assert!(err.is_err(), "stale diff must be rejected, not silently mis-applied");
+        }
+        // Buffer is exactly what it was after the user's edit — untouched by
+        // the rejected accept, not partially patched.
+        assert_eq!(state.get_content(&file), Some(drifted_content.as_str()));
+    }
+}

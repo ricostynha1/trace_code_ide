@@ -173,6 +173,12 @@ pub struct AiSettings {
     /// review_commands on; otherwise behaves like deny).
     #[serde(default = "default_shell_network")]
     pub shell_network: String,
+    /// bugs.md Bug 2: fully disable automatic context trimming and
+    /// summarization, for debugging the caching problem with a stable
+    /// context. When true, `cost_aware_compact`/`compact_context` are a
+    /// no-op every turn.
+    #[serde(default)]
+    pub disable_context_trimming: bool,
 }
 
 fn default_shell_sandbox() -> String { "detect".to_string() }
@@ -197,6 +203,7 @@ impl Default for AiSettings {
             n_expected_rounds: default_n_expected_rounds(),
             shell_sandbox: default_shell_sandbox(),
             shell_network: default_shell_network(),
+            disable_context_trimming: false,
         }
     }
 }

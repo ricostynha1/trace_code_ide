@@ -155,7 +155,15 @@ pub fn accepted_hunks_to_commands(diff: &PendingDiff) -> Vec<Command> {
         orig_idx += 1;
     }
 
-    let new_content = result_lines.join("\n");
+    // bugs.md Bug 1: `.lines()` strips line terminators entirely, so joining
+    // with a bare "\n" silently converts CRLF files to LF and drops a
+    // trailing newline — a real content change the diff view never showed
+    // the user. Reassemble using the original file's own conventions.
+    let line_ending = if diff.original.contains("\r\n") { "\r\n" } else { "\n" };
+    let mut new_content = result_lines.join(line_ending);
+    if diff.original.ends_with('\n') && !new_content.is_empty() {
+        new_content.push_str(line_ending);
+    }
 
     // Emit as a Delete+Insert batch (attributed to AI agent)
     vec![Command::replace(file_path, 0, diff.original.clone(), new_content)]
@@ -195,4 +203,78 @@ fn longest_common_subsequence<'a>(a: &[&'a str], b: &[&'a str]) -> Vec<&'a str> 
 
     result.reverse();
     result
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn accept_all(diff: &mut PendingDiff) {
+        for h in &mut diff.hunks {
+            h.accepted = true;
+        }
+    }
+
+    fn new_content_of(commands: &[Command]) -> String {
+        match &commands[0] {
+            Command::Replace { new, .. } => new.clone(),
+            other => panic!("expected a single Replace command, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn accept_all_round_trips_with_trailing_newline() {
+        let original = "a\nb\nc\n";
+        let proposed = "a\nX\nc\n";
+        let mut diff = create_pending_diff("f.rs", original, proposed, "agent");
+        accept_all(&mut diff);
+        let commands = accepted_hunks_to_commands(&diff);
+        assert_eq!(new_content_of(&commands), proposed);
+    }
+
+    #[test]
+    fn accept_all_round_trips_without_trailing_newline() {
+        let original = "a\nb\nc";
+        let proposed = "a\nX\nc";
+        let mut diff = create_pending_diff("f.rs", original, proposed, "agent");
+        accept_all(&mut diff);
+        let commands = accepted_hunks_to_commands(&diff);
+        assert_eq!(new_content_of(&commands), proposed);
+    }
+
+    #[test]
+    fn accept_all_round_trips_with_crlf() {
+        let original = "a\r\nb\r\nc\r\n";
+        let proposed = "a\r\nX\r\nc\r\n";
+        let mut diff = create_pending_diff("f.rs", original, proposed, "agent");
+        accept_all(&mut diff);
+        let commands = accepted_hunks_to_commands(&diff);
+        assert_eq!(new_content_of(&commands), proposed);
+    }
+
+    #[test]
+    fn reject_all_reconstructs_original_exactly() {
+        // Before the fix, reassembling via `.join("\n")` silently dropped the
+        // trailing newline even when every hunk was rejected — the file
+        // written to disk differed from the base content the diff was
+        // supposedly a no-op against.
+        let original = "a\nb\nc\n";
+        let proposed = "a\nX\nc\n";
+        let diff = create_pending_diff("f.rs", original, proposed, "agent");
+        // hunks default to accepted: false
+        let commands = accepted_hunks_to_commands(&diff);
+        assert_eq!(new_content_of(&commands), original);
+    }
+
+    #[test]
+    fn partial_accept_mixes_original_and_proposed() {
+        let original = "a\nb\nc\nd\ne\n";
+        let proposed = "a\nB\nc\nD\ne\n";
+        let mut diff = create_pending_diff("f.rs", original, proposed, "agent");
+        assert_eq!(diff.hunks.len(), 2, "two separate single-line hunks expected");
+        // Accept only the first hunk (b -> B), reject the second (d -> D).
+        diff.hunks[0].accepted = true;
+        let commands = accepted_hunks_to_commands(&diff);
+        assert_eq!(new_content_of(&commands), "a\nB\nc\nd\ne\n");
+    }
 }

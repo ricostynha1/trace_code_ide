@@ -9,7 +9,7 @@ use tracelean_core::ai::retention::{
     RetentionEngine, RetentionEntry, EntryKind, RetentionAction, Resource,
     RetentionPolicyConfig,
 };
-use tracelean_core::ai::cost_model::{
+use tracelean_core::ai::cost_trimmed_summary_model::{
     should_prune, should_summarize, PruneContext, CostDecision,
     batch_prune_decisions, CachePredictionTracker,
 };
@@ -349,7 +349,8 @@ fn test_end_to_end_pipeline() {
 
     // Run cost-based pruning (automatic provider, middle prune)
     let ctx = PruneContext::default_for_provider(make_auto_provider(), 0.00001);
-    let (to_prune, logs) = batch_prune_decisions(&eligible, &ctx, 8);
+    let all_entries: Vec<&RetentionEntry> = engine.user_view.entries.iter().collect();
+    let (to_prune, logs) = batch_prune_decisions(&all_entries, &eligible, &ctx, 8);
 
     // All should be pruned (middle prune, p_invalidated=0, always profitable)
     assert_eq!(to_prune.len(), 4);

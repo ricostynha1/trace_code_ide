@@ -77,6 +77,28 @@ pub fn get_model_characteristics(
     }))
 }
 
+/// bugs.md Bug 1: the sandbox dropdown otherwise picks silently between
+/// overlay/strace/none — surface which backend this machine actually gets
+/// so "Detect" and "Strict" aren't a guessing game.
+#[tauri::command]
+pub fn get_sandbox_capabilities() -> serde_json::Value {
+    use tracelean_core::ai::shell_sandbox::{overlay_available, strace_available};
+    let overlay = overlay_available();
+    let strace = strace_available();
+    let detect_backend = if overlay {
+        "overlay"
+    } else if strace {
+        "strace"
+    } else {
+        "none"
+    };
+    serde_json::json!({
+        "overlay_available": overlay,
+        "strace_available": strace,
+        "detect_backend": detect_backend,
+    })
+}
+
 /// Check which API keys are available via environment variables.
 /// Returns a map of provider -> env var name if set.
 #[tauri::command]
@@ -209,6 +231,8 @@ pub async fn ai_chat(
     let pause = Arc::new(TauriPauseHandler {
         app_handle: app.clone(),
         resume_state: resume_state.0.clone(),
+        pending_diffs: svc.pending_diffs.clone(),
+        cancel: svc.cancel.clone(),
     });
     let response = svc.one_shot_turn(messages, Some(pause), false).await?;
     invalidate_undo_cache(&cache);
@@ -244,6 +268,8 @@ pub async fn ai_chat_session(
     let pause = Arc::new(TauriPauseHandler {
         app_handle: app.clone(),
         resume_state: resume_state.0.clone(),
+        pending_diffs: svc.pending_diffs.clone(),
+        cancel: svc.cancel.clone(),
     });
     let result = svc.chat_turn(&session_id, &user_message, Some(pause), false).await?;
     invalidate_undo_cache(&cache);
@@ -357,6 +383,12 @@ pub async fn list_chat_sessions(
 pub struct TauriPauseHandler {
     pub app_handle: AppHandle,
     pub resume_state: Arc<tokio::sync::Mutex<Option<tokio::sync::oneshot::Sender<(bool, bool)>>>>,
+    /// bugs.md Bug 0: same pending-diffs list the diff-review UI mutates —
+    /// polled by `wait_for_review` so the loop unblocks the moment the user
+    /// accepts/rejects the staged hunks (no extra button to click).
+    pub pending_diffs: Arc<std::sync::Mutex<Vec<crate::PendingDiff>>>,
+    /// Lets Stop unblock a `wait_for_review` poll immediately.
+    pub cancel: tracelean_core::agent::CancelToken,
 }
 
 #[async_trait::async_trait]
@@ -417,6 +449,36 @@ impl tracelean_core::agent::PauseHandler for TauriPauseHandler {
             }
             _ => tracelean_core::agent::CommandApproval { approved: false, allow_network: false },
         }
+    }
+
+    /// bugs.md Bug 0: poll the shared pending-diffs list rather than wait on
+    /// a button click — resolving hunks in the editor's diff bar (which
+    /// mutates this same Arc via accept/reject commands) is what unblocks
+    /// the loop. Stop cancels the shared token, which breaks the poll too.
+    async fn wait_for_review(&self, target_count: usize) -> bool {
+        let _ = self.app_handle.emit("tool-loop-pause", serde_json::json!({
+            "loops_completed": 0,
+            "kind": "diff-review",
+            "message": "Waiting for you to accept or reject the staged edit(s) before continuing…",
+        }));
+
+        loop {
+            if self.cancel.is_cancelled() {
+                return false;
+            }
+            let count = self
+                .pending_diffs
+                .lock()
+                .map(|d| d.len())
+                .unwrap_or(0);
+            if count <= target_count {
+                break;
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(250)).await;
+        }
+
+        let _ = self.app_handle.emit("tool-loop-resumed", serde_json::json!({ "kind": "diff-review" }));
+        true
     }
 }
 

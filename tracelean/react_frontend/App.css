@@ -731,6 +731,14 @@ html, body, #root {
   font-size: 11px;
 }
 
+.ai-hint-ok {
+  color: #4caf50;
+}
+
+.ai-hint-warn {
+  color: #d29922;
+}
+
 /* Log */
 .ai-log-content {
   padding: 8px;
@@ -2096,6 +2104,29 @@ html, body, #root {
 .ai-log-cache-legend .legend-cached { color: #d7dae0; }
 .ai-log-cache-legend .legend-uncached { color: #e06c75; }
 
+/* bugs.md Bug 3: predicted vs. actual cache hit rate */
+.ai-log-cache-health {
+  font-size: 11px;
+  color: #d19a66;
+}
+
+/* bugs.md Bug 3: copy raw request button, inline with the h5 it sits in */
+.ai-copy-raw-request-btn {
+  margin-left: 10px;
+  padding: 2px 8px;
+  background: #3c3c3c;
+  border: 1px solid #555;
+  border-radius: 4px;
+  color: #ccc;
+  cursor: pointer;
+  font-size: 11px;
+  vertical-align: middle;
+}
+
+.ai-copy-raw-request-btn:hover {
+  background: #4c4c4c;
+}
+
 /* bugs.md Feature 5: collapsed equal-prefix note in log detail */
 .ai-log-equal-note {
   color: #5c6370;
@@ -2519,6 +2550,19 @@ html, body, #root {
 .editor-diffbar .diffbar-reject {
   color: #e06c75;
   border-color: #e06c75;
+}
+
+/* bugs.md Bug 1: apply/accept/reject failures, most commonly a stale diff
+ * (the buffer moved since this diff was staged) rejected by the witness
+ * check — flex-basis 100% forces its own row above the button row. */
+.editor-diffbar .diffbar-error {
+  flex-basis: 100%;
+  color: #e5c07b;
+  background: rgba(229, 192, 123, 0.12);
+  border: 1px solid rgba(229, 192, 123, 0.4);
+  border-radius: 3px;
+  padding: 3px 8px;
+  cursor: help;
 }
 
 /* ── Thinking messages in chat (bugs.md Bug 1.8) ────────────────────────── */

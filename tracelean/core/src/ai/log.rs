@@ -47,12 +47,26 @@ pub struct InteractionEntry {
     /// What compaction ran before this request (bugs.md: log icons + detail).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub compaction: Option<CompactionInfo>,
+    /// bugs.md Bug 3: the exact wire request body, for a "copy raw request"
+    /// button — rules out the prompt itself changing between calls when
+    /// cache hits look inconsistent. `None` when the provider doesn't
+    /// capture it (e.g. the call failed before the body was serialized).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub request_raw: Option<String>,
+    /// bugs.md Bug 3: cached tokens the cost model predicted for this turn,
+    /// alongside `usage.cached_tokens` (the actual value the provider
+    /// reported) — the ratio is the "cache health" the log shows. `None`
+    /// when no prediction was made this turn (e.g. no explicit cache
+    /// markers were planned).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub predicted_cached_tokens: Option<usize>,
 }
 
 /// Compaction that ran before a request: summarization or trimming (prune).
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct CompactionInfo {
-    /// "summarized" | "trimmed"
+    /// "summarized" | "trimmed" | "candidates" (nothing removed this turn,
+    /// but some entries were eligible and kept — see `details`).
     pub kind: String,
     pub messages_removed: usize,
     pub tokens_before: usize,
@@ -152,6 +166,8 @@ impl InteractionLog {
             tool_schemas,
             tool_passing: Some(request.model.tool_passing),
             compaction: None,
+            request_raw: response.raw_request.clone(),
+            predicted_cached_tokens: None,
         };
 
         self.entries.push(entry);
@@ -194,6 +210,8 @@ impl InteractionLog {
             tool_schemas,
             tool_passing: Some(request.model.tool_passing),
             compaction: None,
+            request_raw: None,
+            predicted_cached_tokens: None,
         };
 
         self.entries.push(entry);
@@ -205,6 +223,15 @@ impl InteractionLog {
     pub fn attach_compaction_to_last(&mut self, info: CompactionInfo) {
         if let Some(last) = self.entries.last_mut() {
             last.compaction = Some(info);
+        }
+    }
+
+    /// bugs.md Bug 3: attach the cache-tracker's prediction for this turn to
+    /// the entry it corresponds to, so the log can show predicted vs. actual
+    /// cache hit rate ("cache health").
+    pub fn set_last_entry_predicted_cache(&mut self, predicted_cached_tokens: usize) {
+        if let Some(last) = self.entries.last_mut() {
+            last.predicted_cached_tokens = Some(predicted_cached_tokens);
         }
     }
 

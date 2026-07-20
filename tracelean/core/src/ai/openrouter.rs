@@ -224,6 +224,10 @@ impl AiProvider for OpenRouterProvider {
             stop: request.stop.clone(),
         };
 
+        // bugs.md Bug 3: capture the exact wire body, same as bedrock.rs — no
+        // SDK involved here either, `body` is already a plain owned struct.
+        let raw_request = serde_json::to_string_pretty(&body).ok();
+
         let mut last_err = None;
         for attempt in 0..=self.max_retries {
             if attempt > 0 {
@@ -323,6 +327,7 @@ impl AiProvider for OpenRouterProvider {
                         content,
                         usage: token_usage,
                         raw_response: Some(raw_text),
+                        raw_request,
                         truncated,
                         tool_calls,
                     });

@@ -704,6 +704,11 @@ impl AiProvider for BedrockProvider {
             },
         };
 
+        // bugs.md Bug 3: capture the exact wire body for the log's "copy raw
+        // request" button — `body` is a locally-owned struct, so this is a
+        // plain serialize with no extra request work.
+        let raw_request = serde_json::to_string_pretty(&body).ok();
+
         let url = self.endpoint();
 
         let mut last_err = None;
@@ -875,6 +880,7 @@ impl AiProvider for BedrockProvider {
                         content,
                         usage: token_usage,
                         raw_response: Some(raw_text),
+                        raw_request,
                         truncated,
                         tool_calls,
                         thinking,

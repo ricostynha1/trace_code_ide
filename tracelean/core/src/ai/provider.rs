@@ -202,6 +202,11 @@ pub struct AiResponse {
     pub usage: super::tracking::TokenUsage,
     /// Raw response body for full transparency
     pub raw_response: Option<String>,
+    /// bugs.md Bug 3: the exact wire request body as sent to the provider,
+    /// for byte-for-byte inspection when cache hits look inconsistent (rules
+    /// out the prompt itself changing between calls).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub raw_request: Option<String>,
     /// Whether the response was truncated (hit max_tokens)
     pub truncated: bool,
     /// Tool calls requested by the model (empty if none)
