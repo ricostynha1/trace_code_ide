@@ -230,7 +230,7 @@ impl AiService {
 
 /// Rebuild a model's full `ModelConfig` from just its identity
 /// (provider + model_id) — no network call. Bedrock and Mock have local
-/// catalog/pricing data (`bedrock_pricing`, `provider_cache`, `model_catalog`)
+/// catalog/pricing data (`provider_cache`, `model_catalog`)
 /// and resolve to accurate, up-to-date figures; OpenRouter has no local
 /// pricing source (its own `/models` response IS the source of truth), so it
 /// resolves to an identity-only placeholder until `list_models_for` next runs.

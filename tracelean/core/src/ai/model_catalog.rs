@@ -140,6 +140,16 @@ pub fn lookup(model_id: &str) -> Option<ModelEnrichment> {
     None
 }
 
+/// Look up (input_cost_per_1m, output_cost_per_1m) for a model ID.
+/// Returns `None` if the model isn't in the catalog or carries no pricing.
+pub fn pricing_for(model_id: &str) -> Option<(f64, f64)> {
+    let enrichment = lookup(model_id)?;
+    match (enrichment.input_cost_per_m, enrichment.output_cost_per_m) {
+        (Some(input), Some(output)) => Some((input, output)),
+        _ => None,
+    }
+}
+
 /// Enrich a ModelConfig with catalog data.
 pub fn enrich(model: &mut super::provider::ModelConfig) {
     use super::provider::{ProviderKind, ToolCallFormat, ToolPassing};
