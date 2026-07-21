@@ -227,4 +227,25 @@ mod tests {
         let problems = km.validate(super::super::actions::registry());
         assert!(problems.is_empty(), "keymap problems: {:?}", problems);
     }
+
+    #[test]
+    fn main_state_has_discoverable_bindings() {
+        // Regression guard for the which-key discoverability bug
+        // (new_features_work_plan.md #3): Main is the resting state and the
+        // only one containing the leader key(s) into every other mode, so it
+        // must never be the one state with nothing to show — the frontend
+        // used to hide the which-key bar specifically because it treated an
+        // empty/discarded Main binding set as the normal case.
+        let km = Keymap::load();
+        let bindings = km.bindings_for_state(START_STATE);
+        assert!(
+            !bindings.is_empty(),
+            "Main must expose at least one discoverable binding (e.g. a leader key)"
+        );
+        assert!(
+            bindings.iter().any(|b| b.kind == "transition"),
+            "Main should offer at least one transition into another mode: {:?}",
+            bindings
+        );
+    }
 }
