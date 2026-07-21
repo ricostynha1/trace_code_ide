@@ -238,6 +238,26 @@ pub fn execute_tool_reviewed(
         };
     }
 
+    // Schema-driven argument validation (P1): every tool's arg requirements
+    // live in tools.json, so this one gate replaces the per-tool hardcoded
+    // "Missing 'x' argument" strings that used to live in each execute_*
+    // function below. Tools not found in the registry (legacy dispatch
+    // aliases) skip validation and fall through to their own checks.
+    let registry = super::tool_registry::ToolRegistry::embedded();
+    if let Some(schema) = registry.and_then(|r| r.schema_for(&call.name)) {
+        if let Err(problem) = super::tool_errors::validate_args(&call.arguments, schema) {
+            return ToolResult {
+                success: false,
+                content: super::tool_errors::format_arg_validation_error(
+                    &call.name,
+                    &problem,
+                    registry,
+                ),
+                data: None,
+            };
+        }
+    }
+
     match call.name.as_str() {
         "read_file" => execute_read_file(call, project_root, permissions),
         "edit_file" => execute_edit_file(call, project_root, state, permissions, review),
@@ -2317,6 +2337,55 @@ mod tests {
             name: name.into(),
             arguments: args,
         }
+    }
+
+    // ===== schema-driven argument validation (P1) =====
+
+    #[test]
+    fn missing_required_arg_produces_schema_driven_message() {
+        let tmp = TempDir::new().unwrap();
+        let mut state = AppState::new();
+        let symbols = SymbolTable::new();
+        let graph = TraceGraph::new();
+        let perms = full_perms();
+
+        // "path" is required by read_file's tools.json schema; omit it.
+        let call = make_call("read_file", json!({"max_results": 10}));
+        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
+        assert!(!result.success);
+        assert!(result.content.contains("path"));
+        assert!(result.content.contains("Usage:"));
+        // Never reaches execute_read_file's own hand-written fallback text.
+        assert!(!result.content.contains("Expected: read_file"));
+    }
+
+    #[test]
+    fn wrong_type_arg_is_rejected_before_dispatch() {
+        let tmp = TempDir::new().unwrap();
+        let mut state = AppState::new();
+        let symbols = SymbolTable::new();
+        let graph = TraceGraph::new();
+        let perms = full_perms();
+
+        // "path" must be a string per schema; send a number instead.
+        let call = make_call("read_file", json!({"path": 5}));
+        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
+        assert!(!result.success);
+        assert!(result.content.contains("string"));
+    }
+
+    #[test]
+    fn valid_args_pass_the_gate_unaffected() {
+        let tmp = TempDir::new().unwrap();
+        std::fs::write(tmp.path().join("f.txt"), "hi\n").unwrap();
+        let mut state = AppState::new();
+        let symbols = SymbolTable::new();
+        let graph = TraceGraph::new();
+        let perms = full_perms();
+
+        let call = make_call("read_file", json!({"path": "f.txt"}));
+        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
+        assert!(result.success);
     }
 
     // ===== read_file tests =====

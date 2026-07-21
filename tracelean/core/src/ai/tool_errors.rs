@@ -187,6 +187,31 @@ pub fn validate_args(args: &serde_json::Value, schema: &serde_json::Value) -> Re
     Ok(())
 }
 
+/// Build the error message shown to a model that called a tool with
+/// arguments failing schema validation (missing/wrong-type params). Sourced
+/// entirely from tools.json (`short_help`/`example`) rather than a per-tool
+/// hardcoded string, so every tool's error text stays in sync with its
+/// schema automatically (P1: no hardcoded tool text in the executor).
+pub fn format_arg_validation_error(
+    tool_name: &str,
+    problem: &str,
+    registry: Option<&ToolRegistry>,
+) -> String {
+    let mut msg = format!("Invalid arguments for `{}`: {}.", tool_name, problem);
+    if let Some(reg) = registry {
+        if let Some(sig) = reg.short_help_for(tool_name) {
+            msg.push_str(&format!("\nUsage: {}", sig));
+        }
+        if let Some(example) = reg.example_for(tool_name) {
+            msg.push_str(&format!(
+                "\nExample arguments: {}",
+                serde_json::to_string(example).unwrap_or_default()
+            ));
+        }
+    }
+    msg
+}
+
 fn type_name(v: &serde_json::Value) -> &'static str {
     match v {
         serde_json::Value::Null => "null",
@@ -268,6 +293,20 @@ mod tests {
         assert!(validate_args(&serde_json::json!({"count": "five"}), &schema).is_err());
         assert!(validate_args(&serde_json::json!({"bogus": 1}), &schema).is_err());
         assert!(validate_args(&serde_json::json!({"count": 5}), &schema).is_ok());
+    }
+
+    #[test]
+    fn arg_validation_error_pulls_usage_and_example_from_registry() {
+        let registry = ToolRegistry::load_from_str(include_str!("../../../data/tools.json")).unwrap();
+        let msg = format_arg_validation_error(
+            "read_file",
+            "missing required parameter `path`",
+            Some(&registry),
+        );
+        assert!(msg.contains("read_file"));
+        assert!(msg.contains("missing required parameter `path`"));
+        assert!(msg.contains("Usage:"));
+        assert!(msg.contains("Example arguments:"));
     }
 
     #[test]
