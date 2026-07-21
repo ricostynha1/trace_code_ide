@@ -199,3 +199,42 @@ fn params_to_json_schema(params: &[super::tools::ToolParam]) -> serde_json::Valu
         "required": required,
     })
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use super::super::tool_registry::ToolRegistry;
+
+    /// Guards against `handle_tools_list` (the JSON-RPC surface any external
+    /// MCP client sees) drifting from `data/tools.json` again the way the
+    /// old hardcoded `builtin_tool_definitions()` catalog did — see
+    /// ai_module_cleanup_plan.md finding 3.
+    #[test]
+    fn tools_list_names_are_subset_of_registry() {
+        let request = JsonRpcRequest {
+            jsonrpc: "2.0".into(),
+            id: Some(serde_json::json!(1)),
+            method: "tools/list".into(),
+            params: serde_json::Value::Null,
+        };
+        let response = handle_tools_list(&request);
+        let result = response.result.expect("tools/list should return a result");
+        let listed: Vec<String> = result["tools"]
+            .as_array()
+            .expect("tools field should be an array")
+            .iter()
+            .map(|t| t["name"].as_str().expect("tool name").to_string())
+            .collect();
+        assert!(!listed.is_empty(), "tools/list should not be empty");
+
+        let registry = ToolRegistry::embedded().expect("embedded tools.json parses");
+        let known: Vec<&str> = registry.all_tool_entries().iter().map(|e| e.name.as_str()).collect();
+        for name in &listed {
+            assert!(
+                known.contains(&name.as_str()),
+                "tools/list advertised {:?}, which is not in data/tools.json: {:?}",
+                name, known
+            );
+        }
+    }
+}

@@ -290,14 +290,3 @@ pub async fn ai_chat_stream(
 pub fn get_agent_tools() -> Vec<ai::ToolDefinition> {
     ai::tools::builtin_tool_definitions()
 }
-
-#[tauri::command]
-pub async fn get_agent_tools_prompt(
-    client: State<'_, McpClientWrapper>,
-) -> Result<String, String> {
-    let mut tools = ai::tools::builtin_tool_definitions();
-    let mgr = client.0.lock().await;
-    let mcp_tools: Vec<ai::ToolDefinition> = mgr.all_tools().into_iter().map(|(_s, t)| t).collect();
-    tools.extend(mcp_tools);
-    Ok(ai::tools::tools_as_system_prompt(&tools))
-}
