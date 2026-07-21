@@ -29,7 +29,17 @@
       "example": {
         "query": "delete a file"
       },
-      "short_help": "discover_tools(query, max_results?) — Find and load additional tools by capability."
+      "short_help": "discover_tools(query, max_results?) — Find and load additional tools by capability.",
+      "aliases": [
+        "find a tool",
+        "what tools",
+        "need a tool",
+        "load tool"
+      ],
+      "examples": [
+        "Find a tool to delete files",
+        "What tools can query the trace graph"
+      ]
     },
     {
       "name": "list_directory",
@@ -71,7 +81,25 @@
         "recursive": true,
         "file_filter": "*.rs"
       },
-      "short_help": "list_directory(path?, recursive?, max_results?, offset?, file_filter?, max_depth?) — List files/dirs. Paginated."
+      "short_help": "list_directory(path?, recursive?, max_results?, offset?, file_filter?, max_depth?) — List files/dirs. Paginated.",
+      "aliases": [
+        "show directory",
+        "ls",
+        "list directory",
+        "browse files",
+        "show tree",
+        "what files",
+        "directory contents",
+        "list files",
+        "show files in this project",
+        "project structure"
+      ],
+      "examples": [
+        "List all files in src/",
+        "Show project structure",
+        "What files are in the root",
+        "Show me the files in this project"
+      ]
     },
     {
       "name": "find",
@@ -130,7 +158,32 @@
         "mode": "regex",
         "path": "src"
       },
-      "short_help": "find(query, mode?, case_sensitive?, max_results?, offset?, path?, file_filter?) — Search files by regex or semantic; auto falls back regex → case-insensitive → semantic."
+      "short_help": "find(query, mode?, case_sensitive?, max_results?, offset?, path?, file_filter?) — Search files by regex or semantic; auto falls back regex → case-insensitive → semantic.",
+      "aliases": [
+        "grep",
+        "search text",
+        "find pattern",
+        "regex search",
+        "look for",
+        "where is",
+        "find in files",
+        "search code",
+        "semantic search",
+        "find similar",
+        "search meaning",
+        "find function by description",
+        "what does",
+        "find related code"
+      ],
+      "examples": [
+        "Find all TODO comments",
+        "Search for fn main in src/",
+        "Where is login defined",
+        "Grep for API_KEY in *.rs",
+        "Find auth handling code",
+        "Search for error recovery logic",
+        "Find upload validation"
+      ]
     },
     {
       "name": "read_file",
@@ -163,7 +216,31 @@
         "offset": 0,
         "max_results": 100
       },
-      "short_help": "read_file(path, offset?, max_results?) — Read file lines. Paginated. max_results=0 returns metadata only."
+      "short_help": "read_file(path, offset?, max_results?) — Read file lines. Paginated. max_results=0 returns metadata only.",
+      "aliases": [
+        "read file",
+        "open file",
+        "view file",
+        "show lines",
+        "cat file",
+        "get contents",
+        "look at file",
+        "display code",
+        "line count",
+        "file size",
+        "how many lines",
+        "file length",
+        "wc"
+      ],
+      "examples": [
+        "Read first 20 lines of main.rs",
+        "Show last 10 lines",
+        "View src/auth.rs lines 5-30",
+        "Check file contents",
+        "How many lines in main.rs",
+        "Check file size",
+        "Count lines before reading"
+      ]
     },
     {
       "name": "edit_file",
@@ -201,7 +278,25 @@
         "end": 5,
         "text": "fn new_code() {\n    todo!()\n}\n"
       },
-      "short_help": "edit_file(path, text, start?, end?) — Replace line range [start,end) with text. start==end inserts; omit both to replace whole file."
+      "short_help": "edit_file(path, text, start?, end?) — Replace line range [start,end) with text. start==end inserts; omit both to replace whole file.",
+      "aliases": [
+        "write file",
+        "edit file",
+        "insert lines",
+        "prepend",
+        "append",
+        "replace lines",
+        "add to file",
+        "create file",
+        "overwrite"
+      ],
+      "examples": [
+        "Prepend comment to file",
+        "Append line at end",
+        "Replace lines 5-10",
+        "Insert import at top",
+        "Add phrase to all files"
+      ]
     },
     {
       "name": "replace_str",
@@ -217,7 +312,8 @@
           },
           "old_str": {
             "type": "string",
-            "description": "Exact text to find (must match once)."
+            "description": "Exact text to find (must match once).",
+            "error_hint": "old_str must match the file's text byte-for-byte (including whitespace/indentation) and occur exactly once; read_file the relevant lines first if unsure."
           },
           "new_str": {
             "type": "string",
@@ -236,7 +332,24 @@
         "old_str": "let x = 1;",
         "new_str": "let x = 42;"
       },
-      "short_help": "replace_str(path, old_str, new_str) — Replace exact string in file (must match exactly once)."
+      "short_help": "replace_str(path, old_str, new_str) — Replace exact string in file (must match exactly once).",
+      "aliases": [
+        "replace text",
+        "find and replace",
+        "substitute",
+        "edit text",
+        "change text",
+        "modify content",
+        "swap text",
+        "patch file",
+        "fix typo"
+      ],
+      "examples": [
+        "Replace TODO with implementation",
+        "Change function name",
+        "Fix typo",
+        "Update import statement"
+      ]
     },
     {
       "name": "run_shell",
@@ -275,7 +388,24 @@
         "command": "cargo test",
         "timeout_secs": 60
       },
-      "short_help": "run_shell(command, cwd?, timeout_secs?) — Run shell command in project root."
+      "short_help": "run_shell(command, cwd?, timeout_secs?) — Run shell command in project root.",
+      "aliases": [
+        "execute shell",
+        "terminal",
+        "run command",
+        "bash",
+        "compile",
+        "build",
+        "test",
+        "make"
+      ],
+      "examples": [
+        "Run cargo build",
+        "Execute tests",
+        "Compile the project",
+        "Run make",
+        "Check linting"
+      ]
     },
     {
       "name": "web_search",
@@ -303,7 +433,18 @@
       "example": {
         "query": "rust tokio watch channel"
       },
-      "short_help": "web_search(query, max_results?) — Search the web; returns result titles + URLs."
+      "short_help": "web_search(query, max_results?) — Search the web; returns result titles + URLs.",
+      "aliases": [
+        "search web",
+        "google",
+        "look up online",
+        "download page",
+        "documentation lookup"
+      ],
+      "examples": [
+        "Search for tokio watch channel docs",
+        "Look up the latest reqwest API"
+      ]
     },
     {
       "name": "web_fetch",
@@ -327,7 +468,17 @@
       "example": {
         "url": "https://docs.rs/tokio"
       },
-      "short_help": "web_fetch(url) — Fetch a URL as text into .tracelean/web/ readable with read_file/find."
+      "short_help": "web_fetch(url) — Fetch a URL as text into .tracelean/web/ readable with read_file/find.",
+      "aliases": [
+        "fetch url",
+        "web fetch",
+        "download page",
+        "read a page"
+      ],
+      "examples": [
+        "Fetch https://docs.rs/serde",
+        "Download a changelog page"
+      ]
     },
     {
       "name": "help_tool",
@@ -351,7 +502,16 @@
       "example": {
         "tool_name": "edit_file"
       },
-      "short_help": "help_tool(tool_name) — Get detailed usage info for any tool."
+      "short_help": "help_tool(tool_name) — Get detailed usage info for any tool.",
+      "aliases": [
+        "tool help",
+        "how do I use",
+        "tool usage"
+      ],
+      "examples": [
+        "Get help for edit_file",
+        "How do I use find"
+      ]
     }
   ],
   "dynamic_tools": [
@@ -377,7 +537,17 @@
       "example": {
         "path": "src/obsolete.rs"
       },
-      "short_help": "delete_file(path) — Delete a file (reversible via undo)."
+      "short_help": "delete_file(path) — Delete a file (reversible via undo).",
+      "aliases": [
+        "remove file",
+        "rm",
+        "delete",
+        "erase file"
+      ],
+      "examples": [
+        "Delete temp file",
+        "Remove scratch.rs"
+      ]
     },
     {
       "name": "query_trace_graph",
@@ -401,7 +571,19 @@
       "example": {
         "req_id": "REQ-01"
       },
-      "short_help": "query_trace_graph(req_id) — Linked specs, code, tests for a requirement."
+      "short_help": "query_trace_graph(req_id) — Linked specs, code, tests for a requirement.",
+      "aliases": [
+        "trace requirement",
+        "find links",
+        "requirement coverage",
+        "what implements",
+        "trace link"
+      ],
+      "examples": [
+        "What code implements REQ-01",
+        "Show traceability for REQ-03",
+        "Find tests for requirement"
+      ]
     },
     {
       "name": "query_code_element",
@@ -431,7 +613,17 @@
         "file": "src/auth.rs",
         "name": "login"
       },
-      "short_help": "query_code_element(file, name) — Requirements/specs linked to a code element."
+      "short_help": "query_code_element(file, name) — Requirements/specs linked to a code element.",
+      "aliases": [
+        "trace code",
+        "code links",
+        "what requirement",
+        "element trace"
+      ],
+      "examples": [
+        "What requirement does login() satisfy",
+        "Find spec for upload function"
+      ]
     },
     {
       "name": "list_requirements",
@@ -446,7 +638,19 @@
         "additionalProperties": false
       },
       "example": {},
-      "short_help": "list_requirements() — List all requirements with ID, title, status."
+      "short_help": "list_requirements() — List all requirements with ID, title, status.",
+      "aliases": [
+        "show requirements",
+        "all requirements",
+        "requirement list",
+        "specs",
+        "project requirements"
+      ],
+      "examples": [
+        "List all requirements",
+        "Show project requirements",
+        "What are the specs"
+      ]
     },
     {
       "name": "get_symbols",
@@ -470,7 +674,108 @@
       "example": {
         "path": "src/types.rs"
       },
-      "short_help": "get_symbols(path) — Parsed symbols (functions, structs, classes) from a file."
+      "short_help": "get_symbols(path) — Parsed symbols (functions, structs, classes) from a file.",
+      "aliases": [
+        "parse symbols",
+        "functions in file",
+        "classes in file",
+        "code structure",
+        "definitions",
+        "what functions"
+      ],
+      "examples": [
+        "Get symbols from main.rs",
+        "What functions are in auth.rs",
+        "Show class structure"
+      ]
     }
-  ]
+  ],
+  "category_keywords": {
+    "filesystem": [
+      "file",
+      "read",
+      "write",
+      "open",
+      "save",
+      "create",
+      "edit",
+      "modify",
+      "content",
+      "path",
+      "append",
+      "end",
+      "add",
+      "phrase"
+    ],
+    "editing": [
+      "replace",
+      "change",
+      "fix",
+      "update",
+      "modify",
+      "edit",
+      "swap",
+      "patch",
+      "typo",
+      "insert",
+      "append",
+      "add",
+      "end",
+      "phrase",
+      "text"
+    ],
+    "search": [
+      "search",
+      "find",
+      "grep",
+      "look",
+      "pattern",
+      "match",
+      "where"
+    ],
+    "execution": [
+      "run",
+      "execute",
+      "command",
+      "shell",
+      "terminal",
+      "build",
+      "test",
+      "compile",
+      "make"
+    ],
+    "traceability": [
+      "trace",
+      "requirement",
+      "spec",
+      "link",
+      "traceability",
+      "coverage"
+    ],
+    "requirements": [
+      "requirement",
+      "req",
+      "requirements",
+      "status",
+      "specs"
+    ],
+    "code_analysis": [
+      "symbol",
+      "function",
+      "class",
+      "struct",
+      "parse",
+      "definition",
+      "declarations"
+    ],
+    "web": [
+      "web",
+      "search",
+      "url",
+      "fetch",
+      "download",
+      "documentation",
+      "online"
+    ]
+  }
 }

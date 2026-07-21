@@ -5,6 +5,7 @@
 //! before becoming eligible for cost-based removal.
 
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::path::Path;
 use super::provider::{ToolSchema, ToolFunction};
 
@@ -47,6 +48,14 @@ pub struct ToolJsonEntry {
     /// The single source for help/error text (bugs.md Bug 2: no hardcoded copies).
     #[serde(default)]
     pub short_help: Option<String>,
+    /// Alternate phrasings a user query might use instead of the tool name,
+    /// boosting `tool_selector.rs`'s discovery ranking.
+    #[serde(default)]
+    pub aliases: Vec<String>,
+    /// Short natural-language example queries this tool answers, also fed
+    /// into `tool_selector.rs`'s enrichment text.
+    #[serde(default)]
+    pub examples: Vec<String>,
 }
 
 /// Shared response-message conventions declared in tools.json, so every tool
@@ -67,6 +76,10 @@ pub struct ToolsConfig {
     pub dynamic_tools: Vec<ToolJsonEntry>,
     #[serde(default)]
     pub conventions: ToolConventions,
+    /// category -> keywords that boost a tool's discovery score when a
+    /// query token matches (`tool_selector.rs::category_boost`).
+    #[serde(default)]
+    pub category_keywords: HashMap<String, Vec<String>>,
 }
 
 /// A dynamically-loaded tool tracked by the registry.
@@ -95,6 +108,8 @@ pub struct ToolRegistry {
     pub config: DynamicToolConfig,
     /// Shared response-message conventions from tools.json.
     pub conventions: ToolConventions,
+    /// category -> discovery-boost keywords from tools.json.
+    pub category_keywords: HashMap<String, Vec<String>>,
     /// Current turn counter.
     pub current_turn: usize,
 }
@@ -129,6 +144,7 @@ impl ToolRegistry {
             dynamic_tools: Vec::new(),
             config: DynamicToolConfig::default(),
             conventions: config.conventions,
+            category_keywords: config.category_keywords,
             current_turn: 0,
         })
     }
@@ -153,6 +169,7 @@ impl ToolRegistry {
             dynamic_tools: Vec::new(),
             config: DynamicToolConfig::default(),
             conventions: config.conventions,
+            category_keywords: config.category_keywords,
             current_turn: 0,
         })
     }

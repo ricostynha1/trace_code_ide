@@ -125,12 +125,29 @@ pub fn format_tool_call_error(
     msg
 }
 
+/// A schema-validation failure: which parameter caused it (`None` for
+/// whole-arguments-object failures) plus the human-readable reason, so
+/// callers can look up that parameter's own `error_hint` (finding 5).
+pub struct ValidationError {
+    pub param: Option<String>,
+    pub message: String,
+}
+
+impl std::fmt::Display for ValidationError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.message)
+    }
+}
+
 /// Validate parsed arguments against a tool's JSON schema (small hand-rolled
 /// checker: required fields present, no unknown fields, primitive types match).
-/// Returns Err(description) on the first violation.
-pub fn validate_args(args: &serde_json::Value, schema: &serde_json::Value) -> Result<(), String> {
+/// Returns Err on the first violation.
+pub fn validate_args(args: &serde_json::Value, schema: &serde_json::Value) -> Result<(), ValidationError> {
     let Some(obj) = args.as_object() else {
-        return Err(format!("arguments must be a JSON object, got {}", type_name(args)));
+        return Err(ValidationError {
+            param: None,
+            message: format!("arguments must be a JSON object, got {}", type_name(args)),
+        });
     };
     let properties = schema.get("properties").and_then(|p| p.as_object());
 
@@ -139,7 +156,10 @@ pub fn validate_args(args: &serde_json::Value, schema: &serde_json::Value) -> Re
         for req in required {
             if let Some(key) = req.as_str() {
                 if !obj.contains_key(key) {
-                    return Err(format!("missing required parameter `{}`", key));
+                    return Err(ValidationError {
+                        param: Some(key.to_string()),
+                        message: format!("missing required parameter `{}`", key),
+                    });
                 }
             }
         }
@@ -155,7 +175,10 @@ pub fn validate_args(args: &serde_json::Value, schema: &serde_json::Value) -> Re
         if forbid_additional {
             for key in obj.keys() {
                 if !props.contains_key(key) {
-                    return Err(format!("unknown parameter `{}`", key));
+                    return Err(ValidationError {
+                        param: None,
+                        message: format!("unknown parameter `{}`", key),
+                    });
                 }
             }
         }
@@ -175,16 +198,31 @@ pub fn validate_args(args: &serde_json::Value, schema: &serde_json::Value) -> Re
                 _ => true,
             };
             if !ok {
-                return Err(format!(
-                    "parameter `{}` must be {}, got {}",
-                    key,
-                    expected,
-                    type_name(value)
-                ));
+                return Err(ValidationError {
+                    param: Some(key.to_string()),
+                    message: format!(
+                        "parameter `{}` must be {}, got {}",
+                        key,
+                        expected,
+                        type_name(value)
+                    ),
+                });
             }
         }
     }
     Ok(())
+}
+
+/// Look up a parameter's `error_hint` from a tool's JSON schema
+/// (`input_schema.properties.<param>.error_hint` — not a standard
+/// JSON-Schema keyword, read only by this validator, harmless to the
+/// model-facing schema otherwise).
+fn error_hint_for_param<'a>(schema: &'a serde_json::Value, param: &str) -> Option<&'a str> {
+    schema
+        .get("properties")
+        .and_then(|p| p.get(param))
+        .and_then(|p| p.get("error_hint"))
+        .and_then(|h| h.as_str())
 }
 
 /// Build the error message shown to a model that called a tool with
@@ -194,11 +232,16 @@ pub fn validate_args(args: &serde_json::Value, schema: &serde_json::Value) -> Re
 /// schema automatically (P1: no hardcoded tool text in the executor).
 pub fn format_arg_validation_error(
     tool_name: &str,
-    problem: &str,
+    error: &ValidationError,
     registry: Option<&ToolRegistry>,
 ) -> String {
-    let mut msg = format!("Invalid arguments for `{}`: {}.", tool_name, problem);
+    let mut msg = format!("Invalid arguments for `{}`: {}.", tool_name, error.message);
     if let Some(reg) = registry {
+        if let (Some(param), Some(schema)) = (&error.param, reg.schema_for(tool_name)) {
+            if let Some(hint) = error_hint_for_param(schema, param) {
+                msg.push_str(&format!("\n{}", hint));
+            }
+        }
         if let Some(sig) = reg.short_help_for(tool_name) {
             msg.push_str(&format!("\nUsage: {}", sig));
         }
@@ -279,7 +322,8 @@ mod tests {
             "additionalProperties": false
         });
         let err = validate_args(&serde_json::json!({}), &schema).unwrap_err();
-        assert!(err.contains("path"));
+        assert!(err.message.contains("path"));
+        assert_eq!(err.param.as_deref(), Some("path"));
     }
 
     #[test]
@@ -298,15 +342,26 @@ mod tests {
     #[test]
     fn arg_validation_error_pulls_usage_and_example_from_registry() {
         let registry = ToolRegistry::load_from_str(include_str!("../../../data/tools.json")).unwrap();
-        let msg = format_arg_validation_error(
-            "read_file",
-            "missing required parameter `path`",
-            Some(&registry),
-        );
+        let error = ValidationError {
+            param: Some("path".to_string()),
+            message: "missing required parameter `path`".to_string(),
+        };
+        let msg = format_arg_validation_error("read_file", &error, Some(&registry));
         assert!(msg.contains("read_file"));
         assert!(msg.contains("missing required parameter `path`"));
         assert!(msg.contains("Usage:"));
         assert!(msg.contains("Example arguments:"));
+    }
+
+    #[test]
+    fn arg_validation_error_surfaces_param_error_hint_when_present() {
+        let registry = ToolRegistry::load_from_str(include_str!("../../../data/tools.json")).unwrap();
+        let error = ValidationError {
+            param: Some("old_str".to_string()),
+            message: "missing required parameter `old_str`".to_string(),
+        };
+        let msg = format_arg_validation_error("replace_str", &error, Some(&registry));
+        assert!(msg.contains("byte-for-byte"), "expected old_str's error_hint in: {}", msg);
     }
 
     #[test]

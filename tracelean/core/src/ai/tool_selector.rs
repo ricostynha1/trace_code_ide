@@ -11,6 +11,7 @@
 //! - Ready for semantic embedding upgrade (swap TF-IDF for FastEmbed when available)
 
 use super::provider::ToolSchema;
+use super::tool_registry::ToolRegistry;
 use std::collections::HashMap;
 
 /// Default number of tools to include in a single request (per spec: top_k = 5).
@@ -37,88 +38,28 @@ struct IndexedTool {
 
 /// Enrichment data for a tool: aliases, examples, and category.
 struct ToolEnrichment {
-    category: &'static str,
-    aliases: &'static [&'static str],
-    examples: &'static [&'static str],
+    category: String,
+    aliases: Vec<String>,
+    examples: Vec<String>,
 }
 
-/// Get enrichment data for builtin tools.
+/// Get enrichment data for a tool from `data/tools.json`'s `aliases`/
+/// `examples`/`category` fields (finding 4: previously a second,
+/// independently hand-maintained table keyed on tool names — some of which,
+/// e.g. `read_range`/`write_range`/`find_grep`, no longer exist).
 fn get_enrichment(tool_name: &str) -> ToolEnrichment {
-    match tool_name {
-        "read_range" => ToolEnrichment {
-            category: "filesystem",
-            aliases: &["read file", "open file", "view file", "show lines", "cat file", "get contents", "look at file", "display code"],
-            examples: &["Read first 20 lines of main.rs", "Show last 10 lines", "View src/auth.rs lines 5-30", "Check file contents"],
+    let entry = ToolRegistry::embedded()
+        .and_then(|r| r.all_tool_entries().iter().find(|e| e.name == tool_name));
+    match entry {
+        Some(e) => ToolEnrichment {
+            category: e.category.clone(),
+            aliases: e.aliases.clone(),
+            examples: e.examples.clone(),
         },
-        "write_range" => ToolEnrichment {
-            category: "editing",
-            aliases: &["write file", "edit file", "insert lines", "prepend", "append", "replace lines", "add to file", "create file", "overwrite"],
-            examples: &["Prepend comment to file", "Append line at end", "Replace lines 5-10", "Insert import at top", "Add phrase to all files"],
-        },
-        "count_lines" => ToolEnrichment {
-            category: "filesystem",
-            aliases: &["line count", "file size", "how many lines", "file length", "wc"],
-            examples: &["How many lines in main.rs", "Check file size", "Count lines before reading"],
-        },
-        "str_replace" => ToolEnrichment {
-            category: "editing",
-            aliases: &["replace text", "find and replace", "substitute", "edit text", "change text", "modify content", "swap text", "patch file", "fix typo"],
-            examples: &["Replace TODO with implementation", "Change function name", "Fix typo", "Update import statement"],
-        },
-        "list_files" => ToolEnrichment {
-            category: "filesystem",
-            aliases: &["show directory", "ls", "list directory", "browse files", "show tree", "what files", "directory contents"],
-            examples: &["List all files in src/", "Show project structure", "What files are in the root"],
-        },
-        "delete_file" => ToolEnrichment {
-            category: "filesystem",
-            aliases: &["remove file", "rm", "delete", "erase file"],
-            examples: &["Delete temp file", "Remove scratch.rs"],
-        },
-        "find_grep" => ToolEnrichment {
-            category: "search",
-            aliases: &["grep", "search text", "find pattern", "regex search", "look for", "where is", "find in files", "search code"],
-            examples: &["Find all TODO comments", "Search for fn main in src/", "Where is login defined", "Grep for API_KEY in *.rs"],
-        },
-        "find_embed" => ToolEnrichment {
-            category: "search",
-            aliases: &["semantic search", "find similar", "search meaning", "find function by description", "what does", "find related code"],
-            examples: &["Find auth handling code", "Search for error recovery logic", "Find upload validation"],
-        },
-        "query_trace_graph" => ToolEnrichment {
-            category: "traceability",
-            aliases: &["trace requirement", "find links", "requirement coverage", "what implements", "trace link"],
-            examples: &["What code implements REQ-01", "Show traceability for REQ-03", "Find tests for requirement"],
-        },
-        "query_code_element" => ToolEnrichment {
-            category: "traceability",
-            aliases: &["trace code", "code links", "what requirement", "element trace"],
-            examples: &["What requirement does login() satisfy", "Find spec for upload function"],
-        },
-        "list_requirements" => ToolEnrichment {
-            category: "requirements",
-            aliases: &["show requirements", "all requirements", "requirement list", "specs", "project requirements"],
-            examples: &["List all requirements", "Show project requirements", "What are the specs"],
-        },
-        "get_symbols" => ToolEnrichment {
-            category: "code_analysis",
-            aliases: &["parse symbols", "functions in file", "classes in file", "code structure", "definitions", "what functions"],
-            examples: &["Get symbols from main.rs", "What functions are in auth.rs", "Show class structure"],
-        },
-        "run_shell" => ToolEnrichment {
-            category: "shell",
-            aliases: &["execute shell", "terminal", "run command", "bash", "compile", "build", "test", "make"],
-            examples: &["Run cargo build", "Execute tests", "Compile the project", "Run make", "Check linting"],
-        },
-        "web_search" => ToolEnrichment {
-            category: "web",
-            aliases: &["search web", "google", "look up online", "fetch url", "download page", "web fetch", "documentation lookup"],
-            examples: &["Search for tokio watch channel docs", "Fetch https://docs.rs/serde", "Look up the latest reqwest API"],
-        },
-        _ => ToolEnrichment {
-            category: "other",
-            aliases: &[],
-            examples: &[],
+        None => ToolEnrichment {
+            category: "other".to_string(),
+            aliases: Vec::new(),
+            examples: Vec::new(),
         },
     }
 }
@@ -371,21 +312,13 @@ fn tokenize(text: &str) -> Vec<String> {
         .collect()
 }
 
-/// Boost score if query mentions category-related keywords.
+/// Boost score if query mentions category-related keywords, from
+/// `data/tools.json`'s top-level `category_keywords` map (finding 4:
+/// previously a second, independently hand-maintained table here).
 fn category_boost(category: &str, query_tokens: &[String]) -> f64 {
-    let category_keywords: &[(&str, &[&str])] = &[
-        ("filesystem", &["file", "read", "write", "open", "save", "create", "edit", "modify", "content", "path", "append", "end", "add", "phrase"]),
-        ("editing", &["replace", "change", "fix", "update", "modify", "edit", "swap", "patch", "typo", "insert", "append", "add", "end", "phrase", "text"]),
-        ("search", &["search", "find", "grep", "look", "pattern", "match", "where"]),
-        ("shell", &["run", "execute", "command", "shell", "terminal", "build", "test", "compile", "make"]),
-        ("traceability", &["trace", "requirement", "spec", "link", "traceability", "coverage"]),
-        ("requirements", &["requirement", "req", "requirements", "status", "specs"]),
-        ("code_analysis", &["symbol", "function", "class", "struct", "parse", "definition", "declarations"]),
-        ("commands", &["undo", "redo", "command", "insert", "delete", "replace"]),
-    ];
-
-    if let Some((_cat_name, keywords)) = category_keywords.iter().find(|(name, _)| *name == category) {
-        for kw in *keywords {
+    let Some(registry) = ToolRegistry::embedded() else { return 0.0 };
+    if let Some(keywords) = registry.category_keywords.get(category) {
+        for kw in keywords {
             if query_tokens.iter().any(|qt| qt == kw) {
                 return 0.3;
             }
@@ -413,20 +346,20 @@ mod tests {
 
         // Queries that SHOULD select tools (expect score > threshold)
         let should_match = vec![
-            ("read the main.rs file", "read_range"),
-            ("show me the files in this project", "list_files"),
-            ("find all TODO comments", "find_grep"),
-            ("Add a comment at the end of every file", "write_range"),
-            ("replace the word foo with bar in auth.rs", "str_replace"),
+            ("read the main.rs file", "read_file"),
+            ("show me the files in this project", "list_directory"),
+            ("find all TODO comments", "find"),
+            ("Add a comment at the end of every file", "edit_file"),
+            ("replace the word foo with bar in auth.rs", "replace_str"),
             ("run cargo build", "run_shell"),
             ("list all requirements", "list_requirements"),
             ("what functions are in search.rs", "get_symbols"),
             ("delete the temp file", "delete_file"),
-            ("search for authentication code", "find_embed"),
+            ("search for authentication code", "find"),
             ("what implements REQ-01", "query_trace_graph"),
-            ("show project structure", "list_files"),
-            ("User: add 'hello' to end of every req file", "write_range"),
-            ("count how many lines in main.rs", "count_lines"),
+            ("show project structure", "list_directory"),
+            ("User: add 'hello' to end of every req file", "edit_file"),
+            ("count how many lines in main.rs", "read_file"),
         ];
 
         // Queries that should NOT select tools (expect score < threshold)
@@ -495,7 +428,7 @@ mod tests {
         let schemas = builtin_tool_schemas();
         let index = ToolIndex::new(&schemas);
         let selected = index.select("read the main.rs file", None);
-        assert!(names(&selected).contains(&"read_range"), "Expected read_range in {:?}", names(&selected));
+        assert!(names(&selected).contains(&"read_file"), "Expected read_file in {:?}", names(&selected));
     }
 
     #[test]
@@ -503,7 +436,7 @@ mod tests {
         let schemas = builtin_tool_schemas();
         let index = ToolIndex::new(&schemas);
         let selected = index.select("find all uses of 'TODO' in the codebase", None);
-        assert!(names(&selected).contains(&"find_grep"), "Expected find_grep in {:?}", names(&selected));
+        assert!(names(&selected).contains(&"find"), "Expected find in {:?}", names(&selected));
     }
 
     #[test]
@@ -520,10 +453,10 @@ mod tests {
         let index = ToolIndex::new(&schemas);
         let selected = index.select_with_context(
             "now write the result",
-            &["read_range".into()],
+            &["read_file".into()],
             Some(5),
         );
-        assert!(names(&selected).contains(&"read_range"), "Should include previously called tool");
+        assert!(names(&selected).contains(&"read_file"), "Should include previously called tool");
     }
 
     #[test]
@@ -532,7 +465,7 @@ mod tests {
         let index = ToolIndex::new(&schemas);
         let selected = index.select("Add the phrase 'Hello bob' at the end of the file auth.rs", None);
         let n = names(&selected);
-        let has_edit = n.contains(&"write_range") || n.contains(&"str_replace");
+        let has_edit = n.contains(&"edit_file") || n.contains(&"replace_str");
         assert!(has_edit, "Expected edit tool in {:?}", n);
     }
 
@@ -541,7 +474,7 @@ mod tests {
         let schemas = builtin_tool_schemas();
         let index = ToolIndex::new(&schemas);
         let selected = index.select("show me the project structure", None);
-        assert!(names(&selected).contains(&"list_files"), "Expected list_files in {:?}", names(&selected));
+        assert!(names(&selected).contains(&"list_directory"), "Expected list_directory in {:?}", names(&selected));
     }
 
     #[test]
@@ -574,7 +507,7 @@ mod tests {
         let index = ToolIndex::new(&schemas);
         let selected = index.select("where is the login function defined", None);
         let n = names(&selected);
-        let has_search = n.contains(&"find_grep") || n.contains(&"find_embed") || n.contains(&"get_symbols");
+        let has_search = n.contains(&"find") || n.contains(&"get_symbols");
         assert!(has_search, "Expected search/code tool in {:?}", n);
     }
 
@@ -584,7 +517,7 @@ mod tests {
         let index = ToolIndex::new(&schemas);
         let selected = index.select("User: add 'I love requirements' as comment to end of every file\nAgent: I'll look for requirement files first", None);
         let n = names(&selected);
-        let has_fs = n.contains(&"write_range") || n.contains(&"list_files");
+        let has_fs = n.contains(&"edit_file") || n.contains(&"list_directory");
         assert!(has_fs, "Expected filesystem tool in {:?}", n);
     }
 
@@ -610,7 +543,7 @@ mod tests {
         let schemas = builtin_tool_schemas();
         let index = ToolIndex::new(&schemas);
         let selected = index.select("what files do we have in this project", None);
-        assert!(names(&selected).contains(&"list_files"), "Expected list_files in {:?}", names(&selected));
+        assert!(names(&selected).contains(&"list_directory"), "Expected list_directory in {:?}", names(&selected));
     }
 
     #[test]
@@ -628,7 +561,7 @@ mod tests {
         let schemas = builtin_tool_schemas();
         let index = ToolIndex::new(&schemas);
         let selected = index.select("show me the contents of src/auth.rs", None);
-        assert!(names(&selected).contains(&"read_range"), "Expected read_range in {:?}", names(&selected));
+        assert!(names(&selected).contains(&"read_file"), "Expected read_file in {:?}", names(&selected));
     }
 
     #[test]
@@ -645,7 +578,7 @@ mod tests {
         let index = ToolIndex::new(&schemas);
         let selected = index.select("what functions are defined in upload.rs", None);
         let n = names(&selected);
-        let has_code = n.contains(&"get_symbols") || n.contains(&"find_grep");
+        let has_code = n.contains(&"get_symbols") || n.contains(&"find");
         assert!(has_code, "Expected code analysis tool in {:?}", n);
     }
 
@@ -663,7 +596,7 @@ mod tests {
         let index = ToolIndex::new(&schemas);
         let selected = index.select("fix the typo in auth.rs, change 'authenicate' to 'authenticate'", None);
         let n = names(&selected);
-        let has_edit = n.contains(&"str_replace") || n.contains(&"write_range");
+        let has_edit = n.contains(&"replace_str") || n.contains(&"edit_file");
         assert!(has_edit, "Expected edit tool for typo fix in {:?}", n);
     }
 }
