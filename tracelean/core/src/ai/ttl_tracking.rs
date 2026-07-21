@@ -385,6 +385,35 @@ mod tests {
     }
 
     #[test]
+    fn zero_tool_tokens_collapses_static_tools_candidate_onto_system_prompt() {
+        // Regression test for the runtime's cache-prediction Bug B: feeding
+        // 0 for static/dynamic tool tokens (as `plan_cache_breakpoints` used
+        // to) put the "after static tools" candidate at the exact same
+        // position as "after system prompt alone", so it could never win the
+        // `>` comparison and the tool schemas' real wire cost was invisible
+        // to every downstream candidate's position math.
+        let planner = CacheMarkerPlanner::new(explicit_300s());
+        let with_zero_tools = planner.plan_markers(500, 0, 0, 2000, 0, 15);
+        assert!(
+            with_zero_tools.iter().all(|m| m.position_tokens == 500),
+            "with no tool tokens, only the system-prompt position should appear: {:?}",
+            with_zero_tools
+        );
+
+        let with_real_tools = planner.plan_markers(500, 300, 100, 2000, 0, 15);
+        assert!(
+            with_real_tools.iter().any(|m| m.position_tokens == 800),
+            "static tools should push a candidate to system+static tokens: {:?}",
+            with_real_tools
+        );
+        assert!(
+            with_real_tools.iter().any(|m| m.position_tokens == 900),
+            "dynamic tools should push a candidate to system+static+dynamic tokens: {:?}",
+            with_real_tools
+        );
+    }
+
+    #[test]
     fn test_marker_planner_automatic() {
         let provider = automatic();
         let planner = CacheMarkerPlanner::new(provider);

@@ -229,8 +229,14 @@ async fn run_agent_turn_inner(
         // Runs on every request including the first of a turn — in persistent
         // sessions that first request carries the whole accumulated history
         // (bugs.md Bug 5: compaction almost never actuated).
+        let cached_prefix_tokens_for_prune = relative_cached_prefix_tokens(
+            last_cached_tokens,
+            prev_sent_messages.as_deref(),
+            &prev_sent_tools,
+            &prev_sent_dynamic_tools,
+        );
         let compaction_info = {
-            let info = cost_aware_compact(ctx, &mut messages, &model, provider.as_ref(), last_cached_tokens).await;
+            let info = cost_aware_compact(ctx, &mut messages, &model, provider.as_ref(), cached_prefix_tokens_for_prune).await;
             if ctx.verbose {
                 if let Some(i) = &info {
                     eprintln!(
@@ -246,6 +252,17 @@ async fn run_agent_turn_inner(
             total_compactions += 1;
         }
 
+        // Computed ahead of `plan_cache_breakpoints` below so its marker
+        // economics can be costed against the tool schemas actually being
+        // sent this turn, instead of assuming they're free (Bug B).
+        let dynamic_schemas: Vec<crate::ai::provider::ToolSchema> =
+            tool_registry.dynamic_schemas().into_iter().cloned().collect();
+        let dynamic_tools_this_turn = if dynamic_schemas.is_empty() {
+            None
+        } else {
+            Some(dynamic_schemas.clone())
+        };
+
         // P9b (D9b.1): plan write-if-worth-it markers for this request.
         let cache_breakpoints: Vec<usize> = if cache_verifier.enabled {
             explicit_cache_cfg
@@ -256,7 +273,16 @@ async fn run_agent_turn_inner(
                         .lock()
                         .map(|t| t.cold_turn_ratio())
                         .unwrap_or(1.0);
-                    plan_cache_breakpoints(cfg, &messages, loop_i, cold_ratio)
+                    let static_tools_tokens = estimate_tools_tokens(&Some(static_tools.clone()));
+                    let dynamic_tools_tokens = estimate_tools_tokens(&dynamic_tools_this_turn);
+                    plan_cache_breakpoints(
+                        cfg,
+                        &messages,
+                        loop_i,
+                        cold_ratio,
+                        static_tools_tokens,
+                        dynamic_tools_tokens,
+                    )
                 })
                 .unwrap_or_default()
         } else {
@@ -267,13 +293,6 @@ async fn run_agent_turn_inner(
             .max()
             .map(|&i| messages.iter().take(i + 1).map(estimate_msg_tokens).sum())
             .unwrap_or(0);
-        let dynamic_schemas: Vec<crate::ai::provider::ToolSchema> =
-            tool_registry.dynamic_schemas().into_iter().cloned().collect();
-        let dynamic_tools_this_turn = if dynamic_schemas.is_empty() {
-            None
-        } else {
-            Some(dynamic_schemas.clone())
-        };
 
         // D9b.3: markers sent last request → this one should read from cache.
         // bugs.md Bug 3: remember the prediction so the log entry for this
@@ -1074,6 +1093,33 @@ pub(crate) fn estimate_msg_tokens(m: &ChatMessage) -> usize {
             .sum::<usize>()
 }
 
+/// Bug A fix (new_features_work_plan.md #2): `cached_prefix_tokens` off the
+/// wire is an ABSOLUTE count — the provider's whole cached prefix, including
+/// the system prompt and (for `SystemPromptEmbed` providers) the tool
+/// definitions rendered into it. `batch_prune_decisions`' entry offsets are
+/// RELATIVE: `classify_messages` starts counting at 0 right after the system
+/// message (`trimmed_rules_table.rs`), and tool schemas are never part of
+/// that count at all. Feeding the absolute count straight into
+/// `PruneContext::cached_prefix_tokens` compared every entry's relative
+/// offset against a baseline it was never measured from, overstating
+/// invalidation risk for essentially every prune candidate. Strip the same
+/// system+tools baseline that was actually part of the cached request
+/// (`prev_sent_*`, what produced `last_cached_tokens`) before handing it to
+/// the cost model.
+pub(crate) fn relative_cached_prefix_tokens(
+    last_cached_tokens: usize,
+    prev_sent_messages: Option<&[ChatMessage]>,
+    prev_sent_tools: &Option<Vec<crate::ai::provider::ToolSchema>>,
+    prev_sent_dynamic_tools: &Option<Vec<crate::ai::provider::ToolSchema>>,
+) -> usize {
+    let system_tokens = prev_sent_messages
+        .and_then(|m| m.first())
+        .map(estimate_msg_tokens)
+        .unwrap_or(0);
+    let tools_tokens = estimate_tools_tokens(prev_sent_tools) + estimate_tools_tokens(prev_sent_dynamic_tools);
+    last_cached_tokens.saturating_sub(system_tokens + tools_tokens)
+}
+
 /// bugs.md: tool schemas (static + dynamic) are sent as separate `AiRequest`
 /// fields, not `ChatMessage`s, but still occupy real prompt tokens and — when
 /// unchanged from the previous request — are just as cacheable as a matching
@@ -1158,6 +1204,8 @@ fn plan_cache_breakpoints(
     messages: &[ChatMessage],
     loop_i: u32,
     cold_turn_ratio: f64,
+    static_tools_tokens: usize,
+    dynamic_tools_tokens: usize,
 ) -> Vec<usize> {
     use crate::ai::ttl_tracking::{CacheBlock, CacheMarkerPlanner};
 
@@ -1177,8 +1225,21 @@ fn plan_cache_breakpoints(
         .map(estimate_msg_tokens)
         .sum();
 
+    // Bug B fix: tool schemas are real wire tokens (bugs.md), not free. They
+    // used to be passed as hardcoded 0s here, which silently collapsed the
+    // "after static tools"/"after dynamic tools" candidates onto the "after
+    // system prompt" position and undercounted every position downstream of
+    // them (including the conversation-prefix candidate), skewing every
+    // marker's cost/benefit math on this path.
     let planner = CacheMarkerPlanner::new(cfg.clone());
-    let markers = planner.plan_markers(system_tokens, 0, 0, 0, stable_prefix_tokens, n_expected);
+    let markers = planner.plan_markers(
+        system_tokens,
+        static_tools_tokens,
+        dynamic_tools_tokens,
+        0,
+        stable_prefix_tokens,
+        n_expected,
+    );
 
     let mut idxs: Vec<usize> = markers
         .iter()
@@ -1187,7 +1248,20 @@ fn plan_cache_breakpoints(
             // The stable prefix ends before the newest message.
             CacheBlock::ConversationPrefix { .. } => Some(messages.len().saturating_sub(2)),
             CacheBlock::AfterMessage { index } => Some(index),
-            _ => None,
+            // Structural gap (not just a missing number): tool schemas are a
+            // separate `AiRequest` field, not `ChatMessage`s, so there is no
+            // message index "after the tools" to report through this
+            // message-index-only Vec. Their token cost is now correctly
+            // folded into every other candidate's position math above, but
+            // if the planner's own ranking picks one of these as the single
+            // best marker, there is nowhere to place it and it's dropped
+            // here rather than mis-mapped onto message 0 or 1. Fixing this
+            // for real needs `AiRequest::cache_breakpoints` to grow a
+            // non-message marker location (e.g. an enum of
+            // {AfterSystem, AfterStaticTools, AfterDynamicTools,
+            // AfterMessage(usize)}), which is a wire-format change, not a
+            // one-line fix.
+            CacheBlock::StaticTools | CacheBlock::DynamicTools => None,
         })
         .filter(|&i| i < messages.len())
         .collect();
@@ -1949,7 +2023,7 @@ mod cache_marker_tests {
         // Big system prompt + first user message: system-prompt marker pays
         // for itself even with no timing history (cold_ratio 1.0 → floor 0.5).
         let messages = vec![msg(MessageRole::System, 8000), msg(MessageRole::User, 200)];
-        let idxs = plan_cache_breakpoints(&anthropic_cfg(), &messages, 0, 1.0);
+        let idxs = plan_cache_breakpoints(&anthropic_cfg(), &messages, 0, 1.0, 0, 0);
         assert_eq!(idxs, vec![0], "system prompt should carry a marker");
     }
 
@@ -1960,7 +2034,7 @@ mod cache_marker_tests {
             messages.push(msg(MessageRole::User, 2000));
             messages.push(msg(MessageRole::Assistant, 2000));
         }
-        let idxs = plan_cache_breakpoints(&anthropic_cfg(), &messages, 3, 0.0);
+        let idxs = plan_cache_breakpoints(&anthropic_cfg(), &messages, 3, 0.0, 0, 0);
         assert!(idxs.contains(&0), "system marker expected");
         assert!(
             idxs.contains(&(messages.len() - 2)),
@@ -1968,6 +2042,42 @@ mod cache_marker_tests {
             idxs
         );
         assert!(idxs.len() <= 4, "Anthropic allows max 4 breakpoints");
+    }
+
+    #[test]
+    fn relative_cached_prefix_strips_system_and_tools_baseline() {
+        // Bug A: 1000 absolute cached tokens where 300 of them are the system
+        // message and 200 are static+dynamic tool schemas should leave 500
+        // tokens of actual conversation-body prefix cached — the frame
+        // `batch_prune_decisions`' relative entry offsets are measured in.
+        let prev_messages = vec![msg(MessageRole::System, 1200)]; // ~300 tokens (len/4)
+        let tools = vec![crate::ai::provider::ToolSchema {
+            tool_type: "function".into(),
+            function: crate::ai::provider::ToolFunction {
+                name: "x".repeat(100),
+                description: "y".repeat(300),
+                parameters: serde_json::json!({}),
+            },
+        }];
+        let static_tokens = estimate_tools_tokens(&Some(tools.clone()));
+        let got = relative_cached_prefix_tokens(1000, Some(&prev_messages), &Some(tools), &None);
+        assert_eq!(got, 1000usize.saturating_sub(300 + static_tokens));
+    }
+
+    #[test]
+    fn relative_cached_prefix_saturates_at_zero_when_baseline_exceeds_cache() {
+        // If the whole absolute cache count is smaller than the system+tools
+        // baseline (e.g. right after the tool set changed), the conversation
+        // body has nothing cached — never underflow to a huge usize.
+        let prev_messages = vec![msg(MessageRole::System, 8000)];
+        let got = relative_cached_prefix_tokens(10, Some(&prev_messages), &None, &None);
+        assert_eq!(got, 0);
+    }
+
+    #[test]
+    fn relative_cached_prefix_with_no_prior_request_is_zero_baseline() {
+        let got = relative_cached_prefix_tokens(500, None, &None, &None);
+        assert_eq!(got, 500);
     }
 
     #[test]
@@ -1981,7 +2091,7 @@ mod cache_marker_tests {
             notes: None,
         };
         let messages = vec![msg(MessageRole::System, 8000), msg(MessageRole::User, 200)];
-        assert!(plan_cache_breakpoints(&cfg, &messages, 2, 0.0).is_empty());
+        assert!(plan_cache_breakpoints(&cfg, &messages, 2, 0.0, 0, 0).is_empty());
     }
 
     #[test]
