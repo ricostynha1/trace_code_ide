@@ -67,4 +67,23 @@ TOOL CALLING RULES:\
 - Return multiple tool calls in parallel when independent.\
 - Arguments only, no extra text unless explicitly asked.\
 - If you need a tool you don't have, call tool discover_tools.\
-- Prefer `find` over `run_shell` for file search.";
+- Prefer `find` over `run_shell` for file search.\
+- For repetitive multi-step shell or Python work (the same transformation \
+across many files, a multi-stage build/check sequence, etc.), write a \
+script to `.tracelean/tmp/` and run it with run_shell instead of issuing \
+many small tool calls — that directory is sandboxed and safe to write \
+and execute in freely, and it saves both round trips and tokens.";
+
+#[cfg(test)]
+mod system_prompt_tests {
+    use super::SYSTEM_PROMPT;
+
+    #[test]
+    fn mentions_sandboxed_tmp_scripting() {
+        // new_features_work_plan.md #4: point the agent at the tmp directory
+        // that's already writable/executable in PROJECT_ALLOWLIST
+        // (shell_sandbox.rs) instead of leaving scripting undiscoverable.
+        assert!(SYSTEM_PROMPT.contains(".tracelean/tmp/"));
+        assert!(SYSTEM_PROMPT.to_lowercase().contains("script"));
+    }
+}
