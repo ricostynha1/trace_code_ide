@@ -87,7 +87,7 @@ impl AgentPermissions {
             agent_id: agent_id.into(),
             denied_tools: vec![
                 "edit_file".into(),
-                "str_replace".into(),
+                "replace_str".into(),
                 "delete_file".into(),
                 "run_shell".into(),
             ],
@@ -245,12 +245,12 @@ pub fn execute_tool_reviewed(
     // aliases) skip validation and fall through to their own checks.
     let registry = super::tool_registry::ToolRegistry::embedded();
     if let Some(schema) = registry.and_then(|r| r.schema_for(&call.name)) {
-        if let Err(problem) = super::tool_errors::validate_args(&call.arguments, schema) {
+        if let Err(error) = super::tool_errors::validate_args(&call.arguments, schema) {
             return ToolResult {
                 success: false,
                 content: super::tool_errors::format_arg_validation_error(
                     &call.name,
-                    &problem,
+                    &error,
                     registry,
                 ),
                 data: None,
@@ -261,21 +261,11 @@ pub fn execute_tool_reviewed(
     match call.name.as_str() {
         "read_file" => execute_read_file(call, project_root, permissions),
         "edit_file" => execute_edit_file(call, project_root, state, permissions, review),
-        //
-        "count_lines" => execute_count_lines(call, project_root, permissions),
-
-        "find_grep" => execute_find(call, project_root, embed_index),
-        "find_embed" => execute_find_embed(call, embed_index),
-        // tools.json name "find": mode-dispatched (auto|regex|semantic) with fallback chain
+        // Mode-dispatched (auto|regex|semantic) with fallback chain; also the
+        // only caller of execute_find_embed for the standalone semantic path.
         "find" => execute_find(call, project_root, embed_index),
-
-        "str_replace" => execute_str_replace(call, project_root, state, permissions, review),
-        // tools.json name "replace_str" → same as str_replace
         "replace_str" => execute_str_replace(call, project_root, state, permissions, review),
-
         "delete_file" => execute_delete_file(call, project_root, state, permissions),
-        "list_files" => execute_list_directory(call, project_root),
-        // tools.json canonical name
         "list_directory" => execute_list_directory(call, project_root),
         "query_trace_graph" => execute_query_trace(call, graph),
         "query_code_element" => execute_query_code(call, graph),
@@ -420,48 +410,6 @@ fn execute_read_file(call: &ToolCall, project_root: &Path, perms: &AgentPermissi
             "modified": modified,
             "hint": hint,
         })),
-    }
-}
-
-fn execute_count_lines(
-    call: &ToolCall,
-    project_root: &Path,
-    perms: &AgentPermissions,
-) -> ToolResult {
-    let path = match get_str_arg(call, "path") {
-        Some(p) => p,
-        None => {
-            return ToolResult {
-                success: false,
-                content: "Missing 'path' argument. Expected: count_lines(path)".into(),
-                data: None,
-            }
-        }
-    };
-
-    if !perms.can_read(&path) {
-        return ToolResult {
-            success: false,
-            content: format!("Permission denied: cannot read '{}'.", path),
-            data: None,
-        };
-    }
-
-    let full = project_root.join(&path);
-    match std::fs::read_to_string(&full) {
-        Ok(content) => {
-            let count = content.lines().count();
-            ToolResult {
-                success: true,
-                content: format!("{} lines", count),
-                data: None,
-            }
-        }
-        Err(e) => ToolResult {
-            success: false,
-            content: format!("Error reading '{}': {}", path, e),
-            data: None,
-        },
     }
 }
 
@@ -2458,24 +2406,6 @@ mod tests {
         assert!(!result.success);
     }
 
-    // ===== count_lines tests =====
-
-    #[test]
-    fn test_count_lines_success() {
-        let tmp = TempDir::new().unwrap();
-        std::fs::write(tmp.path().join("f.txt"), "a\nb\nc\n").unwrap();
-
-        let mut state = AppState::new();
-        let symbols = SymbolTable::new();
-        let graph = TraceGraph::new();
-        let perms = full_perms();
-
-        let call = make_call("count_lines", json!({"path": "f.txt"}));
-        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
-        assert!(result.success);
-        assert!(result.content.contains("3 lines"));
-    }
-
     // ===== edit_file tests =====
 
     #[test]
@@ -2590,10 +2520,10 @@ mod tests {
         assert_eq!(state.get_content(&rel).unwrap(), "original\n");
     }
 
-    // ===== str_replace tests =====
+    // ===== replace_str tests =====
 
     #[test]
-    fn test_str_replace_success() {
+    fn test_replace_str_success() {
         let tmp = TempDir::new().unwrap();
         std::fs::write(tmp.path().join("f.txt"), "hello world").unwrap();
 
@@ -2603,7 +2533,7 @@ mod tests {
         let perms = full_perms();
 
         let call = make_call(
-            "str_replace",
+            "replace_str",
             json!({"path": "f.txt", "old_str": "world", "new_str": "rust"}),
         );
         let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
@@ -2614,7 +2544,7 @@ mod tests {
     }
 
     #[test]
-    fn test_str_replace_not_found() {
+    fn test_replace_str_not_found() {
         let tmp = TempDir::new().unwrap();
         std::fs::write(tmp.path().join("f.txt"), "hello").unwrap();
 
@@ -2624,7 +2554,7 @@ mod tests {
         let perms = full_perms();
 
         let call = make_call(
-            "str_replace",
+            "replace_str",
             json!({"path": "f.txt", "old_str": "xyz", "new_str": "abc"}),
         );
         let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
@@ -2633,7 +2563,7 @@ mod tests {
     }
 
     #[test]
-    fn test_str_replace_nonunique() {
+    fn test_replace_str_nonunique() {
         let tmp = TempDir::new().unwrap();
         std::fs::write(tmp.path().join("f.txt"), "foo foo foo").unwrap();
 
@@ -2644,7 +2574,7 @@ mod tests {
 
         state.load_file(PathBuf::from("f.txt"), "foo foo foo".into());
         let call = make_call(
-            "str_replace",
+            "replace_str",
             json!({"path": "f.txt", "old_str": "foo", "new_str": "bar"}),
         );
         let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
@@ -2652,10 +2582,10 @@ mod tests {
         assert!(result.content.contains("3 times"));
     }
 
-    // ===== find_grep tests =====
+    // ===== find (regex mode) tests =====
 
     #[test]
-    fn test_find_grep_success() {
+    fn test_find_regex_success() {
         let tmp = TempDir::new().unwrap();
         std::fs::write(tmp.path().join("a.rs"), "fn main() { todo!(); }").unwrap();
         std::fs::write(tmp.path().join("b.rs"), "// nothing").unwrap();
@@ -2665,7 +2595,7 @@ mod tests {
         let graph = TraceGraph::new();
         let perms = full_perms();
 
-        let call = make_call("find_grep", json!({"pattern": "todo!"}));
+        let call = make_call("find", json!({"query": "todo!"}));
         let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
         assert!(result.success);
         assert!(result.content.contains("a.rs"));
@@ -2673,7 +2603,7 @@ mod tests {
     }
 
     #[test]
-    fn test_find_grep_no_matches() {
+    fn test_find_regex_no_matches() {
         let tmp = TempDir::new().unwrap();
         std::fs::write(tmp.path().join("a.rs"), "fn main() {}").unwrap();
 
@@ -2682,47 +2612,47 @@ mod tests {
         let graph = TraceGraph::new();
         let perms = full_perms();
 
-        let call = make_call("find_grep", json!({"pattern": "zzz_never_match"}));
+        let call = make_call("find", json!({"query": "zzz_never_match"}));
         let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
         assert!(result.success);
         assert!(result.content.contains("No matches"));
     }
 
     #[test]
-    fn test_find_grep_invalid_regex() {
+    fn test_find_regex_invalid_regex() {
         let tmp = TempDir::new().unwrap();
         let mut state = AppState::new();
         let symbols = SymbolTable::new();
         let graph = TraceGraph::new();
         let perms = full_perms();
 
-        let call = make_call("find_grep", json!({"pattern": "[invalid"}));
+        let call = make_call("find", json!({"query": "[invalid"}));
         let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
         assert!(!result.success);
         assert!(result.content.contains("Invalid regex"));
     }
 
-    // ===== find_embed tests =====
+    // ===== find (semantic mode) tests =====
 
     #[test]
-    fn test_find_embed_no_index() {
+    fn test_find_semantic_no_index() {
         let tmp = TempDir::new().unwrap();
         let mut state = AppState::new();
         let symbols = SymbolTable::new();
         let graph = TraceGraph::new();
         let perms = full_perms();
 
-        let call = make_call("find_embed", json!({"query": "auth handler"}));
+        let call = make_call("find", json!({"query": "auth handler", "mode": "semantic"}));
         let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
         // No index passed via execute_tool (uses None), so returns error
         assert!(!result.success);
         assert!(result.content.contains("not initialized"));
     }
 
-    // ===== list_files tests =====
+    // ===== list_directory tests =====
 
     #[test]
-    fn test_list_files_success() {
+    fn test_list_directory_success() {
         let tmp = TempDir::new().unwrap();
         std::fs::write(tmp.path().join("a.txt"), "").unwrap();
         std::fs::create_dir(tmp.path().join("sub")).unwrap();
@@ -2732,7 +2662,7 @@ mod tests {
         let graph = TraceGraph::new();
         let perms = full_perms();
 
-        let call = make_call("list_files", json!({}));
+        let call = make_call("list_directory", json!({}));
         let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
         assert!(result.success);
         assert!(result.content.contains("a.txt"));
@@ -2799,6 +2729,29 @@ mod tests {
             result.content.to_lowercase().contains("denied")
                 || result.content.to_lowercase().contains("not allowed")
         );
+    }
+
+    #[test]
+    fn test_replace_str_permission_denied_for_read_only() {
+        // read_only()'s denied_tools list must name the canonical
+        // data/tools.json tool ("replace_str"), not the stale legacy alias
+        // ("str_replace") — otherwise a read-only agent could still edit
+        // files via replace_str.
+        let tmp = TempDir::new().unwrap();
+        std::fs::write(tmp.path().join("f.txt"), "hello world").unwrap();
+
+        let mut state = AppState::new();
+        let symbols = SymbolTable::new();
+        let graph = TraceGraph::new();
+        let perms = AgentPermissions::read_only("ro-agent");
+
+        let call = make_call(
+            "replace_str",
+            json!({"path": "f.txt", "old_str": "world", "new_str": "rust"}),
+        );
+        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
+        assert!(!result.success);
+        assert!(result.content.to_lowercase().contains("denied"));
     }
 
     // ===== Unknown tool =====
@@ -2896,6 +2849,97 @@ mod tests {
         let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
         assert!(result.success);
         assert!(result.content.contains("main"));
+    }
+
+    // ===== Dispatch <-> data/tools.json consistency (ai_module_cleanup_plan.md finding 7) =====
+    //
+    // The plan called this direction (an extra dispatch arm with no matching
+    // tools.json entry, or vice versa) unenforceable "without reflection".
+    // Parsing this file's own source with tree-sitter at test time gives us
+    // exactly that reflection, so both directions are checked here — not
+    // just "schema name silently falls through to Unknown tool", but also
+    // "arm exists for a tool name tools.json doesn't know about".
+
+    /// Extract every string-literal pattern (skipping the `_` fallback) from
+    /// the `match call.name.as_str() { ... }` dispatch in this file's own
+    /// source, by parsing it with tree-sitter-rust.
+    fn dispatch_arm_names() -> Vec<String> {
+        let source = include_str!("tool_executor.rs");
+        let mut parser = tree_sitter::Parser::new();
+        parser
+            .set_language(&tree_sitter_rust::LANGUAGE.into())
+            .expect("tree-sitter-rust language should load");
+        let tree = parser.parse(source, None).expect("tool_executor.rs should parse");
+
+        let mut names = Vec::new();
+        let mut cursor = tree.root_node().walk();
+        let mut stack = vec![tree.root_node()];
+        while let Some(node) = stack.pop() {
+            if node.kind() == "match_expression" {
+                if let Some(value) = node.child_by_field_name("value") {
+                    if value.utf8_text(source.as_bytes()).unwrap_or("") == "call.name.as_str()" {
+                        collect_arm_names(node, source, &mut names);
+                    }
+                }
+            }
+            for child in node.children(&mut cursor) {
+                stack.push(child);
+            }
+        }
+        names
+    }
+
+    fn collect_arm_names(match_expr: tree_sitter::Node, source: &str, out: &mut Vec<String>) {
+        let Some(body) = match_expr.child_by_field_name("body") else { return };
+        let mut cursor = body.walk();
+        for arm in body.children(&mut cursor) {
+            if arm.kind() != "match_arm" { continue }
+            let Some(pattern) = arm.child_by_field_name("pattern") else { continue };
+            // A single-literal arm's pattern is `match_pattern -> string_literal`;
+            // an `a" | "b`-style or-pattern would nest further, but the dispatch
+            // here only ever uses single string-literal arms.
+            let mut inner_cursor = pattern.walk();
+            for child in pattern.children(&mut inner_cursor) {
+                if child.kind() == "string_literal" {
+                    if let Ok(text) = child.utf8_text(source.as_bytes()) {
+                        out.push(text.trim_matches('"').to_string());
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn dispatch_arms_match_tools_json_exactly() {
+        let arms = dispatch_arm_names();
+        assert!(!arms.is_empty(), "tree-sitter should have found the dispatch match's string arms");
+
+        let registry = super::super::tool_registry::ToolRegistry::embedded()
+            .expect("embedded tools.json parses");
+        let mut registry_names: Vec<String> = registry
+            .all_tool_entries()
+            .iter()
+            .map(|e| e.name.clone())
+            .collect();
+        registry_names.sort();
+
+        let mut arm_names = arms.clone();
+        arm_names.sort();
+        arm_names.dedup();
+
+        let extra_arms: Vec<&String> = arm_names.iter().filter(|n| !registry_names.contains(n)).collect();
+        assert!(
+            extra_arms.is_empty(),
+            "dispatch has arm(s) for tool name(s) not in data/tools.json: {:?}",
+            extra_arms
+        );
+
+        let missing_arms: Vec<&String> = registry_names.iter().filter(|n| !arm_names.contains(n)).collect();
+        assert!(
+            missing_arms.is_empty(),
+            "data/tools.json has tool(s) with no dispatch arm in tool_executor.rs: {:?}",
+            missing_arms
+        );
     }
 }
 
