@@ -1,5 +1,7 @@
 # TraceLean Architecture
 
+*All relative paths below (`core/...`, `gui_backend/...`, `react_frontend/...`, `ui_settings/...`, `data/...`) are relative to [`tracelean/`](../tracelean/), the crate/app root — not this `docs/` folder.*
+
 ## System Overview
 
 TraceLean is a traceability-first IDE that links requirements → specs → code → tests in real-time. It combines traditional editing with AI-agent integration through the Zed Agent Client Protocol (ACP).

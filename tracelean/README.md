@@ -32,29 +32,9 @@ cargo tauri dev
 cargo tauri build
 ```
 
-### GUI Keybindings (Myth)
-
-The editor and file tree are driven by a modal keymap (Emacs-style
-"which-key"), not just mouse clicks — the same mode machine backs both
-panels. Press a leader key to enter a mode; a bar at the bottom of the
-window shows every key available in the current mode, so you never have to
-memorize the whole tree.
-
-| Key (in Editor/FileTree) | Effect |
-|---|---|
-| `Ctrl+Space` or `Ctrl+.` | Open the Options menu |
-| `Shift+↑` / `Shift+↓` | Go to parent / child AST node |
-| `Shift+←` / `Shift+→` | Go to previous / next sibling node |
-
-Inside **Options**: `f` → File menu, `u` undo, `r` redo, `s` save, `Escape` back to normal editing.
-Inside **File**: `o` open, `r` rename, `d` delete, `n` create new file, `Escape` back to Options.
-
-This table is generated from `ui_settings/keymap.json` — edit that file to add
-or change bindings (it's validated at startup; an unknown action or a
-transition to an undefined mode fails a test in `core/src/myth/keymap.rs`,
-not silently). The bottom bar is not wired up outside the Editor and File
-Tree panels yet; everywhere else in the app (chat, diffs, undo tree,
-terminal) uses plain buttons, which still work with Tab + Enter/Space.
+> User-facing docs (keybindings, settings, panels) live in the
+> [top-level README](../README.md). This file is developer-facing: build,
+> run, benchmark, test.
 
 ## Launching the TUI
 
@@ -169,25 +149,8 @@ Results written to `benchmark_results.json`.
 cargo test --workspace
 ```
 
-## Configuration
-
-AI provider, model, and safety settings are managed from the Settings panel
-in the GUI (provider/API key, spend cap, sandbox mode, context-trimming
-tuning). They're persisted as JSON, not hidden state:
-
-- `{project}/.tracelean/ai_settings.json` — per-project settings (checked first).
-- `~/.tracelean/ai_settings.json` — fallback used before a project is open.
-
-Notable settings (see `AiSettings` in `core/src/lib.rs` for the full list and doc comments):
-
-| Setting | Purpose |
-|---|---|
-| `spend_cap_usd` | Hard stop once a session's estimated cost crosses this (default $1). |
-| `shell_sandbox` | `"off"` \| `"detect"` \| `"strict"` — agent shell commands run in an overlay+bwrap sandbox by default; `"strict"` refuses to run without it. |
-| `shell_network` | `"deny"` \| `"ask"` \| `"allow"` — network access for sandboxed shell commands. |
-| `review_edits` / `review_commands` | Require per-hunk / per-command approval before an agent edit or shell command applies. |
-| `disable_context_trimming` | Fully disables automatic context pruning/summarization — useful when debugging caching behavior with a stable prompt. |
-| `n_expected_rounds` | Tuning knob for how aggressively old context is trimmed/summarized (higher = keep more). |
+> Settings/configuration reference has moved to the
+> [top-level README](../README.md#1-quick-start-gui).
 
 ## Recommended IDE Setup
 

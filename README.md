@@ -43,6 +43,22 @@ Open the **AI Chat** panel → **Settings** (gear icon), then either:
 then select a model from the catalog. A per-session **spend cap** (default $1)
 refuses new requests once exceeded — raise it in the same settings pane.
 
+Everything in that Settings pane is backed by plain JSON, not hidden state:
+
+- `{project}/.tracelean/ai_settings.json` — per-project (checked first).
+- `~/.tracelean/ai_settings.json` — fallback used before a project is open.
+
+Fields worth knowing about beyond provider/model/spend cap (see `AiSettings`
+in `tracelean/core/src/lib.rs` for the full list and doc comments):
+
+| Setting | Purpose |
+|---|---|
+| `shell_sandbox` | `"off"` \| `"detect"` \| `"strict"` — agent shell commands run in an overlay+bwrap sandbox by default; `"strict"` refuses to run without it. |
+| `shell_network` | `"deny"` \| `"ask"` \| `"allow"` — network access for sandboxed shell commands. |
+| `review_edits` / `review_commands` | Require per-hunk / per-command approval before an agent edit or shell command applies. |
+| `disable_context_trimming` | Fully disables automatic context pruning/summarization — useful when debugging caching behavior with a stable prompt. |
+| `n_expected_rounds` | Tuning knob for how aggressively old context is trimmed/summarized (higher = keep more). |
+
 ---
 
 ## 2. The panels
@@ -61,6 +77,29 @@ refuses new requests once exceeded — raise it in the same settings pane.
 - **Context meter** — how full the model's context window is
   (green < 60%, amber < 85%, red ≥ 85%). The `⟲` button resets the model's
   context (your visible transcript is kept).
+
+### Keyboard control (Myth)
+
+The Editor and File Tree are driven by a modal keymap ("Myth"), Emacs-style —
+press a leader key to enter a mode, and a which-key bar at the bottom of the
+window lists every key available in that mode, so you never have to memorize
+the whole tree.
+
+| Key (in Editor/File Tree) | Effect |
+|---|---|
+| `Ctrl+Space` or `Ctrl+.` | Open the Options menu |
+| `Shift+↑` / `Shift+↓` | Go to parent / child AST node |
+| `Shift+←` / `Shift+→` | Go to previous / next sibling node |
+
+Inside **Options**: `f` → File menu, `u` undo, `r` redo, `s` save, `Escape` back to normal editing.
+Inside **File**: `o` open, `r` rename, `d` delete, `n` create new file, `Escape` back to Options.
+
+This table comes from `tracelean/ui_settings/keymap.json` — edit that file to
+add or change bindings (an unknown action, or a transition to an undefined
+mode, fails a startup test rather than breaking silently). The which-key bar
+and mode machine currently only cover the Editor and File Tree panels — chat,
+diffs, undo tree, and the terminal use plain buttons (still reachable via
+Tab + Enter/Space, just without leader-key discoverability).
 
 ---
 
@@ -154,6 +193,15 @@ tracelean/
   data/            model catalog, tool schemas, cache/pricing metadata
   scripts/         model-metadata generators + Python benchmark
   exercism_tasks/  benchmark task cache
-docs/              specs and design notes
+docs/              architecture + planning docs (see below)
 example/           sample project used for manual testing
 ```
+
+`docs/`:
+
+| File | What's in it |
+|---|---|
+| `architecture.md` | Subsystem-by-subsystem map with file pointers (ACP, command/undo system, trace graph, AI providers, sandboxing, cost model, Myth, frontend, persistence). |
+| `TOOL_SINGLE_SOURCE.md` | Design note on keeping tool schemas (`data/tools.json`) and executor code in sync; status of what's implemented vs. still proposed. |
+| `Regression.md` | Recipe for checking that a compaction/retention/cost-model change didn't make the agent dumber or pricier. |
+| `new_features_work_plan.md` | Prioritized backlog with rationale and implementation sketches. |

@@ -1,5 +1,7 @@
 # Tool Definition: Single Source of Truth
 
+*Paths below (`core/...`, `data/...`) are relative to [`tracelean/`](../tracelean/), not this `docs/` folder.*
+
 ## Status (2026-07-20)
 
 The "Alternative: Runtime validation middleware" section below is now

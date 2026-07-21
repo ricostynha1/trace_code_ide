@@ -2,6 +2,8 @@
 
 Source: `new_features.md`. Each item below restates the request, ranks it, justifies the rank, and sketches a high-level implementation approach grounded in the actual code (not a rewrite proposal — every plan reuses existing structure). Ranked highest-impact/lowest-risk first.
 
+*Paths below (`core/...`, `data/...`, etc.) are relative to [`tracelean/`](../tracelean/), not this `docs/` folder.*
+
 ---
 
 ## 1. Kill hardcoded tool text/errors in providers — make tools fully JSON-driven
