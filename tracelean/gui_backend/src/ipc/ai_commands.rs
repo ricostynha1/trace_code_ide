@@ -1,12 +1,11 @@
-//! AI IPC commands — chat, settings, models, agents, diff pipeline.
+//! AI IPC commands — chat, settings, models, diff pipeline.
 
 use crate::ai;
 use crate::ai::tracking::SessionStats;
-use crate::ai::tools::ToolDefinition;
 use crate::{
     AppStateWrapper, AiSettingsWrapper, AiLogWrapper, AiSessionStatsWrapper,
     MockProviderWrapper, PendingDiffsWrapper, TraceGraphWrapper, UndoTreeCacheWrapper,
-    SymbolTableWrapper, AiSettings, McpClientWrapper, invalidate_undo_cache, get_provider,
+    SymbolTableWrapper, AiSettings, McpClientWrapper, invalidate_undo_cache,
     ToolLoopResumeWrapper,
 };
 use tauri::{AppHandle, Emitter, State};
@@ -552,140 +551,6 @@ pub fn assemble_context_for_file(
     let s = state.0.lock().map_err(|e| e.to_string())?;
     let g = graph_state.0.lock().map_err(|e| e.to_string())?;
     Ok(ai::context::assemble_for_file(&s, &g, &file_path, token_budget))
-}
-
-// --- Agent Commands ---
-
-/// Collect tool definitions from connected MCP client servers.
-async fn get_mcp_client_tools(client: &tauri::State<'_, McpClientWrapper>) -> Vec<ToolDefinition> {
-    let mgr = client.0.lock().await;
-    mgr.all_tools().into_iter().map(|(_server, tool)| tool).collect()
-}
-
-/// Get provider + model config (needed for cost calculation).
-async fn get_provider_and_model(
-    settings: &tauri::State<'_, AiSettingsWrapper>,
-    mock_provider: &tauri::State<'_, MockProviderWrapper>,
-) -> Result<(Box<dyn ai::provider::AiProvider + Send + Sync>, ai::ModelConfig), String> {
-    let model = {
-        let s = settings.0.lock().map_err(|e| e.to_string())?;
-        s.selected_model.clone().ok_or("No model selected")?
-    };
-    let provider = get_provider(settings, mock_provider).await?;
-    Ok((provider, model))
-}
-
-/// Record token usage + cost from agent result into session stats, emit event.
-fn record_agent_stats(
-    stats: &tauri::State<'_, AiSessionStatsWrapper>,
-    model: &ai::ModelConfig,
-    result: &ai::agents::AgentResult,
-    app: &AppHandle,
-) {
-    if let Some(ref usage) = result.usage {
-        let cost = usage.estimate_cost(
-            model.input_cost_per_m,
-            model.output_cost_per_m,
-            model.cached_input_cost_per_m,
-        );
-        if let Ok(mut s) = stats.0.lock() {
-            s.record(usage, &cost);
-        }
-        // Emit cost-updated event so frontend can refresh display
-        let _ = app.emit("ai-stats-updated", ());
-    }
-}
-
-#[tauri::command]
-pub async fn run_agent_elicitation(
-    app: AppHandle,
-    state: State<'_, AppStateWrapper>,
-    _graph_state: State<'_, TraceGraphWrapper>,
-    settings: State<'_, AiSettingsWrapper>,
-    mock_provider: State<'_, MockProviderWrapper>,
-    _log_state: State<'_, AiLogWrapper>,
-    stats: State<'_, AiSessionStatsWrapper>,
-    mcp_client: State<'_, McpClientWrapper>,
-    user_goal: String,
-) -> Result<ai::agents::AgentResult, String> {
-    let (provider, model) = get_provider_and_model(&settings, &mock_provider).await?;
-    let project_root = {
-        let s = state.0.lock().map_err(|e| e.to_string())?;
-        s.project_root().cloned().ok_or("No project open")?
-    };
-    let extra_tools = get_mcp_client_tools(&mcp_client).await;
-    let result = ai::agents::run_elicitation_standalone(provider.as_ref(), &project_root, &user_goal, &extra_tools).await?;
-    record_agent_stats(&stats, &model, &result, &app);
-    Ok(result)
-}
-
-#[tauri::command]
-pub async fn run_agent_formalisation(
-    app: AppHandle,
-    state: State<'_, AppStateWrapper>,
-    _graph_state: State<'_, TraceGraphWrapper>,
-    settings: State<'_, AiSettingsWrapper>,
-    mock_provider: State<'_, MockProviderWrapper>,
-    stats: State<'_, AiSessionStatsWrapper>,
-    mcp_client: State<'_, McpClientWrapper>,
-    req_id: String,
-) -> Result<ai::agents::AgentResult, String> {
-    let (provider, model) = get_provider_and_model(&settings, &mock_provider).await?;
-    let project_root = {
-        let s = state.0.lock().map_err(|e| e.to_string())?;
-        s.project_root().cloned().ok_or("No project open")?
-    };
-    let extra_tools = get_mcp_client_tools(&mcp_client).await;
-    let result = ai::agents::run_formalisation_standalone(provider.as_ref(), &project_root, &req_id, &extra_tools).await?;
-    record_agent_stats(&stats, &model, &result, &app);
-    Ok(result)
-}
-
-#[tauri::command]
-pub async fn run_agent_implementation(
-    app: AppHandle,
-    state: State<'_, AppStateWrapper>,
-    _graph_state: State<'_, TraceGraphWrapper>,
-    settings: State<'_, AiSettingsWrapper>,
-    mock_provider: State<'_, MockProviderWrapper>,
-    stats: State<'_, AiSessionStatsWrapper>,
-    mcp_client: State<'_, McpClientWrapper>,
-    spec_path: String,
-    language: String,
-) -> Result<ai::agents::AgentResult, String> {
-    let (provider, model) = get_provider_and_model(&settings, &mock_provider).await?;
-    let project_root = {
-        let s = state.0.lock().map_err(|e| e.to_string())?;
-        s.project_root().cloned().ok_or("No project open")?
-    };
-    let extra_tools = get_mcp_client_tools(&mcp_client).await;
-    let result = ai::agents::run_implementation_standalone(provider.as_ref(), &project_root, &spec_path, &language, &extra_tools).await?;
-    record_agent_stats(&stats, &model, &result, &app);
-    Ok(result)
-}
-
-#[tauri::command]
-pub async fn run_agent_repair(
-    app: AppHandle,
-    state: State<'_, AppStateWrapper>,
-    _graph_state: State<'_, TraceGraphWrapper>,
-    settings: State<'_, AiSettingsWrapper>,
-    mock_provider: State<'_, MockProviderWrapper>,
-    stats: State<'_, AiSessionStatsWrapper>,
-    mcp_client: State<'_, McpClientWrapper>,
-    file_path: String,
-    violation: String,
-    language: String,
-) -> Result<ai::agents::AgentResult, String> {
-    let (provider, model) = get_provider_and_model(&settings, &mock_provider).await?;
-    let project_root = {
-        let s = state.0.lock().map_err(|e| e.to_string())?;
-        s.project_root().cloned().ok_or("No project open")?
-    };
-    let extra_tools = get_mcp_client_tools(&mcp_client).await;
-    let result = ai::agents::run_repair_standalone(provider.as_ref(), &project_root, &file_path, &violation, &language, &extra_tools).await?;
-    record_agent_stats(&stats, &model, &result, &app);
-    Ok(result)
 }
 
 // --- Diff Pipeline ---

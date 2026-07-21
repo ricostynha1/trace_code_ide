@@ -174,7 +174,12 @@ Implementations: OpenRouter, AWS Bedrock, Mock (for testing/dev).
 Prompt → Context Assembly → LLM Call → Response Parse → Tool Calls → Execute → Loop
 ```
 
-Built-in agents: Elicitation, Formalisation, Implementation, Repair.
+The single live agent loop is the main chat agent (`agent/runtime.rs`). An
+earlier set of standalone Elicitation/Formalisation/Implementation/Repair
+agents (`ai/agents.rs`) was never wired to the UI and has been removed —
+see `docs/new_features_work_plan.md` for the plan to fold their intent into
+the chat-driven agent when the spec/code-native spec-IDE features are
+implemented.
 
 ### Tool Execution
 

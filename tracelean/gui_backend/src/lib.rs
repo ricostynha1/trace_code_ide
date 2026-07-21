@@ -280,10 +280,6 @@ pub fn run() {
             ipc::ai_commands::get_prompt_templates,
             ipc::ai_commands::assemble_context_for_requirement,
             ipc::ai_commands::assemble_context_for_file,
-            ipc::ai_commands::run_agent_elicitation,
-            ipc::ai_commands::run_agent_formalisation,
-            ipc::ai_commands::run_agent_implementation,
-            ipc::ai_commands::run_agent_repair,
             ipc::ai_commands::get_pending_diffs,
             ipc::ai_commands::accept_diff_hunk,
             ipc::ai_commands::reject_diff_hunk,
@@ -306,7 +302,6 @@ pub fn run() {
             ipc::mcp_commands::list_agent_permissions,
             ipc::mcp_commands::ai_chat_stream,
             ipc::mcp_commands::get_agent_tools,
-            ipc::mcp_commands::get_agent_tools_prompt,
             // Myth (surfaces, actions, keymap)
             ipc::myth_commands::list_actions_at,
             ipc::myth_commands::dispatch_action,

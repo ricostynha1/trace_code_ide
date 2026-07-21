@@ -5,23 +5,19 @@
 //! - Token/cost tracking
 //! - Prompt templates
 //! - Context assembly
-//! - Response parsing
 //! - Diff pipeline (shadow buffer → accept/reject hunks)
-//! - Agent implementations (elicitation, formalisation, implementation, repair)
 //! - Interaction log
 
 pub mod provider;
 pub mod openrouter;
 pub mod bedrock;
-pub mod bedrock_pricing;
+pub mod tool_dialects;
 pub mod mock;
 pub mod tracking;
 pub mod templates;
 pub mod log;
 pub mod context;
-pub mod response_parser;
 pub mod diff_pipeline;
-pub mod agents;
 pub mod tools;
 pub mod tool_executor;
 pub mod shell_sandbox;
