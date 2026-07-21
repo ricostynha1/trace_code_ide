@@ -1,5 +1,25 @@
 # Tool Definition: Single Source of Truth
 
+## Status (2026-07-20)
+
+The "Alternative: Runtime validation middleware" section below is now
+**implemented** — see `ai::tool_errors::validate_args` (schema-driven
+required/type checks) gated in `ai::tool_executor::execute_tool_reviewed`,
+right after the permission check and before dispatch. Every tool call is
+checked against its `data/tools.json` schema before any executor code runs;
+the error message (`format_arg_validation_error`) is built from the tool's
+own `short_help`/`example`, not a per-tool hardcoded string.
+
+What this does *not* fix: the `build.rs` codegen idea below is still about a
+different, narrower failure mode — a call site inside an `execute_*`
+function using the wrong string literal (e.g. `get_str_arg(call, "pathh")`).
+`validate_args` confirms the *argument object* satisfies the schema; it
+can't know whether the executor's own accessor calls happen to read the
+matching key. That's still a real (if now much less common in practice —
+every `execute_*` function's used keys were audited against its schema when
+the validation gate was added) latent gap the codegen approach below would
+close for good. Left as a real "current workarounds" note, not done.
+
 ## Problem
 
 Tool definitions exist in two places:

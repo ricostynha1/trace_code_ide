@@ -180,13 +180,54 @@ Built-in agents: Elicitation, Formalisation, Implementation, Repair.
 Agent emits ToolCall → permission check → execute_tool() → ToolResult back to agent
 ```
 
-Tools available: `read_file`, `write_file`, `str_replace`, `insert_lines`, `list_files`, `emit_command`, `query_trace_graph`, `query_code_element`, `list_requirements`, `get_symbols`, `run_shell`, `search_files`.
+Tools available (canonical names, single source of truth `data/tools.json`): `read_file`, `edit_file`, `replace_str`, `list_directory`, `find` (regex/semantic/auto), `delete_file`, `run_shell`, `web_search`, `web_fetch`, `query_trace_graph`, `query_code_element`, `list_requirements`, `get_symbols`, `discover_tools`, `help_tool`. Argument validation (required/typed params) is schema-driven straight from `data/tools.json` (`ai/tool_errors.rs::validate_args`, gated in `ai/tool_executor.rs::execute_tool_reviewed`) — no per-tool hardcoded error text.
 
 ### MCP Integration
 
 Two sides:
 1. **MCP Host** (`mcp_host.rs`): Exposes our tools via JSON-RPC so external MCP clients can call them
 2. **MCP Client** (`mcp_client.rs`): Connects to user-configured external MCP servers, discovers their tools, makes them available to our agents
+
+### Agent Shell Sandboxing
+
+`core/src/ai/shell_sandbox.rs`. Every `run_shell` tool call goes through one
+mechanism that does containment *and* diffing at once: the project is bound
+into a bubblewrap (`bwrap`) overlay mount namespace whose upper dir is
+persisted after the command exits. The real project tree is physically
+untouched during the run — walking the upper dir once yields every
+create/modify/delete the command performed, fed back through the normal
+`Command`/undo-tree machinery instead of a special-cased apply path.
+
+- **Backends, in preference order**: overlay (full containment + exact diff) → strace fallback (no containment, but mutated paths are recovered from the syscall trace) → none (unsandboxed, visible notice; `detect` mode only).
+- `PROJECT_ALLOWLIST` — project-relative dirs bound writable but *not* diffed (regenerable build/cache dirs: `target`, `node_modules`, `.venv`, `.tracelean/tmp`, …). `.tracelean/tmp` is the sanctioned place for an agent-written throwaway script (`SYSTEM_PROMPT` in `ai/mod.rs` tells the agent this directly).
+- `PROTECTED` — paths (`.git`, `.tracelean`) whose upper-dir changes are discarded even where technically writable; never replayed onto the real tree.
+- Mode is user-controlled via `AiSettings::shell_sandbox` (`"off"` / `"detect"` / `"strict"`) and network access via `shell_network` (`"deny"` / `"ask"` / `"allow"`).
+
+### Cost Model & Context Compaction
+
+`core/src/ai/cost_trimmed_summary_model.rs`, `ttl_tracking.rs`,
+`trimmed_rules_table.rs`, driven from `agent/runtime.rs::cost_aware_compact`.
+Every request runs a cut-point cost scan instead of a guessed
+"context is getting big, truncate" threshold:
+
+- **Rules table** (`trimmed_rules_table.rs`) answers a type-based question only: is this message ever allowed to be pruned at all? (user messages: never; stale tool results/assistant turns: eligible once they age out of the recent-turns window.)
+- **Cost scan** (`batch_prune_decisions`) then decides *whether* and *how far* to cut among what the rules table allowed: `savings(x)` sums the expected future read-discount value of everything at/after cut `x`; `penalty(x)` is the cached-prefix invalidation that cutting there would cost, computed via `estimate_prefix_invalidation`. Only acts if net benefit is positive.
+- **Cache markers** (`ttl_tracking::CacheMarkerPlanner`) plan explicit `cache_control`-style breakpoints for providers that require them (Anthropic-style); automatic-caching providers (Bedrock/MiniMax) instead get a passive prediction from the shared prefix with the previous request (`agent/runtime.rs::relative_cached_prefix_tokens`/`common_prefix_tokens`).
+- Both paths account for tool-schema tokens explicitly (`estimate_tools_tokens`) — they're a separate `AiRequest` field, not a `ChatMessage`, but occupy real cached wire tokens and used to be silently treated as free.
+- User-facing tuning knobs: `AiSettings::n_expected_rounds` (aggressiveness) and `disable_context_trimming` (full on/off switch for isolating caching behavior).
+
+### Myth (Keyboard-Driven, Structured-Document UI)
+
+`core/src/myth/` (`mod.rs`, `surface.rs`, `actions.rs`, `keymap.rs`,
+`bindings.rs`). Every Myth-aware UI surface is content + a parser producing
+nodes with captures, plus a binding map attaching actions to captures —
+the same model whether it's rendered as rich rows in the GUI or styled text
+in the TUI:
+
+- **`Surface`/`SurfaceNode`** (`surface.rs`): content parsed into nodes (`capture`, line, char range, text, JSON meta). `FileTreeSurface` is the only current implementation (workspace → indented text → `@dir`/`@file` nodes); `capture` is documented to extend to code-highlight captures later.
+- **`ActionRegistry`** (`actions.rs`): a static table of pure functions (`open_file`, `rename_file`, `delete_file`, `create_file`, `save_file`, `undo`, `redo`, `copy`, plus 4 semantic-nav actions). State-mutating actions return `Command`s — they never mutate `AppState` directly, so every action is undoable for free.
+- **`Keymap`** (`keymap.rs`): a mode machine over `ui_settings/keymap.json` (`Main` → `Options` → `File`, transitions and dispatches). Which-key is a *query* over this data (`bindings_for_state`), not a separate feature. Validated at startup: an unknown action or a transition to an undefined state fails `keymap.rs`'s `shipped_keymap_is_valid` test.
+- **Coverage today**: only `Editor.tsx` and `FileTree.tsx` call `myth_key_event`/render the which-key bar. `AiChatPanel`, `DiffReviewPanel`, `UndoTreePanel`, `TerminalPanel`, `MenuBar`, `EditorDiffBar` have no Myth wiring — they rely on plain `<button>`s (Tab/Enter-accessible, but no leader-key/which-key discoverability). Extending coverage there is unstarted work, not a regression.
 
 ---
 
@@ -298,9 +339,14 @@ tracelean/
   - Conversation history tracking per agent
   - Unified event stream via EventSink
 
-### Remaining (Phase 4)
-- Wire built-in agent to real AI providers (OpenRouter/Bedrock)
-- Agent process binary (so it can be spawned as subprocess)
-- UI components for multi-agent management
-- Agent-to-agent delegation in practice (agent A spawns agent B)
-- Persistent agent sessions across IDE restarts
+### Phase 4 ✓ (partially stale as of this section — verify against code before trusting fully)
+- Built-in agent wired to real AI providers (OpenRouter, Bedrock) — see `ai::bedrock`/`ai::openrouter`, `AiSettings::active_provider`.
+- Cost-aware context compaction (pruning + summarization) driven by real pricing, not guessed thresholds — `agent/runtime.rs::cost_aware_compact`, `ai::cost_trimmed_summary_model`.
+- Shell sandboxing for agent commands (overlay+bwrap, strace fallback) — `ai::shell_sandbox`.
+
+### Remaining
+- Agent process binary (so the built-in agent can be spawned as a subprocess like external ACP agents).
+- UI components for multi-agent management.
+- Agent-to-agent delegation in practice (agent A spawns agent B).
+- Persistent agent sessions across IDE restarts.
+- MYTH keyboard coverage outside Editor/FileTree (see Myth section below).
