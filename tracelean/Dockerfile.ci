@@ -1,0 +1,57 @@
+# TraceLean CI test image — builds nothing shippable, just proves the test
+# suite is green. The image build itself IS the CI check: `docker build`
+# exits non-zero (red) the moment any RUN step below fails, and exits 0
+# (green) only if every step succeeds. Same Dockerfile runs locally and in
+# .github/workflows/ci.yml, so "it passes on my machine" and "it passes in
+# CI" are the same claim.
+#
+# Local run:
+#   docker build -f Dockerfile.ci -t tracelean-ci .   (from the tracelean/ dir)
+#
+# Scope (per docs/new_features_work_plan.md's CI sketch): the default
+# `cargo test --workspace` run is safe to run unattended — the only test
+# that hits a live provider (tests/integration_bedrock.rs) is gated behind
+# the `live_bedrock` Cargo feature, off by default. Nothing here touches a
+# live AI provider, spends money, or needs secrets.
+#
+# Base is Debian trixie (glibc >= 2.38), not bookworm: the prebuilt onnxruntime
+# binary pulled in transitively by fastembed/ort references __isoc23_* symbol
+# versions that only exist on glibc 2.38+, so linking `cargo test` fails on
+# bookworm's glibc 2.36 with "undefined reference to `__isoc23_strtoull`" etc.
+FROM rust:1.88-trixie
+
+RUN apt-get update && apt-get install -y \
+    libwebkit2gtk-4.1-dev \
+    libgtk-3-dev \
+    librsvg2-dev \
+    libsoup-3.0-dev \
+    libjavascriptcoregtk-4.1-dev \
+    libdbus-1-dev \
+    libssl-dev \
+    pkg-config \
+    build-essential \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Node 22, for the frontend type-check step.
+RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
+    && apt-get install -y nodejs \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Copy everything (see .dockerignore for what's excluded — target/,
+# node_modules/, dist/ are large and either regenerated or irrelevant here).
+COPY . .
+
+RUN npm ci
+
+# Rust: compile check across every crate/target, then run the full suite.
+RUN cargo check --workspace --all-targets
+RUN cargo test --workspace
+
+# Frontend: type-check only (no bundling needed for CI signal).
+RUN npx tsc --noEmit
+
+# Reaching here means every gate above exited 0 — nothing left to run.
+CMD ["true"]
