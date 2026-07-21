@@ -324,3 +324,111 @@ pub fn run() {
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
+
+#[cfg(test)]
+mod mcp_command_consistency_tests {
+    //! `ai_module_cleanup_plan.md` finding 7's dispatch-consistency idea,
+    //! applied to the MCP IPC surface: every `#[tauri::command]` fn in
+    //! `ipc/mcp_commands.rs` should be registered in this file's
+    //! `tauri::generate_handler![...]` list, and vice versa — a command
+    //! defined but never registered is unreachable from the frontend; an
+    //! entry registered with no matching fn would fail to compile, but this
+    //! also catches the entry pointing at the wrong module. Parses both
+    //! files with tree-sitter-rust rather than trusting the list by eye.
+    use std::collections::HashSet;
+
+    fn parse(source: &str) -> tree_sitter::Tree {
+        let mut parser = tree_sitter::Parser::new();
+        parser
+            .set_language(&tree_sitter_rust::LANGUAGE.into())
+            .expect("tree-sitter-rust language should load");
+        parser.parse(source, None).expect("source should parse")
+    }
+
+    /// Leaf-token texts of `node`, in source order — used inside the macro's
+    /// token tree, which tree-sitter-rust leaves as raw tokens rather than
+    /// structured path/expression nodes.
+    fn leaf_tokens<'a>(node: tree_sitter::Node, source: &'a str, out: &mut Vec<&'a str>) {
+        if node.child_count() == 0 {
+            if let Ok(text) = node.utf8_text(source.as_bytes()) {
+                out.push(text);
+            }
+            return;
+        }
+        let mut cursor = node.walk();
+        for child in node.children(&mut cursor) {
+            leaf_tokens(child, source, out);
+        }
+    }
+
+    /// Every `ipc::mcp_commands::<name>` path referenced anywhere in this
+    /// file (in practice, only inside `tauri::generate_handler![...]`).
+    fn registered_mcp_commands() -> HashSet<String> {
+        let source = include_str!("lib.rs");
+        let tree = parse(source);
+        let mut tokens = Vec::new();
+        leaf_tokens(tree.root_node(), source, &mut tokens);
+
+        let mut names = HashSet::new();
+        let mut i = 0;
+        while i + 4 < tokens.len() {
+            if tokens[i] == "ipc" && tokens[i + 1] == "::" && tokens[i + 2] == "mcp_commands" && tokens[i + 3] == "::" {
+                names.insert(tokens[i + 4].to_string());
+            }
+            i += 1;
+        }
+        names
+    }
+
+    /// Every fn name annotated `#[tauri::command]` in `ipc/mcp_commands.rs`.
+    fn defined_mcp_commands() -> HashSet<String> {
+        let source = include_str!("ipc/mcp_commands.rs");
+        let tree = parse(source);
+        let mut names = HashSet::new();
+        let mut stack = vec![tree.root_node()];
+        while let Some(node) = stack.pop() {
+            if node.kind() == "function_item" {
+                let is_tauri_command = node
+                    .prev_sibling()
+                    .filter(|s| s.kind() == "attribute_item")
+                    .and_then(|s| s.utf8_text(source.as_bytes()).ok())
+                    .map(|text| text.contains("tauri::command"))
+                    .unwrap_or(false);
+                if is_tauri_command {
+                    if let Some(name_node) = node.child_by_field_name("name") {
+                        if let Ok(name) = name_node.utf8_text(source.as_bytes()) {
+                            names.insert(name.to_string());
+                        }
+                    }
+                }
+            }
+            let mut cursor = node.walk();
+            for child in node.children(&mut cursor) {
+                stack.push(child);
+            }
+        }
+        names
+    }
+
+    #[test]
+    fn mcp_commands_registered_matches_defined() {
+        let defined = defined_mcp_commands();
+        let registered = registered_mcp_commands();
+        assert!(!defined.is_empty(), "should find #[tauri::command] fns in mcp_commands.rs");
+        assert!(!registered.is_empty(), "should find ipc::mcp_commands:: entries in generate_handler!");
+
+        let undefined: Vec<&String> = registered.iter().filter(|n| !defined.contains(*n)).collect();
+        assert!(
+            undefined.is_empty(),
+            "generate_handler! registers ipc::mcp_commands::{{}} name(s) with no matching #[tauri::command] fn: {:?}",
+            undefined
+        );
+
+        let unregistered: Vec<&String> = defined.iter().filter(|n| !registered.contains(*n)).collect();
+        assert!(
+            unregistered.is_empty(),
+            "mcp_commands.rs defines #[tauri::command] fn(s) never registered in generate_handler!: {:?}",
+            unregistered
+        );
+    }
+}
