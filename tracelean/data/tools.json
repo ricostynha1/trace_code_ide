@@ -1,6 +1,7 @@
 {
   "conventions": {
-    "pagination_hint": "{shown} of {total} matches shown, call again with offset={next_offset} to see the rest"
+    "pagination_hint": "{shown} of {total} matches shown, call again with offset={next_offset} to see the rest",
+    "giant_line_hint": "Line {line} of '{path}' is {actual} chars but only bytes {lower}-{upper} are shown here (truncated) — {line} is the line number to target, and in the cut range {lower} is the lower byte offset and {upper} is the upper byte offset of the shown slice. To read more of this single line, use run_shell with: sed -n '{line}p' '{path}' | cut -c{lower}-{upper}, then shift both offsets forward (e.g. cut -c{upper}-{next}) to page through the rest of the line."
   },
   "tools": [
     {
@@ -98,7 +99,7 @@
       "tier": "static",
       "category": "search",
       "description": "Meaning-based (semantic) code search using local embeddings — finds code by what it does, not by exact text. Use for concepts, similar logic, or 'where is X handled' questions. For exact symbols, strings, or regex/glob matching use the shell (run_shell with grep/find) instead.",
-      "embedded_txt": "Semantic code search over a local embeddings index (fastembed, built automatically when the project opens). Finds code by meaning rather than exact text — use it for concepts ('where is authentication handled'), similar logic, or when you don't know the exact symbol name. For exact/regex/glob/filename search, use the shell via run_shell (grep, find) — frontier models are fluent with those and large output is auto-written to a file you can read_file. Params: query (natural language), optional path to scope the search to a subtree, max_results (default 30), is_recursive (default false — reserved), glob_filter_for_file_types (default '*' = no filter, e.g. '*.rs'). Examples: find authentication handling logic, locate code that validates uploads, find error-recovery logic similar to a description.",
+      "embedded_txt": "Semantic code search over a local embeddings index (fastembed, built automatically when the project opens). Finds code by meaning rather than exact text — use it for concepts ('where is authentication handled'), similar logic, or when you don't know the exact symbol name. Matches below a relevance floor are dropped, so an empty/short result means no good match exists, not that the index is broken. Each result shows a tight 3-line snippet (the best-matching lines within the larger ~30-line region that was actually ranked) plus that region's full file:line range — use read_file on that range for more surrounding context. For exact/regex/glob/filename search, use the shell via run_shell (grep, find) — frontier models are fluent with those and large output is auto-written to a file you can read_file. Params: query (natural language), optional path to scope the search to a subtree, max_results (default 10), is_recursive (default false — reserved), glob_filter_for_file_types (default '*' = no filter, e.g. '*.rs'). Examples: find authentication handling logic, locate code that validates uploads, find error-recovery logic similar to a description.",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -110,7 +111,7 @@
           },
           "max_results": {
             "type": "integer",
-            "default": 30
+            "default": 10
           },
           "is_recursive": {
             "type": "boolean",
@@ -152,7 +153,7 @@
       "tier": "static",
       "category": "filesystem",
       "description": "Read file lines from offset. Returns file metadata (lines, bytes, size, modified, permissions, owner, group). Empty range = metadata only.",
-      "embedded_txt": "Read lines from a file with pagination support. Returns content plus file metadata: total lines, bytes, human-readable size, relative modification time, unix permissions string, owner and group. Reading with max_results=0 returns only metadata without content — use as a cheap stat check. Supports negative offset (-1 = last line). Paginated: check has_more and next_offset in response data. Lines over 300 chars are truncated with a hint to re-read that specific line. Subsumes old count_lines tool since metadata always includes line count. Examples: read first 50 lines of main.rs, check file size without reading content, read last 20 lines of a log file.",
+      "embedded_txt": "Read lines from a file with pagination support. Returns content plus file metadata: total lines, bytes, human-readable size, relative modification time, unix permissions string, owner and group. Reading with max_results=0 returns only metadata without content — use as a cheap stat check. Supports negative offset (-1 = last line). Paginated: check has_more and next_offset in response data. Individual lines over 2000 chars (e.g. minified JSON, a data dump) are truncated with a hint showing a run_shell sed/cut command to page through the rest of that specific line by byte offset. Subsumes old count_lines tool since metadata always includes line count. Examples: read first 50 lines of main.rs, check file size without reading content, read last 20 lines of a log file.",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -318,7 +319,7 @@
       "tier": "static",
       "category": "execution",
       "description": "Run a shell command (dirty open files are flushed to disk first). Output over 500 lines or 30KB is written to a file instead of returned inline.",
-      "embedded_txt": "Execute an arbitrary shell command in the project directory. Before running, any open file with unsaved buffer content is flushed to disk so grep/find/etc. see current content. Returns combined stdout+stderr; if that exceeds 500 lines or 30KB, the full output is written to .tracelean/shell_logs/ and a short preview plus that file's path is returned instead — use read_file with an offset to page through it. Use for: exact/regex/glob file search (grep, find — you already know these well), running tests, building projects, installing dependencies, git operations, any CLI tool. Timeout configurable (default 30s). Examples: grep -rn TODO src/, find . -name '*.rs', cargo test, npm install, git status, python script.py, make build.",
+      "embedded_txt": "Execute an arbitrary shell command in the project directory. Before running, any open file with unsaved buffer content is flushed to disk so grep/find/etc. see current content. Returns combined stdout+stderr; if that (or any other tool's result) exceeds 500 lines or 30KB, the full output is written to .tracelean/tool_logs/ and a short preview plus that file's path is returned instead — use read_file with an offset to page through it. Use for: exact/regex/glob file search (grep, find — you already know these well), running tests, building projects, installing dependencies, git operations, any CLI tool. Timeout configurable (default 30s). Examples: grep -rn TODO src/, find . -name '*.rs', cargo test, npm install, git status, python script.py, make build.",
       "input_schema": {
         "type": "object",
         "properties": {

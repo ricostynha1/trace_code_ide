@@ -66,9 +66,13 @@ TOOL CALLING RULES:\
 - For exact/regex/glob/filename search, use `run_shell` with `grep`/`find` — \
 you already know these well. Use `find_semantic` only for meaning-based \
 search (concepts, similar logic, or when you don't know the exact symbol).\
-- Shell output larger than 500 lines or 30KB is automatically written to a \
-file under `.tracelean/shell_logs/` and you get a preview plus that file's \
+- Any tool's output larger than 500 lines or 30KB is automatically written to \
+a file under `.tracelean/tool_logs/` and you get a preview plus that file's \
 path — use `read_file` with an offset to page through the rest.\
+- `find_semantic` drops matches below a relevance floor, so a short or empty \
+result means no good match exists, not that something is broken. Each hit's \
+snippet is a tight best-matching slice; use the larger file:line range shown \
+alongside it (via read_file) for more context.\
 - For repetitive multi-step shell or Python work (the same transformation \
 across many files, a multi-stage build/check sequence, etc.), write a \
 script to `.tracelean/tmp/` and run it with run_shell instead of issuing \

@@ -67,6 +67,10 @@ pub struct ToolConventions {
     /// {shown}, {total}, {next_offset}.
     #[serde(default)]
     pub pagination_hint: Option<String>,
+    /// Template for read_file's "single line too long, truncated" message.
+    /// Placeholders: {path}, {line}, {actual}, {lower}, {upper}, {next}.
+    #[serde(default)]
+    pub giant_line_hint: Option<String>,
 }
 
 /// The full tools.json structure.
@@ -191,6 +195,31 @@ impl ToolRegistry {
         tpl.replace("{shown}", &shown.to_string())
             .replace("{total}", total)
             .replace("{next_offset}", &next_offset.to_string())
+    }
+
+    /// Format read_file's "single line too long, truncated" hint from the
+    /// tools.json convention template (with a hardcoded fallback), so the
+    /// message isn't duplicated/hardcoded in the executor (P1 in tool_errors.rs).
+    /// `upper` is the char cap the line was clipped to; `lower` is always 1
+    /// since the clip always starts at the beginning of the line.
+    pub fn giant_line_hint(path: &str, line: usize, actual: usize, upper: usize) -> String {
+        const DEFAULT: &str =
+            "Line {line} of '{path}' is {actual} chars but only bytes {lower}-{upper} are \
+             shown here (truncated) — {line} is the line number to target, and in the cut \
+             range {lower} is the lower byte offset and {upper} is the upper byte offset of \
+             the shown slice. To read more of this single line, use run_shell with: \
+             sed -n '{line}p' '{path}' | cut -c{lower}-{upper}, then shift both offsets \
+             forward (e.g. cut -c{upper}-{next}) to page through the rest of the line.";
+        let tpl = Self::embedded()
+            .and_then(|r| r.conventions.giant_line_hint.clone())
+            .unwrap_or_else(|| DEFAULT.to_string());
+        let next = upper * 2;
+        tpl.replace("{path}", path)
+            .replace("{line}", &line.to_string())
+            .replace("{actual}", &actual.to_string())
+            .replace("{lower}", "1")
+            .replace("{upper}", &upper.to_string())
+            .replace("{next}", &next.to_string())
     }
 
     /// Get all tool schemas for the current request (static + active dynamic).

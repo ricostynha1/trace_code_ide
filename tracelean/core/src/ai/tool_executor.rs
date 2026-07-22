@@ -262,7 +262,7 @@ pub fn execute_tool_reviewed(
         }
     }
 
-    match call.name.as_str() {
+    let mut result = match call.name.as_str() {
         "read_file" => execute_read_file(call, project_root, permissions),
         "edit_file" => execute_edit_file(call, project_root, state, permissions, review),
         // Meaning-based search over the local embeddings index. Exact/regex/glob
@@ -294,7 +294,16 @@ pub fn execute_tool_reviewed(
             ),
             data: None,
         },
+    };
+
+    // General protection (no per-tool exceptions except read_file, which owns
+    // dedicated line-based pagination instead): any tool whose result is large
+    // enough to blow the context window gets spilled to a log file here, once,
+    // regardless of which tool produced it.
+    if call.name != "read_file" {
+        result.content = maybe_spill_large_output(&result.content, project_root);
     }
+    result
 }
 
 fn get_str_arg(call: &ToolCall, key: &str) -> Option<String> {
@@ -307,6 +316,12 @@ fn get_str_arg(call: &ToolCall, key: &str) -> Option<String> {
 fn get_int_arg(call: &ToolCall, key: &str) -> Option<i64> {
     call.arguments.get(key).and_then(|v| v.as_i64())
 }
+
+/// Cap on a single displayed line's length in read_file. Beyond this, a line
+/// is truncated and the model is pointed at the shell (byte-offset sed/cut)
+/// rather than read_file for the rest of that specific line — see
+/// `READ_FILE_MAX_LINE_CHARS`'s use in `execute_read_file`.
+const READ_FILE_MAX_LINE_CHARS: usize = 2000;
 
 fn execute_read_file(call: &ToolCall, project_root: &Path, perms: &AgentPermissions) -> ToolResult {
     let path = match get_str_arg(call, "path") {
@@ -378,29 +393,56 @@ fn execute_read_file(call: &ToolCall, project_root: &Path, perms: &AgentPermissi
             Some("Range described by offset and max_results does not contain any line".to_string()),
         )
     } else {
+        // read_file's pagination is line-based; a file with very few but
+        // pathologically long lines (minified JSON, a data dump) would
+        // otherwise bypass it entirely — even max_results=1 would return one
+        // giant line. Cap each displayed line's length independently and
+        // point the model at the shell (byte-offset paging) for the rest,
+        // rather than inventing a second, line-internal pagination axis.
+        let mut giant_line: Option<(usize, usize)> = None; // (line_no, actual_chars)
         let lines_text = selected
             .iter()
             .enumerate()
-            .map(|(i, l)| format!("{:>4}| {}", start + i + 1, l))
+            .map(|(i, l)| {
+                let line_no = start + i + 1;
+                let char_count = l.chars().count();
+                if char_count > READ_FILE_MAX_LINE_CHARS {
+                    if giant_line.is_none() {
+                        giant_line = Some((line_no, char_count));
+                    }
+                    let clipped: String = l.chars().take(READ_FILE_MAX_LINE_CHARS).collect();
+                    format!(
+                        "{:>4}| {}…[truncated, {}/{} chars shown]",
+                        line_no, clipped, READ_FILE_MAX_LINE_CHARS, char_count
+                    )
+                } else {
+                    format!("{:>4}| {}", line_no, l)
+                }
+            })
             .collect::<Vec<_>>()
             .join("\n");
 
         let result_content = format!("{}\n{}", meta_line, lines_text);
 
-        let hint = if max_results_truncated {
-            Some(format!(
+        let mut hint_parts: Vec<String> = Vec::new();
+        if let Some((line_no, actual)) = giant_line {
+            hint_parts.push(super::tool_registry::ToolRegistry::giant_line_hint(
+                &path, line_no, actual, READ_FILE_MAX_LINE_CHARS,
+            ));
+        }
+        if max_results_truncated {
+            hint_parts.push(format!(
                 "Result was truncated because more than 200 lines were requested. \
              To get the rest, make another read starting at offset={}.",
                 start + 200
-            ))
+            ));
         } else if end < num_lines {
-            Some(format!(
+            hint_parts.push(format!(
                 "Showing lines {}-{} of {}. Use offset={} to read more.",
                 start + 1, end, num_lines, end
-            ))
-        } else {
-            None
-        };
+            ));
+        }
+        let hint = if hint_parts.is_empty() { None } else { Some(hint_parts.join(" ")) };
 
         (result_content, hint)
     };
@@ -1342,14 +1384,22 @@ fn execute_get_symbols(call: &ToolCall, symbols: &SymbolTable) -> ToolResult {
     }
 }
 
-/// Item 3: shell output beyond either bound is spilled to a log file instead
-/// of returned inline, so a large `grep`/`find`/build log can't blow the
-/// context window.
-const SHELL_SPILL_MAX_LINES: usize = 500;
-const SHELL_SPILL_MAX_BYTES: usize = 30 * 1024;
+/// Any tool's output beyond either bound is spilled to a log file instead of
+/// returned inline, so a large `grep`/build log, symbol dump, requirements
+/// list, or trace-graph query can't blow the context window. Originally
+/// shell-only (item 3); generalized to a single choke point in
+/// `execute_tool_reviewed` after auditing the other tools' executors —
+/// `list_requirements`, `get_symbols`, `query_trace_graph`/`query_code_element`,
+/// and `find_semantic` all had no byte cap either, just count caps (or none at
+/// all), so a big-enough project could inundate the model through any of them.
+/// `read_file` is deliberately exempted: it already owns dedicated line-based
+/// pagination and a pathological single giant line needs a fix in that
+/// pagination itself, not a generic byte-spill wrapper around its result.
+const TOOL_OUTPUT_SPILL_MAX_LINES: usize = 500;
+const TOOL_OUTPUT_SPILL_MAX_BYTES: usize = 30 * 1024;
 
 /// If `output` exceeds the spill thresholds, write the full text to
-/// `{project}/.tracelean/shell_logs/<id>.log` and return a short head/tail
+/// `{project}/.tracelean/tool_logs/<id>.log` and return a short head/tail
 /// preview plus a pointer telling the model to `read_file` the log. Otherwise
 /// returns `output` unchanged.
 ///
@@ -1357,23 +1407,23 @@ const SHELL_SPILL_MAX_BYTES: usize = 30 * 1024;
 /// overlay), so it is not captured as a tracked mutation and never pollutes
 /// the review/diff stream. `.tracelean` is a protected path in the overlay, so
 /// even a sandboxed run's materialization pass ignores it.
-fn maybe_spill_shell_output(output: &str, project_root: &Path) -> String {
+fn maybe_spill_large_output(output: &str, project_root: &Path) -> String {
     let line_count = output.lines().count();
     let byte_count = output.len();
-    if line_count <= SHELL_SPILL_MAX_LINES && byte_count <= SHELL_SPILL_MAX_BYTES {
+    if line_count <= TOOL_OUTPUT_SPILL_MAX_LINES && byte_count <= TOOL_OUTPUT_SPILL_MAX_BYTES {
         return output.to_string();
     }
 
-    let dir = project_root.join(".tracelean").join("shell_logs");
+    let dir = project_root.join(".tracelean").join("tool_logs");
     if let Err(e) = std::fs::create_dir_all(&dir) {
         return format!(
-            "[warning: output is large ({} lines, {} bytes) but the shell_logs dir \
+            "[warning: output is large ({} lines, {} bytes) but the tool_logs dir \
              could not be created ({}); returning it inline]\n{}",
             line_count, byte_count, e, output
         );
     }
     let ts = chrono::Utc::now().format("%Y%m%d-%H%M%S");
-    let file = dir.join(format!("shell-{}-{}.log", ts, uuid::Uuid::new_v4()));
+    let file = dir.join(format!("tool-{}-{}.log", ts, uuid::Uuid::new_v4()));
     if let Err(e) = std::fs::write(&file, output) {
         return format!(
             "[warning: output is large ({} lines, {} bytes) but the log file could \
@@ -1594,12 +1644,15 @@ fn run_shell_direct(
             data: None,
         },
         Ok(out) => {
-            let body = maybe_spill_shell_output(&out.output, project_root);
+            // Spilling happens once, generically, at execute_tool_reviewed's
+            // return point — not here — so it sees the full final content
+            // (including the notice prefixed below) rather than just the raw
+            // command output.
             let mut content = match &out.killed_reason {
                 Some(reason) => {
-                    format!("Command killed ({}). Partial output:\n{}", reason, body)
+                    format!("Command killed ({}). Partial output:\n{}", reason, out.output)
                 }
-                None => body,
+                None => out.output,
             };
             if let Some(n) = notice {
                 content = format!("{}\n{}", n, content);
@@ -1709,10 +1762,12 @@ fn materialize_sandbox_run(
         }
     }
 
-    let body = maybe_spill_shell_output(&run.output, project_root);
+    // Spilling happens once, generically, at execute_tool_reviewed's return
+    // point — not here — so it sees the full final content (raw output plus
+    // the sandbox sections appended below), not just the raw command output.
     let mut content = match &run.killed_reason {
-        Some(reason) => format!("Command killed ({}). Partial output:\n{}", reason, body),
-        None => body,
+        Some(reason) => format!("Command killed ({}). Partial output:\n{}", reason, run.output),
+        None => run.output.clone(),
     };
     let mut sections: Vec<String> = Vec::new();
     if !notes.is_empty() {
@@ -2023,7 +2078,7 @@ fn execute_find_semantic(call: &ToolCall, embed_index: &Option<SharedIndex>) -> 
             }
         }
     };
-    let max_results = get_int_arg(call, "max_results").unwrap_or(30).max(1) as usize;
+    let max_results = get_int_arg(call, "max_results").unwrap_or(10).max(1) as usize;
     let path_filter = get_str_arg(call, "path").unwrap_or_default();
     // `is_recursive` is accepted for schema symmetry but the index already
     // spans the whole project subtree under `path`, so there is nothing to
@@ -2070,11 +2125,14 @@ fn execute_find_semantic(call: &ToolCall, embed_index: &Option<SharedIndex>) -> 
         .iter()
         .map(|r| {
             format!(
-                "{}:{}-{} (score: {:.3})\n{}",
+                "{}:{}-{} (score: {:.3}) — part of a larger match at {}:{}-{}\n{}",
                 r.file.display(),
                 r.start_line + 1,
                 r.end_line,
                 r.score,
+                r.file.display(),
+                r.chunk_start_line + 1,
+                r.chunk_end_line,
                 r.snippet
             )
         })
@@ -2196,6 +2254,34 @@ mod tests {
         assert!(result.content.contains("c"));
         assert!(!result.content.contains("| a"));
         assert!(!result.content.contains("| d"));
+    }
+
+    #[test]
+    fn test_read_file_truncates_giant_single_line() {
+        // A file with very few but pathologically long lines bypasses
+        // read_file's line-based pagination entirely — even max_results=1
+        // would return the whole giant line without this per-line cap.
+        let tmp = TempDir::new().unwrap();
+        let giant = "x".repeat(5000);
+        std::fs::write(tmp.path().join("giant.txt"), format!("short\n{}\n", giant)).unwrap();
+
+        let mut state = AppState::new();
+        let symbols = SymbolTable::new();
+        let graph = TraceGraph::new();
+        let perms = full_perms();
+
+        let call = make_call("read_file", json!({"path": "giant.txt", "max_results": 2}));
+        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
+        assert!(result.success);
+        assert!(result.content.contains("[truncated, 2000/5000 chars shown]"));
+        // The truncated line itself must actually be short in the response.
+        assert!(result.content.len() < 5000);
+        // Hint points the model at run_shell sed/cut with the line number and
+        // byte range spelled out, not just a bare "truncated" notice.
+        let hint = result.data.unwrap()["hint"].as_str().unwrap().to_string();
+        assert!(hint.contains("Line 2 of"), "expected line number in hint: {}", hint);
+        assert!(hint.contains("sed -n '2p'"), "expected sed command in hint: {}", hint);
+        assert!(hint.contains("cut -c1-2000"), "expected cut byte range in hint: {}", hint);
     }
 
     #[test]
@@ -2626,7 +2712,7 @@ mod tests {
         let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
         assert!(result.success);
         assert!(result.content.contains("hello"));
-        assert!(!std::fs::exists(tmp.path().join(".tracelean/shell_logs")).unwrap_or(false));
+        assert!(!std::fs::exists(tmp.path().join(".tracelean/tool_logs")).unwrap_or(false));
     }
 
     #[test]
@@ -2644,15 +2730,70 @@ mod tests {
         );
         let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
         assert!(result.success);
-        assert!(result.content.contains(".tracelean/shell_logs/"));
+        assert!(result.content.contains(".tracelean/tool_logs/"));
         assert!(result.content.contains("read_file"));
 
-        let log_dir = tmp.path().join(".tracelean/shell_logs");
+        let log_dir = tmp.path().join(".tracelean/tool_logs");
         let entries: Vec<_> = std::fs::read_dir(&log_dir).unwrap().flatten().collect();
         assert_eq!(entries.len(), 1);
         let full = std::fs::read_to_string(entries[0].path()).unwrap();
         assert!(full.contains("line-1\n"));
         assert!(full.contains("line-800"));
+    }
+
+    // ===== general protection: spill applies to every tool, not just run_shell =====
+
+    #[test]
+    fn test_list_requirements_large_output_spills_to_file() {
+        let tmp = TempDir::new().unwrap();
+        std::fs::create_dir_all(tmp.path().join("reqs")).unwrap();
+        // 600 requirements, each with a long title, comfortably clears both
+        // the 500-line and 30KB spill thresholds.
+        for i in 0..600 {
+            std::fs::write(
+                tmp.path().join("reqs").join(format!("REQ-{:04}.md", i)),
+                format!(
+                    "# REQ-{:04}: {}\nStatus: linked\n\nBody text.\n",
+                    i,
+                    "a very long requirement title ".repeat(5)
+                ),
+            )
+            .unwrap();
+        }
+        let mut state = AppState::new();
+        let symbols = SymbolTable::new();
+        let graph = TraceGraph::new();
+        let perms = full_perms();
+
+        let call = make_call("list_requirements", json!({}));
+        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
+        assert!(result.success);
+        assert!(
+            result.content.contains(".tracelean/tool_logs/"),
+            "expected a spill pointer, got: {}",
+            result.content
+        );
+    }
+
+    #[test]
+    fn test_read_file_is_exempt_from_general_spill() {
+        // read_file owns its own line-based pagination (capped at 200 lines);
+        // it must never get spilled to yet another file it would then have to
+        // read_file its way through.
+        let tmp = TempDir::new().unwrap();
+        let big: String = (1..=150).map(|i| format!("line {}\n", i)).collect();
+        std::fs::write(tmp.path().join("big.txt"), &big).unwrap();
+
+        let mut state = AppState::new();
+        let symbols = SymbolTable::new();
+        let graph = TraceGraph::new();
+        let perms = full_perms();
+
+        let call = make_call("read_file", json!({"path": "big.txt", "max_results": 150}));
+        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
+        assert!(result.success);
+        assert!(!result.content.contains(".tracelean/tool_logs/"));
+        assert!(!std::fs::exists(tmp.path().join(".tracelean/tool_logs")).unwrap_or(false));
     }
 
     // ===== item 4: flush dirty buffers before shell commands =====
