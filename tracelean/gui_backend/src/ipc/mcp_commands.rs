@@ -163,6 +163,7 @@ pub async fn ai_chat_stream(
     live_context: State<'_, crate::LiveContextWrapper>,
     resolved_diffs: State<'_, crate::ResolvedDiffsWrapper>,
     diff_notify: State<'_, crate::DiffResolvedNotifyWrapper>,
+    embed_index: State<'_, crate::EmbedIndexWrapper>,
     session_id: String,
     user_message: String,
 ) -> Result<ai::AiResponse, String> {
@@ -232,6 +233,7 @@ pub async fn ai_chat_stream(
         retention_engine: std::sync::Arc::new(std::sync::Mutex::new(tracelean_core::ai::RetentionEngine::with_defaults())),
         timing_tracker: std::sync::Arc::new(std::sync::Mutex::new(tracelean_core::ai::TurnTimingTracker::new())),
         pending_diffs: diffs.0.clone(),
+        embed_index: embed_index.0.clone(),
     };
 
     // Session-based (bugs.md Bug 1): the store owns the conversation, so the

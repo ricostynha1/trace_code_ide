@@ -48,6 +48,8 @@ fn ai_service(
         // Bug 2: shared across every service instance, same pattern as above.
         resolved_diffs: app.state::<crate::ResolvedDiffsWrapper>().0.clone(),
         diff_notify: app.state::<crate::DiffResolvedNotifyWrapper>().0.clone(),
+        // Auto-built on project open; shared so find_semantic can query it.
+        embed_index: app.state::<crate::EmbedIndexWrapper>().0.clone(),
     }
 }
 

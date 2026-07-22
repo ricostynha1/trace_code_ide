@@ -598,7 +598,7 @@ impl RetentionEngine {
         match tool_name {
             "discover_tools" => "discover_tools_result".to_string(),
             "list_directory" => "list_directory_result".to_string(),
-            "find" => "find_result".to_string(),
+            "find_semantic" => "find_result".to_string(),
             "read_file" => "read_file_content".to_string(),
             "edit_file" | "replace_str" => "edit_result".to_string(),
             "run_shell" => "run_shell_result".to_string(),

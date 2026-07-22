@@ -44,7 +44,7 @@ pub use tools::{ToolDefinition, ToolCall, ToolResult};
 pub use tool_executor::AgentPermissions;
 pub use tool_selector::ToolIndex;
 pub use streaming::StreamToken;
-pub use embeddings::{EmbeddingsIndex, SharedIndex, new_shared_index, EmbedResult};
+pub use embeddings::{EmbeddingsIndex, SharedIndex, new_shared_index, spawn_build, EmbedResult};
 pub use tool_registry::{ToolRegistry, DynamicEntry, ToolJsonEntry};
 pub use provider_cache::{ProviderCacheRegistry, ProviderCacheConfig, CacheMode};
 pub use ttl_tracking::{TurnTimingTracker, CacheMarkerPlanner};
@@ -63,7 +63,12 @@ TOOL CALLING RULES:\
 - Return multiple tool calls in parallel when independent.\
 - Arguments only, no extra text unless explicitly asked.\
 - If you need a tool you don't have, call tool discover_tools.\
-- Prefer `find` over `run_shell` for file search.\
+- For exact/regex/glob/filename search, use `run_shell` with `grep`/`find` — \
+you already know these well. Use `find_semantic` only for meaning-based \
+search (concepts, similar logic, or when you don't know the exact symbol).\
+- Shell output larger than 500 lines or 30KB is automatically written to a \
+file under `.tracelean/shell_logs/` and you get a preview plus that file's \
+path — use `read_file` with an offset to page through the rest.\
 - For repetitive multi-step shell or Python work (the same transformation \
 across many files, a multi-stage build/check sequence, etc.), write a \
 script to `.tracelean/tmp/` and run it with run_shell instead of issuing \

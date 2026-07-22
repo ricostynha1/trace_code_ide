@@ -899,7 +899,7 @@ async fn run_agent_turn_inner(
                                 &sym,
                                 &g,
                                 &call_permissions,
-                                &None,
+                                &Some(ctx.embed_index.clone()),
                                 Some(&mut sink),
                             );
                             if diffs.len() > before {
@@ -932,13 +932,14 @@ async fn run_agent_turn_inner(
                             }
                             result
                         } else {
-                            ai::tool_executor::execute_tool(
+                            ai::tool_executor::execute_tool_with_index(
                                 &mcp_call,
                                 &ctx.project_root,
                                 &mut s,
                                 &sym,
                                 &g,
                                 &call_permissions,
+                                &Some(ctx.embed_index.clone()),
                             )
                         }
                     };
@@ -2013,7 +2014,7 @@ mod pairing_tests {
         // adjacency; the result must be demoted, and the now-unanswered call
         // flattened.
         let mut msgs = vec![
-            assistant(vec![call("call_1", "find")]),
+            assistant(vec![call("call_1", "find_semantic")]),
             user("[Context compacted]"),
             tool("call_1", "match list"),
         ];

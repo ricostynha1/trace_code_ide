@@ -348,14 +348,14 @@ mod tests {
         let should_match = vec![
             ("read the main.rs file", "read_file"),
             ("show me the files in this project", "list_directory"),
-            ("find all TODO comments", "find"),
+            ("find all TODO comments", "find_semantic"),
             ("Add a comment at the end of every file", "edit_file"),
             ("replace the word foo with bar in auth.rs", "replace_str"),
             ("run cargo build", "run_shell"),
             ("list all requirements", "list_requirements"),
             ("what functions are in search.rs", "get_symbols"),
             ("delete the temp file", "delete_file"),
-            ("search for authentication code", "find"),
+            ("search for authentication code", "find_semantic"),
             ("what implements REQ-01", "query_trace_graph"),
             ("show project structure", "list_directory"),
             ("User: add 'hello' to end of every req file", "edit_file"),
@@ -436,7 +436,7 @@ mod tests {
         let schemas = builtin_tool_schemas();
         let index = ToolIndex::new(&schemas);
         let selected = index.select("find all uses of 'TODO' in the codebase", None);
-        assert!(names(&selected).contains(&"find"), "Expected find in {:?}", names(&selected));
+        assert!(names(&selected).contains(&"find_semantic"), "Expected find_semantic in {:?}", names(&selected));
     }
 
     #[test]
@@ -507,7 +507,7 @@ mod tests {
         let index = ToolIndex::new(&schemas);
         let selected = index.select("where is the login function defined", None);
         let n = names(&selected);
-        let has_search = n.contains(&"find") || n.contains(&"get_symbols");
+        let has_search = n.contains(&"find_semantic") || n.contains(&"get_symbols");
         assert!(has_search, "Expected search/code tool in {:?}", n);
     }
 
@@ -578,7 +578,7 @@ mod tests {
         let index = ToolIndex::new(&schemas);
         let selected = index.select("what functions are defined in upload.rs", None);
         let n = names(&selected);
-        let has_code = n.contains(&"get_symbols") || n.contains(&"find");
+        let has_code = n.contains(&"get_symbols") || n.contains(&"find_semantic");
         assert!(has_code, "Expected code analysis tool in {:?}", n);
     }
 

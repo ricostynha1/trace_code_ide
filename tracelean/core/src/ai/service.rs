@@ -44,6 +44,9 @@ pub struct AiService {
     pub resolved_diffs: Arc<Mutex<HashMap<String, crate::ResolvedDiffOutcome>>>,
     /// Bug 2: wakeup signal paired with `resolved_diffs` — no polling.
     pub diff_notify: Arc<tokio::sync::Notify>,
+    /// Local semantic-search index (auto-built on project open), threaded into
+    /// the tool executor so `find_semantic` can query it.
+    pub embed_index: crate::ai::SharedIndex,
 }
 
 impl AiService {
@@ -88,6 +91,7 @@ impl AiService {
             retention_engine: Arc::new(Mutex::new(crate::ai::RetentionEngine::with_defaults())),
             timing_tracker: Arc::new(Mutex::new(crate::ai::TurnTimingTracker::new())),
             pending_diffs: self.pending_diffs.clone(),
+            embed_index: self.embed_index.clone(),
         })
     }
 

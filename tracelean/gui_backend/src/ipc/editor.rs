@@ -183,6 +183,7 @@ pub fn open_project(
     symbols_state: State<'_, SymbolTableWrapper>,
     ai_settings: State<'_, crate::AiSettingsWrapper>,
     cache: State<'_, UndoTreeCacheWrapper>,
+    embed_index: State<'_, crate::EmbedIndexWrapper>,
     path: String,
 ) -> Result<Vec<String>, String> {
     let result = {
@@ -190,6 +191,9 @@ pub fn open_project(
         let mut sym = symbols_state.0.lock().map_err(|e| e.to_string())?;
         service::open_project(&mut s, &mut sym, &path)?
     };
+    // Auto-build the semantic-search index in the background (local + free, so
+    // no API budget is spent) so find_semantic has something to query.
+    crate::core::ai::spawn_build(&embed_index.0, std::path::PathBuf::from(&path));
     // Bug 4: open_project may have just seeded the initial-snapshot commit
     // point — make sure the undo tree panel picks it up right away.
     invalidate_undo_cache(&cache);

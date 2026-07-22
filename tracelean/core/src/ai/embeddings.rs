@@ -47,6 +47,29 @@ pub fn new_shared_index() -> SharedIndex {
     Arc::new(Mutex::new(None))
 }
 
+/// Build the index for `project_root` on a background thread and store it into
+/// `index` when done. Building is local and free (fastembed AllMiniLML6V2,
+/// model cached after first download), so it is safe to auto-run on project
+/// open without spending any API budget. Best-effort: a build failure just
+/// leaves the index empty and `find_semantic` reports it isn't ready yet.
+pub fn spawn_build(index: &SharedIndex, project_root: PathBuf) {
+    let index = Arc::clone(index);
+    std::thread::spawn(move || match EmbeddingsIndex::build(&project_root) {
+        Some(built) => {
+            if let Ok(mut guard) = index.lock() {
+                *guard = Some(built);
+            }
+        }
+        None => {
+            eprintln!(
+                "[embeddings] index build failed for {} (model load error) — \
+                 semantic search will be unavailable this session",
+                project_root.display()
+            );
+        }
+    });
+}
+
 /// Configuration for index building.
 const CHUNK_LINES: usize = 30;
 const CHUNK_OVERLAP: usize = 5;

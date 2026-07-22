@@ -45,8 +45,8 @@
       "name": "list_directory",
       "tier": "static",
       "category": "filesystem",
-      "description": "List files and directories. Paginated.",
-      "embedded_txt": "List files and directories in a given path. Supports pagination via offset/max_results, recursive listing, glob filtering, and depth limiting. Use to explore project structure, find files by pattern, or browse directory contents. Returns file names with type indicators (trailing / for dirs). Replaces old non-paginated list_files. Examples: list all .rs files in src/, show project root structure, find all test directories recursively.",
+      "description": "List files and directories.",
+      "embedded_txt": "List files and directories in a given path, with recursive listing, glob filtering, and depth limiting. Use to explore project structure, find files by pattern, or browse directory contents. Returns file names with type indicators (trailing / for dirs). For very large trees, prefer the shell (run_shell with find/ls) — large shell output is auto-written to a file you can read_file. Examples: list all .rs files in src/, show project root structure, find all test directories recursively.",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -57,14 +57,6 @@
           "recursive": {
             "type": "boolean",
             "default": false
-          },
-          "max_results": {
-            "type": "integer",
-            "default": 50
-          },
-          "offset": {
-            "type": "integer",
-            "default": 0
           },
           "file_filter": {
             "type": "string"
@@ -81,7 +73,7 @@
         "recursive": true,
         "file_filter": "*.rs"
       },
-      "short_help": "list_directory(path?, recursive?, max_results?, offset?, file_filter?, max_depth?) — List files/dirs. Paginated.",
+      "short_help": "list_directory(path?, recursive?, file_filter?, max_depth?) — List files/dirs.",
       "aliases": [
         "show directory",
         "ls",
@@ -102,50 +94,31 @@
       ]
     },
     {
-      "name": "find",
+      "name": "find_semantic",
       "tier": "static",
       "category": "search",
-      "description": "Search files with auto regex or semantic similarity. regex mode: fast pattern/text matching (case-insensitive fallback by default) — use for exact symbols, strings, comments, imports; escape special chars like . * ( for a literal match. semantic mode: natural-language, meaning-based search using embeddings — use for finding concepts, similar logic, or when a regex search returns no results. auto: tries regex first (then case-insensitive); if both fail, falls back to semantic.",
-      "embedded_txt": "Unified search tool combining regex grep and semantic embedding search. Regex mode: fast text/pattern matching across files like grep, for exact symbols, strings, comments, imports — escape special chars like . * ( for literal matches; falls back to case-insensitive automatically. Semantic mode: natural language search using embeddings, finds code by meaning not exact text — use for concepts, similar logic, or when regex finds nothing. Auto mode tries regex, then case-insensitive, then semantic, and reports which strategy produced the results. Supports pagination via offset/max_results, file filtering by glob, case sensitivity, context lines around matches. Use instead of run_shell for any file search task. Examples: find all TODO comments, search for authentication handling logic, locate where a function is defined, find files importing a module.",
+      "description": "Meaning-based (semantic) code search using local embeddings — finds code by what it does, not by exact text. Use for concepts, similar logic, or 'where is X handled' questions. For exact symbols, strings, or regex/glob matching use the shell (run_shell with grep/find) instead.",
+      "embedded_txt": "Semantic code search over a local embeddings index (fastembed, built automatically when the project opens). Finds code by meaning rather than exact text — use it for concepts ('where is authentication handled'), similar logic, or when you don't know the exact symbol name. For exact/regex/glob/filename search, use the shell via run_shell (grep, find) — frontier models are fluent with those and large output is auto-written to a file you can read_file. Params: query (natural language), optional path to scope the search to a subtree, max_results (default 30), is_recursive (default false — reserved), glob_filter_for_file_types (default '*' = no filter, e.g. '*.rs'). Examples: find authentication handling logic, locate code that validates uploads, find error-recovery logic similar to a description.",
       "input_schema": {
         "type": "object",
         "properties": {
           "query": {
             "type": "string"
           },
-          "mode": {
-            "type": "string",
-            "enum": [
-              "auto",
-              "regex",
-              "semantic"
-            ],
-            "default": "auto"
-          },
-          "case_sensitive": {
-            "type": "boolean",
-            "default": false
-          },
-          "max_results": {
-            "type": "integer",
-            "default": 20
-          },
-          "offset": {
-            "type": "integer",
-            "default": 0
-          },
           "path": {
             "type": "string"
           },
-          "file_filter": {
-            "type": "string"
-          },
-          "max_depth": {
-            "type": "integer"
-          },
-          "context": {
+          "max_results": {
             "type": "integer",
-            "default": 1
+            "default": 30
+          },
+          "is_recursive": {
+            "type": "boolean",
+            "default": false
+          },
+          "glob_filter_for_file_types": {
+            "type": "string",
+            "default": "*"
           }
         },
         "required": [
@@ -154,35 +127,24 @@
         "additionalProperties": false
       },
       "example": {
-        "query": "fn main",
-        "mode": "regex",
+        "query": "authentication handling logic",
         "path": "src"
       },
-      "short_help": "find(query, mode?, case_sensitive?, max_results?, offset?, path?, file_filter?) — Search files by regex or semantic; auto falls back regex → case-insensitive → semantic.",
+      "short_help": "find_semantic(query, path?, max_results?, is_recursive?, glob_filter_for_file_types?) — Meaning-based code search (local embeddings). Use the shell (grep/find) for exact/regex search.",
       "aliases": [
-        "grep",
-        "search text",
-        "find pattern",
-        "regex search",
-        "look for",
-        "where is",
-        "find in files",
-        "search code",
         "semantic search",
         "find similar",
         "search meaning",
         "find function by description",
         "what does",
-        "find related code"
+        "find related code",
+        "find by concept"
       ],
       "examples": [
-        "Find all TODO comments",
-        "Search for fn main in src/",
-        "Where is login defined",
-        "Grep for API_KEY in *.rs",
         "Find auth handling code",
         "Search for error recovery logic",
-        "Find upload validation"
+        "Find upload validation",
+        "Where is login handled"
       ]
     },
     {
@@ -355,26 +317,15 @@
       "name": "run_shell",
       "tier": "static",
       "category": "execution",
-      "description": "Run a shell command. Output truncated to head/tail lines.",
-      "embedded_txt": "Execute an arbitrary shell command in the project directory or specified cwd. Returns stdout and stderr with head/tail truncation for large outputs. Use for: running tests, building projects, installing dependencies, git operations, any CLI tool. Prefer find tool over run_shell for file searching. Timeout configurable (default 30s). Output shows first N and last M lines with a note about omitted middle. Examples: cargo test, npm install, git status, python script.py, make build.",
+      "description": "Run a shell command (dirty open files are flushed to disk first). Output over 500 lines or 30KB is written to a file instead of returned inline.",
+      "embedded_txt": "Execute an arbitrary shell command in the project directory. Before running, any open file with unsaved buffer content is flushed to disk so grep/find/etc. see current content. Returns combined stdout+stderr; if that exceeds 500 lines or 30KB, the full output is written to .tracelean/shell_logs/ and a short preview plus that file's path is returned instead — use read_file with an offset to page through it. Use for: exact/regex/glob file search (grep, find — you already know these well), running tests, building projects, installing dependencies, git operations, any CLI tool. Timeout configurable (default 30s). Examples: grep -rn TODO src/, find . -name '*.rs', cargo test, npm install, git status, python script.py, make build.",
       "input_schema": {
         "type": "object",
         "properties": {
           "command": {
             "type": "string"
           },
-          "cwd": {
-            "type": "string"
-          },
           "timeout_secs": {
-            "type": "integer",
-            "default": 30
-          },
-          "head_lines": {
-            "type": "integer",
-            "default": 50
-          },
-          "tail_lines": {
             "type": "integer",
             "default": 30
           }
@@ -388,7 +339,7 @@
         "command": "cargo test",
         "timeout_secs": 60
       },
-      "short_help": "run_shell(command, cwd?, timeout_secs?) — Run shell command in project root.",
+      "short_help": "run_shell(command, timeout_secs?) — Run a shell command; large output spills to a file.",
       "aliases": [
         "execute shell",
         "terminal",
@@ -397,14 +348,23 @@
         "compile",
         "build",
         "test",
-        "make"
+        "make",
+        "grep",
+        "search text",
+        "find pattern",
+        "regex search",
+        "find in files",
+        "search code"
       ],
       "examples": [
         "Run cargo build",
         "Execute tests",
         "Compile the project",
         "Run make",
-        "Check linting"
+        "Check linting",
+        "Find all TODO comments",
+        "Search for fn main in src/",
+        "Grep for API_KEY in *.rs"
       ]
     },
     {
@@ -412,7 +372,7 @@
       "tier": "static",
       "category": "web",
       "description": "Search the web. Returns result titles and URLs; fetch one with web_fetch.",
-      "embedded_txt": "Search the web with a terms query (DuckDuckGo backend). Returns a list of result titles and URLs. To read a page's content, pass one of the returned URLs to web_fetch, which saves the page text into the project (.tracelean/web/) where read_file and find can inspect it. Use for: looking up library documentation, error messages, API references, current information not in the codebase. Examples: search for tokio watch channel docs, look up a compiler error, find the latest reqwest API.",
+      "embedded_txt": "Search the web with a terms query (DuckDuckGo backend). Returns a list of result titles and URLs. To read a page's content, pass one of the returned URLs to web_fetch, which saves the page text into the project (.tracelean/web/) where read_file or a shell grep can inspect it. Use for: looking up library documentation, error messages, API references, current information not in the codebase. Examples: search for tokio watch channel docs, look up a compiler error, find the latest reqwest API.",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -450,8 +410,8 @@
       "name": "web_fetch",
       "tier": "static",
       "category": "web",
-      "description": "Fetch a URL; its readable text is saved to a project temp file for read_file/find.",
-      "embedded_txt": "Fetch a web page by URL. The page is downloaded, HTML is stripped to readable text, and the result is saved under .tracelean/web/ inside the project. The tool returns the saved path, line count, and a short preview — use read_file or find on that path to inspect the content. Use after web_search returns candidate URLs, or directly when you already know the URL. Examples: fetch https://docs.rs/tokio, download a changelog page, read an API reference page.",
+      "description": "Fetch a URL; its readable text is saved to a project temp file for read_file/shell grep.",
+      "embedded_txt": "Fetch a web page by URL. The page is downloaded, HTML is stripped to readable text, and the result is saved under .tracelean/web/ inside the project. The tool returns the saved path, line count, and a short preview — use read_file, or run_shell with grep, on that path to inspect the content. Use after web_search returns candidate URLs, or directly when you already know the URL. Examples: fetch https://docs.rs/tokio, download a changelog page, read an API reference page.",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -468,7 +428,7 @@
       "example": {
         "url": "https://docs.rs/tokio"
       },
-      "short_help": "web_fetch(url) — Fetch a URL as text into .tracelean/web/ readable with read_file/find.",
+      "short_help": "web_fetch(url) — Fetch a URL as text into .tracelean/web/ readable with read_file/grep.",
       "aliases": [
         "fetch url",
         "web fetch",
@@ -485,7 +445,7 @@
       "tier": "static",
       "category": "meta",
       "description": "Get detailed usage info for any tool by name.",
-      "embedded_txt": "Retrieve the extended description (embedded_txt) for any available tool. Use when you need more detail about a tool's capabilities, parameters, edge cases, or usage examples before calling it. Works for both static and dynamic tools. Returns the full embedded_txt field which contains comprehensive usage documentation. Examples: help_tool('edit_file') to understand line range semantics, help_tool('find') to understand mode differences.",
+      "embedded_txt": "Retrieve the extended description (embedded_txt) for any available tool. Use when you need more detail about a tool's capabilities, parameters, edge cases, or usage examples before calling it. Works for both static and dynamic tools. Returns the full embedded_txt field which contains comprehensive usage documentation. Examples: help_tool('edit_file') to understand line range semantics, help_tool('find_semantic') to understand what it's for.",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -510,7 +470,7 @@
       ],
       "examples": [
         "Get help for edit_file",
-        "How do I use find"
+        "How do I use find_semantic"
       ]
     }
   ],

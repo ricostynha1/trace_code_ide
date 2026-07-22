@@ -40,6 +40,9 @@ pub struct AgentContext {
     pub timing_tracker: Arc<Mutex<TurnTimingTracker>>,
     /// P10 review mode: staged agent edits awaiting per-hunk user approval.
     pub pending_diffs: Arc<Mutex<Vec<crate::PendingDiff>>>,
+    /// Local semantic-search index (auto-built on project open) — threaded into
+    /// the tool executor so `find_semantic` can query it.
+    pub embed_index: crate::ai::SharedIndex,
 }
 
 /// User's answer to a per-command shell approval prompt (bugs.md Feature 4 +
@@ -117,6 +120,7 @@ impl AgentContext {
             retention_engine: Arc::new(Mutex::new(RetentionEngine::with_defaults())),
             timing_tracker: Arc::new(Mutex::new(TurnTimingTracker::new())),
             pending_diffs: Arc::clone(&app.pending_diffs),
+            embed_index: Arc::clone(&app.embed_index),
         }
     }
 
@@ -140,6 +144,7 @@ impl AgentContext {
             retention_engine: Arc::new(Mutex::new(RetentionEngine::with_defaults())),
             timing_tracker: Arc::new(Mutex::new(TurnTimingTracker::new())),
             pending_diffs: Arc::new(Mutex::new(Vec::new())),
+            embed_index: crate::ai::new_shared_index(),
         }
     }
 }

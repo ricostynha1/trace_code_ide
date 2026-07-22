@@ -48,6 +48,11 @@ pub struct MockPendingWrapper(pub Mutex<Vec<ai::mock::MockPendingRequest>>);
 pub struct MockProviderWrapper(pub Arc<tokio::sync::Mutex<Option<Arc<ai::mock::MockProvider>>>>);
 pub struct PendingDiffsWrapper(pub Arc<Mutex<Vec<PendingDiff>>>);
 
+/// Local semantic-search index, auto-built in the background on project open
+/// (see `ipc::editor::open_project`) and shared with every `AiService` so
+/// `find_semantic` can query it.
+pub struct EmbedIndexWrapper(pub tracelean_core::ai::SharedIndex);
+
 /// Bug 3: session_id -> (prompt_tokens, completion_tokens) of the latest LLM
 /// response seen so far in an in-flight turn — lets the context-usage bar
 /// update live during a multi-iteration tool loop instead of only at turn end.
@@ -218,6 +223,7 @@ pub fn run() {
         .manage(MockPendingWrapper(Mutex::new(Vec::new())))
         .manage(MockProviderWrapper(Arc::new(tokio::sync::Mutex::new(None))))
         .manage(PendingDiffsWrapper(Arc::new(Mutex::new(Vec::new()))))
+        .manage(EmbedIndexWrapper(tracelean_core::ai::new_shared_index()))
         .manage(LiveContextWrapper(Arc::new(Mutex::new(std::collections::HashMap::new()))))
         .manage(ResolvedDiffsWrapper(Arc::new(Mutex::new(std::collections::HashMap::new()))))
         .manage(DiffResolvedNotifyWrapper(Arc::new(tokio::sync::Notify::new())))

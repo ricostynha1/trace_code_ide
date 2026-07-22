@@ -92,7 +92,7 @@ fn test_load_tool_registry_from_data() {
     assert!(names.contains(&"read_file"));
     assert!(names.contains(&"edit_file"));
     assert!(names.contains(&"replace_str"));
-    assert!(names.contains(&"find"));
+    assert!(names.contains(&"find_semantic"));
     assert!(names.contains(&"list_directory"));
     assert!(names.contains(&"run_shell"));
     assert!(names.contains(&"help_tool"));

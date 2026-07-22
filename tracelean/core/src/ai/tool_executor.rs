@@ -265,9 +265,9 @@ pub fn execute_tool_reviewed(
     match call.name.as_str() {
         "read_file" => execute_read_file(call, project_root, permissions),
         "edit_file" => execute_edit_file(call, project_root, state, permissions, review),
-        // Mode-dispatched (auto|regex|semantic) with fallback chain; also the
-        // only caller of execute_find_embed for the standalone semantic path.
-        "find" => execute_find(call, project_root, embed_index),
+        // Meaning-based search over the local embeddings index. Exact/regex/glob
+        // search moved to the shell (run_shell with grep/find).
+        "find_semantic" => execute_find_semantic(call, embed_index),
         "replace_str" => execute_str_replace(call, project_root, state, permissions, review),
         "delete_file" => execute_delete_file(call, project_root, state, permissions),
         "list_directory" => execute_list_directory(call, project_root),
@@ -1016,11 +1016,16 @@ fn near_match_lines(content: &str, old_str: &str, max: usize) -> Vec<(usize, Str
 
 // insert_lines removed — use edit_file(start==end) instead
 
+/// Hard cap on list_directory output. Item 5 removed offset/max_results
+/// pagination (read_file is the one paginated tool); this bound just keeps a
+/// pathological recursive listing from flooding the context — past it the
+/// model is told to narrow the path/filter or use the shell (find/ls), whose
+/// large output spills to a file.
+const LIST_DIR_CAP: usize = 1000;
+
 fn execute_list_directory(call: &ToolCall, project_root: &Path) -> ToolResult {
     let rel_path = get_str_arg(call, "path").unwrap_or_default();
     let recursive = call.arguments.get("recursive").and_then(|v| v.as_bool()).unwrap_or(false);
-    let max_results = get_int_arg(call, "max_results").unwrap_or(50) as usize;
-    let offset = get_int_arg(call, "offset").unwrap_or(0) as usize;
     let file_filter = get_str_arg(call, "file_filter");
     let max_depth = get_int_arg(call, "max_depth").map(|d| d as usize);
 
@@ -1068,22 +1073,24 @@ fn execute_list_directory(call: &ToolCall, project_root: &Path) -> ToolResult {
 
     all_entries.sort();
     let total = all_entries.len();
-    let page: Vec<&String> = all_entries.iter().skip(offset).take(max_results).collect();
-    let has_more = offset + max_results < total;
+    let truncated = total > LIST_DIR_CAP;
+    let shown: Vec<&String> = all_entries.iter().take(LIST_DIR_CAP).collect();
 
-    let mut output = page.iter().map(|s| s.as_str()).collect::<Vec<_>>().join("\n");
-    if has_more {
-        output.push_str(&format!("\n\n[has_more=true, next_offset={}, total={}]", offset + max_results, total));
+    let mut output = shown.iter().map(|s| s.as_str()).collect::<Vec<_>>().join("\n");
+    if truncated {
+        output.push_str(&format!(
+            "\n\n[{} of {} entries shown — narrow the path/file_filter, or use run_shell with find/ls for the full listing (large output spills to a file you can read_file)]",
+            LIST_DIR_CAP, total
+        ));
     }
 
     ToolResult {
         success: true,
         content: output,
         data: Some(serde_json::json!({
-            "entries": page,
+            "entries": shown,
             "total": total,
-            "has_more": has_more,
-            "next_offset": if has_more { offset + max_results } else { total },
+            "truncated": truncated,
         })),
     }
 }
@@ -1335,6 +1342,109 @@ fn execute_get_symbols(call: &ToolCall, symbols: &SymbolTable) -> ToolResult {
     }
 }
 
+/// Item 3: shell output beyond either bound is spilled to a log file instead
+/// of returned inline, so a large `grep`/`find`/build log can't blow the
+/// context window.
+const SHELL_SPILL_MAX_LINES: usize = 500;
+const SHELL_SPILL_MAX_BYTES: usize = 30 * 1024;
+
+/// If `output` exceeds the spill thresholds, write the full text to
+/// `{project}/.tracelean/shell_logs/<id>.log` and return a short head/tail
+/// preview plus a pointer telling the model to `read_file` the log. Otherwise
+/// returns `output` unchanged.
+///
+/// The log is written to the REAL project tree (never inside a sandbox
+/// overlay), so it is not captured as a tracked mutation and never pollutes
+/// the review/diff stream. `.tracelean` is a protected path in the overlay, so
+/// even a sandboxed run's materialization pass ignores it.
+fn maybe_spill_shell_output(output: &str, project_root: &Path) -> String {
+    let line_count = output.lines().count();
+    let byte_count = output.len();
+    if line_count <= SHELL_SPILL_MAX_LINES && byte_count <= SHELL_SPILL_MAX_BYTES {
+        return output.to_string();
+    }
+
+    let dir = project_root.join(".tracelean").join("shell_logs");
+    if let Err(e) = std::fs::create_dir_all(&dir) {
+        return format!(
+            "[warning: output is large ({} lines, {} bytes) but the shell_logs dir \
+             could not be created ({}); returning it inline]\n{}",
+            line_count, byte_count, e, output
+        );
+    }
+    let ts = chrono::Utc::now().format("%Y%m%d-%H%M%S");
+    let file = dir.join(format!("shell-{}-{}.log", ts, uuid::Uuid::new_v4()));
+    if let Err(e) = std::fs::write(&file, output) {
+        return format!(
+            "[warning: output is large ({} lines, {} bytes) but the log file could \
+             not be written ({}); returning it inline]\n{}",
+            line_count, byte_count, e, output
+        );
+    }
+
+    // Head/tail preview so the model still sees the shape of the output. Each
+    // line is itself capped — a handful of pathologically long lines could
+    // otherwise blow the spill threshold in bytes while staying under the
+    // line-count threshold, defeating the point of not returning it inline.
+    const HEAD: usize = 20;
+    const TAIL: usize = 20;
+    const MAX_LINE_CHARS: usize = 500;
+    let clip = |l: &str| -> String {
+        if l.chars().count() > MAX_LINE_CHARS {
+            format!("{}…", l.chars().take(MAX_LINE_CHARS).collect::<String>())
+        } else {
+            l.to_string()
+        }
+    };
+    let lines: Vec<&str> = output.lines().collect();
+    let rel = file.strip_prefix(project_root).unwrap_or(&file);
+    let mut preview = lines[..HEAD.min(lines.len())]
+        .iter()
+        .map(|l| clip(l))
+        .collect::<Vec<_>>()
+        .join("\n");
+    if lines.len() > HEAD + TAIL {
+        preview.push_str(&format!("\n… ({} lines omitted) …\n", lines.len() - HEAD - TAIL));
+        preview.push_str(
+            &lines[lines.len() - TAIL..]
+                .iter()
+                .map(|l| clip(l))
+                .collect::<Vec<_>>()
+                .join("\n"),
+        );
+    }
+    format!(
+        "[full output ({} lines, {} bytes) written to {} — use read_file with offset \
+         to inspect the rest]\n{}",
+        line_count,
+        byte_count,
+        rel.display(),
+        preview
+    )
+}
+
+/// Item 4: the shell reads files from disk, but human editor edits live in the
+/// in-memory buffer until an explicit save (Ctrl+S). Before running a shell
+/// command, write every open buffer whose content differs from disk back to
+/// disk so `grep`/`find`/etc. see current content rather than stale disk
+/// content. AI auto-apply edits already `save_eff` on every edit (no-op here);
+/// review-staged AI edits live only in the `ReviewSink`, never in buffers, so
+/// they are left untouched (review isolation preserved).
+fn flush_dirty_buffers_to_disk(state: &AppState, project_root: &Path) {
+    let open: Vec<PathBuf> = state.open_files().into_iter().cloned().collect();
+    for rel in open {
+        let Some(buf) = state.get_content(&rel) else { continue };
+        let disk = std::fs::read_to_string(project_root.join(&rel)).ok();
+        if disk.as_deref() != Some(buf) {
+            let full = project_root.join(&rel);
+            if let Some(parent) = full.parent() {
+                let _ = std::fs::create_dir_all(parent);
+            }
+            let _ = std::fs::write(&full, buf);
+        }
+    }
+}
+
 fn execute_run_shell(
     call: &ToolCall,
     project_root: &Path,
@@ -1360,6 +1470,9 @@ fn execute_run_shell(
             }
         }
     };
+
+    // Item 4: make sure the shell sees current file content, not stale disk.
+    flush_dirty_buffers_to_disk(state, project_root);
 
     let timeout_secs = get_int_arg(call, "timeout_secs")
         .unwrap_or(30)
@@ -1481,11 +1594,12 @@ fn run_shell_direct(
             data: None,
         },
         Ok(out) => {
+            let body = maybe_spill_shell_output(&out.output, project_root);
             let mut content = match &out.killed_reason {
                 Some(reason) => {
-                    format!("Command killed ({}). Partial output:\n{}", reason, out.output)
+                    format!("Command killed ({}). Partial output:\n{}", reason, body)
                 }
-                None => out.output.clone(),
+                None => body,
             };
             if let Some(n) = notice {
                 content = format!("{}\n{}", n, content);
@@ -1595,9 +1709,10 @@ fn materialize_sandbox_run(
         }
     }
 
+    let body = maybe_spill_shell_output(&run.output, project_root);
     let mut content = match &run.killed_reason {
-        Some(reason) => format!("Command killed ({}). Partial output:\n{}", reason, run.output),
-        None => run.output.clone(),
+        Some(reason) => format!("Command killed ({}). Partial output:\n{}", reason, body),
+        None => body,
     };
     let mut sections: Vec<String> = Vec::new();
     if !notes.is_empty() {
@@ -1893,344 +2008,38 @@ fn web_fetch_to_file(url: &str, project_root: &Path) -> ToolResult {
     }
 }
 
-/// Dispatcher for the `find` tool. Routes on the schema's `mode` parameter
-/// (auto | regex | semantic) and implements the auto fallback chain:
-/// exact regex → case-insensitive regex → semantic. Explicit modes that come
-/// up empty suggest the other mode instead of failing silently.
-fn execute_find(
-    call: &ToolCall,
-    project_root: &Path,
-    embed_index: &Option<SharedIndex>,
-) -> ToolResult {
-    // Accept both 'pattern' (internal name) and 'query' (schema name from tools.json)
-    let pattern = match get_str_arg(call, "pattern").or_else(|| get_str_arg(call, "query")) {
-        Some(p) => p,
-        None => {
-            return ToolResult {
-                success: false,
-                content: "Missing 'query' argument. Expected: find(query, mode?, case_sensitive?, max_results?, offset?, path?, file_filter?)".into(),
-                data: None,
-            }
-        }
-    };
-    let mode = get_str_arg(call, "mode").unwrap_or_else(|| "auto".to_string());
-
-    match mode.as_str() {
-        "semantic" => {
-            let res = execute_find_embed(call, embed_index);
-            if res.success && res.content.starts_with("No semantic matches") {
-                ToolResult {
-                    success: true,
-                    content: format!(
-                        "{} Try mode=\"regex\" if you are looking for an exact symbol, string, or pattern.",
-                        res.content
-                    ),
-                    data: None,
-                }
-            } else {
-                res
-            }
-        }
-        "regex" => match regex_find(call, project_root, &pattern) {
-            Err(err) => err,
-            Ok(Some(content)) => ToolResult { success: true, content, data: None },
-            Ok(None) => ToolResult {
-                success: true,
-                content: "No matches found (exact or case-insensitive). Try mode=\"semantic\" for a meaning-based search, or check the pattern — special chars like . * ( must be escaped for a literal match.".into(),
-                data: None,
-            },
-        },
-        // "auto" (and anything unrecognized): regex → case-insensitive → semantic
-        _ => {
-            match regex_find(call, project_root, &pattern) {
-                Err(err) => return err,
-                Ok(Some(content)) => return ToolResult { success: true, content, data: None },
-                Ok(None) => {}
-            }
-            let sem = execute_find_embed(call, embed_index);
-            if sem.success && !sem.content.starts_with("No semantic matches") {
-                ToolResult {
-                    success: true,
-                    content: format!(
-                        "regex and case-insensitive search found nothing; falling back to semantic search:\n{}",
-                        sem.content
-                    ),
-                    data: None,
-                }
-            } else if !sem.success {
-                ToolResult {
-                    success: true,
-                    content: format!(
-                        "No matches found (exact or case-insensitive; semantic fallback unavailable: {})",
-                        sem.content
-                    ),
-                    data: None,
-                }
-            } else {
-                ToolResult {
-                    success: true,
-                    content: "No matches found — regex, case-insensitive, and semantic search all came up empty. Try a broader or simpler query.".into(),
-                    data: None,
-                }
-            }
-        }
-    }
-}
-
-/// Hard cap on how many matches a single grep pass will count before stopping
-/// the scan — bounds cost on pathological queries while still letting the
-/// pagination hint report a meaningful total.
-const GREP_SCAN_CAP: usize = 2000;
-
-/// Collects grep matches for one `offset`/`max_results` window while counting
-/// every match, so responses can say "N of M matches" and how to page.
-struct GrepCollector {
-    offset: usize,
-    max_results: usize,
-    /// Total matches seen so far (capped at GREP_SCAN_CAP).
-    total: usize,
-    results: Vec<String>,
-}
-
-impl GrepCollector {
-    fn push(&mut self, entry: String) {
-        if self.total >= self.offset && self.results.len() < self.max_results {
-            self.results.push(entry);
-        }
-        self.total += 1;
-    }
-    fn scan_done(&self) -> bool {
-        self.total >= GREP_SCAN_CAP
-    }
-}
-
-/// Run the regex leg of `find`, including the case-insensitive retry and the
-/// pagination hint. Returns:
-/// - `Err(result)` — invalid regex, ready to return to the model;
-/// - `Ok(Some(content))` — matches found (content includes any annotations);
-/// - `Ok(None)` — genuinely zero matches, caller decides the fallback.
-fn regex_find(
-    call: &ToolCall,
-    project_root: &Path,
-    pattern: &str,
-) -> Result<Option<String>, ToolResult> {
-    let case_sensitive = call
-        .arguments
-        .get("case_sensitive")
-        .and_then(|v| v.as_bool())
-        .unwrap_or(false);
-    let offset = get_int_arg(call, "offset").unwrap_or(0).max(0) as usize;
-
-    let re = regex::Regex::new(pattern).map_err(|e| ToolResult {
-        success: false,
-        content: format!(
-            "Invalid regex '{}': {} — escape special chars like . * ( for a literal match.",
-            pattern, e
-        ),
-        data: None,
-    })?;
-
-    let mut coll = run_grep(call, project_root, &re);
-    let mut note = "";
-    if coll.total == 0 && !case_sensitive {
-        // Exact case found nothing — retry case-insensitively before giving up.
-        if let Ok(ci_re) = regex::Regex::new(&format!("(?i){}", pattern)) {
-            let ci_coll = run_grep(call, project_root, &ci_re);
-            if ci_coll.total > 0 {
-                note = "exact-case match found nothing; case-insensitive search found these:\n";
-                coll = ci_coll;
-            }
-        }
-    }
-
-    if coll.total == 0 {
-        return Ok(None);
-    }
-    if coll.results.is_empty() {
-        // offset beyond the matches that exist
-        return Ok(Some(format!(
-            "offset {} is beyond the {} matches found — call again with a smaller offset.",
-            offset, coll.total
-        )));
-    }
-
-    let mut content = format!("{}{}", note, coll.results.join("\n"));
-    let shown_through = offset + coll.results.len();
-    if coll.total > shown_through {
-        let total_str = if coll.scan_done() {
-            format!("{}+", GREP_SCAN_CAP)
-        } else {
-            coll.total.to_string()
-        };
-        content.push_str(&format!(
-            "\n{}",
-            super::tool_registry::ToolRegistry::pagination_hint(
-                coll.results.len(),
-                &total_str,
-                shown_through
-            )
-        ));
-    }
-    Ok(Some(content))
-}
-
-/// One full grep pass over the target path with the given (pre-compiled) regex.
-fn run_grep(call: &ToolCall, project_root: &Path, re: &regex::Regex) -> GrepCollector {
-    let search_path = get_str_arg(call, "path").unwrap_or_default();
-    let recursive = call
-        .arguments
-        .get("recursive")
-        .and_then(|v| v.as_bool())
-        .unwrap_or(true);
-    let max_results = get_int_arg(call, "max_results").unwrap_or(20) as usize;
-    // Schema name is 'context'; 'context_lines' kept for internal callers.
-    let context_lines = get_int_arg(call, "context_lines")
-        .or_else(|| get_int_arg(call, "context"))
-        .unwrap_or(0) as usize;
-    let file_filter = get_str_arg(call, "file_filter").unwrap_or_default();
-    let offset = get_int_arg(call, "offset").unwrap_or(0).max(0) as usize;
-
-    let target = if search_path.is_empty() {
-        project_root.to_path_buf()
-    } else {
-        project_root.join(&search_path)
-    };
-
-    let mut coll = GrepCollector {
-        offset,
-        max_results,
-        total: 0,
-        results: Vec::new(),
-    };
-
-    if target.is_file() {
-        grep_file(&target, project_root, re, context_lines, &mut coll);
-    } else {
-        grep_dir(
-            &target,
-            project_root,
-            re,
-            &file_filter,
-            recursive,
-            context_lines,
-            &mut coll,
-            0,
-        );
-    }
-    coll
-}
-
-fn grep_file(
-    file_path: &Path,
-    root: &Path,
-    re: &regex::Regex,
-    context_lines: usize,
-    coll: &mut GrepCollector,
-) {
-    if coll.scan_done() {
-        return;
-    }
-    let Ok(content) = std::fs::read_to_string(file_path) else {
-        return;
-    };
-    let rel = file_path.strip_prefix(root).unwrap_or(file_path);
-    let all_lines: Vec<&str> = content.lines().collect();
-
-    for (line_num, line) in all_lines.iter().enumerate() {
-        if re.is_match(line) {
-            if context_lines == 0 {
-                coll.push(format!(
-                    "{}:{}: {}",
-                    rel.display(),
-                    line_num + 1,
-                    line.trim()
-                ));
-            } else {
-                let start = line_num.saturating_sub(context_lines);
-                let end = (line_num + context_lines + 1).min(all_lines.len());
-                let mut block = format!("{}:{}\n", rel.display(), line_num + 1);
-                for i in start..end {
-                    let marker = if i == line_num { ">" } else { " " };
-                    block.push_str(&format!("{}{:>4}| {}\n", marker, i + 1, all_lines[i]));
-                }
-                coll.push(block);
-            }
-            if coll.scan_done() {
-                return;
-            }
-        }
-    }
-}
-
-fn grep_dir(
-    dir: &Path,
-    root: &Path,
-    re: &regex::Regex,
-    file_filter: &str,
-    recursive: bool,
-    context_lines: usize,
-    coll: &mut GrepCollector,
-    depth: usize,
-) {
-    if depth > 15 || coll.scan_done() {
-        return;
-    }
-    let Ok(entries) = std::fs::read_dir(dir) else {
-        return;
-    };
-    for entry in entries.flatten() {
-        let name = entry.file_name().to_string_lossy().to_string();
-        if name.starts_with('.') || name == "node_modules" || name == "target" {
-            continue;
-        }
-        let path = entry.path();
-        if path.is_dir() {
-            if recursive {
-                grep_dir(
-                    &path,
-                    root,
-                    re,
-                    file_filter,
-                    recursive,
-                    context_lines,
-                    coll,
-                    depth + 1,
-                );
-            }
-        } else {
-            // Apply file filter
-            if !file_filter.is_empty() {
-                if let Some(ext) = file_filter.strip_prefix("*.") {
-                    if !name.ends_with(&format!(".{}", ext)) {
-                        continue;
-                    }
-                }
-            }
-            grep_file(&path, root, re, context_lines, coll);
-        }
-    }
-}
-
-fn execute_find_embed(call: &ToolCall, embed_index: &Option<SharedIndex>) -> ToolResult {
+/// Meaning-based search over the local embeddings index (`find_semantic`).
+/// Exact/regex/glob/filename search moved to the shell (run_shell with
+/// grep/find), so this tool is only the semantic path. The index is built
+/// automatically in the background when a project opens (local + free).
+fn execute_find_semantic(call: &ToolCall, embed_index: &Option<SharedIndex>) -> ToolResult {
     let query = match get_str_arg(call, "query") {
         Some(q) => q,
         None => {
             return ToolResult {
                 success: false,
-                content: "Missing 'query' argument. Expected: find_embed(query, max_results?, path?, file_filter?)".into(),
+                content: "Missing 'query' argument. Expected: find_semantic(query, path?, max_results?, is_recursive?, glob_filter_for_file_types?)".into(),
                 data: None,
             }
         }
     };
-    let max_results = get_int_arg(call, "max_results").unwrap_or(5) as usize;
+    let max_results = get_int_arg(call, "max_results").unwrap_or(30).max(1) as usize;
     let path_filter = get_str_arg(call, "path").unwrap_or_default();
-    let file_filter = get_str_arg(call, "file_filter").unwrap_or_default();
+    // `is_recursive` is accepted for schema symmetry but the index already
+    // spans the whole project subtree under `path`, so there is nothing to
+    // toggle — it is intentionally ignored.
+    // Default glob "*" means "no filter". The index only understands "*.ext"
+    // globs, so a bare "*" (or empty) is treated as no filter.
+    let file_filter = match get_str_arg(call, "glob_filter_for_file_types") {
+        Some(g) if g != "*" && !g.is_empty() => g,
+        _ => String::new(),
+    };
 
     let index_arc = match embed_index {
         Some(arc) => arc.clone(),
         None => return ToolResult {
             success: false,
-            content: "find_embed: embeddings index not initialized. Build it first (rebuild context button).".into(),
+            content: "find_semantic: the embeddings index is not available (it builds automatically in the background when a project opens). Use the shell (run_shell with grep/find) for exact search in the meantime.".into(),
             data: None,
         },
     };
@@ -2241,7 +2050,7 @@ fn execute_find_embed(call: &ToolCall, embed_index: &Option<SharedIndex>) -> Too
         None => {
             return ToolResult {
                 success: false,
-                content: "find_embed: embeddings index not built yet. Trigger rebuild.".into(),
+                content: "find_semantic: the embeddings index is still building (started when the project opened) — retry shortly, or use the shell (grep/find) for exact search meanwhile.".into(),
                 data: None,
             }
         }
@@ -2252,7 +2061,7 @@ fn execute_find_embed(call: &ToolCall, embed_index: &Option<SharedIndex>) -> Too
     if results.is_empty() {
         return ToolResult {
             success: true,
-            content: "No semantic matches found.".into(),
+            content: "No semantic matches found. For an exact symbol, string, or pattern, use the shell: run_shell with grep/find.".into(),
             data: None,
         };
     }
@@ -2284,11 +2093,8 @@ fn execute_find_embed(call: &ToolCall, embed_index: &Option<SharedIndex>) -> Too
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::commands::Command;
     use crate::parser::{Symbol, SymbolKind, SymbolTable};
-    use crate::trace_graph::{
-        CodeElement, CodeElementKind, ReqStatus, Requirement, Spec, Test, TestKind, TraceGraph,
-    };
+    use crate::trace_graph::{ReqStatus, Requirement, TraceGraph};
     use serde_json::json;
     use std::path::PathBuf;
     use tempfile::TempDir;
@@ -2599,57 +2405,9 @@ mod tests {
         assert!(result.content.contains("3 times"));
     }
 
-    // ===== find (regex mode) tests =====
-
-    #[test]
-    fn test_find_regex_success() {
-        let tmp = TempDir::new().unwrap();
-        std::fs::write(tmp.path().join("a.rs"), "fn main() { todo!(); }").unwrap();
-        std::fs::write(tmp.path().join("b.rs"), "// nothing").unwrap();
-
-        let mut state = AppState::new();
-        let symbols = SymbolTable::new();
-        let graph = TraceGraph::new();
-        let perms = full_perms();
-
-        let call = make_call("find", json!({"query": "todo!"}));
-        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
-        assert!(result.success);
-        assert!(result.content.contains("a.rs"));
-        assert!(result.content.contains("todo!"));
-    }
-
-    #[test]
-    fn test_find_regex_no_matches() {
-        let tmp = TempDir::new().unwrap();
-        std::fs::write(tmp.path().join("a.rs"), "fn main() {}").unwrap();
-
-        let mut state = AppState::new();
-        let symbols = SymbolTable::new();
-        let graph = TraceGraph::new();
-        let perms = full_perms();
-
-        let call = make_call("find", json!({"query": "zzz_never_match"}));
-        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
-        assert!(result.success);
-        assert!(result.content.contains("No matches"));
-    }
-
-    #[test]
-    fn test_find_regex_invalid_regex() {
-        let tmp = TempDir::new().unwrap();
-        let mut state = AppState::new();
-        let symbols = SymbolTable::new();
-        let graph = TraceGraph::new();
-        let perms = full_perms();
-
-        let call = make_call("find", json!({"query": "[invalid"}));
-        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
-        assert!(!result.success);
-        assert!(result.content.contains("Invalid regex"));
-    }
-
-    // ===== find (semantic mode) tests =====
+    // ===== find_semantic tests =====
+    // Exact/regex/glob search now lives in the shell (run_shell with grep/find);
+    // find_semantic is the meaning-based path only.
 
     #[test]
     fn test_find_semantic_no_index() {
@@ -2659,11 +2417,26 @@ mod tests {
         let graph = TraceGraph::new();
         let perms = full_perms();
 
-        let call = make_call("find", json!({"query": "auth handler", "mode": "semantic"}));
+        let call = make_call("find_semantic", json!({"query": "auth handler"}));
+        // execute_tool passes &None for the index, so this reports the index
+        // isn't available yet rather than crashing.
         let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
-        // No index passed via execute_tool (uses None), so returns error
         assert!(!result.success);
-        assert!(result.content.contains("not initialized"));
+        assert!(result.content.contains("not available"));
+    }
+
+    #[test]
+    fn test_find_semantic_missing_query() {
+        let tmp = TempDir::new().unwrap();
+        let mut state = AppState::new();
+        let symbols = SymbolTable::new();
+        let graph = TraceGraph::new();
+        let perms = full_perms();
+
+        // Schema validation (required "query") rejects the call before dispatch.
+        let call = make_call("find_semantic", json!({}));
+        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
+        assert!(!result.success);
     }
 
     // ===== list_directory tests =====
@@ -2837,6 +2610,77 @@ mod tests {
         let call = make_call("run_shell", json!({"command": "echo hi"}));
         let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
         assert!(!result.success);
+    }
+
+    // ===== item 3: shell output spill-to-file =====
+
+    #[test]
+    fn test_run_shell_small_output_returned_inline() {
+        let tmp = TempDir::new().unwrap();
+        let mut state = AppState::new();
+        let symbols = SymbolTable::new();
+        let graph = TraceGraph::new();
+        let perms = full_perms();
+
+        let call = make_call("run_shell", json!({"command": "echo hello"}));
+        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
+        assert!(result.success);
+        assert!(result.content.contains("hello"));
+        assert!(!std::fs::exists(tmp.path().join(".tracelean/shell_logs")).unwrap_or(false));
+    }
+
+    #[test]
+    fn test_run_shell_large_output_spills_to_file() {
+        let tmp = TempDir::new().unwrap();
+        let mut state = AppState::new();
+        let symbols = SymbolTable::new();
+        let graph = TraceGraph::new();
+        let perms = full_perms();
+
+        // 800 lines exceeds the 500-line spill threshold.
+        let call = make_call(
+            "run_shell",
+            json!({"command": "for i in $(seq 1 800); do echo line-$i; done"}),
+        );
+        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
+        assert!(result.success);
+        assert!(result.content.contains(".tracelean/shell_logs/"));
+        assert!(result.content.contains("read_file"));
+
+        let log_dir = tmp.path().join(".tracelean/shell_logs");
+        let entries: Vec<_> = std::fs::read_dir(&log_dir).unwrap().flatten().collect();
+        assert_eq!(entries.len(), 1);
+        let full = std::fs::read_to_string(entries[0].path()).unwrap();
+        assert!(full.contains("line-1\n"));
+        assert!(full.contains("line-800"));
+    }
+
+    // ===== item 4: flush dirty buffers before shell commands =====
+
+    #[test]
+    fn test_run_shell_flushes_dirty_buffer_to_disk_first() {
+        let tmp = TempDir::new().unwrap();
+        let rel = PathBuf::from("a.txt");
+        std::fs::write(tmp.path().join(&rel), "old content").unwrap();
+
+        let mut state = AppState::new();
+        state.load_file(rel.clone(), "new unsaved content".to_string());
+        let symbols = SymbolTable::new();
+        let graph = TraceGraph::new();
+        let perms = full_perms();
+
+        let call = make_call("run_shell", json!({"command": "cat a.txt"}));
+        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
+        assert!(result.success);
+        assert!(
+            result.content.contains("new unsaved content"),
+            "shell should see the flushed buffer content, got: {}",
+            result.content
+        );
+        assert_eq!(
+            std::fs::read_to_string(tmp.path().join(&rel)).unwrap(),
+            "new unsaved content"
+        );
     }
 
     // ===== get_symbols =====

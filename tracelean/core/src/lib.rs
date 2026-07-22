@@ -243,6 +243,10 @@ pub struct SharedApp {
     pub resolved_diffs: Arc<Mutex<HashMap<String, ResolvedDiffOutcome>>>,
     /// Wakeup signal paired with `resolved_diffs` — no polling.
     pub diff_notify: Arc<tokio::sync::Notify>,
+    /// Local semantic-search index, auto-built in the background on project
+    /// open (see `ai::spawn_build`) and shared with every `AiService`/agent
+    /// turn so `find_semantic` has something to query.
+    pub embed_index: ai::SharedIndex,
 }
 
 impl SharedApp {
@@ -265,6 +269,7 @@ impl SharedApp {
             live_context: Arc::new(Mutex::new(HashMap::new())),
             resolved_diffs: Arc::new(Mutex::new(HashMap::new())),
             diff_notify: Arc::new(tokio::sync::Notify::new()),
+            embed_index: ai::new_shared_index(),
         }
     }
 
@@ -285,6 +290,7 @@ impl SharedApp {
             live_context: self.live_context.clone(),
             resolved_diffs: self.resolved_diffs.clone(),
             diff_notify: self.diff_notify.clone(),
+            embed_index: self.embed_index.clone(),
         }
     }
 
