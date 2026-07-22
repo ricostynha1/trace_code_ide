@@ -79,6 +79,14 @@ pub fn open_project(
         state.set_project_root(root.clone());
     }
 
+    // Bug 4: every opened project gets a baseline commit point so the
+    // initial state is never lost — but only if nothing survived restore
+    // (a restored project already has its own history).
+    if state.undo_tree().is_empty() {
+        state.record_file_open();
+        state.mark_commit_point("Initial snapshot".to_string());
+    }
+
     // Parse all source files in parallel
     let files = collect_source_files(&root);
     let file_contents: Vec<(PathBuf, String)> = files.iter().filter_map(|p| {

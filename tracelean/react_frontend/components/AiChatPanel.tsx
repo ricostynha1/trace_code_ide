@@ -162,6 +162,9 @@ interface InteractionEntry {
   request_raw?: string | null;
   /** bugs.md Bug 3: predicted cached tokens for this turn (cache health = actual/predicted). */
   predicted_cached_tokens?: number | null;
+  /** FEATURE 2: model context window at request time, for a per-entry "% context used" figure. */
+  context_window?: number;
+  context_window_known?: boolean;
   /** Compaction that ran before this request (bugs.md: log icons + detail). */
   compaction?: {
     kind: string; // "summarized" | "trimmed" | "candidates"
@@ -916,6 +919,7 @@ export function AiChatPanel({ visible, onClose }: Props) {
             )}
             {toolLoopPaused && (() => {
               const isShell = toolLoopPaused.kind === "shell-approval";
+              const isDiffReview = toolLoopPaused.kind === "diff-review";
               const netAsk = toolLoopPaused.networkPolicy === "ask";
               return (
                 <div className="ai-msg ai-msg-pause">
@@ -945,10 +949,21 @@ export function AiChatPanel({ visible, onClose }: Props) {
                     </label>
                   )}
                   <div className="ai-pause-buttons">
-                    <button onClick={() => resumeToolLoop(true, isShell && netAsk ? approveWithNetwork : false)}>
-                      {isShell ? "Allow" : "Continue"}
-                    </button>
-                    <button onClick={() => resumeToolLoop(false)}>{isShell ? "Deny" : "Stop"}</button>
+                    {isDiffReview ? (
+                      // Bug 2: `resumeToolLoop` resolves a different channel
+                      // (the should_continue oneshot) that `wait_for_review`
+                      // never reads — resolving the diff in the editor's diff
+                      // bar is what actually unblocks the run. The only thing
+                      // a button here can do is hard-cancel.
+                      <button onClick={stopAgentRun}>Stop</button>
+                    ) : (
+                      <>
+                        <button onClick={() => resumeToolLoop(true, isShell && netAsk ? approveWithNetwork : false)}>
+                          {isShell ? "Allow" : "Continue"}
+                        </button>
+                        <button onClick={() => resumeToolLoop(false)}>{isShell ? "Deny" : "Stop"}</button>
+                      </>
+                    )}
                   </div>
                 </div>
               );
@@ -1662,6 +1677,15 @@ export function AiChatPanel({ visible, onClose }: Props) {
                         : `0 predicted cached tokens (got ${inspectEntry.usage.cached_tokens.toLocaleString()})`}
                     </td>
                   </tr>
+                  <tr title="FEATURE 2: input tokens for this request as a % of the model's context window.">
+                    <td>Context used</td>
+                    <td>{inspectEntry.usage.input_tokens.toLocaleString()} / {(inspectEntry.context_window ?? 0).toLocaleString()}</td>
+                    <td>
+                      {inspectEntry.context_window
+                        ? `${inspectEntry.context_window_known ? "" : "~"}${Math.round((inspectEntry.usage.input_tokens / inspectEntry.context_window) * 100)}%`
+                        : "unknown"}
+                    </td>
+                  </tr>
                 </tbody>
               </table>
             </div>
@@ -1699,6 +1723,14 @@ export function AiChatPanel({ visible, onClose }: Props) {
                         ? `🗄 ${Math.round((entry.usage.cached_tokens / entry.predicted_cached_tokens) * 100)}%`
                         : "🗄 0 predicted"
                       : "🗄 unknown"}
+                  </span>
+                  <span
+                    className="ai-log-context-badge"
+                    title="FEATURE 2: input tokens for this request as a % of the model's context window."
+                  >
+                    {entry.context_window
+                      ? `▤ ${entry.context_window_known ? "" : "~"}${Math.round((entry.usage.input_tokens / entry.context_window) * 100)}%`
+                      : "▤ unknown"}
                   </span>
                   <span className="ai-log-cost">${entry.cost.total_usd.toFixed(6)}</span>
                   <span className="ai-log-time">{new Date(entry.timestamp).toLocaleTimeString()}</span>

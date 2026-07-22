@@ -34,6 +34,16 @@ pub struct AiService {
     pub pending_diffs: Arc<Mutex<Vec<crate::PendingDiff>>>,
     /// Hard-stop token (T12) shared with the stop_agent_run entry point.
     pub cancel: crate::agent::CancelToken,
+    /// Bug 3: session_id -> (prompt_tokens, completion_tokens) of the most
+    /// recent LLM response seen so far *this turn* — updated every
+    /// tool-loop iteration (see `run_agent_turn_inner`), not just once at
+    /// turn end, so the context-usage bar can update live instead of only
+    /// after the whole turn finishes.
+    pub live_context: crate::agent::LiveContextMap,
+    /// Bug 2: resolved-but-not-yet-collected diff-review outcomes.
+    pub resolved_diffs: Arc<Mutex<HashMap<String, crate::ResolvedDiffOutcome>>>,
+    /// Bug 2: wakeup signal paired with `resolved_diffs` — no polling.
+    pub diff_notify: Arc<tokio::sync::Notify>,
 }
 
 impl AiService {
@@ -83,6 +93,12 @@ impl AiService {
 
     /// One persistent-session chat turn: appends the user message, runs the
     /// agent tool loop, persists the evolved model view.
+    ///
+    /// Bug 3: unlike before, this does NOT hold the `sessions` store lock for
+    /// the whole turn — it clones the session out, runs the (possibly
+    /// multi-iteration) tool loop against the clone, then writes the result
+    /// back. That's what lets `session_info()` (the context-usage bar) return
+    /// promptly mid-turn instead of queueing behind the entire turn.
     pub async fn chat_turn(
         &self,
         session_id: &str,
@@ -94,29 +110,55 @@ impl AiService {
         self.cancel.reset();
         let ctx = self.agent_context(pause_handler, verbose).await?;
 
-        let mut store = self.sessions.lock().await;
-        let session = store
-            .entry(session_id.to_string())
-            .or_insert_with(|| ChatSession::new(session_id.to_string()));
-        session.append(ChatMessage {
-            role: MessageRole::User,
-            content: user_message.to_string(),
-            tool_call_id: None,
-            tool_calls: Vec::new(),
-        });
+        let mut session = {
+            let mut store = self.sessions.lock().await;
+            let session = store
+                .entry(session_id.to_string())
+                .or_insert_with(|| ChatSession::new(session_id.to_string()));
+            session.append(ChatMessage {
+                role: MessageRole::User,
+                content: user_message.to_string(),
+                tool_call_id: None,
+                tool_calls: Vec::new(),
+            });
+            session.clone()
+        };
+
         let cost_before = self.stats.lock().map(|s| s.total_cost_usd).unwrap_or(0.0);
-        let result = run_agent_turn_session(&ctx, session)
-            .await
-            .map_err(|e| e.to_string())?;
+        let turn_result = run_agent_turn_session(
+            &ctx,
+            &mut session,
+            Some((self.live_context.clone(), session_id.to_string())),
+        )
+        .await;
+
+        // Always clear the live-context entry once the turn is over (success
+        // or error) — the write-back below is the source of truth again, and
+        // a stale entry could otherwise mislead a session_info() call made
+        // just as a new turn for this session_id starts.
+        let _ = self.live_context.lock().map(|mut m| { m.remove(session_id); });
 
         // P11: persist the session every turn (cost delta from session stats).
-        let cost_after = self.stats.lock().map(|s| s.total_cost_usd).unwrap_or(cost_before);
-        session.total_cost_usd += (cost_after - cost_before).max(0.0);
-        session.updated_at = chrono::Utc::now().to_rfc3339();
-        if let Some(root) = self.project_root() {
-            save_session(&root, session);
+        if turn_result.is_ok() {
+            let cost_after = self.stats.lock().map(|s| s.total_cost_usd).unwrap_or(cost_before);
+            session.total_cost_usd += (cost_after - cost_before).max(0.0);
+            session.updated_at = chrono::Utc::now().to_rfc3339();
         }
-        Ok(result)
+
+        // Write back regardless of outcome — the appended user message (and
+        // any partial model_view progress made before a failure) must not be
+        // lost, matching the pre-Bug-3 behavior where `session` was a `&mut`
+        // straight into the store instead of a clone.
+        {
+            let mut store = self.sessions.lock().await;
+            store.insert(session_id.to_string(), session.clone());
+        }
+        if turn_result.is_ok() {
+            if let Some(root) = self.project_root() {
+                save_session(&root, &session);
+            }
+        }
+        turn_result.map_err(|e| e.to_string())
     }
 
     /// bugs.md Feature 2: user-triggered summarization of a session's model
@@ -186,7 +228,11 @@ impl AiService {
         }
     }
 
-    /// Context-utilization snapshot for a session (P7).
+    /// Context-utilization snapshot for a session (P7). Bug 3: prefers the
+    /// live, mid-turn token counts (`live_context`, updated every tool-loop
+    /// iteration by `run_agent_turn_inner`) over the session store's
+    /// `last_prompt_tokens`/`last_completion_tokens`, which only reflect the
+    /// end of the *previous* turn while a new one is in flight.
     pub async fn session_info(&self, session_id: &str) -> Result<ChatSessionInfo, String> {
         let (context_window, known) = {
             let s = self.settings.lock().map_err(|e| e.to_string())?;
@@ -195,11 +241,16 @@ impl AiService {
                 None => (128_000, false),
             }
         };
+        let live = self.live_context.lock().ok().and_then(|m| m.get(session_id).copied());
         let store = self.sessions.lock().await;
-        Ok(match store.get(session_id) {
+        let mut info = match store.get(session_id) {
             Some(session) => session.info(context_window, known),
             None => ChatSession::new(session_id.to_string()).info(context_window, known),
-        })
+        };
+        if let Some((prompt, completion)) = live {
+            info.estimated_context_tokens = prompt + completion;
+        }
+        Ok(info)
     }
 
     /// The visible transcript of a session (user_view).

@@ -42,6 +42,12 @@ fn ai_service(
         // T12: shared hard-stop token, resolved from managed state so every
         // service instance controls (and is controlled by) the same token.
         cancel: app.state::<crate::AgentCancelWrapper>().0.clone(),
+        // Bug 3: shared across every service instance, same as `cancel` above,
+        // so a mid-turn write here is visible to a concurrent session_info() read.
+        live_context: app.state::<crate::LiveContextWrapper>().0.clone(),
+        // Bug 2: shared across every service instance, same pattern as above.
+        resolved_diffs: app.state::<crate::ResolvedDiffsWrapper>().0.clone(),
+        diff_notify: app.state::<crate::DiffResolvedNotifyWrapper>().0.clone(),
     }
 }
 
@@ -231,6 +237,8 @@ pub async fn ai_chat(
         app_handle: app.clone(),
         resume_state: resume_state.0.clone(),
         pending_diffs: svc.pending_diffs.clone(),
+        resolved_diffs: svc.resolved_diffs.clone(),
+        diff_notify: svc.diff_notify.clone(),
         cancel: svc.cancel.clone(),
     });
     let response = svc.one_shot_turn(messages, Some(pause), false).await?;
@@ -268,6 +276,8 @@ pub async fn ai_chat_session(
         app_handle: app.clone(),
         resume_state: resume_state.0.clone(),
         pending_diffs: svc.pending_diffs.clone(),
+        resolved_diffs: svc.resolved_diffs.clone(),
+        diff_notify: svc.diff_notify.clone(),
         cancel: svc.cancel.clone(),
     });
     let result = svc.chat_turn(&session_id, &user_message, Some(pause), false).await?;
@@ -291,10 +301,14 @@ pub async fn reset_chat_session(
 }
 
 /// Context-utilization snapshot for the chat cost bar (P7, D7.2).
+/// Bug 3: prefers the live, mid-turn token counts over the session store's
+/// last-turn-end values, so this reflects an in-flight multi-iteration turn
+/// instead of only the previous one.
 #[tauri::command]
 pub async fn get_chat_session_info(
     session_store: State<'_, crate::ChatSessionStoreWrapper>,
     settings: State<'_, AiSettingsWrapper>,
+    live_context: State<'_, crate::LiveContextWrapper>,
     session_id: String,
 ) -> Result<tracelean_core::ChatSessionInfo, String> {
     let (context_window, known) = {
@@ -304,20 +318,16 @@ pub async fn get_chat_session_info(
             None => (128_000, false),
         }
     };
-    println!("Context window {}, known {}", context_window, known);
+    let live = live_context.0.lock().ok().and_then(|m| m.get(&session_id).copied());
     let store = session_store.0.lock().await;
-    Ok(match store.get(&session_id) {
-        Some(session) => {
-            println!("known session context {:?}",session.info(context_window, known));
-            session.info(context_window, known)
-        }
-            ,
-        None => {
-            println!("Print new session");
-       
-            tracelean_core::ChatSession::new(session_id).info(context_window, known)
-        },
-    })
+    let mut info = match store.get(&session_id) {
+        Some(session) => session.info(context_window, known),
+        None => tracelean_core::ChatSession::new(session_id).info(context_window, known),
+    };
+    if let Some((prompt, completion)) = live {
+        info.estimated_context_tokens = prompt + completion;
+    }
+    Ok(info)
 }
 
 /// bugs.md Feature 2: force-summarize a session's model context now
@@ -382,11 +392,15 @@ pub async fn list_chat_sessions(
 pub struct TauriPauseHandler {
     pub app_handle: AppHandle,
     pub resume_state: Arc<tokio::sync::Mutex<Option<tokio::sync::oneshot::Sender<(bool, bool)>>>>,
-    /// bugs.md Bug 0: same pending-diffs list the diff-review UI mutates —
-    /// polled by `wait_for_review` so the loop unblocks the moment the user
-    /// accepts/rejects the staged hunks (no extra button to click).
+    /// bugs.md Bug 0: same pending-diffs list the diff-review UI mutates.
     pub pending_diffs: Arc<std::sync::Mutex<Vec<crate::PendingDiff>>>,
-    /// Lets Stop unblock a `wait_for_review` poll immediately.
+    /// Bug 2: resolved-but-not-yet-collected diff outcomes, written by
+    /// `apply_accepted_hunks`/`discard_pending_diff` — `wait_for_review`
+    /// waits on `diff_notify` instead of polling this.
+    pub resolved_diffs: Arc<std::sync::Mutex<std::collections::HashMap<String, tracelean_core::ResolvedDiffOutcome>>>,
+    /// Wakeup signal paired with `resolved_diffs` — no polling.
+    pub diff_notify: Arc<tokio::sync::Notify>,
+    /// Lets Stop unblock a `wait_for_review` wait immediately.
     pub cancel: tracelean_core::agent::CancelToken,
 }
 
@@ -450,11 +464,12 @@ impl tracelean_core::agent::PauseHandler for TauriPauseHandler {
         }
     }
 
-    /// bugs.md Bug 0: poll the shared pending-diffs list rather than wait on
-    /// a button click — resolving hunks in the editor's diff bar (which
-    /// mutates this same Arc via accept/reject commands) is what unblocks
-    /// the loop. Stop cancels the shared token, which breaks the poll too.
-    async fn wait_for_review(&self, target_count: usize) -> bool {
+    /// bugs.md Bug 0 / Bug 2: event-driven — waits on `diff_notify` (fired by
+    /// `apply_accepted_hunks`/`discard_pending_diff` the moment the user
+    /// resolves a staged diff) instead of polling. `notified()` is created
+    /// *before* the resolved-map check below, so a resolution that lands
+    /// between the check and the `.await` is never missed.
+    async fn wait_for_review(&self, diff_ids: &[String]) -> Option<Vec<tracelean_core::ResolvedDiffOutcome>> {
         let _ = self.app_handle.emit("tool-loop-pause", serde_json::json!({
             "loops_completed": 0,
             "kind": "diff-review",
@@ -462,22 +477,20 @@ impl tracelean_core::agent::PauseHandler for TauriPauseHandler {
         }));
 
         loop {
-            if self.cancel.is_cancelled() {
-                return false;
+            let notified = self.diff_notify.notified();
+            {
+                let mut resolved = self.resolved_diffs.lock().unwrap();
+                if diff_ids.iter().all(|id| resolved.contains_key(id)) {
+                    let outcomes = diff_ids.iter().filter_map(|id| resolved.remove(id)).collect();
+                    let _ = self.app_handle.emit("tool-loop-resumed", serde_json::json!({ "kind": "diff-review" }));
+                    return Some(outcomes);
+                }
             }
-            let count = self
-                .pending_diffs
-                .lock()
-                .map(|d| d.len())
-                .unwrap_or(0);
-            if count <= target_count {
-                break;
+            tokio::select! {
+                _ = notified => continue,
+                _ = self.cancel.cancelled() => return None,
             }
-            tokio::time::sleep(std::time::Duration::from_millis(250)).await;
         }
-
-        let _ = self.app_handle.emit("tool-loop-resumed", serde_json::json!({ "kind": "diff-review" }));
-        true
     }
 }
 
@@ -626,6 +639,8 @@ pub fn apply_accepted_hunks(
     state: State<'_, AppStateWrapper>,
     cache: State<'_, UndoTreeCacheWrapper>,
     diffs: State<'_, PendingDiffsWrapper>,
+    resolved_diffs: State<'_, crate::ResolvedDiffsWrapper>,
+    diff_notify: State<'_, crate::DiffResolvedNotifyWrapper>,
     diff_id: String,
 ) -> Result<String, String> {
     let mut d = diffs.0.lock().map_err(|e| e.to_string())?;
@@ -661,7 +676,21 @@ pub fn apply_accepted_hunks(
         }
     }
 
+    // Bug 2: hand the real outcome to whichever `wait_for_review` is
+    // blocking on this diff id, before removing it — event-driven, no polling.
+    let outcome = tracelean_core::ResolvedDiffOutcome {
+        diff_id: diff.id.clone(),
+        file: file.clone(),
+        total_hunks: diff.hunks.len(),
+        accepted_hunks: accepted_count,
+        applied_message: diff.applied_message.clone(),
+        first_line: diff.hunks.first().map(|h| h.original_start + 1),
+    };
     d.remove(diff_idx);
+    if let Ok(mut resolved) = resolved_diffs.0.lock() {
+        resolved.insert(diff_id, outcome);
+    }
+    diff_notify.0.notify_waiters();
 
     invalidate_undo_cache(&cache);
     let _ = app.emit("undo-tree-changed", ());
@@ -673,9 +702,35 @@ pub fn apply_accepted_hunks(
 #[tauri::command]
 pub fn discard_pending_diff(
     diffs: State<'_, PendingDiffsWrapper>,
+    resolved_diffs: State<'_, crate::ResolvedDiffsWrapper>,
+    diff_notify: State<'_, crate::DiffResolvedNotifyWrapper>,
     diff_id: String,
 ) -> Result<(), String> {
     let mut d = diffs.0.lock().map_err(|e| e.to_string())?;
-    d.retain(|x| x.id != diff_id);
+    let mut removed: Vec<ai::diff_pipeline::PendingDiff> = Vec::new();
+    d.retain(|x| {
+        if x.id == diff_id {
+            removed.push(x.clone());
+            false
+        } else {
+            true
+        }
+    });
+    if let Ok(mut resolved) = resolved_diffs.0.lock() {
+        for diff in removed {
+            resolved.insert(
+                diff.id.clone(),
+                tracelean_core::ResolvedDiffOutcome {
+                    diff_id: diff.id.clone(),
+                    file: diff.file.clone(),
+                    total_hunks: diff.hunks.len(),
+                    accepted_hunks: 0,
+                    applied_message: diff.applied_message.clone(),
+                    first_line: diff.hunks.first().map(|h| h.original_start + 1),
+                },
+            );
+        }
+    }
+    diff_notify.0.notify_waiters();
     Ok(())
 }

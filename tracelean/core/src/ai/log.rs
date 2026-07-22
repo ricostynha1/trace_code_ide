@@ -60,6 +60,15 @@ pub struct InteractionEntry {
     /// markers were planned).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub predicted_cached_tokens: Option<usize>,
+    /// FEATURE 2: the model's context window at the time of this request, so
+    /// the Log tab can show "% context used" per entry (usage.input_tokens /
+    /// context_window) without re-deriving it from model catalogs later.
+    #[serde(default)]
+    pub context_window: u32,
+    /// False when `context_window` is the generic fallback, not a value the
+    /// model catalog actually knows (mirrors `ChatSessionInfo::context_window_known`).
+    #[serde(default)]
+    pub context_window_known: bool,
 }
 
 /// Compaction that ran before a request: summarization or trimming (prune).
@@ -168,6 +177,8 @@ impl InteractionLog {
             compaction: None,
             request_raw: response.raw_request.clone(),
             predicted_cached_tokens: None,
+            context_window: request.model.context_window,
+            context_window_known: request.model.context_window_known,
         };
 
         self.entries.push(entry);
@@ -212,6 +223,8 @@ impl InteractionLog {
             compaction: None,
             request_raw: None,
             predicted_cached_tokens: None,
+            context_window: request.model.context_window,
+            context_window_known: request.model.context_window_known,
         };
 
         self.entries.push(entry);

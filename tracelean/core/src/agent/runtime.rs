@@ -64,6 +64,12 @@ pub struct SentRequestSnapshot {
     pub dynamic_tools: Option<Vec<crate::ai::provider::ToolSchema>>,
 }
 
+/// Bug 3: session_id -> (prompt_tokens, completion_tokens) of the most
+/// recent LLM response seen so far in an in-flight turn. Written once per
+/// tool-loop iteration (not just once at turn end) so the context-usage bar
+/// can update live during a multi-iteration turn.
+pub type LiveContextMap = std::sync::Arc<std::sync::Mutex<std::collections::HashMap<String, (u32, u32)>>>;
+
 // ─── Constants ───────────────────────────────────────────────────────────────
 
 const TOOL_LOOP_PAUSE_THRESHOLD: usize = 10;
@@ -79,15 +85,20 @@ pub async fn run_agent_turn(
     ctx: &AgentContext,
     messages: Vec<ChatMessage>,
 ) -> Result<AgentTurnResult, AgentError> {
-    run_agent_turn_inner(ctx, messages, Vec::new(), None).await
+    run_agent_turn_inner(ctx, messages, Vec::new(), None, None).await
 }
 
 /// Run one agent turn with persistent session state.
 /// Compaction persists in session.model_view across calls — preserves caching.
 /// The caller appends the new user message to session before calling this.
+/// `live_context` (Bug 3): when set, the tool loop writes this turn's latest
+/// (prompt, completion) token counts into it every iteration — not just once
+/// at the end — so a concurrently-polled context-usage bar reflects an
+/// in-flight, multi-iteration turn instead of only the previous one.
 pub async fn run_agent_turn_session(
     ctx: &AgentContext,
     session: &mut super::session::ChatSession,
+    live_context: Option<(LiveContextMap, String)>,
 ) -> Result<AgentTurnResult, AgentError> {
     session.advance_turn();
 
@@ -98,7 +109,7 @@ pub async fn run_agent_turn_session(
     } else {
         Some(session.last_sent.clone())
     };
-    let result = run_agent_turn_inner(ctx, messages, session.dynamic_tools.clone(), prev_sent).await?;
+    let result = run_agent_turn_inner(ctx, messages, session.dynamic_tools.clone(), prev_sent, live_context).await?;
 
     // Persist evolved state: final_messages includes all compaction + tool calls + final response
     // This is the model_view for next call — preserves caching prefix stability.
@@ -140,6 +151,7 @@ async fn run_agent_turn_inner(
     input_messages: Vec<ChatMessage>,
     initial_dynamic_tools: Vec<String>,
     prev_sent_init: Option<SentRequestSnapshot>,
+    live_context: Option<(LiveContextMap, String)>,
 ) -> Result<AgentTurnResult, AgentError> {
     let (model, provider) = build_provider(ctx)?;
     // Load tool registry (static tools always sent)
@@ -461,6 +473,16 @@ async fn run_agent_turn_inner(
                 {
                     let mut s = ctx.stats.lock().map_err(|e| AgentError::Lock(e.to_string()))?;
                     s.record(&response.usage, &cost);
+                }
+                // Bug 3: live per-iteration update — same values
+                // run_agent_turn_session writes to session.last_prompt_tokens/
+                // last_completion_tokens at turn end, just written every
+                // iteration instead of once, so a concurrently-polled
+                // session_info() reflects an in-flight turn.
+                if let Some((live_map, sid)) = &live_context {
+                    if let Ok(mut m) = live_map.lock() {
+                        m.insert(sid.clone(), (response.usage.input_tokens, response.usage.output_tokens));
+                    }
                 }
                 ctx.event_sink.emit("ai-stats-updated", "");
                 last_cached_tokens = response.usage.cached_tokens as usize;
@@ -847,6 +869,7 @@ async fn run_agent_turn_inner(
                     // pre-call count so we can block below until the user
                     // resolves them.
                     let mut review_wait_target: Option<usize> = None;
+                    let mut new_diff_ids: Vec<String> = Vec::new();
                     let tool_result = {
                         let mut s = ctx.state.lock().map_err(|e| AgentError::Lock(e.to_string()))?;
                         let sym = ctx
@@ -904,6 +927,7 @@ async fn run_agent_turn_inner(
                                     })
                                     .to_string(),
                                 );
+                                new_diff_ids = diffs[before..].iter().map(|d| d.id.clone()).collect();
                                 review_wait_target = Some(before);
                             }
                             result
@@ -996,24 +1020,72 @@ async fn run_agent_turn_inner(
                         duration_ms: tool_duration,
                     });
 
-                    // Push tool result message
-                    messages.push(ChatMessage {
-                        role: MessageRole::Tool,
-                        content: tool_result.content.clone(),
-                        tool_call_id: Some(tc.id.clone()),
-                        tool_calls: Vec::new(),
-                    });
-
-                    // bugs.md Bug 0: don't let the agent keep calling tools
-                    // (or start a new turn) against a project state the
-                    // staged hunks haven't actually reached yet — block
-                    // until the user accepts/rejects them, or aborts the run.
-                    if let Some(target) = review_wait_target {
-                        if let Some(ref handler) = ctx.pause_handler {
-                            if !handler.wait_for_review(target).await {
-                                return Err(AgentError::StoppedByUser(total_tool_calls));
+                    // Push tool result message — deferred until after
+                    // wait_for_review below when this call staged diffs, so
+                    // the model sees the real accept/reject/partial outcome
+                    // instead of the "staged for review" placeholder text
+                    // (bugs.md Bug 2).
+                    if review_wait_target.is_none() {
+                        messages.push(ChatMessage {
+                            role: MessageRole::Tool,
+                            content: tool_result.content.clone(),
+                            tool_call_id: Some(tc.id.clone()),
+                            tool_calls: Vec::new(),
+                        });
+                    } else if let Some(ref handler) = ctx.pause_handler {
+                        // bugs.md Bug 0 / Bug 2: don't let the agent keep
+                        // calling tools (or start a new turn) against a
+                        // project state the staged hunks haven't actually
+                        // reached yet — block until the user resolves them
+                        // (or aborts the run), then report what really
+                        // happened.
+                        match handler.wait_for_review(&new_diff_ids).await {
+                            None => return Err(AgentError::StoppedByUser(total_tool_calls)),
+                            Some(outcomes) => {
+                                let content = if outcomes.is_empty() {
+                                    tool_result.content.clone()
+                                } else {
+                                    outcomes
+                                        .iter()
+                                        .map(|o| {
+                                            if o.accepted_hunks == o.total_hunks {
+                                                o.applied_message.clone()
+                                            } else if o.accepted_hunks == 0 {
+                                                format!(
+                                                    "Edit to '{}' was rejected by the user (at line {}); file unchanged.",
+                                                    o.file,
+                                                    o.first_line.unwrap_or(1)
+                                                )
+                                            } else {
+                                                format!(
+                                                    "Edit to '{}' was partially accepted by the user ({}/{} hunks applied at line {}); file updated with only the accepted changes.",
+                                                    o.file,
+                                                    o.accepted_hunks,
+                                                    o.total_hunks,
+                                                    o.first_line.unwrap_or(1)
+                                                )
+                                            }
+                                        })
+                                        .collect::<Vec<_>>()
+                                        .join("\n")
+                                };
+                                messages.push(ChatMessage {
+                                    role: MessageRole::Tool,
+                                    content,
+                                    tool_call_id: Some(tc.id.clone()),
+                                    tool_calls: Vec::new(),
+                                });
                             }
                         }
+                    } else {
+                        // No pause handler configured (headless runs) — no
+                        // one to block on, fall back to the placeholder text.
+                        messages.push(ChatMessage {
+                            role: MessageRole::Tool,
+                            content: tool_result.content.clone(),
+                            tool_call_id: Some(tc.id.clone()),
+                            tool_calls: Vec::new(),
+                        });
                     }
 
                     // Track consecutive failures

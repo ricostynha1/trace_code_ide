@@ -25,7 +25,7 @@ pub use commands::Command;
 pub use parser::SymbolTable;
 pub use state::AppState;
 pub use trace_graph::TraceGraph;
-pub use ai::{InteractionLog, tracking::SessionStats, diff_pipeline::PendingDiff};
+pub use ai::{InteractionLog, tracking::SessionStats, diff_pipeline::{PendingDiff, ResolvedDiffOutcome}};
 pub use ai::provider::{AiProvider, AiError, AiRequest, AiResponse};
 pub use ai::mcp_client::McpClientManager;
 pub use ai::tool_executor::AgentPermissions;
@@ -235,6 +235,14 @@ pub struct SharedApp {
     pub acp: Option<Arc<acp::AcpClientManager>>,
     /// Hard-stop token for the running agent turn (T12).
     pub agent_cancel: agent::CancelToken,
+    /// Bug 3: live, mid-turn context-token counts for the context-usage bar.
+    pub live_context: agent::LiveContextMap,
+    /// Bug 2: resolved-but-not-yet-collected diff-review outcomes, keyed by
+    /// diff id — event-driven handoff between the UI (which resolves diffs)
+    /// and the paused tool loop (which is waiting for them).
+    pub resolved_diffs: Arc<Mutex<HashMap<String, ResolvedDiffOutcome>>>,
+    /// Wakeup signal paired with `resolved_diffs` — no polling.
+    pub diff_notify: Arc<tokio::sync::Notify>,
 }
 
 impl SharedApp {
@@ -254,6 +262,9 @@ impl SharedApp {
             chat_sessions: Arc::new(tokio::sync::Mutex::new(HashMap::new())),
             acp: None, // Initialized lazily when first agent connects
             agent_cancel: agent::CancelToken::new(),
+            live_context: Arc::new(Mutex::new(HashMap::new())),
+            resolved_diffs: Arc::new(Mutex::new(HashMap::new())),
+            diff_notify: Arc::new(tokio::sync::Notify::new()),
         }
     }
 
@@ -271,6 +282,9 @@ impl SharedApp {
             event_sink: self.event_sink.clone(),
             pending_diffs: self.pending_diffs.clone(),
             cancel: self.agent_cancel.clone(),
+            live_context: self.live_context.clone(),
+            resolved_diffs: self.resolved_diffs.clone(),
+            diff_notify: self.diff_notify.clone(),
         }
     }
 

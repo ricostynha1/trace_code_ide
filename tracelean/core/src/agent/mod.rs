@@ -9,5 +9,5 @@ pub mod session;
 pub use cancel::CancelToken;
 pub use context::{AgentContext, CommandApproval, PauseHandler};
 pub use error::AgentError;
-pub use runtime::{force_summarize, run_agent_turn, run_agent_turn_session, AgentTurnResult, SentRequestSnapshot, ToolCallRecord};
+pub use runtime::{force_summarize, run_agent_turn, run_agent_turn_session, AgentTurnResult, LiveContextMap, SentRequestSnapshot, ToolCallRecord};
 pub use session::{ChatSession, ChatSessionInfo, ChatSessionSummary};

@@ -41,6 +41,28 @@ pub struct PendingDiff {
     pub agent: String,
     /// Timestamp
     pub timestamp: String,
+    /// Bug 2: the success message a direct (non-review) apply of this exact
+    /// edit would have returned — reused verbatim as the tool result the AI
+    /// sees if the user ends up accepting every hunk, so review mode is
+    /// invisible to the model on the happy path.
+    #[serde(default)]
+    pub applied_message: String,
+}
+
+/// Bug 2: what actually happened to a staged diff once the user resolved it
+/// (via `apply_accepted_hunks` or `discard_pending_diff`) — reported back to
+/// the AI instead of the "staged for review" placeholder text.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ResolvedDiffOutcome {
+    pub diff_id: String,
+    pub file: String,
+    pub total_hunks: usize,
+    pub accepted_hunks: usize,
+    /// The direct-apply success message (see `PendingDiff::applied_message`),
+    /// reused verbatim when every hunk was accepted.
+    pub applied_message: String,
+    /// 1-indexed line of the first hunk, for a "rejected at line N" message.
+    pub first_line: Option<usize>,
 }
 
 /// Compute diff hunks between original and proposed content.
@@ -107,6 +129,7 @@ pub fn create_pending_diff(
     original: &str,
     proposed: &str,
     agent: &str,
+    applied_message: &str,
 ) -> PendingDiff {
     let hunks = compute_diff(original, proposed);
     PendingDiff {
@@ -117,6 +140,7 @@ pub fn create_pending_diff(
         hunks,
         agent: agent.to_string(),
         timestamp: chrono::Utc::now().to_rfc3339(),
+        applied_message: applied_message.to_string(),
     }
 }
 
@@ -226,7 +250,7 @@ mod tests {
     fn accept_all_round_trips_with_trailing_newline() {
         let original = "a\nb\nc\n";
         let proposed = "a\nX\nc\n";
-        let mut diff = create_pending_diff("f.rs", original, proposed, "agent");
+        let mut diff = create_pending_diff("f.rs", original, proposed, "agent", "applied");
         accept_all(&mut diff);
         let commands = accepted_hunks_to_commands(&diff);
         assert_eq!(new_content_of(&commands), proposed);
@@ -236,7 +260,7 @@ mod tests {
     fn accept_all_round_trips_without_trailing_newline() {
         let original = "a\nb\nc";
         let proposed = "a\nX\nc";
-        let mut diff = create_pending_diff("f.rs", original, proposed, "agent");
+        let mut diff = create_pending_diff("f.rs", original, proposed, "agent", "applied");
         accept_all(&mut diff);
         let commands = accepted_hunks_to_commands(&diff);
         assert_eq!(new_content_of(&commands), proposed);
@@ -246,7 +270,7 @@ mod tests {
     fn accept_all_round_trips_with_crlf() {
         let original = "a\r\nb\r\nc\r\n";
         let proposed = "a\r\nX\r\nc\r\n";
-        let mut diff = create_pending_diff("f.rs", original, proposed, "agent");
+        let mut diff = create_pending_diff("f.rs", original, proposed, "agent", "applied");
         accept_all(&mut diff);
         let commands = accepted_hunks_to_commands(&diff);
         assert_eq!(new_content_of(&commands), proposed);
@@ -260,7 +284,7 @@ mod tests {
         // supposedly a no-op against.
         let original = "a\nb\nc\n";
         let proposed = "a\nX\nc\n";
-        let diff = create_pending_diff("f.rs", original, proposed, "agent");
+        let diff = create_pending_diff("f.rs", original, proposed, "agent", "applied");
         // hunks default to accepted: false
         let commands = accepted_hunks_to_commands(&diff);
         assert_eq!(new_content_of(&commands), original);
@@ -270,7 +294,7 @@ mod tests {
     fn partial_accept_mixes_original_and_proposed() {
         let original = "a\nb\nc\nd\ne\n";
         let proposed = "a\nB\nc\nD\ne\n";
-        let mut diff = create_pending_diff("f.rs", original, proposed, "agent");
+        let mut diff = create_pending_diff("f.rs", original, proposed, "agent", "applied");
         assert_eq!(diff.hunks.len(), 2, "two separate single-line hunks expected");
         // Accept only the first hunk (b -> B), reject the second (d -> D).
         diff.hunks[0].accepted = true;

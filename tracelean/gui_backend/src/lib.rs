@@ -9,7 +9,7 @@ pub use tracelean_core as core;
 pub use tracelean_core::{
     ai, commands, parser, persistence, requirements, service, state, surgical_edit, trace_graph, undo_tree,
     Command, AppState, SymbolTable, TraceGraph,
-    AiSettings, InteractionLog, SessionStats, PendingDiff, McpClientManager, AgentPermissions,
+    AiSettings, InteractionLog, SessionStats, PendingDiff, ResolvedDiffOutcome, McpClientManager, AgentPermissions,
     FileEntry, TraceGraphStats, UndoTreeView, UndoNodeView, CommandLogEntry,
     ToolCallEvent, ToolCallStatus,
     command_summary, command_file, command_affects_file,
@@ -47,6 +47,20 @@ pub struct AiSessionStatsWrapper(pub Arc<Mutex<SessionStats>>);
 pub struct MockPendingWrapper(pub Mutex<Vec<ai::mock::MockPendingRequest>>);
 pub struct MockProviderWrapper(pub Arc<tokio::sync::Mutex<Option<Arc<ai::mock::MockProvider>>>>);
 pub struct PendingDiffsWrapper(pub Arc<Mutex<Vec<PendingDiff>>>);
+
+/// Bug 3: session_id -> (prompt_tokens, completion_tokens) of the latest LLM
+/// response seen so far in an in-flight turn — lets the context-usage bar
+/// update live during a multi-iteration tool loop instead of only at turn end.
+pub struct LiveContextWrapper(pub tracelean_core::agent::LiveContextMap);
+
+/// Bug 2: resolved-but-not-yet-collected diff-review outcomes, keyed by diff
+/// id — the paused tool loop drains these once every diff it's waiting on
+/// has an entry, instead of polling `PendingDiffsWrapper`.
+pub struct ResolvedDiffsWrapper(pub Arc<Mutex<std::collections::HashMap<String, ResolvedDiffOutcome>>>);
+
+/// Wakeup signal paired with `ResolvedDiffsWrapper` — no polling anywhere in
+/// the diff-review wait path.
+pub struct DiffResolvedNotifyWrapper(pub Arc<tokio::sync::Notify>);
 
 /// Channel for tool loop pause/resume and per-command shell approval.
 /// Frontend sends (continue/approve, allow_network) — the second flag is the
@@ -204,6 +218,9 @@ pub fn run() {
         .manage(MockPendingWrapper(Mutex::new(Vec::new())))
         .manage(MockProviderWrapper(Arc::new(tokio::sync::Mutex::new(None))))
         .manage(PendingDiffsWrapper(Arc::new(Mutex::new(Vec::new()))))
+        .manage(LiveContextWrapper(Arc::new(Mutex::new(std::collections::HashMap::new()))))
+        .manage(ResolvedDiffsWrapper(Arc::new(Mutex::new(std::collections::HashMap::new()))))
+        .manage(DiffResolvedNotifyWrapper(Arc::new(tokio::sync::Notify::new())))
         .manage(ToolLoopResumeWrapper(Arc::new(tokio::sync::Mutex::new(None))))
         .manage(AgentCancelWrapper(tracelean_core::agent::CancelToken::new()))
         .manage(ChatSessionStoreWrapper(Arc::new(tokio::sync::Mutex::new(std::collections::HashMap::new()))))
@@ -228,6 +245,8 @@ pub fn run() {
             ipc::editor::apply_command,
             ipc::editor::undo,
             ipc::editor::redo,
+            ipc::editor::undo_file,
+            ipc::editor::redo_file,
             ipc::editor::get_file_content,
             ipc::editor::open_project,
             ipc::editor::list_files,

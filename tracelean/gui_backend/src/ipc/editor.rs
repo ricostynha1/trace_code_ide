@@ -129,6 +129,47 @@ pub fn redo(
     Ok(result)
 }
 
+/// Item 6: Ctrl+Z — undo scoped to a single file (branch-scoped tree
+/// rewrite). Global, full-tree undo is only reachable via the undo tree
+/// panel's node click (`jump_to`, see `get_undo_tree`/`UndoTreePanel.tsx`).
+#[tauri::command]
+pub fn undo_file(
+    app: AppHandle,
+    state: State<'_, AppStateWrapper>,
+    cache: State<'_, UndoTreeCacheWrapper>,
+    path: String,
+) -> Result<crate::core::state::EditOutcome, String> {
+    let mut s = state.0.lock().map_err(|e| e.to_string())?;
+    let result = s.undo_file(&path);
+    if result.changed {
+        sync_file_operations_to_disk(&s);
+        invalidate_undo_cache(&cache);
+        let _ = app.emit("undo-tree-changed", ());
+        let _ = app.emit("files-changed", ());
+    }
+    Ok(result)
+}
+
+/// Item 6: Ctrl+Shift+Z / Ctrl+Y — redo scoped to a single file, symmetric
+/// to `undo_file`.
+#[tauri::command]
+pub fn redo_file(
+    app: AppHandle,
+    state: State<'_, AppStateWrapper>,
+    cache: State<'_, UndoTreeCacheWrapper>,
+    path: String,
+) -> Result<crate::core::state::EditOutcome, String> {
+    let mut s = state.0.lock().map_err(|e| e.to_string())?;
+    let result = s.redo_file(&path);
+    if result.changed {
+        sync_file_operations_to_disk(&s);
+        invalidate_undo_cache(&cache);
+        let _ = app.emit("undo-tree-changed", ());
+        let _ = app.emit("files-changed", ());
+    }
+    Ok(result)
+}
+
 #[tauri::command]
 pub fn get_file_content(state: State<'_, AppStateWrapper>, path: String) -> Result<Option<String>, String> {
     let s = state.0.lock().map_err(|e| e.to_string())?;
@@ -137,9 +178,11 @@ pub fn get_file_content(state: State<'_, AppStateWrapper>, path: String) -> Resu
 
 #[tauri::command]
 pub fn open_project(
+    app: AppHandle,
     state: State<'_, AppStateWrapper>,
     symbols_state: State<'_, SymbolTableWrapper>,
     ai_settings: State<'_, crate::AiSettingsWrapper>,
+    cache: State<'_, UndoTreeCacheWrapper>,
     path: String,
 ) -> Result<Vec<String>, String> {
     let result = {
@@ -147,6 +190,10 @@ pub fn open_project(
         let mut sym = symbols_state.0.lock().map_err(|e| e.to_string())?;
         service::open_project(&mut s, &mut sym, &path)?
     };
+    // Bug 4: open_project may have just seeded the initial-snapshot commit
+    // point — make sure the undo tree panel picks it up right away.
+    invalidate_undo_cache(&cache);
+    let _ = app.emit("undo-tree-changed", ());
     // Project-scoped config wins over the home fallback loaded at startup.
     if let Some(project_settings) =
         crate::core::ai::service::load_settings_from(std::path::Path::new(&path))

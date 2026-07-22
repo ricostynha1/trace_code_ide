@@ -641,8 +641,10 @@ export function Editor({ filePath, initialLine }: EditorProps) {
   };
 
   const handleUndo = async () => {
+    // Item 6: Ctrl+Z is scoped to the active file — global undo is only
+    // reachable via clicking a node in the undo tree panel.
     try {
-      const outcome = await invoke<EditOutcome>("undo");
+      const outcome = await invoke<EditOutcome>("undo_file", { path: filePath });
       if (outcome.changed) {
         await syncFromBackend();
         applyCursorHint(outcome.cursor);
@@ -654,7 +656,7 @@ export function Editor({ filePath, initialLine }: EditorProps) {
 
   const handleRedo = async () => {
     try {
-      const outcome = await invoke<EditOutcome>("redo");
+      const outcome = await invoke<EditOutcome>("redo_file", { path: filePath });
       if (outcome.changed) {
         await syncFromBackend();
         applyCursorHint(outcome.cursor);

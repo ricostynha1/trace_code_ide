@@ -555,7 +555,7 @@ mod ai_diff_review {
         let proposed = "fn main() {\n    new();\n}\n";
         let (mut state, file) = fresh(original);
 
-        let mut diff = create_pending_diff(&file.to_string_lossy(), original, proposed, "agent");
+        let mut diff = create_pending_diff(&file.to_string_lossy(), original, proposed, "agent", "applied");
         for h in &mut diff.hunks {
             h.accepted = true;
         }
@@ -572,7 +572,7 @@ mod ai_diff_review {
         let proposed = "fn main() {\n    new();\n}\n";
         let (mut state, file) = fresh(original);
 
-        let mut diff = create_pending_diff(&file.to_string_lossy(), original, proposed, "agent");
+        let mut diff = create_pending_diff(&file.to_string_lossy(), original, proposed, "agent", "applied");
         for h in &mut diff.hunks {
             h.accepted = true;
         }

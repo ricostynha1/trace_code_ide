@@ -150,18 +150,22 @@ pub struct ReviewSink<'a> {
 }
 
 impl ReviewSink<'_> {
-    /// Stage a proposed full-content change and describe it to the agent.
-    fn stage(&mut self, path: &str, original: &str, proposed: &str) -> ToolResult {
-        let diff =
-            super::diff_pipeline::create_pending_diff(path, original, proposed, &self.agent);
+    /// Stage a proposed full-content change. `applied_message` is the
+    /// success message a direct (non-review) apply of this same edit would
+    /// have returned — Bug 2: `runtime.rs` uses it (not this ToolResult's
+    /// content, which never reaches the AI) as the tool result once the user
+    /// accepts every hunk, so review mode is invisible to the model on the
+    /// happy path.
+    fn stage(&mut self, path: &str, original: &str, proposed: &str, applied_message: &str) -> ToolResult {
+        let diff = super::diff_pipeline::create_pending_diff(
+            path, original, proposed, &self.agent, applied_message,
+        );
         let n = diff.hunks.len();
         self.pending.push(diff);
         ToolResult {
             success: true,
             content: format!(
-                "Edit to '{}' staged for user review ({} hunk{} pending approval). \
-                 It is NOT applied yet — the user will accept or reject hunks in the IDE. \
-                 Continue with your remaining work; do not re-apply this edit.",
+                "Edit to '{}' staged for user review ({} hunk{} pending approval).",
                 path,
                 n,
                 if n == 1 { "" } else { "s" }
@@ -531,7 +535,8 @@ fn execute_edit_file(
 
             // P10 review mode: stage the whole-file change instead of applying
             if let Some(sink) = review {
-                return sink.stage(&path, &old_content, &text);
+                let applied_message = format!("Wrote whole file '{}' ({} chars).", path, text.len());
+                return sink.stage(&path, &old_content, &text, &applied_message);
             }
 
             // Replace entire content
@@ -656,7 +661,12 @@ fn execute_edit_file(
             text,
             &content[end_offset..]
         );
-        return sink.stage(&path, &content, &proposed);
+        let action = if start == end { "Inserted" } else { "Replaced" };
+        let applied_message = format!(
+            "{} at lines {}-{} in '{}' ({} chars).",
+            action, start, end, path, text.len()
+        );
+        return sink.stage(&path, &content, &proposed, &applied_message);
     }
 
     // Apply as Replace command (positions are char indices, not bytes)
@@ -900,7 +910,13 @@ fn execute_str_replace(
     // P10 review mode: stage the replacement instead of applying
     if let Some(sink) = review {
         let proposed = content.replacen(&old_str, &new_str, 1);
-        return sink.stage(&path, &content, &proposed);
+        let applied_message = format!(
+            "Replaced {} chars at offset {} in '{}'.",
+            old_str.len(),
+            offset,
+            path
+        );
+        return sink.stage(&path, &content, &proposed, &applied_message);
     }
 
     let at = content[..offset].chars().count();
@@ -1515,7 +1531,8 @@ fn materialize_sandbox_run(
                 // touches the real tree until the user accepts hunks.
                 if overlay {
                     if let Some(sink) = review.as_deref_mut() {
-                        sink.stage(&path_str, m.pre.as_deref().unwrap_or(""), &post);
+                        let applied_message = format!("{} ({})", path_str, kind_str);
+                        sink.stage(&path_str, m.pre.as_deref().unwrap_or(""), &post, &applied_message);
                         staged += 1;
                         notes.push(format!("{} ({}) → staged for review", path_str, kind_str));
                         continue;

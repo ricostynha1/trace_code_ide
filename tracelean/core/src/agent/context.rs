@@ -66,17 +66,18 @@ pub trait PauseHandler: Send + Sync {
         CommandApproval { approved: true, allow_network: false }
     }
 
-    /// bugs.md Bug 0: block the tool loop after a tool call stages new
-    /// pending diffs (an `edit_file`/`run_shell` in review mode), until the
-    /// user has accepted or rejected all of them. Without this, the agent
-    /// keeps calling tools — and can read/edit files — against a project
-    /// state the staged hunks haven't actually reached yet.
-    /// `target_count` is the pending-diff count to wait for (the count
-    /// before this tool call staged anything); returns false to abort the
-    /// run (user hit Stop while reviewing).
-    async fn wait_for_review(&self, target_count: usize) -> bool {
-        let _ = target_count;
-        true
+    /// bugs.md Bug 0 / Bug 2: block the tool loop after a tool call stages
+    /// new pending diffs (an `edit_file`/`run_shell` in review mode), until
+    /// the user has accepted or rejected all of them. Without this, the
+    /// agent keeps calling tools — and can read/edit files — against a
+    /// project state the staged hunks haven't actually reached yet.
+    /// `diff_ids` are the ids staged by this tool call; returns the real
+    /// per-diff outcome (accepted/rejected/partial) so the caller can report
+    /// what actually happened instead of a placeholder "staged" message, or
+    /// `None` to abort the run (user hit Stop while reviewing).
+    async fn wait_for_review(&self, diff_ids: &[String]) -> Option<Vec<crate::ResolvedDiffOutcome>> {
+        let _ = diff_ids;
+        Some(Vec::new())
     }
 }
 

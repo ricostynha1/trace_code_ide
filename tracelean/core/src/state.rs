@@ -271,6 +271,47 @@ impl AppState {
         }
     }
 
+    /// Item 6: undo only the most recent edit to `path`, leaving other
+    /// files' edits intact (branch-scoped tree rewrite — see
+    /// `UndoTree::rewind_single_file`). This is what Ctrl+Z does now;
+    /// the global, full-tree `undo()` above is reachable only via the undo
+    /// tree panel's node click.
+    pub fn undo_file(&mut self, path: &str) -> EditOutcome {
+        self.last_applied_node = None;
+        match self.undo_tree.rewind_single_file(path) {
+            Some(cmds) => {
+                let mut cursor = None;
+                for cmd in &cmds {
+                    if let Err(e) = self.execute_one(cmd) {
+                        eprintln!("undo_file integrity failure: {}", e);
+                    }
+                    cursor = cmd.cursor_after();
+                }
+                EditOutcome { changed: !cmds.is_empty(), cursor }
+            }
+            None => EditOutcome { changed: false, cursor: None },
+        }
+    }
+
+    /// Item 6: redo the most recent `undo_file(path)` — symmetric
+    /// single-file redo (see `UndoTree::redo_single_file`).
+    pub fn redo_file(&mut self, path: &str) -> EditOutcome {
+        self.last_applied_node = None;
+        match self.undo_tree.redo_single_file(path) {
+            Some(cmds) => {
+                let mut cursor = None;
+                for cmd in &cmds {
+                    if let Err(e) = self.execute_one(cmd) {
+                        eprintln!("redo_file integrity failure: {}", e);
+                    }
+                    cursor = cmd.cursor_after();
+                }
+                EditOutcome { changed: !cmds.is_empty(), cursor }
+            }
+            None => EditOutcome { changed: false, cursor: None },
+        }
+    }
+
     /// Get file content (read-only)
     pub fn get_content(&self, path: &PathBuf) -> Option<&str> {
         self.buffers.get(path).map(|b| b.content.as_str())

@@ -160,6 +160,9 @@ pub async fn ai_chat_stream(
     resume_state: State<'_, ToolLoopResumeWrapper>,
     diffs: State<'_, crate::PendingDiffsWrapper>,
     session_store: State<'_, crate::ChatSessionStoreWrapper>,
+    live_context: State<'_, crate::LiveContextWrapper>,
+    resolved_diffs: State<'_, crate::ResolvedDiffsWrapper>,
+    diff_notify: State<'_, crate::DiffResolvedNotifyWrapper>,
     session_id: String,
     user_message: String,
 ) -> Result<ai::AiResponse, String> {
@@ -220,6 +223,8 @@ pub async fn ai_chat_stream(
             app_handle: app.clone(),
             resume_state: resume_state.0.clone(),
             pending_diffs: diffs.0.clone(),
+            resolved_diffs: resolved_diffs.0.clone(),
+            diff_notify: diff_notify.0.clone(),
             cancel: cancel.clone(),
         })),
         cancel,
@@ -231,29 +236,49 @@ pub async fn ai_chat_stream(
 
     // Session-based (bugs.md Bug 1): the store owns the conversation, so the
     // context bar and compaction state survive across streamed turns too.
-    let mut store = session_store.0.lock().await;
-    let chat_session = store
-        .entry(session_id.clone())
-        .or_insert_with(|| ChatSession::new(session_id.clone()));
-    chat_session.append(ChatMessage {
-        role: MessageRole::User,
-        content: user_message,
-        tool_call_id: None,
-        tool_calls: Vec::new(),
-    });
+    // Bug 3: clone the session out and drop the store lock before running
+    // the (possibly multi-iteration) turn — holding it the whole time would
+    // block get_chat_session_info() from returning live mid-turn updates,
+    // same issue as the non-streaming chat_turn path.
+    let mut chat_session = {
+        let mut store = session_store.0.lock().await;
+        let s = store
+            .entry(session_id.clone())
+            .or_insert_with(|| ChatSession::new(session_id.clone()));
+        s.append(ChatMessage {
+            role: MessageRole::User,
+            content: user_message,
+            tool_call_id: None,
+            tool_calls: Vec::new(),
+        });
+        s.clone()
+    };
 
     // Delegate to the single core implementation (tool loop, compaction, etc.)
     let cost_before = stats.0.lock().map(|s| s.total_cost_usd).unwrap_or(0.0);
-    let result = run_agent_turn_session(&ctx, chat_session).await;
+    let result = run_agent_turn_session(
+        &ctx,
+        &mut chat_session,
+        Some((live_context.0.clone(), session_id.clone())),
+    )
+    .await;
+    let _ = live_context.0.lock().map(|mut m| { m.remove(&session_id); });
 
     // P11: persist the session every turn (best-effort).
     if result.is_ok() {
         let cost_after = stats.0.lock().map(|s| s.total_cost_usd).unwrap_or(cost_before);
         chat_session.total_cost_usd += (cost_after - cost_before).max(0.0);
         chat_session.updated_at = chrono::Utc::now().to_rfc3339();
-        if !project_root.as_os_str().is_empty() {
-            tracelean_core::ai::service::save_session(&project_root, chat_session);
-        }
+    }
+
+    // Write back regardless of outcome — mirrors the pre-Bug-3 behavior
+    // where `chat_session` was a `&mut` straight into the store.
+    {
+        let mut store = session_store.0.lock().await;
+        store.insert(session_id.clone(), chat_session.clone());
+    }
+    if result.is_ok() && !project_root.as_os_str().is_empty() {
+        tracelean_core::ai::service::save_session(&project_root, &chat_session);
     }
     match result {
         Ok(turn_result) => {
