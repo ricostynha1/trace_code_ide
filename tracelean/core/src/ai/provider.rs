@@ -80,10 +80,24 @@ pub struct ModelConfig {
     /// How tools are passed to this model.
     #[serde(default)]
     pub tool_passing: ToolPassing,
+    /// Minimum prompt-prefix size (tokens) this model+platform needs before a
+    /// cache checkpoint actually caches anything (from `data/models.json`'s
+    /// `cache_min_tokens`, populated per Bedrock/Anthropic docs — see
+    /// `model_catalog::enrich`). Only consulted for explicit-cache providers
+    /// (`requires_markers`); irrelevant for automatic-cache models. Defaults
+    /// to a conservative 4096 for models the catalog hasn't covered, so an
+    /// unrecognized Claude model never gets a marker placed that can't
+    /// possibly pay off.
+    #[serde(default = "default_cache_min_tokens")]
+    pub cache_min_tokens: u32,
 }
 
 fn default_context_window() -> u32 {
     128_000
+}
+
+fn default_cache_min_tokens() -> u32 {
+    4096
 }
 
 impl Default for ModelConfig {
@@ -106,6 +120,7 @@ impl Default for ModelConfig {
             context_window_known: false,
             tool_call_format: ToolCallFormat::default(),
             tool_passing: ToolPassing::default(),
+            cache_min_tokens: default_cache_min_tokens(),
         }
     }
 }

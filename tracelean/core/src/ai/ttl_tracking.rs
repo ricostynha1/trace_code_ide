@@ -171,6 +171,18 @@ pub struct CacheMarkerPlanner {
     pub provider: ProviderCacheConfig,
     /// Max markers allowed (Anthropic allows up to 4).
     pub max_markers: usize,
+    /// Minimum prefix size (tokens) a candidate position must clear before
+    /// it's worth marking at all — sourced from the caller's resolved
+    /// `ModelConfig::cache_min_tokens` (itself populated from
+    /// `data/models.json`'s per-model `cache_min_tokens` field; see
+    /// `model_catalog::enrich`). A marker below this floor is a paid write
+    /// that the provider will never actually cache — Bedrock silently serves
+    /// the request without caching rather than erroring, so without this
+    /// check the planner keeps recommending markers that can never be read
+    /// back. 0 disables the floor (used by tests exercising the
+    /// marker-position economics in isolation, not modeling a specific real
+    /// model).
+    pub min_cacheable_tokens: usize,
 }
 
 /// D9b.1 write-if-worth-it value of a marker at `prefix_tokens`:
@@ -183,12 +195,12 @@ fn marker_value(prefix_tokens: usize, read_discount: f64, write_multiplier: f64,
 
 impl CacheMarkerPlanner {
 
-    pub fn new(provider: ProviderCacheConfig) -> Self {
+    pub fn new(provider: ProviderCacheConfig, min_cacheable_tokens: usize) -> Self {
         let max_markers = match provider.cache_mode {
             CacheMode::Explicit => 4,
             CacheMode::Automatic => 0, // no markers needed
         };
-        Self { provider, max_markers }
+        Self { provider, max_markers, min_cacheable_tokens }
     }
 
     /// Plan cache marker positions given the request structure.
@@ -218,7 +230,7 @@ impl CacheMarkerPlanner {
         // Candidate 1: After system prompt
         let pos1 = system_prompt_tokens;
         let savings1 = marker_value(pos1, d, w, n_expected);
-        if savings1 > 0.0 {
+        if savings1 > 0.0 && pos1 >= self.min_cacheable_tokens {
             candidates.push(CacheMarker {
                 position_tokens: pos1,
                 after_block: CacheBlock::SystemPrompt,
@@ -229,7 +241,7 @@ impl CacheMarkerPlanner {
         // Candidate 2: After system prompt + static tools
         let pos2 = system_prompt_tokens + static_tools_tokens;
         let savings2 = marker_value(pos2, d, w, n_expected);
-        if savings2 > savings1.max(0.0) {
+        if savings2 > savings1.max(0.0) && pos2 >= self.min_cacheable_tokens {
             candidates.push(CacheMarker {
                 position_tokens: pos2,
                 after_block: CacheBlock::StaticTools,
@@ -241,7 +253,7 @@ impl CacheMarkerPlanner {
         if dynamic_tools_tokens > 0 {
             let pos3 = pos2 + dynamic_tools_tokens;
             let savings3 = marker_value(pos3, d, w, n_expected);
-            if savings3 > savings2.max(0.0) {
+            if savings3 > savings2.max(0.0) && pos3 >= self.min_cacheable_tokens {
                 candidates.push(CacheMarker {
                     position_tokens: pos3,
                     after_block: CacheBlock::DynamicTools,
@@ -254,7 +266,7 @@ impl CacheMarkerPlanner {
         if stable_conversation_prefix_tokens > 100 {
             let pos4 = pos2 + dynamic_tools_tokens + stable_conversation_prefix_tokens;
             let savings4 = marker_value(pos4, d, w, n_expected);
-            if savings4 > 0.0 {
+            if savings4 > 0.0 && pos4 >= self.min_cacheable_tokens {
                 candidates.push(CacheMarker {
                     position_tokens: pos4,
                     after_block: CacheBlock::ConversationPrefix { up_to_turn: 0 },
@@ -363,7 +375,7 @@ mod tests {
     #[test]
     fn test_marker_planner_explicit() {
         let provider = explicit_300s();
-        let planner = CacheMarkerPlanner::new(provider);
+        let planner = CacheMarkerPlanner::new(provider, 0);
 
         // With Anthropic (d=0.1, w=1.25), break-even is N*d > w → N > 12.5
         // So we need n_expected >= 13 for markers to be profitable
@@ -392,7 +404,7 @@ mod tests {
         // position as "after system prompt alone", so it could never win the
         // `>` comparison and the tool schemas' real wire cost was invisible
         // to every downstream candidate's position math.
-        let planner = CacheMarkerPlanner::new(explicit_300s());
+        let planner = CacheMarkerPlanner::new(explicit_300s(), 0);
         let with_zero_tools = planner.plan_markers(500, 0, 0, 2000, 0, 15);
         assert!(
             with_zero_tools.iter().all(|m| m.position_tokens == 500),
@@ -416,10 +428,55 @@ mod tests {
     #[test]
     fn test_marker_planner_automatic() {
         let provider = automatic();
-        let planner = CacheMarkerPlanner::new(provider);
+        let planner = CacheMarkerPlanner::new(provider, 0);
 
         let markers = planner.plan_markers(500, 300, 100, 2000, 800, 4);
         assert!(markers.is_empty()); // no markers for automatic providers
+    }
+
+    /// The floor exists specifically because Bedrock silently no-ops a
+    /// cachePoint under the model's minimum instead of erroring — without
+    /// this gate the planner would keep recommending (and paying the write
+    /// surcharge for) markers that can never be read back. Verified live:
+    /// this exact scenario (a ~900-token system+tools prefix) cached
+    /// correctly on Sonnet 4.6 (1,024 floor) but never wrote on Haiku 4.5
+    /// (4,096 floor) in the same agent conversation.
+    #[test]
+    fn candidates_below_the_model_floor_are_not_marked() {
+        let provider = explicit_300s();
+
+        // Below a 4096-token floor (e.g. Haiku 4.5 on Bedrock): even though
+        // the write-vs-read economics alone would recommend a marker, none
+        // should be emitted because Bedrock would silently skip the write.
+        let haiku_floor = CacheMarkerPlanner::new(provider.clone(), 4096);
+        let markers = haiku_floor.plan_markers(500, 300, 100, 0, 0, 15);
+        assert!(
+            markers.is_empty(),
+            "a ~900 token prefix must not be marked under a 4096 floor: {:?}",
+            markers
+        );
+
+        // The exact same request shape, but under a 1024-token floor (e.g.
+        // Sonnet 4.6 on Bedrock): the system+tools position (800) still
+        // doesn't clear it, so it's still correctly excluded — this isn't
+        // "any floor accepts everything", it's a real per-position check.
+        let sonnet_floor = CacheMarkerPlanner::new(provider.clone(), 1024);
+        let markers = sonnet_floor.plan_markers(500, 300, 100, 0, 0, 15);
+        assert!(
+            markers.is_empty(),
+            "800 tokens must not clear a 1024 floor either: {:?}",
+            markers
+        );
+
+        // Push the system+tools position (800) just over a genuinely low
+        // floor and it should be marked.
+        let low_floor = CacheMarkerPlanner::new(provider, 700);
+        let markers = low_floor.plan_markers(500, 300, 100, 0, 0, 15);
+        assert!(
+            markers.iter().any(|m| m.position_tokens == 800),
+            "800 tokens should clear a 700-token floor: {:?}",
+            markers
+        );
     }
 
     #[test]

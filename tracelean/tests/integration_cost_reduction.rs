@@ -263,7 +263,7 @@ fn test_cache_prediction_anomaly_detection() {
 #[test]
 fn test_cache_marker_placement() {
     let provider = make_explicit_provider();
-    let planner = CacheMarkerPlanner::new(provider);
+    let planner = CacheMarkerPlanner::new(provider, 0);
 
     // With n_expected=20 (long session), markers should be profitable
     let markers = planner.plan_markers(

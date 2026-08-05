@@ -26,6 +26,12 @@ struct CatalogEntry {
     /// Optional catalog overrides for tool strategy (revert without code change).
     tool_call_format: Option<super::provider::ToolCallFormat>,
     tool_passing: Option<super::provider::ToolPassing>,
+    /// Minimum prompt-prefix size (tokens) before a cache checkpoint actually
+    /// caches anything on this exact model+platform (e.g. Bedrock Haiku 4.5
+    /// needs 4096, Bedrock Sonnet 4.6 needs only 1024 — same `cachePoint`
+    /// mechanism, different provider-documented floor). `None` for models
+    /// this field hasn't been populated for.
+    cache_min_tokens: Option<u32>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -46,6 +52,7 @@ pub struct ModelEnrichment {
     pub context_window: Option<u32>,
     pub tool_call_format: Option<super::provider::ToolCallFormat>,
     pub tool_passing: Option<super::provider::ToolPassing>,
+    pub cache_min_tokens: Option<u32>,
 }
 
 /// The compiled-in catalog JSON.
@@ -80,6 +87,7 @@ fn build_index() -> CatalogIndex {
                 .map(|cw| cw as u32),
             tool_call_format: entry.tool_call_format,
             tool_passing: entry.tool_passing,
+            cache_min_tokens: entry.cache_min_tokens,
         };
 
         by_key.insert(entry.model.to_lowercase(), enrichment.clone());
@@ -177,6 +185,11 @@ pub fn enrich(model: &mut super::provider::ModelConfig) {
                 model.context_window_known = true;
             }
         }
+        // Unconditional overwrite — no legacy pre-seeded placeholder to
+        // preserve for this field, unlike input/output cost above.
+        if let Some(min_tokens) = enrichment.cache_min_tokens {
+            model.cache_min_tokens = min_tokens;
+        }
     }
 
     let id = model.model_id.to_lowercase();
@@ -240,5 +253,54 @@ mod tests {
         let result = lookup("openrouter/anthropic/claude-fable-5");
         // Should match via slug normalization
         assert!(result.is_some() || lookup("claude-fable-5").is_some());
+    }
+
+    /// cache_min_tokens is data-sourced from data/models.json, not hardcoded
+    /// per-model logic in Rust — this pins the catalog data itself (via
+    /// `lookup`), not a Rust-side lookup table. Verified live: a ~1,500 token
+    /// system+tools prefix on the same agent conversation cached correctly
+    /// on Sonnet 4.6 but never wrote a cache entry on Haiku 4.5, matching
+    /// these two floors exactly.
+    #[test]
+    fn cache_min_tokens_reflects_bedrock_per_model_floors() {
+        let haiku = lookup("eu.anthropic.claude-haiku-4-5-20251001-v1:0").unwrap();
+        assert_eq!(haiku.cache_min_tokens, Some(4096));
+
+        let sonnet_4_6 = lookup("eu.anthropic.claude-sonnet-4-6").unwrap();
+        assert_eq!(sonnet_4_6.cache_min_tokens, Some(1024));
+    }
+
+    #[test]
+    fn enrich_sets_cache_min_tokens_from_catalog() {
+        use super::super::provider::{ModelConfig, ProviderKind};
+
+        let mut haiku = ModelConfig {
+            provider: ProviderKind::Bedrock,
+            model_id: "eu.anthropic.claude-haiku-4-5-20251001-v1:0".to_string(),
+            ..Default::default()
+        };
+        enrich(&mut haiku);
+        assert_eq!(haiku.cache_min_tokens, 4096);
+
+        let mut sonnet = ModelConfig {
+            provider: ProviderKind::Bedrock,
+            model_id: "eu.anthropic.claude-sonnet-4-6".to_string(),
+            ..Default::default()
+        };
+        enrich(&mut sonnet);
+        assert_eq!(sonnet.cache_min_tokens, 1024);
+    }
+
+    #[test]
+    fn enrich_leaves_conservative_default_for_a_model_not_in_the_catalog() {
+        use super::super::provider::{ModelConfig, ProviderKind};
+
+        let mut unknown = ModelConfig {
+            provider: ProviderKind::Bedrock,
+            model_id: "anthropic.claude-some-future-model-not-yet-cataloged".to_string(),
+            ..Default::default()
+        };
+        enrich(&mut unknown);
+        assert_eq!(unknown.cache_min_tokens, 4096, "ModelConfig::default()'s conservative fallback should survive when the catalog has nothing for this id");
     }
 }

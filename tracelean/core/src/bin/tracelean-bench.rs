@@ -241,6 +241,13 @@ async fn execute_exercism_task(
         let mut settings = ctx.settings.lock().unwrap();
         configure_settings(&mut settings, cli_provider, cli_model, cli_region, cost_cap);
     }
+    // `AgentContext::from_env` hardcodes `spend_cap_usd: 1.0` and the agent
+    // loop's per-iteration hard stop (see `run_agent_turn`) reads `ctx.
+    // spend_cap_usd` directly, NOT `ctx.settings.lock().spend_cap_usd` — so
+    // without this, `--cap` only affected the coarser cross-task check in
+    // `run_benchmark` (checked between tasks) and never actually bounded
+    // spend *inside* a single task's multi-iteration loop.
+    ctx.spend_cap_usd = cost_cap;
 
     let prompt = format!(
         "Solve the exercism '{}' task in Python.\n\
@@ -294,9 +301,19 @@ async fn execute_exercism_task(
             )
         }
         Err(e) => {
-            let usage = TokenUsage::default();
+            // An error (e.g. the spend cap being hit) can still follow real,
+            // already-billed API calls made earlier in the same turn — read
+            // `ctx.stats` instead of reporting a zeroed usage/cost, which
+            // would silently hide real spend from the benchmark's output.
+            let stats = ctx.stats.lock().unwrap();
+            let usage = TokenUsage {
+                input_tokens: stats.total_input_tokens as u32,
+                output_tokens: stats.total_output_tokens as u32,
+                thinking_tokens: stats.total_thinking_tokens as u32,
+                cached_tokens: stats.total_cached_tokens as u32,
+            };
             let cost = CostEstimate {
-                total_usd: 0.0,
+                total_usd: stats.total_cost_usd,
                 input_cost: 0.0,
                 output_cost: 0.0,
                 cached_savings: 0.0,
@@ -369,9 +386,14 @@ fn configure_settings(
         display_name: "Bench Model".to_string(),
         max_tokens: 16384,
         temperature: 0.0,
-        input_cost_per_m: 3.0,
-        output_cost_per_m: 15.0,
-        cached_input_cost_per_m: 0.3,
+        // Left at 0.0 (not a placeholder guess) so `model_catalog::enrich`
+        // below actually fills in the model's real catalog pricing —
+        // `enrich` only overrides a price that's still 0.0, so a non-zero
+        // placeholder here would silently survive enrichment and every cost
+        // figure this binary reports/enforces would be wrong.
+        input_cost_per_m: 0.0,
+        output_cost_per_m: 0.0,
+        cached_input_cost_per_m: 0.0,
         extra_params: None,
         coding_index: None,
         coding_rank: None,
@@ -382,6 +404,12 @@ fn configure_settings(
     // Match the GUI: catalog enrichment decides tool dialect, tool passing,
     // pricing and context window for the model id.
     tracelean_core::ai::model_catalog::enrich(&mut model);
+    // `enrich` doesn't set a cached-input price (only bedrock::model_for_id's
+    // path does) — derive it from the now-resolved input price + the
+    // provider's cache-read discount, same as the real app does, so cached
+    // tokens aren't priced as free.
+    model.cached_input_cost_per_m =
+        tracelean_core::ai::provider_cache::default_cached_price_per_m(&model.model_id, model.input_cost_per_m);
     settings.selected_model = Some(model);
 
     settings.spend_cap_usd = cost_cap;

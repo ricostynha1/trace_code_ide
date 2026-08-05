@@ -294,6 +294,7 @@ async fn run_agent_turn_inner(
                         cold_ratio,
                         static_tools_tokens,
                         dynamic_tools_tokens,
+                        model.cache_min_tokens as usize,
                     )
                 })
                 .unwrap_or_default()
@@ -1279,6 +1280,7 @@ fn plan_cache_breakpoints(
     cold_turn_ratio: f64,
     static_tools_tokens: usize,
     dynamic_tools_tokens: usize,
+    min_cacheable_tokens: usize,
 ) -> Vec<usize> {
     use crate::ai::ttl_tracking::{CacheBlock, CacheMarkerPlanner};
 
@@ -1304,7 +1306,7 @@ fn plan_cache_breakpoints(
     // system prompt" position and undercounted every position downstream of
     // them (including the conversation-prefix candidate), skewing every
     // marker's cost/benefit math on this path.
-    let planner = CacheMarkerPlanner::new(cfg.clone());
+    let planner = CacheMarkerPlanner::new(cfg.clone(), min_cacheable_tokens);
     let markers = planner.plan_markers(
         system_tokens,
         static_tools_tokens,
@@ -2096,7 +2098,7 @@ mod cache_marker_tests {
         // Big system prompt + first user message: system-prompt marker pays
         // for itself even with no timing history (cold_ratio 1.0 → floor 0.5).
         let messages = vec![msg(MessageRole::System, 8000), msg(MessageRole::User, 200)];
-        let idxs = plan_cache_breakpoints(&anthropic_cfg(), &messages, 0, 1.0, 0, 0);
+        let idxs = plan_cache_breakpoints(&anthropic_cfg(), &messages, 0, 1.0, 0, 0, 0);
         assert_eq!(idxs, vec![0], "system prompt should carry a marker");
     }
 
@@ -2107,7 +2109,7 @@ mod cache_marker_tests {
             messages.push(msg(MessageRole::User, 2000));
             messages.push(msg(MessageRole::Assistant, 2000));
         }
-        let idxs = plan_cache_breakpoints(&anthropic_cfg(), &messages, 3, 0.0, 0, 0);
+        let idxs = plan_cache_breakpoints(&anthropic_cfg(), &messages, 3, 0.0, 0, 0, 0);
         assert!(idxs.contains(&0), "system marker expected");
         assert!(
             idxs.contains(&(messages.len() - 2)),
@@ -2115,6 +2117,23 @@ mod cache_marker_tests {
             idxs
         );
         assert!(idxs.len() <= 4, "Anthropic allows max 4 breakpoints");
+    }
+
+    /// End-to-end: a model floor high enough to exclude the small system
+    /// prompt (e.g. Haiku 4.5's 4096) suppresses the marker entirely, while
+    /// the same request under a lower floor (e.g. Sonnet 4.6's 1024) still
+    /// gets one — matching what was observed live between the two models on
+    /// the exact same agent conversation.
+    #[test]
+    fn model_floor_suppresses_markers_the_generic_economics_would_otherwise_place() {
+        let messages = vec![msg(MessageRole::System, 8000), msg(MessageRole::User, 200)];
+        // system prompt ≈ 8000/4 = 2000 tokens: below a 4096 floor, above a
+        // 1024 one.
+        let idxs_high_floor = plan_cache_breakpoints(&anthropic_cfg(), &messages, 0, 1.0, 0, 0, 4096);
+        assert!(idxs_high_floor.is_empty(), "2000 tokens must not clear a 4096 floor: {:?}", idxs_high_floor);
+
+        let idxs_low_floor = plan_cache_breakpoints(&anthropic_cfg(), &messages, 0, 1.0, 0, 0, 1024);
+        assert_eq!(idxs_low_floor, vec![0], "2000 tokens should clear a 1024 floor");
     }
 
     #[test]
@@ -2164,7 +2183,7 @@ mod cache_marker_tests {
             notes: None,
         };
         let messages = vec![msg(MessageRole::System, 8000), msg(MessageRole::User, 200)];
-        assert!(plan_cache_breakpoints(&cfg, &messages, 2, 0.0, 0, 0).is_empty());
+        assert!(plan_cache_breakpoints(&cfg, &messages, 2, 0.0, 0, 0, 0).is_empty());
     }
 
     #[test]

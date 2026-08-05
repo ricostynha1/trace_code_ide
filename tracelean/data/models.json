@@ -789,7 +789,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "anthropic.claude-3-5-sonnet-20240620-v1:0",
@@ -811,7 +812,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 1024
   },
   {
     "model": "anthropic.claude-3-5-sonnet-20241022-v2:0",
@@ -833,7 +835,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 1024
   },
   {
     "model": "anthropic.claude-3-7-sonnet-20240620-v1:0",
@@ -855,7 +858,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 1024
   },
   {
     "model": "anthropic.claude-3-7-sonnet-20250219-v1:0",
@@ -877,7 +881,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 1024
   },
   {
     "model": "anthropic.claude-3-haiku-20240307-v1:0",
@@ -899,7 +904,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "anthropic.claude-3-opus-20240229-v1:0",
@@ -921,7 +927,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "anthropic.claude-3-sonnet-20240229-v1:0",
@@ -943,7 +950,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "anthropic.claude-fable-5",
@@ -965,7 +973,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "anthropic.claude-haiku-4-5-20251001-v1:0",
@@ -987,7 +996,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "anthropic.claude-haiku-4-5@20251001",
@@ -1009,7 +1019,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "anthropic.claude-instant-v1",
@@ -1031,7 +1042,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "anthropic.claude-mythos-preview",
@@ -1053,7 +1065,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "anthropic.claude-opus-4-1-20250805-v1:0",
@@ -1075,7 +1088,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 1024
   },
   {
     "model": "anthropic.claude-opus-4-20250514-v1:0",
@@ -1097,7 +1111,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 1024
   },
   {
     "model": "anthropic.claude-opus-4-5-20251101-v1:0",
@@ -1119,7 +1134,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "anthropic.claude-opus-4-6-v1",
@@ -1141,7 +1157,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "anthropic.claude-opus-4-7",
@@ -1163,7 +1180,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "anthropic.claude-opus-4-8",
@@ -1185,7 +1203,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "anthropic.claude-sonnet-4-20250514-v1:0",
@@ -1207,7 +1226,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "anthropic.claude-sonnet-4-5-20250929-v1:0",
@@ -1229,7 +1249,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "anthropic.claude-sonnet-4-6",
@@ -1251,7 +1272,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 1024
   },
   {
     "model": "anthropic.claude-sonnet-5",
@@ -1273,7 +1295,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "anthropic.claude-v1",
@@ -1295,7 +1318,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "anthropic.claude-v2:1",
@@ -1317,7 +1341,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "anyscale/google/gemma-7b-it",
@@ -1647,7 +1672,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 1024
   },
   {
     "model": "apac.anthropic.claude-3-5-sonnet-20241022-v2:0",
@@ -1669,7 +1695,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 1024
   },
   {
     "model": "apac.anthropic.claude-3-haiku-20240307-v1:0",
@@ -1691,7 +1718,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "apac.anthropic.claude-3-sonnet-20240229-v1:0",
@@ -1713,7 +1741,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "apac.anthropic.claude-haiku-4-5-20251001-v1:0",
@@ -1735,7 +1764,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "apac.anthropic.claude-sonnet-4-20250514-v1:0",
@@ -1757,7 +1787,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "au.anthropic.claude-haiku-4-5-20251001-v1:0",
@@ -1779,7 +1810,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "au.anthropic.claude-opus-4-6-v1",
@@ -1801,7 +1833,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "au.anthropic.claude-opus-4-7",
@@ -1823,7 +1856,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "au.anthropic.claude-opus-4-8",
@@ -1845,7 +1879,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "au.anthropic.claude-sonnet-4-5-20250929-v1:0",
@@ -1867,7 +1902,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "au.anthropic.claude-sonnet-4-6",
@@ -1889,7 +1925,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 1024
   },
   {
     "model": "au.anthropic.claude-sonnet-5",
@@ -1911,7 +1948,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "azure/mistral-large-2402",
@@ -2571,7 +2609,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "bedrock/ap-northeast-1/1-month-commitment/anthropic.claude-v1",
@@ -2593,7 +2632,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "bedrock/ap-northeast-1/1-month-commitment/anthropic.claude-v2:1",
@@ -2615,7 +2655,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "bedrock/ap-northeast-1/6-month-commitment/anthropic.claude-instant-v1",
@@ -2637,7 +2678,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "bedrock/ap-northeast-1/6-month-commitment/anthropic.claude-v1",
@@ -2659,7 +2701,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "bedrock/ap-northeast-1/6-month-commitment/anthropic.claude-v2:1",
@@ -2681,7 +2724,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "bedrock/ap-northeast-1/anthropic.claude-instant-v1",
@@ -2703,7 +2747,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "bedrock/ap-northeast-1/anthropic.claude-v1",
@@ -2725,7 +2770,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "bedrock/ap-northeast-1/anthropic.claude-v2:1",
@@ -2747,7 +2793,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "bedrock/ap-northeast-1/deepseek.v3.2",
@@ -2989,7 +3036,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "bedrock/eu-central-1/1-month-commitment/anthropic.claude-v1",
@@ -3011,7 +3059,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "bedrock/eu-central-1/1-month-commitment/anthropic.claude-v2:1",
@@ -3033,7 +3082,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "bedrock/eu-central-1/6-month-commitment/anthropic.claude-instant-v1",
@@ -3055,7 +3105,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "bedrock/eu-central-1/6-month-commitment/anthropic.claude-v1",
@@ -3077,7 +3128,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "bedrock/eu-central-1/6-month-commitment/anthropic.claude-v2:1",
@@ -3099,7 +3151,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "bedrock/eu-central-1/anthropic.claude-instant-v1",
@@ -3121,7 +3174,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "bedrock/eu-central-1/anthropic.claude-v1",
@@ -3143,7 +3197,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "bedrock/eu-central-1/anthropic.claude-v2:1",
@@ -3165,7 +3220,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "bedrock/eu-central-1/qwen.qwen3-coder-next",
@@ -3451,7 +3507,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 1024
   },
   {
     "model": "bedrock/sa-east-1/deepseek.v3.2",
@@ -3561,7 +3618,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "bedrock/us-east-1/1-month-commitment/anthropic.claude-v1",
@@ -3583,7 +3641,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "bedrock/us-east-1/1-month-commitment/anthropic.claude-v2:1",
@@ -3605,7 +3664,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "bedrock/us-east-1/6-month-commitment/anthropic.claude-instant-v1",
@@ -3627,7 +3687,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "bedrock/us-east-1/6-month-commitment/anthropic.claude-v1",
@@ -3649,7 +3710,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "bedrock/us-east-1/6-month-commitment/anthropic.claude-v2:1",
@@ -3671,7 +3733,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "bedrock/us-east-1/anthropic.claude-instant-v1",
@@ -3693,7 +3756,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "bedrock/us-east-1/anthropic.claude-v1",
@@ -3715,7 +3779,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "bedrock/us-east-1/anthropic.claude-v2:1",
@@ -3737,7 +3802,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "bedrock/us-east-1/deepseek.v3.2",
@@ -4089,7 +4155,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 1024
   },
   {
     "model": "bedrock/us-gov-east-1/anthropic.claude-3-haiku-20240307-v1:0",
@@ -4111,7 +4178,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "bedrock/us-gov-east-1/anthropic.claude-haiku-4-5-20251001-v1:0",
@@ -4133,7 +4201,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "bedrock/us-gov-east-1/anthropic.claude-sonnet-4-5-20250929-v1:0",
@@ -4155,7 +4224,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "bedrock/us-gov-east-1/meta.llama3-70b-instruct-v1:0",
@@ -4353,7 +4423,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 1024
   },
   {
     "model": "bedrock/us-gov-west-1/anthropic.claude-3-7-sonnet-20250219-v1:0",
@@ -4375,7 +4446,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 1024
   },
   {
     "model": "bedrock/us-gov-west-1/anthropic.claude-3-haiku-20240307-v1:0",
@@ -4397,7 +4469,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "bedrock/us-gov-west-1/anthropic.claude-haiku-4-5-20251001-v1:0",
@@ -4419,7 +4492,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "bedrock/us-gov-west-1/anthropic.claude-sonnet-4-5-20250929-v1:0",
@@ -4441,7 +4515,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "bedrock/us-gov-west-1/meta.llama3-70b-instruct-v1:0",
@@ -4551,7 +4626,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "bedrock/us-west-2/1-month-commitment/anthropic.claude-v1",
@@ -4573,7 +4649,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "bedrock/us-west-2/1-month-commitment/anthropic.claude-v2:1",
@@ -4595,7 +4672,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "bedrock/us-west-2/6-month-commitment/anthropic.claude-instant-v1",
@@ -4617,7 +4695,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "bedrock/us-west-2/6-month-commitment/anthropic.claude-v1",
@@ -4639,7 +4718,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "bedrock/us-west-2/6-month-commitment/anthropic.claude-v2:1",
@@ -4661,7 +4741,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "bedrock/us-west-2/anthropic.claude-instant-v1",
@@ -4683,7 +4764,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "bedrock/us-west-2/anthropic.claude-v1",
@@ -4705,7 +4787,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "bedrock/us-west-2/anthropic.claude-v2:1",
@@ -4727,7 +4810,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "bedrock/us-west-2/deepseek.v3.2",
@@ -4859,7 +4943,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "bedrock_mantle/google.gemma-4-26b-a4b",
@@ -5167,7 +5252,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 1024
   },
   {
     "model": "claude-3-haiku-20240307",
@@ -5189,7 +5275,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 2048
   },
   {
     "model": "claude-3-opus-20240229",
@@ -5211,7 +5298,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "claude-4-opus-20250514",
@@ -5233,7 +5321,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "claude-4-sonnet-20250514",
@@ -5255,7 +5344,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "claude-fable-5",
@@ -5277,7 +5367,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 2048
   },
   {
     "model": "claude-haiku-4-5",
@@ -5299,7 +5390,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "claude-haiku-4-5-20251001",
@@ -5321,7 +5413,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "claude-opus-4-1",
@@ -5343,7 +5436,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "claude-opus-4-1-20250805",
@@ -5365,7 +5459,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "claude-opus-4-20250514",
@@ -5387,7 +5482,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "claude-opus-4-5",
@@ -5409,7 +5505,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "claude-opus-4-5-20251101",
@@ -5431,7 +5528,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "claude-opus-4-6",
@@ -5453,7 +5551,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "claude-opus-4-6-20260205",
@@ -5475,7 +5574,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "claude-opus-4-7",
@@ -5497,7 +5597,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "claude-opus-4-7-20260416",
@@ -5519,7 +5620,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "claude-opus-4-8",
@@ -5541,7 +5643,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "claude-sonnet-4-20250514",
@@ -5563,7 +5666,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 1024
   },
   {
     "model": "claude-sonnet-4-5",
@@ -5585,7 +5689,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 1024
   },
   {
     "model": "claude-sonnet-4-5-20250929",
@@ -5607,7 +5712,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 1024
   },
   {
     "model": "claude-sonnet-4-6",
@@ -5629,7 +5735,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 2048
   },
   {
     "model": "claude-sonnet-5",
@@ -5651,7 +5758,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "cloudflare/@cf/deepseek-ai/deepseek-r1-distill-qwen-32b",
@@ -9149,7 +9257,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "eu.anthropic.claude-3-5-sonnet-20240620-v1:0",
@@ -9171,7 +9280,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 1024
   },
   {
     "model": "eu.anthropic.claude-3-5-sonnet-20241022-v2:0",
@@ -9193,7 +9303,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 1024
   },
   {
     "model": "eu.anthropic.claude-3-7-sonnet-20250219-v1:0",
@@ -9215,7 +9326,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 1024
   },
   {
     "model": "eu.anthropic.claude-3-haiku-20240307-v1:0",
@@ -9237,7 +9349,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "eu.anthropic.claude-3-opus-20240229-v1:0",
@@ -9259,7 +9372,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "eu.anthropic.claude-3-sonnet-20240229-v1:0",
@@ -9281,7 +9395,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "eu.anthropic.claude-fable-5",
@@ -9303,7 +9418,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "eu.anthropic.claude-haiku-4-5-20251001-v1:0",
@@ -9325,7 +9441,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "eu.anthropic.claude-opus-4-1-20250805-v1:0",
@@ -9347,7 +9464,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 1024
   },
   {
     "model": "eu.anthropic.claude-opus-4-20250514-v1:0",
@@ -9369,7 +9487,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 1024
   },
   {
     "model": "eu.anthropic.claude-opus-4-5-20251101-v1:0",
@@ -9391,7 +9510,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "eu.anthropic.claude-opus-4-6-v1",
@@ -9413,7 +9533,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "eu.anthropic.claude-opus-4-7",
@@ -9435,7 +9556,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "eu.anthropic.claude-opus-4-8",
@@ -9457,7 +9579,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "eu.anthropic.claude-sonnet-4-20250514-v1:0",
@@ -9479,7 +9602,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "eu.anthropic.claude-sonnet-4-5-20250929-v1:0",
@@ -9501,7 +9625,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "eu.anthropic.claude-sonnet-4-6",
@@ -9523,7 +9648,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 1024
   },
   {
     "model": "eu.anthropic.claude-sonnet-5",
@@ -9545,7 +9671,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "eu.deepseek.v3.2",
@@ -12625,7 +12752,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "global.anthropic.claude-haiku-4-5-20251001-v1:0",
@@ -12647,7 +12775,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "global.anthropic.claude-opus-4-5-20251101-v1:0",
@@ -12669,7 +12798,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "global.anthropic.claude-opus-4-6-v1",
@@ -12691,7 +12821,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "global.anthropic.claude-opus-4-7",
@@ -12713,7 +12844,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "global.anthropic.claude-opus-4-8",
@@ -12735,7 +12867,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "global.anthropic.claude-sonnet-4-20250514-v1:0",
@@ -12757,7 +12890,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "global.anthropic.claude-sonnet-4-5-20250929-v1:0",
@@ -12779,7 +12913,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "global.anthropic.claude-sonnet-4-6",
@@ -12801,7 +12936,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 1024
   },
   {
     "model": "global.anthropic.claude-sonnet-5",
@@ -12823,7 +12959,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "gmi/MiniMaxAI/MiniMax-M2.1",
@@ -16717,7 +16854,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "jp.anthropic.claude-opus-4-7",
@@ -16739,7 +16877,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "jp.anthropic.claude-opus-4-8",
@@ -16761,7 +16900,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "jp.anthropic.claude-sonnet-4-5-20250929-v1:0",
@@ -16783,7 +16923,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "jp.anthropic.claude-sonnet-4-6",
@@ -16805,7 +16946,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 1024
   },
   {
     "model": "jp.anthropic.claude-sonnet-5",
@@ -16827,7 +16969,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "lambda_ai/deepseek-llama3.3-70b",
@@ -23273,7 +23416,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 2048
   },
   {
     "model": "openrouter/anthropic/claude-3.5-sonnet",
@@ -23295,7 +23439,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "openrouter/anthropic/claude-3.7-sonnet",
@@ -23317,7 +23462,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 1024
   },
   {
     "model": "openrouter/anthropic/claude-haiku-4.5",
@@ -23339,7 +23485,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "openrouter/anthropic/claude-opus-4",
@@ -23361,7 +23508,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "openrouter/anthropic/claude-opus-4.1",
@@ -23383,7 +23531,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "openrouter/anthropic/claude-opus-4.5",
@@ -23405,7 +23554,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "openrouter/anthropic/claude-opus-4.6",
@@ -23427,7 +23577,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "openrouter/anthropic/claude-opus-4.7",
@@ -23449,7 +23600,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "openrouter/anthropic/claude-sonnet-4",
@@ -23471,7 +23623,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 1024
   },
   {
     "model": "openrouter/anthropic/claude-sonnet-4.5",
@@ -23493,7 +23646,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 1024
   },
   {
     "model": "openrouter/anthropic/claude-sonnet-4.6",
@@ -23515,7 +23669,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 2048
   },
   {
     "model": "openrouter/deepseek/deepseek-chat",
@@ -28905,7 +29060,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "us.amazon.nova-2-lite-v1:0",
@@ -29081,7 +29237,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "us.anthropic.claude-3-5-sonnet-20240620-v1:0",
@@ -29103,7 +29260,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 1024
   },
   {
     "model": "us.anthropic.claude-3-5-sonnet-20241022-v2:0",
@@ -29125,7 +29283,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 1024
   },
   {
     "model": "us.anthropic.claude-3-7-sonnet-20250219-v1:0",
@@ -29147,7 +29306,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 1024
   },
   {
     "model": "us.anthropic.claude-3-haiku-20240307-v1:0",
@@ -29169,7 +29329,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "us.anthropic.claude-3-opus-20240229-v1:0",
@@ -29191,7 +29352,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "us.anthropic.claude-3-sonnet-20240229-v1:0",
@@ -29213,7 +29375,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "us.anthropic.claude-fable-5",
@@ -29235,7 +29398,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "us.anthropic.claude-haiku-4-5-20251001-v1:0",
@@ -29257,7 +29421,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "us.anthropic.claude-opus-4-1-20250805-v1:0",
@@ -29279,7 +29444,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 1024
   },
   {
     "model": "us.anthropic.claude-opus-4-20250514-v1:0",
@@ -29301,7 +29467,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 1024
   },
   {
     "model": "us.anthropic.claude-opus-4-5-20251101-v1:0",
@@ -29323,7 +29490,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "us.anthropic.claude-opus-4-6-v1",
@@ -29345,7 +29513,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "us.anthropic.claude-opus-4-7",
@@ -29367,7 +29536,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "us.anthropic.claude-opus-4-8",
@@ -29389,7 +29559,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "us.anthropic.claude-sonnet-4-20250514-v1:0",
@@ -29411,7 +29582,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "us.anthropic.claude-sonnet-4-5-20250929-v1:0",
@@ -29433,7 +29605,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "us.anthropic.claude-sonnet-4-6",
@@ -29455,7 +29628,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 1024
   },
   {
     "model": "us.anthropic.claude-sonnet-5",
@@ -29477,7 +29651,8 @@
     "cache_read_discount": 0.1,
     "cache_write_multiplier": 1.25,
     "cache_ttl_seconds": 300,
-    "cache_requires_markers": true
+    "cache_requires_markers": true,
+    "cache_min_tokens": 4096
   },
   {
     "model": "us.deepseek.r1-v1:0",
