@@ -50,6 +50,10 @@ fn ai_service(
         diff_notify: app.state::<crate::DiffResolvedNotifyWrapper>().0.clone(),
         // Auto-built on project open; shared so find_semantic can query it.
         embed_index: app.state::<crate::EmbedIndexWrapper>().0.clone(),
+        // Same pattern as `cancel`/`live_context` above — must be the one
+        // Tauri-managed instance, not rebuilt per call, or the session's
+        // observed chars-per-token ratio never accumulates.
+        calibrated_chars_per_token: app.state::<crate::CacheCalibrationWrapper>().0.clone(),
     }
 }
 

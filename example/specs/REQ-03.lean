@@ -1,3 +1,4 @@
+//ricostynha author
 -- Formal specification for REQ-03: Search Functionality
 -- Datatypes ARE the spec. Code must produce exactly these structures.
 

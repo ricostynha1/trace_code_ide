@@ -1,3 +1,4 @@
+//ricostynha author
 #!/usr/bin/env python3
 """
 Script to run all tests for the bubble sort implementation.

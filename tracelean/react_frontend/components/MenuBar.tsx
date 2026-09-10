@@ -10,6 +10,8 @@ interface MenuBarProps {
   aiChatVisible: boolean;
   onToggleTraceDashboard: () => void;
   traceDashVisible: boolean;
+  onToggleSandbox: () => void;
+  sandboxVisible: boolean;
 }
 
 export function MenuBar({
@@ -22,6 +24,8 @@ export function MenuBar({
   aiChatVisible,
   onToggleTraceDashboard,
   traceDashVisible,
+  onToggleSandbox,
+  sandboxVisible,
 }: MenuBarProps) {
   const handleOpenFolder = async () => {
     try {
@@ -75,6 +79,13 @@ export function MenuBar({
         className={aiChatVisible ? "active" : ""}
       >
         AI Chat
+      </button>
+      <button
+        onClick={onToggleSandbox}
+        className={sandboxVisible ? "active" : ""}
+        title="Sandboxed workspace for running external tools (e.g. Claude Code) yourself"
+      >
+        Sandbox
       </button>
       <span className="title">TraceLean IDE</span>
     </div>

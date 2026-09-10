@@ -1,3 +1,4 @@
+//ricostynha author
 -- Formal specification for REQ-01: User Authentication
 -- The primary value here: datatypes define the contract.
 -- Implementation code MUST match these types exactly.

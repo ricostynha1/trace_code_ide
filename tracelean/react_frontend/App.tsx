@@ -13,6 +13,7 @@ import { WhichKeyBar } from "./components/WhichKeyBar";
 import { Splitter } from "./components/Splitter";
 import { DiffReviewPanel } from "./components/DiffReviewPanel";
 import { TerminalPanel } from "./components/TerminalPanel";
+import { SandboxPanel } from "./components/SandboxPanel";
 import "./App.css";
 
 function App() {
@@ -28,6 +29,7 @@ function App() {
   const [reqsPanelVisible, setReqsPanelVisible] = useState(false);
   const [aiPanelVisible, setAiPanelVisible] = useState(false);
   const [traceDashVisible, setTraceDashVisible] = useState(false);
+  const [sandboxVisible, setSandboxVisible] = useState(false);
   // Key to force editor remount on undo-tree jump
   const [editorKey, setEditorKey] = useState(0);
   // Track whether AI is actively running — prevent file switching during AI edits
@@ -122,6 +124,8 @@ function App() {
         aiChatVisible={aiPanelVisible}
         onToggleTraceDashboard={() => setTraceDashVisible((v) => !v)}
         traceDashVisible={traceDashVisible}
+        onToggleSandbox={() => setSandboxVisible((v) => !v)}
+        sandboxVisible={sandboxVisible}
       />
       <div className="main-content">
         {projectOpen && (
@@ -169,6 +173,14 @@ function App() {
         <AiChatPanel
           visible={aiPanelVisible}
           onClose={() => setAiPanelVisible(false)}
+        />
+        {sandboxVisible && (
+          <Splitter cssVar="--sandbox-panel-width" side="right" defaultWidth={320} />
+        )}
+        <SandboxPanel
+          visible={sandboxVisible}
+          onClose={() => setSandboxVisible(false)}
+          onFileSelect={handleFileSelect}
         />
         <MockPromptWindow />
         <TraceabilityDashboard

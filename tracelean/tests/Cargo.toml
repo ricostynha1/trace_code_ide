@@ -22,6 +22,10 @@ path = "integration_bedrock.rs"
 name = "integration_cost_reduction"
 path = "integration_cost_reduction.rs"
 
+[[test]]
+name = "integration_sandbox_session"
+path = "integration_sandbox_session.rs"
+
 [dev-dependencies]
 tracelean_lib = { path = "../gui_backend", package = "tracelean" }
 tracelean-core = { path = "../core" }

@@ -143,6 +143,7 @@ impl InteractionLog {
             request.model.input_cost_per_m,
             request.model.output_cost_per_m,
             request.model.cached_input_cost_per_m,
+            super::provider_cache::cache_write_multiplier(&request.model),
         );
 
         let (tools_provided, tool_names, tool_schemas) = tools_of(request);
@@ -212,6 +213,7 @@ impl InteractionLog {
                 input_cost: 0.0,
                 output_cost: 0.0,
                 cached_savings: 0.0,
+                write_cost: 0.0,
             },
             duration_ms,
             truncated: false,
@@ -225,6 +227,55 @@ impl InteractionLog {
             predicted_cached_tokens: None,
             context_window: request.model.context_window,
             context_window_known: request.model.context_window_known,
+        };
+
+        self.entries.push(entry);
+        self.trim();
+    }
+
+    /// Record one turn of an *external* agent session — Claude Code running
+    /// in a tracelean sandbox (`sandbox::transcript`), not a provider call
+    /// tracelean made itself. There is no `AiRequest`/`AiResponse` to build
+    /// this from (tracelean never sent the request), so unlike
+    /// `record_success` this takes already-assembled pieces directly and
+    /// leaves provider-call-specific fields (`request_messages`,
+    /// `tool_schemas`, `request_raw`, `context_window`) empty/unknown rather
+    /// than inventing values tracelean has no way to know.
+    pub fn record_external(
+        &mut self,
+        agent: &str,
+        model_id: &str,
+        response_content: Option<String>,
+        response_thinking: Option<String>,
+        tool_names: Vec<String>,
+        usage: TokenUsage,
+        cost: CostEstimate,
+    ) {
+        let entry = InteractionEntry {
+            id: uuid::Uuid::new_v4().to_string(),
+            timestamp: chrono::Utc::now().to_rfc3339(),
+            agent: agent.to_string(),
+            model_id: model_id.to_string(),
+            model_display_name: model_id.to_string(),
+            request_messages: Vec::new(),
+            response_content,
+            response_thinking,
+            response_tool_calls: Vec::new(),
+            error: None,
+            usage,
+            cost,
+            duration_ms: 0,
+            truncated: false,
+            was_compacted: false,
+            tools_provided: tool_names.len() as u32,
+            tool_names,
+            tool_schemas: Vec::new(),
+            tool_passing: None,
+            compaction: None,
+            request_raw: None,
+            predicted_cached_tokens: None,
+            context_window: 0,
+            context_window_known: false,
         };
 
         self.entries.push(entry);
@@ -312,5 +363,45 @@ impl InteractionLog {
             }
         }
         Self::new()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn record_external_leaves_provider_call_fields_empty_not_invented() {
+        let mut log = InteractionLog::new();
+        let usage = TokenUsage {
+            input_tokens: 100,
+            output_tokens: 50,
+            thinking_tokens: 0,
+            cached_tokens: 10,
+            cache_write_tokens: 0,
+        };
+        let cost = CostEstimate { total_usd: 0.001, input_cost: 0.0005, output_cost: 0.0005, cached_savings: 0.0, write_cost: 0.0 };
+
+        log.record_external(
+            "claude-code (sandbox)",
+            "claude-opus-5",
+            Some("hi there".to_string()),
+            None,
+            vec!["read_file".to_string()],
+            usage,
+            cost,
+        );
+
+        let entry = &log.all()[0];
+        assert_eq!(entry.agent, "claude-code (sandbox)");
+        assert_eq!(entry.model_id, "claude-opus-5");
+        assert_eq!(entry.response_content.as_deref(), Some("hi there"));
+        assert_eq!(entry.tool_names, vec!["read_file".to_string()]);
+        assert_eq!(entry.tools_provided, 1);
+        assert!(entry.request_messages.is_empty(), "no request was ever sent by tracelean — nothing to show here");
+        assert!(entry.request_raw.is_none());
+        assert!(!entry.context_window_known, "context window is genuinely unknown for an external session");
+        assert_eq!(entry.usage.input_tokens, 100);
+        assert_eq!(entry.cost.total_usd, 0.001);
     }
 }

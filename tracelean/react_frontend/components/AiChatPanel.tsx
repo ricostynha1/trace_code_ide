@@ -1,7 +1,8 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { ChatSwitcher, ChatInstance } from "./ChatSwitcher";
+import { sandboxStore } from "./sandboxStore";
 
 interface ChatMessage {
   role: "system" | "user" | "assistant" | "tool" | "thinking";
@@ -54,6 +55,7 @@ interface TokenUsage {
   output_tokens: number;
   thinking_tokens: number;
   cached_tokens: number;
+  cache_write_tokens?: number;
 }
 
 interface AiResponse {
@@ -69,8 +71,16 @@ interface SessionStats {
   total_output_tokens: number;
   total_thinking_tokens: number;
   total_cached_tokens: number;
+  total_cache_write_tokens?: number;
   total_cost_usd: number;
   total_output_cost_usd: number;
+  /** External-agent (Claude Code sandbox) usage — kept separate from the
+   * totals above; see `SessionStats::external_estimated_cost_usd` in
+   * core/src/ai/tracking.rs for why it never counts toward the spend cap. */
+  external_requests?: number;
+  external_input_tokens?: number;
+  external_output_tokens?: number;
+  external_estimated_cost_usd?: number;
 }
 
 /** P7: context-utilization snapshot from get_chat_session_info. */
@@ -151,7 +161,7 @@ interface InteractionEntry {
   response_tool_calls: ToolCallResponse[];
   error: string | null;
   usage: TokenUsage;
-  cost: { total_usd: number; input_cost: number; output_cost: number; cached_savings: number };
+  cost: { total_usd: number; input_cost: number; output_cost: number; cached_savings: number; write_cost?: number };
   duration_ms: number;
   truncated: boolean;
   was_compacted?: boolean;
@@ -194,6 +204,38 @@ interface MockPendingRequest {
 }
 
 type Tab = "chat" | "settings" | "log" | "stats" | "model";
+
+/** Chat tab mode: "built-in" is tracelean's own agent (the existing
+ * behaviour); "external" is a read-only view of a Claude Code session
+ * running in a sandbox (`SandboxPanel.tsx`) — its transcript is registered
+ * into the same Log/Stats tabs as a regular interaction (estimated cost;
+ * see `sandbox::cost`), but nothing typed here is ever sent to it. */
+type ChatMode = "built-in" | "external";
+
+/** Mirrors `tracelean_core::sandbox::transcript::TranscriptEvent`
+ * (externally tagged, snake_case) — a live, read-only view of a Claude Code
+ * session running in a tracelean sandbox (Phase 8: Tier-1 transcript
+ * tailing only, no interception; see `core/src/sandbox/transcript.rs`).
+ * tracelean never sends anything to that session — this tab has no input
+ * box, only a session picker and the transcript. */
+type SandboxTranscriptEvent =
+  | { type: "user_text"; text: string }
+  | { type: "assistant_text"; text: string }
+  | { type: "thinking"; text: string }
+  | { type: "tool_use"; id: string; name: string; input: unknown }
+  | { type: "tool_result"; tool_use_id: string; content: string; is_error: boolean }
+  | { type: "usage"; model: string; input_tokens: number; output_tokens: number; cache_read_tokens: number; cache_write_5m_tokens: number; cache_write_1h_tokens: number }
+  | { type: "system_note"; subtype: string };
+
+interface SandboxTranscriptEntry {
+  uuid: string;
+  event: SandboxTranscriptEvent;
+}
+
+interface SandboxSessionSummary {
+  id: string;
+  created: string;
+}
 
 /** T14: characteristics of the picked model, from get_model_characteristics. */
 interface ModelCharacteristics {
@@ -277,6 +319,82 @@ function cachedFlags(e: InteractionEntry): boolean[] {
 
 export function AiChatPanel({ visible, onClose }: Props) {
   const [tab, setTab] = useState<Tab>("chat");
+  const [chatMode, setChatMode] = useState<ChatMode>("built-in");
+
+  // --- External Agent chat mode (Phase 8: read-only Tier-1 observability
+  // of a Claude Code session running in a tracelean sandbox) ---
+  const [sandboxSessions, setSandboxSessions] = useState<SandboxSessionSummary[]>([]);
+  const [sandboxSessionId, setSandboxSessionId] = useState<string | null>(sandboxStore.activeSessionId);
+  const [sandboxEvents, setSandboxEvents] = useState<SandboxTranscriptEntry[]>([]);
+  const sandboxSeenRef = useRef<Set<string>>(new Set());
+
+  const loadSandboxSessions = () => {
+    invoke<SandboxSessionSummary[]>("sandbox_list_sessions").then(setSandboxSessions).catch(() => setSandboxSessions([]));
+  };
+
+  // Default to (and follow) whichever session SandboxPanel most recently
+  // created or selected.
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const id = (e as CustomEvent).detail?.id ?? null;
+      setSandboxSessionId(id);
+    };
+    window.addEventListener("sandbox-active-session-changed", handler);
+    return () => window.removeEventListener("sandbox-active-session-changed", handler);
+  }, []);
+
+  // Backfill from the session's transcript-so-far, then switch to live
+  // tailing. Re-runs whenever the selected session changes.
+  useEffect(() => {
+    sandboxSeenRef.current = new Set();
+    setSandboxEvents([]);
+    if (!sandboxSessionId) return;
+    const id = sandboxSessionId;
+    invoke<SandboxTranscriptEntry[]>("sandbox_transcript_history", { sessionId: id })
+      .then((history) => {
+        const seen = sandboxSeenRef.current;
+        const fresh: SandboxTranscriptEntry[] = [];
+        for (const entry of history) {
+          const key = `${entry.uuid}:${JSON.stringify(entry.event)}`;
+          if (seen.has(key)) continue;
+          seen.add(key);
+          fresh.push(entry);
+        }
+        setSandboxEvents(fresh);
+      })
+      .catch(() => {});
+  }, [sandboxSessionId]);
+
+  useEffect(() => {
+    const unlisten = listen("sandbox-transcript", (event: any) => {
+      const payload = typeof event.payload === "string" ? JSON.parse(event.payload) : event.payload;
+      if (!sandboxSessionId || payload?.session_id !== sandboxSessionId) return;
+      const entry: SandboxTranscriptEntry = { uuid: payload.uuid, event: payload.event };
+      const key = `${entry.uuid}:${JSON.stringify(entry.event)}`;
+      const seen = sandboxSeenRef.current;
+      if (seen.has(key)) return;
+      seen.add(key);
+      setSandboxEvents((prev) => [...prev, entry]);
+    });
+    return () => { unlisten.then((fn) => fn()); };
+  }, [sandboxSessionId]);
+
+  // Join tool_use with its later tool_result (by tool_use_id) so they
+  // render as one row, same idea as the built-in agent's tool-call chips.
+  const sandboxResultByToolId = useMemo(() => {
+    const map = new Map<string, { content: string; is_error: boolean }>();
+    for (const { event } of sandboxEvents) {
+      if (event.type === "tool_result") map.set(event.tool_use_id, { content: event.content, is_error: event.is_error });
+    }
+    return map;
+  }, [sandboxEvents]);
+  const sandboxToolUseIds = useMemo(() => {
+    const set = new Set<string>();
+    for (const { event } of sandboxEvents) {
+      if (event.type === "tool_use") set.add(event.id);
+    }
+    return set;
+  }, [sandboxEvents]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -598,6 +716,10 @@ export function AiChatPanel({ visible, onClose }: Props) {
   };
 
   const sendMessage = async () => {
+    if (chatMode === "external") {
+      setError("This conversation is with an external agent — send it messages in its own terminal (Sandbox panel → Open terminal), not here.");
+      return;
+    }
     if (!input.trim() || loading) return;
 
     // T3.8: Frontend spend cap check
@@ -781,7 +903,109 @@ export function AiChatPanel({ visible, onClose }: Props) {
 
       {tab === "chat" && (
         <div className="ai-chat-content">
+          <div className="ai-chat-mode-toggle">
+            <button className={chatMode === "built-in" ? "active" : ""} onClick={() => setChatMode("built-in")}>Built-in</button>
+            <button className={chatMode === "external" ? "active" : ""} onClick={() => { setChatMode("external"); loadSandboxSessions(); }}>External Agent</button>
+            {chatMode === "external" && (
+              <>
+                <select
+                  value={sandboxSessionId ?? ""}
+                  onChange={(e) => setSandboxSessionId(e.target.value || null)}
+                >
+                  <option value="">— none —</option>
+                  {sandboxSessions.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.id.slice(0, 8)} — {new Date(s.created).toLocaleTimeString()}
+                    </option>
+                  ))}
+                </select>
+                <button className="panel-btn" onClick={loadSandboxSessions} title="Refresh session list">⟳</button>
+              </>
+            )}
+          </div>
+          {chatMode === "external" && (
+            <div className="ai-sandbox-readonly-hint">
+              Read-only — a live view of a Claude Code session running in the sandbox, registered here as regular interactions (Log/Stats tabs included; cost is an estimate). Send it messages in its own terminal (Sandbox panel → Open terminal).
+            </div>
+          )}
           <div className="ai-messages">
+            {chatMode === "external" ? (
+              <>
+                {!sandboxSessionId && (
+                  <div className="ai-msg ai-msg-system"><span className="ai-msg-tool-call">Open the Sandbox panel and start (or pick) a session to watch its transcript here.</span></div>
+                )}
+                {sandboxSessionId && sandboxEvents.length === 0 && (
+                  <div className="ai-msg ai-msg-system"><span className="ai-msg-tool-call">No transcript yet — nothing written to Claude Code's own session log for this project so far.</span></div>
+                )}
+                {sandboxEvents.map((entry, i) => {
+                  const ev = entry.event;
+                  const key = `${entry.uuid}-${i}`;
+                  switch (ev.type) {
+                    case "user_text":
+                      return (
+                        <div key={key} className="ai-msg ai-msg-user">
+                          <span className="ai-msg-role">user</span>
+                          <pre className="ai-msg-content">{ev.text}</pre>
+                        </div>
+                      );
+                    case "assistant_text":
+                      return (
+                        <div key={key} className="ai-msg ai-msg-assistant">
+                          <span className="ai-msg-role">assistant</span>
+                          <pre className="ai-msg-content">{ev.text}</pre>
+                        </div>
+                      );
+                    case "thinking":
+                      return (
+                        <details key={key} className="ai-msg ai-msg-thinking">
+                          <summary>💭 thinking ({ev.text.length} chars)</summary>
+                          <pre className="ai-msg-content">{ev.text}</pre>
+                        </details>
+                      );
+                    case "tool_use": {
+                      const result = sandboxResultByToolId.get(ev.id);
+                      const argsPreview = (() => {
+                        try { return JSON.stringify(ev.input); } catch { return String(ev.input); }
+                      })();
+                      return (
+                        <div key={key} className="ai-msg ai-msg-tool">
+                          <span className="ai-msg-tool-call">
+                            {result ? (result.is_error ? "✗" : "✓") : "◌"} {ev.name}({argsPreview})
+                          </span>
+                          {result && (
+                            <pre className="ai-msg-content">{result.content.slice(0, 2000)}</pre>
+                          )}
+                        </div>
+                      );
+                    }
+                    case "tool_result": {
+                      if (sandboxToolUseIds.has(ev.tool_use_id)) return null;
+                      return (
+                        <div key={key} className="ai-msg ai-msg-tool">
+                          <span className="ai-msg-tool-call">{ev.is_error ? "✗" : "✓"} result for {ev.tool_use_id.slice(0, 8)}</span>
+                          <pre className="ai-msg-content">{ev.content.slice(0, 2000)}</pre>
+                        </div>
+                      );
+                    }
+                    case "usage":
+                      return (
+                        <div key={key} className="ai-sandbox-usage">
+                          {ev.model} · in {ev.input_tokens} / out {ev.output_tokens} / cache-read {ev.cache_read_tokens} / cache-write-5m {ev.cache_write_5m_tokens} / cache-write-1h {ev.cache_write_1h_tokens}
+                        </div>
+                      );
+                    case "system_note":
+                      return (
+                        <div key={key} className="ai-msg ai-msg-system">
+                          <span className="ai-msg-tool-call">— {ev.subtype} —</span>
+                        </div>
+                      );
+                    default:
+                      return null;
+                  }
+                })}
+              </>
+            ) : (
+            <>
             {(() => {
               // Group consecutive tool-call chips into batches
               const grouped: Array<{ type: "single"; msg: ChatMessage; idx: number } | { type: "chips"; msgs: ChatMessage[]; startIdx: number }> = [];
@@ -968,18 +1192,20 @@ export function AiChatPanel({ visible, onClose }: Props) {
                 </div>
               );
             })()}
+            </>
+            )}
             {error && <div className="ai-msg ai-msg-error">{error}</div>}
             <div ref={messagesEndRef} />
           </div>
           <div className="ai-input-area">
             <textarea
-              value={input}
+              value={chatMode === "external" ? "" : input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
-              placeholder="Send a message..."
-              disabled={loading}
+              placeholder={chatMode === "external" ? "This is an external agent — send messages in its own terminal instead." : "Send a message..."}
+              disabled={loading || chatMode === "external"}
             />
-            <button onClick={sendMessage} disabled={loading || !input.trim()}>Send</button>
+            <button onClick={sendMessage} disabled={loading || chatMode === "external" || !input.trim()}>Send</button>
           </div>
           {stats && (
             <div className="ai-cost-bar">
@@ -1422,8 +1648,13 @@ export function AiChatPanel({ visible, onClose }: Props) {
                   })()}</td></tr>
                   <tr><td>Output tokens</td><td>{log.reduce((s, e) => s + e.usage.output_tokens, 0).toLocaleString()}</td></tr>
                   <tr><td>Thinking tokens</td><td>{log.reduce((s, e) => s + e.usage.thinking_tokens, 0).toLocaleString()}</td></tr>
+                  <tr title="Tokens newly written to the provider's cache across this log — each one costs a write premium (e.g. 1.25x) instead of the plain input rate, and is a fresh miss+rewrite, not a reused prefix.">
+                    <td>Cache write tokens</td>
+                    <td>{log.reduce((s, e) => s + (e.usage.cache_write_tokens ?? 0), 0).toLocaleString()}</td>
+                  </tr>
                   <tr><td>Total cost</td><td><strong>${log.reduce((s, e) => s + e.cost.total_usd, 0).toFixed(6)}</strong></td></tr>
-                  <tr><td>Cache savings</td><td>${log.reduce((s, e) => s + e.cost.cached_savings, 0).toFixed(6)}</td></tr>
+                  <tr><td>Cache savings (net of write cost)</td><td>${log.reduce((s, e) => s + e.cost.cached_savings, 0).toFixed(6)}</td></tr>
+                  <tr><td>Cache write cost</td><td>${log.reduce((s, e) => s + (e.cost.write_cost ?? 0), 0).toFixed(6)}</td></tr>
                   {(() => {
                     // bugs.md Bug 3: predicted-vs-actual cache health, summed
                     // over every entry that got a prediction (automatic-cache
@@ -1654,8 +1885,15 @@ export function AiChatPanel({ visible, onClose }: Props) {
               <h5>Token Usage & Cost</h5>
               <table>
                 <tbody>
-                  <tr><td>Input (non-cached)</td><td>{inspectEntry.usage.input_tokens - inspectEntry.usage.cached_tokens}</td><td>${((inspectEntry.usage.input_tokens - inspectEntry.usage.cached_tokens) / 1_000_000 * (settings?.selected_model?.input_cost_per_m ?? 0)).toFixed(6)}</td></tr>
+                  <tr><td>Input (non-cached)</td><td>{inspectEntry.usage.input_tokens - inspectEntry.usage.cached_tokens - (inspectEntry.usage.cache_write_tokens ?? 0)}</td><td>${((inspectEntry.usage.input_tokens - inspectEntry.usage.cached_tokens - (inspectEntry.usage.cache_write_tokens ?? 0)) / 1_000_000 * (settings?.selected_model?.input_cost_per_m ?? 0)).toFixed(6)}</td></tr>
                   <tr><td>Input (cached)</td><td>{inspectEntry.usage.cached_tokens}</td><td>${(inspectEntry.usage.cached_tokens / 1_000_000 * (settings?.selected_model?.cached_input_cost_per_m ?? 0)).toFixed(6)}</td></tr>
+                  {!!inspectEntry.usage.cache_write_tokens && (
+                    <tr title="Tokens newly written to the provider's cache this turn — billed at a write premium (e.g. 1.25x), not the plain input rate.">
+                      <td>Input (cache write)</td>
+                      <td>{inspectEntry.usage.cache_write_tokens}</td>
+                      <td>${(inspectEntry.cost.write_cost ?? 0).toFixed(6)}</td>
+                    </tr>
+                  )}
                   <tr><td>Output</td><td>{inspectEntry.usage.output_tokens}</td><td>${(inspectEntry.usage.output_tokens / 1_000_000 * (settings?.selected_model?.output_cost_per_m ?? 0)).toFixed(6)}</td></tr>
                   <tr><td>Thinking</td><td>{inspectEntry.usage.thinking_tokens}</td><td>${(inspectEntry.usage.thinking_tokens / 1_000_000 * (settings?.selected_model?.output_cost_per_m ?? 0)).toFixed(6)}</td></tr>
                   <tr><td><strong>Total</strong></td><td></td><td><strong>${inspectEntry.cost.total_usd.toFixed(6)}</strong></td></tr>
@@ -1732,6 +1970,14 @@ export function AiChatPanel({ visible, onClose }: Props) {
                       ? `▤ ${entry.context_window_known ? "" : "~"}${Math.round((entry.usage.input_tokens / entry.context_window) * 100)}%`
                       : "▤ unknown"}
                   </span>
+                  {!!entry.usage.cache_write_tokens && (
+                    <span
+                      className="ai-log-cache-write-badge"
+                      title={`Cache write: ${entry.usage.cache_write_tokens.toLocaleString()} tokens newly written to cache this turn${entry.cost.write_cost ? ` (+$${entry.cost.write_cost.toFixed(6)} write premium)` : ""}`}
+                    >
+                      {`✎ ${compactNum(entry.usage.cache_write_tokens)}`}
+                    </span>
+                  )}
                   <span className="ai-log-cost">${entry.cost.total_usd.toFixed(6)}</span>
                   <span className="ai-log-time">{new Date(entry.timestamp).toLocaleTimeString()}</span>
                 </div>
@@ -1752,11 +1998,26 @@ export function AiChatPanel({ visible, onClose }: Props) {
                 <tr><td>Output tokens</td><td>{stats.total_output_tokens.toLocaleString()}</td></tr>
                 <tr><td>Thinking tokens</td><td>{stats.total_thinking_tokens.toLocaleString()}</td></tr>
                 <tr><td>Cached tokens</td><td>{stats.total_cached_tokens.toLocaleString()}</td></tr>
+                <tr><td>Cache write tokens</td><td>{(stats.total_cache_write_tokens ?? 0).toLocaleString()}</td></tr>
                 <tr><td>Total cost</td><td>${stats.total_cost_usd.toFixed(6)}</td></tr>
               </tbody>
             </table>
           ) : (
             <p>Loading...</p>
+          )}
+          {stats && (stats.external_requests ?? 0) > 0 && (
+            <>
+              <h3>External Agent Sessions (estimated)</h3>
+              <table className="ai-stats-table">
+                <tbody>
+                  <tr><td>Requests</td><td>{stats.external_requests}</td></tr>
+                  <tr><td>Input tokens</td><td>{(stats.external_input_tokens ?? 0).toLocaleString()}</td></tr>
+                  <tr><td>Output tokens</td><td>{(stats.external_output_tokens ?? 0).toLocaleString()}</td></tr>
+                  <tr><td>Estimated cost</td><td>${(stats.external_estimated_cost_usd ?? 0).toFixed(6)}</td></tr>
+                </tbody>
+              </table>
+              <p className="ai-sandbox-usage">Not billed through tracelean and not counted against the spend cap above — a modeled estimate against the model Claude Code itself reported, priced via tracelean's own pricing catalog.</p>
+            </>
           )}
         </div>
       )}

@@ -17,6 +17,10 @@ path = "src/bin/tracelean-agent.rs"
 name = "tracelean-bench"
 path = "src/bin/tracelean-bench.rs"
 
+[[bin]]
+name = "tracelean-sandbox"
+path = "src/bin/tracelean-sandbox.rs"
+
 [dependencies]
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
@@ -45,6 +49,7 @@ tree-sitter-json = "0.23"
 
 [target.'cfg(target_os = "linux")'.dependencies]
 libc = "0.2"
+notify = "6"
 
 [dev-dependencies]
 tempfile = "3"

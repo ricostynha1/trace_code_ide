@@ -8,3 +8,4 @@ pub mod mcp_commands;
 pub mod acp_commands;
 pub mod myth_commands;
 pub mod terminal_commands;
+pub mod sandbox_commands;

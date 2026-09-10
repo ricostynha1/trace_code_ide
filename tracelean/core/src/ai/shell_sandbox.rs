@@ -36,11 +36,11 @@ pub const PROJECT_ALLOWLIST: &[&str] = &[
 
 /// Home-relative cache dirs bound writable so toolchains keep working under
 /// the read-only root (package registries, compiler caches).
-const HOME_ALLOWLIST: &[&str] = &[".cargo", ".rustup", ".cache", ".npm"];
+pub(crate) const HOME_ALLOWLIST: &[&str] = &[".cargo", ".rustup", ".cache", ".npm"];
 
 /// Paths protected even where the project is writable (R4). Upper-dir entries
 /// under these are discarded, never replayed onto the real tree.
-const PROTECTED: &[&str] = &[".git", ".tracelean"];
+pub(crate) const PROTECTED: &[&str] = &[".git", ".tracelean"];
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SandboxMode {
@@ -121,7 +121,7 @@ pub struct SandboxRun {
 }
 
 /// Files above this size are reported but not turned into undo commands.
-const MAX_CAPTURE_BYTES: u64 = 4 * 1024 * 1024;
+pub(crate) const MAX_CAPTURE_BYTES: u64 = 4 * 1024 * 1024;
 
 // ─── Availability probes ─────────────────────────────────────────────────────
 
@@ -392,17 +392,17 @@ pub fn run_overlay(
     Ok(run)
 }
 
-fn is_protected(rel: &Path) -> bool {
+pub(crate) fn is_protected(rel: &Path) -> bool {
     PROTECTED.iter().any(|p| rel.starts_with(p))
 }
 
-fn is_allowlisted(rel: &Path) -> bool {
+pub(crate) fn is_allowlisted(rel: &Path) -> bool {
     PROJECT_ALLOWLIST.iter().any(|p| rel.starts_with(p))
 }
 
 /// Read a file as text for mutation capture. Ok(None) = missing.
 /// Err(reason) = exists but not capturable (binary / too large / io error).
-fn read_capture(path: &Path) -> Result<Option<String>, String> {
+pub(crate) fn read_capture(path: &Path) -> Result<Option<String>, String> {
     match std::fs::symlink_metadata(path) {
         Err(_) => Ok(None),
         Ok(md) => {

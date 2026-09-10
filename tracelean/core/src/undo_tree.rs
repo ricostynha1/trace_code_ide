@@ -76,6 +76,79 @@ impl UndoTree {
         id
     }
 
+    /// Give a file just opened for the first time this session a base-state
+    /// node — its content at open time, as a same-old/same-new no-op
+    /// `Command::Replace` so `command_file`/`command_affects_file` see it
+    /// as *this file's own* history (unlike `push_initial`'s untargeted
+    /// empty `Batch`, which no per-file filter ever matches). Without this,
+    /// a file's undo history in "file mode" starts at its first real edit —
+    /// there is nothing to jump back to before that.
+    ///
+    /// Deliberately does **not** unconditionally behave like `push`: it's
+    /// parented at the tree's true root (not at `current`), and it only
+    /// claims `current` when nothing is already "in progress" (`current`
+    /// is `None`). Opening one file must not steal `current` away from
+    /// another file's in-progress edit chain — but if `current` **is**
+    /// `None`, some node still has to claim it, and it must be a real,
+    /// unique one: `UndoTree::redo()`'s `current == None` fallback finds
+    /// "the first node with no parent" by *insertion order* — if a later
+    /// operation (e.g. the session's first real edit, which also parents
+    /// under `current` when `current` is `None`) creates a *second*
+    /// parentless node, that lookup silently redoes to the wrong one
+    /// (whichever was inserted first) instead of failing loudly. Claiming
+    /// `current` here when it's free keeps the tree's "exactly one true
+    /// root" invariant intact — the next real edit to *any* file then
+    /// parents under this node instead of becoming a second orphan root.
+    ///
+    /// "Free" means more than `current == None`: `push_initial` (called by
+    /// `service::open_project`'s baseline-commit-point step, *before* any
+    /// file is ever opened) already leaves `current` pointing at its own
+    /// untargeted empty-`Batch` root — so on a real session the very first
+    /// file's base node would see `current` as `Some`, decline to claim
+    /// it, and that file's first *real* edit would then parent under the
+    /// untargeted root too, becoming a **sibling** of its own base node
+    /// instead of a child — exactly the "extra circle" bug this was meant
+    /// to prevent, just relocated. So: claim `current` whenever it's
+    /// either `None` *or* pointing at a node with no file of its own
+    /// (`command_file` — nothing file-specific has happened yet). Once
+    /// `current` legitimately belongs to some file (this one's own base,
+    /// or a real edit to it or another file), never steal it — a later
+    /// real edit to this file still parents under whatever `current` is
+    /// at that time when something *is* already in progress (same as any
+    /// other edit); jumping across branches already walks inverses/
+    /// commands via the tree's actual parent chain (`jump_to`), so this
+    /// base node is reachable and correct to jump to exactly like any
+    /// other node, independent of where it sits visually.
+    pub fn push_file_base(&mut self, command: Command, inverse: Command) -> NodeId {
+        let id = Uuid::new_v4();
+        let parent = self.nodes.first().map(|n| n.id);
+        let node = UndoNode {
+            id,
+            command,
+            inverse,
+            parent,
+            children: Vec::new(),
+            timestamp: Utc::now(),
+            commit_point: None,
+        };
+        if let Some(pid) = parent {
+            if let Some(&pidx) = self.id_to_index.get(&pid) {
+                self.nodes[pidx].children.push(id);
+            }
+        }
+        let new_index = self.nodes.len();
+        self.nodes.push(node);
+        self.id_to_index.insert(id, new_index);
+        let current_is_free = match self.current {
+            None => true,
+            Some(idx) => crate::command_file(&self.nodes[idx].command).is_none(),
+        };
+        if current_is_free {
+            self.current = Some(new_index);
+        }
+        id
+    }
+
     /// Push a new command. Creates child of current node (or root if empty).
     /// Returns the new node's ID.
     pub fn push(&mut self, command: Command, inverse: Command) -> NodeId {

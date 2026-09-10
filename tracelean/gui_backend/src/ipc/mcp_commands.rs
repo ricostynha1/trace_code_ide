@@ -7,6 +7,7 @@ use crate::{
     MockProviderWrapper, SymbolTableWrapper, TraceGraphWrapper,
     McpHostPermissionsWrapper, McpClientWrapper, AgentPermissionsStore,
     UndoTreeCacheWrapper, ToolLoopResumeWrapper, invalidate_undo_cache,
+    CacheCalibrationWrapper,
 };
 use tauri::{AppHandle, Emitter, State};
 
@@ -164,6 +165,7 @@ pub async fn ai_chat_stream(
     resolved_diffs: State<'_, crate::ResolvedDiffsWrapper>,
     diff_notify: State<'_, crate::DiffResolvedNotifyWrapper>,
     embed_index: State<'_, crate::EmbedIndexWrapper>,
+    cache_calibration: State<'_, CacheCalibrationWrapper>,
     session_id: String,
     user_message: String,
 ) -> Result<ai::AiResponse, String> {
@@ -232,6 +234,7 @@ pub async fn ai_chat_stream(
         verbose: false,
         retention_engine: std::sync::Arc::new(std::sync::Mutex::new(tracelean_core::ai::RetentionEngine::with_defaults())),
         timing_tracker: std::sync::Arc::new(std::sync::Mutex::new(tracelean_core::ai::TurnTimingTracker::new())),
+        calibrated_chars_per_token: cache_calibration.0.clone(),
         pending_diffs: diffs.0.clone(),
         embed_index: embed_index.0.clone(),
     };

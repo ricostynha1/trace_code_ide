@@ -32,6 +32,12 @@ struct CatalogEntry {
     /// mechanism, different provider-documented floor). `None` for models
     /// this field hasn't been populated for.
     cache_min_tokens: Option<u32>,
+    /// Which data-source catalog this entry came from (e.g. "bedrock",
+    /// "bedrock_converse", "openrouter", "anthropic"). Only consulted to
+    /// build the Bedrock-Converse Claude id list below — everyday lookups
+    /// match purely by model id/slug regardless of this tag.
+    #[serde(default)]
+    provider: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -66,12 +72,26 @@ struct CatalogIndex {
     by_key: HashMap<String, ModelEnrichment>,
     /// Slug -> enrichment (for fuzzy lookup)
     by_slug: HashMap<String, ModelEnrichment>,
+    /// Bedrock Converse-compatible Claude model ids — i.e. ids carrying one
+    /// of the cross-region inference-profile prefixes (`eu.`, `us.`,
+    /// `apac.`, `au.`, `jp.`, `global.`). Bedrock's own `/v1/models` listing
+    /// endpoint (bedrock-mantle) only returns BARE Claude ids like
+    /// `anthropic.claude-haiku-4-5` — those aren't valid Converse
+    /// identifiers and 400 with "use an inference profile" the moment
+    /// they're actually used. This list is what the model picker should
+    /// offer instead; see `bedrock_claude_ids_for_region`.
+    bedrock_claude_ids: Vec<String>,
 }
+
+/// Known Bedrock cross-region inference-profile prefixes (excluding
+/// `anthropic` itself, which marks a bare/non-region-prefixed id).
+const INFERENCE_PROFILE_PREFIXES: [&str; 6] = ["eu", "us", "apac", "au", "jp", "global"];
 
 fn build_index() -> CatalogIndex {
     let entries: Vec<CatalogEntry> = serde_json::from_str(CATALOG_JSON).unwrap_or_default();
     let mut by_key = HashMap::with_capacity(entries.len());
     let mut by_slug = HashMap::with_capacity(entries.len());
+    let mut bedrock_claude_ids = Vec::new();
 
     for entry in entries {
         let enrichment = ModelEnrichment {
@@ -90,6 +110,17 @@ fn build_index() -> CatalogIndex {
             cache_min_tokens: entry.cache_min_tokens,
         };
 
+        let is_bedrock = matches!(entry.provider.as_deref(), Some("bedrock") | Some("bedrock_converse"));
+        let lower_id = entry.model.to_lowercase();
+        if is_bedrock
+            && lower_id.contains("claude")
+            && INFERENCE_PROFILE_PREFIXES
+                .iter()
+                .any(|p| lower_id.starts_with(&format!("{p}.")))
+        {
+            bedrock_claude_ids.push(entry.model.clone());
+        }
+
         by_key.insert(entry.model.to_lowercase(), enrichment.clone());
 
         if let Some(slug) = entry.slug {
@@ -99,11 +130,73 @@ fn build_index() -> CatalogIndex {
         }
     }
 
-    CatalogIndex { by_key, by_slug }
+    CatalogIndex { by_key, by_slug, bedrock_claude_ids }
 }
 
 fn get_catalog() -> &'static CatalogIndex {
     CATALOG.get_or_init(build_index)
+}
+
+/// Map an AWS region code to Bedrock's cross-region inference-profile
+/// prefix. Best-effort — AWS's own geography grouping for cross-region
+/// inference; unrecognized regions fall back to `"global"`, which is
+/// increasingly the norm for newer models and works from any region when
+/// the model supports it.
+fn inference_profile_prefix_for_region(region: &str) -> &'static str {
+    let r = region.to_lowercase();
+    if r.starts_with("eu-") {
+        "eu"
+    } else if r.starts_with("us-") {
+        "us"
+    } else if r.starts_with("ap-southeast-2") || r.starts_with("ap-southeast-4") {
+        "au"
+    } else if r.starts_with("ap-northeast-1") || r.starts_with("ap-northeast-3") {
+        "jp"
+    } else if r.starts_with("ap-") {
+        "apac"
+    } else {
+        "global"
+    }
+}
+
+/// Bedrock Converse-compatible Claude model ids to offer for the given AWS
+/// region — the ids that actually work as Converse `model_id`s, unlike
+/// whatever bare ids `BedrockProvider::list_models` gets back from
+/// bedrock-mantle's `/v1/models` (see `bedrock_claude_ids` above).
+///
+/// Includes both the region-specific prefix and `global.`-prefixed variants
+/// (deduped by base model name, preferring the region-specific one) since
+/// `global.` profiles are often the only option for the newest models.
+/// Whether a given account actually has entitlement to a listed model is
+/// still determined at request time by Bedrock itself — same as every other
+/// provider's model list in this app, which is never a promise of access.
+pub fn bedrock_claude_ids_for_region(region: &str) -> Vec<String> {
+    let prefix = inference_profile_prefix_for_region(region);
+    let catalog = get_catalog();
+
+    let mut seen_base_names: std::collections::HashSet<&str> = std::collections::HashSet::new();
+    let mut out = Vec::new();
+
+    // Region-specific ids first, so they win the dedup-by-base-name pass
+    // below over the `global.` fallback.
+    for id in &catalog.bedrock_claude_ids {
+        if let Some(base) = id.strip_prefix(&format!("{prefix}.")) {
+            if seen_base_names.insert(base) {
+                out.push(id.clone());
+            }
+        }
+    }
+    if prefix != "global" {
+        for id in &catalog.bedrock_claude_ids {
+            if let Some(base) = id.strip_prefix("global.") {
+                if seen_base_names.insert(base) {
+                    out.push(id.clone());
+                }
+            }
+        }
+    }
+
+    out
 }
 
 /// Normalize a model ID for lookup: lowercase, strip common prefixes.
@@ -248,6 +341,17 @@ mod tests {
         assert!(e.coding_rank.is_some());
     }
 
+    /// Regression: `claude-opus-5` was missing from data/models.json (added
+    /// after Claude Opus 5's release) — `pricing_for` silently returned
+    /// `None` for it, e.g. for cost-estimating an external Claude Code
+    /// session's own transcript, which reports this exact bare model id.
+    #[test]
+    fn pricing_for_finds_claude_opus_5() {
+        let (input, output) = pricing_for("claude-opus-5").expect("claude-opus-5 should be priced");
+        assert_eq!(input, 5.0);
+        assert_eq!(output, 25.0);
+    }
+
     #[test]
     fn lookup_normalized() {
         let result = lookup("openrouter/anthropic/claude-fable-5");
@@ -302,5 +406,80 @@ mod tests {
         };
         enrich(&mut unknown);
         assert_eq!(unknown.cache_min_tokens, 4096, "ModelConfig::default()'s conservative fallback should survive when the catalog has nothing for this id");
+    }
+
+    /// The model picker's whole bug: bedrock-mantle's `/v1/models` only
+    /// returns bare Claude ids that 400 on Converse. This is the
+    /// replacement list `BedrockProvider::list_models` should offer instead.
+    #[test]
+    fn bedrock_claude_ids_for_region_returns_converse_compatible_ids_only() {
+        let ids = bedrock_claude_ids_for_region("eu-west-1");
+        assert!(!ids.is_empty(), "expected at least one eu.-prefixed Claude id");
+        for id in &ids {
+            assert!(
+                id.starts_with("eu.") || id.starts_with("global."),
+                "unexpected id for eu-west-1: {id}"
+            );
+        }
+        assert!(
+            ids.iter().any(|id| id == "eu.anthropic.claude-haiku-4-5-20251001-v1:0"),
+            "expected the confirmed-working Haiku 4.5 id, got: {ids:?}"
+        );
+        assert!(
+            ids.iter().any(|id| id == "eu.anthropic.claude-sonnet-4-6"),
+            "expected the confirmed-working Sonnet 4.6 id, got: {ids:?}"
+        );
+        // Bare ids (no region/global prefix) must never appear — those are
+        // exactly the ones that 400 on Converse.
+        assert!(!ids.iter().any(|id| id.starts_with("anthropic.")));
+    }
+
+    #[test]
+    fn bedrock_claude_ids_dedupes_region_over_global_for_the_same_base_model() {
+        let ids = bedrock_claude_ids_for_region("us-east-1");
+        let base = "anthropic.claude-haiku-4-5-20251001-v1:0";
+        let matches: Vec<&String> = ids.iter().filter(|id| id.ends_with(base)).collect();
+        assert_eq!(matches.len(), 1, "expected exactly one variant of this model, got: {matches:?}");
+        assert_eq!(matches[0], &format!("us.{base}"), "region-specific id should win over a global. fallback");
+    }
+
+    /// The model picker's second bug: swapping bedrock-mantle's bare Claude
+    /// ids for the working region-prefixed ones (above) surfaced entries
+    /// whose `coding_index`/`coding_rank` were never backfilled in
+    /// data/models.json, even though their bare siblings (still present in
+    /// the catalog for other purposes) already carried a ranking — so every
+    /// Bedrock-picked Claude model silently sorted as "unranked" in the
+    /// picker. Fixed by backfilling the region-prefixed rows in the data
+    /// file itself, not by adding a Rust-side prefix-stripping fallback.
+    #[test]
+    fn region_prefixed_claude_entries_carry_the_same_ranking_as_their_bare_sibling() {
+        let bare = lookup("anthropic.claude-sonnet-4-6").unwrap();
+        let prefixed = lookup("eu.anthropic.claude-sonnet-4-6").unwrap();
+        assert!(bare.coding_index.is_some(), "bare entry should have a ranking to compare against");
+        assert_eq!(prefixed.coding_index, bare.coding_index);
+        assert_eq!(prefixed.coding_rank, bare.coding_rank);
+    }
+
+    #[test]
+    fn enrich_surfaces_ranking_for_a_region_prefixed_bedrock_claude_model() {
+        use super::super::provider::{ModelConfig, ProviderKind};
+
+        let mut model = ModelConfig {
+            provider: ProviderKind::Bedrock,
+            model_id: "eu.anthropic.claude-haiku-4-5-20251001-v1:0".to_string(),
+            ..Default::default()
+        };
+        enrich(&mut model);
+        assert!(model.coding_index.is_some(), "picker-listed Claude model must not appear unranked");
+    }
+
+    #[test]
+    fn inference_profile_prefix_maps_known_aws_regions() {
+        assert_eq!(inference_profile_prefix_for_region("eu-west-1"), "eu");
+        assert_eq!(inference_profile_prefix_for_region("us-east-1"), "us");
+        assert_eq!(inference_profile_prefix_for_region("ap-southeast-2"), "au");
+        assert_eq!(inference_profile_prefix_for_region("ap-northeast-1"), "jp");
+        assert_eq!(inference_profile_prefix_for_region("ap-south-1"), "apac");
+        assert_eq!(inference_profile_prefix_for_region("sa-east-1"), "global");
     }
 }

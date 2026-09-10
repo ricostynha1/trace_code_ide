@@ -1,3 +1,6 @@
+# Local model caches (fastembed downloads ONNX blobs here at runtime)
+gui_backend/.fastembed_cache/
+
 # Logs
 logs
 *.log

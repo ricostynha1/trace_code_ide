@@ -1,3 +1,4 @@
+//ricostynha author
 // Search module implementing full-text search across code files with relevance ranking
 /// Full-text search module
 

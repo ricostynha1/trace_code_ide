@@ -259,6 +259,7 @@ impl AiProvider for MockProvider {
                 output_tokens,
                 thinking_tokens: 0,
                 cached_tokens: 0,
+                cache_write_tokens: 0,
             },
             raw_response: Some(raw_response),
             raw_request: Some(raw_request_json),

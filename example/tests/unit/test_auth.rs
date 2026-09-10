@@ -1,3 +1,4 @@
+//ricostynha author
 /// Unit tests for auth module
 
 #[cfg(test)]

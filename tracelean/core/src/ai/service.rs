@@ -47,6 +47,11 @@ pub struct AiService {
     /// Local semantic-search index (auto-built on project open), threaded into
     /// the tool executor so `find_semantic` can query it.
     pub embed_index: crate::ai::SharedIndex,
+    /// Session-observed chars-per-token ratio for cache-marker economics —
+    /// see `AgentContext::calibrated_chars_per_token`. Must be shared across
+    /// every `agent_context()` call for this service instance, not rebuilt
+    /// per turn.
+    pub calibrated_chars_per_token: Arc<Mutex<f64>>,
 }
 
 impl AiService {
@@ -90,6 +95,7 @@ impl AiService {
             verbose,
             retention_engine: Arc::new(Mutex::new(crate::ai::RetentionEngine::with_defaults())),
             timing_tracker: Arc::new(Mutex::new(crate::ai::TurnTimingTracker::new())),
+            calibrated_chars_per_token: self.calibrated_chars_per_token.clone(),
             pending_diffs: self.pending_diffs.clone(),
             embed_index: self.embed_index.clone(),
         })

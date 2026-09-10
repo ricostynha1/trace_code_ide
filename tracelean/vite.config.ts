@@ -25,8 +25,10 @@ export default defineConfig(async () => ({
         }
       : undefined,
     watch: {
-      // 3. tell Vite to ignore watching `gui_backend`
-      ignored: ["**/gui_backend/**"],
+      // 3. tell Vite to ignore watching `gui_backend` and the Rust build
+      // output (`target/` — hundreds of thousands of files, blows through
+      // the inotify watch limit on Linux otherwise).
+      ignored: ["**/gui_backend/**", "**/target/**", "**/.tracelean/**"],
     },
   },
 }));

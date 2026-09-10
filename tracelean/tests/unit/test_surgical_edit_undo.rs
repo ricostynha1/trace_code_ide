@@ -255,10 +255,15 @@ fn test_interleaved_user_and_agent_edits_undo_all() {
     assert!(state.undo().changed);
     assert_eq!(state.get_content(&path).unwrap(), "fn start() {}\n");
 
+    // base (the file's own content when first loaded — a no-op, but still
+    // a real tree position now; see AppState::load_file)
+    assert!(state.undo().changed);
+
     // root
     assert!(!state.undo().changed);
 
     // === Redo ALL forward ===
+    assert!(state.redo().changed); // base
     assert!(state.redo().changed); // user1
     assert!(state.get_content(&path).unwrap().contains("fn user_fn() {}"));
     for _ in &agent1_nodes { assert!(state.redo().changed); } // agent1

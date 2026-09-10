@@ -302,8 +302,14 @@ fn rapid_undo_redo_stability() {
         assert!(state.undo().changed);
     }
     assert_eq!(state.get_content(&file), Some(""));
+    // One more: the file's own base-state node (its content — "" — when
+    // first opened). Content doesn't visibly change (it's a no-op), but
+    // the tree position does move, so this still reports `changed`.
+    assert!(state.undo().changed);
     assert!(!state.undo().changed);
 
+    // Symmetric: redo past the base node first, then the 10 real edits.
+    assert!(state.redo().changed);
     for _ in 0..10 {
         assert!(state.redo().changed);
     }
@@ -326,6 +332,161 @@ fn jump_to_node_works() {
         state.execute_raw(&cmd);
     }
     assert_eq!(state.get_content(&file), Some("A"));
+}
+
+fn find_base_node_id(state: &AppState, file: &PathBuf) -> tracelean_lib::undo_tree::NodeId {
+    state
+        .undo_tree()
+        .nodes()
+        .iter()
+        .find(|n| tracelean_lib::command_file(&n.command).as_deref() == Some(&file.to_string_lossy() as &str))
+        .expect("load_file should have created a base node for this file")
+        .id
+}
+
+#[test]
+fn opening_a_file_lets_undo_tree_jump_back_to_the_pre_edit_state() {
+    // Regression: opening a file never gave it a base-state node, so a
+    // file's undo history in "file mode" started at its first real edit —
+    // there was nothing to jump back to before that (the file's own
+    // beginning was unreachable). `load_file` now creates one itself, for
+    // every caller (see its doc comment) — this exercises the ordinary
+    // "user opens a file" path (`fresh` calls `load_file`, same as
+    // `service::open_file` does).
+    let original = "fn main() {}\n";
+    let (mut state, file) = fresh(original);
+
+    // load_file claims `current` here because nothing else was in
+    // progress (a fresh AppState) — it must, or the session's first real
+    // edit would *also* parent under a `None` current and create a second,
+    // ambiguous "root" (see `UndoTree::push_file_base`'s doc comment for
+    // why `redo()` breaks if that happens).
+    let base_id = find_base_node_id(&state, &file);
+    assert_eq!(state.undo_tree().current_node().unwrap().id, base_id);
+
+    state.apply(Command::insert(file.clone(), 12, " // edit 1".into())).unwrap();
+    state.apply(Command::insert(file.clone(), 0, "// edit 2\n".into())).unwrap();
+    assert_ne!(state.get_content(&file), Some(original));
+
+    let commands = state.jump_to_node(base_id).unwrap();
+    for cmd in commands {
+        state.execute_raw(&cmd);
+    }
+    assert_eq!(state.get_content(&file), Some(original), "jumping to the base node must restore the file to its content when first opened");
+}
+
+#[test]
+fn agent_editing_an_unopened_file_still_gets_a_base_node() {
+    // Regression (resurfaced after the first fix, in a different code
+    // path): the user never had this file open — an agent's edit tool
+    // seeds the buffer with the file's pre-edit content via `load_file`
+    // (`ai::tool_executor`, `sandbox::mirror::apply_mutations`, `acp::server`
+    // all do this), *then* applies the real edit. `load_file` now creates
+    // the same base node regardless of who calls it or why — it's no
+    // longer tied to the editor's own `open_file` path specifically.
+    let mut state = AppState::new();
+    let file = PathBuf::from("agent_touched.rs");
+    let original = "fn untouched() {}\n";
+
+    // Exactly the shape agent tooling uses: load pre-edit content into a
+    // buffer the user never opened, then apply the real edit as a Replace.
+    state.load_file(file.clone(), original.to_string());
+    let base_id = find_base_node_id(&state, &file);
+    // Nothing else was in progress (fresh state), so this base node claims
+    // `current` — see `push_file_base`'s doc comment for why it must, or
+    // the next edit would create a second ambiguous root.
+    assert_eq!(state.undo_tree().current_node().unwrap().id, base_id);
+
+    state
+        .apply(Command::replace(file.clone(), 0, original.to_string(), "fn agent_wrote_this() {}\n".to_string()))
+        .unwrap();
+    assert_ne!(state.get_content(&file), Some(original));
+
+    let commands = state.jump_to_node(base_id).unwrap();
+    for cmd in commands {
+        state.execute_raw(&cmd);
+    }
+    assert_eq!(state.get_content(&file), Some(original), "a file an agent edited without the user ever opening it must still have a reachable pre-edit state");
+}
+
+#[test]
+fn first_file_in_a_real_session_chains_under_its_own_base_not_the_project_placeholder() {
+    // Regression: reported as "3 initial states show up after opening one
+    // file and making one edit" — `service::open_project` calls
+    // `record_file_open()` (-> `push_initial`) on *every* fresh project,
+    // before any file is ever opened, which leaves `current` pointing at
+    // its own untargeted empty-`Batch` placeholder node. The first fix's
+    // `push_file_base` only claimed `current` when it was `None` — but
+    // here it's already `Some` (the placeholder), so the claim never
+    // happened, and the file's first real edit parented under the
+    // placeholder too, becoming a *sibling* of its own base node instead
+    // of a child. In file mode, a node's parent being outside the
+    // filtered set makes it render as its own root — so the base node
+    // AND the first edit both showed up as disconnected "initial-looking"
+    // circles for one file after one edit.
+    let mut state = AppState::new();
+    // Exactly service::open_project's baseline step.
+    state.record_file_open();
+    state.mark_commit_point("Initial snapshot".to_string());
+
+    let file = PathBuf::from("src/main.rs");
+    let original = "fn main() {}\n";
+    // Exactly service::open_file's sequence.
+    state.load_file(file.clone(), original.to_string());
+    state.record_file_open(); // no-op now (tree isn't empty), same as open_file's real call
+
+    let base_id = find_base_node_id(&state, &file);
+    assert_eq!(
+        state.undo_tree().current_node().unwrap().id,
+        base_id,
+        "the first file opened in a real session must be able to claim `current` away from the project's untargeted placeholder root"
+    );
+
+    state.apply(Command::insert(file.clone(), 13, "// edit".into())).unwrap();
+    let edit_id = state.undo_tree().current_node().unwrap().id;
+    let edit_node = state.undo_tree().nodes().iter().find(|n| n.id == edit_id).unwrap();
+    assert_eq!(
+        edit_node.parent,
+        Some(base_id),
+        "the file's first real edit must chain under its own base node, not become a sibling of it"
+    );
+}
+
+#[test]
+fn agent_editing_a_second_file_does_not_steal_current_from_the_first() {
+    // The other half of the design: opening/loading a *second* file while
+    // the user is mid-edit on a *first* one must not yank `current` away
+    // from that in-progress chain (an agent editing file B shouldn't
+    // disturb the user's undo/redo position in file A) — the base-node
+    // claim in `push_file_base` only fires when `current` is `None`.
+    let (mut state, file_a) = fresh("a original\n");
+    state.apply(Command::insert(file_a.clone(), 0, "user edit to A\n".into())).unwrap();
+    let current_after_a_edit = state.undo_tree().current_node().unwrap().id;
+
+    let file_b = PathBuf::from("agent_touched_b.rs");
+    let original_b = "fn b() {}\n";
+    state.load_file(file_b.clone(), original_b.to_string());
+    assert_eq!(
+        state.undo_tree().current_node().unwrap().id,
+        current_after_a_edit,
+        "loading file B must not move `current` away from file A's in-progress edit"
+    );
+
+    let base_id_b = find_base_node_id(&state, &file_b);
+    state
+        .apply(Command::replace(file_b.clone(), 0, original_b.to_string(), "fn agent_wrote_b() {}\n".to_string()))
+        .unwrap();
+
+    // File A is untouched by any of this.
+    assert_eq!(state.get_content(&file_a).unwrap(), "user edit to A\na original\n");
+
+    // File B's own history is still independently reachable back to its
+    // pre-edit state.
+    let commands = state.jump_to_node(base_id_b).unwrap();
+    for cmd in commands {
+        state.execute_raw(&cmd);
+    }
+    assert_eq!(state.get_content(&file_b), Some(original_b));
 }
 
 // --- Typing-run coalescing ---

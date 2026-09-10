@@ -435,6 +435,7 @@ impl AiProvider for BedrockProvider {
                         output_tokens: usage.and_then(|u| u.completion_tokens).unwrap_or(0),
                         thinking_tokens,
                         cached_tokens: cached,
+                        cache_write_tokens: 0,
                     };
 
                     return Ok(AiResponse {
@@ -513,10 +514,24 @@ impl AiProvider for BedrockProvider {
             retryable: false,
         })?;
 
-        let models = body.data.into_iter()
+        // bedrock-mantle's `/v1/models` returns BARE Claude ids (e.g.
+        // `anthropic.claude-haiku-4-5`) — those aren't valid Converse model
+        // identifiers and 400 with "use an inference profile" the moment
+        // they're actually used (`complete_anthropic` routes every Claude
+        // model through Converse, never mantle's chat-completions endpoint).
+        // Drop mantle's Claude entries entirely and substitute the
+        // Converse-compatible, region-prefixed ids from the catalog instead
+        // — same source of truth `data/models.json` already uses for
+        // pricing/cache config.
+        let mut models: Vec<ModelConfig> = body.data.into_iter()
             .filter(|m| m.status.as_deref() != Some("unavailable"))
+            .filter(|m| !is_claude_model(&m.id))
             .map(|m| model_for_id(&m.id))
             .collect();
+
+        for id in super::model_catalog::bedrock_claude_ids_for_region(&self.region) {
+            models.push(model_for_id(&id));
+        }
 
         Ok(models)
     }
@@ -1052,6 +1067,7 @@ impl BedrockProvider {
                             output_tokens: usage.output_tokens,
                             thinking_tokens: 0,
                             cached_tokens: usage.cache_read_input_tokens,
+                            cache_write_tokens: usage.cache_write_input_tokens,
                         },
                         raw_response: Some(raw_text),
                         raw_request,

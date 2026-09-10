@@ -55,6 +55,17 @@ pub struct AppState {
     /// Runtime-only switch: disable typing-run coalescing (replay, tests).
     #[serde(skip)]
     coalesce_disabled: bool,
+    /// Active sandbox session (if any) whose work dir IDE saves should be
+    /// mirrored into. Runtime-only — a session is re-attached, not
+    /// persisted with the checkpoint.
+    #[serde(skip)]
+    sandbox_link: Option<crate::sandbox::SandboxLink>,
+    /// Paths that have already gotten a `load_file` base-state undo-tree
+    /// node (see `load_file`'s doc comment) — persisted (not `#[serde(skip)]`)
+    /// so restoring a checkpoint doesn't push a duplicate base node the
+    /// next time something re-loads a path this session already covered.
+    #[serde(default)]
+    files_with_base_node: std::collections::HashSet<PathBuf>,
 }
 
 impl AppState {
@@ -66,6 +77,8 @@ impl AppState {
             project_root: None,
             last_applied_node: None,
             coalesce_disabled: false,
+            sandbox_link: None,
+            files_with_base_node: std::collections::HashSet::new(),
         }
     }
 
@@ -342,8 +355,40 @@ impl AppState {
         self.project_root.as_ref()
     }
 
-    /// Load file content into buffer (initialization, not a command)
+    /// Attach (or detach with `None`) the sandbox session whose work dir
+    /// saves should mirror into (P: sandboxed workspace).
+    pub fn set_sandbox_link(&mut self, link: Option<crate::sandbox::SandboxLink>) {
+        self.sandbox_link = link;
+    }
+
+    pub fn sandbox_link(&self) -> Option<&crate::sandbox::SandboxLink> {
+        self.sandbox_link.as_ref()
+    }
+
+    /// Load file content into a buffer (initialization, not a user command
+    /// — no witness check, can't fail) — but the file's own undo history
+    /// still needs a starting point: give it one real base-state node the
+    /// *first* time this path is ever loaded, via `UndoTree::push_file_base`
+    /// (parented at the tree root, doesn't move `current` — opening/loading
+    /// a file isn't "doing something at the current position", and other
+    /// files' in-progress edit chains must be unaffected by it).
+    ///
+    /// This runs for every caller of `load_file` — `service::open_file`
+    /// (the user opening a tab), the built-in agent's edit tools seeding a
+    /// buffer for a file that wasn't already open before editing it
+    /// (`ai::tool_executor`), the sandbox mirror doing the same for an
+    /// external agent's edits (`sandbox::mirror::apply_mutations`), and the
+    /// ACP server (`acp::server`) — deliberately: without this, "file mode"
+    /// in the undo-tree panel started at whatever the *first* thing to
+    /// touch the file was (a real edit, often from an agent that never had
+    /// the file open), with no way to get back to "before that." Guarded
+    /// by `files_with_base_node` so re-loading an already-tracked path
+    /// (reopening a tab, a checkpoint restore) doesn't push a duplicate.
     pub fn load_file(&mut self, path: PathBuf, content: String) {
+        if self.files_with_base_node.insert(path.clone()) {
+            let cmd = Command::Replace { file: path.clone(), at: 0, old: content.clone(), new: content.clone() };
+            self.undo_tree.push_file_base(cmd.clone(), cmd);
+        }
         self.buffers.insert(path, FileBuffer::new(content));
     }
 
@@ -410,6 +455,9 @@ impl AppState {
         self.undo_tree = UndoTree::new();
         self.command_log.clear();
         self.last_applied_node = None;
+        // A cleared tree has no base nodes either — otherwise a file whose
+        // path was tracked before the clear would never get a new one.
+        self.files_with_base_node.clear();
     }
 
     fn get_or_create_buffer(&mut self, path: &PathBuf) -> &mut FileBuffer {

@@ -277,12 +277,14 @@ async fn execute_exercism_task(
                 output_tokens: stats.total_output_tokens as u32,
                 thinking_tokens: stats.total_thinking_tokens as u32,
                 cached_tokens: stats.total_cached_tokens as u32,
+                cache_write_tokens: stats.total_cache_write_tokens as u32,
             };
             let cost = CostEstimate {
                 total_usd: stats.total_cost_usd,
                 input_cost: 0.0,
                 output_cost: 0.0,
                 cached_savings: 0.0,
+                write_cost: 0.0,
             };
 
             let passed = turn.response.content.to_lowercase().contains("pass")
@@ -311,12 +313,14 @@ async fn execute_exercism_task(
                 output_tokens: stats.total_output_tokens as u32,
                 thinking_tokens: stats.total_thinking_tokens as u32,
                 cached_tokens: stats.total_cached_tokens as u32,
+                cache_write_tokens: stats.total_cache_write_tokens as u32,
             };
             let cost = CostEstimate {
                 total_usd: stats.total_cost_usd,
                 input_cost: 0.0,
                 output_cost: 0.0,
                 cached_savings: 0.0,
+                write_cost: 0.0,
             };
             (false, 0, 0, 0, usage, cost, Some(e.to_string()))
         }

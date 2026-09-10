@@ -164,6 +164,20 @@ pub fn default_cached_price_per_m(model_id: &str, input_cost_per_m: f64) -> f64 
     input_cost_per_m * discount
 }
 
+/// Real cache-write premium multiplier for `model`, sourced from
+/// provider_cache.json by provider key (e.g. 1.25 for "anthropic_5min").
+/// Deliberately bypasses [`resolve_cache_config`]'s "derived from model
+/// pricing" branch, which only reconstructs a *read* discount from
+/// `cached_input_cost_per_m` and always reports 0.0 for writes — models.json
+/// carries no per-model write-cost field, so the provider-level entry is the
+/// only real source of truth for this number.
+pub fn cache_write_multiplier(model: &super::provider::ModelConfig) -> f64 {
+    provider_cache_key(model)
+        .and_then(|key| ProviderCacheRegistry::embedded().and_then(|r| r.get(key)))
+        .map(|cfg| cfg.cache_write_multiplier)
+        .unwrap_or(0.0)
+}
+
 /// Resolve the cache config the cost model uses for `model`, plus a
 /// human-readable source tag (surfaced in the chat panel's Model tab so a
 /// missing/guessed cache config is visible instead of silently mispricing

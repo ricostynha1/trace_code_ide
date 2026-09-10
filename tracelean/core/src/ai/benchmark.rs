@@ -150,6 +150,7 @@ mod tests {
                 output_tokens: 5000,
                 thinking_tokens: 0,
                 cached_tokens: 0,
+                cache_write_tokens: 0,
             };
             // ~$0.015 per call at typical pricing
             let cost = CostEstimate {
@@ -157,6 +158,7 @@ mod tests {
                 input_cost: 0.003,
                 output_cost: 0.003,
                 cached_savings: 0.0,
+                write_cost: 0.0,
             };
             (true, 3, 1, 0, usage, cost, None)
         });
@@ -181,6 +183,7 @@ mod tests {
                 input_cost: 0.0,
                 output_cost: 0.0001,
                 cached_savings: 0.0,
+                write_cost: 0.0,
             };
             (i % 2 == 0, 1, 1, 0, usage, cost, None)
         });

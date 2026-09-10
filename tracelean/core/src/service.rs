@@ -114,7 +114,7 @@ pub fn open_file(state: &mut AppState, path: &str) -> Result<String, String> {
 
     let content = std::fs::read_to_string(&full_path)
         .map_err(|e| format!("Failed to read {}: {}", path, e))?;
-    state.load_file(rel_path.clone(), content.clone());
+    state.load_file(rel_path, content.clone());
     state.record_file_open();
     Ok(content)
 }
@@ -129,6 +129,19 @@ pub fn save_file(state: &AppState, symbols: &mut SymbolTable, path: &str) -> Res
         .ok_or_else(|| format!("File not in buffer: {}", path))?;
     std::fs::write(&full_path, content)
         .map_err(|e| format!("Failed to write {}: {}", path, e))?;
+
+    // Sandboxed workspace: mirror the save into the active session's work
+    // dir too, and record the write so its watcher recognises the echo
+    // instead of re-applying its own content back (`sandbox::mirror`).
+    if let Some(link) = state.sandbox_link() {
+        let sandbox_path = link.work_dir.join(&rel_path);
+        if let Some(parent) = sandbox_path.parent() {
+            let _ = std::fs::create_dir_all(parent);
+        }
+        if std::fs::write(&sandbox_path, content).is_ok() {
+            link.self_writes.mark(rel_path.clone(), content);
+        }
+    }
 
     // Re-parse symbols
     symbols.parse_file(&rel_path, content);

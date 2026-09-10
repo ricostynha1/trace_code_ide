@@ -14,7 +14,7 @@ use crate::ai::{
 };
 use crate::{ToolCallEvent, ToolCallStatus};
 
-use super::context::AgentContext;
+use super::context::{AgentContext, DEFAULT_CHARS_PER_TOKEN};
 use super::error::AgentError;
 
 // ─── Public types ────────────────────────────────────────────────────────────
@@ -275,6 +275,17 @@ async fn run_agent_turn_inner(
             Some(dynamic_schemas.clone())
         };
 
+        // Session-calibrated chars-per-token ratio (bugs.md: the flat
+        // chars/4 default under-predicted real cached tokens by 50-200% on
+        // JSON/code-heavy tool traffic, which fed both the shown prediction
+        // AND the marker floor/economics checks). Read once per request so
+        // every estimate below is internally consistent.
+        let chars_per_token = ctx
+            .calibrated_chars_per_token
+            .lock()
+            .map(|r| *r)
+            .unwrap_or(DEFAULT_CHARS_PER_TOKEN);
+
         // P9b (D9b.1): plan write-if-worth-it markers for this request.
         let cache_breakpoints: Vec<usize> = if cache_verifier.enabled {
             explicit_cache_cfg
@@ -285,8 +296,8 @@ async fn run_agent_turn_inner(
                         .lock()
                         .map(|t| t.cold_turn_ratio())
                         .unwrap_or(1.0);
-                    let static_tools_tokens = estimate_tools_tokens(&Some(static_tools.clone()));
-                    let dynamic_tools_tokens = estimate_tools_tokens(&dynamic_tools_this_turn);
+                    let static_tools_tokens = estimate_tools_tokens_ratio(&Some(static_tools.clone()), chars_per_token);
+                    let dynamic_tools_tokens = estimate_tools_tokens_ratio(&dynamic_tools_this_turn, chars_per_token);
                     plan_cache_breakpoints(
                         cfg,
                         &messages,
@@ -295,6 +306,7 @@ async fn run_agent_turn_inner(
                         static_tools_tokens,
                         dynamic_tools_tokens,
                         model.cache_min_tokens as usize,
+                        chars_per_token,
                     )
                 })
                 .unwrap_or_default()
@@ -304,14 +316,14 @@ async fn run_agent_turn_inner(
         let sent_prefix_tokens: usize = cache_breakpoints
             .iter()
             .max()
-            .map(|&i| messages.iter().take(i + 1).map(estimate_msg_tokens).sum())
+            .map(|&i| messages.iter().take(i + 1).map(|m| estimate_msg_tokens_ratio(m, chars_per_token)).sum())
             .unwrap_or(0);
 
         // D9b.3: markers sent last request → this one should read from cache.
         // bugs.md Bug 3: remember the prediction so the log entry for this
         // exact request can show predicted vs. actual cache health.
         let predicted_cache_this_turn = if cache_verifier.predicted_prefix_tokens > 0 {
-            let total_est: usize = messages.iter().map(estimate_msg_tokens).sum();
+            let total_est: usize = messages.iter().map(|m| estimate_msg_tokens_ratio(m, chars_per_token)).sum();
             cache_predictions.predict(
                 loop_i as usize,
                 cache_verifier.predicted_prefix_tokens,
@@ -337,14 +349,14 @@ async fn run_agent_turn_inner(
             // to a matching message prefix whenever the tool set itself is
             // unchanged from the previous request).
             prev_sent_messages.as_ref().map(|prev| {
-                let msg_tokens = common_prefix_tokens(prev, &messages);
+                let msg_tokens = common_prefix_tokens_ratio(prev, &messages, chars_per_token);
                 let static_tokens = if prev_sent_tools.as_ref() == Some(&static_tools) {
-                    estimate_tools_tokens(&Some(static_tools.clone()))
+                    estimate_tools_tokens_ratio(&Some(static_tools.clone()), chars_per_token)
                 } else {
                     0
                 };
                 let dynamic_tokens = if prev_sent_dynamic_tools == dynamic_tools_this_turn {
-                    estimate_tools_tokens(&dynamic_tools_this_turn)
+                    estimate_tools_tokens_ratio(&dynamic_tools_this_turn, chars_per_token)
                 } else {
                     0
                 };
@@ -447,11 +459,16 @@ async fn run_agent_turn_inner(
                     eprintln!("---");
                 }
 
+                // Self-calibrate the chars-per-token ratio from this real
+                // response before anything else reads it this turn.
+                update_chars_per_token_calibration(ctx, &request, &response.usage);
+
                 // Record stats
                 let cost = response.usage.estimate_cost(
                     model.input_cost_per_m,
                     model.output_cost_per_m,
                     model.cached_input_cost_per_m,
+                    crate::ai::provider_cache::cache_write_multiplier(&model),
                 );
                 {
                     let mut log = ctx.log.lock().map_err(|e| AgentError::Lock(e.to_string()))?;
@@ -470,6 +487,12 @@ async fn run_agent_turn_inner(
                     if let Some(predicted) = predicted_cache_this_turn {
                         log.set_last_entry_predicted_cache(predicted);
                     }
+                    // `persist` was implemented but never actually called
+                    // anywhere — every interaction (including real cache
+                    // usage stats) lived in memory only and vanished on
+                    // restart, with no way to inspect a past session's
+                    // request/response history from disk.
+                    log.persist(&ctx.project_root);
                 }
                 {
                     let mut s = ctx.stats.lock().map_err(|e| AgentError::Lock(e.to_string()))?;
@@ -1144,6 +1167,7 @@ async fn run_agent_turn_inner(
                     format!("chat/tool_{}", loop_i)
                 };
                 log.record_failure(&label, &request, &e, duration_ms);
+                log.persist(&ctx.project_root);
                 return Err(AgentError::Provider(e.message));
             }
         }
@@ -1158,12 +1182,23 @@ async fn run_agent_turn_inner(
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-/// Rough token estimate for one message (content + structured tool calls).
+/// Rough token estimate for one message (content + structured tool calls),
+/// using the flat 4-chars/token default. Compaction timing and tests use
+/// this fixed form; live marker-planning/prediction call sites use
+/// [`estimate_msg_tokens_ratio`] with the session's calibrated ratio instead
+/// (bugs.md: the flat default under-predicted real cached tokens by
+/// 50-200% on JSON/code-heavy tool traffic).
 pub(crate) fn estimate_msg_tokens(m: &ChatMessage) -> usize {
-    m.content.len() / 4
+    estimate_msg_tokens_ratio(m, DEFAULT_CHARS_PER_TOKEN)
+}
+
+/// Same estimate as [`estimate_msg_tokens`], parameterized on a
+/// chars-per-token ratio calibrated from real `usage.input_tokens`.
+pub(crate) fn estimate_msg_tokens_ratio(m: &ChatMessage, chars_per_token: f64) -> usize {
+    (m.content.len() as f64 / chars_per_token) as usize
         + m.tool_calls
             .iter()
-            .map(|tc| tc.function.arguments.len() / 4 + 5)
+            .map(|tc| (tc.function.arguments.len() as f64 / chars_per_token) as usize + 5)
             .sum::<usize>()
 }
 
@@ -1200,19 +1235,87 @@ pub(crate) fn relative_cached_prefix_tokens(
 /// message prefix. Left out of `common_prefix_tokens`, the automatic-cache
 /// prediction undercounted every turn by the full size of the tool schemas.
 pub(crate) fn estimate_tools_tokens(tools: &Option<Vec<crate::ai::provider::ToolSchema>>) -> usize {
+    estimate_tools_tokens_ratio(tools, DEFAULT_CHARS_PER_TOKEN)
+}
+
+/// Same estimate as [`estimate_tools_tokens`], parameterized on a calibrated
+/// chars-per-token ratio — see [`estimate_msg_tokens_ratio`].
+pub(crate) fn estimate_tools_tokens_ratio(
+    tools: &Option<Vec<crate::ai::provider::ToolSchema>>,
+    chars_per_token: f64,
+) -> usize {
     tools
         .as_ref()
         .map(|ts| {
             ts.iter()
                 .map(|t| {
-                    (t.function.name.len()
+                    ((t.function.name.len()
                         + t.function.description.len()
-                        + t.function.parameters.to_string().len())
-                        / 4
+                        + t.function.parameters.to_string().len()) as f64
+                        / chars_per_token) as usize
                 })
                 .sum()
         })
         .unwrap_or(0)
+}
+
+/// Total characters actually sent this request (system+messages+tool-call
+/// args+tool schemas) — the exact same content the estimate helpers above
+/// count, so `real_chars / usage.input_tokens` after the response comes
+/// back is a faithful, self-correcting chars-per-token calibration for this
+/// session's actual content mix.
+fn total_request_chars(request: &AiRequest) -> usize {
+    let tools_chars = |tools: &Option<Vec<crate::ai::provider::ToolSchema>>| -> usize {
+        tools
+            .as_ref()
+            .map(|ts| {
+                ts.iter()
+                    .map(|t| {
+                        t.function.name.len()
+                            + t.function.description.len()
+                            + t.function.parameters.to_string().len()
+                    })
+                    .sum()
+            })
+            .unwrap_or(0)
+    };
+    let messages_chars: usize = request
+        .messages
+        .iter()
+        .map(|m| {
+            m.content.len()
+                + m.tool_calls
+                    .iter()
+                    .map(|tc| tc.function.arguments.len())
+                    .sum::<usize>()
+        })
+        .sum();
+    messages_chars + tools_chars(&request.tools) + tools_chars(&request.dynamic_tools)
+}
+
+/// Update the session's calibrated chars-per-token ratio from one real
+/// request/response pair. EMA-smoothed (not last-observed-only) so a single
+/// unusual turn — e.g. right after compaction rewrites the content mix —
+/// can't swing every subsequent estimate; clamped to a sane band so a
+/// division-edge-case turn (tiny `usage.input_tokens`) can't send future
+/// estimates to an unusable extreme.
+pub(crate) fn update_chars_per_token_calibration(
+    ctx: &AgentContext,
+    request: &AiRequest,
+    usage: &crate::ai::tracking::TokenUsage,
+) {
+    if usage.input_tokens == 0 {
+        return;
+    }
+    let chars = total_request_chars(request) as f64;
+    if chars <= 0.0 {
+        return;
+    }
+    let observed = chars / usage.input_tokens as f64;
+    if let Ok(mut ratio) = ctx.calibrated_chars_per_token.lock() {
+        let smoothed = *ratio * 0.7 + observed * 0.3;
+        *ratio = smoothed.clamp(1.5, 6.0);
+    }
 }
 
 /// bugs.md Bug 3: predicted cached tokens for providers with AUTOMATIC
@@ -1221,11 +1324,18 @@ pub(crate) fn estimate_tools_tokens(tools: &Option<Vec<crate::ai::provider::Tool
 /// this: the provider hits cache for however much of the new request's
 /// message prefix is byte-identical to what it cached from the previous
 /// request; anything from the first divergence onward is a fresh write.
-pub(crate) fn common_prefix_tokens(prev: &[ChatMessage], current: &[ChatMessage]) -> usize {
+/// Parameterized on a calibrated chars-per-token ratio — see
+/// [`estimate_msg_tokens_ratio`]. Tests pass `DEFAULT_CHARS_PER_TOKEN`
+/// explicitly; the live caller passes the session's calibrated ratio.
+pub(crate) fn common_prefix_tokens_ratio(
+    prev: &[ChatMessage],
+    current: &[ChatMessage],
+    chars_per_token: f64,
+) -> usize {
     prev.iter()
         .zip(current.iter())
         .take_while(|(a, b)| a == b)
-        .map(|(m, _)| estimate_msg_tokens(m))
+        .map(|(m, _)| estimate_msg_tokens_ratio(m, chars_per_token))
         .sum()
 }
 
@@ -1281,6 +1391,7 @@ fn plan_cache_breakpoints(
     static_tools_tokens: usize,
     dynamic_tools_tokens: usize,
     min_cacheable_tokens: usize,
+    chars_per_token: f64,
 ) -> Vec<usize> {
     use crate::ai::ttl_tracking::{CacheBlock, CacheMarkerPlanner};
 
@@ -1294,10 +1405,10 @@ fn plan_cache_breakpoints(
     let p_reuse = (1.0 - cold_turn_ratio).max(0.5);
     let n_expected = if p_reuse >= 0.5 { 3 } else { 1 };
 
-    let system_tokens = estimate_msg_tokens(&messages[0]);
+    let system_tokens = estimate_msg_tokens_ratio(&messages[0], chars_per_token);
     let stable_prefix_tokens: usize = messages[1..messages.len().saturating_sub(1)]
         .iter()
-        .map(estimate_msg_tokens)
+        .map(|m| estimate_msg_tokens_ratio(m, chars_per_token))
         .sum();
 
     // Bug B fix: tool schemas are real wire tokens (bugs.md), not free. They
@@ -1316,27 +1427,62 @@ fn plan_cache_breakpoints(
         n_expected,
     );
 
+    // The stable prefix ends before the newest *unstable* addition — not just
+    // the newest single message. When an assistant turn fires several
+    // parallel tool calls, each tool result lands as its own `ChatMessage`
+    // (bedrock.rs merges the trailing run of them into one wire message at
+    // send time), and that whole run keeps growing in place across requests
+    // until every result is back. Anchoring the breakpoint one message
+    // behind the tail (as if only a single message could ever be "new")
+    // lands it *inside* that still-growing run on a bursty turn. The next
+    // request then extends the run further, mutating the exact wire content
+    // the old checkpoint was written against — so the provider can't find a
+    // matching prefix for ANY of it and silently pays full price to
+    // re-embed and rewrite the whole thing (observed live: a 24.8k-token
+    // turn with 0 cached tokens right after a turn that had built up to
+    // 9.7k cached, ~43% of that session's entire cost). Skipping back past
+    // the *entire* trailing run of Tool messages keeps the breakpoint a
+    // strict forward extension of whatever was cached last time, at the
+    // cost of leaving the newest tool-call batch itself uncached until the
+    // turn after it lands.
+    let newest_batch_start = {
+        let mut i = messages.len();
+        while i > 0 && messages[i - 1].role == MessageRole::Tool {
+            i -= 1;
+        }
+        if i == messages.len() {
+            messages.len().saturating_sub(1)
+        } else {
+            i
+        }
+    };
+
     let mut idxs: Vec<usize> = markers
         .iter()
         .filter_map(|m| match m.after_block {
             CacheBlock::SystemPrompt => Some(0usize),
-            // The stable prefix ends before the newest message.
-            CacheBlock::ConversationPrefix { .. } => Some(messages.len().saturating_sub(2)),
+            CacheBlock::ConversationPrefix { .. } => Some(newest_batch_start.saturating_sub(1)),
             CacheBlock::AfterMessage { index } => Some(index),
-            // Structural gap (not just a missing number): tool schemas are a
-            // separate `AiRequest` field, not `ChatMessage`s, so there is no
-            // message index "after the tools" to report through this
-            // message-index-only Vec. Their token cost is now correctly
-            // folded into every other candidate's position math above, but
-            // if the planner's own ranking picks one of these as the single
-            // best marker, there is nowhere to place it and it's dropped
-            // here rather than mis-mapped onto message 0 or 1. Fixing this
-            // for real needs `AiRequest::cache_breakpoints` to grow a
-            // non-message marker location (e.g. an enum of
-            // {AfterSystem, AfterStaticTools, AfterDynamicTools,
-            // AfterMessage(usize)}), which is a wire-format change, not a
-            // one-line fix.
-            CacheBlock::StaticTools | CacheBlock::DynamicTools => None,
+            // Tool schemas are a separate `AiRequest` field, not a
+            // `ChatMessage` — there is no message index that sits literally
+            // "between the tools and the system prompt". But neither
+            // implemented wire format (Bedrock Converse, OpenRouter) offers a
+            // way to mark the tools array independently either: both render
+            // tools *before* system/messages and only support inserting a
+            // cache boundary inside the system block or a message, at which
+            // point it covers everything rendered before it — tools
+            // included. So "after static/dynamic tools" and "after system
+            // prompt" are the *same* wire position for every provider this
+            // planner currently drives; mapping both onto message index 0
+            // is not an approximation, it's the actual insertion point.
+            // Previously this arm dropped the marker entirely, which
+            // silently produced zero cache markers on the very first
+            // request of a session whenever tool schemas made the
+            // system+tools total clear a model's floor while the system
+            // prompt text alone did not (bugs.md: live trace showed 1511
+            // combined tokens over Sonnet 4.6's 1024 floor, system alone
+            // ~347 under it — turn 1 got no marker at all).
+            CacheBlock::StaticTools | CacheBlock::DynamicTools => Some(0usize),
         })
         .filter(|&i| i < messages.len())
         .collect();
@@ -1883,12 +2029,14 @@ async fn call_summary_llm(
                 request.model.input_cost_per_m,
                 request.model.output_cost_per_m,
                 request.model.cached_input_cost_per_m,
+                crate::ai::provider_cache::cache_write_multiplier(&request.model),
             );
             if let Ok(mut s) = ctx.stats.lock() {
                 s.record(&response.usage, &cost);
             }
             if let Ok(mut log) = ctx.log.lock() {
                 log.record_success("summarization", &request, &response, 0);
+                log.persist(&ctx.project_root);
             }
             Some(response.content)
         }
@@ -2040,7 +2188,7 @@ mod common_prefix_tests {
         let mut current = prev.clone();
         current.push(msg(MessageRole::Assistant, "hi, how can I help"));
         let expected: usize = prev.iter().map(estimate_msg_tokens).sum();
-        assert_eq!(common_prefix_tokens(&prev, &current), expected);
+        assert_eq!(common_prefix_tokens_ratio(&prev, &current, 4.0), expected);
     }
 
     #[test]
@@ -2050,7 +2198,7 @@ mod common_prefix_tests {
         // prediction was made" — this returns Some(0) upstream, not None.
         let prev = vec![msg(MessageRole::System, "sys prompt v1")];
         let current = vec![msg(MessageRole::System, "sys prompt v2")];
-        assert_eq!(common_prefix_tokens(&prev, &current), 0);
+        assert_eq!(common_prefix_tokens_ratio(&prev, &current, 4.0), 0);
     }
 
     #[test]
@@ -2064,7 +2212,7 @@ mod common_prefix_tests {
         current[2] = msg(MessageRole::Assistant, "a DIFFERENT answer one");
         current.push(msg(MessageRole::User, "question two"));
         let expected: usize = prev[..2].iter().map(estimate_msg_tokens).sum();
-        assert_eq!(common_prefix_tokens(&prev, &current), expected);
+        assert_eq!(common_prefix_tokens_ratio(&prev, &current, 4.0), expected);
     }
 }
 
@@ -2098,8 +2246,31 @@ mod cache_marker_tests {
         // Big system prompt + first user message: system-prompt marker pays
         // for itself even with no timing history (cold_ratio 1.0 → floor 0.5).
         let messages = vec![msg(MessageRole::System, 8000), msg(MessageRole::User, 200)];
-        let idxs = plan_cache_breakpoints(&anthropic_cfg(), &messages, 0, 1.0, 0, 0, 0);
+        let idxs = plan_cache_breakpoints(&anthropic_cfg(), &messages, 0, 1.0, 0, 0, 0, 4.0);
         assert_eq!(idxs, vec![0], "system prompt should carry a marker");
+    }
+
+    /// Live bug: a system prompt alone (~347 est. tokens) sat under Sonnet
+    /// 4.6's 1024-token floor, but system+tools combined (~1511) cleared it
+    /// comfortably — yet the very first request of the session got zero
+    /// cache markers. The planner's own economics correctly identified
+    /// "after tools" (pos2, clearing the floor) as the winning candidate,
+    /// but the message-index mapping used to drop `StaticTools`/
+    /// `DynamicTools` candidates entirely since there's no `ChatMessage`
+    /// index "between tools and system". Both now map onto message index 0,
+    /// the system block's only real insertion point.
+    #[test]
+    fn small_system_prompt_still_gets_a_marker_when_tools_push_it_over_the_floor() {
+        let messages = vec![msg(MessageRole::System, 1390), msg(MessageRole::User, 75)];
+        // system alone ~= 1390/4 = 347 tokens: under a 1024 floor.
+        let static_tools_tokens = 1164; // matches the live trace's tool-schema estimate
+        // combined ~= 347 + 1164 = 1511: clears a 1024 floor.
+        let idxs = plan_cache_breakpoints(&anthropic_cfg(), &messages, 0, 1.0, static_tools_tokens, 0, 1024, 4.0);
+        assert_eq!(
+            idxs,
+            vec![0],
+            "system+tools clearing the floor should still place a marker at the only available insertion point"
+        );
     }
 
     #[test]
@@ -2109,7 +2280,7 @@ mod cache_marker_tests {
             messages.push(msg(MessageRole::User, 2000));
             messages.push(msg(MessageRole::Assistant, 2000));
         }
-        let idxs = plan_cache_breakpoints(&anthropic_cfg(), &messages, 3, 0.0, 0, 0, 0);
+        let idxs = plan_cache_breakpoints(&anthropic_cfg(), &messages, 3, 0.0, 0, 0, 0, 4.0);
         assert!(idxs.contains(&0), "system marker expected");
         assert!(
             idxs.contains(&(messages.len() - 2)),
@@ -2129,10 +2300,10 @@ mod cache_marker_tests {
         let messages = vec![msg(MessageRole::System, 8000), msg(MessageRole::User, 200)];
         // system prompt ≈ 8000/4 = 2000 tokens: below a 4096 floor, above a
         // 1024 one.
-        let idxs_high_floor = plan_cache_breakpoints(&anthropic_cfg(), &messages, 0, 1.0, 0, 0, 4096);
+        let idxs_high_floor = plan_cache_breakpoints(&anthropic_cfg(), &messages, 0, 1.0, 0, 0, 4096, 4.0);
         assert!(idxs_high_floor.is_empty(), "2000 tokens must not clear a 4096 floor: {:?}", idxs_high_floor);
 
-        let idxs_low_floor = plan_cache_breakpoints(&anthropic_cfg(), &messages, 0, 1.0, 0, 0, 1024);
+        let idxs_low_floor = plan_cache_breakpoints(&anthropic_cfg(), &messages, 0, 1.0, 0, 0, 1024, 4.0);
         assert_eq!(idxs_low_floor, vec![0], "2000 tokens should clear a 1024 floor");
     }
 
@@ -2172,6 +2343,35 @@ mod cache_marker_tests {
         assert_eq!(got, 500);
     }
 
+    /// Live bug: a burst of parallel tool calls appends several `Tool`-role
+    /// messages in one turn. The old `messages.len() - 2` anchor landed the
+    /// breakpoint *inside* that still-growing batch, so the very next request
+    /// (which finishes appending the batch) no longer matched the cached
+    /// prefix at all — a full-price rewrite that discarded everything cached
+    /// so far. The breakpoint must land before the whole trailing Tool run,
+    /// not just before its last message.
+    #[test]
+    fn conversation_prefix_marker_skips_the_entire_trailing_tool_batch() {
+        let messages = vec![
+            msg(MessageRole::System, 8000),
+            msg(MessageRole::User, 2000),
+            msg(MessageRole::Assistant, 2000), // requests 3 parallel tool calls
+            msg(MessageRole::Tool, 2000),
+            msg(MessageRole::Tool, 2000),
+            msg(MessageRole::Tool, 2000),
+        ];
+        let idxs = plan_cache_breakpoints(&anthropic_cfg(), &messages, 3, 0.0, 0, 0, 0, 4.0);
+        // Before the fix this would be messages.len() - 2 == 4, landing
+        // between the 1st and 2nd tool result — inside the batch.
+        let tool_batch_start = 3;
+        assert!(
+            idxs.iter().all(|&i| i < tool_batch_start),
+            "conversation-prefix marker must land before the whole trailing \
+             tool-result batch, got {:?}",
+            idxs
+        );
+    }
+
     #[test]
     fn automatic_provider_gets_no_markers() {
         let cfg = ProviderCacheConfig {
@@ -2183,7 +2383,7 @@ mod cache_marker_tests {
             notes: None,
         };
         let messages = vec![msg(MessageRole::System, 8000), msg(MessageRole::User, 200)];
-        assert!(plan_cache_breakpoints(&cfg, &messages, 2, 0.0, 0, 0, 0).is_empty());
+        assert!(plan_cache_breakpoints(&cfg, &messages, 2, 0.0, 0, 0, 0, 4.0).is_empty());
     }
 
     #[test]
@@ -2389,5 +2589,91 @@ mod compaction_tests {
 
         assert!(info.is_none(), "trimming must be fully disabled by the setting");
         assert_eq!(messages.len(), before, "messages must be untouched");
+    }
+}
+
+#[cfg(test)]
+mod calibration_tests {
+    use super::*;
+    use crate::ai::tracking::TokenUsage;
+
+    fn text_request(content: &str) -> AiRequest {
+        AiRequest {
+            model: ai::ModelConfig::default(),
+            messages: vec![ChatMessage {
+                role: MessageRole::User,
+                content: content.to_string(),
+                tool_call_id: None,
+                tool_calls: Vec::new(),
+            }],
+            stop: None,
+            tools: None,
+            dynamic_tools: None,
+            cache_breakpoints: Vec::new(),
+        }
+    }
+
+    fn usage_with_input_tokens(input_tokens: u32) -> TokenUsage {
+        TokenUsage {
+            input_tokens,
+            output_tokens: 0,
+            thinking_tokens: 0,
+            cached_tokens: 0,
+            cache_write_tokens: 0,
+        }
+    }
+
+    /// Live bug: the flat chars/4 default consistently under-predicted real
+    /// cached tokens by 50-200% on JSON/code-heavy tool traffic (real ratio
+    /// runs lower than 4 chars/token for that content). One real
+    /// request/response pair should nudge the calibrated ratio toward the
+    /// observed value, not leave it pinned at the default.
+    #[test]
+    fn one_real_response_moves_the_ratio_toward_the_observed_value() {
+        let ctx = AgentContext::from_env(std::env::temp_dir());
+        assert_eq!(*ctx.calibrated_chars_per_token.lock().unwrap(), DEFAULT_CHARS_PER_TOKEN);
+
+        // 400 chars of content, but the provider reports 200 real input
+        // tokens: observed ratio 2.0, well under the 4.0 default.
+        let request = text_request(&"x".repeat(400));
+        update_chars_per_token_calibration(&ctx, &request, &usage_with_input_tokens(200));
+
+        let ratio = *ctx.calibrated_chars_per_token.lock().unwrap();
+        assert!(
+            ratio < DEFAULT_CHARS_PER_TOKEN && ratio > 2.0,
+            "expected the ratio to move from 4.0 toward 2.0 but not jump straight there, got {ratio}"
+        );
+    }
+
+    /// A single anomalous turn (e.g. a near-empty request right after
+    /// compaction) must not be able to swing the calibration to an unusable
+    /// extreme — it's EMA-smoothed and clamped.
+    #[test]
+    fn calibration_is_smoothed_and_clamped_against_outlier_turns() {
+        let ctx = AgentContext::from_env(std::env::temp_dir());
+
+        // Wildly implausible observed ratio (10 chars sent, 1 real token —
+        // ratio 10.0) must not push the calibration anywhere near 10.0 in
+        // one step, and must stay inside the clamp band.
+        let request = text_request(&"x".repeat(10));
+        update_chars_per_token_calibration(&ctx, &request, &usage_with_input_tokens(1));
+
+        let ratio = *ctx.calibrated_chars_per_token.lock().unwrap();
+        assert!(ratio <= 6.0, "clamp band must cap the ratio, got {ratio}");
+        assert!(
+            ratio < 6.0 || (DEFAULT_CHARS_PER_TOKEN * 0.7 + 10.0 * 0.3) >= 6.0,
+            "single outlier turn must be smoothed, not applied in full, got {ratio}"
+        );
+    }
+
+    /// A zero-token response (e.g. an error path with no real usage data)
+    /// must leave the calibration untouched rather than dividing by zero or
+    /// corrupting it with a bogus observation.
+    #[test]
+    fn zero_input_tokens_leaves_calibration_untouched() {
+        let ctx = AgentContext::from_env(std::env::temp_dir());
+        let request = text_request("hello");
+        update_chars_per_token_calibration(&ctx, &request, &usage_with_input_tokens(0));
+        assert_eq!(*ctx.calibrated_chars_per_token.lock().unwrap(), DEFAULT_CHARS_PER_TOKEN);
     }
 }

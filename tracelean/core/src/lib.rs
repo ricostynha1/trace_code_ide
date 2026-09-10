@@ -11,6 +11,7 @@ pub mod parser;
 pub mod persistence;
 pub mod requirements;
 pub mod service;
+pub mod sandbox;
 pub mod state;
 pub mod surgical_edit;
 pub mod testrun;
@@ -247,6 +248,9 @@ pub struct SharedApp {
     /// open (see `ai::spawn_build`) and shared with every `AiService`/agent
     /// turn so `find_semantic` has something to query.
     pub embed_index: ai::SharedIndex,
+    /// Session-observed chars-per-token ratio for cache-marker economics —
+    /// see `agent::AgentContext::calibrated_chars_per_token`.
+    pub calibrated_chars_per_token: Arc<Mutex<f64>>,
 }
 
 impl SharedApp {
@@ -270,6 +274,7 @@ impl SharedApp {
             resolved_diffs: Arc::new(Mutex::new(HashMap::new())),
             diff_notify: Arc::new(tokio::sync::Notify::new()),
             embed_index: ai::new_shared_index(),
+            calibrated_chars_per_token: Arc::new(Mutex::new(agent::context::DEFAULT_CHARS_PER_TOKEN)),
         }
     }
 
@@ -291,6 +296,7 @@ impl SharedApp {
             resolved_diffs: self.resolved_diffs.clone(),
             diff_notify: self.diff_notify.clone(),
             embed_index: self.embed_index.clone(),
+            calibrated_chars_per_token: self.calibrated_chars_per_token.clone(),
         }
     }
 
@@ -315,8 +321,14 @@ pub fn command_summary(cmd: &Command) -> String {
                 let p: String = s.chars().take(20).collect();
                 if s.chars().count() > 20 { format!("{}...", p) } else { p }
             };
-            if old.is_empty() && new.is_empty() {
-                format!("No-op @{}:{}", file.display(), at)
+            if old == new {
+                // Covers both the empty-file case and a file's synthetic
+                // base-state node (`AppState::record_file_base` — same
+                // content as both `old` and `new`, since nothing changed).
+                // "Initial" is what the undo-tree panel's `cmdMarker`
+                // already recognizes (same label the tree-wide root uses),
+                // so this needs no frontend change to render sensibly.
+                format!("Initial @{}:{}", file.display(), at)
             } else if old.is_empty() {
                 format!("Insert @{}:{} \"{}\"", file.display(), at, preview(new))
             } else if new.is_empty() {

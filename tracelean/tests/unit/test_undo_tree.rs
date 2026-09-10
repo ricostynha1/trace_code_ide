@@ -1,5 +1,6 @@
 //! Unit tests for the undo tree data structure
 
+use tracelean_lib::command_file;
 use tracelean_lib::commands::Command;
 use tracelean_lib::undo_tree::{CommitPoint, UndoTree};
 use chrono::Utc;
@@ -136,6 +137,31 @@ fn jump_to_node() {
     let commands = tree.jump_to(node_a_id);
     assert!(commands.is_some());
     assert_eq!(tree.current_node().unwrap().id, node_a_id);
+}
+
+#[test]
+fn push_file_base_is_reachable_but_does_not_move_current() {
+    // Regression: a file's undo history in "file mode" used to start at
+    // its first real edit — there was no node representing the file's
+    // content when it was first opened, so there was nothing to jump back
+    // to before that. `push_file_base` fixes this, but must not behave
+    // like `push` (parenting under `current` and moving it) — opening a
+    // file isn't "doing something at the current position", and other
+    // files' in-progress edit chains must be unaffected by it.
+    let mut tree = UndoTree::new();
+
+    let (a, a_inv) = insert_cmd("A"); // some unrelated ongoing history
+    tree.push(a, a_inv);
+    let unrelated_current = tree.current_node().unwrap().id;
+
+    let base = Command::replace(PathBuf::from("new.rs"), 0, "".into(), "hello".into());
+    let base_id = tree.push_file_base(base.clone(), base);
+
+    assert_eq!(tree.current_node().unwrap().id, unrelated_current, "opening a file must not move `current`");
+    assert_eq!(tree.len(), 2);
+
+    let base_node = tree.nodes().iter().find(|n| n.id == base_id).unwrap();
+    assert_eq!(command_file(&base_node.command).as_deref(), Some("new.rs"), "the base node must carry the file's own path, unlike push_initial's untargeted empty Batch");
 }
 
 #[test]

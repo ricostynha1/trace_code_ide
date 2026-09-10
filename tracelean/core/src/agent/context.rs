@@ -12,6 +12,13 @@ use crate::{
     ai::{RetentionEngine, TurnTimingTracker},
 };
 
+/// Fallback chars-per-token ratio before any real usage data has been
+/// observed this session. Deliberately the same flat estimate used
+/// throughout `runtime.rs` — `calibrated_chars_per_token` only ever
+/// *replaces* this with a value measured from the provider's own reported
+/// `usage.input_tokens`, never a second guess.
+pub const DEFAULT_CHARS_PER_TOKEN: f64 = 4.0;
+
 /// Everything the agent loop needs — no Tauri, no UI framework.
 pub struct AgentContext {
     pub state: Arc<Mutex<AppState>>,
@@ -38,6 +45,15 @@ pub struct AgentContext {
     pub retention_engine: Arc<Mutex<RetentionEngine>>,
     /// Turn timing tracker (idle time → cache cold detection).
     pub timing_tracker: Arc<Mutex<TurnTimingTracker>>,
+    /// Session-observed chars-per-token ratio, self-calibrated from real
+    /// `usage.input_tokens` after each response (bugs.md: the flat chars/4
+    /// heuristic under-predicted real cached tokens by 50-200% on live
+    /// tool-heavy traffic, which fed directly into the cache-marker floor
+    /// checks and made them too conservative on borderline requests, not
+    /// just the health display). Must be a shared, persistent `Arc` across
+    /// the whole session for the calibration to have any effect — a fresh
+    /// one built per turn never learns anything.
+    pub calibrated_chars_per_token: Arc<Mutex<f64>>,
     /// P10 review mode: staged agent edits awaiting per-hunk user approval.
     pub pending_diffs: Arc<Mutex<Vec<crate::PendingDiff>>>,
     /// Local semantic-search index (auto-built on project open) — threaded into
@@ -119,6 +135,7 @@ impl AgentContext {
             verbose: false,
             retention_engine: Arc::new(Mutex::new(RetentionEngine::with_defaults())),
             timing_tracker: Arc::new(Mutex::new(TurnTimingTracker::new())),
+            calibrated_chars_per_token: Arc::new(Mutex::new(DEFAULT_CHARS_PER_TOKEN)),
             pending_diffs: Arc::clone(&app.pending_diffs),
             embed_index: Arc::clone(&app.embed_index),
         }
@@ -143,6 +160,7 @@ impl AgentContext {
             verbose: false,
             retention_engine: Arc::new(Mutex::new(RetentionEngine::with_defaults())),
             timing_tracker: Arc::new(Mutex::new(TurnTimingTracker::new())),
+            calibrated_chars_per_token: Arc::new(Mutex::new(DEFAULT_CHARS_PER_TOKEN)),
             pending_diffs: Arc::new(Mutex::new(Vec::new())),
             embed_index: crate::ai::new_shared_index(),
         }

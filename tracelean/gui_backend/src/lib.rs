@@ -47,6 +47,11 @@ pub struct AiSessionStatsWrapper(pub Arc<Mutex<SessionStats>>);
 pub struct MockPendingWrapper(pub Mutex<Vec<ai::mock::MockPendingRequest>>);
 pub struct MockProviderWrapper(pub Arc<tokio::sync::Mutex<Option<Arc<ai::mock::MockProvider>>>>);
 pub struct PendingDiffsWrapper(pub Arc<Mutex<Vec<PendingDiff>>>);
+/// Session-observed chars-per-token ratio for cache-marker economics — see
+/// `tracelean_core::agent::AgentContext::calibrated_chars_per_token`. Must
+/// stay Tauri-managed (not rebuilt per IPC call) or the calibration never
+/// accumulates across turns.
+pub struct CacheCalibrationWrapper(pub Arc<Mutex<f64>>);
 
 /// Local semantic-search index, auto-built in the background on project open
 /// (see `ipc::editor::open_project`) and shared with every `AiService` so
@@ -223,6 +228,9 @@ pub fn run() {
         .manage(MockPendingWrapper(Mutex::new(Vec::new())))
         .manage(MockProviderWrapper(Arc::new(tokio::sync::Mutex::new(None))))
         .manage(PendingDiffsWrapper(Arc::new(Mutex::new(Vec::new()))))
+        .manage(CacheCalibrationWrapper(Arc::new(Mutex::new(
+            tracelean_core::agent::context::DEFAULT_CHARS_PER_TOKEN,
+        ))))
         .manage(EmbedIndexWrapper(tracelean_core::ai::new_shared_index()))
         .manage(LiveContextWrapper(Arc::new(Mutex::new(std::collections::HashMap::new()))))
         .manage(ResolvedDiffsWrapper(Arc::new(Mutex::new(std::collections::HashMap::new()))))
@@ -236,6 +244,7 @@ pub fn run() {
         .manage(AcpManagerWrapper(std::sync::Arc::new(
             tracelean_core::acp::AcpClientManager::new(Arc::new(tracelean_core::SharedApp::new_headless()))
         )))
+        .manage(ipc::sandbox_commands::SandboxSessionWrapper::default())
         .manage(ipc::myth_commands::MythKeymapWrapper({
             let km = tracelean_core::myth::Keymap::load();
             for problem in km.validate(tracelean_core::myth::actions::registry()) {
@@ -345,6 +354,17 @@ pub fn run() {
             ipc::acp_commands::acp_prompt,
             ipc::acp_commands::acp_cancel,
             ipc::acp_commands::acp_permission_respond,
+            // Sandbox (P: sandboxed workspace for external agents)
+            ipc::sandbox_commands::sandbox_capabilities,
+            ipc::sandbox_commands::sandbox_create_session,
+            ipc::sandbox_commands::sandbox_destroy_session,
+            ipc::sandbox_commands::sandbox_destroy_all_sessions,
+            ipc::sandbox_commands::sandbox_list_sessions,
+            ipc::sandbox_commands::sandbox_shell_command,
+            ipc::sandbox_commands::sandbox_open_terminal,
+            ipc::sandbox_commands::sandbox_changes,
+            ipc::sandbox_commands::sandbox_revert_file,
+            ipc::sandbox_commands::sandbox_transcript_history,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

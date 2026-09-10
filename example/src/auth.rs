@@ -1,3 +1,4 @@
+//ricostynha author
 // Authentication module handling user login/logout operations and credential validation.
 // User authentication module
 pub struct Credentials {

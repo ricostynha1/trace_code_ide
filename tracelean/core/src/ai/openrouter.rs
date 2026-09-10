@@ -320,6 +320,7 @@ impl AiProvider for OpenRouterProvider {
                             .and_then(|u| u.prompt_tokens_details.as_ref())
                             .and_then(|d| d.cached_tokens)
                             .unwrap_or(0),
+                        cache_write_tokens: 0,
                     };
 
                     return Ok(AiResponse {
