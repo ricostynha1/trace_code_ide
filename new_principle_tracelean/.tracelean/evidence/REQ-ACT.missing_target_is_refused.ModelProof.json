@@ -1,0 +1,25 @@
+{
+  "key": {
+    "reqId": "REQ-ACT",
+    "clause": "missing_target_is_refused",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Act::a_missing_target_is_named",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "171fdeddd48be875",
+  "inputs": [
+    [
+      "model",
+      "60770180691a6d4f"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

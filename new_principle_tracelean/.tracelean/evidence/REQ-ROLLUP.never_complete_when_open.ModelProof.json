@@ -1,0 +1,25 @@
+{
+  "key": {
+    "reqId": "REQ-ROLLUP",
+    "clause": "never_complete_when_open",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Rollup::an_unclaimed_decomposition_is_never_complete",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "9afa1da01382758c",
+  "inputs": [
+    [
+      "model",
+      "ac485f79c09af56a+bcea34ec26edd655"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-SHOW",
+    "clause": "well_formed_by_construction",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "independent-review-agent",
+      "promptVersion": "1"
+    }
+  },
+  "linkHash": "7d4cfafb551d509e",
+  "inputs": [
+    [
+      "requirement",
+      "9fc8f80c8354724e"
+    ],
+    [
+      "model",
+      "33b4dcb380ce6097"
+    ]
+  ]
+}

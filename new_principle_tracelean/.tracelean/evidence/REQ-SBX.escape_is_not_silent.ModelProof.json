@@ -1,0 +1,25 @@
+{
+  "key": {
+    "reqId": "REQ-SBX",
+    "clause": "escape_is_not_silent",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Effects::nothing_written_is_nothing_escaped",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "bd72b31f081ca74d",
+  "inputs": [
+    [
+      "model",
+      "1e0fd0149ba94f3e+875ced4d8c3ac542+8acab00f46da524b"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

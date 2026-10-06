@@ -1,0 +1,21 @@
+# Build output.
+target/
+formal/.lake/
+
+# One builder of the shared Lean package at a time, across test processes.
+formal/.tracelean-build.lock
+
+# Generated runners: TraceLean's own code, rewritten whenever it is stale.
+.tracelean/drt-rust/
+.tracelean/drt-ts/
+
+# What the editor had open, and the sandboxes it made, per person — in this
+# tree and in any tree opened with it (the demo).
+**/.tracelean/editor.json
+**/.tracelean/sessions/
+
+# The browser bundle, produced from web/src by `node web/build.mjs`.
+web/dist/
+
+# Tauri's generated schemas and permissions.
+crates/desktop/gen/

@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-UNDO",
+    "clause": "path_via_ancestor",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 77,
+      "cases": 3000,
+      "op": "REQ-UNDO.jump_equivalence"
+    }
+  },
+  "linkHash": "670a239df0fb0125",
+  "inputs": [
+    [
+      "implementation",
+      "5cf65bb312097f6c+660d82947b80a380"
+    ],
+    [
+      "model",
+      "14cf9ad7939d2b17+4f4d41ec41bf2c80"
+    ]
+  ]
+}

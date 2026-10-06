@@ -1,0 +1,25 @@
+{
+  "key": {
+    "reqId": "REQ-DRT-PROTO",
+    "clause": "failure_named",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Protocol::an_empty_line_is_not_json",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "2d8b5ea5025cdd0f",
+  "inputs": [
+    [
+      "model",
+      "fc56830a116db684"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

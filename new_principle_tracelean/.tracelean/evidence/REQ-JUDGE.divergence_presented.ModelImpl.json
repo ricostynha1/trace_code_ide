@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-JUDGE",
+    "clause": "divergence_presented",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 59,
+      "cases": 2000,
+      "op": "REQ-JUDGE.prompt_exported"
+    }
+  },
+  "linkHash": "09714a45318abe54",
+  "inputs": [
+    [
+      "implementation",
+      "0bfb42630f56bb5b+33c087ca17caa726+db5201a1837f656b"
+    ],
+    [
+      "model",
+      "0b366673facbb2e3"
+    ]
+  ]
+}

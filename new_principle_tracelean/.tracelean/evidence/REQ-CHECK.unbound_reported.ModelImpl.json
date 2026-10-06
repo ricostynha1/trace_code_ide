@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-CHECK",
+    "clause": "unbound_reported",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 41,
+      "cases": 2000,
+      "op": "REQ-CHECK.exactly_once"
+    }
+  },
+  "linkHash": "123d7b142df38aaf",
+  "inputs": [
+    [
+      "implementation",
+      "7219e19ead9b2154"
+    ],
+    [
+      "model",
+      "3bacc87678b4070e"
+    ]
+  ]
+}

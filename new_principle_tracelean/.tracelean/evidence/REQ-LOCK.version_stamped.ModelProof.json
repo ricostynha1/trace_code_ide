@@ -1,0 +1,25 @@
+{
+  "key": {
+    "reqId": "REQ-LOCK",
+    "clause": "version_stamped",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Lockfile::no_version_is_not_version_zero",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "d6342e7ddd2238a5",
+  "inputs": [
+    [
+      "model",
+      "d8c49421dbdd21ef"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

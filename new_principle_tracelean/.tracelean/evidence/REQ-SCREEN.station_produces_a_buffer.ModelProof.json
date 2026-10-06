@@ -1,0 +1,25 @@
+{
+  "key": {
+    "reqId": "REQ-SCREEN",
+    "clause": "station_produces_a_buffer",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Screen::every_station_produces",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "23ebfe1073a24981",
+  "inputs": [
+    [
+      "model",
+      "26109d97124aa78c"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

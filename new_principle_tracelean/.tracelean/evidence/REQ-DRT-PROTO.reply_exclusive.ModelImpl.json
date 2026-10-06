@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-DRT-PROTO",
+    "clause": "reply_exclusive",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 17,
+      "cases": 2000,
+      "op": "REQ-DRT-PROTO.line_delimited"
+    }
+  },
+  "linkHash": "ea97f5f6136dbba8",
+  "inputs": [
+    [
+      "implementation",
+      "0d3bdd2024dde50e+5ba63d7f0caa1826+8363b8c8a09c266a+e17477101903e723+f57cdcb5bd2b38ed"
+    ],
+    [
+      "model",
+      "c33336d8df0f8e74+fc56830a116db684"
+    ]
+  ]
+}

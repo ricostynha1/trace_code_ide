@@ -1,0 +1,25 @@
+{
+  "key": {
+    "reqId": "REQ-REQDOC",
+    "clause": "refines_dag",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Refinement::self_refinement_is_a_cycle",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "92de9edb4bf79295",
+  "inputs": [
+    [
+      "model",
+      "7a2fff81b24f3de4+a2a6887eda815a9c"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

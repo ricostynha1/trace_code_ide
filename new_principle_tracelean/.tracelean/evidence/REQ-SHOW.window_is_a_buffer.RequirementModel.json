@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-SHOW",
+    "clause": "window_is_a_buffer",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "independent-review-agent",
+      "promptVersion": "1"
+    }
+  },
+  "linkHash": "28bf32c1b49e61c0",
+  "inputs": [
+    [
+      "requirement",
+      "9fc8f80c8354724e"
+    ],
+    [
+      "model",
+      "7e374d2b880b864b"
+    ]
+  ]
+}

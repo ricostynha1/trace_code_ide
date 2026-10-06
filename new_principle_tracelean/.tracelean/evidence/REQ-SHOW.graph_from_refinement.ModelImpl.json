@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-SHOW",
+    "clause": "graph_from_refinement",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 67,
+      "cases": 2000,
+      "op": "REQ-SHOW.graph_from_refinement"
+    }
+  },
+  "linkHash": "9285b6aedff845f2",
+  "inputs": [
+    [
+      "implementation",
+      "afe1cb98c5742604"
+    ],
+    [
+      "model",
+      "8062961bcf85f698"
+    ]
+  ]
+}

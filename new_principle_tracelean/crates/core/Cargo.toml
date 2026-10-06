@@ -1,0 +1,16 @@
+[package]
+name = "tracelean-core"
+version = "0.1.0"
+edition = "2021"
+description = "TraceLean core: traceability, evidence, differential testing."
+
+[lib]
+name = "tracelean_core"
+path = "src/lib.rs"
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tree-sitter = "0.25"
+tree-sitter-rust = "0.24"
+tree-sitter-lean4 = "0.3"

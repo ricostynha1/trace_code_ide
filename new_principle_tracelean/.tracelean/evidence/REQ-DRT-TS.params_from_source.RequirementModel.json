@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-DRT-TS",
+    "clause": "params_from_source",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "independent-review-agent",
+      "promptVersion": "1"
+    }
+  },
+  "linkHash": "84ffb3e9be747a6c",
+  "inputs": [
+    [
+      "requirement",
+      "dcb4028876793f50"
+    ],
+    [
+      "model",
+      "565272414f63ae4a"
+    ]
+  ]
+}

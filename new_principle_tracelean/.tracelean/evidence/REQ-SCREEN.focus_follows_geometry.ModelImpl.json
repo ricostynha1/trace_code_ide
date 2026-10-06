@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-SCREEN",
+    "clause": "focus_follows_geometry",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 71,
+      "cases": 2000,
+      "op": "REQ-SCREEN.focus_follows_geometry"
+    }
+  },
+  "linkHash": "31ae20ffcc99ac78",
+  "inputs": [
+    [
+      "implementation",
+      "4e12bc5d3a15d3c1"
+    ],
+    [
+      "model",
+      "48a602485720c325"
+    ]
+  ]
+}

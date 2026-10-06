@@ -1,0 +1,25 @@
+{
+  "key": {
+    "reqId": "REQ-DRT-COVER",
+    "clause": "floor_unmet_is_not_pass",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Coverage::only_a_covered_agreement_is_evidence",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "cc6601db551a9418",
+  "inputs": [
+    [
+      "model",
+      "12892e68f2e37ef1"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

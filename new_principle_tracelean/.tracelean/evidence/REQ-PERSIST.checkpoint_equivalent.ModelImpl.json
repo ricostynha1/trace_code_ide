@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-PERSIST",
+    "clause": "checkpoint_equivalent",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 62,
+      "cases": 3000,
+      "op": "REQ-PERSIST.replay_exact"
+    }
+  },
+  "linkHash": "c9c78d72bcc71202",
+  "inputs": [
+    [
+      "implementation",
+      "61f60e6880fef065+9e83f0c31d84ec4f"
+    ],
+    [
+      "model",
+      "28d6b9470ce598fd+6be21c1a89ec7df3"
+    ]
+  ]
+}

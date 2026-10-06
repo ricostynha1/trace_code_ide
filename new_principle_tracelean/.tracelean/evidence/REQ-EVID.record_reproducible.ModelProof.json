@@ -1,0 +1,25 @@
+{
+  "key": {
+    "reqId": "REQ-EVID",
+    "clause": "record_reproducible",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Record::no_cases_is_not_reproducible",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "d5b2e2dfd83a7cfb",
+  "inputs": [
+    [
+      "model",
+      "bfd0a935cb3e6b8a"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

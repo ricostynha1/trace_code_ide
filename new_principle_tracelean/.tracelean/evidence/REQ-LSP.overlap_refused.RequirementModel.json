@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-LSP",
+    "clause": "overlap_refused",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "independent-review-agent",
+      "promptVersion": "1"
+    }
+  },
+  "linkHash": "34b649564d8ca48f",
+  "inputs": [
+    [
+      "requirement",
+      "64b2290b3e11364e"
+    ],
+    [
+      "model",
+      "2598b04e1b26dfde"
+    ]
+  ]
+}

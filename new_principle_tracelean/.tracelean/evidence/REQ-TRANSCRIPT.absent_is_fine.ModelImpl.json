@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-TRANSCRIPT",
+    "clause": "absent_is_fine",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 91,
+      "cases": 2000,
+      "op": "REQ-TRANSCRIPT.partial_line_held"
+    }
+  },
+  "linkHash": "3f741de77cce7206",
+  "inputs": [
+    [
+      "implementation",
+      "48be5fb8bdefd9d1+513d77fc489c904b+6fd20aab59dbbd30"
+    ],
+    [
+      "model",
+      "bcd8789899d37482"
+    ]
+  ]
+}

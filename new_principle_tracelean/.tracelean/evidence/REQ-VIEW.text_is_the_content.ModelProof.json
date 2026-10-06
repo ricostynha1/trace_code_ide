@@ -1,0 +1,25 @@
+{
+  "key": {
+    "reqId": "REQ-VIEW",
+    "clause": "text_is_the_content",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.View::a_listing_is_well_formed",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "52c70d4cd164a3e5",
+  "inputs": [
+    [
+      "model",
+      "75cafef92d87592c+e713a595e72505b2"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

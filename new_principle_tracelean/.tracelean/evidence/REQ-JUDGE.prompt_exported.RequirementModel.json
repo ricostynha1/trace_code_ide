@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-JUDGE",
+    "clause": "prompt_exported",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "independent-review-agent",
+      "promptVersion": "1"
+    }
+  },
+  "linkHash": "c584f97beb479558",
+  "inputs": [
+    [
+      "requirement",
+      "3be76d77938899ca"
+    ],
+    [
+      "model",
+      "0b366673facbb2e3"
+    ]
+  ]
+}

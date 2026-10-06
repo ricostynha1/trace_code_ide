@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-MYTH",
+    "clause": "whichkey_is_a_query",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "independent-review-agent",
+      "promptVersion": "1"
+    }
+  },
+  "linkHash": "10a66b0cbba36a1b",
+  "inputs": [
+    [
+      "requirement",
+      "955386fbb4c82be8"
+    ],
+    [
+      "model",
+      "11fc455a6126a519"
+    ]
+  ]
+}

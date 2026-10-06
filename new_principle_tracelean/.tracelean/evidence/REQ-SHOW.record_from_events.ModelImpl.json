@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-SHOW",
+    "clause": "record_from_events",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 79,
+      "cases": 2000,
+      "op": "REQ-SHOW.record_from_events"
+    }
+  },
+  "linkHash": "6b293ddd3129d022",
+  "inputs": [
+    [
+      "implementation",
+      "1e348090f50356c4"
+    ],
+    [
+      "model",
+      "3ac7b9bbc53940f2"
+    ]
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-EVID",
+    "clause": "monotone",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 7,
+      "cases": 2000,
+      "op": "REQ-EVID.weakest_link"
+    }
+  },
+  "linkHash": "cf5f21c261df86ba",
+  "inputs": [
+    [
+      "implementation",
+      "d934f495a6aee879"
+    ],
+    [
+      "model",
+      "d47ffb3b29e8752b"
+    ]
+  ]
+}

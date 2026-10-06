@@ -1,0 +1,25 @@
+{
+  "key": {
+    "reqId": "REQ-STRENGTH",
+    "clause": "not_proved_by_us",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Strength::an_obligation_is_never_discharged",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "67c926b3a9f1d13b",
+  "inputs": [
+    [
+      "model",
+      "9772b5a355704b31"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

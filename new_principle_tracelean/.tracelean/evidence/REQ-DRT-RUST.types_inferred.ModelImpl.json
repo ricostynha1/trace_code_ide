@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-DRT-RUST",
+    "clause": "types_inferred",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 64,
+      "cases": 3000,
+      "op": "REQ-DRT-RUST.params_from_source"
+    }
+  },
+  "linkHash": "8de4d3dfa980344a",
+  "inputs": [
+    [
+      "implementation",
+      "4ca4af32b5a85902+6468d7394e5921bb+66f99267d36ee4b8"
+    ],
+    [
+      "model",
+      "3705ac7787f83732"
+    ]
+  ]
+}

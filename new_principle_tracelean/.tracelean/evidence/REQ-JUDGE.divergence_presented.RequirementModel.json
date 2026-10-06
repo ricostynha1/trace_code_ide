@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-JUDGE",
+    "clause": "divergence_presented",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "independent-review-agent",
+      "promptVersion": "1"
+    }
+  },
+  "linkHash": "fa5e530817bfe025",
+  "inputs": [
+    [
+      "requirement",
+      "3be76d77938899ca"
+    ],
+    [
+      "model",
+      "0b366673facbb2e3"
+    ]
+  ]
+}

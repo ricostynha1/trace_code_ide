@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-DRT-COVER",
+    "clause": "law_coverage",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 97,
+      "cases": 2000,
+      "op": "REQ-DRT-COVER.floor_stated"
+    }
+  },
+  "linkHash": "0720eacf8059307e",
+  "inputs": [
+    [
+      "implementation",
+      "6e623894fe5e18a5+8f294839d8ea9a59+e2cb7964a19623a5"
+    ],
+    [
+      "model",
+      "562694efc2002317"
+    ]
+  ]
+}

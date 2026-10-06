@@ -1,0 +1,25 @@
+{
+  "key": {
+    "reqId": "REQ-REQDOC",
+    "clause": "clauseless_uniform",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Requirement::no_clauses_is_one_implicit_clause",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "5f9a9e615ee94a13",
+  "inputs": [
+    [
+      "model",
+      "5b5eb84bf1e70cf9"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

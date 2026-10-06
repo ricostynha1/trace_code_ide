@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-ROLLUP",
+    "clause": "min_not_mean",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 37,
+      "cases": 2000,
+      "op": "REQ-ROLLUP.min_not_mean"
+    }
+  },
+  "linkHash": "2283cc271faeda18",
+  "inputs": [
+    [
+      "implementation",
+      "b9b7749514a5a105+d33f902cb75709f5"
+    ],
+    [
+      "model",
+      "30f0a5ab73add768+bcea34ec26edd655"
+    ]
+  ]
+}

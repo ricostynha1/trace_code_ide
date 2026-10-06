@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-SHOW",
+    "clause": "file_from_text",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "independent-review-agent",
+      "promptVersion": "1"
+    }
+  },
+  "linkHash": "c056bb073906274f",
+  "inputs": [
+    [
+      "requirement",
+      "9fc8f80c8354724e"
+    ],
+    [
+      "model",
+      "3ddda33e4b52c471"
+    ]
+  ]
+}

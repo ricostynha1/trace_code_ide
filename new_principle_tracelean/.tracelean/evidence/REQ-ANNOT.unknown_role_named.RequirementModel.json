@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-ANNOT",
+    "clause": "unknown_role_named",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "independent-review-agent",
+      "promptVersion": "1"
+    }
+  },
+  "linkHash": "f2cda8e9261e7bd0",
+  "inputs": [
+    [
+      "requirement",
+      "487a8132bfcc4d95"
+    ],
+    [
+      "model",
+      "c3ada71c9c444a58"
+    ]
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "key": {
+    "reqId": "REQ-DRT",
+    "clause": "error_is_an_answer",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Protocol::a_refusal_against_an_answer_is_a_divergence",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "7be859c3e564012d",
+  "inputs": [
+    [
+      "model",
+      "0bb14760b8406bd0"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

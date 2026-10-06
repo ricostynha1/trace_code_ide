@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-MYTH",
+    "clause": "whichkey_is_a_query",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 25,
+      "cases": 2000,
+      "op": "REQ-MYTH.whichkey_is_a_query"
+    }
+  },
+  "linkHash": "86011ce2144cee43",
+  "inputs": [
+    [
+      "implementation",
+      "20ebff8bb015e862+c76399b7f6b9aa58"
+    ],
+    [
+      "model",
+      "11fc455a6126a519"
+    ]
+  ]
+}

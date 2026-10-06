@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-SBX",
+    "clause": "classification_total",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 13,
+      "cases": 2000,
+      "op": "REQ-SBX.classification_total"
+    }
+  },
+  "linkHash": "34586470f4f8cbdc",
+  "inputs": [
+    [
+      "implementation",
+      "42e1aab57e4f5b08+5d7a80a22bae0cdc"
+    ],
+    [
+      "model",
+      "1e0fd0149ba94f3e"
+    ]
+  ]
+}

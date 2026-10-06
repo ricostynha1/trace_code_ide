@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-STRENGTH",
+    "clause": "open_is_the_default",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 33,
+      "cases": 3000,
+      "op": "REQ-STRENGTH.qualifies_proof"
+    }
+  },
+  "linkHash": "a3b7c3966b7c971e",
+  "inputs": [
+    [
+      "implementation",
+      "a91fb39e83ceedb2+d29d5a8c44645266"
+    ],
+    [
+      "model",
+      "87d4da9d465362f8+b1d7f99240581683"
+    ]
+  ]
+}

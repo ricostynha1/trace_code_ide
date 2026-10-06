@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-REQDOC",
+    "clause": "refines_dag",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 71,
+      "cases": 3000,
+      "op": "REQ-REQDOC.refines_dag"
+    }
+  },
+  "linkHash": "418b3bc0ea6a37a6",
+  "inputs": [
+    [
+      "implementation",
+      "37e71b2b05a3d320+4edd907ac8bea805"
+    ],
+    [
+      "model",
+      "7a2fff81b24f3de4+a2a6887eda815a9c"
+    ]
+  ]
+}

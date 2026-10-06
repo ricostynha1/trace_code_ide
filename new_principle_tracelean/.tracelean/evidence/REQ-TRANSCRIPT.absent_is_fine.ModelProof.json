@@ -1,0 +1,25 @@
+{
+  "key": {
+    "reqId": "REQ-TRANSCRIPT",
+    "clause": "absent_is_fine",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Transcript::empty_is_empty",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "30505aada3234a67",
+  "inputs": [
+    [
+      "model",
+      "bcd8789899d37482"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

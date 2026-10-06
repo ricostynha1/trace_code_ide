@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-DOCLINK",
+    "clause": "hash_moves_review",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "independent-review-agent",
+      "promptVersion": "1"
+    }
+  },
+  "linkHash": "809b33b2075e6cdc",
+  "inputs": [
+    [
+      "requirement",
+      "ca9f26ad87c3cd2e"
+    ],
+    [
+      "model",
+      "cddf7f4f1b5b07e7"
+    ]
+  ]
+}

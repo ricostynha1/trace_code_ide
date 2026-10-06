@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-ANCHOR",
+    "clause": "imprecise_capped",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 79,
+      "cases": 500,
+      "op": "REQ-ANCHOR.imprecise_capped"
+    }
+  },
+  "linkHash": "9484a443e2c20034",
+  "inputs": [
+    [
+      "implementation",
+      "225a5ee319edd222+41745486cd0d975b"
+    ],
+    [
+      "model",
+      "c4de5182e39bc735"
+    ]
+  ]
+}

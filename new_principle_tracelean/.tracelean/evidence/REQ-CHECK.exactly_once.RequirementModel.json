@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-CHECK",
+    "clause": "exactly_once",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "independent-review-agent",
+      "promptVersion": "1"
+    }
+  },
+  "linkHash": "12151374036c5c70",
+  "inputs": [
+    [
+      "requirement",
+      "22fa2b9c7ccb28b8"
+    ],
+    [
+      "model",
+      "3bacc87678b4070e"
+    ]
+  ]
+}

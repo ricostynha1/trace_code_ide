@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-COST",
+    "clause": "estimate_is_labelled",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 89,
+      "cases": 2000,
+      "op": "REQ-COST.estimate_is_labelled"
+    }
+  },
+  "linkHash": "329c2b190bb40e56",
+  "inputs": [
+    [
+      "implementation",
+      "736b8954024e12dc"
+    ],
+    [
+      "model",
+      "bedf114c1b8e5b13"
+    ]
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-ROLLUP",
+    "clause": "untraced_counted",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 127,
+      "cases": 2000,
+      "op": "REQ-ROLLUP.untraced_counted"
+    }
+  },
+  "linkHash": "6bc0a03eb8dd23f3",
+  "inputs": [
+    [
+      "implementation",
+      "72c3064bc8a413d3"
+    ],
+    [
+      "model",
+      "425ac11f8d9aaaad"
+    ]
+  ]
+}

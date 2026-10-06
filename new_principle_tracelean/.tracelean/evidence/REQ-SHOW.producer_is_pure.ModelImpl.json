@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-SHOW",
+    "clause": "producer_is_pure",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 71,
+      "cases": 2000,
+      "op": "REQ-SHOW.producer_is_pure"
+    }
+  },
+  "linkHash": "931a30d5effc1cc9",
+  "inputs": [
+    [
+      "implementation",
+      "14b231e70c2eb262+1e348090f50356c4+3ee59ad610e968c9+8d3bb9af88e9048a+afe1cb98c5742604+d2a332a9dd7d677a+e6e898adf246d972+fbc55b274e9687b0"
+    ],
+    [
+      "model",
+      "3ac7b9bbc53940f2+3ddda33e4b52c471+52ba70bac2e13a4f+78c5c7a3ec8c2c7a+8062961bcf85f698+abc562971ca8a349+dd1183891445ce98"
+    ]
+  ]
+}

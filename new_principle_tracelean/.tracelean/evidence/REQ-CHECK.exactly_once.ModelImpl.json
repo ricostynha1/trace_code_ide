@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-CHECK",
+    "clause": "exactly_once",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 41,
+      "cases": 2000,
+      "op": "REQ-CHECK.exactly_once"
+    }
+  },
+  "linkHash": "6c382c821c5ff5fb",
+  "inputs": [
+    [
+      "implementation",
+      "7219e19ead9b2154+a17d2efd6cbbad0e"
+    ],
+    [
+      "model",
+      "3bacc87678b4070e"
+    ]
+  ]
+}

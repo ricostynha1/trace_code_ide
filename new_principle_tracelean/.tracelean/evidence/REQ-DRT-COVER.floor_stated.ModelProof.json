@@ -1,0 +1,25 @@
+{
+  "key": {
+    "reqId": "REQ-DRT-COVER",
+    "clause": "floor_stated",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Coverage::no_floor_is_not_a_met_floor",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "f24eea75b79a7bed",
+  "inputs": [
+    [
+      "model",
+      "562694efc2002317"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

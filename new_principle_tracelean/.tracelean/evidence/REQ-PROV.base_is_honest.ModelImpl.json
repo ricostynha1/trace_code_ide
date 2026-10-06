@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-PROV",
+    "clause": "base_is_honest",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 88,
+      "cases": 3000,
+      "op": "REQ-PROV.position_question"
+    }
+  },
+  "linkHash": "cd60fa9672e178d1",
+  "inputs": [
+    [
+      "implementation",
+      "5d103a616c8b840f"
+    ],
+    [
+      "model",
+      "92cc8d6d9e1fb040"
+    ]
+  ]
+}

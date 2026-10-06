@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-SELFWRITE",
+    "clause": "content_matched",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "independent-review-agent",
+      "promptVersion": "1"
+    }
+  },
+  "linkHash": "f28f344dbca6625d",
+  "inputs": [
+    [
+      "requirement",
+      "d3332ae800d53559"
+    ],
+    [
+      "model",
+      "e5f0ed11c7a356e5"
+    ]
+  ]
+}

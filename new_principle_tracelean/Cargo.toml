@@ -1,0 +1,10 @@
+[workspace]
+members = ["crates/core", "crates/desktop", "crates/editor", "crates/tui"]
+exclude = ["tools/stage0-trace"]
+resolver = "2"
+
+# Dependencies optimised even in a debug build: tree-sitter parses every file
+# when a project opens, and unoptimised it made opening this one take ~4 s.
+# Built once; the project's own crates stay quick to rebuild.
+[profile.dev.package."*"]
+opt-level = 2

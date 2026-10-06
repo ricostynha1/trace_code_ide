@@ -1,0 +1,25 @@
+{
+  "key": {
+    "reqId": "REQ-ROLLUP",
+    "clause": "untraced_counted",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Rollup::an_unclaimed_file_is_counted",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "0f56a4708fdb972c",
+  "inputs": [
+    [
+      "model",
+      "425ac11f8d9aaaad"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

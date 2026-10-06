@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-ANNOT",
+    "clause": "region_balanced",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "independent-review-agent",
+      "promptVersion": "1"
+    }
+  },
+  "linkHash": "840847322dc40c28",
+  "inputs": [
+    [
+      "requirement",
+      "487a8132bfcc4d95"
+    ],
+    [
+      "model",
+      "4340cbd92854e997"
+    ]
+  ]
+}

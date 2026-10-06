@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-COST",
+    "clause": "price_is_per_model",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 79,
+      "cases": 2000,
+      "op": "REQ-COST.cost_from_usage"
+    }
+  },
+  "linkHash": "ae966d81af467d14",
+  "inputs": [
+    [
+      "implementation",
+      "5e9260c3ef9971fe+772351f96973e686+ed014f66f4315d45"
+    ],
+    [
+      "model",
+      "15bf20ff869ca259+c936fc28db5def24"
+    ]
+  ]
+}

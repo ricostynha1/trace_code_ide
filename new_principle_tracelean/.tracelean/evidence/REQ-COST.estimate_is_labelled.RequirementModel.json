@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-COST",
+    "clause": "estimate_is_labelled",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "independent-review-agent",
+      "promptVersion": "1"
+    }
+  },
+  "linkHash": "ab3947fec050777f",
+  "inputs": [
+    [
+      "requirement",
+      "7c1b5d0b4957507e"
+    ],
+    [
+      "model",
+      "bedf114c1b8e5b13"
+    ]
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-PERSIST",
+    "clause": "truncated_is_reported",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 62,
+      "cases": 3000,
+      "op": "REQ-PERSIST.replay_exact"
+    }
+  },
+  "linkHash": "b4af34f07465f6e2",
+  "inputs": [
+    [
+      "implementation",
+      "75cdb802890d2e9b+9e83f0c31d84ec4f"
+    ],
+    [
+      "model",
+      "285fc2c91c36f32f+28d6b9470ce598fd"
+    ]
+  ]
+}

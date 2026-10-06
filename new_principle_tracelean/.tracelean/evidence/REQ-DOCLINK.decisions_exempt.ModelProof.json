@@ -1,0 +1,25 @@
+{
+  "key": {
+    "reqId": "REQ-DOCLINK",
+    "clause": "decisions_exempt",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.DocLink::a_decision_record_declares_nothing",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "a7d1cc6bd1ffe739",
+  "inputs": [
+    [
+      "model",
+      "35e6357949d421ab"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

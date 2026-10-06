@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-PERSIST",
+    "clause": "replay_exact",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "independent-review-agent",
+      "promptVersion": "1"
+    }
+  },
+  "linkHash": "324c5e5c95262183",
+  "inputs": [
+    [
+      "requirement",
+      "49ef47219ced0b32"
+    ],
+    [
+      "model",
+      "c7da65face5d5188"
+    ]
+  ]
+}

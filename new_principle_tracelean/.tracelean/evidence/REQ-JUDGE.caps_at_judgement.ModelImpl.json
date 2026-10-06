@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-JUDGE",
+    "clause": "caps_at_judgement",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 17,
+      "cases": 2000,
+      "op": "REQ-JUDGE.caps_at_judgement"
+    }
+  },
+  "linkHash": "182bf229e1392078",
+  "inputs": [
+    [
+      "implementation",
+      "cc47d150967b06d6+db792132593a0d6e"
+    ],
+    [
+      "model",
+      "985f00febe1f14a1"
+    ]
+  ]
+}

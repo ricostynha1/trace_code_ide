@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-SHOW",
+    "clause": "index_from_requirements",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 61,
+      "cases": 2000,
+      "op": "REQ-SHOW.index_from_requirements"
+    }
+  },
+  "linkHash": "84e70f98c7c2e70f",
+  "inputs": [
+    [
+      "implementation",
+      "8d3bb9af88e9048a"
+    ],
+    [
+      "model",
+      "52ba70bac2e13a4f"
+    ]
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-MYTH",
+    "clause": "modes_defined",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 24,
+      "cases": 3000,
+      "op": "REQ-MYTH.modes_defined"
+    }
+  },
+  "linkHash": "951b14ba1c8a5618",
+  "inputs": [
+    [
+      "implementation",
+      "2bf6d6b7b990cea5+70765ed489b2e95d"
+    ],
+    [
+      "model",
+      "ca58ab60c248f90e"
+    ]
+  ]
+}

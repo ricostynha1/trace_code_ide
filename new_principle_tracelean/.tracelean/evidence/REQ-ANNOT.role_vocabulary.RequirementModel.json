@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-ANNOT",
+    "clause": "role_vocabulary",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "independent-review-agent",
+      "promptVersion": "1"
+    }
+  },
+  "linkHash": "e02bb3932b87b5e8",
+  "inputs": [
+    [
+      "requirement",
+      "487a8132bfcc4d95"
+    ],
+    [
+      "model",
+      "1c3c45132dd33c5c"
+    ]
+  ]
+}

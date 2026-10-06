@@ -1,0 +1,25 @@
+{
+  "key": {
+    "reqId": "REQ-STALE",
+    "clause": "inputs_identified",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Record::unnamed_inputs_are_reported",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "0196f230f361579b",
+  "inputs": [
+    [
+      "model",
+      "bd42f4294715eb6d+bfd0a935cb3e6b8a"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

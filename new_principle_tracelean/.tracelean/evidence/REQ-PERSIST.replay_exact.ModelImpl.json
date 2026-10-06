@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-PERSIST",
+    "clause": "replay_exact",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 62,
+      "cases": 3000,
+      "op": "REQ-PERSIST.replay_exact"
+    }
+  },
+  "linkHash": "2556e87b8666320a",
+  "inputs": [
+    [
+      "implementation",
+      "6f5a98cb5c24c6bf+9e83f0c31d84ec4f"
+    ],
+    [
+      "model",
+      "28d6b9470ce598fd+c7da65face5d5188"
+    ]
+  ]
+}

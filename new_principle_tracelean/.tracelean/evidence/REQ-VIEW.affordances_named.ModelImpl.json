@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-VIEW",
+    "clause": "affordances_named",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 29,
+      "cases": 2000,
+      "op": "REQ-VIEW.affordances_named"
+    }
+  },
+  "linkHash": "20e7a0266244271e",
+  "inputs": [
+    [
+      "implementation",
+      "22234f4cd24e24ba+ba7a8b45189e84eb"
+    ],
+    [
+      "model",
+      "0b802e5a56b1afd2+91324f0af65e3f3a"
+    ]
+  ]
+}

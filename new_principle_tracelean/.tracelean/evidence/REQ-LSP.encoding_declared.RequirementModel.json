@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-LSP",
+    "clause": "encoding_declared",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "independent-review-agent",
+      "promptVersion": "1"
+    }
+  },
+  "linkHash": "1b6299a7ff8e2bfa",
+  "inputs": [
+    [
+      "requirement",
+      "64b2290b3e11364e"
+    ],
+    [
+      "model",
+      "24979beb9cebcabd"
+    ]
+  ]
+}

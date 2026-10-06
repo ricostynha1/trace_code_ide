@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-VIEW",
+    "clause": "changes_are_deltas",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "independent-review-agent",
+      "promptVersion": "1"
+    }
+  },
+  "linkHash": "2df191e7be595e44",
+  "inputs": [
+    [
+      "requirement",
+      "4694bd7184911203"
+    ],
+    [
+      "model",
+      "33cd2cc372099424"
+    ]
+  ]
+}

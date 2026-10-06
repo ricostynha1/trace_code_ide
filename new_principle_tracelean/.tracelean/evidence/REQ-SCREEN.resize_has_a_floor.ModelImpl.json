@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-SCREEN",
+    "clause": "resize_has_a_floor",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 67,
+      "cases": 2000,
+      "op": "REQ-SCREEN.resize_moves_one_divider"
+    }
+  },
+  "linkHash": "c66e5add1f0ba40e",
+  "inputs": [
+    [
+      "implementation",
+      "78624a9bc0e91512"
+    ],
+    [
+      "model",
+      "38567ed311d04ebe"
+    ]
+  ]
+}

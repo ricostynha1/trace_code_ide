@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-SCREEN",
+    "clause": "opened_outlives_shown",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 47,
+      "cases": 2000,
+      "op": "REQ-SCREEN.opened_outlives_shown"
+    }
+  },
+  "linkHash": "1c5128c6e54bdf8f",
+  "inputs": [
+    [
+      "implementation",
+      "73391e86dc1fcf7b+939e3f90319b2f22"
+    ],
+    [
+      "model",
+      "5e3581c3e17298a5+c06eb9b1d8f88429"
+    ]
+  ]
+}

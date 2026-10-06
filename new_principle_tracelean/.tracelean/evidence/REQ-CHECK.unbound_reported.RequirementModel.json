@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-CHECK",
+    "clause": "unbound_reported",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "independent-review-agent",
+      "promptVersion": "1"
+    }
+  },
+  "linkHash": "89dd456cd7cd688b",
+  "inputs": [
+    [
+      "requirement",
+      "22fa2b9c7ccb28b8"
+    ],
+    [
+      "model",
+      "3bacc87678b4070e"
+    ]
+  ]
+}

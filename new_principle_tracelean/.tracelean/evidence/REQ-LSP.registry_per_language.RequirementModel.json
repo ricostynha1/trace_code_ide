@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-LSP",
+    "clause": "registry_per_language",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "independent-review-agent",
+      "promptVersion": "1"
+    }
+  },
+  "linkHash": "fb6d255d9881549c",
+  "inputs": [
+    [
+      "requirement",
+      "64b2290b3e11364e"
+    ],
+    [
+      "model",
+      "24979beb9cebcabd"
+    ]
+  ]
+}

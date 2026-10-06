@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-LSP",
+    "clause": "absent_server_named",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "independent-review-agent",
+      "promptVersion": "1"
+    }
+  },
+  "linkHash": "350bef714ce00fd3",
+  "inputs": [
+    [
+      "requirement",
+      "64b2290b3e11364e"
+    ],
+    [
+      "model",
+      "c21060bc1d6040f4"
+    ]
+  ]
+}

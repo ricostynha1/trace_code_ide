@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-STALE",
+    "clause": "inputs_identified",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 113,
+      "cases": 2000,
+      "op": "REQ-EVID.record_reproducible"
+    }
+  },
+  "linkHash": "9ab5c4a14dda98b4",
+  "inputs": [
+    [
+      "implementation",
+      "107872326037aa91+16a61830adb9a422+dcd16668ba2894b4+e3a14bd49414e546+ec75a5041b2ee18e"
+    ],
+    [
+      "model",
+      "bd42f4294715eb6d+bfd0a935cb3e6b8a"
+    ]
+  ]
+}

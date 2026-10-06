@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-ROLLUP",
+    "clause": "deterministic_order",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 91,
+      "cases": 3000,
+      "op": "REQ-ROLLUP.open_is_lower_bound"
+    }
+  },
+  "linkHash": "c9cd35d27703ef19",
+  "inputs": [
+    [
+      "implementation",
+      "56cdf8a9dc37d39d+b49d36737f216235+d33f902cb75709f5"
+    ],
+    [
+      "model",
+      "bcea34ec26edd655"
+    ]
+  ]
+}

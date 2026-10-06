@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-LSP",
+    "clause": "encoding_round_trip",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 31,
+      "cases": 2000,
+      "op": "REQ-LSP.encoding_round_trip"
+    }
+  },
+  "linkHash": "486d2ca803395aad",
+  "inputs": [
+    [
+      "implementation",
+      "1018568ef1976a69+2cbeb1d7deb0d0d5"
+    ],
+    [
+      "model",
+      "206b4076cc50f710+5ba52b4088992f04"
+    ]
+  ]
+}

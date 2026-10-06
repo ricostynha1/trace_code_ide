@@ -1,0 +1,25 @@
+{
+  "key": {
+    "reqId": "REQ-SHOW",
+    "clause": "menu_from_keymap",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Produce::a_menu_offers_what_its_keys_dispatch",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "22271391999b544e",
+  "inputs": [
+    [
+      "model",
+      "dd1183891445ce98"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

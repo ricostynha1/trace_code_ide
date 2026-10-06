@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "What the window may do. Nothing but talk to this application's own commands: the page renders buffers and sends keys, and everything else it might want is something the editor decides.",
+  "windows": ["main"],
+  "permissions": ["core:default"]
+}

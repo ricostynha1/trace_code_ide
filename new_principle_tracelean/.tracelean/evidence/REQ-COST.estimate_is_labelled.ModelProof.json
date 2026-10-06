@@ -1,0 +1,25 @@
+{
+  "key": {
+    "reqId": "REQ-COST",
+    "clause": "estimate_is_labelled",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Cost::an_estimate_says_so",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "cc7dbe4683ae2bd2",
+  "inputs": [
+    [
+      "model",
+      "bedf114c1b8e5b13"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-CMD",
+    "clause": "witness_carried",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 71,
+      "cases": 3000,
+      "op": "REQ-CMD.batch_reverses"
+    }
+  },
+  "linkHash": "2c59d741b931cdf7",
+  "inputs": [
+    [
+      "implementation",
+      "e8bc3f0f63a48682"
+    ],
+    [
+      "model",
+      "854a6245d289ba86"
+    ]
+  ]
+}

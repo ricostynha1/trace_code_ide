@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-EVID",
+    "clause": "judgement_caps",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 19,
+      "cases": 1000,
+      "op": "REQ-EVID.judgement_caps"
+    }
+  },
+  "linkHash": "737008701d9aa53c",
+  "inputs": [
+    [
+      "implementation",
+      "65990c639c28d354+ab4982978eec7f8b+cc47d150967b06d6"
+    ],
+    [
+      "model",
+      "0183812077703e72"
+    ]
+  ]
+}

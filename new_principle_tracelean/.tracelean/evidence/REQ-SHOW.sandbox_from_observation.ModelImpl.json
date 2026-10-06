@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-SHOW",
+    "clause": "sandbox_from_observation",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 71,
+      "cases": 2000,
+      "op": "REQ-SHOW.sandbox_from_observation"
+    }
+  },
+  "linkHash": "0086315cabfb856c",
+  "inputs": [
+    [
+      "implementation",
+      "856151b97ec1df39+d2a332a9dd7d677a"
+    ],
+    [
+      "model",
+      "6e900dc6464e1d0f+abc562971ca8a349"
+    ]
+  ]
+}

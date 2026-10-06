@@ -1,0 +1,25 @@
+{
+  "key": {
+    "reqId": "REQ-SCREEN",
+    "clause": "opened_outlives_shown",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Screen::open_twice_holds_one",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "0e3ee5d106b29f1d",
+  "inputs": [
+    [
+      "model",
+      "5e3581c3e17298a5+c06eb9b1d8f88429"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

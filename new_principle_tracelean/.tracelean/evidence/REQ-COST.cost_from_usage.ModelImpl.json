@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-COST",
+    "clause": "cost_from_usage",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 79,
+      "cases": 2000,
+      "op": "REQ-COST.cost_from_usage"
+    }
+  },
+  "linkHash": "6f157786465eba22",
+  "inputs": [
+    [
+      "implementation",
+      "ed014f66f4315d45"
+    ],
+    [
+      "model",
+      "c936fc28db5def24"
+    ]
+  ]
+}

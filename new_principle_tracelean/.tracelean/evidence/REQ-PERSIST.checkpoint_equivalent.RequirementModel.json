@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-PERSIST",
+    "clause": "checkpoint_equivalent",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "independent-review-agent",
+      "promptVersion": "1"
+    }
+  },
+  "linkHash": "83e19dd05c6db22d",
+  "inputs": [
+    [
+      "requirement",
+      "49ef47219ced0b32"
+    ],
+    [
+      "model",
+      "6be21c1a89ec7df3"
+    ]
+  ]
+}

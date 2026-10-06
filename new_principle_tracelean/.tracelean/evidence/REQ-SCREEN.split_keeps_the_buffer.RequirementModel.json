@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-SCREEN",
+    "clause": "split_keeps_the_buffer",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "independent-review-agent",
+      "promptVersion": "1"
+    }
+  },
+  "linkHash": "3bb449bae4acdfa9",
+  "inputs": [
+    [
+      "requirement",
+      "3e3ec1f81caab4fa"
+    ],
+    [
+      "model",
+      "8be7de2bdd0a8aed"
+    ]
+  ]
+}

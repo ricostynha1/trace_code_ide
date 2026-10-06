@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-SHOW",
+    "clause": "listing_from_entries",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "independent-review-agent",
+      "promptVersion": "1"
+    }
+  },
+  "linkHash": "112994f2daa9c78b",
+  "inputs": [
+    [
+      "requirement",
+      "9fc8f80c8354724e"
+    ],
+    [
+      "model",
+      "2c4a79afd9285f01"
+    ]
+  ]
+}

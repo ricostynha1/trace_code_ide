@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "ARCH-HONEST",
+    "clause": "weakest_link",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "independent-review-agent",
+      "promptVersion": "1"
+    }
+  },
+  "linkHash": "673b93f13a696d06",
+  "inputs": [
+    [
+      "requirement",
+      "8760068412007801"
+    ],
+    [
+      "model",
+      "30f0a5ab73add768"
+    ]
+  ]
+}

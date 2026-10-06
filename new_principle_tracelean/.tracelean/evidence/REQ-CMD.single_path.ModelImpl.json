@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-CMD",
+    "clause": "single_path",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 5,
+      "cases": 3000,
+      "op": "REQ-CMD.total_or_refused"
+    }
+  },
+  "linkHash": "dd078f22cded5d4a",
+  "inputs": [
+    [
+      "implementation",
+      "495fe945204600ab+a1bf3b594be58fcc"
+    ],
+    [
+      "model",
+      "87fc163406abdce9"
+    ]
+  ]
+}

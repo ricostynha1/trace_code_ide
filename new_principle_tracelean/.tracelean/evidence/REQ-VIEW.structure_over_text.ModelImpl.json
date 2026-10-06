@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-VIEW",
+    "clause": "structure_over_text",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 23,
+      "cases": 2000,
+      "op": "REQ-VIEW.text_is_the_content"
+    }
+  },
+  "linkHash": "26b27d91aefbdbb1",
+  "inputs": [
+    [
+      "implementation",
+      "4f18850bc2ccc9a6+9245bbcc6540f626"
+    ],
+    [
+      "model",
+      "abf873814f7aa389+e713a595e72505b2"
+    ]
+  ]
+}

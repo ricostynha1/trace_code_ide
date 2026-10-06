@@ -1,0 +1,25 @@
+{
+  "key": {
+    "reqId": "REQ-LSP",
+    "clause": "edits_ordered",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Lsp::no_edits_lower_to_nothing",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "c1880aae3f1d5f4f",
+  "inputs": [
+    [
+      "model",
+      "2598b04e1b26dfde"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

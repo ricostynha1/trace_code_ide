@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-DRT-GEN",
+    "clause": "fixed_stream",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "independent-review-agent",
+      "promptVersion": "1"
+    }
+  },
+  "linkHash": "f08010e624b00957",
+  "inputs": [
+    [
+      "requirement",
+      "88076ee038cb795b"
+    ],
+    [
+      "model",
+      "9ef66c65431edf29"
+    ]
+  ]
+}

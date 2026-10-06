@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-JUDGE",
+    "clause": "prompt_exported",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 59,
+      "cases": 2000,
+      "op": "REQ-JUDGE.prompt_exported"
+    }
+  },
+  "linkHash": "184552543a7f0a99",
+  "inputs": [
+    [
+      "implementation",
+      "0bfb42630f56bb5b+a5bd5310915cb4bb+a714e521334573b4"
+    ],
+    [
+      "model",
+      "0b366673facbb2e3"
+    ]
+  ]
+}

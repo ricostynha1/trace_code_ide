@@ -1,0 +1,25 @@
+{
+  "key": {
+    "reqId": "REQ-VIEW",
+    "clause": "changes_are_deltas",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.View::a_delta_rebuilds_what_it_came_from",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "4a7ca61f0630584b",
+  "inputs": [
+    [
+      "model",
+      "33cd2cc372099424+b5336c7f25bd3ecd"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

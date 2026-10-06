@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-SCREEN",
+    "clause": "focus_is_placed",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "independent-review-agent",
+      "promptVersion": "1"
+    }
+  },
+  "linkHash": "b8a8865769c3735c",
+  "inputs": [
+    [
+      "requirement",
+      "3e3ec1f81caab4fa"
+    ],
+    [
+      "model",
+      "039ea0dd4a02df36"
+    ]
+  ]
+}

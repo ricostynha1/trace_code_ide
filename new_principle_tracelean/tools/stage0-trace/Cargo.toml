@@ -1,0 +1,9 @@
+[package]
+name = "stage0-trace"
+version = "0.1.0"
+edition = "2021"
+description = "Bootstrap driver: runs the stage-0 TraceLean trace kernel over this tree."
+
+[dependencies]
+tracelean-core = { path = "../../../tracelean/core" }
+serde_json = "1"

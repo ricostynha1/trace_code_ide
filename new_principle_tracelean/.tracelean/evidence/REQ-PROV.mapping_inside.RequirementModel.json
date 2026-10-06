@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-PROV",
+    "clause": "mapping_inside",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "independent-review-agent",
+      "promptVersion": "1"
+    }
+  },
+  "linkHash": "dc33450458ddeade",
+  "inputs": [
+    [
+      "requirement",
+      "9bfbd2157e095981"
+    ],
+    [
+      "model",
+      "3c74019b46571f27"
+    ]
+  ]
+}

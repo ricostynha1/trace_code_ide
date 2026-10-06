@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-ANCHOR",
+    "clause": "symbol_not_line",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 73,
+      "cases": 2000,
+      "op": "REQ-ANCHOR.symbol_not_line"
+    }
+  },
+  "linkHash": "1a484dd52f2fa109",
+  "inputs": [
+    [
+      "implementation",
+      "0773488d22732f0b+33ab84d452addf90+7c3f8e50487a7954"
+    ],
+    [
+      "model",
+      "d1b5933586cf1c6d"
+    ]
+  ]
+}

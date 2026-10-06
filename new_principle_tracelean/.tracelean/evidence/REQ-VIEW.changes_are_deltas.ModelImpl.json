@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-VIEW",
+    "clause": "changes_are_deltas",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 41,
+      "cases": 2000,
+      "op": "REQ-VIEW.changes_are_deltas"
+    }
+  },
+  "linkHash": "36caeb7375bbdf43",
+  "inputs": [
+    [
+      "implementation",
+      "e009bb06f800af6f+e129bee9d5761be1"
+    ],
+    [
+      "model",
+      "33cd2cc372099424+b5336c7f25bd3ecd"
+    ]
+  ]
+}

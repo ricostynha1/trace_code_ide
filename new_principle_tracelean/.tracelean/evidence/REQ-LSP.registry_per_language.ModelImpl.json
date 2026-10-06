@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-LSP",
+    "clause": "registry_per_language",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 71,
+      "cases": 2000,
+      "op": "REQ-LSP.registry_per_language"
+    }
+  },
+  "linkHash": "380e4d1767481139",
+  "inputs": [
+    [
+      "implementation",
+      "1452242868ae1afa+7adef53b8f58b746"
+    ],
+    [
+      "model",
+      "24979beb9cebcabd"
+    ]
+  ]
+}

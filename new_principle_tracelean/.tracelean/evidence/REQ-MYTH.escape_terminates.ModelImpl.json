@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-MYTH",
+    "clause": "escape_terminates",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 24,
+      "cases": 3000,
+      "op": "REQ-MYTH.modes_defined"
+    }
+  },
+  "linkHash": "4d81cc31e4d0227e",
+  "inputs": [
+    [
+      "implementation",
+      "2bf6d6b7b990cea5+70765ed489b2e95d"
+    ],
+    [
+      "model",
+      "ca58ab60c248f90e+de2f2feec093967d"
+    ]
+  ]
+}

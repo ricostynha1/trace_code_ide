@@ -1,0 +1,25 @@
+{
+  "key": {
+    "reqId": "REQ-SHOW",
+    "clause": "window_is_a_buffer",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Produce::a_window_carries_the_spans_that_fall_in_it",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "766d2acee3d680db",
+  "inputs": [
+    [
+      "model",
+      "7e374d2b880b864b"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

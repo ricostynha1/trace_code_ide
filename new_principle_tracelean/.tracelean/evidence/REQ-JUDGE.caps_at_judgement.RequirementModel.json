@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-JUDGE",
+    "clause": "caps_at_judgement",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "independent-review-agent",
+      "promptVersion": "1"
+    }
+  },
+  "linkHash": "5169dce24f696b5e",
+  "inputs": [
+    [
+      "requirement",
+      "3be76d77938899ca"
+    ],
+    [
+      "model",
+      "985f00febe1f14a1"
+    ]
+  ]
+}

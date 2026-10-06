@@ -1,0 +1,25 @@
+{
+  "key": {
+    "reqId": "REQ-DRT-COVER",
+    "clause": "vacuous_named",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Coverage::nothing_reached_is_vacuous_not_short",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "ac2395f1f39e0f65",
+  "inputs": [
+    [
+      "model",
+      "562694efc2002317"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

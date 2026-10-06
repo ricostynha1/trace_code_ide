@@ -1,0 +1,25 @@
+{
+  "key": {
+    "reqId": "REQ-EVID",
+    "clause": "weakest_link",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Evidence::assurance_mem_chain",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "19600c7eea311514",
+  "inputs": [
+    [
+      "model",
+      "d47ffb3b29e8752b"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

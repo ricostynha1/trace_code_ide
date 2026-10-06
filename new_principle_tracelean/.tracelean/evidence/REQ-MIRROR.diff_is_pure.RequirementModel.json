@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-MIRROR",
+    "clause": "diff_is_pure",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "independent-review-agent",
+      "promptVersion": "1"
+    }
+  },
+  "linkHash": "52b5ec0efcc16d61",
+  "inputs": [
+    [
+      "requirement",
+      "1202c4966e4af549"
+    ],
+    [
+      "model",
+      "239c28511bddd9b0+33dad4e741f81e93"
+    ]
+  ]
+}

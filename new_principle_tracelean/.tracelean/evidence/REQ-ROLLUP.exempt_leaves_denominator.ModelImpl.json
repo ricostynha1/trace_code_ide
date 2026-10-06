@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-ROLLUP",
+    "clause": "exempt_leaves_denominator",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 91,
+      "cases": 3000,
+      "op": "REQ-ROLLUP.open_is_lower_bound"
+    }
+  },
+  "linkHash": "9ef460819636ec5f",
+  "inputs": [
+    [
+      "implementation",
+      "8bc9971e95aa3caf+d33f902cb75709f5"
+    ],
+    [
+      "model",
+      "bcea34ec26edd655"
+    ]
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-CMD",
+    "clause": "round_trip",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "independent-review-agent",
+      "promptVersion": "1"
+    }
+  },
+  "linkHash": "c434b6e01e0c22f3",
+  "inputs": [
+    [
+      "requirement",
+      "08e0bb7140981dc3"
+    ],
+    [
+      "model",
+      "184c564fff862e18"
+    ]
+  ]
+}

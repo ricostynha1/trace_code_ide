@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-SCREEN",
+    "clause": "focus_is_placed",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 41,
+      "cases": 2000,
+      "op": "REQ-SCREEN.every_pane_is_opened"
+    }
+  },
+  "linkHash": "e041ffc4fcdeb4b2",
+  "inputs": [
+    [
+      "implementation",
+      "f6b045588164b437"
+    ],
+    [
+      "model",
+      "039ea0dd4a02df36"
+    ]
+  ]
+}

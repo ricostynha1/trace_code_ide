@@ -1,0 +1,25 @@
+{
+  "key": {
+    "reqId": "REQ-ANNOT",
+    "clause": "totality",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Annotation::a_comment_without_at_signs_says_nothing",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "fb92da1066c58a24",
+  "inputs": [
+    [
+      "model",
+      "a99d19460921e69e+c3ada71c9c444a58"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

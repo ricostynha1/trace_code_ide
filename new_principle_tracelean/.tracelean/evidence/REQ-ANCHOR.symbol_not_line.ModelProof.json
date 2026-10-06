@@ -1,0 +1,25 @@
+{
+  "key": {
+    "reqId": "REQ-ANCHOR",
+    "clause": "symbol_not_line",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Anchor::an_identity_never_mentions_a_line",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "e31726d67cb350e0",
+  "inputs": [
+    [
+      "model",
+      "d1b5933586cf1c6d"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-DOCLINK",
+    "clause": "dangling_reported",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "independent-review-agent",
+      "promptVersion": "1"
+    }
+  },
+  "linkHash": "bce00e4d6ec518a4",
+  "inputs": [
+    [
+      "requirement",
+      "ca9f26ad87c3cd2e"
+    ],
+    [
+      "model",
+      "cddf7f4f1b5b07e7"
+    ]
+  ]
+}

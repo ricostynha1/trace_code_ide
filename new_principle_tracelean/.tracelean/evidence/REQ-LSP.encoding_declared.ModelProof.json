@@ -1,0 +1,25 @@
+{
+  "key": {
+    "reqId": "REQ-LSP",
+    "clause": "encoding_declared",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Lsp::a_declared_encoding_is_the_answer",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "2c0db7652480dd8b",
+  "inputs": [
+    [
+      "model",
+      "24979beb9cebcabd"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

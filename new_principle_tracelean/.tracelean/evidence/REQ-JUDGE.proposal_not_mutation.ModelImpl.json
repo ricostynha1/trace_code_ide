@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-JUDGE",
+    "clause": "proposal_not_mutation",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 17,
+      "cases": 2000,
+      "op": "REQ-JUDGE.caps_at_judgement"
+    }
+  },
+  "linkHash": "ec5215d5e1ccd84e",
+  "inputs": [
+    [
+      "implementation",
+      "e1c6b3e931457ddd"
+    ],
+    [
+      "model",
+      "985f00febe1f14a1"
+    ]
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-CMD",
+    "clause": "total_or_refused",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "independent-review-agent",
+      "promptVersion": "1"
+    }
+  },
+  "linkHash": "483bccbeacb69ce4",
+  "inputs": [
+    [
+      "requirement",
+      "08e0bb7140981dc3"
+    ],
+    [
+      "model",
+      "87fc163406abdce9"
+    ]
+  ]
+}

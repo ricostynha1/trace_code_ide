@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-STRENGTH",
+    "clause": "nondeterministic_declared",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 33,
+      "cases": 3000,
+      "op": "REQ-STRENGTH.qualifies_proof"
+    }
+  },
+  "linkHash": "cbd70637bec68375",
+  "inputs": [
+    [
+      "implementation",
+      "a91fb39e83ceedb2+d29d5a8c44645266"
+    ],
+    [
+      "model",
+      "87d4da9d465362f8+b1d7f99240581683"
+    ]
+  ]
+}

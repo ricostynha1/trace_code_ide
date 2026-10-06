@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-MYTH",
+    "clause": "totality",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 23,
+      "cases": 3000,
+      "op": "REQ-MYTH.totality"
+    }
+  },
+  "linkHash": "02c34c26e9521d4c",
+  "inputs": [
+    [
+      "implementation",
+      "40ac8c4719440ed4+d6915f13729e3d31"
+    ],
+    [
+      "model",
+      "b2d0950b816b6710+fcbb441030da0cc9"
+    ]
+  ]
+}

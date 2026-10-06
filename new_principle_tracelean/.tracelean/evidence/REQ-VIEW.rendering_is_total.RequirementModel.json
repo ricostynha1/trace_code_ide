@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-VIEW",
+    "clause": "rendering_is_total",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "independent-review-agent",
+      "promptVersion": "1"
+    }
+  },
+  "linkHash": "6f1507a677170da7",
+  "inputs": [
+    [
+      "requirement",
+      "4694bd7184911203"
+    ],
+    [
+      "model",
+      "75cafef92d87592c"
+    ]
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-SHOW",
+    "clause": "well_formed_by_construction",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 53,
+      "cases": 2000,
+      "op": "REQ-SHOW.well_formed_by_construction"
+    }
+  },
+  "linkHash": "1a389df31a9c85e4",
+  "inputs": [
+    [
+      "implementation",
+      "6790242e5c2d7d58+8d3bb9af88e9048a+afe1cb98c5742604"
+    ],
+    [
+      "model",
+      "33b4dcb380ce6097"
+    ]
+  ]
+}

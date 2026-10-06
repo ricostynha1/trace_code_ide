@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-TRANSCRIPT",
+    "clause": "partial_line_held",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "independent-review-agent",
+      "promptVersion": "1"
+    }
+  },
+  "linkHash": "ec6febf803228bbb",
+  "inputs": [
+    [
+      "requirement",
+      "52bd9c122acce06e"
+    ],
+    [
+      "model",
+      "bcd8789899d37482"
+    ]
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-DOCLINK",
+    "clause": "hash_moves_review",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 5,
+      "cases": 2000,
+      "op": "REQ-DOCLINK.hash_moves_review"
+    }
+  },
+  "linkHash": "11b4f44364c52f90",
+  "inputs": [
+    [
+      "implementation",
+      "3d3acc7818412630+e5dcefbcedf8b54b"
+    ],
+    [
+      "model",
+      "cddf7f4f1b5b07e7"
+    ]
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-DOCLINK",
+    "clause": "confirmation_is_human",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 47,
+      "cases": 2000,
+      "op": "REQ-DOCLINK.confirmation_is_human"
+    }
+  },
+  "linkHash": "81b18f424a390743",
+  "inputs": [
+    [
+      "implementation",
+      "5fee88da30a6a3f3+7ffe2be3e9c3e8d2"
+    ],
+    [
+      "model",
+      "80b8a4d54a1f21da"
+    ]
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-SHOW",
+    "clause": "menu_from_keymap",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 73,
+      "cases": 2000,
+      "op": "REQ-SHOW.menu_from_keymap"
+    }
+  },
+  "linkHash": "42ffbf6802b4c5da",
+  "inputs": [
+    [
+      "implementation",
+      "3b92b0998edb6e5d+3ee59ad610e968c9"
+    ],
+    [
+      "model",
+      "dd1183891445ce98"
+    ]
+  ]
+}

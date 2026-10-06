@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-CMD",
+    "clause": "batch_reverses",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 71,
+      "cases": 3000,
+      "op": "REQ-CMD.batch_reverses"
+    }
+  },
+  "linkHash": "bcaa716c36cf4903",
+  "inputs": [
+    [
+      "implementation",
+      "1039d0438586c413+5305dd11c3ee0a0b"
+    ],
+    [
+      "model",
+      "184c564fff862e18"
+    ]
+  ]
+}

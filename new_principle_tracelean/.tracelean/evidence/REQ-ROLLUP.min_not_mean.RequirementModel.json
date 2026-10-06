@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-ROLLUP",
+    "clause": "min_not_mean",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "independent-review-agent",
+      "promptVersion": "1"
+    }
+  },
+  "linkHash": "0207c3ceca79b1f0",
+  "inputs": [
+    [
+      "requirement",
+      "b09bbb617b67aca1"
+    ],
+    [
+      "model",
+      "30f0a5ab73add768"
+    ]
+  ]
+}

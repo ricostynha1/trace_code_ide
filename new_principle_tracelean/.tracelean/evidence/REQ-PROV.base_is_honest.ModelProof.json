@@ -1,0 +1,25 @@
+{
+  "key": {
+    "reqId": "REQ-PROV",
+    "clause": "base_is_honest",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Provenance::nothing_recorded_means_nothing_written",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "a1571b1c19d0dcc8",
+  "inputs": [
+    [
+      "model",
+      "92cc8d6d9e1fb040"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-SELFWRITE",
+    "clause": "own_writes_ignored",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 37,
+      "cases": 2000,
+      "op": "REQ-SELFWRITE.own_writes_ignored"
+    }
+  },
+  "linkHash": "f1949bad7f0ad9b1",
+  "inputs": [
+    [
+      "implementation",
+      "cec6c5450f7a6b73"
+    ],
+    [
+      "model",
+      "e5f0ed11c7a356e5"
+    ]
+  ]
+}

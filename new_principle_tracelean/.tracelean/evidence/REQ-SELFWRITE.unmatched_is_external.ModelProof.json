@@ -1,0 +1,25 @@
+{
+  "key": {
+    "reqId": "REQ-SELFWRITE",
+    "clause": "unmatched_is_external",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Mirror::nothing_pending_is_external",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "01b80252410c389f",
+  "inputs": [
+    [
+      "model",
+      "e5f0ed11c7a356e5"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

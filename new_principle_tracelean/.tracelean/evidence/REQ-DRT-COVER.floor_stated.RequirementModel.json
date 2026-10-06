@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-DRT-COVER",
+    "clause": "floor_stated",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "independent-review-agent",
+      "promptVersion": "1"
+    }
+  },
+  "linkHash": "2a7ec8be421d323c",
+  "inputs": [
+    [
+      "requirement",
+      "867ec22aa630d0f9"
+    ],
+    [
+      "model",
+      "562694efc2002317"
+    ]
+  ]
+}

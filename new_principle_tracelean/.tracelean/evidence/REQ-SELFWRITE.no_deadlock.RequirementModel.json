@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-SELFWRITE",
+    "clause": "no_deadlock",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "independent-review-agent",
+      "promptVersion": "1"
+    }
+  },
+  "linkHash": "9c53aeb0644269b0",
+  "inputs": [
+    [
+      "requirement",
+      "d3332ae800d53559"
+    ],
+    [
+      "model",
+      "0eca5893d40b22ee"
+    ]
+  ]
+}

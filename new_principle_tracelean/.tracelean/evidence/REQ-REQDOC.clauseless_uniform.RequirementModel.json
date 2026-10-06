@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-REQDOC",
+    "clause": "clauseless_uniform",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "independent-review-agent",
+      "promptVersion": "1"
+    }
+  },
+  "linkHash": "2ee010cf6736da20",
+  "inputs": [
+    [
+      "requirement",
+      "bad5f8d2219f99e5"
+    ],
+    [
+      "model",
+      "5b5eb84bf1e70cf9"
+    ]
+  ]
+}

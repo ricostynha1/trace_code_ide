@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-EVID",
+    "clause": "judgement_caps",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "independent-review-agent",
+      "promptVersion": "1"
+    }
+  },
+  "linkHash": "e1d07f44f1d7d268",
+  "inputs": [
+    [
+      "requirement",
+      "c3dfc3a07c7808a1"
+    ],
+    [
+      "model",
+      "0183812077703e72"
+    ]
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-LOCK",
+    "clause": "version_stamped",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "independent-review-agent",
+      "promptVersion": "1"
+    }
+  },
+  "linkHash": "7c3b02110c5910b8",
+  "inputs": [
+    [
+      "requirement",
+      "bac341f63b8d1e71"
+    ],
+    [
+      "model",
+      "d8c49421dbdd21ef"
+    ]
+  ]
+}

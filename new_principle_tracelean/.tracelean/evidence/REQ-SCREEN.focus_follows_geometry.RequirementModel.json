@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-SCREEN",
+    "clause": "focus_follows_geometry",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "independent-review-agent",
+      "promptVersion": "1"
+    }
+  },
+  "linkHash": "51e719200b688c35",
+  "inputs": [
+    [
+      "requirement",
+      "3e3ec1f81caab4fa"
+    ],
+    [
+      "model",
+      "48a602485720c325"
+    ]
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-SCREEN",
+    "clause": "layout_tiles_the_region",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "independent-review-agent",
+      "promptVersion": "1"
+    }
+  },
+  "linkHash": "874bc02f3a048735",
+  "inputs": [
+    [
+      "requirement",
+      "3e3ec1f81caab4fa"
+    ],
+    [
+      "model",
+      "737eeaaa0cd574c1"
+    ]
+  ]
+}

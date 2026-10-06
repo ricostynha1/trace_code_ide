@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-STALE",
+    "clause": "change_invalidates",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "independent-review-agent",
+      "promptVersion": "1"
+    }
+  },
+  "linkHash": "e2a929129a4533a5",
+  "inputs": [
+    [
+      "requirement",
+      "b3fe15b5f0154562"
+    ],
+    [
+      "model",
+      "aace6213626c3e45"
+    ]
+  ]
+}

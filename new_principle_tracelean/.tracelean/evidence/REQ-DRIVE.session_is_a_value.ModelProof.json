@@ -1,0 +1,25 @@
+{
+  "key": {
+    "reqId": "REQ-DRIVE",
+    "clause": "session_is_a_value",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Drive::a_session_answers_once_per_key",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "0c7336c40bc6f616",
+  "inputs": [
+    [
+      "model",
+      "b50bbd06a7e6541c"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

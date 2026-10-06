@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-SCREEN",
+    "clause": "split_keeps_the_buffer",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 59,
+      "cases": 2000,
+      "op": "REQ-SCREEN.split_keeps_the_buffer"
+    }
+  },
+  "linkHash": "0d19f47316831634",
+  "inputs": [
+    [
+      "implementation",
+      "f35e91a1bc035d17"
+    ],
+    [
+      "model",
+      "8be7de2bdd0a8aed"
+    ]
+  ]
+}

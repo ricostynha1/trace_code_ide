@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-CMD",
+    "clause": "batch_reverses",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "independent-review-agent",
+      "promptVersion": "1"
+    }
+  },
+  "linkHash": "2ff9baf7383b5e4b",
+  "inputs": [
+    [
+      "requirement",
+      "08e0bb7140981dc3"
+    ],
+    [
+      "model",
+      "184c564fff862e18"
+    ]
+  ]
+}

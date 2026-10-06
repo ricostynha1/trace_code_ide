@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-ROLLUP",
+    "clause": "never_complete_when_open",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "independent-review-agent",
+      "promptVersion": "1"
+    }
+  },
+  "linkHash": "7cea5b14896382ec",
+  "inputs": [
+    [
+      "requirement",
+      "b09bbb617b67aca1"
+    ],
+    [
+      "model",
+      "ac485f79c09af56a"
+    ]
+  ]
+}

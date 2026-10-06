@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-SHOW",
+    "clause": "listing_from_entries",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 97,
+      "cases": 2000,
+      "op": "REQ-SHOW.listing_from_entries"
+    }
+  },
+  "linkHash": "6491afb30d94f9e7",
+  "inputs": [
+    [
+      "implementation",
+      "1316a77ef517bbe5+b6cc31858fb5a354"
+    ],
+    [
+      "model",
+      "2c4a79afd9285f01"
+    ]
+  ]
+}

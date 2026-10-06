@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-VIEW",
+    "clause": "everything_is_a_buffer",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "independent-review-agent",
+      "promptVersion": "1"
+    }
+  },
+  "linkHash": "7a9b9be13cf3a14d",
+  "inputs": [
+    [
+      "requirement",
+      "4694bd7184911203"
+    ],
+    [
+      "model",
+      "c91db8e13b2cb37c"
+    ]
+  ]
+}

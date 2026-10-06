@@ -1,0 +1,25 @@
+{
+  "key": {
+    "reqId": "REQ-DRIVE",
+    "clause": "menu_is_the_bar_there",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Drive::every_step_shows_the_bar_of_the_mode_it_reached",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "27a22a0f1763f549",
+  "inputs": [
+    [
+      "model",
+      "b50bbd06a7e6541c"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

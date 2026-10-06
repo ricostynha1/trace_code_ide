@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-SHOW",
+    "clause": "producers_are_total",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 53,
+      "cases": 2000,
+      "op": "REQ-SHOW.well_formed_by_construction"
+    }
+  },
+  "linkHash": "618071ab6beab317",
+  "inputs": [
+    [
+      "implementation",
+      "47626fa9c7f1ab28+6790242e5c2d7d58"
+    ],
+    [
+      "model",
+      "33b4dcb380ce6097+7e374d2b880b864b"
+    ]
+  ]
+}

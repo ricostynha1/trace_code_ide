@@ -1,0 +1,25 @@
+{
+  "key": {
+    "reqId": "REQ-ANCHOR",
+    "clause": "imprecise_capped",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Anchor::an_imprecise_anchor_caps_a_proof",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "6df654e78c338fb8",
+  "inputs": [
+    [
+      "model",
+      "c4de5182e39bc735"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

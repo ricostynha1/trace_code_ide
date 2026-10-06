@@ -1,0 +1,25 @@
+{
+  "key": {
+    "reqId": "REQ-DRT-PROTO",
+    "clause": "reply_exclusive",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Protocol::neither_is_not_an_answer",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "e7d7b080ff8a1ba7",
+  "inputs": [
+    [
+      "model",
+      "c33336d8df0f8e74+fc56830a116db684"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

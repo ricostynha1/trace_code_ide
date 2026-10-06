@@ -1,0 +1,25 @@
+{
+  "key": {
+    "reqId": "REQ-MYTH",
+    "clause": "keymap_is_data",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Keymap::a_missing_root_is_reported_at_load",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "3e49cd91dfc762ba",
+  "inputs": [
+    [
+      "model",
+      "ca58ab60c248f90e"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

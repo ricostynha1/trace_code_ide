@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-CMD",
+    "clause": "witness_carried",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "independent-review-agent",
+      "promptVersion": "1"
+    }
+  },
+  "linkHash": "51b2605de54c2acc",
+  "inputs": [
+    [
+      "requirement",
+      "08e0bb7140981dc3"
+    ],
+    [
+      "model",
+      "854a6245d289ba86"
+    ]
+  ]
+}

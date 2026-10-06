@@ -1,0 +1,25 @@
+{
+  "key": {
+    "reqId": "REQ-ACT",
+    "clause": "unknown_is_refused",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Act::an_unknown_action_is_refused",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "0ea10bc32e4ad4e3",
+  "inputs": [
+    [
+      "model",
+      "4d7c86ad412807d1+60770180691a6d4f+d4629532127d15ae"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

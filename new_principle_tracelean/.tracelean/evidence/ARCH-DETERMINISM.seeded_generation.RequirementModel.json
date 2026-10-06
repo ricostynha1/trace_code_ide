@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "ARCH-DETERMINISM",
+    "clause": "seeded_generation",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "independent-review-agent",
+      "promptVersion": "1"
+    }
+  },
+  "linkHash": "6ba7f2d5f98099db",
+  "inputs": [
+    [
+      "requirement",
+      "fe4332a503b0c083"
+    ],
+    [
+      "model",
+      "9ef66c65431edf29"
+    ]
+  ]
+}

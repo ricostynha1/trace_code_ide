@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-SHOW",
+    "clause": "window_is_a_buffer",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 83,
+      "cases": 2000,
+      "op": "REQ-SHOW.window_is_a_buffer"
+    }
+  },
+  "linkHash": "5b03cc6c4fc5f8a2",
+  "inputs": [
+    [
+      "implementation",
+      "47626fa9c7f1ab28+7371a641a73361e5"
+    ],
+    [
+      "model",
+      "7e374d2b880b864b"
+    ]
+  ]
+}

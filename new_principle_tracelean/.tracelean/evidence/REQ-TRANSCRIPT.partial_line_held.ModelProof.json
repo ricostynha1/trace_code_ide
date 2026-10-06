@@ -1,0 +1,25 @@
+{
+  "key": {
+    "reqId": "REQ-TRANSCRIPT",
+    "clause": "partial_line_held",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Transcript::no_newline_is_all_held",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "600db689d9a40255",
+  "inputs": [
+    [
+      "model",
+      "bcd8789899d37482+dde87731c465dfa9"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "key": {
+    "reqId": "REQ-REQDOC",
+    "clause": "id_unique",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Requirement::one_declaration_is_not_a_duplicate",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "cf0d66e4a2312a33",
+  "inputs": [
+    [
+      "model",
+      "ed7528f9e644fd0b"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

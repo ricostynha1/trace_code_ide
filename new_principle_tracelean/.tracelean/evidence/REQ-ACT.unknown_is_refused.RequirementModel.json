@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-ACT",
+    "clause": "unknown_is_refused",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "independent-review-agent",
+      "promptVersion": "1"
+    }
+  },
+  "linkHash": "c5f4b0adbe3f32fb",
+  "inputs": [
+    [
+      "requirement",
+      "f3995ba568dbf65f"
+    ],
+    [
+      "model",
+      "d4629532127d15ae"
+    ]
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-COST",
+    "clause": "cache_priced_apart",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 83,
+      "cases": 2000,
+      "op": "REQ-COST.cache_priced_apart"
+    }
+  },
+  "linkHash": "6db1a4aa00ffaacb",
+  "inputs": [
+    [
+      "implementation",
+      "a4099bd2693b2d2d"
+    ],
+    [
+      "model",
+      "060c20077467402d"
+    ]
+  ]
+}

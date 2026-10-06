@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-LOCK",
+    "clause": "deterministic_bytes",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 12,
+      "cases": 2000,
+      "op": "REQ-LOCK.deterministic_bytes"
+    }
+  },
+  "linkHash": "721ebaf566a69d24",
+  "inputs": [
+    [
+      "implementation",
+      "51aba16aa5ebe2fb+672d8b2648ac548c+6a54a220f2f21645+d97932c0458c79f1"
+    ],
+    [
+      "model",
+      "a105d7f65b4db0a6"
+    ]
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-SHOW",
+    "clause": "core_produces",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 59,
+      "cases": 2000,
+      "op": "REQ-SHOW.core_produces"
+    }
+  },
+  "linkHash": "0a680636762fc686",
+  "inputs": [
+    [
+      "implementation",
+      "4b6db735a69eb00f+4b9dc77791161952+6ce05c865d2cebfb"
+    ],
+    [
+      "model",
+      "88c95c8a3a54ea34"
+    ]
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-SBX",
+    "clause": "escape_is_not_silent",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "independent-review-agent",
+      "promptVersion": "1"
+    }
+  },
+  "linkHash": "19d155b940da2f45",
+  "inputs": [
+    [
+      "requirement",
+      "eb45d08674b26dcc"
+    ],
+    [
+      "model",
+      "875ced4d8c3ac542"
+    ]
+  ]
+}

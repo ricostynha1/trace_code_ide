@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-ANCHOR",
+    "clause": "comments_excluded",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "independent-review-agent",
+      "promptVersion": "1"
+    }
+  },
+  "linkHash": "7bbfbaef33965d66",
+  "inputs": [
+    [
+      "requirement",
+      "44406cdf4636390d"
+    ],
+    [
+      "model",
+      "d9fa7adb61ff1e6c"
+    ]
+  ]
+}

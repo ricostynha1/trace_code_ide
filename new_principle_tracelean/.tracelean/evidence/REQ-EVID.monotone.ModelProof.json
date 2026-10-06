@@ -1,0 +1,25 @@
+{
+  "key": {
+    "reqId": "REQ-EVID",
+    "clause": "monotone",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Evidence::adding_a_record_never_lowers_assurance",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "3835cb0a1cb4d2d2",
+  "inputs": [
+    [
+      "model",
+      "d47ffb3b29e8752b"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

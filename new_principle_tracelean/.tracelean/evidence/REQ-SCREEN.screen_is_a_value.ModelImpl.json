@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-SCREEN",
+    "clause": "screen_is_a_value",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 41,
+      "cases": 2000,
+      "op": "REQ-SCREEN.every_pane_is_opened"
+    }
+  },
+  "linkHash": "972b164f2b337446",
+  "inputs": [
+    [
+      "implementation",
+      "1ca96acd04f1c6d8+3b92b0998edb6e5d+d04b064eff46abd8+f6b045588164b437"
+    ],
+    [
+      "model",
+      "5d159a3d8229033d+8f043133e986f1ae"
+    ]
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-VIEW",
+    "clause": "rendering_is_total",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 31,
+      "cases": 2000,
+      "op": "REQ-VIEW.rendering_is_total"
+    }
+  },
+  "linkHash": "cfce8ebaffb26703",
+  "inputs": [
+    [
+      "implementation",
+      "5c285ce7e09ab6a0+c3cebfdb197803af+cbd18457dec9045d+f82ce5be11c6371f"
+    ],
+    [
+      "model",
+      "75cafef92d87592c+b9f69cf500f6df83"
+    ]
+  ]
+}

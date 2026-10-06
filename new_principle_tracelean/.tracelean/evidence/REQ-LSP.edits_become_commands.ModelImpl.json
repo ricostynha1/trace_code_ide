@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-LSP",
+    "clause": "edits_become_commands",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 53,
+      "cases": 2000,
+      "op": "REQ-LSP.edits_ordered"
+    }
+  },
+  "linkHash": "58297133756995f5",
+  "inputs": [
+    [
+      "implementation",
+      "df41c9b26fe45147"
+    ],
+    [
+      "model",
+      "2598b04e1b26dfde"
+    ]
+  ]
+}

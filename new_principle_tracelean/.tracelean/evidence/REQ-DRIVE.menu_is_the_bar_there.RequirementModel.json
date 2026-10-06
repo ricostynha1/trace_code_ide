@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-DRIVE",
+    "clause": "menu_is_the_bar_there",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "independent-review-agent",
+      "promptVersion": "1"
+    }
+  },
+  "linkHash": "c6047668e3551fb2",
+  "inputs": [
+    [
+      "requirement",
+      "ea6e5510b364457b"
+    ],
+    [
+      "model",
+      "b50bbd06a7e6541c"
+    ]
+  ]
+}

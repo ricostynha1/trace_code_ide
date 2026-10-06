@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-ANCHOR",
+    "clause": "hash_tracks_body",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 56,
+      "cases": 2000,
+      "op": "REQ-ANCHOR.hash_tracks_body"
+    }
+  },
+  "linkHash": "448ebaed05d80184",
+  "inputs": [
+    [
+      "implementation",
+      "5820f821f92ea5d0+81c1bfeac2776bbd"
+    ],
+    [
+      "model",
+      "0913a5732f797b56"
+    ]
+  ]
+}

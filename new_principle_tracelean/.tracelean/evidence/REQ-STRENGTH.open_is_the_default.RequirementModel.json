@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-STRENGTH",
+    "clause": "open_is_the_default",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "independent-review-agent",
+      "promptVersion": "1"
+    }
+  },
+  "linkHash": "dfee0abd7a555c51",
+  "inputs": [
+    [
+      "requirement",
+      "a884e4b26e42844d"
+    ],
+    [
+      "model",
+      "b1d7f99240581683"
+    ]
+  ]
+}

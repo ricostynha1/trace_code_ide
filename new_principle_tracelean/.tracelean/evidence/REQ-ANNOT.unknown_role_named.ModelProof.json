@@ -1,0 +1,25 @@
+{
+  "key": {
+    "reqId": "REQ-ANNOT",
+    "clause": "unknown_role_named",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Annotation::an_unknown_role_is_reported",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "094e617fceea5549",
+  "inputs": [
+    [
+      "model",
+      "c3ada71c9c444a58"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

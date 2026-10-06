@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-CHECK",
+    "clause": "progress_not_fault",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "independent-review-agent",
+      "promptVersion": "1"
+    }
+  },
+  "linkHash": "8ad96f6d0c630ae0",
+  "inputs": [
+    [
+      "requirement",
+      "22fa2b9c7ccb28b8"
+    ],
+    [
+      "model",
+      "ee0aee0c614287b3"
+    ]
+  ]
+}

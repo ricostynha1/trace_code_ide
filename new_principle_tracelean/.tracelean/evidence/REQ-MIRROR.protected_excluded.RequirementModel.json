@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-MIRROR",
+    "clause": "protected_excluded",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "independent-review-agent",
+      "promptVersion": "1"
+    }
+  },
+  "linkHash": "e979a2c4b772a746",
+  "inputs": [
+    [
+      "requirement",
+      "1202c4966e4af549"
+    ],
+    [
+      "model",
+      "33dad4e741f81e93"
+    ]
+  ]
+}

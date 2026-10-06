@@ -1,0 +1,25 @@
+{
+  "key": {
+    "reqId": "REQ-DRIVE",
+    "clause": "walk_follows_the_machine",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Drive::a_walk_is_as_long_as_the_session",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "5dd02989bc57cffc",
+  "inputs": [
+    [
+      "model",
+      "676324c005184ec4+b50bbd06a7e6541c"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

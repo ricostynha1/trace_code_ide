@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-DRIVE",
+    "clause": "walk_follows_the_machine",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "independent-review-agent",
+      "promptVersion": "1"
+    }
+  },
+  "linkHash": "8dcf140107b1ddd5",
+  "inputs": [
+    [
+      "requirement",
+      "ea6e5510b364457b"
+    ],
+    [
+      "model",
+      "b50bbd06a7e6541c"
+    ]
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-CMD",
+    "clause": "round_trip",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 11,
+      "cases": 3000,
+      "op": "REQ-CMD.round_trip"
+    }
+  },
+  "linkHash": "646b46a3e0490263",
+  "inputs": [
+    [
+      "implementation",
+      "e9b9a6e565c3e78a+f7c2db45c36cfd31"
+    ],
+    [
+      "model",
+      "184c564fff862e18"
+    ]
+  ]
+}

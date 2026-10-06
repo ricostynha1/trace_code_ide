@@ -1,0 +1,21 @@
+[package]
+name = "tracelean-tui"
+version = "0.1.0"
+edition = "2021"
+description = "TraceLean's terminal frontend: it renders buffers and produces none."
+
+[[bin]]
+name = "tracelean-tui"
+path = "src/main.rs"
+
+[dependencies]
+tracelean-core = { path = "../core" }
+tracelean-editor = { path = "../editor" }
+crossterm = "0.28"
+serde_json = "1"
+
+[dev-dependencies]
+# A pseudo-terminal, so the driving suite writes the bytes a keyboard writes and
+# `crossterm` parses them as it always does (REQ-DRIVE.keys_arrive_as_bytes).
+# Already in the lock through crossterm; nothing new is vendored.
+libc = "0.2"

@@ -1,0 +1,608 @@
+/* How a role looks.
+ *
+ * A role says what a region *is*; this file is the only place that says how it
+ * looks, which is the same division the terminal frontend makes with colours.
+ * Nothing here adds or removes text.
+ *
+ * The palette is the first TraceLean's (VS Code Dark+ chrome, One Dark syntax),
+ * so a person moving between the two reads the same colours as the same things.
+ */
+
+/* Every colour and font is a variable set from the theme (`assets/theme.json`,
+ * overridden by a project's `.tracelean/theme.json`) — see `paint` in app.ts.
+ * Section and key make the name: `ui.accent` is `--ui-accent`. This file says
+ * where things go; the theme says what they look like. */
+:root {
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  overflow: hidden;
+}
+
+/* The window, laid out as the first one was: the stations down the left edge,
+ * what is opened as tabs along the top, the panes under them, then the
+ * which-key bar and the status line across the whole width. */
+body {
+  margin: 0;
+  background: var(--ui-document);
+  color: var(--ui-documentText);
+  font-family: var(--fonts-code);
+  font-size: var(--fonts-codeSize);
+  /* A fixed line height, because the editor is told how many lines fit and a
+   * relative one would make that a guess. */
+  line-height: 21px;
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  grid-template-areas:
+    "stations strip"
+    "stations buffer"
+    "menu     menu"
+    "status   status";
+  height: 100vh;
+}
+
+/* The stations: an activity bar. The rows are the buffer's own, laid down a
+ * column because that is where a window keeps the places it can go. */
+#stations {
+  grid-area: stations;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 2px;
+  padding: 6px 0;
+  background: var(--ui-activityBar);
+  border-right: 1px solid var(--ui-border);
+  overflow: hidden;
+}
+
+/* What is opened: a row of tabs. */
+#strip {
+  grid-area: strip;
+  display: flex;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  min-height: 35px;
+  background: var(--ui-sidebar);
+  border-bottom: 1px solid var(--ui-border);
+  scrollbar-width: thin;
+}
+
+.item {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 1px solid transparent;
+  padding: 0;
+  white-space: pre;
+}
+
+button.item {
+  cursor: pointer;
+}
+
+#strip .item {
+  font-family: var(--fonts-chrome);
+  font-size: var(--fonts-chromeSize);
+  line-height: 1;
+  color: var(--ui-tabText);
+  background: var(--ui-tab);
+  border: none;
+  border-right: 1px solid var(--ui-sidebar);
+  padding: 0 14px;
+  min-height: 35px;
+}
+
+#strip button.item:hover {
+  color: var(--ui-tabActiveText);
+  background: var(--ui-tabActive);
+}
+
+/* A tab's ×: faint until the tab is pointed at or is the one shown. */
+#strip .close {
+  margin-left: 8px;
+  padding: 0 3px;
+  border-radius: 3px;
+  opacity: 0;
+}
+
+#strip .item:hover .close,
+#strip .item.role-heading .close {
+  opacity: 0.7;
+}
+
+#strip .close:hover {
+  opacity: 1;
+  background: var(--ui-hover);
+}
+
+/* The row the core marks as a heading is the buffer the focused pane shows. */
+#strip .item.role-heading {
+  color: var(--ui-tabActiveText);
+  background: var(--ui-tabActive);
+  box-shadow: inset 0 -2px 0 var(--ui-accent);
+}
+
+#stations .item {
+  color: var(--ui-activityIcon);
+  border: none;
+  border-left: 2px solid transparent;
+  padding: 8px 0;
+  text-align: center;
+  opacity: 0.75;
+}
+
+#stations button.item:hover,
+#stations button.item:focus-visible {
+  color: var(--ui-activityIconActive);
+  border-left-color: var(--ui-accent);
+  opacity: 1;
+  outline: none;
+}
+
+/* A station is painted as its emblem instead of its name. The name is still
+ * there — it is the item's accessible name, which is what a screen reader
+ * announces and what a harness reads off the page — so the glyph itself is
+ * hidden, or the region would be read twice. Sized up, because an emblem
+ * standing alone is the whole of what a person sees. */
+.emblem {
+  font-size: 1.35rem;
+  line-height: 1;
+}
+
+/* The region the panes are laid out in. Positioned, because each pane is put
+ * where the editor said, in the units the editor said it in. */
+#buffer {
+  grid-area: buffer;
+  position: relative;
+  overflow: hidden;
+  background: var(--ui-document);
+}
+
+/* One pane. The border is drawn inside the box's own edge, which is the
+ * difference between this frontend and the terminal: a window has a pixel to
+ * spend on a line and a terminal has to take a whole column from the pane. */
+/* Lines are never wrapped — a line is a line of the buffer — so a long one
+ * scrolls across; down is the editor's, through its window. */
+.pane {
+  position: absolute;
+  white-space: pre;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+  background: var(--ui-document);
+  color: var(--ui-documentText);
+  border-right: 1px solid var(--ui-border);
+  border-bottom: 1px solid var(--ui-border);
+}
+
+/* Listings and menus are where you choose what to look at, and wear the
+ * sidebar's shade so they read as that beside a document. */
+.pane.kind-directory,
+.pane.kind-menu,
+.pane.kind-record {
+  background: var(--ui-sidebar);
+  color: var(--ui-sidebarText);
+}
+
+/* The pane a key goes to, marked the way the first one marked the active tab. */
+.pane.focused {
+  box-shadow: inset 0 2px 0 var(--ui-focus);
+}
+
+/* The divider, where a pointer grabs a pane's edge. Wider than the line it
+ * sits on, because an edge a person has to hit exactly is an edge they miss.
+ * Inside the pane's edge: one past it would overflow the pane and give every
+ * pane a scrollbar for nothing. */
+.divider {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 6px;
+  height: 100%;
+  cursor: col-resize;
+  transition: background 0.15s;
+  z-index: 1;
+}
+
+.divider:hover,
+.divider:active {
+  background: var(--ui-accent);
+}
+
+/* A margin rather than padding, so the caret — placed in characters from the
+ * line's own edge — moves with the text. */
+.line {
+  min-height: 21px;
+  height: 21px;
+  position: relative;
+  margin-left: 8px;
+}
+
+/* A file's gutter: line numbers, from `data-number`, which the page sets from
+ * where the window starts. Generated content, so selecting text leaves the
+ * numbers behind. */
+.pane.kind-file {
+  --gutter: 8ch;
+}
+
+/* The claims beside a line, after its number: a letter a role. */
+.chips {
+  position: absolute;
+  left: 4.5ch;
+  width: 3.5ch;
+  overflow: hidden;
+  display: flex;
+  gap: 1px;
+  user-select: none;
+}
+
+.chip {
+  font: inherit;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 14px;
+  margin-top: 3px;
+  padding: 0 2px;
+  border: none;
+  border-radius: 2px;
+  cursor: pointer;
+  color: var(--ui-document);
+  background: var(--ui-gutterText);
+}
+
+.chip-models { background: var(--chips-models); }
+.chip-implements { background: var(--chips-implements); }
+.chip-tests { background: var(--chips-tests); }
+.chip-drt { background: var(--chips-drt); }
+.chip-proves { background: var(--chips-proves); }
+
+.pane.kind-file .line {
+  padding-left: var(--gutter);
+}
+
+.pane.kind-file .line::before {
+  content: attr(data-number);
+  position: absolute;
+  left: 0;
+  width: 4ch;
+  text-align: right;
+  color: var(--ui-gutterText);
+  user-select: none;
+}
+
+.pane.kind-file .line.active::before {
+  color: var(--ui-gutterActive);
+}
+
+.line:hover,
+.pane.focused .line.active {
+  background: var(--ui-activeLine);
+}
+
+.pane.kind-directory .line:hover,
+.pane.kind-menu .line:hover,
+.pane.kind-record .line:hover {
+  background: var(--ui-hover);
+}
+
+/* Where the cursor is. It shows nothing, so it cannot show text the buffer
+ * does not contain — the editor says the line and column and this draws a mark
+ * there. */
+.caret {
+  position: absolute;
+  top: 2px;
+  width: 2px;
+  height: 17px;
+  background: var(--ui-caret);
+  animation: blink 1.1s step-end infinite;
+}
+
+@keyframes blink {
+  50% { opacity: 0; }
+}
+
+/* A button is how this medium offers an affordance; a terminal binds a key.
+ * Neither invents one. It is styled as text so that the page reads as the
+ * buffer's text and not as a form. */
+/* No colour of its own: the role class says what the region is, and its colour
+ * comes from the theme like any other text. */
+button.actionable {
+  font: inherit;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+button.actionable:hover,
+button.actionable:focus {
+  background: var(--ui-selected);
+  outline: none;
+  text-decoration: underline dotted;
+}
+
+/* An entry that does something, in a panel (the sandbox's buttons, the
+ * welcome page's starts), looks pressable before it is pointed at. */
+.pane.kind-record button.actionable.role-entry {
+  background: color-mix(in srgb, var(--ui-button) 35%, transparent);
+  border-radius: 3px;
+}
+
+.pane.kind-record button.actionable.role-entry:hover {
+  background: var(--ui-button);
+  color: var(--ui-buttonText);
+  text-decoration: none;
+}
+
+.role-plain { color: var(--roles-plain); }
+.role-path { color: var(--roles-path); }
+.role-entry { color: var(--roles-entry); }
+.role-heading { color: var(--roles-heading); font-weight: 600; }
+.role-requirement { color: var(--roles-requirement); }
+.role-level { color: var(--roles-level); }
+.role-level-l1 { color: var(--roles-levelL1); }
+.role-level-l2 { color: var(--roles-levelL2); }
+.role-level-l3 { color: var(--roles-levelL3); }
+.role-level-l4 { color: var(--roles-levelL4); font-weight: 600; }
+.role-added { color: var(--roles-added); background: color-mix(in srgb, var(--roles-added) 8%, transparent); }
+.role-removed { color: var(--roles-removed); background: color-mix(in srgb, var(--roles-removed) 8%, transparent); }
+
+/* Syntax: one rule per token kind the core parses (`TokenKind`), each colour
+ * from the theme's `syntax` section. Written here, not by script: the window's
+ * content policy refuses a stylesheet made at run time. */
+.token-keyword { color: var(--syntax-keyword); }
+.token-string { color: var(--syntax-string); }
+.token-escape { color: var(--syntax-escape); }
+.token-number { color: var(--syntax-number); }
+.token-constant { color: var(--syntax-constant); }
+.token-comment { color: var(--syntax-comment); font-style: italic; }
+.token-type { color: var(--syntax-type); }
+.token-function { color: var(--syntax-function); }
+.token-macroCall { color: var(--syntax-macroCall); }
+.token-operator { color: var(--syntax-operator); }
+.token-property { color: var(--syntax-property); }
+.token-heading { color: var(--syntax-heading); font-weight: bold; }
+.token-bold { color: var(--syntax-bold); font-weight: bold; }
+.token-italic { color: var(--syntax-italic); font-style: italic; }
+.token-link { color: var(--syntax-link); text-decoration: underline; }
+
+/* The menu the mode offers: the first one's which-key bar, full width under
+ * the panes, its rows laid side by side because it is read across. */
+#menu {
+  grid-area: menu;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 0 20px;
+  max-height: 32vh;
+  overflow-y: auto;
+  padding: 8px 14px;
+  background: var(--ui-menu);
+  border-top: 2px solid var(--ui-accent);
+  color: var(--ui-menuText);
+  white-space: pre;
+}
+
+#menu .role-entry { color: var(--ui-menuText); }
+
+#menu button.actionable:hover,
+#menu button.actionable:focus {
+  color: var(--ui-menuKey);
+}
+
+#menu[hidden] {
+  display: none;
+}
+
+#status {
+  grid-area: status;
+  font-family: var(--fonts-chrome);
+  font-size: 12px;
+  line-height: 22px;
+  padding: 0 12px;
+  background: var(--ui-statusBar);
+  color: var(--ui-statusText);
+  white-space: pre;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Line and column, laid over the status line's right end. */
+#position {
+  grid-area: status;
+  justify-self: end;
+  z-index: 1;
+  font-family: var(--fonts-chrome);
+  font-size: 12px;
+  line-height: 22px;
+  padding: 0 12px;
+  background: var(--ui-statusBar);
+  color: var(--ui-statusText);
+  white-space: pre;
+}
+
+/* The checker's count, first on the right of the status line: a pill in the
+ * warning colour when it found something. */
+#position .problems {
+  font: inherit;
+  border: 0;
+  border-radius: 3px;
+  margin-right: 12px;
+  padding: 0 6px;
+  cursor: pointer;
+  background: transparent;
+  color: var(--ui-statusText);
+}
+
+#position .problems.some {
+  background: var(--ui-warning);
+  color: var(--ui-statusBar);
+}
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: var(--ui-scrollbar); }
+::-webkit-scrollbar-track { background: transparent; }
+
+/* The context menu: what the core says can be done where the pointer is. */
+#context {
+  position: fixed;
+  z-index: 10;
+  min-width: 260px;
+  max-height: 80vh;
+  overflow-y: auto;
+  padding: 4px 0;
+  background: var(--ui-contextMenu);
+  color: var(--ui-contextMenuText);
+  border: 1px solid var(--ui-contextMenuBorder);
+  border-radius: 4px;
+  box-shadow: 0 6px 20px var(--ui-shadow);
+  font-family: var(--fonts-chrome);
+  font-size: var(--fonts-chromeSize);
+  line-height: 1.4;
+}
+
+/* Laid along the bottom, as which-key lays out what a prefix leads to: one
+ * column per group, keys first, above the status bar. */
+#context.which-key {
+  left: 0;
+  right: 0;
+  bottom: 22px;
+  max-height: 45vh;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  align-items: start;
+  gap: 0 16px;
+  padding: 6px 8px 8px;
+  border: none;
+  border-top: 2px solid var(--ui-accent);
+  border-radius: 0;
+  background: var(--ui-menu);
+  color: var(--ui-menuText);
+}
+
+#context.which-key .context-entry {
+  justify-content: flex-start;
+  gap: 12px;
+}
+
+#context.which-key .context-keys {
+  min-width: 9ch;
+  color: var(--ui-menuKey);
+  font-size: var(--fonts-codeSize);
+}
+
+.context-group {
+  padding: 6px 12px 2px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ui-contextMenuHeading);
+}
+
+.context-entry {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  width: 100%;
+  padding: 4px 12px;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.context-entry:hover,
+.context-entry:focus-visible {
+  background: var(--ui-contextMenuHover);
+  outline: none;
+}
+
+.context-keys {
+  color: var(--ui-contextMenuKeys);
+  font-family: var(--fonts-code);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.context-input {
+  display: block;
+  width: calc(100% - 24px);
+  margin: 4px 12px;
+  padding: 4px 6px;
+  background: var(--ui-input);
+  color: var(--ui-documentText);
+  border: 1px solid var(--ui-button);
+  border-radius: 2px;
+  font-family: var(--fonts-code);
+  font-size: var(--fonts-codeSize);
+}
+
+/* Text in a pane can be selected with a drag and copied. */
+.pane {
+  user-select: text;
+  cursor: text;
+}
+
+.pane.kind-directory,
+.pane.kind-menu,
+.pane.kind-record {
+  cursor: default;
+}
+
+
+/* Ctrl+F's field: the context menu's box, pinned under the tabs on the right. */
+#context.find {
+  top: 40px;
+  right: 24px;
+  min-width: 300px;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* Ctrl+P: the same box, wider, its list under the field. */
+#context.quick {
+  left: 50%;
+  right: auto;
+  transform: translateX(-50%);
+  min-width: 480px;
+}
+
+/* What the editor has selected, laid over the text. Lightened rather than
+ * painted over, so the text stays readable under it. */
+.selection {
+  position: absolute;
+  pointer-events: none;
+  background: var(--ui-selection);
+  mix-blend-mode: lighten;
+}
+
+/* Each other place the name under the cursor is written, in the window. */
+.occurrence {
+  position: absolute;
+  pointer-events: none;
+  background: var(--ui-wordHighlight);
+  mix-blend-mode: lighten;
+}
+
+/* The bracket beside the cursor and its match. */
+.bracket {
+  position: absolute;
+  pointer-events: none;
+  outline: 1px solid var(--ui-bracketMatch);
+}
+
+#context .context-entry.chosen {
+  background: var(--ui-selected);
+}

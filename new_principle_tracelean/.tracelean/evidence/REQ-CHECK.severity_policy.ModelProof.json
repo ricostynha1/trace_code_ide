@@ -1,0 +1,25 @@
+{
+  "key": {
+    "reqId": "REQ-CHECK",
+    "clause": "severity_policy",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Checker::progress_never_blocks",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "dcfa45f157c7d2cb",
+  "inputs": [
+    [
+      "model",
+      "2c75247e2f4b7aa9+877ede27519bdf01"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

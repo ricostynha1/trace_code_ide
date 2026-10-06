@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-JUDGE",
+    "clause": "proposal_not_mutation",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "independent-review-agent",
+      "promptVersion": "1"
+    }
+  },
+  "linkHash": "853c919e48df8e19",
+  "inputs": [
+    [
+      "requirement",
+      "3be76d77938899ca"
+    ],
+    [
+      "model",
+      "985f00febe1f14a1"
+    ]
+  ]
+}

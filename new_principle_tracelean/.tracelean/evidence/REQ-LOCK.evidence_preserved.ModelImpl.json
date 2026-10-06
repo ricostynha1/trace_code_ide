@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-LOCK",
+    "clause": "evidence_preserved",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 13,
+      "cases": 2000,
+      "op": "REQ-LOCK.evidence_preserved"
+    }
+  },
+  "linkHash": "0dc8c524ec1d82b9",
+  "inputs": [
+    [
+      "implementation",
+      "14266a3f399a6f46+8932d5c8bcabfbc1+8e8f2241d7f6acd8+d478854f081500ff+ffeb984f7031c840"
+    ],
+    [
+      "model",
+      "b63f1f28a803b5ed"
+    ]
+  ]
+}

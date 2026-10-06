@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-DOCLINK",
+    "clause": "dangling_reported",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 5,
+      "cases": 2000,
+      "op": "REQ-DOCLINK.hash_moves_review"
+    }
+  },
+  "linkHash": "f7701153ed0a70e8",
+  "inputs": [
+    [
+      "implementation",
+      "3d3acc7818412630"
+    ],
+    [
+      "model",
+      "cddf7f4f1b5b07e7"
+    ]
+  ]
+}

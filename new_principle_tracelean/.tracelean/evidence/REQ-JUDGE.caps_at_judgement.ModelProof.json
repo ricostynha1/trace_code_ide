@@ -1,0 +1,25 @@
+{
+  "key": {
+    "reqId": "REQ-JUDGE",
+    "clause": "caps_at_judgement",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Judge::judgement_never_exceeds_L2",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "431a6674f7aa2a73",
+  "inputs": [
+    [
+      "model",
+      "985f00febe1f14a1"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

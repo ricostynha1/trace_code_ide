@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-DRT-COVER",
+    "clause": "floor_stated",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 97,
+      "cases": 2000,
+      "op": "REQ-DRT-COVER.floor_stated"
+    }
+  },
+  "linkHash": "2afd9812be14fff5",
+  "inputs": [
+    [
+      "implementation",
+      "6e623894fe5e18a5+8f294839d8ea9a59+b50fa306eb06b5bd+db20873d41a74402"
+    ],
+    [
+      "model",
+      "562694efc2002317"
+    ]
+  ]
+}

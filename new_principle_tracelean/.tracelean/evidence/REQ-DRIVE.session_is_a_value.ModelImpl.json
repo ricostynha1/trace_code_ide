@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-DRIVE",
+    "clause": "session_is_a_value",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 27,
+      "cases": 2000,
+      "op": "REQ-DRIVE.session_is_a_value"
+    }
+  },
+  "linkHash": "5ce627de61d3cc86",
+  "inputs": [
+    [
+      "implementation",
+      "10f1c3783c38f2b2+854edb98d7e77b7e+e475b4662df90c16"
+    ],
+    [
+      "model",
+      "b50bbd06a7e6541c"
+    ]
+  ]
+}

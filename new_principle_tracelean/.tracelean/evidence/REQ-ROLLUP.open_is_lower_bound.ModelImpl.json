@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-ROLLUP",
+    "clause": "open_is_lower_bound",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 91,
+      "cases": 3000,
+      "op": "REQ-ROLLUP.open_is_lower_bound"
+    }
+  },
+  "linkHash": "147694ba4d73ce8e",
+  "inputs": [
+    [
+      "implementation",
+      "8d101cfe3d5b86a4+b40bb852be10fd2f+d33f902cb75709f5+e33a44d720f5aa31"
+    ],
+    [
+      "model",
+      "24edb474b2447bdd+bcea34ec26edd655"
+    ]
+  ]
+}

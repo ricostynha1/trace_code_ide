@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-MIRROR",
+    "clause": "apply_reproduces",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 17,
+      "cases": 2000,
+      "op": "REQ-MIRROR.apply_reproduces"
+    }
+  },
+  "linkHash": "41afcc9ef4926c16",
+  "inputs": [
+    [
+      "implementation",
+      "3e7426755df1fdfa"
+    ],
+    [
+      "model",
+      "856df242f5d145ed"
+    ]
+  ]
+}

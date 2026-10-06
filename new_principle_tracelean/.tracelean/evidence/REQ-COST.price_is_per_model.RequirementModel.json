@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-COST",
+    "clause": "price_is_per_model",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "independent-review-agent",
+      "promptVersion": "1"
+    }
+  },
+  "linkHash": "88198365bc8395e8",
+  "inputs": [
+    [
+      "requirement",
+      "7c1b5d0b4957507e"
+    ],
+    [
+      "model",
+      "15bf20ff869ca259"
+    ]
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-UNDO",
+    "clause": "preview_is_pure",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "independent-review-agent",
+      "promptVersion": "1"
+    }
+  },
+  "linkHash": "81a99e9c27eff067",
+  "inputs": [
+    [
+      "requirement",
+      "68b251036a8e8002"
+    ],
+    [
+      "model",
+      "8ebf2ca2ea5e6aed"
+    ]
+  ]
+}

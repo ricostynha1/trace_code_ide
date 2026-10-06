@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-DRIVE",
+    "clause": "session_is_a_value",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "independent-review-agent",
+      "promptVersion": "1"
+    }
+  },
+  "linkHash": "68cd1a6366ca2852",
+  "inputs": [
+    [
+      "requirement",
+      "ea6e5510b364457b"
+    ],
+    [
+      "model",
+      "b50bbd06a7e6541c"
+    ]
+  ]
+}

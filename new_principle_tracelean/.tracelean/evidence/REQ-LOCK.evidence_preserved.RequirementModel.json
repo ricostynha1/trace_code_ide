@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-LOCK",
+    "clause": "evidence_preserved",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "independent-review-agent",
+      "promptVersion": "1"
+    }
+  },
+  "linkHash": "bfe2b6fbf143ee5b",
+  "inputs": [
+    [
+      "requirement",
+      "bac341f63b8d1e71"
+    ],
+    [
+      "model",
+      "b63f1f28a803b5ed"
+    ]
+  ]
+}

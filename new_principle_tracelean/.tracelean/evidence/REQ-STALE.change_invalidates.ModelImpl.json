@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-STALE",
+    "clause": "change_invalidates",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 29,
+      "cases": 3000,
+      "op": "REQ-STALE.change_invalidates"
+    }
+  },
+  "linkHash": "3df4d2550d84d25e",
+  "inputs": [
+    [
+      "implementation",
+      "0d263916c5c4761c+1a76aa2d5aeea1e8+d478854f081500ff+e04c8dc3a4904487"
+    ],
+    [
+      "model",
+      "aace6213626c3e45"
+    ]
+  ]
+}

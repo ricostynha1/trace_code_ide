@@ -1,0 +1,25 @@
+{
+  "key": {
+    "reqId": "REQ-CHECK",
+    "clause": "progress_not_fault",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Checker::progress_never_blocks",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "d31bbd7ae7ae60c9",
+  "inputs": [
+    [
+      "model",
+      "877ede27519bdf01+ee0aee0c614287b3"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

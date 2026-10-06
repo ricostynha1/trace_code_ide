@@ -1,0 +1,13 @@
+[package]
+name = "tracelean-editor"
+version = "0.1.0"
+edition = "2021"
+description = "TraceLean's editor state: what an intent does, shared by every frontend."
+
+[lib]
+name = "tracelean_editor"
+path = "src/lib.rs"
+
+[dependencies]
+tracelean-core = { path = "../core" }
+serde_json = "1"

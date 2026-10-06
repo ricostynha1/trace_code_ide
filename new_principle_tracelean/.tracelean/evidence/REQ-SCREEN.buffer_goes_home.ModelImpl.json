@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-SCREEN",
+    "clause": "buffer_goes_home",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 89,
+      "cases": 2000,
+      "op": "REQ-SCREEN.buffer_goes_home"
+    }
+  },
+  "linkHash": "523a72c8d0c91646",
+  "inputs": [
+    [
+      "implementation",
+      "3427c6cf087d0e97+a17e9750b0197a6c"
+    ],
+    [
+      "model",
+      "624f1eeb642f5110"
+    ]
+  ]
+}

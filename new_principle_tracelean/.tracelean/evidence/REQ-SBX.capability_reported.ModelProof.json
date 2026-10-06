@@ -1,0 +1,25 @@
+{
+  "key": {
+    "reqId": "REQ-SBX",
+    "clause": "capability_reported",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Effects::a_named_mechanism_is_reported",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "9aac2caf516913fb",
+  "inputs": [
+    [
+      "model",
+      "72767d3112f95b11+8acab00f46da524b"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

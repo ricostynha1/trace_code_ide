@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-UNDO",
+    "clause": "no_loss_on_branch",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "independent-review-agent",
+      "promptVersion": "1"
+    }
+  },
+  "linkHash": "12cf240d89c6cacd",
+  "inputs": [
+    [
+      "requirement",
+      "68b251036a8e8002"
+    ],
+    [
+      "model",
+      "34b25f64371a154e"
+    ]
+  ]
+}

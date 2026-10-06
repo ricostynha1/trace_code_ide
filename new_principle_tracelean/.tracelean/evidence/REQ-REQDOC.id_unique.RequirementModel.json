@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-REQDOC",
+    "clause": "id_unique",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "independent-review-agent",
+      "promptVersion": "1"
+    }
+  },
+  "linkHash": "66c0cd38536feb33",
+  "inputs": [
+    [
+      "requirement",
+      "bad5f8d2219f99e5"
+    ],
+    [
+      "model",
+      "ed7528f9e644fd0b"
+    ]
+  ]
+}

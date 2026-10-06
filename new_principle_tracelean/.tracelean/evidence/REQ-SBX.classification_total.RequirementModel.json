@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-SBX",
+    "clause": "classification_total",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "independent-review-agent",
+      "promptVersion": "1"
+    }
+  },
+  "linkHash": "08d94897c02d05a5",
+  "inputs": [
+    [
+      "requirement",
+      "eb45d08674b26dcc"
+    ],
+    [
+      "model",
+      "1e0fd0149ba94f3e"
+    ]
+  ]
+}

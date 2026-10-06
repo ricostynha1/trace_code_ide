@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-SCREEN",
+    "clause": "strip_is_the_opened_set",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 73,
+      "cases": 2000,
+      "op": "REQ-SCREEN.strip_is_the_opened_set"
+    }
+  },
+  "linkHash": "623fc07d298fc9ae",
+  "inputs": [
+    [
+      "implementation",
+      "e42970a5172721e4+f0a15131ac4ae15c"
+    ],
+    [
+      "model",
+      "996d30a83cfdbb17"
+    ]
+  ]
+}

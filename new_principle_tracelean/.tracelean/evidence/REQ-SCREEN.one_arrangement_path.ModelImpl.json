@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-SCREEN",
+    "clause": "one_arrangement_path",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 83,
+      "cases": 2000,
+      "op": "REQ-SCREEN.one_arrangement_path"
+    }
+  },
+  "linkHash": "3b1334000886a400",
+  "inputs": [
+    [
+      "implementation",
+      "40fe8e4c98c83b37"
+    ],
+    [
+      "model",
+      "f33bd6ef77cd82b4"
+    ]
+  ]
+}

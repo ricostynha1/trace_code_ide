@@ -1,0 +1,25 @@
+{
+  "key": {
+    "reqId": "REQ-MIRROR",
+    "clause": "binary_handled",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Mirror::an_opaque_file_is_never_mirrored",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "d982ff22197da964",
+  "inputs": [
+    [
+      "model",
+      "ec3bd62507568eba"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "key": {
+    "reqId": "REQ-REQDOC",
+    "clause": "refines_resolves",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Refinement::a_missing_parent_is_dangling_not_a_cycle",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "df75d837a61bf5a0",
+  "inputs": [
+    [
+      "model",
+      "9ea64c735fbb374d+a2a6887eda815a9c"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

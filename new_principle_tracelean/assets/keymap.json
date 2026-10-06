@@ -1,0 +1,151 @@
+{
+  "root": "Normal",
+  "modes": [
+    [
+      "Normal",
+      {
+        "parent": null,
+        "bindings": [
+          ["Space", { "enter": { "mode": "Leader", "description": "leader" } }],
+          [".", { "dispatch": { "action": "screen.offers", "description": "what can be done here" } }],
+          ["i", { "enter": { "mode": "Insert", "description": "insert text" } }]
+        ]
+      }
+    ],
+    [
+      "Insert",
+      {
+        "parent": null,
+        "bindings": [
+          ["Escape", { "enter": { "mode": "Normal", "description": "stop typing" } }]
+        ]
+      }
+    ],
+    [
+      "Leader",
+      {
+        "parent": "Normal",
+        "bindings": [
+          ["a", { "enter": { "mode": "Agent", "description": "agent" } }],
+          ["d", { "enter": { "mode": "Drt", "description": "differential testing" } }],
+          ["f", { "enter": { "mode": "File", "description": "file" } }],
+          ["h", { "enter": { "mode": "History", "description": "history" } }],
+          ["t", { "enter": { "mode": "Trace", "description": "trace" } }],
+          ["w", { "enter": { "mode": "Screen", "description": "panes and stations" } }]
+        ]
+      }
+    ],
+    [
+      "Screen",
+      {
+        "parent": "Leader",
+        "bindings": [
+          ["h", { "dispatch": { "action": "screen.focus.left", "description": "focus left" } }],
+          ["j", { "dispatch": { "action": "screen.focus.down", "description": "focus down" } }],
+          ["k", { "dispatch": { "action": "screen.focus.up", "description": "focus up" } }],
+          ["l", { "dispatch": { "action": "screen.focus.right", "description": "focus right" } }],
+          ["b", { "dispatch": { "action": "screen.strip", "description": "list what is opened" } }],
+          ["o", { "dispatch": { "action": "screen.show", "description": "show the buffer here" } }],
+          ["q", { "dispatch": { "action": "screen.close", "description": "close this buffer" } }],
+          ["s", { "dispatch": { "action": "screen.split.down", "description": "split downwards" } }],
+          ["t", { "enter": { "mode": "Station", "description": "stations" } }],
+          ["v", { "dispatch": { "action": "screen.split.across", "description": "split across" } }],
+          ["+", { "dispatch": { "action": "screen.grow", "description": "grow this pane" } }],
+          ["-", { "dispatch": { "action": "screen.shrink", "description": "shrink this pane" } }]
+        ]
+      }
+    ],
+    [
+      "Station",
+      {
+        "parent": "Screen",
+        "bindings": [
+          ["d", { "dispatch": { "action": "screen.station.design", "description": "the refinement graph" } }],
+          ["h", { "dispatch": { "action": "screen.station.history", "description": "the undo tree" } }],
+          ["p", { "dispatch": { "action": "screen.station.project", "description": "open a project" } }],
+          ["r", { "dispatch": { "action": "screen.station.requirements", "description": "requirements and clauses" } }],
+          ["s", { "dispatch": { "action": "screen.station.sandbox", "description": "watch a sandboxed agent" } }]
+        ]
+      }
+    ],
+    [
+      "Trace",
+      {
+        "parent": "Leader",
+        "bindings": [
+          ["a", { "dispatch": { "action": "trace.approve", "description": "approve this draft requirement" } }],
+          ["c", { "dispatch": { "action": "trace.check", "description": "check the tree" } }],
+          ["e", { "dispatch": { "action": "trace.evidence", "description": "evidence for this anchor" } }],
+          ["f", { "dispatch": { "action": "trace.findings", "description": "list findings" } }],
+          ["j", { "dispatch": { "action": "trace.judge", "description": "the judge's prompt for this clause" } }],
+          ["l", { "dispatch": { "action": "trace.lock", "description": "write the lockfile" } }],
+          ["n", { "dispatch": { "action": "trace.new_requirement", "description": "new requirement" } }],
+          ["o", { "dispatch": { "action": "trace.requirement", "description": "open the requirement here" } }],
+          ["r", { "dispatch": { "action": "trace.rollup", "description": "coverage rollup" } }],
+          ["s", { "dispatch": { "action": "trace.stale", "description": "what went stale" } }]
+        ]
+      }
+    ],
+    [
+      "Drt",
+      {
+        "parent": "Leader",
+        "bindings": [
+          ["b", { "dispatch": { "action": "drt.bindings", "description": "list bindings" } }],
+          ["c", { "dispatch": { "action": "drt.coverage", "description": "coverage floors" } }],
+          ["j", { "dispatch": { "action": "drt.judge", "description": "judge a divergence" } }],
+          ["r", { "dispatch": { "action": "drt.run", "description": "run the bindings" } }],
+          ["s", { "dispatch": { "action": "drt.shrink", "description": "shrink the last divergence" } }]
+        ]
+      }
+    ],
+    [
+      "File",
+      {
+        "parent": "Leader",
+        "bindings": [
+          ["c", { "dispatch": { "action": "file.copy", "description": "copy all of it" } }],
+          ["l", { "dispatch": { "action": "file.copy_line", "description": "copy this line" } }],
+          ["p", { "dispatch": { "action": "file.copy_path", "description": "copy the path" } }],
+          ["d", { "dispatch": { "action": "file.delete", "description": "delete" } }],
+          ["g", { "dispatch": { "action": "file.definition", "description": "go to the definition" } }],
+          ["n", { "dispatch": { "action": "file.new", "description": "new file" } }],
+          ["o", { "dispatch": { "action": "file.open", "description": "open" } }],
+          ["r", { "dispatch": { "action": "file.rename", "description": "rename" } }],
+          ["s", { "dispatch": { "action": "file.save", "description": "save" } }],
+          ["u", { "dispatch": { "action": "file.references", "description": "where this name is used" } }]
+        ]
+      }
+    ],
+    [
+      "History",
+      {
+        "parent": "Leader",
+        "bindings": [
+          ["b", { "dispatch": { "action": "history.branch", "description": "switch branch" } }],
+          ["j", { "dispatch": { "action": "history.jump", "description": "go to this point" } }],
+          ["r", { "dispatch": { "action": "history.redo", "description": "redo" } }],
+          ["t", { "dispatch": { "action": "history.tree", "description": "show the tree" } }],
+          ["u", { "dispatch": { "action": "history.undo", "description": "undo" } }]
+        ]
+      }
+    ],
+    [
+      "Agent",
+      {
+        "parent": "Leader",
+        "bindings": [
+          ["a", { "dispatch": { "action": "observe.accept", "description": "accept the change" } }],
+          ["c", { "dispatch": { "action": "sandbox.copy", "description": "copy the sandbox command" } }],
+          ["d", { "dispatch": { "action": "observe.diff", "description": "review the diff" } }],
+          ["e", { "dispatch": { "action": "sandbox.end", "description": "end the sandbox" } }],
+          ["f", { "dispatch": { "action": "observe.accept_file", "description": "accept this file" } }],
+          ["n", { "dispatch": { "action": "sandbox.new", "description": "new sandbox" } }],
+          ["r", { "dispatch": { "action": "observe.reject_file", "description": "reject this file" } }],
+          ["s", { "dispatch": { "action": "observe.start", "description": "watch the sandbox" } }],
+          ["x", { "dispatch": { "action": "observe.reject", "description": "reject the change" } }]
+        ]
+      }
+    ]
+  ]
+}

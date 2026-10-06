@@ -1,0 +1,25 @@
+{
+  "key": {
+    "reqId": "REQ-DRT-RUST",
+    "clause": "params_from_source",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Signature::an_arrow_in_a_bound_is_not_a_closing_bracket",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "4c3c91cd1e30d6a6",
+  "inputs": [
+    [
+      "model",
+      "3705ac7787f83732"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

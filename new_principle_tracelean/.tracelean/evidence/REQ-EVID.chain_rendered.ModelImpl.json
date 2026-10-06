@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-EVID",
+    "clause": "chain_rendered",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 29,
+      "cases": 2000,
+      "op": "REQ-EVID.chain_rendered"
+    }
+  },
+  "linkHash": "0be4eea3af413eb9",
+  "inputs": [
+    [
+      "implementation",
+      "92e3165fc2b36c0a+e7b9b6651ebf205e"
+    ],
+    [
+      "model",
+      "ef9574811b50a30d"
+    ]
+  ]
+}

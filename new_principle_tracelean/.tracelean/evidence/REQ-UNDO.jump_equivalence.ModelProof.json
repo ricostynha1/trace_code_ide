@@ -1,0 +1,25 @@
+{
+  "key": {
+    "reqId": "REQ-UNDO",
+    "clause": "jump_equivalence",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Tree::an_empty_history_has_nothing_to_disagree_about",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "fb15f063f9e35073",
+  "inputs": [
+    [
+      "model",
+      "4f4d41ec41bf2c80+8b3dbad264f46927"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

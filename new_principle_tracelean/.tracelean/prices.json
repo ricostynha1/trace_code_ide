@@ -1,0 +1,23 @@
+[
+  {
+    "model": "claude-opus-4-20250514",
+    "input": 15000000,
+    "cached": 1500000,
+    "cacheWrite": 18750000,
+    "output": 75000000
+  },
+  {
+    "model": "claude-sonnet-4-5-20250929",
+    "input": 3000000,
+    "cached": 300000,
+    "cacheWrite": 3750000,
+    "output": 15000000
+  },
+  {
+    "model": "claude-haiku-4-5-20251001",
+    "input": 800000,
+    "cached": 80000,
+    "cacheWrite": 1000000,
+    "output": 4000000
+  }
+]
