@@ -344,6 +344,9 @@ Lean/DRT where the core changed + editor + window, with tests
   clause on hover; the graph rows carry titles; every bottom-bar entry has a
   readable label (the keymap's description when nothing better). The tree
   marks each file with the kinds of claim in it (I T M P D, chip colours).
+  A requirement's document carries chips on each clause line; F12 on a
+  requirement name opens its document at the clause; the index shows each
+  requirement's implemented clauses as a bar.
 - **Not done.** Opening a terminal for the user (ruled out by
   `ARCH-NO-DRIVING.user_runs_it`); Lean infoview and type-check on save (both
   start a process); LSP hover; coverage treemap and trend.

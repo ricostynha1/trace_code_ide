@@ -235,6 +235,22 @@ impl Editor {
     /// (`tick`).
     pub fn chips_shown(&self, buffer: &Buffer, top: usize, height: usize) -> Vec<(usize, char, String)> {
         let BufferKind::File { path } = &buffer.kind else { return Vec::new() };
+        // A requirement's own document: its clauses, marked with what claims
+        // them anywhere in the tree.
+        let index = self.index();
+        if let Some(requirement) = index.requirements.values().find(|r| r.file == *path) {
+            let claims: Vec<(Option<String>, tracelean_core::trace::annotation::Role)> = index
+                .links
+                .iter()
+                .filter(|l| l.req_id == requirement.id)
+                .map(|l| (l.clause.clone(), l.role))
+                .collect();
+            return tracelean_core::surface::chips::clause_chips(&buffer.text, &requirement.id, &claims)
+                .into_iter()
+                .filter(|c| (top..top + height).contains(&c.line))
+                .map(|c| (c.line, c.letter, c.requirement))
+                .collect();
+        }
         let mut held = self.chips_held.borrow_mut();
         let (_, chips) = held
             .entry(path.clone())
@@ -1549,6 +1565,30 @@ impl Editor {
     /// Go to where the name under the cursor is declared.
     fn go_to_definition(&mut self) {
         use tracelean_core::surface::definition::{declarations, identifier_at};
+        // A requirement name is defined where its document says it: at the
+        // clause's own line, or the top for the requirement.
+        let buffer = self.buffer();
+        let named = buffer
+            .spans
+            .iter()
+            .find(|s| s.role == tracelean_core::surface::view::Role::Requirement && s.start <= self.offset && self.offset < s.stop)
+            .map(|s| buffer.text.chars().skip(s.start).take(s.stop - s.start).collect::<String>());
+        if let Some(name) = named {
+            let (id, clause) = match name.split_once('.') {
+                Some((id, clause)) => (id.to_string(), Some(clause.to_string())),
+                None => (name.clone(), None),
+            };
+            if let Some(file) = self.index().requirements.get(&id).map(|r| r.file.clone()) {
+                let text = self.workspace().files.get(&file).cloned().unwrap_or_default();
+                let line = clause
+                    .and_then(|c| text.lines().position(|l| l.trim_start().starts_with(&format!("{c}:"))))
+                    .map_or(1, |n| n + 1);
+                let link = requirement_view::link_text(&file, line as u32);
+                self.perform(Intent::Display { what: BufferKind::File { path: link } });
+                self.say("definition", &format!("{name}: {file}:{line}"));
+                return;
+            }
+        }
         let Some(name) = identifier_at(&self.buffer().text, self.offset) else {
             self.say("no name here", "put the cursor on a name");
             return;

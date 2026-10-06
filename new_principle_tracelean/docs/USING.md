@@ -60,6 +60,11 @@ The icons on the left are **stations**, always there:
 - **🔗 Trace** beside the code answers "why is this here, and what else
   would notice if it changed": for every claim in the open file, the clause
   and everything else that claims it, as links.
+- **In a requirement's own file** (`reqs/*.md`), each clause line carries
+  the same chips for what claims it, so a clause nothing meets stands out
+  while you write it.
+- **`F12` (or Ctrl+click) on a requirement name** in code jumps to that
+  clause's line in its document.
 - **Click any requirement name** (in code, prose or a panel) to open it. An
   opened requirement lists every clause with its evidence level (L1–L4) and
   every claim as a `path:line` link — click to jump there. A clause nothing

@@ -14,7 +14,9 @@ fn keymap() -> Keymap {
 }
 
 fn project(files: &[(&str, &str)]) -> PathBuf {
-    let dir = std::env::temp_dir().join(format!("tracelean-context-{}", std::process::id()));
+    static COUNTER: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+    let n = COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    let dir = std::env::temp_dir().join(format!("tracelean-context-{}-{n}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     for (name, content) in files {
         let path = dir.join(name);
@@ -31,6 +33,21 @@ const TREE: &[(&str, &str)] = &[
     ("tests/t.rs", "/// @tests REQ-A.one\n#[test]\nfn it_does() { assert_eq!(thing(), 1); }\n\n/// @tests REQ-B.two\n#[test]\nfn it_does_finely() { assert!(thing() > 0); }\n"),
     ("tests/plain.rs", "#[test]\nfn unannotated() { thing(); }\n"),
 ];
+
+/// Going to the definition of a requirement name in code opens its document
+/// at the clause's own line.
+#[test]
+fn a_requirement_name_is_defined_at_its_clause() {
+    let root = project(TREE);
+    let mut editor = Editor::open(root.clone(), keymap());
+    here(&mut editor, "file.open", Some("src/i.rs"));
+    editor.offset = "/// @implements REQ".chars().count();
+    editor.chord("F12");
+    assert!(matches!(editor.buffer().kind, tracelean_core::surface::view::BufferKind::File { ref path } if path == "reqs/a.md"));
+    let said = plain_text(editor.status.clone()).join("\n");
+    assert!(said.contains("reqs/a.md:6"), "{said}");
+    let _ = std::fs::remove_dir_all(&root);
+}
 
 fn here(editor: &mut Editor, action: &str, target: Option<&str>) {
     let pane = editor.screen.focus.clone();

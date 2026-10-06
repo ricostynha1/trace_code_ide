@@ -314,14 +314,15 @@ button.item {
  * where the window starts. Generated content, so selecting text leaves the
  * numbers behind. */
 .pane.kind-file {
-  --gutter: 8ch;
+  --gutter: 10ch;
 }
 
-/* The claims beside a line, after its number: a letter a role. */
+/* The claims beside a line, after its number: a letter a role — room for
+ * four, as a clause implemented, tested, modelled and proved has. */
 .chips {
   position: absolute;
   left: 4.5ch;
-  width: 3.5ch;
+  width: 5.5ch;
   overflow: hidden;
   display: flex;
   gap: 1px;
