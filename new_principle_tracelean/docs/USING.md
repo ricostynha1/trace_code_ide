@@ -63,6 +63,9 @@ The icons on the left are **stations**, always there:
 - **In a requirement's own file** (`reqs/*.md`), each clause line carries
   the same chips for what claims it, so a clause nothing meets stands out
   while you write it.
+- **Anywhere inside an annotated item** — a function's body, say — the bar at
+  the bottom offers the clause it claims: open it, or gather its context for
+  an agent.
 - **`F12` (or Ctrl+click) on a requirement name** in code jumps to that
   clause's line in its document.
 - **Click any requirement name** (in code, prose or a panel) to open it. An

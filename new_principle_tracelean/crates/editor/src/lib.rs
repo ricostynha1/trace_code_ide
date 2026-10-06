@@ -1136,6 +1136,47 @@ impl Editor {
                 }
             }
         }
+        // Anywhere inside an item that claims a clause, the clause it claims:
+        // a function's body is about its requirement as much as the
+        // annotation over it is.
+        if let BufferKind::File { path } = &buffer.kind {
+            let line = buffer.text.chars().take(offset).filter(|c| *c == '\n').count() as u32 + 1;
+            let mut claimed: Vec<String> = self
+                .index()
+                .links
+                .iter()
+                .filter(|l| l.anchor.file == *path && l.anchor.precise)
+                .filter(|l| l.line <= line && line <= l.anchor.end_line)
+                .map(|l| match &l.clause {
+                    Some(clause) => format!("{}.{clause}", l.req_id),
+                    None => l.req_id.clone(),
+                })
+                .collect();
+            claimed.dedup();
+            let at = offered.iter().position(|o| o.group != "here").unwrap_or(offered.len());
+            let mut extra = Vec::new();
+            for clause in claimed {
+                if offered.iter().any(|o| o.group == "here" && o.target.as_deref() == Some(clause.as_str())) {
+                    continue;
+                }
+                for (action, label) in [
+                    ("trace.requirement", format!("Open {clause}")),
+                    ("trace.context", format!("Context for an agent to change {clause}")),
+                ] {
+                    extra.push(tracelean_core::surface::offer::Offer {
+                        group: "here".into(),
+                        label,
+                        action: action.into(),
+                        target: Some(clause.clone()),
+                        asks: None,
+                        // Chosen, not typed: a key acts on the span under
+                        // the cursor, and here there is none naming it.
+                        keys: None,
+                    });
+                }
+            }
+            offered.splice(at..at, extra);
+        }
         offered
     }
 

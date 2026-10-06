@@ -49,6 +49,26 @@ fn a_requirement_name_is_defined_at_its_clause() {
     let _ = std::fs::remove_dir_all(&root);
 }
 
+/// Inside the body of an item that claims a clause, what the cursor is on
+/// offers that clause — to open, and to gather for an agent.
+#[test]
+fn inside_a_claiming_item_its_clause_is_offered() {
+    let root = project(TREE);
+    let mut editor = Editor::open(root.clone(), keymap());
+    here(&mut editor, "file.open", Some("src/i.rs"));
+    editor.offset = "/// @implements REQ-A.one\npub fn thing() -> u8 {\n    ".chars().count();
+    let (pane, at, offered) = editor.offers_here();
+    let context = offered
+        .iter()
+        .find(|o| o.action == "trace.context" && o.target.as_deref() == Some("REQ-A.one"))
+        .unwrap_or_else(|| panic!("the clause is offered: {offered:?}"));
+    assert_eq!(context.group, "here");
+    editor.choose(&pane, at, "trace.context", context.target.clone(), None);
+    let shown = plain_text(editor.buffer()).join("\n");
+    assert!(shown.contains("Context for an agent"), "{shown}");
+    let _ = std::fs::remove_dir_all(&root);
+}
+
 fn here(editor: &mut Editor, action: &str, target: Option<&str>) {
     let pane = editor.screen.focus.clone();
     editor.choose(&pane, 0, action, target.map(str::to_string), None);

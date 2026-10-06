@@ -348,6 +348,8 @@ Lean/DRT where the core changed + editor + window, with tests
   requirement name opens its document at the clause; the index shows each
   requirement's implemented clauses as a bar. On a requirement's document
   the 🔗 trace lists each clause with every claim on it, counting the unmet.
+  Inside a claiming item's body the which-key bar offers its clause (open,
+  agent context).
 - **Chrome.** Record panels wear their first heading as a header bar; menu
   entries highlight on hover; the mode is a coloured badge (theme `modes`).
   An agent's context is a checklist with a Copy button, its preview
