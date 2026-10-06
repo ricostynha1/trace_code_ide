@@ -7,6 +7,7 @@ pub mod context;
 pub mod definition;
 pub mod drive;
 pub mod explorer;
+pub mod file_trace;
 pub mod findings_view;
 pub mod highlight;
 pub mod history_view;

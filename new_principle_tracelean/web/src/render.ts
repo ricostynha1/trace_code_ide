@@ -144,6 +144,7 @@ export function render(buffer: Buffer): Rendering {
 // Realises REQ-VIEW.presentation_may_be_symbolic.
 const EMBLEMS: Record<string, string> = {
   "screen.station.project": "📁",
+  "screen.station.trace": "🔗",
   "screen.station.sandbox": "🧪",
   "screen.station.requirements": "📋",
   "screen.station.design": "🕸",

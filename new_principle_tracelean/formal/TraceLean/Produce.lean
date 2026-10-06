@@ -391,7 +391,7 @@ def designRows (nodes : List Node) : List Row :=
   expandAll 3 nodes 0 (nodes.filter (fun node => node.refines.isEmpty))
 
 private def designLine (row : Row) : String :=
-  spaces (row.indent * 2) ++ gradeText row.node.level ++ "  " ++ row.node.id
+  spaces (row.indent * 2) ++ gradeText row.node.level ++ "  " ++ row.node.id ++ "  " ++ row.node.title
 
 private def designSpans (at_ : Nat) : List Row → List Span
   | [] => []

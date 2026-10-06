@@ -224,6 +224,8 @@ function drawChips(box: HTMLElement, pane: Pane) {
     chip.className = `chip chip-${CLAIMED[letter] ?? "other"}`;
     chip.textContent = letter;
     chip.title = `${CLAIMED[letter] ?? letter} ${requirement}`;
+    // Pointed at, it says what the clause it claims says.
+    chip.addEventListener("mouseenter", () => void sayRequirement(chip, requirement), { once: true });
     chip.addEventListener("mousedown", (event) => event.stopPropagation());
     chip.addEventListener("click", (event) => {
       event.stopPropagation();

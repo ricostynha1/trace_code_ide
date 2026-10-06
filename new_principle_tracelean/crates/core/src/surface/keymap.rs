@@ -163,6 +163,7 @@ pub const ACTIONS: &[&str] = &[
     "screen.station.project",
     "screen.station.requirements",
     "screen.station.sandbox",
+    "screen.station.trace",
     "screen.strip",
     "trace.approve",
     "trace.check",

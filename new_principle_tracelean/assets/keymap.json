@@ -63,6 +63,7 @@
         "bindings": [
           ["d", { "dispatch": { "action": "screen.station.design", "description": "the refinement graph" } }],
           ["h", { "dispatch": { "action": "screen.station.history", "description": "the undo tree" } }],
+          ["l", { "dispatch": { "action": "screen.station.trace", "description": "what this file claims, and what else claims it" } }],
           ["p", { "dispatch": { "action": "screen.station.project", "description": "open a project" } }],
           ["r", { "dispatch": { "action": "screen.station.requirements", "description": "requirements and clauses" } }],
           ["s", { "dispatch": { "action": "screen.station.sandbox", "description": "watch a sandboxed agent" } }]

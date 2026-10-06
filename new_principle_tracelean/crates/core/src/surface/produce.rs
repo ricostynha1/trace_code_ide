@@ -448,7 +448,7 @@ pub fn design_rows(nodes: Vec<Node>) -> Vec<Row> {
 }
 
 fn design_line(row: &Row) -> String {
-    format!("{}{}  {}", " ".repeat(row.indent * 2), grade_text(row.node.level), row.node.id)
+    format!("{}{}  {}  {}", " ".repeat(row.indent * 2), grade_text(row.node.level), row.node.id, row.node.title)
 }
 
 /// The refinement graph as a buffer: one row a requirement, indented under what

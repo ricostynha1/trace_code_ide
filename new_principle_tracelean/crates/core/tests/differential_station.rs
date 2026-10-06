@@ -216,6 +216,7 @@ fn model_and_implementation_agree_on_what_a_station_stands_for() {
                 "requirements".into(),
                 "design".into(),
                 "history".into(),
+                "trace".into(),
                 "Project".into(),
             ],
         },
@@ -600,6 +601,7 @@ fn generation_reaches_every_station_and_a_name_that_is_none() {
                 "requirements".into(),
                 "design".into(),
                 "history".into(),
+                "trace".into(),
                 "Project".into(),
             ],
         },
@@ -624,7 +626,7 @@ fn generation_reaches_every_station_and_a_name_that_is_none() {
         &[
             ("a station that exists", real),
             ("a name that is no station", absent),
-            ("each of the five stations", reached.len() as u64),
+            ("each of the six stations", reached.len() as u64),
         ],
     );
 }

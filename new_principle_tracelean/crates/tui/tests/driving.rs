@@ -486,7 +486,7 @@ fn splitting_the_screen_draws_two_panes() {
 fn a_station_is_on_the_screen_and_opens_from_the_keyboard() {
     let mut terminal = open();
     let opening = shown(&terminal.screen());
-    for station in ["project", "sandbox", "requirements", "design", "history"] {
+    for station in ["project", "trace", "sandbox", "requirements", "design", "history"] {
         assert!(
             opening.contains(station),
             "`{station}` is not on the opening screen, so it is not reachable:\n{opening}"

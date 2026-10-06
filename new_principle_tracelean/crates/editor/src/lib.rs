@@ -684,11 +684,18 @@ impl Editor {
         self.screen = tracelean_core::surface::screen::show_buffer(id, self.screen.clone());
         self.offset = offset.min(length);
         self.top = top;
-        // The tree marks the file the document shows.
+        // The tree marks the file the document shows, and the trace, if it is
+        // open, follows it.
         if home == tracelean_core::surface::screen::DOCUMENT {
             let tree = self.listing_of(".");
             if let Some(held) = self.screen.opened.iter_mut().find(|held| held.id == tree.id) {
                 *held = tree;
+            }
+            if matches!(self.buffer().kind, BufferKind::File { .. }) && self.screen.opened.iter().any(|b| b.id == "record:trace") {
+                let trace = self.file_trace();
+                if let Some(held) = self.screen.opened.iter_mut().find(|held| held.id == trace.id) {
+                    *held = trace;
+                }
             }
         }
     }
@@ -2487,6 +2494,7 @@ impl Editor {
             BufferKind::Record { title } if title.starts_with("context ") => {
                 self.agent_context(&title["context ".len()..])
             }
+            BufferKind::Record { title } if title == "trace" => self.file_trace(),
             BufferKind::Record { title } if title.starts_with("requirement ") => {
                 self.requirement(&title["requirement ".len()..])
             }
@@ -3544,6 +3552,62 @@ impl Editor {
                 }
             }
         }
+    }
+
+    /// The trace of the file the document shows: each claim it makes, and
+    /// everything else that claims the same clause.
+    fn file_trace(&self) -> Buffer {
+        use tracelean_core::surface::file_trace::{file_trace_view, Entry};
+        use tracelean_core::surface::requirement_view::Claim;
+        let width = self.pane_width(tracelean_core::surface::screen::SIDE);
+        let Some((path, _)) = self.document_place() else {
+            return file_trace_view("(no file open)", &[], width);
+        };
+        let index = self.index();
+        let records: Vec<tracelean_core::trace::record::Evidence> = tracelean_core::trace::lockfile::read(&self.root)
+            .map(|l| l.evidence)
+            .unwrap_or_default();
+        let levels = levels_of(&records);
+        let mut entries: Vec<Entry> = index
+            .links
+            .iter()
+            .filter(|link| link.anchor.file == path)
+            .map(|link| {
+                let text = index
+                    .requirements
+                    .get(&link.req_id)
+                    .map(|r| match &link.clause {
+                        Some(k) => r.clauses.get(k).cloned().unwrap_or_default(),
+                        None => r.title.clone(),
+                    })
+                    .unwrap_or_else(|| "no requirement is called this".into());
+                let others = index
+                    .links
+                    .iter()
+                    .filter(|o| o.req_id == link.req_id && o.clause == link.clause && o.anchor.ident() != link.anchor.ident())
+                    .map(|o| Claim {
+                        role: o.role.as_str().to_string(),
+                        path: o.anchor.file.clone(),
+                        line: o.line,
+                        symbol: symbol_of(&o.anchor),
+                    })
+                    .collect();
+                Entry {
+                    line: link.line,
+                    symbol: symbol_of(&link.anchor),
+                    role: link.role.as_str().to_string(),
+                    clause: match &link.clause {
+                        Some(k) => format!("{}.{k}", link.req_id),
+                        None => link.req_id.clone(),
+                    },
+                    text,
+                    level: levels.get(&(link.req_id.clone(), link.clause.clone())).copied().unwrap_or(Level::L1),
+                    others,
+                }
+            })
+            .collect();
+        entries.sort_by_key(|e| e.line);
+        file_trace_view(&path, &entries, width)
     }
 
     /// What an agent needs to change a requirement or clause, with the parts

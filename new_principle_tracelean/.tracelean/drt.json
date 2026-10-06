@@ -2197,7 +2197,7 @@
       "floors": [
         { "situation": "a station that exists", "atLeast": 560 },
         { "situation": "a name that is no station", "atLeast": 830 },
-        { "situation": "each of the five stations", "atLeast": 5 }
+        { "situation": "each of the six stations", "atLeast": 6 }
       ],
       "model": {
         "import": "TraceLean.Screen",

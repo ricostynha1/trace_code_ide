@@ -835,7 +835,7 @@ def strip (screen : Screen) : Buffer :=
   let rows := menuBuffer "opened" (stripEntries screen.opened 1 screen.opened)
   { rows with spans := markFocused (focusedBuffer screen) screen.opened rows.spans }
 
-/-- The five stations, in the order they are always in.
+/-- The six stations, in the order they are always in.
 
 Each row carries its own action rather than a shared one taking the row as a
 target, so that a station is reachable from a bare keyboard as well as from a
@@ -843,6 +843,8 @@ pointer (see `TraceLean.Act`). -/
 def stationEntries : List MenuEntry :=
   [{ key := "project", description := "Open a project",
      action := some "screen.station.project" },
+   { key := "trace", description := "What this file claims, and what else claims it",
+     action := some "screen.station.trace" },
    { key := "sandbox", description := "Watch a sandboxed agent",
      action := some "screen.station.sandbox" },
    { key := "requirements", description := "Requirements and clauses",
@@ -887,6 +889,7 @@ def stationKind (station : String) : Option BufferKind :=
   else if station == "design" then some (BufferKind.menu "design")
   else if station == "sandbox" then some (BufferKind.record "sandbox")
   else if station == "history" then some (BufferKind.record "history")
+  else if station == "trace" then some (BufferKind.record "trace")
   else none
 
 /-- Every station on the bar produces something.

@@ -21,8 +21,9 @@ editor reads what is there and writes only what you save.
 ```
 ┌──┬──────────────── tabs: what is open ──────────────────────┐
 │📁│ explorer      │ document                  │ side panel    │
-│🧪│ (files)       │ (the file you edit)       │ (requirements,│
-│📋│               │ I T M P chips in gutter   │  sandbox,     │
+│🔗│ (files)       │ (the file you edit)       │ (trace,       │
+│🧪│               │ I T M P chips in gutter   │  requirements,│
+│📋│               │                           │  sandbox,     │
 │🕸│               │                           │  history…)    │
 │🌳│               │                           │               │
 ├──┴──────────── which-key: the actions here, with keys ───────┤
@@ -34,6 +35,7 @@ The icons on the left are **stations**, always there:
 | Icon | Opens |
 |---|---|
 | 📁 | the project's files |
+| 🔗 | the trace of the file you are reading: each claim it makes, the clause's text, and every other claim on that clause (its tests, its model, the code it tests) — it follows you from file to file |
 | 🧪 | the sandbox: run an AI agent on a copy of the tree, then review its changes |
 | 📋 | the requirements and how well each is evidenced |
 | 🕸 | the refinement graph: which requirement refines which |
@@ -50,8 +52,11 @@ The icons on the left are **stations**, always there:
   (a Lean theorem) and `@drt` (a differential test of the code against its
   model).
 - **Chips** in the gutter mark each claimed item: **I** implements, **T**
-  tests, **M** models, **P** proves, **D** drt. Click a chip, or the name in
-  the annotation, to open the requirement.
+  tests, **M** models, **P** proves, **D** drt. Point at a chip to read the
+  clause; click it, or the name in the annotation, to open the requirement.
+- **🔗 Trace** beside the code answers "why is this here, and what else
+  would notice if it changed": for every claim in the open file, the clause
+  and everything else that claims it, as links.
 - **Click any requirement name** (in code, prose or a panel) to open it. An
   opened requirement lists every clause with its evidence level (L1–L4) and
   every claim as a `path:line` link — click to jump there. A clause nothing

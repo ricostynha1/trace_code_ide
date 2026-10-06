@@ -106,6 +106,18 @@ pub fn described(keymap: &Keymap) -> std::collections::BTreeMap<String, String> 
     out
 }
 
+/// What the keymap calls an action, capitalised as a menu entry reads — for
+/// an action no entry names more particularly.
+fn description_of(keymap: &Keymap, action: &str) -> Option<String> {
+    keymap.modes.iter().flat_map(|(_, mode)| mode.bindings.iter()).find_map(|(_, binding)| match binding {
+        Binding::Dispatch { action: named, description } if named == action => {
+            let mut chars = description.chars();
+            chars.next().map(|first| first.to_uppercase().chain(chars).collect())
+        }
+        _ => None,
+    })
+}
+
 fn offer(
     keymap: &Keymap,
     group: &str,
@@ -156,7 +168,7 @@ pub fn offers(buffer: &Buffer, offset: usize, keymap: &Keymap) -> Vec<Offer> {
             "observe.reject" => "Reject the agent's change".into(),
             "observe.accept_file" => "Accept this file".into(),
             "observe.reject_file" => "Reject this file".into(),
-            other => other.to_string(),
+            other => description_of(keymap, other).unwrap_or_else(|| other.to_string()),
         };
         // A button's text is not what it is about; the row it is on is, and
         // that is the shell's to resolve.
@@ -273,6 +285,7 @@ pub fn offers(buffer: &Buffer, offset: usize, keymap: &Keymap) -> Vec<Offer> {
     // Places that are always reachable.
     for (action, label) in [
         ("screen.station.project", "Project files"),
+        ("screen.station.trace", "What this file claims"),
         ("screen.station.requirements", "Requirements"),
         ("screen.station.design", "Refinement graph"),
         ("screen.station.sandbox", "Sandbox"),

@@ -338,6 +338,11 @@ Lean/DRT where the core changed + editor + window, with tests
   function, annotated or not). Parts toggle; the page previews exactly what
   `Copy for an agent` puts on the clipboard. Lean `TraceLean.Context` +
   `differential_context` for the closure, the choice and the part names.
+- **🔗 Trace station.** The first one's trace panel, back: for each claim in
+  the open file, the clause, its text and level, and every other claim on it
+  as links; it follows the document from file to file. Chips say their
+  clause on hover; the graph rows carry titles; every bottom-bar entry has a
+  readable label (the keymap's description when nothing better).
 - **Not done.** Opening a terminal for the user (ruled out by
   `ARCH-NO-DRIVING.user_runs_it`); Lean infoview and type-check on save (both
   start a process); LSP hover; coverage treemap and trend.

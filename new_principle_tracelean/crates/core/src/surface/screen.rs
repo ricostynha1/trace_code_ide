@@ -874,7 +874,7 @@ pub fn title_of(buffer: &Buffer) -> String {
     }
 }
 
-/// The five stations, in the order they are always in.
+/// The six stations, in the order they are always in.
 ///
 /// Each row carries its own action rather than a shared one taking the row as a
 /// target, so that a station is reachable from a bare keyboard as well as from
@@ -882,6 +882,7 @@ pub fn title_of(buffer: &Buffer) -> String {
 pub fn station_entries() -> Vec<MenuEntry> {
     [
         ("project", "Open a project"),
+        ("trace", "What this file claims, and what else claims it"),
         ("sandbox", "Watch a sandboxed agent"),
         ("requirements", "Requirements and clauses"),
         ("design", "The refinement graph"),
@@ -931,6 +932,7 @@ pub fn station_kind(station: String) -> Option<BufferKind> {
         "design" => Some(BufferKind::Menu { title: "design".to_string() }),
         "sandbox" => Some(BufferKind::Record { title: "sandbox".to_string() }),
         "history" => Some(BufferKind::Record { title: "history".to_string() }),
+        "trace" => Some(BufferKind::Record { title: "trace".to_string() }),
         _ => None,
     }
 }
