@@ -466,7 +466,7 @@ button.actionable:focus {
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   align-content: start;
   gap: 0 20px;
-  height: 150px;
+  height: min(150px, 28vh);
   overflow-y: auto;
   padding: 6px 14px;
   background: var(--ui-menu);
@@ -488,7 +488,7 @@ button.actionable:focus {
 }
 
 #menu.which-key .context-column {
-  max-height: 140px;
+  max-height: min(140px, 26vh);
   overflow-y: auto;
 }
 

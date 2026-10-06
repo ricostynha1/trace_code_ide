@@ -2758,9 +2758,12 @@ impl Editor {
                         })
                     })
                     .count();
+                // As a bar of five, read at a glance down the list.
+                let filled = (implemented * 5 + clauses.len() / 2) / clauses.len().max(1);
+                let bar: String = "█".repeat(filled) + &"░".repeat(5 - filled.min(5));
                 make::Node {
                     id: id.clone(),
-                    title: format!("[{implemented}/{}] {}", clauses.len(), requirement.title),
+                    title: format!("{bar} {implemented}/{}  {}", clauses.len(), requirement.title),
                     refines: requirement.refines.clone(),
                     level: reached,
                 }
