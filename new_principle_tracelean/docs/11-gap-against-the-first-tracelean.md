@@ -346,7 +346,8 @@ Lean/DRT where the core changed + editor + window, with tests
   marks each file with the kinds of claim in it (I T M P D, chip colours).
   A requirement's document carries chips on each clause line; F12 on a
   requirement name opens its document at the clause; the index shows each
-  requirement's implemented clauses as a bar.
+  requirement's implemented clauses as a bar. On a requirement's document
+  the 🔗 trace lists each clause with every claim on it, counting the unmet.
 - **Chrome.** Record panels wear their first heading as a header bar; menu
   entries highlight on hover; the mode is a coloured badge (theme `modes`).
 - **Not done.** Opening a terminal for the user (ruled out by

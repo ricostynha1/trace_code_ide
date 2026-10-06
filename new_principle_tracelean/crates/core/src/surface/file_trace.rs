@@ -50,13 +50,20 @@ pub fn file_trace_view(path: &str, entries: &[Entry], width: usize) -> Buffer {
         return out.finish("trace");
     }
     let clauses: std::collections::BTreeSet<&str> = entries.iter().map(|e| e.clause.as_str()).collect();
-    let summary = format!(
-        "{} claim{} on {} clause{}",
-        entries.len(),
-        if entries.len() == 1 { "" } else { "s" },
-        clauses.len(),
-        if clauses.len() == 1 { "" } else { "s" }
-    );
+    // A requirement's own document lists its clauses, each with its claims.
+    let own = entries.iter().all(|e| e.role == "clause");
+    let unmet = entries.iter().filter(|e| e.others.is_empty()).count();
+    let summary = if own {
+        format!("{} clauses, {} claimed by nothing", entries.len(), unmet)
+    } else {
+        format!(
+            "{} claim{} on {} clause{}",
+            entries.len(),
+            if entries.len() == 1 { "" } else { "s" },
+            clauses.len(),
+            if clauses.len() == 1 { "" } else { "s" }
+        )
+    };
     out.line(&[(&summary, Role::Plain, &[])]);
     for entry in entries {
         out.blank();
@@ -124,6 +131,28 @@ mod tests {
         assert_eq!(actions_at(shown.clone(), offset_of(&shown, "tests/t.rs:9")), vec!["file.open".to_string()]);
         assert!(actions_at(shown.clone(), offset_of(&shown, "REQ-A.one")).contains(&"trace.context".to_string()));
         assert!(shown.text.contains("It does the thing."));
+    }
+
+    /// A requirement's document lists its clauses, saying which nothing claims.
+    #[test]
+    fn a_requirement_lists_its_clauses_and_what_claims_each() {
+        let clause = |key: &str, others: Vec<Claim>| Entry {
+            line: 7,
+            symbol: Some(key.into()),
+            role: "clause".into(),
+            clause: format!("REQ-A.{key}"),
+            text: "It does.".into(),
+            level: Level::L1,
+            others,
+        };
+        let entries = vec![
+            clause("one", vec![Claim { role: "implements".into(), path: "src/a.rs".into(), line: 3, symbol: None }]),
+            clause("two", vec![]),
+        ];
+        let shown = file_trace_view("reqs/REQ-A.md", &entries, 60);
+        assert!(faults(shown.clone()).is_empty());
+        assert!(shown.text.contains("2 clauses, 1 claimed by nothing"));
+        assert_eq!(actions_at(shown.clone(), offset_of(&shown, "src/a.rs:3")), vec!["file.open".to_string()]);
     }
 
     #[test]

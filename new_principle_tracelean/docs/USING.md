@@ -35,7 +35,7 @@ The icons on the left are **stations**, always there:
 | Icon | Opens |
 |---|---|
 | 📁 | the project's files |
-| 🔗 | the trace of the file you are reading: each claim it makes, the clause's text, and every other claim on that clause (its tests, its model, the code it tests) — it follows you from file to file |
+| 🔗 | the trace of the file you are reading: each claim it makes, the clause's text, and every other claim on that clause (its tests, its model, the code it tests) — it follows you from file to file. On a requirement's own document it lists each clause and everything that claims it, flagging clauses nothing claims |
 | 🧪 | the sandbox: run an AI agent on a copy of the tree, then review its changes |
 | 📋 | the requirements and how well each is evidenced |
 | 🕸 | the refinement graph: which requirement refines which |

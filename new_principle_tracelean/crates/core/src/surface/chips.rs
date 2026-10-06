@@ -63,6 +63,23 @@ pub fn chips(file: &str, text: &str) -> Vec<Chip> {
 pub fn clause_chips(text: &str, id: &str, claims: &[(Option<String>, Role)]) -> Vec<Chip> {
     const ORDER: &str = "MITDP";
     let mut out = Vec::new();
+    for (line, key) in clause_lines(text) {
+        let mut letters: Vec<char> = claims
+            .iter()
+            .filter(|(clause, _)| clause.as_deref() == Some(key.as_str()))
+            .filter_map(|(_, role)| letter(*role))
+            .collect();
+        letters.sort_by_key(|l| ORDER.find(*l));
+        letters.dedup();
+        out.extend(letters.into_iter().map(|letter| Chip { line, letter, requirement: format!("{id}.{key}") }));
+    }
+    out
+}
+
+/// Each clause of a requirement's document, as its zero-based line and key: an
+/// indented `key: text` in the frontmatter.
+pub fn clause_lines(text: &str) -> Vec<(usize, String)> {
+    let mut out = Vec::new();
     let mut fences = 0;
     for (line, row) in text.lines().enumerate() {
         if row.trim() == "---" {
@@ -72,20 +89,11 @@ pub fn clause_chips(text: &str, id: &str, claims: &[(Option<String>, Role)]) -> 
             }
             continue;
         }
-        // A clause is an indented `key: text` under `clauses:`.
         let Some((key, _)) = row.strip_prefix("  ").and_then(|r| r.split_once(':')) else { continue };
         let key = key.trim();
-        if key.is_empty() || key.contains(' ') {
-            continue;
+        if !key.is_empty() && !key.contains(' ') {
+            out.push((line, key.to_string()));
         }
-        let mut letters: Vec<char> = claims
-            .iter()
-            .filter(|(clause, _)| clause.as_deref() == Some(key))
-            .filter_map(|(_, role)| letter(*role))
-            .collect();
-        letters.sort_by_key(|l| ORDER.find(*l));
-        letters.dedup();
-        out.extend(letters.into_iter().map(|letter| Chip { line, letter, requirement: format!("{id}.{key}") }));
     }
     out
 }

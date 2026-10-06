@@ -3617,6 +3617,42 @@ impl Editor {
             .map(|l| l.evidence)
             .unwrap_or_default();
         let levels = levels_of(&records);
+        let claim_of = |link: &tracelean_core::trace::index::Link| Claim {
+            role: link.role.as_str().to_string(),
+            path: link.anchor.file.clone(),
+            line: link.line,
+            symbol: symbol_of(&link.anchor),
+        };
+        // A requirement's own document: each clause, and everything in the
+        // tree that claims it — where the requirement is met, read from it.
+        if let Some(requirement) = index.requirements.values().find(|r| r.file == path) {
+            let text = self
+                .screen
+                .opened
+                .iter()
+                .find(|b| matches!(&b.kind, BufferKind::File { path: p } if *p == path))
+                .map(|b| b.text.clone())
+                .unwrap_or_default();
+            let entries: Vec<Entry> = tracelean_core::surface::chips::clause_lines(&text)
+                .into_iter()
+                .filter(|(_, key)| requirement.clauses.contains_key(key))
+                .map(|(line, key)| Entry {
+                    line: line as u32 + 1,
+                    symbol: Some(key.clone()),
+                    role: "clause".into(),
+                    clause: format!("{}.{key}", requirement.id),
+                    text: requirement.clauses[&key].clone(),
+                    level: levels.get(&(requirement.id.clone(), Some(key.clone()))).copied().unwrap_or(Level::L1),
+                    others: index
+                        .links
+                        .iter()
+                        .filter(|l| l.req_id == requirement.id && l.clause.as_deref() == Some(key.as_str()))
+                        .map(claim_of)
+                        .collect(),
+                })
+                .collect();
+            return file_trace_view(&path, &entries, width);
+        }
         let mut entries: Vec<Entry> = index
             .links
             .iter()
@@ -3634,12 +3670,7 @@ impl Editor {
                     .links
                     .iter()
                     .filter(|o| o.req_id == link.req_id && o.clause == link.clause && o.anchor.ident() != link.anchor.ident())
-                    .map(|o| Claim {
-                        role: o.role.as_str().to_string(),
-                        path: o.anchor.file.clone(),
-                        line: o.line,
-                        symbol: symbol_of(&o.anchor),
-                    })
+                    .map(claim_of)
                     .collect();
                 Entry {
                     line: link.line,
