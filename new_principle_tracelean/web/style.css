@@ -446,6 +446,14 @@ button.actionable:focus {
 
 .role-plain { color: var(--roles-plain); }
 .role-path { color: var(--roles-path); }
+/* A menu's entries — the welcome page's starts — answer the pointer as a
+ * list's rows do, so they read as things to click. */
+.pane.kind-menu button.actionable.role-entry:hover {
+  background: var(--ui-hover);
+  color: var(--ui-menuKey);
+  text-decoration: none;
+}
+
 .role-entry { color: var(--roles-entry); }
 .role-heading { color: var(--roles-heading); font-weight: 600; }
 .role-requirement { color: var(--roles-requirement); }
