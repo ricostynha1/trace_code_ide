@@ -347,6 +347,8 @@ Lean/DRT where the core changed + editor + window, with tests
   A requirement's document carries chips on each clause line; F12 on a
   requirement name opens its document at the clause; the index shows each
   requirement's implemented clauses as a bar.
+- **Chrome.** Record panels wear their first heading as a header bar; menu
+  entries highlight on hover; the mode is a coloured badge (theme `modes`).
 - **Not done.** Opening a terminal for the user (ruled out by
   `ARCH-NO-DRIVING.user_runs_it`); Lean infoview and type-check on save (both
   start a process); LSP hover; coverage treemap and trend.

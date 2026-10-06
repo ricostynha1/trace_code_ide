@@ -585,6 +585,22 @@ button.actionable:focus {
   color: var(--ui-statusBar);
 }
 
+/* The mode, last on the status line: a small badge in the mode's colour. */
+#position .mode-badge {
+  margin-left: 12px;
+  padding: 0 6px;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  background: var(--ui-menuMode);
+  color: var(--modes-other);
+  border: 1px solid currentColor;
+}
+
+#position .mode-badge.normal { color: var(--modes-normal); }
+#position .mode-badge.insert { color: var(--modes-insert); }
+
 ::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-thumb { background: var(--ui-scrollbar); }
 ::-webkit-scrollbar-track { background: transparent; }

@@ -132,6 +132,7 @@ anywhere else. Sections:
 | `fonts` | `code`, `codeSize`, `chrome`, `chromeSize` |
 | `roles` | what each role is drawn in (`path`, `heading`, `levelL1`…) |
 | `chips` | gutter chips and claim pills: `implements`, `tests`, `models`, `proves`, `drt` |
+| `modes` | the status line's mode badge: `normal`, `insert`, `other` |
 | `syntax` | token kinds: `keyword`, `string`, `comment`, …, Markdown `heading`/`bold`/`italic`/`link` |
 
 The window turns each into a CSS variable named `--section-key`

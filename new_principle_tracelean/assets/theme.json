@@ -75,6 +75,11 @@
     "drt": "#56b6c2",
     "proves": "#e5c07b"
   },
+  "modes": {
+    "normal": "#61afef",
+    "insert": "#98c379",
+    "other": "#c678dd"
+  },
   "syntax": {
     "keyword": "#c678dd",
     "string": "#98c379",

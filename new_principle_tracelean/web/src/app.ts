@@ -812,7 +812,15 @@ async function show(invoke: Invoke, into: HTMLElement, status: HTMLElement) {
     const where = at && focused && "file" in focused.buffer.kind
       ? `Ln ${(focused.top ?? 0) + at[0] + 1}, Col ${at[1] + 1}`
       : "";
-    position.textContent = [typeof mode === "string" ? mode.toUpperCase() : "", where].filter(Boolean).join("   ");
+    position.textContent = where;
+    // The mode as a badge in its own colour, as the first TraceLean wore it.
+    if (typeof mode === "string" && mode) {
+      const badge = document.createElement("span");
+      const name = mode.toLowerCase();
+      badge.className = `mode-badge ${name === "normal" || name === "insert" ? name : "other"}`;
+      badge.textContent = mode.toUpperCase();
+      position.append(badge);
+    }
     // How many findings the checker has, once the editor has counted; a
     // click lists them.
     const problems = (await invoke("problems", {})) as number | null;

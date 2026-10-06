@@ -372,7 +372,9 @@ try {
   // The cursor's line and column show at the status line's end, and the word
   // and comment chords go to the editor by name.
   const position = await evaluate(`document.getElementById("position")?.textContent`);
-  check("the status line shows the findings, mode, line and column", position === "⚠ 3INSERT   Ln 1, Col 7", JSON.stringify(position));
+  check("the status line shows the findings, mode, line and column", position === "⚠ 3Ln 1, Col 7INSERT", JSON.stringify(position));
+  const badge = await evaluate(`document.querySelector("#position .mode-badge.insert")?.textContent`);
+  check("the mode is a badge in its own colour", badge === "INSERT", JSON.stringify(badge));
   await reset();
   await evaluate(`document.querySelector("#position .problems").click()`);
   await sleep(200);
