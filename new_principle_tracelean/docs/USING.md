@@ -117,7 +117,7 @@ from the bottom bar (or `Space c o`; every opened requirement also has a
 
 | Part | What it holds |
 |---|---|
-| requirement | the requirement, with the clause being changed marked |
+| requirement | the requirement, with the clause being changed marked, and what each clause still lacks (code, a test, a Lean model) |
 | refines | everything it refines, transitively: what it must keep meeting |
 | refined by | everything refining it: what may have to change with it (off by default) |
 | code | each implementing item, with its source |

@@ -367,6 +367,32 @@ fn write_items(out: &mut String, items: &[Item]) {
     }
 }
 
+/// Each clause in view that lacks code, a test or a Lean model, as
+/// `key: no test, no Lean model` — the work a change could also do.
+fn gaps(context: &Context) -> Vec<String> {
+    let id = &context.requirement.id;
+    let claimed = |items: &[Item], name: &str| items.iter().any(|i| i.claims.split(", ").any(|c| c == name));
+    context
+        .requirement
+        .clauses
+        .iter()
+        .filter(|(key, _)| context.clause.as_deref().map_or(true, |c| c == key))
+        .filter_map(|(key, _)| {
+            let name = format!("{id}.{key}");
+            let missing: Vec<&str> = [
+                (&context.code, "no code implements it"),
+                (&context.tests, "no test"),
+                (&context.models, "no Lean model"),
+            ]
+            .into_iter()
+            .filter(|(items, _)| !claimed(items, &name))
+            .map(|(_, what)| what)
+            .collect();
+            (!missing.is_empty()).then(|| format!("{key}: {}", missing.join(", ")))
+        })
+        .collect()
+}
+
 /// The chosen parts, as one prompt for an agent.
 ///
 /// @implements REQ-CONTEXT.person_chooses
@@ -382,6 +408,12 @@ pub fn context_text(context: &Context, included: &BTreeSet<Part>) -> String {
             Part::Requirement => {
                 out.push_str("## The requirement\n\n");
                 write_said(&mut out, &context.requirement, context.clause.as_deref());
+                let gaps = gaps(context);
+                if !gaps.is_empty() {
+                    out.push_str("## Not yet met (what the change could add)\n\n");
+                    gaps.iter().for_each(|g| out.push_str(&format!("- {g}\n")));
+                    out.push('\n');
+                }
             }
             Part::Refines => {
                 out.push_str("## What it refines (it must keep meeting these)\n\n");

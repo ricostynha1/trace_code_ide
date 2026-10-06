@@ -102,6 +102,7 @@ fn a_context_is_chosen_part_by_part_and_copied() {
     let copied = editor.clipboard.take().expect("the context is on the clipboard");
 
     assert!(copied.contains("**one** (the clause being changed): It does the thing."), "{copied}");
+    assert!(copied.contains("- one: no Lean model\n"), "what the clause still lacks:\n{copied}");
     assert!(copied.contains("REQ-B — A finer thing"), "what refines it was chosen:\n{copied}");
     assert!(!copied.contains("## Code that implements it"), "the code was left out:\n{copied}");
     // The test claiming it, with its source; the test of what refines it, and

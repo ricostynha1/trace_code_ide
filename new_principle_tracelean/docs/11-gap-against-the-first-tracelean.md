@@ -353,7 +353,8 @@ Lean/DRT where the core changed + editor + window, with tests
 - **Chrome.** Record panels wear their first heading as a header bar; menu
   entries highlight on hover; the mode is a coloured badge (theme `modes`).
   An agent's context is a checklist with a Copy button, its preview
-  highlighted as Markdown with quoted code in the code font.
+  highlighted as Markdown with quoted code in the code font; it says which
+  clauses still lack code, a test or a Lean model.
 - **Not done.** Opening a terminal for the user (ruled out by
   `ARCH-NO-DRIVING.user_runs_it`); Lean infoview and type-check on save (both
   start a process); LSP hover; coverage treemap and trend.
