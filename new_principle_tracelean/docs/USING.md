@@ -69,8 +69,9 @@ The icons on the left are **stations**, always there:
   opened requirement lists every clause with its evidence level (L1–L4) and
   every claim as a `path:line` link — click to jump there. A clause nothing
   claims says so in red.
-- **📋 Requirements** lists them all with their levels; **🕸** shows how they
-  refine each other.
+- **📋 Requirements** lists them all with their levels and a bar of how many
+  clauses something implements (`███░░ 3/5`); **🕸** shows how they refine
+  each other.
 
 Evidence levels, weakest to strongest: **L1** annotated, **L2** judged by a
 person, **L3** differentially tested, **L4** proved. A clause's level is the
@@ -102,7 +103,7 @@ The editor is modal, like Vim: `i` to type, `Escape` to stop. Outside typing,
 | `Space c` | context for an agent: `o` open it for the requirement here, `t` include/leave out a part, `y` copy |
 | `Space a` | agent: `n` new sandbox, `c` copy its command, `d` review diff, `a`/`x` accept/reject |
 | `Space d` | differential testing: `r` run, `b` bindings, `c` coverage |
-| `Space w` | panes: `h j k l` move focus, `v`/`s` split, `q` close, `t` stations |
+| `Space w` | panes: `h j k l` move focus, `v`/`s` split, `q` close, `t` stations (`p` files, `l` trace, `r` requirements, `d` graph, `s` sandbox, `h` history) |
 
 ## Working with an AI agent
 
