@@ -465,6 +465,36 @@ button.actionable:focus {
 .role-added { color: var(--roles-added); background: color-mix(in srgb, var(--roles-added) 8%, transparent); }
 .role-removed { color: var(--roles-removed); background: color-mix(in srgb, var(--roles-removed) 8%, transparent); }
 
+/* An agent's context: each part a checklist row — its name bright when it is
+ * in, muted when it is out, in a column of its own — and Copy a real button. */
+.pane .line > button.actionable[data-action="context.toggle"] {
+  background: transparent;
+  color: var(--ui-muted);
+  font-weight: 600;
+}
+
+.pane .line > .role-added + button.actionable[data-action="context.toggle"] {
+  color: var(--ui-documentText);
+}
+
+.pane .line > button.actionable[data-action="context.toggle"]:hover {
+  background: var(--ui-hover);
+  color: var(--ui-menuKey);
+  text-decoration: none;
+}
+
+.pane .line > button.actionable[data-action="context.copy"] {
+  background: var(--ui-button);
+  color: var(--ui-buttonText);
+  border-radius: 3px;
+  padding: 0 4px;
+}
+
+.pane .line > button.actionable[data-action="context.copy"]:hover {
+  filter: brightness(1.15);
+  text-decoration: none;
+}
+
 /* Syntax: one rule per token kind the core parses (`TokenKind`), each colour
  * from the theme's `syntax` section. Written here, not by script: the window's
  * content policy refuses a stylesheet made at run time. */

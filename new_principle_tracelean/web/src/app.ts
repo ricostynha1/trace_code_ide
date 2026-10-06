@@ -88,6 +88,8 @@ export function draw(into: HTMLElement, buffer: Buffer, act: (action: string, at
       const button = document.createElement("button");
       button.className = `${classOf(piece.role)} actionable`;
       button.dataset.at = String(piece.at);
+      // What it does, for the style sheet: a toggle is drawn as one.
+      button.dataset.action = piece.actions[0];
       button.textContent = piece.text;
       button.title = `${piece.actions.map((a) => hover[a] ?? a).join(" · ")}  (right-click for more)`;
       // A requirement's name says what the requirement says, when rested on.
