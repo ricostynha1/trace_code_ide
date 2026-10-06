@@ -23,6 +23,10 @@ pub struct Claim {
     pub path: String,
     /// One-based, as an editor counts.
     pub line: u32,
+    /// The item the annotation sits on — `to_celsius`, `Thermo::toCelsius` —
+    /// when it sits on one rather than on a region or the whole file.
+    #[serde(default)]
+    pub symbol: Option<String>,
 }
 
 /// One clause as the view shows it.
@@ -49,6 +53,9 @@ pub struct RequirementShown {
     /// `draft`, `approved`, … as its frontmatter says.
     pub status: String,
     pub refines: Vec<String>,
+    /// The requirements that refine this one: what a change here reaches.
+    #[serde(default)]
+    pub refined_by: Vec<String>,
     pub clauses: Vec<ClauseShown>,
     /// The characters a line may take before it wraps.
     pub width: usize,
@@ -73,16 +80,43 @@ pub fn requirement_view(view: RequirementShown) -> Buffer {
     } else {
         out.line(&[(&status, Role::Plain, &[])]);
     }
-    if !view.refines.is_empty() {
-        let mut pieces: Vec<(&str, Role, &[&str])> = vec![("refines ", Role::Plain, &[])];
-        for (n, parent) in view.refines.iter().enumerate() {
+    for (word, names) in [("refines    ", &view.refines), ("refined by ", &view.refined_by)] {
+        if names.is_empty() {
+            continue;
+        }
+        let mut pieces: Vec<(&str, Role, &[&str])> = vec![(word, Role::Plain, &[])];
+        for (n, name) in names.iter().enumerate() {
             if n > 0 {
                 pieces.push((" ", Role::Plain, &[]));
             }
-            pieces.push((parent.as_str(), Role::Requirement, &["trace.requirement"]));
+            pieces.push((name.as_str(), Role::Requirement, &["trace.requirement"]));
         }
         out.line(&pieces);
     }
+    // How many clauses each kind of claim reaches, in the claims' colours: where
+    // this requirement is implemented, tested, modelled and proved, at a glance.
+    let total = view.clauses.len();
+    let counts: Vec<(crate::trace::annotation::Role, String)> = [
+        crate::trace::annotation::Role::Implements,
+        crate::trace::annotation::Role::Tests,
+        crate::trace::annotation::Role::Models,
+        crate::trace::annotation::Role::Proves,
+        crate::trace::annotation::Role::Drt,
+    ]
+    .into_iter()
+    .map(|role| {
+        let reached = view.clauses.iter().filter(|c| c.claims.iter().any(|claim| claim.role == role.as_str())).count();
+        (role, format!("{} {reached}/{total}", role.as_str()))
+    })
+    .collect();
+    let mut pieces: Vec<(&str, Role, &[&str])> = vec![("evidence   ", Role::Plain, &[])];
+    for (n, (role, said)) in counts.iter().enumerate() {
+        if n > 0 {
+            pieces.push((" ", Role::Plain, &[]));
+        }
+        pieces.push((said.as_str(), Role::Claim { role: *role }, &[]));
+    }
+    out.line(&pieces);
     for clause in &view.clauses {
         out.blank();
         let grade = format!("{:?}", clause.level);
@@ -107,10 +141,21 @@ pub fn requirement_view(view: RequirementShown) -> Buffer {
             };
             out.line(&[("  judge       ", Role::Plain, &[]), (&name, Role::Requirement, &["trace.judge"])]);
         }
+        // Each claim's kind in its chip's colour, then the link to it.
         for claim in &clause.claims {
-            let role = format!("  {:<11} ", claim.role);
+            let kind = format!("{:<10}", claim.role);
+            let role = match crate::trace::annotation::Role::parse(&claim.role) {
+                Some(role) => Role::Claim { role },
+                None => Role::Plain,
+            };
             let link = link_text(&claim.path, claim.line);
-            out.line(&[(&role, Role::Plain, &[]), (&link, Role::Path, &["file.open"])]);
+            let symbol = claim.symbol.as_deref().map(|s| format!("  {s}"));
+            let mut pieces: Vec<(&str, Role, &[&str])> =
+                vec![("  ", Role::Plain, &[]), (&kind, role, &[]), (" ", Role::Plain, &[]), (&link, Role::Path, &["file.open"])];
+            if let Some(symbol) = &symbol {
+                pieces.push((symbol, Role::Token { kind: crate::surface::view::TokenKind::Function }, &[]));
+            }
+            out.line(&pieces);
         }
     }
     out.finish(&format!("requirement {}", view.id))
@@ -153,13 +198,14 @@ mod tests {
             file: "reqs/REQ-X.md".into(),
             status: "draft".into(),
             refines: vec!["ARCH-A".into()],
+            refined_by: vec!["REQ-Y".into()],
             clauses: vec![
                 ClauseShown {
                     key: Some("holds".into()),
                     text: "It shall hold.".into(),
                     level: Level::L2,
                     chain: "L2/L3/L2".into(),
-                    claims: vec![Claim { role: "implements".into(), path: "src/x.rs".into(), line: 12 }],
+                    claims: vec![Claim { role: "implements".into(), path: "src/x.rs".into(), line: 12, symbol: Some("hold".into()) }],
                 },
                 ClauseShown {
                     key: Some("unclaimed".into()),

@@ -8,6 +8,10 @@ claiming to realise it, and the claim checked rather than believed. This tree is
 TraceLean rebuilt under those rules — the same move as compiling a compiler with
 itself.
 
+**New here? Read [docs/USING.md](docs/USING.md)** — how to use the editor, in
+five minutes. To change it — keys, actions, colours, panels — read
+[docs/DEVELOPER_GUIDE.md](docs/DEVELOPER_GUIDE.md).
+
 ## Layout
 
 ```
@@ -65,6 +69,7 @@ cd formal && lake build
 ```bash
 node web/build.mjs               # web/src/*.ts -> web/dist/*.js, no dependencies
 node web/test/pointer.mjs        # the window's mouse and keys, in headless Chrome
+node web/test/look.mjs out.png   # a photograph of the page, a real editor behind it
 cargo run -p tracelean-tui       # the terminal frontend
 cargo run -p tracelean-desktop   # the window
 ```

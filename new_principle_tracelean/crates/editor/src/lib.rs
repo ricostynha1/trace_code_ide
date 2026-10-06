@@ -1107,6 +1107,17 @@ impl Editor {
         offered
     }
 
+    /// Everything that can be done where the cursor is, in the focused pane,
+    /// with that pane and the cursor's offset in its window — what the
+    /// which-key bar shows while no menu is open, and what an entry of it is
+    /// then chosen at.
+    pub fn offers_here(&self) -> (String, usize, Vec<tracelean_core::surface::offer::Offer>) {
+        let pane = self.screen.focus.clone();
+        let at = self.offset.saturating_sub(self.absolute(&pane, 0));
+        let offered = self.offers_at(&pane, at);
+        (pane, at, offered)
+    }
+
     /// Perform an action chosen at a position of a pane — a click on an
     /// affordance, or an entry of the context menu.
     ///
@@ -2606,6 +2617,7 @@ impl Editor {
                         role: link.role.as_str().to_string(),
                         path: link.anchor.file.clone(),
                         line: link.line,
+                        symbol: symbol_of(&link.anchor),
                     })
                     .collect();
                 claims.sort_by(|a, b| (&a.role, &a.path, a.line).cmp(&(&b.role, &b.path, b.line)));
@@ -2627,6 +2639,12 @@ impl Editor {
             file: requirement.file.clone(),
             status: requirement.status.as_str().to_string(),
             refines: requirement.refines.clone(),
+            refined_by: index
+                .requirements
+                .values()
+                .filter(|other| other.refines.iter().any(|parent| parent == id))
+                .map(|other| other.id.clone())
+                .collect(),
             clauses,
             width: self.pane_width(tracelean_core::surface::screen::DOCUMENT),
         })
@@ -3761,6 +3779,14 @@ fn named(req_id: &str, clause: &Option<String>) -> String {
     match clause {
         Some(clause) => format!("{req_id}.{clause}"),
         None => req_id.to_string(),
+    }
+}
+
+/// The item an annotation sits on, by name, when it sits on one.
+fn symbol_of(anchor: &tracelean_core::trace::anchor::Anchor) -> Option<String> {
+    match &anchor.kind {
+        tracelean_core::trace::anchor::AnchorKind::Decl { symbol_path } => Some(symbol_path.clone()),
+        _ => None,
     }
 }
 

@@ -192,6 +192,82 @@ button.item {
   color: var(--ui-sidebarText);
 }
 
+/* Their lines in the window's own font, as the first one's panels were. On
+ * the lines and not the pane: a pane is placed in `ch` of the code font, and
+ * a pane in another font would measure its own place in other units. */
+.pane.kind-directory .line,
+.pane.kind-menu .line,
+.pane.kind-record .line {
+  font-family: var(--fonts-chrome);
+  font-size: var(--fonts-chromeSize);
+}
+
+/* The explorer reads as the first one's file tree: names in the sidebar's
+ * text colour rather than a link's, the shown file's row lit, and the root's
+ * name a small capitalised header. */
+.pane.kind-directory .role-path { color: var(--ui-sidebarText); }
+
+.pane.kind-directory .line:has(.role-heading) {
+  background: var(--ui-selected);
+}
+
+.pane.kind-directory .line:has(.role-heading) .role-heading {
+  color: var(--ui-tabActiveText);
+  font-weight: normal;
+}
+
+.pane.kind-directory .line:first-child .role-heading,
+.pane.kind-directory .line:first-child {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--ui-muted);
+  background: none;
+}
+
+/* A side panel's heading line — a requirement's title, a section — stands
+ * out from the rows under it. */
+.pane.kind-menu .role-heading,
+.pane.kind-record .role-heading {
+  color: var(--ui-panelHeading);
+}
+
+/* What a claim is, as a pill in its gutter chip's colour: a requirement's
+ * implementations, tests, models and proofs told apart at a glance. */
+.role-claim {
+  display: inline-block;
+  min-width: 9ch;
+  border-radius: 3px;
+  padding: 0 4px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 16px;
+  text-align: center;
+  white-space: nowrap;
+  color: var(--ui-document);
+  background: var(--ui-gutterText);
+}
+
+.claim-implements { background: var(--chips-implements); }
+.claim-tests { background: var(--chips-tests); }
+.claim-models { background: var(--chips-models); }
+.claim-proves { background: var(--chips-proves); }
+.claim-drt { background: var(--chips-drt); }
+
+/* An evidence level is a small pill in its grade's colour, so a column of
+ * them reads at a glance. */
+.pane .role-level,
+.pane .role-level-l1,
+.pane .role-level-l2,
+.pane .role-level-l3,
+.pane .role-level-l4 {
+  border-radius: 3px;
+  padding: 0 3px;
+  font-size: 11px;
+  font-weight: 600;
+  background: color-mix(in srgb, currentColor 16%, transparent);
+}
+
 /* The pane a key goes to, marked the way the first one marked the active tab. */
 .pane.focused {
   box-shadow: inset 0 2px 0 var(--ui-focus);
@@ -380,14 +456,43 @@ button.actionable:focus {
   grid-area: menu;
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  align-content: start;
   gap: 0 20px;
-  max-height: 32vh;
+  height: 150px;
   overflow-y: auto;
-  padding: 8px 14px;
+  padding: 6px 14px;
   background: var(--ui-menu);
   border-top: 2px solid var(--ui-accent);
   color: var(--ui-menuText);
   white-space: pre;
+}
+
+/* With no menu open: what can be done at the cursor, a column per group. */
+#menu.which-key {
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  align-items: start;
+  padding: 2px 8px;
+  border-top-color: var(--ui-border);
+  font-family: var(--fonts-chrome);
+  font-size: 12px;
+  line-height: 1.3;
+  white-space: normal;
+}
+
+#menu.which-key .context-column {
+  max-height: 140px;
+  overflow-y: auto;
+}
+
+#menu.which-key .context-entry {
+  justify-content: flex-start;
+  gap: 10px;
+  padding: 1px 12px;
+}
+
+#menu.which-key .context-keys {
+  min-width: 9ch;
+  color: var(--ui-menuKey);
 }
 
 #menu .role-entry { color: var(--ui-menuText); }

@@ -65,6 +65,10 @@ pub enum Role {
     /// carries its grade: a frontend deciding what was a keyword would be
     /// parsing the buffer itself.
     Token { kind: TokenKind },
+    /// What a claim on a requirement is — implements, tests, models, proves —
+    /// so each is coloured as its gutter chip is, and a requirement's claims
+    /// are told apart at a glance.
+    Claim { role: crate::trace::annotation::Role },
 }
 
 /// What a token of source code is.

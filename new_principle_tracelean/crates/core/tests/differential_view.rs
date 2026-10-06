@@ -225,9 +225,16 @@ fn generation_reaches_faulty_spans_and_real_changes() {
     let (mut past, mut back, mut overlap, mut unordered, mut clean) = (0u64, 0u64, 0u64, 0u64, 0u64);
     let (mut text_changed, mut spans_changed, mut nothing) = (0u64, 0u64, 0u64);
     let mut previous: Option<Buffer> = None;
-    for _ in 0..3_000 {
+    for n in 0..3_000 {
         let value = gen::value(&schema, &mut rng);
-        let buffer: Buffer = serde_json::from_value(value).expect("the schema generates a buffer");
+        let mut buffer: Buffer = serde_json::from_value(value).expect("the schema generates a buffer");
+        // One in fifty is the buffer before it again: two equal buffers drawn
+        // at random are too rare to leave "nothing changed" to chance.
+        if n % 50 == 49 {
+            if let Some(before) = &previous {
+                buffer = before.clone();
+            }
+        }
         let found = faults(buffer.clone());
         if found.is_empty() {
             clean += 1;

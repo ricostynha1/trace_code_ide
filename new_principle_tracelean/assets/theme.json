@@ -38,6 +38,7 @@
     "warning": "#d19a66",
     "error": "#f44747",
     "muted": "#888888",
+    "panelHeading": "#dcdcaa",
     "scrollbar": "#79797966",
     "contextMenu": "#2c313a",
     "contextMenuText": "#abb2bf",

@@ -64,6 +64,7 @@ def actionsFor : Role → List String
   | Role.added => ["observe.accept", "observe.reject"]
   | Role.removed => ["observe.accept", "observe.reject"]
   | Role.token _ => []
+  | Role.claim _ => []
 
 /-- Turn marks into spans, taking each one's affordances from its role. -/
 def spansOfMarks (marks : List Mark) : List Span :=

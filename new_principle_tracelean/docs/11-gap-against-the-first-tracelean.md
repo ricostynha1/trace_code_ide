@@ -321,6 +321,15 @@ Lean/DRT where the core changed + editor + window, with tests
   the undo tree (`Space w t h`). Right-click lays its actions along the bottom
   as which-key does, keys first. The demo is traced: `REQ-THERMO` claimed by
   code, tests and `specs/Thermo.lean`, and a draft `REQ-TABLE` with a gap.
+- **Night of 10-06/07.** Panels in the chrome font, the shown file's row
+  lit, levels as pills. A `claim` role (Rust, Lean, TS, TUI) colours each
+  claim as its gutter chip; an opened requirement shows an evidence line
+  (`implements 3/4 · tests 3/4 …`), `refined by`, and each claim's symbol.
+  The which-key bar is fixed at the bottom from the start, showing what can
+  be done at the cursor (`offers_here`). `docs/USING.md` and
+  `docs/DEVELOPER_GUIDE.md`. `web/test/look.mjs` photographs the page with a
+  real editor behind it (`examples/look.rs`, over stdio). The driving suite
+  opens a copy of the demo, so a person's sandbox there no longer fails it.
 - **Not done.** Opening a terminal for the user (ruled out by
   `ARCH-NO-DRIVING.user_runs_it`); Lean infoview and type-check on save (both
   start a process); LSP hover; coverage treemap and trend.

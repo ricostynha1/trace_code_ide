@@ -60,8 +60,15 @@ fn colour(role: Role) -> String {
             None => "\u{1b}[0m".to_string(),
         };
     }
+    // A claim is the colour of its gutter chip, from the `chips` section.
+    if let Role::Claim { role } = role {
+        return match tracelean_editor::theme::colour(theme(), "chips", role.as_str()) {
+            Some(hex) => truecolour(hex, true),
+            None => "\u{1b}[0m".to_string(),
+        };
+    }
     let (key, bold) = match role {
-        Role::Token { .. } => return "\u{1b}[0m".to_string(),
+        Role::Token { .. } | Role::Claim { .. } => return "\u{1b}[0m".to_string(),
         Role::Plain => return "\u{1b}[0m".to_string(),
         Role::Path => ("path", false),
         Role::Entry => ("entry", false),

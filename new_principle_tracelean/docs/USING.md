@@ -1,0 +1,123 @@
+# Using TraceLean
+
+TraceLean is an editor that knows **why code exists**. Requirements live in
+`reqs/*.md`; code, tests and Lean models say which requirement they serve with
+one-line annotations; the editor joins the two, so from any requirement you
+reach the code that implements it, and from any line of code you reach the
+requirement it answers to.
+
+## Start
+
+```bash
+cargo run -p tracelean-desktop -- demo   # the window, on the bundled demo
+cargo run -p tracelean-tui -- demo       # the same editor in a terminal
+```
+
+`demo/` is a small traced project — open it first. Any directory works: the
+editor reads what is there and writes only what you save.
+
+## The window
+
+```
+┌──┬──────────────── tabs: what is open ──────────────────────┐
+│📁│ explorer      │ document                  │ side panel    │
+│🧪│ (files)       │ (the file you edit)       │ (requirements,│
+│📋│               │ I T M P chips in gutter   │  sandbox,     │
+│🕸│               │                           │  history…)    │
+│🌳│               │                           │               │
+├──┴──────────── which-key: the actions here, with keys ───────┤
+└───────────────────────── status line ────────────────────────┘
+```
+
+The icons on the left are **stations**, always there:
+
+| Icon | Opens |
+|---|---|
+| 📁 | the project's files |
+| 🧪 | the sandbox: run an AI agent on a copy of the tree, then review its changes |
+| 📋 | the requirements and how well each is evidenced |
+| 🕸 | the refinement graph: which requirement refines which |
+| 🌳 | the undo tree: every state the file has been in, branches included |
+
+## Finding your way between requirements and code
+
+- **In code**, an annotation names a requirement clause:
+  ```rust
+  /// @implements REQ-THERMO.to_celsius
+  pub fn to_celsius(f: f64) -> f64 { … }
+  ```
+  The roles are `@implements`, `@tests`, `@models` (a Lean model), `@proves`
+  (a Lean theorem) and `@drt` (a differential test of the code against its
+  model).
+- **Chips** in the gutter mark each claimed item: **I** implements, **T**
+  tests, **M** models, **P** proves, **D** drt. Click a chip, or the name in
+  the annotation, to open the requirement.
+- **Click any requirement name** (in code, prose or a panel) to open it. An
+  opened requirement lists every clause with its evidence level (L1–L4) and
+  every claim as a `path:line` link — click to jump there. A clause nothing
+  claims says so in red.
+- **📋 Requirements** lists them all with their levels; **🕸** shows how they
+  refine each other.
+
+Evidence levels, weakest to strongest: **L1** annotated, **L2** judged by a
+person, **L3** differentially tested, **L4** proved. A clause's level is the
+weakest of three bonds — requirement↔model, model↔code, model↔proof — so an
+unchecked bond shows as L1 however strong the others are; the chain beside
+the level (`L2/L1/L3`) says which bond holds it back.
+
+## Keys
+
+Everything has a mouse route (click, right-click) and a key route. You never
+need to memorise: **the bar at the bottom always shows what can be done where
+the cursor is, keys first** — click an entry or type its keys. Right-click
+anything to see the same for the place you pointed at. **F1** lists every key.
+
+The usual editor keys work: `Ctrl+S` save, `Ctrl+Z`/`Ctrl+Y` undo/redo,
+`Ctrl+F` find (`F3` next), `Ctrl+H` replace, `Ctrl+P` open a file by name,
+`Ctrl+Shift+P` any action by name, `Ctrl+Shift+F` search all files, `F12` or
+Ctrl+click go to definition, `Alt+Left` back, `Ctrl+W` close tab, `Ctrl+/`
+comment.
+
+The editor is modal, like Vim: `i` to type, `Escape` to stop. Outside typing,
+**Space** opens the leader menu at the bottom (Emacs which-key style):
+
+| Keys | Does |
+|---|---|
+| `Space f` | files: `o` open, `s` save, `n` new, `r` rename, `d` delete, `g` definition, `u` references |
+| `Space t` | trace: `o` open requirement, `n` new requirement, `a` approve draft, `c` check tree, `f` findings, `r` coverage, `s` stale |
+| `Space h` | history: `u` undo, `r` redo, `t` tree, `b` branch |
+| `Space a` | agent: `n` new sandbox, `c` copy its command, `d` review diff, `a`/`x` accept/reject |
+| `Space d` | differential testing: `r` run, `b` bindings, `c` coverage |
+| `Space w` | panes: `h j k l` move focus, `v`/`s` split, `q` close, `t` stations |
+
+## Working with an AI agent
+
+1. 🧪 (or `Space a n`) makes a sandbox: a copy of the tree the agent may change.
+2. Copy the command shown and run it in your own terminal, then start your
+   agent (e.g. `claude`) there. The editor never starts processes itself.
+3. Its changes appear in the sandbox panel as they happen. Review each diff and
+   accept or reject per file.
+
+## Writing a requirement
+
+`Space t n` (or right-click → New requirement) creates `reqs/REQ-NAME.md`:
+
+```markdown
+---
+id: REQ-NAME
+title: What it is about
+status: draft
+clauses:
+  key: The system shall …
+---
+```
+
+Approve it when it is right (`Space t a`); annotate code with
+`@implements REQ-NAME.key`; the chips and the requirement panel update.
+
+## Look and feel
+
+Every colour and font is in `assets/theme.json`. A project may override any of
+them in `.tracelean/theme.json`; the window picks the change up when it regains
+focus. Changing keys, adding actions and the design behind it all:
+[DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md).

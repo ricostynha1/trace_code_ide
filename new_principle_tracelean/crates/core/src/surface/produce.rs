@@ -47,6 +47,8 @@ pub fn actions_for(role: Role) -> Vec<String> {
         // A token is something to read; what can be done with code is offered
         // by the buffer, not by each keyword in it.
         Role::Token { .. } => &[],
+        // The link beside a claim opens it; the word says what kind it is.
+        Role::Claim { .. } => &[],
     };
     names.iter().map(|name| name.to_string()).collect()
 }

@@ -14,6 +14,7 @@
 //! - `act`    — an action, dispatched from a position in a pane's buffer
 //! - `place`  — a pointer pressed at a position: focus and cursor
 //! - `offers` — everything that can be done at a position (the context menu)
+//! - `offers_here` — the same at the cursor, for the which-key bar
 //! - `choose` — one of those, with its target and the answer typed for it
 //! - `chord`  — save, undo, redo, Home, End, PageUp, PageDown, Delete
 //! - `scroll` — a wheel over a pane
@@ -223,6 +224,13 @@ fn offers(
     offset: usize,
 ) -> Vec<tracelean_core::surface::offer::Offer> {
     held.0.lock().expect("the editor").offers_at(&pane, offset)
+}
+
+/// What can be done where the cursor is: the which-key bar's rows while no
+/// menu is open, with the pane and offset an entry is chosen at.
+#[tauri::command]
+fn offers_here(held: State<'_, Held>) -> (String, usize, Vec<tracelean_core::surface::offer::Offer>) {
+    held.0.lock().expect("the editor").offers_here()
 }
 
 /// One entry of the context menu, with the answer typed for it if it asked.
@@ -448,7 +456,7 @@ fn main() {
             shown, cursor, menu, press, act, grab, bars, act_in_bar, theme, place, offers, choose,
             chord, scroll, paste, act_here, tick, take_clipboard, find, described, cut, quick, search,
             requirement_text, over_lines, brackets, mode, select, selection, replace,
-            problems, palette, selected, symbols, occurrences
+            problems, palette, selected, symbols, occurrences, offers_here
         ])
         .run(tauri::generate_context!())
         .expect("the window opens");

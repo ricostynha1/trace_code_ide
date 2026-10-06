@@ -194,10 +194,10 @@ fn generation_reaches_every_role_and_the_one_that_affords_nothing() {
             }
         }
     }
-    // Eleven and not eight: `level` carries a grade, so there are four of it,
-    // and a run that reached only one of them would say nothing about a
-    // frontend that colours L1 and L4 the same.
-    assert_eq!(roles.len(), 11, "only {roles:?} of the eleven roles were generated");
+    // Seventeen and not eight: `level` carries a grade, so there are four of
+    // it, and `claim` its kind, six; a run that reached only one of them would
+    // say nothing about a frontend that colours L1 and L4 the same.
+    assert_eq!(roles.len(), 17, "only {roles:?} of the seventeen roles were generated");
     support::covered(
         "REQ-SHOW.core_produces",
         &[

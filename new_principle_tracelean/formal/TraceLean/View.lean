@@ -1,6 +1,7 @@
 import Lean
 import TraceLean.Hash
 import TraceLean.Evidence
+import TraceLean.Annotation
 
 /-!
 # The representation every frontend renders
@@ -92,6 +93,9 @@ inductive Role where
   The kind comes from parsing, in the core, for the reason a level carries its
   grade. -/
   | token (kind : TokenKind)
+  /-- What a claim on a requirement is -- implements, tests, models, proves --
+  so each is coloured as its gutter chip is. -/
+  | claim (role : TraceLean.Annotation.Role)
   deriving Repr, DecidableEq, Inhabited, ToJson, FromJson
 
 /-- A region of a buffer's text, what it is, and what can be done there.

@@ -48,6 +48,7 @@ export interface Piece {
 export function classOf(role: Role): string {
   if (typeof role === "string") return `role-${role}`;
   if ("token" in role) return `role-token token-${role.token.kind}`;
+  if ("claim" in role) return `role-claim claim-${role.claim.role}`;
   return `role-level role-level-${role.level.grade.toLowerCase()}`;
 }
 

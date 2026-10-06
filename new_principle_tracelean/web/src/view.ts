@@ -39,7 +39,8 @@ export type Role =
   | { level: { grade: Grade } }
   | "added"
   | "removed"
-  | { token: { kind: string } };
+  | { token: { kind: string } }
+  | { claim: { role: string } };
 
 // Whether two roles are the same. Written out because two of them are objects
 // and `===` on objects compares identity, which would make every character of a
@@ -48,6 +49,7 @@ export function sameRole(a: Role, b: Role): boolean {
   if (typeof a === "string" || typeof b === "string") return a === b;
   if ("level" in a && "level" in b) return a.level.grade === b.level.grade;
   if ("token" in a && "token" in b) return a.token.kind === b.token.kind;
+  if ("claim" in a && "claim" in b) return a.claim.role === b.claim.role;
   return false;
 }
 

@@ -48,8 +48,33 @@ fn demo() -> PathBuf {
 }
 
 /// The frontend, opened on the demo tree at a fixed size.
+///
+/// On a copy of it, still named `demo`, without `.tracelean/`: what a person
+/// left there by opening it — tabs, a sandbox they started — is theirs, and a
+/// suite that read it would pass or fail by who last used the demo, and would
+/// write over it.
 fn open() -> Terminal {
-    Terminal::open(&demo(), 30, 100)
+    static COPIES: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+    let n = COPIES.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+    let copy = std::env::temp_dir().join(format!("tracelean-driving-{}-{n}", std::process::id())).join("demo");
+    let _ = std::fs::remove_dir_all(&copy);
+    copy_tree(&demo(), &copy);
+    Terminal::open(&copy, 30, 100)
+}
+
+fn copy_tree(from: &Path, to: &Path) {
+    std::fs::create_dir_all(to).expect("the copy's folder is made");
+    for entry in std::fs::read_dir(from).expect("the demo reads").flatten() {
+        let path = entry.path();
+        if entry.file_name() == ".tracelean" {
+            continue;
+        }
+        if path.is_dir() {
+            copy_tree(&path, &to.join(entry.file_name()));
+        } else {
+            std::fs::copy(&path, to.join(entry.file_name())).expect("a demo file copies");
+        }
+    }
 }
 
 /// The menu row a mode offers, as the core produces it: one entry a key,

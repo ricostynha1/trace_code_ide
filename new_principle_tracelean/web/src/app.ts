@@ -444,18 +444,32 @@ async function openContext(pane: string, at: number, _x: number, _y: number) {
   closeContext();
   if (!ctx) return;
   const offered = (await ctx.invoke("offers", { pane, offset: at })) as Offer[];
+  document.body.appendChild(overlay(offered, pane, at));
+}
+
+// The box laid over the bottom of the window: the offers, or a question one
+// of them asks.
+function overlay(offered: Offer[], pane: string, at: number): HTMLElement {
   const menu = document.createElement("div");
   menu.id = "context";
   menu.className = "which-key";
   menu.setAttribute("role", "menu");
+  whichKey(menu, offered, pane, at);
+  return menu;
+}
+
+// Offers as which-key columns, one per group, keys first. A click chooses the
+// entry where it was offered; one that asks for a name asks in a box over the
+// bottom of the window.
+function whichKey(into: HTMLElement, offered: Offer[], pane: string, at: number) {
   let group = "";
-  let column: HTMLElement = menu;
+  let column: HTMLElement = into;
   for (const offer of offered) {
     if (offer.group !== group) {
       group = offer.group;
       column = document.createElement("div");
       column.className = "context-column";
-      menu.appendChild(column);
+      into.appendChild(column);
       const heading = document.createElement("div");
       heading.className = "context-group";
       heading.textContent = GROUPS[group] ?? group;
@@ -474,6 +488,11 @@ async function openContext(pane: string, at: number, _x: number, _y: number) {
     entry.addEventListener("click", (event) => {
       event.stopPropagation();
       if (offer.asks) {
+        let menu = document.getElementById("context");
+        if (!menu) {
+          menu = overlay([], pane, at);
+          document.body.appendChild(menu);
+        }
         ask(menu, offer, pane, at);
         return;
       }
@@ -482,7 +501,6 @@ async function openContext(pane: string, at: number, _x: number, _y: number) {
     });
     column.appendChild(entry);
   }
-  document.body.appendChild(menu);
 }
 
 // Ask for an entry's argument inside the menu.
@@ -821,16 +839,24 @@ async function show(invoke: Invoke, into: HTMLElement, status: HTMLElement) {
   // is a buffer, so it is drawn by the same function — and its rows carry
   // actions, which is how a window offers what a terminal binds to a key. A row
   // is about whatever the cursor is on, so it is performed where the cursor is.
+  //
+  // With no menu open it is the which-key bar, there from the start and never
+  // moving: what can be done where the cursor is, keys first, so the keys are
+  // learnt by reading them. One height either way, so the panes above it keep
+  // theirs.
   const bar = document.getElementById("menu");
   if (!bar) return;
   const offered = (await invoke("menu", {})) as Buffer | null;
-  if (!offered) {
-    bar.textContent = "";
-    bar.hidden = true;
+  bar.hidden = false;
+  bar.textContent = "";
+  if (offered) {
+    bar.className = "mode";
+    draw(bar, offered, (action) => void run("act_here", { action }));
     return;
   }
-  bar.hidden = false;
-  draw(bar, offered, (action) => void run("act_here", { action }));
+  const here = (await invoke("offers_here", {})) as [string, number, Offer[]] | null;
+  bar.className = "which-key";
+  if (here) whichKey(bar, here[2], here[0], here[1]);
 }
 
 // Put a caret where the editor says the cursor is.

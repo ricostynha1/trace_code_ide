@@ -29,6 +29,12 @@ pub fn role() -> Schema {
     let mut fields = BTreeMap::new();
     fields.insert("grade".to_string(), Schema::simple_enum(&["L1", "L2", "L3", "L4"]));
     variants.insert("level".to_string(), Some(Box::new(Schema::Struct { fields })));
+    let mut claim = BTreeMap::new();
+    claim.insert(
+        "role".to_string(),
+        Schema::simple_enum(&["models", "implements", "tests", "drt", "proves", "pins"]),
+    );
+    variants.insert("claim".to_string(), Some(Box::new(Schema::Struct { fields: claim })));
     Schema::Enum { variants }
 }
 

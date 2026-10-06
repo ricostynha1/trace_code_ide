@@ -50,6 +50,8 @@ const BRIDGE = `
       case "bars": return [empty("stations"), { ...empty("opened"), text: "1  x.rs",
         spans: [ { start: 0, stop: 7, role: "entry", actions: ["screen.show"] } ] }];
       case "menu": return null;
+      case "offers_here": return ["document", 6, [
+        { group: "file", label: "Save x.rs", action: "file.save", target: null, asks: null, keys: "Ctrl+S" } ]];
       case "tick": return false;
       case "take_clipboard": return null;
       case "quick": return ["src/b.rs", "src/a.rs"];
@@ -184,6 +186,10 @@ try {
   })()`);
 
   check("the page reached the editor", (await calls()).some(([c]) => c === "shown"), JSON.stringify(await calls()));
+  const bar = await evaluate(`(() => { const m = document.getElementById("menu"); const b = m.getBoundingClientRect();
+    return { shown: !m.hidden && b.height > 0, text: m.textContent, bottom: window.innerHeight - b.bottom }; })()`);
+  check("the which-key bar is at the bottom from the start, with the keys for what can be done here",
+    bar.shown && bar.text.includes("Ctrl+S") && bar.text.includes("Save x.rs") && bar.bottom < 40, JSON.stringify(bar));
 
   // A click on the second row of the explorer opens that file, from that pane.
   await reset();
