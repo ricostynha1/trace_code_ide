@@ -2933,6 +2933,61 @@
         "language": "rust",
         "entry": "crates/core/src/surface/screen.rs::stations"
       }
+    },
+    {
+      "req_id": "REQ-CONTEXT",
+      "clause": "neighbourhood_is_closed",
+      "floors": [
+        { "situation": "nothing above", "atLeast": 1200 },
+        { "situation": "two or more steps up", "atLeast": 40 },
+        { "situation": "a cycle back to the target", "atLeast": 340 },
+        { "situation": "a name declared twice", "atLeast": 260 }
+      ],
+      "model": {
+        "import": "TraceLean.Context",
+        "function": "TraceLean.Context.ancestors",
+        "arguments": ["nodes", "id"]
+      },
+      "implementation": {
+        "language": "rust",
+        "entry": "crates/core/src/surface/context.rs::ancestors"
+      }
+    },
+    {
+      "req_id": "REQ-CONTEXT",
+      "clause": "person_chooses",
+      "floors": [
+        { "situation": "nothing chosen", "atLeast": 250 },
+        { "situation": "a part chosen with nothing in it", "atLeast": 1200 },
+        { "situation": "chosen out of order", "atLeast": 830 },
+        { "situation": "a part chosen twice", "atLeast": 550 }
+      ],
+      "model": {
+        "import": "TraceLean.Context",
+        "function": "TraceLean.Context.partsShown",
+        "arguments": ["included", "filled"]
+      },
+      "implementation": {
+        "language": "rust",
+        "entry": "crates/core/src/surface/context.rs::parts_shown"
+      }
+    },
+    {
+      "req_id": "REQ-CONTEXT",
+      "clause": "part_named",
+      "floors": [
+        { "situation": "a label that names a part", "atLeast": 500 },
+        { "situation": "a name that is no part", "atLeast": 1100 }
+      ],
+      "model": {
+        "import": "TraceLean.Context",
+        "function": "TraceLean.Context.partNamed",
+        "arguments": ["name"]
+      },
+      "implementation": {
+        "language": "rust",
+        "entry": "crates/core/src/surface/context.rs::part_named"
+      }
     }
   ]
 }

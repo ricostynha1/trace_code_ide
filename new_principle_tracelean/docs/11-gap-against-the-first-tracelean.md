@@ -330,6 +330,14 @@ Lean/DRT where the core changed + editor + window, with tests
   `docs/DEVELOPER_GUIDE.md`. `web/test/look.mjs` photographs the page with a
   real editor behind it (`examples/look.rs`, over stdio). The driving suite
   opens a copy of the demo, so a person's sandbox there no longer fails it.
+- **Agent context (`REQ-CONTEXT`).** From any requirement name (`Space c o`,
+  the bottom bar, `for agent` in an opened requirement): the requirement with
+  the clause marked, what it refines and what refines it (transitively), the
+  implementing code, claiming tests and Lean models with their source, and
+  affected tests (tests of descendants, tests calling an implementing
+  function, annotated or not). Parts toggle; the page previews exactly what
+  `Copy for an agent` puts on the clipboard. Lean `TraceLean.Context` +
+  `differential_context` for the closure, the choice and the part names.
 - **Not done.** Opening a terminal for the user (ruled out by
   `ARCH-NO-DRIVING.user_runs_it`); Lean infoview and type-check on save (both
   start a process); LSP hover; coverage treemap and trend.

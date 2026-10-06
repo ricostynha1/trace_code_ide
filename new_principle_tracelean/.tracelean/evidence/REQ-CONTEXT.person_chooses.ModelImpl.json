@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-CONTEXT",
+    "clause": "person_chooses",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 99,
+      "cases": 2000,
+      "op": "REQ-CONTEXT.person_chooses"
+    }
+  },
+  "linkHash": "7f604fff65153b6b",
+  "inputs": [
+    [
+      "implementation",
+      "9e3853218d42e751+aea640dd981cac47"
+    ],
+    [
+      "model",
+      "94ef9d519eb1804d"
+    ]
+  ]
+}

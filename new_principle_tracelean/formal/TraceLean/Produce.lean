@@ -59,7 +59,7 @@ def actionsFor : Role → List String
   | Role.path => ["file.open"]
   | Role.entry => ["file.open"]
   | Role.heading => ["trace.evidence", "trace.check"]
-  | Role.requirement => ["trace.requirement", "trace.evidence", "trace.findings"]
+  | Role.requirement => ["trace.requirement", "trace.context", "trace.evidence", "trace.findings"]
   | Role.level _ => ["trace.rollup"]
   | Role.added => ["observe.accept", "observe.reject"]
   | Role.removed => ["observe.accept", "observe.reject"]

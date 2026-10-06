@@ -86,11 +86,33 @@ The editor is modal, like Vim: `i` to type, `Escape` to stop. Outside typing,
 | `Space f` | files: `o` open, `s` save, `n` new, `r` rename, `d` delete, `g` definition, `u` references |
 | `Space t` | trace: `o` open requirement, `n` new requirement, `a` approve draft, `c` check tree, `f` findings, `r` coverage, `s` stale |
 | `Space h` | history: `u` undo, `r` redo, `t` tree, `b` branch |
+| `Space c` | context for an agent: `o` open it for the requirement here, `t` include/leave out a part, `y` copy |
 | `Space a` | agent: `n` new sandbox, `c` copy its command, `d` review diff, `a`/`x` accept/reject |
 | `Space d` | differential testing: `r` run, `b` bindings, `c` coverage |
 | `Space w` | panes: `h j k l` move focus, `v`/`s` split, `q` close, `t` stations |
 
 ## Working with an AI agent
+
+**Give it the context first.** Put the cursor on any requirement name — in a
+code annotation, a requirement, a panel — and choose *Context for an agent*
+from the bottom bar (or `Space c o`; every opened requirement also has a
+`for agent` link per clause). The context page lists what the change touches:
+
+| Part | What it holds |
+|---|---|
+| requirement | the requirement, with the clause being changed marked |
+| refines | everything it refines, transitively: what it must keep meeting |
+| refined by | everything refining it: what may have to change with it (off by default) |
+| code | each implementing item, with its source |
+| tests | each test claiming it, with its source |
+| models | Lean models and proofs claiming it |
+| affected tests | tests of what refines it, and any test that calls an implementing function |
+
+Click a part to include it or leave it out (`Space c t`), then
+**Copy for an agent** (`Space c y`) and paste it to your agent. The page
+shows exactly what will be copied. Nothing is sent anywhere by the editor.
+
+Then let the agent work in a sandbox:
 
 1. 🧪 (or `Space a n`) makes a sandbox: a copy of the tree the agent may change.
 2. Copy the command shown and run it in your own terminal, then start your

@@ -27,6 +27,7 @@
         "parent": "Normal",
         "bindings": [
           ["a", { "enter": { "mode": "Agent", "description": "agent" } }],
+          ["c", { "enter": { "mode": "Context", "description": "context for an agent" } }],
           ["d", { "enter": { "mode": "Drt", "description": "differential testing" } }],
           ["f", { "enter": { "mode": "File", "description": "file" } }],
           ["h", { "enter": { "mode": "History", "description": "history" } }],
@@ -83,6 +84,17 @@
           ["o", { "dispatch": { "action": "trace.requirement", "description": "open the requirement here" } }],
           ["r", { "dispatch": { "action": "trace.rollup", "description": "coverage rollup" } }],
           ["s", { "dispatch": { "action": "trace.stale", "description": "what went stale" } }]
+        ]
+      }
+    ],
+    [
+      "Context",
+      {
+        "parent": "Leader",
+        "bindings": [
+          ["o", { "dispatch": { "action": "trace.context", "description": "what an agent needs to change this requirement" } }],
+          ["t", { "dispatch": { "action": "context.toggle", "description": "include this part or leave it out" } }],
+          ["y", { "dispatch": { "action": "context.copy", "description": "copy the context for an agent" } }]
         ]
       }
     ],

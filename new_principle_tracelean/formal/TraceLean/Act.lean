@@ -2,6 +2,7 @@ import Lean
 import TraceLean.View
 import TraceLean.Command
 import TraceLean.Screen
+import TraceLean.Context
 
 /-!
 # From an action name to something the editor does
@@ -73,6 +74,10 @@ inductive Watch where
   | acceptFile (path : String)
   /-- Take one file's observed change back out, leaving the rest waiting. -/
   | rejectFile (path : String)
+  /-- Include a part of an agent's context, or leave it out. -/
+  | contextToggle (part : TraceLean.Context.Part)
+  /-- Put the chosen parts of an agent's context on the clipboard. -/
+  | contextCopy
   deriving Repr, DecidableEq, Inhabited, ToJson, FromJson
 
 /-- Why nothing happened.
@@ -285,6 +290,15 @@ def dispatch (action : String) (focus : Focus) (w : Workspace) : Intent :=
   | "trace.findings" => report "findings"
   | "trace.lock" => report "lock"
   | "trace.requirement" => requirementUnder focus
+  | "trace.context" =>
+    match focus.under with
+    | none => Intent.refuse (Blocked.needsTarget "trace.context" "a requirement")
+    | some id => report ("context " ++ id)
+  | "context.toggle" =>
+    match focus.under.bind TraceLean.Context.partNamed with
+    | none => Intent.refuse (Blocked.needsTarget "context.toggle" "a part of the context")
+    | some part => Intent.observe (Watch.contextToggle part)
+  | "context.copy" => Intent.observe Watch.contextCopy
   | "trace.judge" =>
     match focus.under with
     | none => Intent.refuse (Blocked.needsTarget "trace.judge" "a clause")

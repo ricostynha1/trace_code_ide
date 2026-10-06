@@ -109,6 +109,8 @@ pub fn requirement_view(view: RequirementShown) -> Buffer {
         (role, format!("{} {reached}/{total}", role.as_str()))
     })
     .collect();
+    // What an agent needs to change it: the name opens its context.
+    out.line(&[("for agent  ", Role::Plain, &[]), (&view.id, Role::Requirement, &["trace.context"]), ("  context to copy", Role::Plain, &[])]);
     let mut pieces: Vec<(&str, Role, &[&str])> = vec![("evidence   ", Role::Plain, &[])];
     for (n, (role, said)) in counts.iter().enumerate() {
         if n > 0 {
@@ -129,6 +131,10 @@ pub fn requirement_view(view: RequirementShown) -> Buffer {
             (&chain, Role::Plain, &[]),
         ]);
         out.wrapped("  ", &clause.text, Role::Plain, &[]);
+        if let Some(key) = &clause.key {
+            let name = format!("{}.{key}", view.id);
+            out.line(&[("  for agent   ", Role::Plain, &[]), (&name, Role::Requirement, &["trace.context"])]);
+        }
         if clause.claims.is_empty() {
             out.line(&[("  nothing claims it yet", Role::Removed, &[])]);
         }

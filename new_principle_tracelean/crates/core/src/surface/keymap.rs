@@ -116,6 +116,8 @@ pub fn typed(character: char) -> String {
 ///
 /// @implements REQ-MYTH.actions_defined
 pub const ACTIONS: &[&str] = &[
+    "context.copy",
+    "context.toggle",
     "drt.bindings",
     "drt.coverage",
     "drt.judge",
@@ -164,6 +166,7 @@ pub const ACTIONS: &[&str] = &[
     "screen.strip",
     "trace.approve",
     "trace.check",
+    "trace.context",
     "trace.evidence",
     "trace.findings",
     "trace.judge",

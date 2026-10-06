@@ -118,6 +118,8 @@ pub struct Editor {
     pub clipboard: Option<String>,
     /// The explorer's open folders: the session's, not the workspace's.
     pub open_folders: BTreeSet<String>,
+    /// Which parts of an agent's context the person has chosen to copy.
+    pub context_parts: BTreeSet<tracelean_core::surface::context::Part>,
     /// What was last searched for, so the next match is one key away.
     pub last_find: Option<String>,
     /// The list `.` offered, while it is up: the pane and position it is
@@ -308,6 +310,7 @@ impl Editor {
             agent_tree: None,
             clipboard: None,
             open_folders: BTreeSet::new(),
+            context_parts: tracelean_core::surface::context::default_parts(),
             last_find: None,
             offering: None,
             index_cache: std::cell::RefCell::new(None),
@@ -2481,6 +2484,9 @@ impl Editor {
             BufferKind::Record { title } if title.starts_with("judge ") => {
                 self.judge(&title["judge ".len()..])
             }
+            BufferKind::Record { title } if title.starts_with("context ") => {
+                self.agent_context(&title["context ".len()..])
+            }
             BufferKind::Record { title } if title.starts_with("requirement ") => {
                 self.requirement(&title["requirement ".len()..])
             }
@@ -3506,6 +3512,52 @@ impl Editor {
             }
             Watch::AcceptFile { path } => self.accept_file(&path),
             Watch::RejectFile { path } => self.reject_file(&path),
+            Watch::ContextToggle { part } => {
+                if !self.context_parts.remove(&part) {
+                    self.context_parts.insert(part);
+                }
+                // Drawn again where it is, the cursor on the switch it was on,
+                // so several parts can be chosen in a row.
+                if let BufferKind::Record { title } = self.buffer().kind {
+                    let at = self.offset;
+                    self.perform(Intent::Display { what: BufferKind::Record { title } });
+                    self.offset = at.min(self.buffer().text.chars().count());
+                }
+            }
+            Watch::ContextCopy => {
+                use tracelean_core::surface::context::{context_text, gather};
+                let target = match self.buffer().kind {
+                    BufferKind::Record { title } => title.strip_prefix("context ").map(str::to_string),
+                    _ => None,
+                };
+                let found = target.and_then(|t| gather(&t, &self.index(), &self.workspace().files));
+                match found {
+                    Some(context) => {
+                        let text = context_text(&context, &self.context_parts);
+                        self.say(
+                            "copied",
+                            &format!("{} characters of context for {} — paste them to your agent", text.chars().count(), context.target),
+                        );
+                        self.clipboard = Some(text);
+                    }
+                    None => self.say("nothing copied", "open the context of a requirement first (Space c o on its name)"),
+                }
+            }
+        }
+    }
+
+    /// What an agent needs to change a requirement or clause, with the parts
+    /// the person has chosen marked.
+    ///
+    /// @implements REQ-CONTEXT.copied_not_sent
+    fn agent_context(&self, target: &str) -> Buffer {
+        use tracelean_core::surface::context::{context_view, gather};
+        match gather(target, &self.index(), &self.workspace().files) {
+            Some(context) => context_view(&context, &self.context_parts, self.pane_width(tracelean_core::surface::screen::DOCUMENT)),
+            None => make::record_buffer(
+                format!("context {target}"),
+                vec![Event { kind: "unknown".into(), text: format!("no requirement is called {target}") }],
+            ),
         }
     }
 

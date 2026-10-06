@@ -40,7 +40,7 @@ pub fn actions_for(role: Role) -> Vec<String> {
         Role::Path => &["file.open"],
         Role::Entry => &["file.open"],
         Role::Heading => &["trace.evidence", "trace.check"],
-        Role::Requirement => &["trace.requirement", "trace.evidence", "trace.findings"],
+        Role::Requirement => &["trace.requirement", "trace.context", "trace.evidence", "trace.findings"],
         Role::Level { .. } => &["trace.rollup"],
         Role::Added => &["observe.accept", "observe.reject"],
         Role::Removed => &["observe.accept", "observe.reject"],

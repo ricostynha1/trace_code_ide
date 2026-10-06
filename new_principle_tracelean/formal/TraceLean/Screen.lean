@@ -402,7 +402,7 @@ def workbench (listing : Buffer) (document_ : Buffer) (side_ : Buffer) : Screen 
 /-- Records read like a file — an opened requirement, a judge's prompt, lists of
 places with their lines — named by how their titles start. -/
 def documentRecords : List String :=
-  ["requirement ", "judge ", "definitions of ", "uses of ", "search ", "keys"]
+  ["requirement ", "judge ", "context ", "definitions of ", "uses of ", "search ", "keys"]
 
 /-- The pane a buffer of this kind belongs in. -/
 def homeOf : BufferKind → String

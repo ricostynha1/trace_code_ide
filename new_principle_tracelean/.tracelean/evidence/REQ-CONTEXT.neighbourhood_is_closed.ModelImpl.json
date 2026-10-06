@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-CONTEXT",
+    "clause": "neighbourhood_is_closed",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 97,
+      "cases": 2000,
+      "op": "REQ-CONTEXT.neighbourhood_is_closed"
+    }
+  },
+  "linkHash": "00c410ecd1957642",
+  "inputs": [
+    [
+      "implementation",
+      "91dd8f294c4f559d+9d3e26f6fa20e4bb"
+    ],
+    [
+      "model",
+      "7435c03d233292a6+e5106c93ab873b56"
+    ]
+  ]
+}

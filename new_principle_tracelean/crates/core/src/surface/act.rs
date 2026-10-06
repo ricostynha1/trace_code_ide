@@ -63,6 +63,10 @@ pub enum Watch {
     AcceptFile { path: String },
     /// Take one file's observed change back out, leaving the rest waiting.
     RejectFile { path: String },
+    /// Include a part of an agent's context, or leave it out.
+    ContextToggle { part: crate::surface::context::Part },
+    /// Put the chosen parts of an agent's context on the clipboard.
+    ContextCopy,
 }
 
 /// Why nothing happened.
@@ -253,6 +257,16 @@ pub fn dispatch(action: String, focus: Focus, w: Workspace) -> Intent {
         "trace.evidence" => report("evidence"),
         "trace.findings" => report("findings"),
         "trace.lock" => report("lock"),
+        // What an agent needs to change the requirement or clause here.
+        "trace.context" => match &focus.under {
+            None => needs("trace.context", "a requirement"),
+            Some(id) => report(&format!("context {id}")),
+        },
+        "context.toggle" => match focus.under.clone().and_then(crate::surface::context::part_named) {
+            None => needs("context.toggle", "a part of the context"),
+            Some(part) => Intent::Observe { watch: Watch::ContextToggle { part } },
+        },
+        "context.copy" => Intent::Observe { watch: Watch::ContextCopy },
         "trace.judge" => match &focus.under {
             None => needs("trace.judge", "a clause"),
             Some(clause) => report(&format!("judge {clause}")),
@@ -392,6 +406,8 @@ mod tests {
             in_file(Some("menu:opened")),
             in_file(Some("#3")),
             Focus { kind: BufferKind::File { path: "reqs/R.md".into() }, offset: 0, under: None },
+            // A part's switch on an agent's context.
+            Focus { kind: BufferKind::Record { title: "context REQ-R".into() }, offset: 0, under: Some("code".into()) },
         ];
         for action in keymap::ACTIONS {
             let answers: Vec<Intent> = cursors

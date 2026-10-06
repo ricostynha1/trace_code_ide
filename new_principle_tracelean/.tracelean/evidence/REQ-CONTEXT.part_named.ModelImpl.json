@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-CONTEXT",
+    "clause": "part_named",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 100,
+      "cases": 2000,
+      "op": "REQ-CONTEXT.part_named"
+    }
+  },
+  "linkHash": "269e48380dc5f3e9",
+  "inputs": [
+    [
+      "implementation",
+      "715714297970a17b"
+    ],
+    [
+      "model",
+      "fbb5ed221932acb9"
+    ]
+  ]
+}
