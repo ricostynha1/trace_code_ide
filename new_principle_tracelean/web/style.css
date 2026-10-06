@@ -225,6 +225,23 @@ button.item {
   background: none;
 }
 
+/* A panel whose first line is a heading — the trace, an agent's context, the
+ * sandbox — wears it as the first one's panel header: a bar, small capitals. */
+.pane.kind-record .line:first-child:has(> .role-heading:first-child) {
+  background: var(--ui-bar);
+  border-bottom: 1px solid var(--ui-border);
+  margin-left: 0;
+  padding-left: 8px;
+}
+
+.pane.kind-record .line:first-child > .role-heading:first-child {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ui-muted);
+}
+
 /* A side panel's heading line — a requirement's title, a section — stands
  * out from the rows under it. */
 .pane.kind-menu .role-heading,
