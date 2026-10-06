@@ -248,6 +248,14 @@ button.item {
   background: var(--ui-gutterText);
 }
 
+/* In the tree, a claim is a letter, small, like the gutter's chips. */
+.pane.kind-directory .role-claim {
+  min-width: 0;
+  padding: 0 3px;
+  font-size: 10px;
+  line-height: 14px;
+}
+
 .claim-implements { background: var(--chips-implements); }
 .claim-tests { background: var(--chips-tests); }
 .claim-models { background: var(--chips-models); }

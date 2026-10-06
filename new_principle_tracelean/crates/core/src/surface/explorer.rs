@@ -101,10 +101,15 @@ fn badge(row: &Row, changed: &BTreeMap<String, String>) -> Option<(&'static str,
 /// and a mark after it where an agent's change is waiting (`changed` maps a
 /// path to `created`, `modified` or `deleted`). The file the document shows,
 /// `current`, is a heading rather than a path, so it stands out.
+///
+/// A file that claims requirements carries a letter for each kind of claim
+/// in it (`claimed`: I implements, T tests, M models, P proves, D drt), in
+/// its chip's colour — where requirements are met is visible from the tree.
 pub fn tree_buffer(
     title: String,
     rows: &[Row],
     changed: &BTreeMap<String, String>,
+    claimed: &BTreeMap<String, BTreeSet<crate::trace::annotation::Role>>,
     current: Option<&str>,
 ) -> Buffer {
     // The first row names the project, so which tree this is stays in view.
@@ -123,6 +128,17 @@ pub fn tree_buffer(
             actions: vec!["file.open".to_string()],
         });
         let mut end = length;
+        if let Some(kinds) = claimed.get(&row.path).filter(|_| !row.folder) {
+            line.push(' ');
+            end += 1;
+            for kind in kinds {
+                let Some(letter) = crate::surface::chips::letter(*kind) else { continue };
+                line.push(' ');
+                line.push(letter);
+                spans.push(Span { start: at + end + 1, stop: at + end + 2, role: Role::Claim { role: *kind }, actions: Vec::new() });
+                end += 2;
+            }
+        }
         if let Some((mark, role)) = badge(row, changed) {
             line.push_str("  ");
             line.push_str(mark);
@@ -174,7 +190,7 @@ mod tests {
 
         let open: BTreeSet<String> = ["src".to_string(), "src/notes".to_string()].into();
         let opened = rows(&files(), &open);
-        let buffer = tree_buffer("demo".into(), &opened, &BTreeMap::new(), Some("src/main.rs"));
+        let buffer = tree_buffer("demo".into(), &opened, &BTreeMap::new(), &BTreeMap::new(), Some("src/main.rs"));
         let main = buffer.text.find("main.rs").map(|b| buffer.text[..b].chars().count()).unwrap();
         assert!(buffer.spans.iter().any(|s| s.start == main && s.role == Role::Heading), "the shown file is not marked");
         assert_eq!(buffer.text, "DEMO\n▾ src\n  ▾ notes\n      a.md\n    main.rs\n▸ tests\n  README.md");
@@ -187,11 +203,11 @@ mod tests {
     #[test]
     fn waiting_changes_are_marked_on_the_file_and_its_folders() {
         let changed: BTreeMap<String, String> = [("src/notes/a.md".to_string(), "modified".to_string())].into();
-        let buffer = tree_buffer("demo".into(), &rows(&files(), &BTreeSet::new()), &changed, None);
+        let buffer = tree_buffer("demo".into(), &rows(&files(), &BTreeSet::new()), &changed, &BTreeMap::new(), None);
         assert_eq!(buffer.text, "DEMO\n▸ src  ●\n▸ tests\n  README.md");
         assert!(faults(buffer.clone()).is_empty());
         let open: BTreeSet<String> = ["src".to_string(), "src/notes".to_string()].into();
-        let buffer = tree_buffer("demo".into(), &rows(&files(), &open), &changed, None);
+        let buffer = tree_buffer("demo".into(), &rows(&files(), &open), &changed, &BTreeMap::new(), None);
         assert!(buffer.text.contains("a.md  ●"), "{}", buffer.text);
         let rows = rows(&files(), &open);
         let at = buffer.text.find("main.rs").map(|b| buffer.text[..b].chars().count()).unwrap();
@@ -204,12 +220,27 @@ mod tests {
     fn unsaved_edits_are_marked_apart() {
         let open: BTreeSet<String> = ["src".to_string()].into();
         let unsaved: BTreeMap<String, String> = [("src/main.rs".to_string(), "unsaved".to_string())].into();
-        let buffer = tree_buffer("demo".into(), &rows(&files(), &open), &unsaved, None);
+        let buffer = tree_buffer("demo".into(), &rows(&files(), &open), &unsaved, &BTreeMap::new(), None);
         assert!(buffer.text.contains("▾ src  ✎") && buffer.text.contains("main.rs  ✎"), "{}", buffer.text);
         let mut both = unsaved.clone();
         both.insert("src/notes/a.md".into(), "modified".into());
-        let buffer = tree_buffer("demo".into(), &rows(&files(), &open), &both, None);
+        let buffer = tree_buffer("demo".into(), &rows(&files(), &open), &both, &BTreeMap::new(), None);
         assert!(buffer.text.contains("▾ src  ●"), "{}", buffer.text);
+    }
+
+    /// A file that claims requirements says which kinds of claim, each in its
+    /// role, so it is coloured as its chips are.
+    #[test]
+    fn a_claiming_file_carries_its_claim_letters() {
+        use crate::trace::annotation::Role as Claimed;
+        let open: BTreeSet<String> = ["src".to_string()].into();
+        let claimed: BTreeMap<String, BTreeSet<Claimed>> =
+            [("src/main.rs".to_string(), [Claimed::Implements, Claimed::Tests].into())].into();
+        let buffer = tree_buffer("demo".into(), &rows(&files(), &open), &BTreeMap::new(), &claimed, None);
+        assert!(buffer.text.contains("main.rs  I T"), "{}", buffer.text);
+        assert!(faults(buffer.clone()).is_empty());
+        let at = buffer.text.find("I T").map(|b| buffer.text[..b].chars().count()).unwrap();
+        assert!(buffer.spans.iter().any(|s| s.start == at && s.role == Role::Claim { role: Claimed::Implements }));
     }
 
     #[test]

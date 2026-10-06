@@ -51,6 +51,9 @@ The icons on the left are **stations**, always there:
   The roles are `@implements`, `@tests`, `@models` (a Lean model), `@proves`
   (a Lean theorem) and `@drt` (a differential test of the code against its
   model).
+- **In the file tree**, a file that claims requirements carries coloured
+  letters after its name — which files implement, test, model or prove
+  something is visible before you open any.
 - **Chips** in the gutter mark each claimed item: **I** implements, **T**
   tests, **M** models, **P** proves, **D** drt. Point at a chip to read the
   clause; click it, or the name in the annotation, to open the requirement.

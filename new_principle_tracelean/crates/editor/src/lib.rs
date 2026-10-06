@@ -538,10 +538,16 @@ impl Editor {
                     BufferKind::File { path } => Some(path),
                     _ => None,
                 });
+            // What each file claims, by kind: the letters after its name.
+            let mut claimed: BTreeMap<String, BTreeSet<tracelean_core::trace::annotation::Role>> = BTreeMap::new();
+            for link in &self.index().links {
+                claimed.entry(link.anchor.file.clone()).or_default().insert(link.role);
+            }
             return explorer::tree_buffer(
                 self.root.display().to_string(),
                 &self.tree_rows(),
                 &changed,
+                &claimed,
                 current.as_deref(),
             );
         }

@@ -19,7 +19,7 @@ pub struct Chip {
 
 /// The letter a role is marked with, in the order marks are laid out. A pin
 /// is a record, not a claim about the code, and has none.
-fn letter(role: Role) -> Option<char> {
+pub fn letter(role: Role) -> Option<char> {
     match role {
         Role::Models => Some('M'),
         Role::Implements => Some('I'),
