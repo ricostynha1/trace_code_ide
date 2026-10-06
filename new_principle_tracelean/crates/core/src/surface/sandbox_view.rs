@@ -106,6 +106,25 @@ impl Lines {
         }
     }
 
+    /// A block of text as it is, with `marks` placed in it (offsets within the
+    /// block) — each mark's role bringing what that role offers.
+    pub(crate) fn marked(&mut self, text: &str, marks: Vec<crate::surface::produce::Mark>) {
+        if !self.text.is_empty() {
+            self.text.push('\n');
+            self.at += 1;
+        }
+        for mark in marks {
+            self.spans.push(Span {
+                start: self.at + mark.start,
+                stop: self.at + mark.stop,
+                role: mark.role,
+                actions: crate::surface::produce::actions_for(mark.role),
+            });
+        }
+        self.text.push_str(text);
+        self.at += text.chars().count();
+    }
+
     pub(crate) fn blank(&mut self) {
         self.line(&[]);
     }

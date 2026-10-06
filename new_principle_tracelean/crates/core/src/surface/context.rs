@@ -450,13 +450,9 @@ pub fn context_view(context: &Context, included: &BTreeSet<Part>, width: usize) 
     out.line(&[("[ Copy for an agent ]", Role::Added, &["context.copy"]), (&size, Role::Plain, &[])]);
     out.blank();
     out.line(&[("What will be copied", Role::Heading, &[])]);
-    for line in text.lines() {
-        if line.is_empty() {
-            out.blank();
-        } else {
-            out.line(&[(line, Role::Plain, &[])]);
-        }
-    }
+    // As Markdown, which it is: headings, code and requirement names marked.
+    let text = text.trim_end();
+    out.marked(text, crate::surface::highlight::markdown(text));
     out.finish(&format!("context {}", context.target))
 }
 

@@ -66,6 +66,14 @@ fn a_context_is_chosen_part_by_part_and_copied() {
     let shown = plain_text(editor.buffer()).join("\n");
     assert!(shown.contains("Context for an agent"), "{shown}");
     assert!(shown.contains("[ ] refined by"), "what refines it is left out until chosen:\n{shown}");
+    // What will be copied reads as the Markdown it is: its headings marked.
+    let headings = editor
+        .buffer()
+        .spans
+        .iter()
+        .filter(|s| s.role == tracelean_core::surface::view::Role::Token { kind: tracelean_core::surface::view::TokenKind::Heading })
+        .count();
+    assert!(headings >= 2, "the preview's headings are marked: {headings}");
 
     // Leave the code out, take what refines it in.
     here(&mut editor, "context.toggle", Some("code"));

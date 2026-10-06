@@ -202,6 +202,13 @@ button.item {
   font-size: var(--fonts-chromeSize);
 }
 
+/* Code quoted in a panel — an agent's context, a fenced block — in the code's
+ * own font, so it reads as the code it is. */
+.pane.kind-record .line .token-string {
+  font-family: var(--fonts-code);
+  font-size: var(--fonts-codeSize);
+}
+
 /* The explorer reads as the first one's file tree: names in the sidebar's
  * text colour rather than a link's, the shown file's row lit, and the root's
  * name a small capitalised header. */
