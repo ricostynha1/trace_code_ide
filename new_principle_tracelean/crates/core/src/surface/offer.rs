@@ -182,7 +182,10 @@ pub fn offers(buffer: &Buffer, offset: usize, keymap: &Keymap) -> Vec<Offer> {
             out.push(offer(keymap, "here", format!("Reject {name} only"), "observe.reject_file", here.clone(), None));
         }
     }
-    if let (BufferKind::Directory { .. }, Some(path)) = (&buffer.kind, &here) {
+    // A row of a listing is a file to rename or delete; the listing's title
+    // above the rows is not.
+    let a_row = actions_at(buffer.clone(), offset).iter().any(|a| a == "file.open");
+    if let (BufferKind::Directory { .. }, Some(path), true) = (&buffer.kind, &here, a_row) {
         out.push(offer(
             keymap,
             "here",

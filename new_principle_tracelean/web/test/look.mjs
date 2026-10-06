@@ -12,10 +12,10 @@
 
 import { spawn } from "node:child_process";
 import { createServer } from "node:http";
-import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createInterface } from "node:readline";
 import { tmpdir } from "node:os";
-import { join, dirname, normalize } from "node:path";
+import { basename, join, dirname, normalize, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const here = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -25,8 +25,15 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const width = Number(process.env.WIDTH ?? 1400);
 const height = Number(process.env.HEIGHT ?? 800);
 
+// On a copy of the tree, named as it is, without what a person keeps there
+// (`.tracelean/`: their tabs, their sandboxes) or what a build leaves: the
+// steps are this script's, and must not become anybody's open tabs.
+const SKIP = new Set([".tracelean", ".git", "target", ".lake", "node_modules"]);
+const copy = join(mkdtempSync(join(tmpdir(), "tracelean-look-tree-")), basename(resolve(here, tree)));
+cpSync(resolve(here, tree), copy, { recursive: true, filter: (from) => !SKIP.has(basename(from)) });
+
 // The editor, one request a line.
-const editor = spawn("cargo", ["run", "-q", "-p", "tracelean-editor", "--example", "look", "--", tree],
+const editor = spawn("cargo", ["run", "-q", "-p", "tracelean-editor", "--example", "look", "--", copy],
   { cwd: here, stdio: ["pipe", "pipe", "inherit"] });
 const replies = createInterface({ input: editor.stdout });
 const waiting = [];
@@ -116,4 +123,5 @@ try {
   chrome.kill();
   editor.kill();
   server.close();
+  rmSync(dirname(copy), { recursive: true, force: true });
 }
