@@ -9,6 +9,7 @@ pub mod doclink;
 pub mod earn;
 pub mod hash;
 pub mod index;
+pub mod lines;
 pub mod lockfile;
 pub mod material;
 pub mod pinning;

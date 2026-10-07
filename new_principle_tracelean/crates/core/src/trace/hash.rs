@@ -74,6 +74,12 @@ pub fn normalize(source: &str, removed: &[(usize, usize)], protected: &[(usize, 
     out
 }
 
+/// Hash of text exactly as it is: where a line number means something, as it
+/// does for coverage, a blank line added is a change.
+pub fn text(source: &str) -> String {
+    digest(source.as_bytes())
+}
+
 /// Hash of a normalised body.
 ///
 /// @implements REQ-ANCHOR.hash_tracks_body

@@ -3099,6 +3099,41 @@
         "entry": "crates/core/src/drt/derive.rs::pair",
         "params": { "leanStructs": "lean_structs", "rustStructs": "rust_structs" }
       }
+    },
+    {
+      "req_id": "REQ-LINECOV",
+      "clause": "per_test",
+      "floors": [
+        { "situation": "a line two tests ran", "atLeast": 30 },
+        { "situation": "a line no test ran", "atLeast": 200 }
+      ],
+      "model": {
+        "import": "TraceLean.Lines",
+        "function": "TraceLean.Lines.merged",
+        "arguments": ["runs", "file"]
+      },
+      "implementation": {
+        "language": "rust",
+        "entry": "crates/core/src/trace/lines.rs::merged"
+      }
+    },
+    {
+      "req_id": "REQ-LINECOV",
+      "clause": "clause_summary",
+      "floors": [
+        { "situation": "some lines run and some not", "atLeast": 200 },
+        { "situation": "no executable line inside", "atLeast": 100 }
+      ],
+      "model": {
+        "import": "TraceLean.Lines",
+        "function": "TraceLean.Lines.spanCoverage",
+        "arguments": ["lines", "start", "stop"]
+      },
+      "implementation": {
+        "language": "rust",
+        "entry": "crates/core/src/trace/lines.rs::span_coverage",
+        "params": { "stop": "end" }
+      }
     }
   ]
 }

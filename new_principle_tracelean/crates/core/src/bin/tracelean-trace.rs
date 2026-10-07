@@ -195,6 +195,30 @@ fn main() {
         return;
     }
 
+    // `--coverage` runs each Rust test alone under coverage and keeps, per
+    // file, which tests ran each line and how often.
+    if std::env::args().any(|a| a == "--coverage") {
+        use tracelean_core::drt::lines_run;
+        let files = tracelean_core::observe::workspace::snapshot(&root).files;
+        match lines_run::measure(&root, &files) {
+            Ok((coverage, tests)) => {
+                for (path, (_, lines)) in &coverage.files {
+                    let reached = lines.iter().filter(|l| l.hits > 0).count();
+                    println!("{reached:>5}/{:<5} {path}", lines.len());
+                }
+                println!("{tests} tests, {} files", coverage.files.len());
+                if let Err(error) = lines_run::write(&root, &coverage) {
+                    eprintln!("cannot keep the coverage: {error}");
+                }
+            }
+            Err(why) => {
+                eprintln!("{why}");
+                std::process::exit(2);
+            }
+        }
+        return;
+    }
+
     // `--pins` asks Lean whether each `@pins` theorem pins its clause, keeps the
     // verdict under `.tracelean/pins`, and says what an unpinned clause owes.
     if std::env::args().any(|a| a == "--pins") {

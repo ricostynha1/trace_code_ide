@@ -6,6 +6,7 @@ pub mod config;
 pub mod derive;
 pub mod gen;
 pub mod lean_runner;
+pub mod lines_run;
 pub mod pins;
 pub mod protocol;
 pub mod rust_runner;

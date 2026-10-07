@@ -242,6 +242,17 @@ function drawChips(box: HTMLElement, pane: Pane) {
   }
 }
 
+// Which lines tests ran: a mark in the gutter, red where none did, and what
+// pointing at the line number says — which tests, how often.
+function drawCoverage(box: HTMLElement, pane: Pane) {
+  for (const [line, hits, said] of pane.coverage ?? []) {
+    const row = box.children[line - (pane.top ?? 0)];
+    if (!(row instanceof HTMLElement)) continue;
+    row.classList.add(hits > 0 ? "covered" : "uncovered");
+    row.title = said;
+  }
+}
+
 // The change a history node made, in a box beside the pointer.
 async function showChange(pane: string, at: number, x: number, y: number) {
   if (!ctx) return;
@@ -286,6 +297,7 @@ function drawPane(into: HTMLElement, pane: Pane) {
       if (row instanceof HTMLElement) row.dataset.number = String((pane.top ?? 0) + index + 1);
     });
     drawChips(box, pane);
+    drawCoverage(box, pane);
   }
 
   // A history node rested on shows the change it made, beside the pointer,

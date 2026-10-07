@@ -31,9 +31,19 @@
       "role": "implements",
       "req": "REQ-TABLE",
       "clause": "every_sample",
+      "file": "src/celsius.rs",
+      "anchor": "src/celsius.rs::describe",
+      "body_hash": "e825d7125c712ac1",
+      "link_hash": "f07613c4ddf51661",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-TABLE",
+      "clause": "every_sample",
       "file": "src/main.rs",
       "anchor": "src/main.rs::main",
-      "body_hash": "c679d51386a2ea14",
+      "body_hash": "cc1fb78ccd0a72cf",
       "link_hash": "729b1e3fc677252c",
       "qualifier": null
     },
@@ -145,6 +155,16 @@
       "anchor": "specs/Thermo.lean::Thermo::round_trip",
       "body_hash": "ce8f0c6bf3449d79",
       "link_hash": "484f14ab2689e74f",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-TABLE",
+      "clause": "every_sample",
+      "file": "tests/round_trip.rs",
+      "anchor": "tests/round_trip.rs::below_zero_is_ice",
+      "body_hash": "d580d53e7849e674",
+      "link_hash": "454a0b7526d0030f",
       "qualifier": null
     },
     {

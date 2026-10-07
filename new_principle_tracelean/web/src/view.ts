@@ -101,6 +101,9 @@ export interface Pane {
   // The claims marked beside the window's lines: buffer line, the role's
   // letter, the requirement it opens.
   chips?: [number, string, string][];
+  // The measured lines in the window: buffer line, how often tests ran it,
+  // and what pointing at it says.
+  coverage?: [number, number, string][];
 }
 
 export type Breach =

@@ -101,6 +101,16 @@ L3 and counted under `drt` in the requirement. A divergence is shrunk and
 printed; a type the two sides do not share (`Float`, `&str`) is named and left
 untested. A binding in `.tracelean/drt.json` overrides it for its clause.
 
+**Coverage, test by test.** `tracelean-trace . --coverage` builds a Rust
+project's tests with `-C instrument-coverage` (needs `rustup component add
+llvm-tools`), runs each test alone, and keeps which tests ran each line and how
+often. An open file then shows a green bar beside lines tests ran and a red,
+tinted line where none did; point at a line for `run 7 times by
+converting_back_gives_what_went_in ×6, …`. A requirement shows per clause how
+many lines of its implementing items run (`covered 4/7 lines run, by 1 test`).
+Edit a file and its coverage disappears until measured again. In the demo,
+`describe` in `src/celsius.rs` has two branches no test reaches.
+
 ## Keys
 
 Everything has a mouse route (click, right-click) and a key route. You never

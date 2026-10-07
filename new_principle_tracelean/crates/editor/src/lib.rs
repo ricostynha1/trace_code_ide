@@ -97,6 +97,9 @@ pub struct Editor {
     held_state: std::cell::RefCell<Option<(Option<tracelean_core::history::tree::NodeId>, Workspace)>>,
     /// Each drawn file's chips, with the text they were counted from.
     chips_held: std::cell::RefCell<BTreeMap<String, (String, Vec<tracelean_core::surface::chips::Chip>)>>,
+    /// The measured line coverage (`tracelean-trace --coverage`), and when the
+    /// file it came from was written.
+    coverage_held: std::cell::RefCell<(Option<std::time::SystemTime>, tracelean_core::trace::lines::Coverage)>,
     /// The workspace as it was last written out, for the review buffer.
     saved: Workspace,
     /// Changes seen in the working tree that the editor has not taken in.
@@ -231,6 +234,59 @@ const CHORDS: &[(&str, &str)] = &[
 ];
 
 impl Editor {
+    /// The measured lines in a window of a file buffer, as the buffer line,
+    /// how often tests ran it, and what pointing at it says — only while the
+    /// file's text is the text that was measured.
+    ///
+    /// @implements REQ-LINECOV.uncovered_shown
+    /// @implements REQ-LINECOV.stale_hidden
+    pub fn coverage_shown(&self, buffer: &Buffer, top: usize, height: usize) -> Vec<(usize, u64, String)> {
+        use tracelean_core::trace::lines::{current, said};
+        let BufferKind::File { path } = &buffer.kind else { return Vec::new() };
+        let mut held = self.coverage_held.borrow_mut();
+        if let Some(newer) = tracelean_core::drt::lines_run::read_if_newer(&self.root, held.0) {
+            *held = (Some(newer.0), newer.1);
+        }
+        let hash = tracelean_core::trace::hash::text(&buffer.text);
+        let Some(lines) = current(&held.1, path, &hash) else { return Vec::new() };
+        lines
+            .iter()
+            .map(|l| (l.line as usize - 1, l))
+            .filter(|(at, _)| (top..top + height).contains(at))
+            .map(|(at, l)| (at, l.hits, said(l)))
+            .collect()
+    }
+
+    /// How much of a clause's implementing items tests run: executable lines
+    /// run, executable lines, and how many tests — over every item measured
+    /// against the text it has now. None when none was.
+    ///
+    /// @implements REQ-LINECOV.clause_summary
+    fn clause_lines(&self, index: &tracelean_core::trace::index::Index, id: &str, clause: &Option<String>) -> Option<(u64, u64, u64)> {
+        use tracelean_core::trace::lines::{current, span_coverage};
+        let mut held = self.coverage_held.borrow_mut();
+        if let Some(newer) = tracelean_core::drt::lines_run::read_if_newer(&self.root, held.0) {
+            *held = (Some(newer.0), newer.1);
+        }
+        let files = &self.workspace().files;
+        let (mut run, mut all, mut tests) = (0, 0, Vec::new());
+        let mut measured = false;
+        for link in index.links.iter().filter(|l| {
+            l.role == tracelean_core::trace::annotation::Role::Implements && l.req_id == id && l.clause == *clause
+        }) {
+            let Some(text) = files.get(&link.anchor.file) else { continue };
+            let Some(lines) = current(&held.1, &link.anchor.file, &tracelean_core::trace::hash::text(text)) else { continue };
+            let reach = span_coverage(lines.clone(), link.anchor.start_line + 1, link.anchor.end_line + 1);
+            measured = true;
+            run += reach.run;
+            all += reach.all;
+            tests.extend(reach.tests);
+        }
+        tests.sort();
+        tests.dedup();
+        measured.then_some((run, all, tests.len() as u64))
+    }
+
     /// The claims to mark beside a window of a file buffer (`surface::chips`),
     /// as the buffer line, the role's letter and the requirement each opens.
     /// None for a buffer that is not a file.
@@ -325,6 +381,7 @@ impl Editor {
             tree: Tree::new(workspace.clone()),
             held_state: std::cell::RefCell::new(None),
             chips_held: std::cell::RefCell::new(BTreeMap::new()),
+            coverage_held: std::cell::RefCell::new((None, Default::default())),
             saved: workspace,
             pending: Vec::new(),
             running: true,
@@ -2788,6 +2845,7 @@ impl Editor {
                             && r.key.bond == tracelean_core::evidence::Bond::ModelImpl
                             && r.effective_level() >= Level::L3
                     }),
+                    lines: self.clause_lines(&index, id, &clause),
                     key: clause,
                     claims,
                     pins,

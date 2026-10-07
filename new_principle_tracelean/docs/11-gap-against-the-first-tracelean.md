@@ -378,6 +378,12 @@ Lean/DRT where the core changed + editor + window, with tests
   packaging the model's directory, depending on the library crate or including
   the file — and records L3 when they agree and every argument class was
   generated. The demo shows `drt 2/4` with no binding and no `@drt`.
+- **Line coverage.** `tracelean-trace . --coverage` runs each Rust test alone
+  under `-C instrument-coverage` and keeps per line who ran it and how often
+  (`.tracelean/coverage.json`, keyed by the file's hash; `trace::lines`, Lean
+  `Lines`, two DRT suites). The window marks covered and uncovered lines with
+  the tests in the line's tooltip; a requirement shows each clause's lines
+  run. Rust only; the terminal shows the per-clause summary, not the marks.
 - **Not done.** Opening a terminal for the user (ruled out by
   `ARCH-NO-DRIVING.user_runs_it`); Lean infoview and type-check on save (both
   start a process); LSP hover; coverage treemap and trend.

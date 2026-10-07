@@ -1,0 +1,14 @@
+[package]
+name = "thermo"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+path = "src/celsius.rs"
+
+[[bin]]
+name = "thermo"
+path = "src/main.rs"
+
+# A project of its own, not a member of the TraceLean workspace around it.
+[workspace]

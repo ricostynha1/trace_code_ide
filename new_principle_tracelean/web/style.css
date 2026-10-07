@@ -460,6 +460,17 @@ body.dragging * {
   color: var(--ui-gutterActive);
 }
 
+/* Coverage (`tracelean-trace --coverage`): a bar at the gutter's edge where
+ * tests ran the line, a red one and a tint where none did. */
+.pane.kind-file .line.covered {
+  box-shadow: inset 3px 0 0 var(--ui-covered);
+}
+
+.pane.kind-file .line.uncovered {
+  box-shadow: inset 3px 0 0 var(--ui-uncovered);
+  background: var(--ui-uncoveredLine);
+}
+
 .line:hover,
 .pane.focused .line.active {
   background: var(--ui-activeLine);

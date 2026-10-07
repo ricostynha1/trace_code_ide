@@ -194,6 +194,7 @@ fn only_declared_shells_touch_the_filesystem() {
         "core/src/drt/config.rs",        // reads the binding file
         "core/src/drt/pins.rs",          // asks Lean about a pinning theorem, keeps the verdict
         "core/src/drt/auto.rs",          // generates, builds and runs a derived test's runners
+        "core/src/drt/lines_run.rs",     // runs each test under coverage, keeps the lines
         "core/src/bin/tracelean-trace.rs", // the command-line entry point
         "editor/src/theme.rs",           // reads the colours a project chose
         "editor/src/recall.rs",          // keeps what was open for next time

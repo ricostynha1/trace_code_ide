@@ -48,6 +48,10 @@ pub struct ClauseShown {
     /// the test came about — a `@drt` claim or `tracelean-trace --drt`.
     #[serde(default)]
     pub tested: bool,
+    /// How much of its implementing items tests run, when it was measured:
+    /// executable lines run, executable lines, and how many tests ran them.
+    #[serde(default)]
+    pub lines: Option<(u64, u64, u64)>,
 }
 
 /// Everything the view is produced from.
@@ -153,6 +157,12 @@ pub fn requirement_view(view: RequirementShown) -> Buffer {
         if clause.claims.is_empty() {
             out.line(&[("  nothing claims it yet", Role::Removed, &[])]);
         }
+        // How much of the code that implements it the tests run.
+        if let Some((run, all, tests)) = clause.lines {
+            let role = if run == all { Role::Added } else { Role::Removed };
+            let said = format!("{run}/{all} lines run, by {tests} test{}", if tests == 1 { "" } else { "s" });
+            out.line(&[("  covered     ", Role::Plain, &[]), (&said, role, &[])]);
+        }
         // Whether the specification leaves one answer per input, as Lean said.
         if let Some((state, said)) = &clause.pins {
             let role = if state == "pinned" { Role::Added } else { Role::Removed };
@@ -235,6 +245,7 @@ mod tests {
                     claims: vec![Claim { role: "implements".into(), path: "src/x.rs".into(), line: 12, symbol: Some("hold".into()) }],
                     pins: Some(("pinned".into(), "X.holds_pinned".into())),
                     tested: true,
+                    lines: Some((3, 4, 2)),
                 },
                 ClauseShown {
                     key: Some("unclaimed".into()),
@@ -244,6 +255,7 @@ mod tests {
                     claims: vec![],
                     pins: None,
                     tested: false,
+                    lines: None,
                 },
             ],
             width: 60,
@@ -269,6 +281,7 @@ mod tests {
         assert!(shown.text.contains("nothing claims it yet"));
         assert!(shown.text.contains("  pinned\n    X.holds_pinned"), "{}", shown.text);
         assert!(shown.text.contains("drt 1/2"), "a derived test counts: {}", shown.text);
+        assert!(shown.text.contains("covered     3/4 lines run, by 2 tests"), "{}", shown.text);
         assert!(shown.text.find("holds").unwrap() < shown.text.find("unclaimed").unwrap());
     }
 

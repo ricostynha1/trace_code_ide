@@ -83,6 +83,9 @@ struct Pane {
     /// The claims marked beside the window's lines (`surface::chips`): the
     /// buffer line, the role's letter, the requirement it opens.
     chips: Vec<(usize, char, String)>,
+    /// The measured lines in the window: buffer line, how often tests ran
+    /// it, and who ran it (`trace::lines`).
+    coverage: Vec<(usize, u64, String)>,
 }
 
 /// Every pane the page should draw.
@@ -105,6 +108,7 @@ fn shown(held: State<'_, Held>, width: u64, height: u64) -> Vec<Pane> {
         .into_iter()
         .map(|placed| Pane {
             chips: editor.chips_shown(&placed.buffer, placed.top, placed.at.height as usize),
+            coverage: editor.coverage_shown(&placed.buffer, placed.top, placed.at.height as usize),
             buffer: window(placed.buffer, placed.top, placed.at.height as usize),
             pane: placed.pane,
             at: placed.at,

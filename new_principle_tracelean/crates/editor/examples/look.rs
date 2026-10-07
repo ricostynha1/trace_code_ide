@@ -58,6 +58,7 @@ fn answer(editor: &mut Editor, command: &str, args: &Value) -> Value {
                     let height = placed.at.height as usize;
                     json!({
                         "chips": editor.chips_shown(&placed.buffer, placed.top, height),
+                        "coverage": editor.coverage_shown(&placed.buffer, placed.top, height),
                         "buffer": window(placed.buffer, placed.top, height),
                         "pane": placed.pane,
                         "at": placed.at,
