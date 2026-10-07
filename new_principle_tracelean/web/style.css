@@ -206,6 +206,7 @@ button.item {
  * font's columns; the window's own font can run wider, so a line that still
  * overflows wraps rather than being cut at the edge. */
 .pane.kind-record .line {
+  font-size: var(--fonts-panelSize);
   height: auto;
   white-space: pre-wrap;
   overflow-wrap: anywhere;

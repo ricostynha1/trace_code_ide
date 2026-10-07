@@ -52,7 +52,8 @@
     "code": "\"JetBrains Mono\", \"Fira Code\", ui-monospace, SFMono-Regular, Menlo, monospace",
     "codeSize": "13px",
     "chrome": "-apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
-    "chromeSize": "13px"
+    "chromeSize": "13px",
+    "panelSize": "12px"
   },
   "roles": {
     "plain": "#abb2bf",
