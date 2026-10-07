@@ -116,21 +116,49 @@ fn generate_spec_template_has_req_info() {
 }
 
 #[test]
-fn has_spec_detection() {
+fn has_spec_means_something_carries_a_models_annotation() {
+    // The old rule was "a file named specs/<id>.lean exists". That filename
+    // convention is gone: a requirement is formalized because some Lean
+    // definition says `@models REQ-01`, wherever that file happens to live.
     let dir = TempDir::new().unwrap();
-    let reqs_dir = dir.path().join("reqs");
-    let specs_dir = dir.path().join("specs");
-    std::fs::create_dir_all(&reqs_dir).unwrap();
-    std::fs::create_dir_all(&specs_dir).unwrap();
+    std::fs::create_dir_all(dir.path().join("anywhere")).unwrap();
 
-    std::fs::write(reqs_dir.join("REQ-01.md"), "# REQ-01: Auth\nStatus: linked\n").unwrap();
-    std::fs::write(specs_dir.join("REQ-01.lean"), "-- spec").unwrap();
+    std::fs::write(
+        dir.path().join("REQ-01.md"),
+        "---\nid: REQ-01\ntitle: Auth\nstatus: linked\n---\nAuthenticate users.\n",
+    )
+    .unwrap();
+    std::fs::write(
+        dir.path().join("REQ-02.md"),
+        "---\nid: REQ-02\ntitle: Other\n---\nSomething else.\n",
+    )
+    .unwrap();
+    // Deliberately not under `specs/`, and not named after the requirement.
+    std::fs::write(
+        dir.path().join("anywhere/model.lean"),
+        "-- @models REQ-01\ndef login := 1\n",
+    )
+    .unwrap();
 
-    let req = parse_requirement(&reqs_dir.join("REQ-01.md"), dir.path()).unwrap();
-    assert!(req.has_spec);
+    let reqs = list_requirements(dir.path());
+    let one = reqs.iter().find(|r| r.id == "REQ-01").expect("REQ-01");
+    let two = reqs.iter().find(|r| r.id == "REQ-02").expect("REQ-02");
+    assert!(one.has_spec, "an @models annotation anywhere formalizes it");
+    assert!(!two.has_spec, "nothing models REQ-02");
+}
 
-    // No spec for REQ-02
-    std::fs::write(reqs_dir.join("REQ-02.md"), "# REQ-02: Other\nStatus: draft\n").unwrap();
-    let req2 = parse_requirement(&reqs_dir.join("REQ-02.md"), dir.path()).unwrap();
-    assert!(!req2.has_spec);
+#[test]
+fn requirements_are_found_regardless_of_directory() {
+    // No `reqs/` directory anywhere, and filenames that say nothing.
+    let dir = TempDir::new().unwrap();
+    std::fs::create_dir_all(dir.path().join("a/b/c")).unwrap();
+    std::fs::write(
+        dir.path().join("a/b/c/anything.md"),
+        "---\nid: REQ-99\ntitle: Buried\n---\nBody.\n",
+    )
+    .unwrap();
+
+    let reqs = list_requirements(dir.path());
+    assert_eq!(reqs.len(), 1);
+    assert_eq!(reqs[0].id, "REQ-99");
 }

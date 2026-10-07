@@ -7,10 +7,10 @@ pub mod ipc;
 // Re-export core for IPC modules to use
 pub use tracelean_core as core;
 pub use tracelean_core::{
-    ai, commands, parser, persistence, requirements, service, state, surgical_edit, trace_graph, undo_tree,
-    Command, AppState, SymbolTable, TraceGraph,
+    ai, commands, drt, judge, lsp, myth, parser, persistence, requirements, service, state, provenance, surgical_edit, trace, undo_tree,
+    Command, AppState, SymbolTable,
     AiSettings, InteractionLog, SessionStats, PendingDiff, ResolvedDiffOutcome, McpClientManager, AgentPermissions,
-    FileEntry, TraceGraphStats, UndoTreeView, UndoNodeView, CommandLogEntry,
+    FileEntry, UndoTreeView, UndoNodeView, CommandLogEntry,
     ToolCallEvent, ToolCallStatus,
     command_summary, command_file, command_affects_file,
     SharedApp, EventSink,
@@ -23,7 +23,6 @@ use std::sync::{Arc, Mutex};
 
 pub struct AppStateWrapper(pub Arc<Mutex<AppState>>);
 pub struct SymbolTableWrapper(pub Arc<Mutex<SymbolTable>>);
-pub struct TraceGraphWrapper(pub Arc<Mutex<TraceGraph>>);
 
 pub struct UndoTreeCache {
     pub version: u64,
@@ -217,7 +216,6 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .manage(AppStateWrapper(Arc::new(Mutex::new(AppState::new()))))
         .manage(SymbolTableWrapper(Arc::new(Mutex::new(SymbolTable::new()))))
-        .manage(TraceGraphWrapper(Arc::new(Mutex::new(TraceGraph::new()))))
         .manage(UndoTreeCacheWrapper(Mutex::new(UndoTreeCache::new())))
         .manage(AiSettingsWrapper(Arc::new(Mutex::new(
             // P8: settings persist across launches (~/.tracelean/ai_settings.json)
@@ -252,8 +250,9 @@ pub fn run() {
             }
             km
         }))
-        .manage(ipc::myth_commands::MythKeymapStateWrapper(Mutex::new(
-            "Main".to_string(),
+        .manage(ipc::myth_commands::LspRegistryWrapper::default())
+        .manage(ipc::myth_commands::MythModeStackWrapper(Mutex::new(
+            tracelean_core::myth::ModeStack::new(),
         )))
         .invoke_handler(tauri::generate_handler![
             // Editor
@@ -280,12 +279,29 @@ pub fn run() {
             ipc::editor::parse_project,
             ipc::editor::get_initial_project,
             // Trace & Requirements
-            ipc::trace::build_trace_graph,
-            ipc::trace::query_requirement_trace,
-            ipc::trace::query_code_trace,
-            ipc::trace::update_trace_graph_file,
-            ipc::trace::get_trace_graph_stats,
-            ipc::trace::get_full_trace_graph,
+            ipc::trace::trace_scan,
+            ipc::trace::trace_findings,
+            ipc::trace::trace_requirement,
+            ipc::trace::trace_overview,
+            ipc::trace::drt_run,
+            ipc::trace::drt_scaffold,
+            ipc::trace::judge_clause,
+            ipc::trace::judge_stale,
+            ipc::trace::drt_bind_preview,
+            ipc::trace::drt_bind_apply,
+            ipc::trace::judge_prompt,
+            ipc::trace::judge_apply_reply,
+            ipc::trace::drt_generate_runner,
+            ipc::trace::trace_tree,
+            ipc::trace::trace_coverage_map,
+            ipc::trace::trace_project_graph,
+            ipc::trace::trace_role_graph,
+            ipc::trace::trace_import_coverage,
+            ipc::trace::trace_import_test_results,
+            ipc::trace::trace_strength_check,
+            ipc::trace::trace_strength_scaffold,
+            ipc::trace::trace_links_in_file,
+            ipc::trace::trace_history,
             ipc::trace::list_requirements,
             ipc::trace::update_requirement_status,
             ipc::trace::create_requirement,
@@ -341,6 +357,11 @@ pub fn run() {
             ipc::myth_commands::dispatch_action,
             ipc::myth_commands::myth_key_event,
             ipc::myth_commands::myth_which_key,
+            ipc::myth_commands::myth_actions_at,
+            ipc::myth_commands::lsp_status,
+            ipc::myth_commands::lsp_query,
+            ipc::myth_commands::lsp_goal_at,
+            ipc::myth_commands::myth_node_at,
             ipc::myth_commands::get_surface,
             // Terminal / test runner (P12)
             ipc::terminal_commands::get_test_command,

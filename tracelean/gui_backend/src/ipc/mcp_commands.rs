@@ -4,7 +4,7 @@ use crate::ai;
 use crate::ai::streaming::StreamSession;
 use crate::{
     AppStateWrapper, AiSettingsWrapper, AiLogWrapper, AiSessionStatsWrapper,
-    MockProviderWrapper, SymbolTableWrapper, TraceGraphWrapper,
+    MockProviderWrapper, SymbolTableWrapper,
     McpHostPermissionsWrapper, McpClientWrapper, AgentPermissionsStore,
     UndoTreeCacheWrapper, ToolLoopResumeWrapper, invalidate_undo_cache,
     CacheCalibrationWrapper,
@@ -22,26 +22,23 @@ pub fn mcp_list_tools() -> Vec<ai::ToolDefinition> {
 pub fn mcp_call_tool(
     state: State<'_, AppStateWrapper>,
     symbols_state: State<'_, SymbolTableWrapper>,
-    graph_state: State<'_, TraceGraphWrapper>,
     mcp_perms: State<'_, McpHostPermissionsWrapper>,
     tool_name: String,
     arguments: serde_json::Value,
 ) -> Result<ai::ToolResult, String> {
     let mut s = state.0.lock().map_err(|e| e.to_string())?;
     let sym = symbols_state.0.lock().map_err(|e| e.to_string())?;
-    let g = graph_state.0.lock().map_err(|e| e.to_string())?;
     let perms = mcp_perms.0.lock().map_err(|e| e.to_string())?;
     let root = s.project_root().cloned().unwrap_or_default();
 
     let call = ai::ToolCall { name: tool_name, arguments };
-    Ok(ai::tool_executor::execute_tool(&call, &root, &mut s, &sym, &g, &perms))
+    Ok(ai::tool_executor::execute_tool(&call, &root, &mut s, &sym, &perms))
 }
 
 #[tauri::command]
 pub fn mcp_handle_jsonrpc(
     state: State<'_, AppStateWrapper>,
     symbols_state: State<'_, SymbolTableWrapper>,
-    graph_state: State<'_, TraceGraphWrapper>,
     mcp_perms: State<'_, McpHostPermissionsWrapper>,
     request_json: String,
 ) -> Result<String, String> {
@@ -50,11 +47,10 @@ pub fn mcp_handle_jsonrpc(
 
     let mut s = state.0.lock().map_err(|e| e.to_string())?;
     let sym = symbols_state.0.lock().map_err(|e| e.to_string())?;
-    let g = graph_state.0.lock().map_err(|e| e.to_string())?;
     let perms = mcp_perms.0.lock().map_err(|e| e.to_string())?;
     let root = s.project_root().cloned().unwrap_or_default();
 
-    let response = ai::mcp_host::handle_request(&request, &root, &mut s, &sym, &g, &perms);
+    let response = ai::mcp_host::handle_request(&request, &root, &mut s, &sym, &perms);
     serde_json::to_string(&response).map_err(|e| e.to_string())
 }
 
@@ -156,7 +152,6 @@ pub async fn ai_chat_stream(
     client: State<'_, McpClientWrapper>,
     state: State<'_, AppStateWrapper>,
     symbols_state: State<'_, SymbolTableWrapper>,
-    graph_state: State<'_, TraceGraphWrapper>,
     cache: State<'_, UndoTreeCacheWrapper>,
     resume_state: State<'_, ToolLoopResumeWrapper>,
     diffs: State<'_, crate::PendingDiffsWrapper>,
@@ -200,7 +195,6 @@ pub async fn ai_chat_stream(
     let ctx = AgentContext {
         state: state.0.clone(),
         symbols: symbols_state.0.clone(),
-        graph: graph_state.0.clone(),
         settings: settings.0.clone(),
         stats: stats.0.clone(),
         log: log_state.0.clone(),

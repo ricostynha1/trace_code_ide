@@ -6,10 +6,15 @@ import { Editor } from "./components/Editor";
 import { MenuBar } from "./components/MenuBar";
 import { UndoTreePanel } from "./components/UndoTreePanel";
 import { RequirementsPanel } from "./components/RequirementsPanel";
+import { TracePanel } from "./components/TracePanel";
+import { LeanInfoview } from "./components/LeanInfoview";
 import { AiChatPanel } from "./components/AiChatPanel";
 import { MockPromptWindow } from "./components/MockPromptWindow";
-import { TraceabilityDashboard } from "./components/TraceabilityDashboard";
+import { ProjectGraph } from "./components/ProjectGraph";
 import { WhichKeyBar } from "./components/WhichKeyBar";
+
+/** See the note beside its use below. */
+const SHOW_WHICH_KEY_BAR = false;
 import { Splitter } from "./components/Splitter";
 import { DiffReviewPanel } from "./components/DiffReviewPanel";
 import { TerminalPanel } from "./components/TerminalPanel";
@@ -24,11 +29,17 @@ function App() {
   const [currentFile, setCurrentFile] = useState<string | null>(null);
   // 1-based line the editor should reveal after navigation (diff bar, bug 0.7)
   const [navLine, setNavLine] = useState<number | null>(null);
+  const [leanVisible, setLeanVisible] = useState(false);
   const [projectRoot, setProjectRoot] = useState<string>("");
   const [undoTreeVisible, setUndoTreeVisible] = useState(false);
   const [reqsPanelVisible, setReqsPanelVisible] = useState(false);
+  // "trace" is the annotation-based view; "list" keeps the original flat
+  // requirement list reachable while the tree earns trust.
+  const [traceView, setTraceView] = useState<"trace" | "list">("trace");
   const [aiPanelVisible, setAiPanelVisible] = useState(false);
-  const [traceDashVisible, setTraceDashVisible] = useState(false);
+  const [graphVisible, setGraphVisible] = useState(false);
+  // Requirement selected in the trace panel, highlighted in the project graph.
+  const [graphHighlight, setGraphHighlight] = useState<string | null>(null);
   const [sandboxVisible, setSandboxVisible] = useState(false);
   // Key to force editor remount on undo-tree jump
   const [editorKey, setEditorKey] = useState(0);
@@ -68,6 +79,14 @@ function App() {
     return () => window.removeEventListener("tracelean-navigate", handler);
   }, []);
 
+  // Verify mode's `g` asks for the goal; opening the panel is part of honouring
+  // that, or the answer would arrive somewhere the user cannot see.
+  useEffect(() => {
+    const handler = () => setLeanVisible(true);
+    window.addEventListener("tracelean-show-lean-panel", handler);
+    return () => window.removeEventListener("tracelean-show-lean-panel", handler);
+  }, []);
+
   // P12: "Fix with AI" from the terminal opens the chat panel pre-seeded
   useEffect(() => {
     const handler = () => setAiPanelVisible(true);
@@ -102,9 +121,12 @@ function App() {
     setCurrentFile(path);
   };
 
-  // Direct file select — always works, used for explicit user navigation
-  const handleFileSelectDirect = (path: string) => {
+  // Direct file select — always works, used for explicit user navigation.
+  // The optional line is what makes "jump to the annotation" land on the
+  // annotation rather than on line 1 of the right file.
+  const handleFileSelectDirect = (path: string, line?: number) => {
     setCurrentFile(path);
+    setNavLine(typeof line === "number" ? line : null);
   };
 
   const handleNodeJump = () => {
@@ -122,10 +144,12 @@ function App() {
         reqsPanelVisible={reqsPanelVisible}
         onToggleAiChat={() => setAiPanelVisible((v) => !v)}
         aiChatVisible={aiPanelVisible}
-        onToggleTraceDashboard={() => setTraceDashVisible((v) => !v)}
-        traceDashVisible={traceDashVisible}
+        onToggleProjectGraph={() => setGraphVisible((v) => !v)}
+        projectGraphVisible={graphVisible}
         onToggleSandbox={() => setSandboxVisible((v) => !v)}
         sandboxVisible={sandboxVisible}
+        onToggleLean={() => setLeanVisible((v) => !v)}
+        leanVisible={leanVisible}
       />
       <div className="main-content">
         {projectOpen && (
@@ -152,11 +176,31 @@ function App() {
         {reqsPanelVisible && (
           <Splitter cssVar="--reqs-panel-width" side="right" defaultWidth={280} />
         )}
-        <RequirementsPanel
-          visible={reqsPanelVisible}
-          onClose={() => setReqsPanelVisible(false)}
-          onFileSelect={handleFileSelect}
-        />
+        {/* The traceability view. The old flat requirement list is kept
+            behind a toggle until the tree has been trusted in real use. */}
+        {traceView === "trace" ? (
+          <TracePanel
+            visible={reqsPanelVisible}
+            onClose={() => setReqsPanelVisible(false)}
+            onFileSelect={handleFileSelectDirect}
+            onRequirementFocus={setGraphHighlight}
+          />
+        ) : (
+          <RequirementsPanel
+            visible={reqsPanelVisible}
+            onClose={() => setReqsPanelVisible(false)}
+            onFileSelect={handleFileSelect}
+          />
+        )}
+        {reqsPanelVisible && (
+          <button
+            className="trace-view-toggle"
+            title="Switch between the traceability tree and the original requirement list"
+            onClick={() => setTraceView(traceView === "trace" ? "list" : "trace")}
+          >
+            {traceView === "trace" ? "list view" : "trace view"}
+          </button>
+        )}
         {undoTreeVisible && (
           <Splitter cssVar="--undo-panel-width" side="right" defaultWidth={220} />
         )}
@@ -182,18 +226,33 @@ function App() {
           onClose={() => setSandboxVisible(false)}
           onFileSelect={handleFileSelect}
         />
+        {leanVisible && (
+          <Splitter cssVar="--lean-panel-width" side="right" defaultWidth={320} />
+        )}
+        <LeanInfoview
+          visible={leanVisible}
+          filePath={currentFile}
+          onClose={() => setLeanVisible(false)}
+          onFileSelect={handleFileSelectDirect}
+        />
         <MockPromptWindow />
-        <TraceabilityDashboard
-          visible={traceDashVisible}
-          onClose={() => setTraceDashVisible(false)}
-          onNavigate={(file, _line) => {
-            handleFileSelectDirect(file);
-            // Could also navigate to line in future
-          }}
+        {graphVisible && (
+          <Splitter cssVar="--graph-panel-width" side="right" defaultWidth={420} />
+        )}
+        <ProjectGraph
+          visible={graphVisible}
+          onClose={() => setGraphVisible(false)}
+          onFileSelect={handleFileSelect}
+          highlightRequirement={graphHighlight}
+          onRequirementSelect={setGraphHighlight}
         />
       </div>
       <TerminalPanel projectOpen={projectOpen} />
-      <WhichKeyBar />
+      {/* The which-key bar is disabled: it occupies a strip along the bottom of
+          every window to advertise bindings nobody is using yet. The component
+          and its keymap plumbing stay — `WhichKeyBar` still reads the same
+          pending-sequence events — so turning it back on is this one line. */}
+      {SHOW_WHICH_KEY_BAR && <WhichKeyBar />}
       {warning && (
         <div className="app-warning-toast" onClick={() => setWarning(null)} title="Dismiss">
           ⚠ {warning}

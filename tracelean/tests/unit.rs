@@ -6,8 +6,12 @@ mod unit {
     mod test_state;
     mod test_undo_tree;
     mod test_persistence;
-    mod test_trace_graph;
     mod test_requirements;
+    mod test_trace;
+    mod test_drt;
+    mod test_judge;
+    mod test_lsp;
+    mod test_myth;
     mod test_highlight_queries;
     mod test_surgical_edit;
     mod test_surgical_edit_undo;

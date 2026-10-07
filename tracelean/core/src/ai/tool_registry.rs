@@ -615,10 +615,10 @@ mod tests {
     #[test]
     fn search_finds_trace_tools() {
         let hits = real_registry().discover_tools("what code implements requirement REQ-01", 5);
-        assert!(hits.contains(&"query_trace_graph".to_string()), "{:?}", hits);
+        assert!(hits.contains(&"query_project_graph".to_string()), "{:?}", hits);
 
         let hits = real_registry().discover_tools("which requirements does this function satisfy", 5);
-        assert!(hits.contains(&"query_code_element".to_string()), "{:?}", hits);
+        assert!(hits.contains(&"query_project_graph".to_string()), "{:?}", hits);
     }
 
     #[test]

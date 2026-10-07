@@ -17,6 +17,8 @@ import type { KeyBindingInfo } from "./mythKeys";
  */
 export function WhichKeyBar() {
   const [mode, setMode] = useState("Main");
+  const [path, setPath] = useState<string[]>(["Main"]);
+  const [note, setNote] = useState("");
   const [bindings, setBindings] = useState<KeyBindingInfo[]>([]);
 
   useEffect(() => {
@@ -29,9 +31,11 @@ export function WhichKeyBar() {
 
     const handler = (e: Event) => {
       const detail = (e as CustomEvent).detail as
-        | { state?: string; bindings?: KeyBindingInfo[] }
+        | { state?: string; bindings?: KeyBindingInfo[]; path?: string[]; note?: string }
         | undefined;
       setMode(detail?.state ?? "Main");
+      setPath(detail?.path ?? [detail?.state ?? "Main"]);
+      setNote(detail?.note ?? "");
       setBindings(detail?.bindings ?? []);
     };
     window.addEventListener("myth-mode", handler);
@@ -40,21 +44,47 @@ export function WhichKeyBar() {
 
   if (bindings.length === 0) return null;
 
+  // Modes nest, so the bar shows how you got here ("Options › Trace"): a
+  // nested mode with only its own name on screen leaves you guessing what
+  // Escape will do.
+  const breadcrumb = path.length > 1 ? path.join(" › ") : mode;
+
+  // Entries from a provider carry a group; keep those together, in the order
+  // core sent them, so the list does not reshuffle between invocations.
+  const groups: Array<[string, KeyBindingInfo[]]> = [];
+  for (const b of bindings.filter((x) => x.key !== "NM")) {
+    const key = b.group ?? "";
+    const existing = groups.find(([g]) => g === key);
+    if (existing) existing[1].push(b);
+    else groups.push([key, [b]]);
+  }
+
+  const label = (b: KeyBindingInfo) =>
+    b.kind === "transition"
+      ? `→${b.target}`
+      : b.kind === "pop"
+        ? "back"
+        : b.kind === "reset"
+          ? "cancel"
+          : b.title ?? b.target.replace(/_/g, " ");
+
   return (
     <div className="which-key-bar">
-      <span className="which-key-bar-mode">{mode}</span>
+      <span className="which-key-bar-mode">{breadcrumb}</span>
       <div className="which-key-bar-grid">
-        {bindings
-          .filter((b) => b.key !== "NM")
-          .map((b) => (
-            <span key={b.key} className="which-key-row">
-              <span className="which-key-key">{b.key}</span>
-              <span className={`which-key-target which-key-${b.kind}`}>
-                {b.kind === "transition" ? `→${b.target}` : b.target.replace(/_/g, " ")}
+        {groups.map(([group, entries]) => (
+          <span key={group || "_"} className="which-key-group">
+            {group && <span className="which-key-group-label">{group}</span>}
+            {entries.map((b) => (
+              <span key={group + b.key} className="which-key-row">
+                <span className="which-key-key">{b.key}</span>
+                <span className={`which-key-target which-key-${b.kind}`}>{label(b)}</span>
               </span>
-            </span>
-          ))}
+            ))}
+          </span>
+        ))}
       </div>
+      {note && <span className="which-key-note">{note}</span>}
     </div>
   );
 }

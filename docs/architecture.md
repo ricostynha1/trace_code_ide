@@ -135,22 +135,56 @@ User/Agent action → Command → AppState.apply(cmd) → inverse stored → Und
 
 ---
 
-## Trace Graph
+## Traceability
 
-Links requirements → specs → code → tests bidirectionally.
+Requirements are linked to code by **annotations in comments** and nothing else. There is
+no `reqs/`, no `specs/`, no filename convention: rename any directory and every link
+survives, because a link exists only where somebody wrote one down.
 
 ```
-┌──────────┐     ┌──────────┐     ┌──────────┐     ┌──────────┐
-│ REQ-01   │────►│ spec/    │────►│ src/     │────►│ tests/   │
-│ (reqs/)  │     │ REQ-01   │     │ auth.rs  │     │ auth_    │
-│          │◄────│ .lean    │◄────│          │◄────│ test.rs  │
-└──────────┘     └──────────┘     └──────────┘     └──────────┘
+product/checkout.md ──@models──► formal/Checkout.lean ──@implements──► engine/pricing.py
+      (requirement)                (executable model)                  (implementation)
+                                          │                                   │
+                                          └────────── @drt ───────────────────┘
+                                             differential testing binds them
 ```
 
-- **Nodes**: Requirements (.md), Specs (.lean), Code elements (functions/structs), Tests
-- **Edges**: Derived from naming conventions, `@trace` annotations, spec imports
-- **Queries**: "What code implements REQ-01?", "What requirements does this function satisfy?"
-- **Incremental**: File changes trigger targeted re-scan (not full rebuild)
+- **Index**: `trace::build(root) -> TraceIndex` — annotations resolved to anchors (symbol
+  paths with normalized-body hashes, never line numbers), requirements parsed from
+  frontmatter, evidence read from `.tracelean/trace.lock.json`, findings from the checker.
+- **Roles**: `@models`, `@implements`, `@tests`, `@drt`, `@proves`, `@pins`, with
+  `@partial`, `@exempt` and `@nondeterministic` as qualifiers.
+- **Evidence**: `L1` annotated, `L2` judged with an executed witness, `L3` differentially
+  tested, `L4` proved. Assurance aggregates by the **minimum** and renders as a chain.
+- **Spec strength** (`trace/strength.rs`): L3 is qualified by a coverage floor, and this is
+  the same qualifier for L4. TraceLean generates `∀ f g, Spec f → Spec g → f = g`, where
+  `Spec` is the `@proves` theorems abstracted over the model symbol; proving it says the
+  properties *determine* the model rather than merely constraining it. The proof is the
+  human's part, so the obligation arrives as `sorry` and reads as open until the kernel
+  says otherwise. New role `@pins`, new qualifier `@nondeterministic reason="…"`. See
+  [spec_strength.md](spec_strength.md).
+- **Differential harness** (`drt/`): the model and the implementation each run as a
+  long-lived subprocess speaking line-delimited JSON — both of them TraceLean's own code,
+  the Lean side generated and the Python side shipped, so a project writes a binding and
+  no harness. TraceLean generates cases from a schema inferred off the model's signature,
+  asks both, compares, shrinks the first disagreement and leaves the triage to a person.
+  See
+  [differential_harness_explained.md](differential_harness_explained.md).
+- **Project graph** (`trace/graph.rs`): two graphs over the same index, because they answer
+  different questions. `role_graph` is what the Project panel draws — four columns,
+  requirement → model → implementation → evidence, where every edge is an annotation
+  somebody wrote and horizontal position *is* the claim. `build` is the containment graph
+  — directories, files, declarations sized by lines — which answers "how much of this is
+  untraced" and feeds the coverage map. Neither is force-directed: a simulation puts the
+  project wherever the physics lands it, so position carries no meaning and the same
+  project looks different every time. Each node carries the properties that are
+  actually its own: line coverage and test outcomes on the code
+  (`trace/coverage.rs`, `trace/test_results.rs`, imported from the language's own
+  tool), spec strength on the model, and differential-testing state on a harness
+  node of its own — which is where the state of the thing binding model to code
+  became visible at all. Edges are one neutral colour: the role is unambiguous
+  from the columns an edge joins, and two role colours were previously identical
+  to two assurance colours.
 
 ---
 
@@ -187,7 +221,7 @@ implemented.
 Agent emits ToolCall → permission check → execute_tool() → ToolResult back to agent
 ```
 
-Tools available (canonical names, single source of truth `data/tools.json`): `read_file`, `edit_file`, `replace_str`, `list_directory`, `find` (regex/semantic/auto), `delete_file`, `run_shell`, `web_search`, `web_fetch`, `query_trace_graph`, `query_code_element`, `list_requirements`, `get_symbols`, `discover_tools`, `help_tool`. Argument validation (required/typed params) is schema-driven straight from `data/tools.json` (`ai/tool_errors.rs::validate_args`, gated in `ai/tool_executor.rs::execute_tool_reviewed`) — no per-tool hardcoded error text.
+Tools available (canonical names, single source of truth `data/tools.json`): `read_file`, `edit_file`, `replace_str`, `list_directory`, `find` (regex/semantic/auto), `delete_file`, `run_shell`, `web_search`, `web_fetch`, `query_project_graph`, `list_requirements`, `get_symbols`, `discover_tools`, `help_tool`. Argument validation (required/typed params) is schema-driven straight from `data/tools.json` (`ai/tool_errors.rs::validate_args`, gated in `ai/tool_executor.rs::execute_tool_reviewed`) — no per-tool hardcoded error text.
 
 ### MCP Integration
 
@@ -299,7 +333,7 @@ tracelean/
 │       ├── acp/       ← Agent Client Protocol (Zed ACP v1)
 │       ├── ai/        ← AI providers, agents, tools, MCP
 │       ├── surgical_edit/ ← edit strategies
-│       ├── trace_graph/   ← requirement tracing
+│       ├── trace/         ← annotations, anchors, evidence, project graph
 │       ├── state.rs       ← AppState + Command system
 │       ├── undo_tree.rs   ← tree-structured history
 │       ├── commands.rs    ← Command enum

@@ -120,7 +120,7 @@ fn test_ast_edit_branching_in_undo_tree() {
         state.get_content(&path).unwrap().chars().count(),
         "\nfn beta() {\n    original();\n}\n".into(),
     )).unwrap();
-    let node_beta_added = state.undo_tree().current_node().unwrap().id;
+    let _node_beta_added = state.undo_tree().current_node().unwrap().id;
 
     // User modifies beta via search&replace
     let content = state.get_content(&path).unwrap().to_string();

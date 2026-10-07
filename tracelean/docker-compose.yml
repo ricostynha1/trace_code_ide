@@ -1,29 +1,96 @@
-version: "3.9"
+# Run from the `tracelean/` directory.
+#
+#   docker compose run --rm dev     # shell with Rust, Node, Lean and pyright
+#   docker compose run --rm test    # the whole suite, front end included
+#   docker compose run --rm e2e     # the Lean/Python differential path
+#   docker compose build app        # the release binary
+#
+# `version:` is gone deliberately — Compose v2 warns that the key is obsolete
+# and ignores it.
+
+x-dev: &dev
+  build:
+    context: .
+    dockerfile: Dockerfile.dev
+  volumes:
+    - .:/app
+    # The example project and the root README live above this directory, and
+    # two things reach for them: the end-to-end differential run works on
+    # `example/`, and the keymap test regenerates `README.md`. The tests resolve
+    # them relative to the crate, which lands at `/example` and `/README.md`
+    # here. Without these mounts those tests quietly skip -- reporting green on
+    # checks that never ran, which is the failure this project exists to stop.
+    - ../example:/example
+    - ../README.md:/README.md
+    # Named volumes, so a rebuild does not start from an empty registry and the
+    # host's own target/ is not clobbered by the container's different glibc.
+    - cargo-registry:/home/tracelean/.cargo/registry
+    - cargo-git:/home/tracelean/.cargo/git
+    - target-cache:/app/target
+  working_dir: /app
 
 services:
-  # Development container - build and check code
   dev:
-    build:
-      context: .
-      dockerfile: Dockerfile.dev
-    volumes:
-      - .:/app
-      - cargo-cache:/usr/local/cargo/registry
-      - cargo-git:/usr/local/cargo/git
-      - target-cache:/app/src-tauri/target
-    working_dir: /app
-    command: bash -c "npm install && cargo check --workspace"
-    environment:
-      - CARGO_HOME=/usr/local/cargo
+    <<: *dev
 
-  # Full build (produces binary)
-  build:
+  check:
+    <<: *dev
+    command: bash -c "npm install && cargo check --workspace --all-targets"
+
+  test:
+    <<: *dev
+    command: >
+      bash -c "npm install
+      && cargo test --workspace
+      && npx tsc --noEmit
+      && npm test"
+
+  # The part that needs Lean: generate and build the model runner for the
+  # example project, then run every binding's differential test against it.
+  e2e:
+    <<: *dev
+    command: >
+      bash -c "cargo test -p tracelean-tests build_example_runner -- --ignored --nocapture
+      && cargo test -p tracelean-tests run_example_drt -- --ignored --nocapture"
+
+  # Line coverage of the Rust workspace and of the example's Python. Distinct
+  # from the two coverage numbers TraceLean computes about itself: those say
+  # whether a requirement has evidence and whether a differential run sampled
+  # its input space, this says whether the code was executed at all.
+  cover:
+    <<: *dev
+    command: >
+      bash -c "cargo llvm-cov --workspace --summary-only --json --output-path /tmp/llvm-cov.json
+      && cargo llvm-cov --workspace --summary-only
+      && cd /example
+      && COVERAGE_FILE=/tmp/.coverage python3 -m coverage run --source=engine -m unittest discover -s checks -p '*_checks.py'
+      && COVERAGE_FILE=/tmp/.coverage python3 -m coverage report
+      && COVERAGE_FILE=/tmp/.coverage python3 -m coverage json -o /tmp/coverage-py.json
+      && python3 /app/scripts/unittest_results.py /example/checks /tmp/test-results.json
+      && echo 'reports in /tmp: llvm-cov.json coverage-py.json test-results.json'"
+
+  # The sandbox tests need an unprivileged user namespace, which the default
+  # seccomp profile forbids — and which `docker build` cannot grant at all, so
+  # `make ci` skips them. This service is where they actually run.
+  sandbox:
+    <<: *dev
+    # Both, and not one: `seccomp:unconfined` alone lets bubblewrap create the
+    # namespace and then fails at `Failed to make / slave: Permission denied`,
+    # because Docker's default AppArmor profile blocks the mount. Verified by
+    # running `bwrap --ro-bind / / true` in the image under each combination.
+    security_opt:
+      - seccomp:unconfined
+      - apparmor:unconfined
+    command: >
+      bash -c "cargo test -p tracelean-core --lib sandbox::session -- --nocapture"
+
+  app:
     build:
       context: .
       dockerfile: Dockerfile
     image: tracelean:latest
 
 volumes:
-  cargo-cache:
+  cargo-registry:
   cargo-git:
   target-cache:

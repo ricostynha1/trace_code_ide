@@ -1,0 +1,549 @@
+{
+  "version": 1,
+  "requirements": {
+    "REQ-CHECKOUT": {
+      "clauses": [
+        "total"
+      ],
+      "content_hash": "v1:db945e85b7c285cf071c3111530b0a08728dc9cdafa874d880da099b376ea885",
+      "file": "product/checkout.md",
+      "refines": [],
+      "decomposition": "complete"
+    },
+    "REQ-DISCOUNT": {
+      "clauses": [
+        "coupon",
+        "rounding",
+        "tiers"
+      ],
+      "content_hash": "v1:a528de20ebd19b572cedaae99940000ab3e15596624fa57dbaf470a19bf171ad",
+      "file": "product/discount.md",
+      "refines": [
+        "REQ-CHECKOUT"
+      ],
+      "decomposition": "complete"
+    },
+    "REQ-RECEIPT": {
+      "clauses": [
+        "audit",
+        "lines"
+      ],
+      "content_hash": "v1:27cb97ca80dd154d36350f60380a39b5bb2bf427a50f37088789f6a94e5a71c3",
+      "file": "product/receipt.md",
+      "refines": [
+        "REQ-CHECKOUT"
+      ],
+      "decomposition": "open"
+    },
+    "REQ-SHIPPING": {
+      "clauses": [
+        "flat",
+        "free",
+        "remote"
+      ],
+      "content_hash": "v1:2882450aeca698b447e176a3ff1248a2bf8d486f506fd4f59e50011f50314d48",
+      "file": "product/shipping.md",
+      "refines": [
+        "REQ-CHECKOUT"
+      ],
+      "decomposition": "complete"
+    }
+  },
+  "links": [
+    {
+      "role": "implements",
+      "req": "REQ-CHECKOUT",
+      "clause": "total",
+      "file": "engine/pricing.py",
+      "anchor": "engine/pricing.py::price",
+      "body_hash": "v1:dee0b4e1f267fe8aeb81332e0327eafad78803fdeef21cbe4d890a1d148ce52c",
+      "link_hash": "v1:6177e1158356f2a2124dc909e4bde99772c72581535789b9d36e424ed0dc80e2",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-DISCOUNT",
+      "clause": "rounding",
+      "file": "engine/pricing.py",
+      "anchor": "engine/pricing.py::discount_cents",
+      "body_hash": "v1:11a01d8ca3d12071ab29b0fde3143230aa0c9817aed506a351a52dfeaf25ff68",
+      "link_hash": "v1:78558b8b86e9e4fb03431ce0fb4e4e9185dfe4a4982c35d33c31214cf4a376ed",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-DISCOUNT",
+      "clause": "tiers",
+      "file": "engine/pricing.py",
+      "anchor": "engine/pricing.py::discount_cents",
+      "body_hash": "v1:11a01d8ca3d12071ab29b0fde3143230aa0c9817aed506a351a52dfeaf25ff68",
+      "link_hash": "v1:0bd15e84535de2168c234e94277d4c619d84e1faa8f24d419c0e387f52691cf9",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-RECEIPT",
+      "clause": "audit",
+      "file": "service/receipt.rs",
+      "anchor": "service/receipt.rs::append_to_audit_log",
+      "body_hash": "v1:1c171129fdb81c5214354211592a767c65043c91c789ff598ec0bab83b1ca8b1",
+      "link_hash": "v1:32393d5687a9d488aac00da9b79e3f4123f3f69523f2f58d1151ab74cc442f1d",
+      "qualifier": "exempt"
+    },
+    {
+      "role": "implements",
+      "req": "REQ-RECEIPT",
+      "clause": "lines",
+      "file": "service/receipt.rs",
+      "anchor": "service/receipt.rs::render",
+      "body_hash": "v1:359315ffae74c57a55bd6f26242a40d5fcc880b69270f6f2c9663adae085bb3c",
+      "link_hash": "v1:71e6e6a61647f1927cc31164287b7a4d1cdd11c2b547119c499880f89baf3207",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-SHIPPING",
+      "clause": "flat",
+      "file": "engine/pricing.py",
+      "anchor": "engine/pricing.py::shipping_cents",
+      "body_hash": "v1:dc259e422098b83f406009980e0746e862cce872445dceb40fae9e185dee6c49",
+      "link_hash": "v1:a2fcc07b94a7f3c68e6dd98b67280f25de23054995adaa6b03153c430f67ea90",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-SHIPPING",
+      "clause": "free",
+      "file": "engine/pricing.py",
+      "anchor": "engine/pricing.py::shipping_cents",
+      "body_hash": "v1:dc259e422098b83f406009980e0746e862cce872445dceb40fae9e185dee6c49",
+      "link_hash": "v1:4ae56c0ddfd4c6b19a2e3f532042795165477f414050d1ca1c657d756704ae83",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-SHIPPING",
+      "clause": "remote",
+      "file": "engine/pricing.py",
+      "anchor": "engine/pricing.py::shipping_cents",
+      "body_hash": "v1:dc259e422098b83f406009980e0746e862cce872445dceb40fae9e185dee6c49",
+      "link_hash": "v1:6db84643874cbb966f0d48481f730a0981feb91ca284792768afe6596a868270",
+      "qualifier": "partial"
+    },
+    {
+      "role": "models",
+      "req": "REQ-CHECKOUT",
+      "clause": "total",
+      "file": "formal/Checkout.lean",
+      "anchor": "formal/Checkout.lean::price",
+      "body_hash": "v1:8c4076c20c1180ea3a9cd43b5486bee29c9ea29a0cfa3db9974b14a2354b79bf",
+      "link_hash": "v1:a3a47997ac887047e734570c4128fca51e711e5d2dfd9df035e4feb7a919327b",
+      "qualifier": null
+    },
+    {
+      "role": "models",
+      "req": "REQ-DISCOUNT",
+      "clause": "rounding",
+      "file": "formal/Checkout.lean",
+      "anchor": "formal/Checkout.lean::discountCents",
+      "body_hash": "v1:9d53b8f4b04f320e8096194e7af3af06c8cad6e1d6b8fefc52241dbcf76642ba",
+      "link_hash": "v1:22958e473c4d6f781e9390d529fd7dfdcb513dca1aad53f44d44be9258f99a4d",
+      "qualifier": null
+    },
+    {
+      "role": "models",
+      "req": "REQ-DISCOUNT",
+      "clause": "tiers",
+      "file": "formal/Checkout.lean",
+      "anchor": "formal/Checkout.lean::discountCents",
+      "body_hash": "v1:9d53b8f4b04f320e8096194e7af3af06c8cad6e1d6b8fefc52241dbcf76642ba",
+      "link_hash": "v1:3a19de4c7decfbdac0406dbdc5fcce92de2f6831be99ac4fa680955014fd0d4a",
+      "qualifier": null
+    },
+    {
+      "role": "models",
+      "req": "REQ-SHIPPING",
+      "clause": "flat",
+      "file": "formal/Checkout.lean",
+      "anchor": "formal/Checkout.lean::shippingCents",
+      "body_hash": "v1:c7b721b9675c8da61e39d3779d0796c17c4b3d5b2c1749eaf999d82b9b39bf49",
+      "link_hash": "v1:0a4b76205296f8552ceeca5afe397e575dbdc8c879ed6f7bc19aa215c267c664",
+      "qualifier": null
+    },
+    {
+      "role": "models",
+      "req": "REQ-SHIPPING",
+      "clause": "free",
+      "file": "formal/Checkout.lean",
+      "anchor": "formal/Checkout.lean::shippingCents",
+      "body_hash": "v1:c7b721b9675c8da61e39d3779d0796c17c4b3d5b2c1749eaf999d82b9b39bf49",
+      "link_hash": "v1:a4471d658d6c52a375190b4838f3dac12a6f8ad4a566626ace3d7cdc1ee560f0",
+      "qualifier": null
+    },
+    {
+      "role": "models",
+      "req": "REQ-SHIPPING",
+      "clause": "remote",
+      "file": "formal/Checkout.lean",
+      "anchor": "formal/Checkout.lean::shippingCents",
+      "body_hash": "v1:c7b721b9675c8da61e39d3779d0796c17c4b3d5b2c1749eaf999d82b9b39bf49",
+      "link_hash": "v1:30d9048955a5c2b42bc320473e2ed1c507a29a8c4224c19bbac251f9e59cd3fe",
+      "qualifier": null
+    },
+    {
+      "role": "pins",
+      "req": "REQ-DISCOUNT",
+      "clause": "rounding",
+      "file": "formal/Strength.lean",
+      "anchor": "formal/Strength.lean::discountCents_pinned",
+      "body_hash": "v1:786711947968c074c927269b66c82aa731f25598379aed0990fd89f7994ad5f7",
+      "link_hash": "v1:436958c14236f2a975e61c4e97ea9787f19fbe0f8a296efd1d25faa1a1dada7f",
+      "qualifier": null
+    },
+    {
+      "role": "pins",
+      "req": "REQ-DISCOUNT",
+      "clause": "tiers",
+      "file": "formal/Strength.lean",
+      "anchor": "formal/Strength.lean::discountCents_pinned",
+      "body_hash": "v1:786711947968c074c927269b66c82aa731f25598379aed0990fd89f7994ad5f7",
+      "link_hash": "v1:d51151ebe661e355cb4c37a1272af8091fc76617a2488715c6321752872ed2bd",
+      "qualifier": null
+    },
+    {
+      "role": "pins",
+      "req": "REQ-SHIPPING",
+      "clause": "flat",
+      "file": "formal/Strength.lean",
+      "anchor": "formal/Strength.lean::shippingCents_pinned",
+      "body_hash": "v1:940a3824a16228e32726949492573906ffd4692eabb3da6104a1077c66bb0ef0",
+      "link_hash": "v1:3ed38c3eeef63d5807cce03adfcbbd66b7ab4925dc3df39c9e79d0d37eee1a68",
+      "qualifier": null
+    },
+    {
+      "role": "pins",
+      "req": "REQ-SHIPPING",
+      "clause": "free",
+      "file": "formal/Strength.lean",
+      "anchor": "formal/Strength.lean::shippingCents_pinned",
+      "body_hash": "v1:940a3824a16228e32726949492573906ffd4692eabb3da6104a1077c66bb0ef0",
+      "link_hash": "v1:1e5979e8bafaf11b443d59dad3004ddbe996c10ec489adfaa77cdab92b818ab7",
+      "qualifier": null
+    },
+    {
+      "role": "pins",
+      "req": "REQ-SHIPPING",
+      "clause": "remote",
+      "file": "formal/Strength.lean",
+      "anchor": "formal/Strength.lean::shippingCents_pinned",
+      "body_hash": "v1:940a3824a16228e32726949492573906ffd4692eabb3da6104a1077c66bb0ef0",
+      "link_hash": "v1:1fbca52e459068dab56eabf8b74e477ed0ec4b045af704c8de545c8d9a2406d7",
+      "qualifier": null
+    },
+    {
+      "role": "proves",
+      "req": "REQ-DISCOUNT",
+      "clause": "tiers",
+      "file": "formal/CheckoutProofs.lean",
+      "anchor": "formal/CheckoutProofs.lean::discount_le_subtotal",
+      "body_hash": "v1:612b7e9813e96b8ed8d19c8b28e2461b0e47135ca912e025da9a11bfe8dbf9c0",
+      "link_hash": "v1:34ba4c39c17f3aa1a78e298a175f587f19ac1903feb9b275130af9bbb18a3575",
+      "qualifier": null
+    },
+    {
+      "role": "proves",
+      "req": "REQ-SHIPPING",
+      "clause": "flat",
+      "file": "formal/CheckoutProofs.lean",
+      "anchor": "formal/CheckoutProofs.lean::flat_below_threshold",
+      "body_hash": "v1:eb7999927efaf0a986d19bdc2131d628b3fccb0b8a4ecd3b69b3e79634fb7875",
+      "link_hash": "v1:52df9b13f0c9f60cb872b9f62b77fef8dbad7e56249707688006345a04426151",
+      "qualifier": null
+    },
+    {
+      "role": "proves",
+      "req": "REQ-SHIPPING",
+      "clause": "free",
+      "file": "formal/CheckoutProofs.lean",
+      "anchor": "formal/CheckoutProofs.lean::free_above_threshold",
+      "body_hash": "v1:170164a849e6acb11df0cd611921edffb9bfe920bd0d37b56eb37236bf54cc54",
+      "link_hash": "v1:f4663f3c33ff86e7c102426dcd521a5031554fa59481d105fabf089c636f68a1",
+      "qualifier": null
+    },
+    {
+      "role": "proves",
+      "req": "REQ-SHIPPING",
+      "clause": "remote",
+      "file": "formal/CheckoutProofs.lean",
+      "anchor": "formal/CheckoutProofs.lean::remote_below_threshold",
+      "body_hash": "v1:b182d2ae3ed0f75084636d86b2dcc85b3a3005e1c16d749228fa23264ab274cb",
+      "link_hash": "v1:e3257ad0120390a61b1a50d1e8b1f2b863c7549dea0b10d89062e2e1c310fbd9",
+      "qualifier": null
+    },
+    {
+      "role": "proves",
+      "req": "REQ-SHIPPING",
+      "clause": "remote",
+      "file": "formal/CheckoutProofs.lean",
+      "anchor": "formal/CheckoutProofs.lean::remote_surcharge_survives_free_shipping",
+      "body_hash": "v1:766e090a9e23e5669e7772ffcbda5b83f618a8129fc48dc0338c9c343c2b5ee2",
+      "link_hash": "v1:357d0e6959050208a2d53a6e9f7f82a538301b105444618d46d9b2716e6b8652",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-CHECKOUT",
+      "clause": "total",
+      "file": "checks/pricing_checks.py",
+      "anchor": "checks/pricing_checks.py::TotalChecks::test_the_discount_can_drop_an_order_out_of_free_shipping",
+      "body_hash": "v1:e5413150c123d060bf4f332d8a7c67279abf01f278f56a6102e22590e0c64da3",
+      "link_hash": "v1:fb1e45b042ea8ddbb355871b49015113f2fd024254650c1228c2ecc2f8e4b02f",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-DISCOUNT",
+      "clause": "rounding",
+      "file": "checks/pricing_checks.py",
+      "anchor": "checks/pricing_checks.py::DiscountChecks::test_a_fractional_cent_rounds_toward_the_customer",
+      "body_hash": "v1:7268e633ef78155425121da302a0dccba9f4e12567308f0bbc22093193327b24",
+      "link_hash": "v1:545440b20fb6ba37f63813919e75630cb36eeb5668c2524e88eb30d550ddf071",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-DISCOUNT",
+      "clause": "tiers",
+      "file": "checks/pricing_checks.py",
+      "anchor": "checks/pricing_checks.py::DiscountChecks::test_bands_are_half_open_and_ascending",
+      "body_hash": "v1:ee736446fe42e67b8d24ba322892e4ffa3feb23a46471b3bf95d0fdb2f4c1601",
+      "link_hash": "v1:c1cd0a55130ea83e77c784477d737d9c827c5db4241dfd22ba783b4973ffd96f",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-RECEIPT",
+      "clause": "lines",
+      "file": "checks/receipt_checks.rs",
+      "anchor": "checks/receipt_checks.rs::every_cart_line_is_rendered_with_its_own_price",
+      "body_hash": "v1:9f58376ec7f64a9619479c51d0a89cebc131f0e6a16135863e0b4447784460bb",
+      "link_hash": "v1:684517362e43c9c93124ce693c29d53f309dcbac7f9d34dac04145d1119bd8ee",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-SHIPPING",
+      "clause": "flat",
+      "file": "checks/pricing_checks.py",
+      "anchor": "checks/pricing_checks.py::ShippingChecks::test_flat_below_the_threshold",
+      "body_hash": "v1:9982b9172cde7a6c25b22fdd387df6d914bad1b99ba53bb1f41de824266d4220",
+      "link_hash": "v1:8e4d5d54c5f27cd2170278aa99fd551c90d9b5e2f7984d55a87fd733515bf775",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-SHIPPING",
+      "clause": "free",
+      "file": "checks/pricing_checks.py",
+      "anchor": "checks/pricing_checks.py::ShippingChecks::test_free_above_the_threshold",
+      "body_hash": "v1:c086cc1584efc45ff3ec31b70ad41b9934ed1eb976a4e36e4adc1ba0c32d4be7",
+      "link_hash": "v1:6fe023c3546291db2d035dcac5fcb4b1e98a2deb919c042c23b4adabadf3173e",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-SHIPPING",
+      "clause": "remote",
+      "file": "checks/pricing_checks.py",
+      "anchor": "checks/pricing_checks.py::ShippingChecks::test_remote_surcharge_applies_even_when_shipping_is_free",
+      "body_hash": "v1:3110b065ec3cff800d6ec973d15c049623fb1a313f97cb10add7e27fffede7ab",
+      "link_hash": "v1:cf3ed862c62d37472c19c2a70b0ddcf0754a0368a40f88aefb6b0de5ff31b607",
+      "qualifier": null
+    }
+  ],
+  "evidence": [
+    {
+      "key": {
+        "req_id": "REQ-CHECKOUT",
+        "clause": "total",
+        "bond": "model-impl"
+      },
+      "level": "L3",
+      "input_hashes": {
+        "clause": "v1:d06ad4f39777c8474fee9782dd5b4c836055aebe3fbdfcbb3097d0fd56a8eadd",
+        "impl": "v1:dee0b4e1f267fe8aeb81332e0327eafad78803fdeef21cbe4d890a1d148ce52c",
+        "model": "v1:8c4076c20c1180ea3a9cd43b5486bee29c9ea29a0cfa3db9974b14a2354b79bf",
+        "test": "v1:e5413150c123d060bf4f332d8a7c67279abf01f278f56a6102e22590e0c64da3"
+      },
+      "detail": {
+        "backend": "drt",
+        "seed": 42,
+        "cases": 2000,
+        "divergences": 0,
+        "coverage_covered": 2,
+        "coverage_total": 2,
+        "lean_version": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+      },
+      "at": "2026-09-14T02:57:12.384167450+00:00",
+      "node": null
+    },
+    {
+      "key": {
+        "req_id": "REQ-DISCOUNT",
+        "clause": "cap",
+        "bond": "model-impl"
+      },
+      "level": "L1",
+      "input_hashes": {
+        "clause": "v1:9b97e6c288046fb27ed573115b910f6cce67ef0a377d2ece2c183d2580cfbe4d",
+        "impl": "v1:6a3765b1c1c576c0d497147b69fb65634f32d73d04f2064114b37c1eff51f728",
+        "model": "v1:246d6e299116bc4950ae8f8a977a27140ba71c57bd4731a6fe7bb7acc98878ef"
+      },
+      "detail": {
+        "backend": "drt",
+        "seed": 42,
+        "cases": 2000,
+        "divergences": 1365,
+        "coverage_covered": 2,
+        "coverage_total": 2,
+        "lean_version": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+      },
+      "at": "2026-09-14T02:57:41.621757354+00:00",
+      "node": null
+    },
+    {
+      "key": {
+        "req_id": "REQ-DISCOUNT",
+        "clause": "rounding",
+        "bond": "model-impl"
+      },
+      "level": "L3",
+      "input_hashes": {
+        "clause": "v1:774f1dece31cce97478b7a0c4f1c42762ac390dbd2bfafd447cd2b877469b457",
+        "impl": "v1:11a01d8ca3d12071ab29b0fde3143230aa0c9817aed506a351a52dfeaf25ff68",
+        "model": "v1:9d53b8f4b04f320e8096194e7af3af06c8cad6e1d6b8fefc52241dbcf76642ba",
+        "pins": "v1:786711947968c074c927269b66c82aa731f25598379aed0990fd89f7994ad5f7",
+        "test": "v1:7268e633ef78155425121da302a0dccba9f4e12567308f0bbc22093193327b24"
+      },
+      "detail": {
+        "backend": "drt",
+        "seed": 42,
+        "cases": 2000,
+        "divergences": 0,
+        "coverage_covered": 2,
+        "coverage_total": 2,
+        "lean_version": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+      },
+      "at": "2026-09-14T02:57:14.763630517+00:00",
+      "node": null
+    },
+    {
+      "key": {
+        "req_id": "REQ-DISCOUNT",
+        "clause": "tiers",
+        "bond": "model-impl"
+      },
+      "level": "L3",
+      "input_hashes": {
+        "clause": "v1:d55cde07a2aad1daa96a45e6c48c0c8cbf60598ea2e05afda5fd9a4fa030d1ed",
+        "impl": "v1:11a01d8ca3d12071ab29b0fde3143230aa0c9817aed506a351a52dfeaf25ff68",
+        "model": "v1:9d53b8f4b04f320e8096194e7af3af06c8cad6e1d6b8fefc52241dbcf76642ba",
+        "pins": "v1:786711947968c074c927269b66c82aa731f25598379aed0990fd89f7994ad5f7",
+        "proof": "v1:612b7e9813e96b8ed8d19c8b28e2461b0e47135ca912e025da9a11bfe8dbf9c0",
+        "test": "v1:ee736446fe42e67b8d24ba322892e4ffa3feb23a46471b3bf95d0fdb2f4c1601"
+      },
+      "detail": {
+        "backend": "drt",
+        "seed": 42,
+        "cases": 2000,
+        "divergences": 0,
+        "coverage_covered": 2,
+        "coverage_total": 2,
+        "lean_version": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+      },
+      "at": "2026-09-14T02:57:13.666601637+00:00",
+      "node": null
+    },
+    {
+      "key": {
+        "req_id": "REQ-SHIPPING",
+        "clause": "flat",
+        "bond": "model-impl"
+      },
+      "level": "L3",
+      "input_hashes": {
+        "clause": "v1:3a31676122cb8d331fa99c163f004c2a4985eb1e48aa9c5cb684953fe922541c",
+        "impl": "v1:dc259e422098b83f406009980e0746e862cce872445dceb40fae9e185dee6c49",
+        "model": "v1:c7b721b9675c8da61e39d3779d0796c17c4b3d5b2c1749eaf999d82b9b39bf49",
+        "pins": "v1:940a3824a16228e32726949492573906ffd4692eabb3da6104a1077c66bb0ef0",
+        "proof": "v1:eb7999927efaf0a986d19bdc2131d628b3fccb0b8a4ecd3b69b3e79634fb7875",
+        "test": "v1:9982b9172cde7a6c25b22fdd387df6d914bad1b99ba53bb1f41de824266d4220"
+      },
+      "detail": {
+        "backend": "drt",
+        "seed": 42,
+        "cases": 2000,
+        "divergences": 0,
+        "coverage_covered": 2,
+        "coverage_total": 2,
+        "lean_version": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+      },
+      "at": "2026-09-14T02:57:18.221752956+00:00",
+      "node": null
+    },
+    {
+      "key": {
+        "req_id": "REQ-SHIPPING",
+        "clause": "free",
+        "bond": "model-impl"
+      },
+      "level": "L3",
+      "input_hashes": {
+        "clause": "v1:402ec437c0d931c5cbb786009a2dd7da83b9989ffee536b254262ff092af4568",
+        "impl": "v1:dc259e422098b83f406009980e0746e862cce872445dceb40fae9e185dee6c49",
+        "model": "v1:c7b721b9675c8da61e39d3779d0796c17c4b3d5b2c1749eaf999d82b9b39bf49",
+        "pins": "v1:940a3824a16228e32726949492573906ffd4692eabb3da6104a1077c66bb0ef0",
+        "proof": "v1:170164a849e6acb11df0cd611921edffb9bfe920bd0d37b56eb37236bf54cc54",
+        "test": "v1:c086cc1584efc45ff3ec31b70ad41b9934ed1eb976a4e36e4adc1ba0c32d4be7"
+      },
+      "detail": {
+        "backend": "drt",
+        "seed": 42,
+        "cases": 2000,
+        "divergences": 0,
+        "coverage_covered": 2,
+        "coverage_total": 2,
+        "lean_version": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+      },
+      "at": "2026-09-14T02:57:16.616234755+00:00",
+      "node": null
+    },
+    {
+      "key": {
+        "req_id": "REQ-SHIPPING",
+        "clause": "remote",
+        "bond": "model-impl"
+      },
+      "level": "L3",
+      "input_hashes": {
+        "clause": "v1:13e2951e1e046b3ae149a7d269ed29c8fb3aceef9747f8403b242ed5134b882b",
+        "impl": "v1:dc259e422098b83f406009980e0746e862cce872445dceb40fae9e185dee6c49",
+        "model": "v1:c7b721b9675c8da61e39d3779d0796c17c4b3d5b2c1749eaf999d82b9b39bf49",
+        "pins": "v1:940a3824a16228e32726949492573906ffd4692eabb3da6104a1077c66bb0ef0",
+        "proof": "v1:8f6a9372c1bf10bec08ce035c112d47614712713484421a46d49df6823a0cb57",
+        "test": "v1:3110b065ec3cff800d6ec973d15c049623fb1a313f97cb10add7e27fffede7ab"
+      },
+      "detail": {
+        "backend": "drt",
+        "seed": 42,
+        "cases": 2000,
+        "divergences": 0,
+        "coverage_covered": 2,
+        "coverage_total": 2,
+        "lean_version": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+      },
+      "at": "2026-09-14T02:57:19.734138521+00:00",
+      "node": null
+    }
+  ]
+}

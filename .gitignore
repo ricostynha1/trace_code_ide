@@ -14,5 +14,10 @@ dist/
 target/
 Cargo.lock
 
-# TraceLean runtime
-.tracelean/
+# TraceLean runtime — ignored, except the declarative files that must be
+# reviewed and shared. Git cannot re-include a file whose parent directory is
+# excluded, so the directory itself is not ignored; its contents are.
+.tracelean/*
+!.tracelean/trace.lock.json
+!.tracelean/trace_policy.json
+!.tracelean/drt.json

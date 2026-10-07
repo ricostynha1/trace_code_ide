@@ -34,4 +34,5 @@ proptest = "1"
 chrono = { version = "0.4", features = ["serde"] }
 serde_json = "1"
 tokio = { version = "1", features = ["full"] }
+async-trait = "0.1"
 reqwest = { version = "0.12", features = ["json"] }

@@ -4,7 +4,7 @@ use crate::ai;
 use crate::ai::tracking::SessionStats;
 use crate::{
     AppStateWrapper, AiSettingsWrapper, AiLogWrapper, AiSessionStatsWrapper,
-    MockProviderWrapper, PendingDiffsWrapper, TraceGraphWrapper, UndoTreeCacheWrapper,
+    MockProviderWrapper, PendingDiffsWrapper, UndoTreeCacheWrapper,
     SymbolTableWrapper, AiSettings, McpClientWrapper, invalidate_undo_cache,
     ToolLoopResumeWrapper,
 };
@@ -23,7 +23,6 @@ fn ai_service(
     mcp_client: &State<'_, McpClientWrapper>,
     state: &State<'_, AppStateWrapper>,
     symbols_state: &State<'_, SymbolTableWrapper>,
-    graph_state: &State<'_, TraceGraphWrapper>,
     session_store: &State<'_, crate::ChatSessionStoreWrapper>,
     diffs: &State<'_, crate::PendingDiffsWrapper>,
 ) -> AiService {
@@ -31,7 +30,6 @@ fn ai_service(
     AiService {
         state: state.0.clone(),
         symbols: symbols_state.0.clone(),
-        graph: graph_state.0.clone(),
         settings: settings.0.clone(),
         stats: stats.0.clone(),
         log: log_state.0.clone(),
@@ -228,7 +226,6 @@ pub async fn ai_chat(
     mcp_client: State<'_, McpClientWrapper>,
     state: State<'_, AppStateWrapper>,
     symbols_state: State<'_, SymbolTableWrapper>,
-    graph_state: State<'_, TraceGraphWrapper>,
     cache: State<'_, UndoTreeCacheWrapper>,
     resume_state: State<'_, ToolLoopResumeWrapper>,
     session_store: State<'_, crate::ChatSessionStoreWrapper>,
@@ -237,7 +234,7 @@ pub async fn ai_chat(
 ) -> Result<ai::AiResponse, String> {
     let svc = ai_service(
         &app, &settings, &log_state, &stats, &mcp_client,
-        &state, &symbols_state, &graph_state, &session_store, &diffs,
+        &state, &symbols_state, &session_store, &diffs,
     );
     let pause = Arc::new(TauriPauseHandler {
         app_handle: app.clone(),
@@ -266,7 +263,6 @@ pub async fn ai_chat_session(
     mcp_client: State<'_, McpClientWrapper>,
     state: State<'_, AppStateWrapper>,
     symbols_state: State<'_, SymbolTableWrapper>,
-    graph_state: State<'_, TraceGraphWrapper>,
     cache: State<'_, UndoTreeCacheWrapper>,
     resume_state: State<'_, ToolLoopResumeWrapper>,
     session_store: State<'_, crate::ChatSessionStoreWrapper>,
@@ -276,7 +272,7 @@ pub async fn ai_chat_session(
 ) -> Result<ai::AiResponse, String> {
     let svc = ai_service(
         &app, &settings, &log_state, &stats, &mcp_client,
-        &state, &symbols_state, &graph_state, &session_store, &diffs,
+        &state, &symbols_state, &session_store, &diffs,
     );
     let pause = Arc::new(TauriPauseHandler {
         app_handle: app.clone(),
@@ -347,14 +343,13 @@ pub async fn summarize_chat_session(
     mcp_client: State<'_, McpClientWrapper>,
     state: State<'_, AppStateWrapper>,
     symbols_state: State<'_, SymbolTableWrapper>,
-    graph_state: State<'_, TraceGraphWrapper>,
     session_store: State<'_, crate::ChatSessionStoreWrapper>,
     diffs: State<'_, crate::PendingDiffsWrapper>,
     session_id: String,
 ) -> Result<(), String> {
     let svc = ai_service(
         &app, &settings, &log_state, &stats, &mcp_client,
-        &state, &symbols_state, &graph_state, &session_store, &diffs,
+        &state, &symbols_state, &session_store, &diffs,
     );
     svc.summarize_session(&session_id).await
 }
@@ -383,13 +378,12 @@ pub async fn list_chat_sessions(
     mcp_client: State<'_, McpClientWrapper>,
     state: State<'_, AppStateWrapper>,
     symbols_state: State<'_, SymbolTableWrapper>,
-    graph_state: State<'_, TraceGraphWrapper>,
     session_store: State<'_, crate::ChatSessionStoreWrapper>,
     diffs: State<'_, crate::PendingDiffsWrapper>,
 ) -> Result<Vec<tracelean_core::agent::ChatSessionSummary>, String> {
     let svc = ai_service(
         &app, &settings, &log_state, &stats, &mcp_client,
-        &state, &symbols_state, &graph_state, &session_store, &diffs,
+        &state, &symbols_state, &session_store, &diffs,
     );
     Ok(svc.list_sessions().await)
 }
@@ -551,25 +545,25 @@ pub fn get_prompt_templates() -> Vec<ai::templates::PromptTemplate> {
 #[tauri::command]
 pub fn assemble_context_for_requirement(
     state: State<'_, AppStateWrapper>,
-    graph_state: State<'_, TraceGraphWrapper>,
     req_id: String,
     token_budget: Option<u32>,
 ) -> Result<ai::templates::AssembledContext, String> {
     let s = state.0.lock().map_err(|e| e.to_string())?;
-    let g = graph_state.0.lock().map_err(|e| e.to_string())?;
-    Ok(ai::context::assemble_for_requirement(&s, &g, &req_id, token_budget))
+    let root = s.project_root().cloned().ok_or("No project open")?;
+    let index = crate::trace::build(&root);
+    Ok(ai::context::assemble_for_requirement(&s, &index, &req_id, token_budget))
 }
 
 #[tauri::command]
 pub fn assemble_context_for_file(
     state: State<'_, AppStateWrapper>,
-    graph_state: State<'_, TraceGraphWrapper>,
     file_path: String,
     token_budget: Option<u32>,
 ) -> Result<ai::templates::AssembledContext, String> {
     let s = state.0.lock().map_err(|e| e.to_string())?;
-    let g = graph_state.0.lock().map_err(|e| e.to_string())?;
-    Ok(ai::context::assemble_for_file(&s, &g, &file_path, token_budget))
+    let root = s.project_root().cloned().ok_or("No project open")?;
+    let index = crate::trace::build(&root);
+    Ok(ai::context::assemble_for_file(&s, &index, &file_path, token_budget))
 }
 
 // --- Diff Pipeline ---

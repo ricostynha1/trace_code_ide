@@ -1,26 +1,29 @@
-# TraceLean CI test image — builds nothing shippable, just proves the test
-# suite is green. The image build itself IS the CI check: `docker build`
-# exits non-zero (red) the moment any RUN step below fails, and exits 0
-# (green) only if every step succeeds. Same Dockerfile runs locally and in
-# .github/workflows/ci.yml, so "it passes on my machine" and "it passes in
-# CI" are the same claim.
+# TraceLean CI test image — builds nothing shippable, just proves the suite is
+# green. The image build itself IS the check: `docker build` exits non-zero the
+# moment any RUN step below fails, and zero only if every step succeeds. The
+# same file runs locally and in CI, so "it passes on my machine" and "it passes
+# in CI" are the same claim.
 #
-# Local run:
-#   docker build -f Dockerfile.ci -t tracelean-ci .   (from the tracelean/ dir)
+#   make ci
+#   docker build -f tracelean/Dockerfile.ci -t tracelean-ci .   (from the repo root)
 #
-# Scope (per docs/new_features_work_plan.md's CI sketch): the default
-# `cargo test --workspace` run is safe to run unattended — the only test
-# that hits a live provider (tests/integration_bedrock.rs) is gated behind
-# the `live_bedrock` Cargo feature, off by default. Nothing here touches a
-# live AI provider, spends money, or needs secrets.
+# The build context is the **repository root**, not `tracelean/`. Two checks
+# need what lives above it: the keymap test regenerates the root `README.md`,
+# and the end-to-end differential run works on `example/`. With the narrower
+# context the example tests silently skipped — they are written to return when
+# the project is absent — so the image reported green on checks it never ran.
 #
-# Base is Debian trixie (glibc >= 2.38), not bookworm: the prebuilt onnxruntime
-# binary pulled in transitively by fastembed/ort references __isoc23_* symbol
-# versions that only exist on glibc 2.38+, so linking `cargo test` fails on
-# bookworm's glibc 2.36 with "undefined reference to `__isoc23_strtoull`" etc.
-FROM rust:1.88-trixie
+# Nothing here touches a live AI provider, spends money, or needs secrets: the
+# one test that reaches a real provider (tests/integration_bedrock.rs) is behind
+# the `live_bedrock` Cargo feature, off by default.
+#
+# Debian trixie, not bookworm: the prebuilt onnxruntime pulled in transitively
+# by fastembed references __isoc23_* symbol versions that need glibc >= 2.38,
+# so linking `cargo test` fails on bookworm's 2.36 with "undefined reference to
+# `__isoc23_strtoull`".
+FROM rust:1.95-trixie
 
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     libwebkit2gtk-4.1-dev \
     libgtk-3-dev \
     librsvg2-dev \
@@ -30,28 +33,70 @@ RUN apt-get update && apt-get install -y \
     libssl-dev \
     pkg-config \
     build-essential \
+    bubblewrap \
+    ca-certificates \
     curl \
+    git \
+    python3 \
     && rm -rf /var/lib/apt/lists/*
 
-# Node 22, for the frontend type-check step.
+# Node 22, for the frontend type-check and vitest.
 RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
-    && apt-get install -y nodejs \
+    && apt-get install -y --no-install-recommends nodejs \
     && rm -rf /var/lib/apt/lists/*
 
-WORKDIR /app
+# Lean, pinned to what `example/formal/lean-toolchain` names. The default suite
+# does not need it — every test that would elaborate Lean reports "no toolchain"
+# and returns rather than failing — but having it here is what lets the
+# `--ignored` end-to-end checks below run at all.
+#
+# `elan-init --default-toolchain X` records the preference without always
+# fetching it, so the install is explicit and the version check is what turns a
+# missing Lean into a failed build rather than a surprise at the e2e step.
+ENV PATH="/root/.elan/bin:${PATH}"
+RUN curl -sSf https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh \
+    | sh -s -- -y --default-toolchain none \
+    && elan toolchain install leanprover/lean4:v4.12.0 \
+    && elan default leanprover/lean4:v4.12.0 \
+    && lean --version \
+    && lake --version
 
-# Copy everything (see .dockerignore for what's excluded — target/,
-# node_modules/, dist/ are large and either regenerated or irrelevant here).
+WORKDIR /repo
+
+# See the repository-root .dockerignore for what is left out: target/,
+# node_modules/, dist/ and the generated Lean runner are large and either
+# regenerated here or irrelevant.
 COPY . .
+
+WORKDIR /repo/tracelean
 
 RUN npm ci
 
-# Rust: compile check across every crate/target, then run the full suite.
 RUN cargo check --workspace --all-targets
+# The sandbox tests are among these. `bwrap` cannot create a user namespace
+# under `docker build`'s default seccomp profile, so `bwrap_available()` reports
+# false and they skip with that reason printed. Run them for real with
+# `make sandbox-test`, which grants the container the necessary privileges.
 RUN cargo test --workspace
 
-# Frontend: type-check only (no bundling needed for CI signal).
+# Again, for the sandbox tests alone and with output shown. `cargo test`
+# captures stderr, so their "skipping: bwrap cannot create a namespace here"
+# line is invisible in the run above and they look like two ordinary passes.
+# A check that did not run must say so in the log it appears in.
+RUN cargo test -p tracelean-core --lib sandbox::session -- --nocapture
+
+# The frontend: type-check and its own unit tests. `treemap.test.ts` is the
+# coverage map's layout, and it is the kind of geometry that is either right or
+# quietly wrong by a factor.
 RUN npx tsc --noEmit
+RUN npm test
+
+# The end-to-end differential path, which is skipped by default because it
+# needs a Lean toolchain and writes into `example/`. Running it here is the only
+# thing that proves the harness still compiles a model, runs it against the
+# Python implementation, and agrees.
+RUN cargo test -p tracelean-tests build_example_runner -- --ignored --nocapture \
+    && cargo test -p tracelean-tests run_example_drt -- --ignored --nocapture
 
 # Reaching here means every gate above exited 0 — nothing left to run.
 CMD ["true"]

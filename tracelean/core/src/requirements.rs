@@ -56,66 +56,55 @@ pub struct RequirementInfo {
     pub has_spec: bool,
 }
 
-/// Parse a requirement markdown file
-pub fn parse_requirement(path: &Path, root: &Path) -> Option<RequirementInfo> {
-    let content = std::fs::read_to_string(path).ok()?;
-    let first_line = content.lines().next()?;
-
-    let heading = first_line.strip_prefix("# ")?;
-    let (id, title) = heading.split_once(':')?;
-    let id = id.trim().to_string();
-    let title = title.trim().to_string();
-
-    let status = content
-        .lines()
-        .find(|line| line.starts_with("Status:"))
-        .map(|line| ReqStatus::from_str(line.strip_prefix("Status:").unwrap_or("draft")))
-        .unwrap_or(ReqStatus::Draft);
-
-    // Description is everything after status line
-    let description = content
-        .lines()
-        .skip_while(|line| !line.starts_with("Status:"))
-        .skip(1)
-        .collect::<Vec<_>>()
-        .join("\n")
-        .trim()
-        .to_string();
-
-    let rel = path.strip_prefix(root).unwrap_or(path).to_path_buf();
-
-    // Check if spec file exists
-    let spec_path = root.join("specs").join(format!("{}.lean", id));
-    let has_spec = spec_path.exists();
-
-    Some(RequirementInfo {
-        id,
-        title,
-        status,
-        file: rel,
-        description,
-        has_spec,
-    })
-}
-
-/// List all requirements from the reqs/ folder
-pub fn list_requirements(root: &Path) -> Vec<RequirementInfo> {
-    let reqs_dir = root.join("reqs");
-    if !reqs_dir.is_dir() {
-        return Vec::new();
-    }
-
-    let mut reqs = Vec::new();
-    if let Ok(entries) = std::fs::read_dir(&reqs_dir) {
-        for entry in entries.flatten() {
-            let path = entry.path();
-            if path.extension().and_then(|e| e.to_str()) == Some("md") {
-                if let Some(req) = parse_requirement(&path, root) {
-                    reqs.push(req);
-                }
-            }
+impl RequirementInfo {
+    fn from_trace(req: &crate::trace::Requirement, modeled: bool) -> Self {
+        Self {
+            id: req.id.clone(),
+            title: req.title.clone(),
+            status: match req.status {
+                crate::trace::ReqStatus::Draft => ReqStatus::Draft,
+                crate::trace::ReqStatus::Approved => ReqStatus::Approved,
+                crate::trace::ReqStatus::Linked => ReqStatus::Linked,
+            },
+            file: req.file.clone(),
+            description: req.body.clone(),
+            has_spec: modeled,
         }
     }
+}
+
+/// Parse a requirement markdown file.
+///
+/// Delegates to `crate::trace::requirement`, which reads frontmatter (and
+/// falls back to the older `# REQ-01: Title` heading form). Identity comes
+/// from the document's `id`, never from where the file lives.
+pub fn parse_requirement(path: &Path, root: &Path) -> Option<RequirementInfo> {
+    let content = std::fs::read_to_string(path).ok()?;
+    match crate::trace::requirement::parse_markdown(path, root, &content) {
+        crate::trace::ParseOutcome::Requirement(req, _) => Some(RequirementInfo::from_trace(&req, false)),
+        crate::trace::ParseOutcome::NotARequirement => None,
+    }
+}
+
+/// List every requirement in the project.
+///
+/// Walks the whole tree rather than a `reqs/` directory: TraceLean imposes no
+/// layout on the projects it traces. `has_spec` now means "something carries an
+/// `@models` annotation for this requirement", not "a file named after it
+/// exists in `specs/`".
+pub fn list_requirements(root: &Path) -> Vec<RequirementInfo> {
+    let index = crate::trace::build(root);
+    let mut reqs: Vec<RequirementInfo> = index
+        .requirements
+        .values()
+        .map(|req| {
+            let modeled = index
+                .links_for(&req.id)
+                .iter()
+                .any(|l| l.role == crate::trace::Role::Models);
+            RequirementInfo::from_trace(req, modeled)
+        })
+        .collect();
     reqs.sort_by(|a, b| a.id.cmp(&b.id));
     reqs
 }

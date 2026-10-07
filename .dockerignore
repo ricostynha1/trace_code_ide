@@ -1,0 +1,20 @@
+# Build context for tracelean/Dockerfile.ci, which is the repository root
+# rather than tracelean/: the keymap test regenerates the root README.md, and
+# the end-to-end differential tests run against example/. With a narrower
+# context both of those silently did nothing — the example tests are written to
+# skip when the project is absent, so CI reported green on checks it had never
+# run.
+.git
+**/node_modules
+**/target
+**/dist
+**/__pycache__
+*.log
+
+# Editor session state for this checkout. The example project's own
+# `.tracelean/` is kept: drt.json, trace.lock.json and trace_policy.json are the
+# bindings and policy the e2e run needs.
+/.tracelean
+/tracelean/.tracelean
+example/.tracelean/drt
+example/formal/.lake

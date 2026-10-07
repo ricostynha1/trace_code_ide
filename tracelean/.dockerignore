@@ -4,4 +4,9 @@ dist
 .git
 .vscode
 *.log
-.tracelean
+
+# The editor's own scratch state for this checkout. Anchored with a leading
+# slash: an unanchored `.tracelean` also matches `example/.tracelean`, which
+# holds the example project's differential-testing bindings and policy — the
+# files the CI image's end-to-end run needs.
+/.tracelean

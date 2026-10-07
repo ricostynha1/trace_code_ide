@@ -1,0 +1,8 @@
+# Pinned so the toolchain is the same on a laptop, in the dev container and in
+# CI. The suite is verified against this version; an unpinned `stable` means
+# "whatever was released this week", which is how a green run on one machine
+# becomes a red one on another for reasons nobody changed.
+[toolchain]
+channel = "1.95.0"
+# `llvm-tools` carries llvm-profdata and llvm-cov, which cargo-llvm-cov drives.
+components = ["rust-analyzer", "rustfmt", "clippy", "llvm-tools"]

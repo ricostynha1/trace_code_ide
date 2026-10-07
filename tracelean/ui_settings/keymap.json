@@ -9,19 +9,62 @@
     "NM": "passthrough"
   },
   "Options": {
-    "Escape": "→Main",
+    "Escape": "pop",
     "f": "→File",
+    "g": "→Goto",
+    "v": "→Verify",
+    "t": "→Trace",
     "u": "undo",
     "r": "redo",
     "s": "save_file",
-    "NM": "→Main"
+    "NM": "reset"
   },
   "File": {
-    "Escape": "→Main",
+    "Escape": "pop",
     "o": "open_file",
     "r": "rename_file",
     "d": "delete_file",
     "n": "create_file",
-    "NM": "→Main"
+    "NM": "reset"
+  },
+  "Goto": {
+    "Escape": "pop",
+    "d": "lsp_definition",
+    "r": "lsp_references",
+    "s": "lsp_symbols",
+    "h": "lsp_hover",
+    "e": "next_diagnostic",
+    "E": "prev_diagnostic",
+    "NM": "reset"
+  },
+  "Verify": {
+    "Escape": "pop",
+    "g": "show_goal",
+    "d": "run_drt",
+    "j": "run_judge",
+    "w": "replay_witness",
+    "b": "lake_build",
+    "a": "→CodeActions",
+    "NM": "reset"
+  },
+  "CodeActions": {
+    "Escape": "pop",
+    "NM": "reset"
+  },
+  "Trace": {
+    "Escape": "pop",
+    "r": "goto_requirement",
+    "m": "goto_model",
+    "c": "goto_code",
+    "t": "goto_tests",
+    "h": "goto_harness",
+    "e": "show_evidence",
+    "u": "goto_provenance",
+    "a": "annotate",
+    "M": "coverage_map",
+    "?": "explain_gap",
+    "+": "zoom_in",
+    "-": "zoom_out",
+    "NM": "reset"
   }
 }

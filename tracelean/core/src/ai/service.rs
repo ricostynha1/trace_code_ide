@@ -16,14 +16,13 @@ use crate::ai::provider::{AiProvider, AiResponse, ChatMessage, MessageRole, Mode
 use crate::ai::tracking::SessionStats;
 use crate::ai::InteractionLog;
 use crate::state::AppState;
-use crate::{AiSettings, ChatSession, ChatSessionInfo, EventSink, SymbolTable, TraceGraph};
+use crate::{AiSettings, ChatSession, ChatSessionInfo, EventSink, SymbolTable};
 
 /// Shared, cheaply clonable AI application service.
 #[derive(Clone)]
 pub struct AiService {
     pub state: Arc<Mutex<AppState>>,
     pub symbols: Arc<Mutex<SymbolTable>>,
-    pub graph: Arc<Mutex<TraceGraph>>,
     pub settings: Arc<Mutex<AiSettings>>,
     pub stats: Arc<Mutex<SessionStats>>,
     pub log: Arc<Mutex<InteractionLog>>,
@@ -74,7 +73,6 @@ impl AiService {
         Ok(AgentContext {
             state: self.state.clone(),
             symbols: self.symbols.clone(),
-            graph: self.graph.clone(),
             settings: self.settings.clone(),
             stats: self.stats.clone(),
             log: self.log.clone(),

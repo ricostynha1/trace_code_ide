@@ -40,6 +40,27 @@ mod tests {
     }
 
     #[test]
+    fn debug_dump_lean_shapes() {
+        let src = r#"namespace Foo
+structure Cart where
+  items : Nat
+  deriving Repr
+inductive Tier where
+  | low
+  | high
+abbrev N := Nat
+instance : Repr Cart := ⟨fun _ _ => ""⟩
+@[simp] def tagged (a : Nat) : Nat := a
+partial def loop (a : Nat) : Nat := loop a
+example : True := trivial
+axiom ax : True
+opaque op : Nat
+end Foo
+"#;
+        dump_tree(src, tree_sitter_lean4::language().into(), "LEAN4 SHAPES");
+    }
+
+    #[test]
     fn debug_dump_markdown() {
         let src = "# Hello World\n\nThis is **bold** and *italic*.\n\n- item 1\n- item 2\n";
         dump_tree(src, tree_sitter_md::LANGUAGE.into(), "MARKDOWN BLOCK");

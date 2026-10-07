@@ -900,10 +900,6 @@ async fn run_agent_turn_inner(
                             .symbols
                             .lock()
                             .map_err(|e| AgentError::Lock(e.to_string()))?;
-                        let g = ctx
-                            .graph
-                            .lock()
-                            .map_err(|e| AgentError::Lock(e.to_string()))?;
                         // P10: review mode stages edits into pending_diffs
                         // instead of applying them.
                         if ctx.permissions.review_edits {
@@ -921,7 +917,6 @@ async fn run_agent_turn_inner(
                                 &ctx.project_root,
                                 &mut s,
                                 &sym,
-                                &g,
                                 &call_permissions,
                                 &Some(ctx.embed_index.clone()),
                                 Some(&mut sink),
@@ -961,7 +956,6 @@ async fn run_agent_turn_inner(
                                 &ctx.project_root,
                                 &mut s,
                                 &sym,
-                                &g,
                                 &call_permissions,
                                 &Some(ctx.embed_index.clone()),
                             )

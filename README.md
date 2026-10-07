@@ -69,7 +69,9 @@ in `tracelean/core/src/lib.rs` for the full list and doc comments):
 | **Editor** | CodeMirror editor. All edits become undoable commands. Hovering an undo node overlays its diff (red removed lines, green added blocks). |
 | **AI Chat** | Chat with the coding agent. Tool calls appear as live chips (running / done / failed, with args and result previews). Multiple chat sessions via the switcher. |
 | **Undo Tree** | Every command is a node; branches form when you undo and edit again. Click any node to jump the whole workspace to that state. Hover to preview its diff in the editor and file tree. |
-| **Requirements** | Requirement tracking and traceability to code. |
+| **Requirements** | The requirement tree: coverage, the assurance chain behind each clause, spec strength beside it, a coverage map of the whole project with untraced code in grey, a findings filter, and the judge-prompt export. |
+| **Project** | The code itself, laid out by containment and tinted by which requirement it serves and how much is known about it. Grey is untraced. Findings render as badges on the node they are about; selecting a node lists its requirements, assurance level and references. |
+| **Lean** | Proof state beside the file, the way the VS Code extension shows it — goals, the messages at the cursor, and the rest of the file's diagnostics. Built from the Lean language server's `$/lean/plainGoal`. When no server is running it says so rather than showing an empty goal list, because an empty goal list means the proof is complete. |
 
 ### The status bar under the chat
 
@@ -85,18 +87,76 @@ press a leader key to enter a mode, and a which-key bar at the bottom of the
 window lists every key available in that mode, so you never have to memorize
 the whole tree.
 
-| Key (in Editor/File Tree) | Effect |
-|---|---|
-| `Ctrl+Space` or `Ctrl+.` | Open the Options menu |
-| `Shift+↑` / `Shift+↓` | Go to parent / child AST node |
-| `Shift+←` / `Shift+→` | Go to previous / next sibling node |
+Modes nest: `Options` opens from `Main`, `File`/`Goto`/`Verify`/`Trace` open
+from `Options`, and `Escape` leaves one level at a time. Any key a mode does not
+bind cancels back to `Main`.
 
-Inside **Options**: `f` → File menu, `u` undo, `r` redo, `s` save, `Escape` back to normal editing.
-Inside **File**: `o` open, `r` rename, `d` delete, `n` create new file, `Escape` back to Options.
+<!-- keymap:begin (generated from tracelean/ui_settings/keymap.json) -->
 
-This table comes from `tracelean/ui_settings/keymap.json` — edit that file to
-add or change bindings (an unknown action, or a transition to an undefined
-mode, fails a startup test rather than breaking silently). The which-key bar
+| Mode | Key | Effect |
+|---|---|---|
+| `Main` | `C-.` | enter `Options` mode |
+| `Main` | `C-Space` | enter `Options` mode |
+| `Main` | `S-ArrowDown` | Child node (`go_child`) |
+| `Main` | `S-ArrowLeft` | Previous sibling (`go_prev_sibling`) |
+| `Main` | `S-ArrowRight` | Next sibling (`go_next_sibling`) |
+| `Main` | `S-ArrowUp` | Parent node (`go_parent`) |
+| `Main` | any other key | handled by the editor (normal typing) |
+| `CodeActions` | `Escape` | leave this mode (back one level) |
+| `CodeActions` | any other key | return to `Main` |
+| `File` | `Escape` | leave this mode (back one level) |
+| `File` | `d` | Delete (`delete_file`) |
+| `File` | `n` | New file… (`create_file`) |
+| `File` | `o` | Open (`open_file`) |
+| `File` | `r` | Rename… (`rename_file`) |
+| `File` | any other key | return to `Main` |
+| `Goto` | `E` | Previous problem (`prev_diagnostic`) |
+| `Goto` | `Escape` | leave this mode (back one level) |
+| `Goto` | `d` | Go to definition (`lsp_definition`) |
+| `Goto` | `e` | Next problem (`next_diagnostic`) |
+| `Goto` | `h` | Hover (`lsp_hover`) |
+| `Goto` | `r` | Find references (`lsp_references`) |
+| `Goto` | `s` | Document symbols (`lsp_symbols`) |
+| `Goto` | any other key | return to `Main` |
+| `Options` | `Escape` | leave this mode (back one level) |
+| `Options` | `f` | enter `File` mode |
+| `Options` | `g` | enter `Goto` mode |
+| `Options` | `r` | Redo (`redo`) |
+| `Options` | `s` | Save (`save_file`) |
+| `Options` | `t` | enter `Trace` mode |
+| `Options` | `u` | Undo (`undo`) |
+| `Options` | `v` | enter `Verify` mode |
+| `Options` | any other key | return to `Main` |
+| `Trace` | `+` | Zoom in (`zoom_in`) |
+| `Trace` | `-` | Zoom out (`zoom_out`) |
+| `Trace` | `?` | Why is this not green? (`explain_gap`) |
+| `Trace` | `Escape` | leave this mode (back one level) |
+| `Trace` | `M` | Coverage map (`coverage_map`) |
+| `Trace` | `a` | Add annotation… (`annotate`) |
+| `Trace` | `c` | Go to implementation (`goto_code`) |
+| `Trace` | `e` | Show evidence record (`show_evidence`) |
+| `Trace` | `h` | Go to DRT harness (`goto_harness`) |
+| `Trace` | `m` | Go to Lean model (`goto_model`) |
+| `Trace` | `r` | Go to requirement (`goto_requirement`) |
+| `Trace` | `t` | Go to tests (`goto_tests`) |
+| `Trace` | `u` | Who wrote this line (`goto_provenance`) |
+| `Trace` | any other key | return to `Main` |
+| `Verify` | `Escape` | leave this mode (back one level) |
+| `Verify` | `a` | enter `CodeActions` mode |
+| `Verify` | `b` | lake build (`lake_build`) |
+| `Verify` | `d` | Differential-test this binding (`run_drt`) |
+| `Verify` | `g` | Lean goal at cursor (`show_goal`) |
+| `Verify` | `j` | Re-judge requirement ↔ model (`run_judge`) |
+| `Verify` | `w` | Replay last witness (`replay_witness`) |
+| `Verify` | any other key | return to `Main` |
+
+<!-- keymap:end -->
+
+This table is generated from `tracelean/ui_settings/keymap.json` — edit that
+file to add or change bindings, then regenerate with
+`TRACELEAN_UPDATE_README=1 cargo test -p tracelean-core readme_keymap`. An
+unknown action, a transition to an undefined mode, or a stale table here each
+fail a test rather than breaking silently. The which-key bar
 and mode machine currently only cover the Editor and File Tree panels — chat,
 diffs, undo tree, and the terminal use plain buttons (still reachable via
 Tab + Enter/Space, just without leader-key discoverability).
@@ -201,7 +261,7 @@ example/           sample project used for manual testing
 
 | File | What's in it |
 |---|---|
-| `architecture.md` | Subsystem-by-subsystem map with file pointers (ACP, command/undo system, trace graph, AI providers, sandboxing, cost model, Myth, frontend, persistence). |
+| `architecture.md` | Subsystem-by-subsystem map with file pointers (ACP, command/undo system, traceability and the project graph, AI providers, sandboxing, cost model, Myth, frontend, persistence). |
 | `TOOL_SINGLE_SOURCE.md` | Design note on keeping tool schemas (`data/tools.json`) and executor code in sync; status of what's implemented vs. still proposed. |
 | `Regression.md` | Recipe for checking that a compaction/retention/cost-model change didn't make the agent dumber or pricier. |
 | `new_features_work_plan.md` | Prioritized backlog with rationale and implementation sketches. |

@@ -6,6 +6,9 @@ pub mod agent;
 pub mod ai;
 pub mod commands;
 pub mod debug_nodes;
+pub mod drt;
+pub mod judge;
+pub mod lsp;
 pub mod myth;
 pub mod parser;
 pub mod persistence;
@@ -15,7 +18,8 @@ pub mod sandbox;
 pub mod state;
 pub mod surgical_edit;
 pub mod testrun;
-pub mod trace_graph;
+pub mod provenance;
+pub mod trace;
 pub mod undo_tree;
 
 #[cfg(test)]
@@ -25,7 +29,6 @@ mod kw_test;
 pub use commands::Command;
 pub use parser::SymbolTable;
 pub use state::AppState;
-pub use trace_graph::TraceGraph;
 pub use ai::{InteractionLog, tracking::SessionStats, diff_pipeline::{PendingDiff, ResolvedDiffOutcome}};
 pub use ai::provider::{AiProvider, AiError, AiRequest, AiResponse};
 pub use ai::mcp_client::McpClientManager;
@@ -57,12 +60,6 @@ pub struct FileEntry {
     pub name: String,
     pub path: String,
     pub is_dir: bool,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TraceGraphStats {
-    pub nodes: usize,
-    pub edges: usize,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -222,7 +219,6 @@ impl Default for AiSettings {
 pub struct SharedApp {
     pub state: Arc<Mutex<AppState>>,
     pub symbols: Arc<Mutex<SymbolTable>>,
-    pub graph: Arc<Mutex<TraceGraph>>,
     pub ai_settings: Arc<Mutex<AiSettings>>,
     pub ai_log: Arc<Mutex<InteractionLog>>,
     pub ai_stats: Arc<Mutex<SessionStats>>,
@@ -259,7 +255,6 @@ impl SharedApp {
         Self {
             state: Arc::new(Mutex::new(AppState::new())),
             symbols: Arc::new(Mutex::new(SymbolTable::new())),
-            graph: Arc::new(Mutex::new(TraceGraph::new())),
             ai_settings: Arc::new(Mutex::new(AiSettings::default())),
             ai_log: Arc::new(Mutex::new(InteractionLog::new())),
             ai_stats: Arc::new(Mutex::new(SessionStats::default())),
@@ -283,7 +278,6 @@ impl SharedApp {
         ai::AiService {
             state: self.state.clone(),
             symbols: self.symbols.clone(),
-            graph: self.graph.clone(),
             settings: self.ai_settings.clone(),
             stats: self.ai_stats.clone(),
             log: self.ai_log.clone(),

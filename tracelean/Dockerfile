@@ -1,10 +1,17 @@
-# TraceLean IDE - Development Build Container
-# Multi-stage: builds both Rust backend and React frontend
+# TraceLean — release build.
+#
+# Two stages: compile the frontend and the Tauri binary, then ship the binary on
+# a slim runtime with the libraries it dlopens and a Lean toolchain for the
+# projects it will open.
+#
+# There is no `cargo install tauri-cli` here. `tauri-build` reads
+# `gui_backend/tauri.conf.json` at compile time and embeds `dist/`, so
+# `npm run build && cargo build --release -p tracelean` produces the same binary
+# `cargo tauri build --no-bundle` would, without spending a long layer compiling
+# the CLI that would only be asked to skip bundling.
+FROM rust:1.95-trixie AS builder
 
-FROM rust:1.88-bookworm AS builder
-
-# Install system deps for Tauri (Linux) and tree-sitter-lean4 build (cc)
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     libwebkit2gtk-4.1-dev \
     libgtk-3-dev \
     librsvg2-dev \
@@ -14,50 +21,51 @@ RUN apt-get update && apt-get install -y \
     libssl-dev \
     pkg-config \
     build-essential \
+    ca-certificates \
     curl \
-    wget \
     file \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Node.js 22
 RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
-    && apt-get install -y nodejs \
+    && apt-get install -y --no-install-recommends nodejs \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# Copy package files first for layer caching
+# Node dependencies first, so editing Rust does not reinstall them.
 COPY package.json package-lock.json* ./
-RUN npm install
+RUN npm ci || npm install
 
-# Install tauri-cli for proper release build with embedded frontend
-RUN cargo install tauri-cli --version "^2"
-
-# Copy Rust manifest for dep caching
-COPY Cargo.toml Cargo.lock* ./
-COPY src-tauri/Cargo.toml src-tauri/Cargo.lock* src-tauri/
+# Then the Cargo manifests, for the same reason. The workspace is
+# core/ + gui_backend/ + tui/ + tests/; `src-tauri/` has not existed since the
+# crates were split, and a Dockerfile that still names it fails at COPY.
+COPY rust-toolchain.toml Cargo.toml Cargo.lock* ./
+COPY core/Cargo.toml core/
+COPY gui_backend/Cargo.toml gui_backend/
+COPY tui/Cargo.toml tui/
 COPY tests/Cargo.toml tests/
-COPY src-tauri/build.rs src-tauri/
-# Create dummy src to cache deps
-RUN mkdir -p src-tauri/src && \
-    echo 'fn main() {}' > src-tauri/src/main.rs && \
-    echo 'pub fn run() {}' > src-tauri/src/lib.rs && \
-    mkdir -p tests/unit && touch tests/lib.rs && \
-    cargo fetch
+# Stub sources so `cargo fetch` can resolve the workspace. Every path here has
+# to match the crate's manifest: `tests/` declares `[lib] path = "lib.rs"` and
+# four `[[test]]` targets, and `tui` is a lib plus a bin.
+RUN mkdir -p core/src gui_backend/src tui/src tests \
+    && echo 'pub fn placeholder() {}' > core/src/lib.rs \
+    && echo 'pub fn run() {}' > gui_backend/src/lib.rs \
+    && echo 'fn main() {}' > gui_backend/src/main.rs \
+    && echo 'pub fn run() {}' > tui/src/lib.rs \
+    && echo 'fn main() {}' > tui/src/main.rs \
+    && touch tests/lib.rs tests/unit.rs tests/integration_bedrock.rs \
+             tests/integration_cost_reduction.rs tests/integration_sandbox_session.rs \
+    && cargo fetch
 
-# Copy full source
 COPY . .
 
-# Build frontend
 RUN npm run build
+RUN cargo build --release -p tracelean
 
-# Build Rust backend with Tauri (embeds frontend, no bundle)
-RUN cargo tauri build --no-bundle
+# --- Runtime ------------------------------------------------------------
+FROM debian:trixie-slim AS runtime
 
-# --- Runtime stage ---
-FROM debian:bookworm-slim AS runtime
-
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     libwebkit2gtk-4.1-0 \
     libgtk-3-0 \
     librsvg2-2 \
@@ -68,27 +76,32 @@ RUN apt-get update && apt-get install -y \
     libglx-mesa0 \
     libegl-mesa0 \
     dbus-x11 \
+    ca-certificates \
+    curl \
+    git \
+    python3 \
     && rm -rf /var/lib/apt/lists/*
 
-# Force software GL + disable WebKit DMABUF/compositing (no GPU in container)
+# Software GL: there is no GPU in the container, and WebKit's DMABUF renderer
+# fails opaquely without one.
 ENV LIBGL_ALWAYS_SOFTWARE=1 \
     GALLIUM_DRIVER=llvmpipe \
     WEBKIT_DISABLE_COMPOSITING_MODE=1 \
     WEBKIT_DISABLE_DMABUF_RENDERER=1
 
-# Install elan (Lean 4 toolchain manager) for spec type-checking
-RUN curl -sSf https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y --default-toolchain leanprover/lean4:stable
-
+RUN useradd -m -u 10001 tracelean
 COPY --from=builder /app/target/release/tracelean /usr/local/bin/tracelean
+# Next to the binary: `read_ui_settings_file` looks in the executable's own
+# directory first, so this is where keymap.json and the highlight queries have
+# to land for the shipped binary to find them.
 COPY --from=builder /app/ui_settings /usr/local/bin/ui_settings
 
-# Create non-root user and grant ownership of app/toolchain dirs
-RUN useradd -m -u 10001 tracelean \
-    && mv /root/.elan /home/tracelean/.elan \
-    && chown -R tracelean:tracelean /home/tracelean/.elan \
-    && chown tracelean:tracelean /usr/local/bin/tracelean /usr/local/bin/ui_settings
-
+USER tracelean
 ENV PATH="/home/tracelean/.elan/bin:${PATH}"
 
-USER tracelean
+# Lean, pinned to the toolchain the example project names. A project with a
+# different `lean-toolchain` still works: elan fetches what that file asks for.
+RUN curl -sSf https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh \
+    | sh -s -- -y --default-toolchain leanprover/lean4:v4.12.0
+
 ENTRYPOINT ["tracelean"]

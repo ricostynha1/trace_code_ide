@@ -214,12 +214,15 @@ export function FileTree({ projectRoot, onFileSelect, selectedFile }: FileTreePr
       const res = await invoke<{
         result: { kind: string; action?: string; state?: string };
         state: string;
+        path: string[];
         bindings: KeyBindingInfo[];
       }>("myth_key_event", { key });
       setMythMode(res.state);
       // Which-key renders in the global bottom bar (Emacs-style)
       window.dispatchEvent(
-        new CustomEvent("myth-mode", { detail: { state: res.state, bindings: res.bindings } })
+        new CustomEvent("myth-mode", {
+          detail: { state: res.state, path: res.path, bindings: res.bindings },
+        })
       );
       if (res.result.kind === "dispatch" && res.result.action) {
         await runAction(res.result.action);

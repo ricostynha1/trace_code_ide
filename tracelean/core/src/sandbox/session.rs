@@ -46,11 +46,30 @@ fn spec_path(session_dir: &Path) -> PathBuf {
 }
 
 /// Whether `bwrap` is usable at all on this machine.
+///
+/// Two questions, not one: is the binary there, and can it actually create a
+/// namespace? They come apart in exactly the environment where it matters —
+/// inside a container, `bwrap --version` succeeds while every real invocation
+/// fails with `Creating new namespace failed: Operation not permitted`, because
+/// the default seccomp profile forbids unprivileged user namespaces. Answering
+/// the first question alone made TraceLean offer sandboxed sessions that could
+/// not start, and made the sandbox tests fail in CI rather than report an
+/// environment that cannot run them.
 pub fn bwrap_available() -> bool {
     static AVAIL: OnceLock<bool> = OnceLock::new();
     *AVAIL.get_or_init(|| {
-        StdCommand::new("bwrap")
+        let present = StdCommand::new("bwrap")
             .arg("--version")
+            .output()
+            .map(|o| o.status.success())
+            .unwrap_or(false);
+        if !present {
+            return false;
+        }
+        // The cheapest invocation that still unshares: if this cannot run,
+        // nothing built by `bwrap_argv` can either.
+        StdCommand::new("bwrap")
+            .args(["--ro-bind", "/", "/", "true"])
             .output()
             .map(|o| o.status.success())
             .unwrap_or(false)
@@ -318,6 +337,30 @@ mod tests {
     use super::*;
     use tempfile::tempdir;
 
+    /// Serializes every test that touches `$HOME` or `$CLAUDE_CONFIG_DIR`.
+    ///
+    /// `bwrap_argv` reads those variables at call time — correctly, since the
+    /// sandbox has to bind whatever home the user actually has. Environment
+    /// variables are process-global, though, and `cargo test` runs these in
+    /// parallel threads of one process, so a test that temporarily points
+    /// `HOME` at a scratch directory was rewriting the world underneath every
+    /// other test calling `bwrap_argv` at that moment. The symptom was a
+    /// failure that never reproduced alone: `bwrap: Can't find source path
+    /// /tmp/.tmpXXXX`, the other test's `HOME` bound into this test's argv and
+    /// then deleted before `bwrap` ran.
+    ///
+    /// The lock is taken by every test that *reads* the environment, not only
+    /// by the two that write it — a reader that does not participate is
+    /// exactly the race being closed.
+    static ENV_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+    /// Take the environment lock, ignoring poisoning: a panicking test has
+    /// already failed and reported, and cascading its poison into every other
+    /// sandbox test would hide which one actually broke.
+    fn env_guard() -> std::sync::MutexGuard<'static, ()> {
+        ENV_LOCK.lock().unwrap_or_else(|poisoned| poisoned.into_inner())
+    }
+
     fn fake_project() -> tempfile::TempDir {
         let dir = tempdir().unwrap();
         std::fs::write(dir.path().join("a.txt"), "hello").unwrap();
@@ -330,6 +373,7 @@ mod tests {
 
     #[test]
     fn bwrap_argv_binds_network_by_default_and_git_through() {
+        let _env = env_guard();
         let dir = fake_project();
         let spec = create_session(dir.path(), true).unwrap();
         let argv = bwrap_argv(&spec);
@@ -341,6 +385,7 @@ mod tests {
 
     #[test]
     fn bwrap_argv_binds_custom_claude_config_dir() {
+        let _env = env_guard();
         // Regression: Claude Code honors $CLAUDE_CONFIG_DIR to relocate its
         // whole state dir off ~/.claude. If that's set (as it commonly is)
         // and we don't bind it, Claude Code sees a read-only filesystem
@@ -362,6 +407,7 @@ mod tests {
 
     #[test]
     fn sandbox_hides_home_directory_siblings_but_keeps_the_project_visible() {
+        let _env = env_guard();
         // SECURITY regression: `--ro-bind / /` makes the whole host
         // filesystem readable inside the sandbox by default. Without the
         // $HOME tmpfs lockdown, a session for one project could `cd ..`
@@ -369,7 +415,7 @@ mod tests {
         // proves that's actually closed, with a real bwrap run, not just
         // an argv shape assertion.
         if !bwrap_available() {
-            eprintln!("skipping: bwrap not on PATH");
+            eprintln!("skipping: bwrap cannot create a namespace here (not installed, or unprivileged user namespaces are blocked)");
             return;
         }
 
@@ -413,6 +459,7 @@ mod tests {
 
     #[test]
     fn bwrap_argv_unshares_net_when_disabled() {
+        let _env = env_guard();
         let dir = fake_project();
         let spec = create_session(dir.path(), false).unwrap();
         let argv = bwrap_argv(&spec);
@@ -422,6 +469,7 @@ mod tests {
 
     #[test]
     fn create_session_skips_allowlisted_and_protected_dirs() {
+        let _env = env_guard();
         let dir = fake_project();
         let spec = create_session(dir.path(), true).unwrap();
         assert!(!spec.work_dir.join("target").exists());
@@ -432,8 +480,9 @@ mod tests {
 
     #[test]
     fn bwrap_actually_runs_and_sees_the_work_copy() {
+        let _env = env_guard();
         if !bwrap_available() {
-            eprintln!("skipping: bwrap not on PATH");
+            eprintln!("skipping: bwrap cannot create a namespace here (not installed, or unprivileged user namespaces are blocked)");
             return;
         }
         let dir = fake_project();
@@ -454,6 +503,7 @@ mod tests {
 
     #[test]
     fn load_session_roundtrips_create_session() {
+        let _env = env_guard();
         let dir = fake_project();
         let spec = create_session(dir.path(), true).unwrap();
         let loaded = load_session(&spec.project_root, &spec.id).unwrap();

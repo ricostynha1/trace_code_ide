@@ -11,7 +11,6 @@ use super::tools::{ToolCall, builtin_tool_definitions};
 use super::tool_executor::{self, AgentPermissions};
 use crate::parser::SymbolTable;
 use crate::state::AppState;
-use crate::trace_graph::TraceGraph;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 
@@ -70,13 +69,12 @@ pub fn handle_request(
     project_root: &Path,
     state: &mut AppState,
     symbols: &SymbolTable,
-    graph: &TraceGraph,
     permissions: &AgentPermissions,
 ) -> JsonRpcResponse {
     match request.method.as_str() {
         "initialize" => handle_initialize(request),
         "tools/list" => handle_tools_list(request),
-        "tools/call" => handle_tools_call(request, project_root, state, symbols, graph, permissions),
+        "tools/call" => handle_tools_call(request, project_root, state, symbols, permissions),
         _ => JsonRpcResponse {
             jsonrpc: "2.0".into(),
             id: request.id.clone(),
@@ -128,7 +126,6 @@ fn handle_tools_call(
     project_root: &Path,
     state: &mut AppState,
     symbols: &SymbolTable,
-    graph: &TraceGraph,
     permissions: &AgentPermissions,
 ) -> JsonRpcResponse {
     // Extract tool name and arguments from params
@@ -144,7 +141,7 @@ fn handle_tools_call(
         arguments,
     };
 
-    let result = tool_executor::execute_tool(&call, project_root, state, symbols, graph, permissions);
+    let result = tool_executor::execute_tool(&call, project_root, state, symbols, permissions);
 
     let mcp_result = serde_json::json!({
         "content": [{

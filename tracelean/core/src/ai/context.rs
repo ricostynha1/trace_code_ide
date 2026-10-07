@@ -1,19 +1,31 @@
-//! Context assembler — pulls from trace graph to build AI request context.
-//! Respects token budget, ranks by relevance to target requirement/file.
+//! Context assembler: what to put in front of the model when the subject is a
+//! requirement or a file.
+//!
+//! It reads the annotation index, not a second graph and not the file system's
+//! shape. The previous version did both: it asked the trace graph for linked
+//! code, and it found the requirement and its model by *building paths* --
+//! `reqs/REQ-01.md`, `specs/REQ-01.lean`. That is the filename convention this
+//! project exists to replace. On a project laid out any other way, which is
+//! every project, it silently assembled nothing and the model was asked to
+//! reason about a requirement it had never been shown.
 
 use crate::state::AppState;
-use crate::trace_graph::TraceGraph;
+use crate::trace::{Role, TraceIndex};
 use super::templates::AssembledContext;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 /// Default token budget (characters / 4 estimate).
 const DEFAULT_TOKEN_BUDGET: u32 = 8000;
 
-/// Assemble context for a requirement target.
-/// Pulls: requirement text → linked spec → linked code → linked tests.
+/// Assemble context for a requirement: its own text, then the files annotated
+/// as its model, implementation and tests.
+///
+/// Ordered by role rather than by file: the model is what the requirement
+/// *means*, so it goes in before an implementation detail when the budget is
+/// tight.
 pub fn assemble_for_requirement(
     state: &AppState,
-    graph: &TraceGraph,
+    index: &TraceIndex,
     req_id: &str,
     token_budget: Option<u32>,
 ) -> AssembledContext {
@@ -21,44 +33,33 @@ pub fn assemble_for_requirement(
     let mut ctx = AssembledContext::new();
     let root = state.project_root().cloned().unwrap_or_default();
 
-    // 1. Requirement text (highest priority)
-    let req_path = root.join("reqs").join(format!("{}.md", req_id));
-    if let Ok(content) = std::fs::read_to_string(&req_path) {
-        ctx.requirement = Some(content.clone());
-        ctx.estimated_tokens += content.len() as u32 / 4;
-    }
-
-    // 2. Linked spec
-    let spec_path = root.join("specs").join(format!("{}.lean", req_id));
-    if let Ok(content) = std::fs::read_to_string(&spec_path) {
-        ctx.spec = Some(content.clone());
-        ctx.estimated_tokens += content.len() as u32 / 4;
-    }
-
-    // 3. Linked code elements (via trace graph)
-    if let Some(trace) = graph.query_requirement_owned(req_id) {
-        for code_elem in &trace.code {
-            if ctx.estimated_tokens >= budget {
-                break;
-            }
-            let code_path = code_elem.file.to_string_lossy().to_string();
-            let full_path = root.join(&code_elem.file);
-            if let Ok(content) = std::fs::read_to_string(&full_path) {
-                let lang = extension_to_language(&code_path);
-                ctx.add_file(code_path, truncate_to_budget(&content, budget - ctx.estimated_tokens), lang);
-            }
+    if let Some(requirement) = index.requirements.get(req_id) {
+        if let Ok(content) = std::fs::read_to_string(root.join(&requirement.file)) {
+            ctx.estimated_tokens += content.len() as u32 / 4;
+            ctx.requirement = Some(content);
         }
+    }
 
-        // 4. Linked tests
-        for test in &trace.tests {
-            if ctx.estimated_tokens >= budget {
-                break;
+    let mut seen: Vec<std::path::PathBuf> = Vec::new();
+    for role in [Role::Models, Role::Implements, Role::Tests, Role::Drt, Role::Proves] {
+        for link in index.links.iter().filter(|l| l.req_id == req_id && l.role == role) {
+            if ctx.estimated_tokens >= budget || seen.contains(&link.anchor.file) {
+                continue;
             }
-            let test_path = test.file.to_string_lossy().to_string();
-            let full_path = root.join(&test.file);
-            if let Ok(content) = std::fs::read_to_string(&full_path) {
-                let lang = extension_to_language(&test_path);
-                ctx.add_file(test_path, truncate_to_budget(&content, budget - ctx.estimated_tokens), lang);
+            let Ok(content) = std::fs::read_to_string(root.join(&link.anchor.file)) else {
+                continue;
+            };
+            seen.push(link.anchor.file.clone());
+            let display = link.anchor.file.to_string_lossy().to_string();
+            let language = extension_to_language(&display);
+            let truncated = truncate_to_budget(&content, budget - ctx.estimated_tokens);
+            ctx.estimated_tokens += truncated.len() as u32 / 4;
+            // The Lean model is the requirement made executable, so it goes in
+            // the slot the templates treat as the specification.
+            if role == Role::Models && ctx.spec.is_none() {
+                ctx.spec = Some(truncated);
+            } else {
+                ctx.add_file(display, truncated, language);
             }
         }
     }
@@ -66,11 +67,11 @@ pub fn assemble_for_requirement(
     ctx
 }
 
-/// Assemble context for a specific file (code element target).
-/// Pulls: the file itself → linked requirement → linked spec.
+/// Assemble context for a file: the file itself, then the requirements
+/// annotated in it and the models those requirements have.
 pub fn assemble_for_file(
     state: &AppState,
-    graph: &TraceGraph,
+    index: &TraceIndex,
     file_path: &str,
     token_budget: Option<u32>,
 ) -> AssembledContext {
@@ -78,30 +79,42 @@ pub fn assemble_for_file(
     let mut ctx = AssembledContext::new();
     let root = state.project_root().cloned().unwrap_or_default();
 
-    // 1. The file itself
-    let full_path = root.join(file_path);
-    if let Ok(content) = std::fs::read_to_string(&full_path) {
-        let lang = extension_to_language(file_path);
-        ctx.add_file(file_path.to_string(), truncate_to_budget(&content, budget), lang);
+    if let Ok(content) = std::fs::read_to_string(root.join(file_path)) {
+        let language = extension_to_language(file_path);
+        let truncated = truncate_to_budget(&content, budget);
+        ctx.estimated_tokens += truncated.len() as u32 / 4;
+        ctx.add_file(file_path.to_string(), truncated, language);
     }
 
-    // 2. Try to find linked requirement via code trace
-    // Use empty name to match any code element in this file
-    if let Some(trace) = graph.query_code_element_owned(&PathBuf::from(file_path), "") {
-        if let Some(req) = trace.requirements.first() {
-            let req_id = &req.id;
-            let req_path = root.join("reqs").join(format!("{}.md", req_id));
-            if let Ok(content) = std::fs::read_to_string(&req_path) {
-                if ctx.estimated_tokens < budget {
+    // Which requirements this file claims to serve -- from the annotations in
+    // it, which is the only thing that knows.
+    let here: Vec<&str> = index
+        .links
+        .iter()
+        .filter(|l| l.anchor.file == Path::new(file_path))
+        .map(|l| l.req_id.as_str())
+        .collect();
+
+    for req_id in here {
+        if ctx.estimated_tokens >= budget {
+            break;
+        }
+        if ctx.requirement.is_none() {
+            if let Some(requirement) = index.requirements.get(req_id) {
+                if let Ok(content) = std::fs::read_to_string(root.join(&requirement.file)) {
                     let truncated = truncate_to_budget(&content, budget - ctx.estimated_tokens);
                     ctx.estimated_tokens += truncated.len() as u32 / 4;
                     ctx.requirement = Some(truncated);
                 }
             }
-            // Linked spec
-            let spec_path = root.join("specs").join(format!("{}.lean", req_id));
-            if let Ok(content) = std::fs::read_to_string(&spec_path) {
-                if ctx.estimated_tokens < budget {
+        }
+        if ctx.spec.is_none() {
+            let model = index
+                .links
+                .iter()
+                .find(|l| l.req_id == req_id && l.role == Role::Models);
+            if let Some(model) = model {
+                if let Ok(content) = std::fs::read_to_string(root.join(&model.anchor.file)) {
                     let truncated = truncate_to_budget(&content, budget - ctx.estimated_tokens);
                     ctx.estimated_tokens += truncated.len() as u32 / 4;
                     ctx.spec = Some(truncated);

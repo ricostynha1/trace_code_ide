@@ -1,0 +1,11 @@
+{
+  "severity": {},
+  "require": [],
+  "block_on": [
+    "dangling",
+    "broken-anchor",
+    "divergence",
+    "unsound-exemption",
+    "unsound-qualifier"
+  ]
+}

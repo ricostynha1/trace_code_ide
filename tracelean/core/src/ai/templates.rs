@@ -205,7 +205,7 @@ pub fn repair_template() -> PromptTemplate {
         system_prompt: "You are a debugging expert working inside the TraceLean IDE. Given a violation (test failure or spec mismatch), \
             suggest either a code fix or a spec update. Explain which is more appropriate and why.\n\n\
             You have access to the project environment via tools. Use read_file to inspect related files. \
-            Use query_trace_graph and query_code_element to understand traceability relationships. \
+            Use query_project_graph to understand traceability relationships. \
             Use search_files to find related code patterns.".into(),
         user_template: "Violation:\n{{violation}}\n\n\
             Current code:\n```{{language}}\n{{code}}\n```\n\n\

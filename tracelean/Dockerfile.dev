@@ -1,10 +1,25 @@
-# TraceLean IDE - Development Container
-# For building and testing without local toolchain
+# TraceLean — development and test container.
+#
+# The point of this image is that `make test` means the same thing on every
+# machine. TraceLean's test suite reaches outside Rust more than most: it
+# elaborates Lean, it spawns language servers, it runs a Python differential
+# adapter against a compiled Lean model. Each of those is a toolchain someone
+# has to install, at a version that has to match, and "works on my laptop" is
+# the failure this image removes.
+#
+#   docker compose run --rm dev            # a shell with everything installed
+#   docker compose run --rm test           # the full suite
+#
+# Debian trixie, not bookworm: the prebuilt onnxruntime pulled in transitively
+# by fastembed references __isoc23_* symbol versions that need glibc >= 2.38,
+# and linking `cargo test` fails on bookworm's 2.36 with "undefined reference
+# to `__isoc23_strtoull`".
+FROM rust:1.95-trixie
 
-FROM rust:1.88-bookworm
-
-# Install system deps for Tauri (Linux) and tree-sitter-lean4 build (cc)
-RUN apt-get update && apt-get install -y \
+# Tauri's webkit stack, plus `cc` for the tree-sitter grammars, plus python3
+# because the example's implementation is Python and TraceLean's differential-
+# testing runner calls it directly, so the suite actually runs it.
+RUN apt-get update && apt-get install -y --no-install-recommends \
     libwebkit2gtk-4.1-dev \
     libgtk-3-dev \
     librsvg2-dev \
@@ -14,40 +29,100 @@ RUN apt-get update && apt-get install -y \
     libssl-dev \
     pkg-config \
     build-essential \
+    bubblewrap \
+    ca-certificates \
     curl \
-    wget \
-    file \
+    git \
+    python3 \
+    python3-venv \
+    python3-coverage \
     xdg-utils \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Node.js 22
+# Node 22, for the frontend build and its vitest suite.
 RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
-    && apt-get install -y nodejs \
+    && apt-get install -y --no-install-recommends nodejs \
     && rm -rf /var/lib/apt/lists/*
 
-# Install elan (Lean 4 toolchain manager)
-RUN curl -sSf https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y --default-toolchain leanprover/lean4:stable
-ENV PATH="/root/.elan/bin:${PATH}"
+# The Python language server, so `lsp_status` reports a running server rather
+# than an install hint. `pyright-langserver` is the first candidate the registry
+# tries; `ruff server` is the fallback and is not installed here.
+RUN npm install -g pyright@1.1.403
 
-# Install tauri-cli
-RUN cargo install tauri-cli --version "^2"
-
-
-WORKDIR /app
-
-# Create non-root user
-RUN useradd -m -u 10001 tracelean
-
-# Move elan to user home and fix ownership
-RUN mv /root/.elan /home/tracelean/.elan \
-    && chown -R tracelean:tracelean /home/tracelean/.elan
-
+# --- Lean ---------------------------------------------------------------
+#
+# Pinned to the toolchain `example/formal/lean-toolchain` names. elan would
+# fetch it on first use anyway, but doing it here means a test run does not
+# start with a several-hundred-megabyte download, and an offline machine still
+# works. Installed as the user that will run it, so nothing has to be moved
+# between homes afterwards.
+ENV ELAN_HOME=/home/tracelean/.elan
 ENV PATH="/home/tracelean/.elan/bin:${PATH}"
 
-# Chown workdir to non-root user
-RUN chown -R tracelean:tracelean /app
+# UID 10001 is fixed for predictability with host bind-mounts; override with
+# `--build-arg UID=$(id -u)` when the host user is not 1000-something.
+ARG UID=10001
+RUN useradd -m -u ${UID} tracelean
 
-# Note: UID 10001 used for predictability with host bind-mounts.
-# Host UID/GID mismatches may require adjusting this value.
 USER tracelean
+# `--default-toolchain` only records the preference; it does not always fetch.
+# The explicit install plus the version check is what makes a missing Lean a
+# failed *build* rather than a surprise on the first test run.
+RUN curl -sSf https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh \
+    | sh -s -- -y --default-toolchain none \
+    && elan toolchain install leanprover/lean4:v4.12.0 \
+    && elan default leanprover/lean4:v4.12.0 \
+    && lean --version \
+    && lake --version
+
+# Every component rust-toolchain.toml asks for, installed here rather than
+# fetched on the first `cargo` invocation — which happens as the non-root user
+# against a root-owned RUSTUP_HOME and fails.
+USER root
+RUN rustup component add rust-analyzer rustfmt clippy llvm-tools && rust-analyzer --version
+
+# Code coverage. Distinct from the two coverage numbers TraceLean computes
+# itself -- requirement coverage, and the input-constructor coverage a
+# differential run has to clear -- and complementary to them: those say whether
+# a clause has evidence, this says whether the code that evidence is about was
+# executed at all. `--locked` so the image does not drift with the registry.
+# `--root /usr/local` puts the binary in /usr/local/bin, which stays on PATH
+# after CARGO_HOME moves into the user's home a few lines below. `--locked` and
+# a pinned version so the image does not drift with the registry.
+RUN cargo install cargo-llvm-cov --locked --version 0.6.16 --root /usr/local \
+    && cargo llvm-cov --version
+
+# CARGO_HOME moves into the user's home. The base image puts it at
+# /usr/local/cargo, which is root-owned; docker-compose mounts a named volume
+# over its `registry/` and Docker initialises that volume from the image
+# *preserving ownership*, so a `chmod` in this file is shadowed and every
+# `cargo` run fails with "Permission denied" on the registry cache.
+ENV CARGO_HOME=/home/tracelean/.cargo
+RUN mkdir -p ${CARGO_HOME}/registry ${CARGO_HOME}/git \
+    && chown -R tracelean:tracelean ${CARGO_HOME}
+
+WORKDIR /app
+# `target/` has to exist here, owned by the user that will write to it. Docker
+# initialises a named volume from whatever is at its mount point in the image,
+# ownership included — so an absent directory becomes a root-owned volume and
+# every `cargo build` in the container fails with "Permission denied".
+RUN mkdir -p /app/target && chown -R tracelean:tracelean /app
+
+# Every toolchain the suite reaches for, checked in the image rather than
+# discovered missing in a test run. A container that builds green and then
+# cannot elaborate Lean is the same lie as a dashboard that reports a passing
+# check nobody ran.
+USER tracelean
+RUN rustc --version \
+    && cargo --version \
+    && node --version \
+    && python3 --version \
+    && lean --version \
+    && rust-analyzer --version \
+    && pyright --version \
+    && command -v pyright-langserver \
+    && cargo llvm-cov --version \
+    && python3 -m coverage --version \
+    && bwrap --version
+
 CMD ["bash"]

@@ -356,7 +356,7 @@ mod tests {
             ("what functions are in search.rs", "get_symbols"),
             ("delete the temp file", "delete_file"),
             ("search for authentication code", "find_semantic"),
-            ("what implements REQ-01", "query_trace_graph"),
+            ("what implements REQ-01", "query_project_graph"),
             ("show project structure", "list_directory"),
             ("User: add 'hello' to end of every req file", "edit_file"),
             ("count how many lines in main.rs", "read_file"),
@@ -552,7 +552,7 @@ mod tests {
         let index = ToolIndex::new(&schemas);
         let selected = index.select("show traceability for REQ-02", None);
         let n = names(&selected);
-        let has_trace = n.contains(&"query_trace_graph") || n.contains(&"list_requirements");
+        let has_trace = n.contains(&"query_project_graph") || n.contains(&"list_requirements");
         assert!(has_trace, "Expected traceability tool in {:?}", n);
     }
 

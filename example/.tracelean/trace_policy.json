@@ -1,0 +1,23 @@
+{
+  "block_on": [
+    "dangling",
+    "broken-anchor",
+    "divergence",
+    "unsound-exemption",
+    "unsound-qualifier"
+  ],
+  "require": [
+    {
+      "match": "REQ-CHECKOUT",
+      "min_level": "L3",
+      "bond": "model-impl"
+    },
+    {
+      "match": "REQ-DISCOUNT",
+      "min_level": "L3",
+      "bond": "model-impl"
+    }
+  ],
+  "severity": {},
+  "high_value": []
+}

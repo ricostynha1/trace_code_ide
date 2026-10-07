@@ -763,7 +763,7 @@ mod tests {
     fn test_offload_large_content() {
         let mut engine = make_engine();
         let large = "x".repeat(20000);
-        let (id, path) = engine.offload_content(&large, 5000, Vec::new());
+        let (_id, path) = engine.offload_content(&large, 5000, Vec::new());
 
         assert!(engine.user_view.entries[0].offloaded);
         assert!(engine.user_view.entries[0].content.contains("OFFLOADED"));

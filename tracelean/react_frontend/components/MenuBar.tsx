@@ -8,10 +8,12 @@ interface MenuBarProps {
   reqsPanelVisible: boolean;
   onToggleAiChat: () => void;
   aiChatVisible: boolean;
-  onToggleTraceDashboard: () => void;
-  traceDashVisible: boolean;
+  onToggleProjectGraph: () => void;
+  projectGraphVisible: boolean;
   onToggleSandbox: () => void;
   sandboxVisible: boolean;
+  onToggleLean: () => void;
+  leanVisible: boolean;
 }
 
 export function MenuBar({
@@ -22,10 +24,12 @@ export function MenuBar({
   reqsPanelVisible,
   onToggleAiChat,
   aiChatVisible,
-  onToggleTraceDashboard,
-  traceDashVisible,
+  onToggleProjectGraph,
+  projectGraphVisible,
   onToggleSandbox,
   sandboxVisible,
+  onToggleLean,
+  leanVisible,
 }: MenuBarProps) {
   const handleOpenFolder = async () => {
     try {
@@ -69,16 +73,24 @@ export function MenuBar({
         Undo Tree
       </button>
       <button
-        onClick={onToggleTraceDashboard}
-        className={traceDashVisible ? "active" : ""}
+        onClick={onToggleProjectGraph}
+        className={projectGraphVisible ? "active" : ""}
+        title="The code, tinted by which requirement it serves and how much is known about it"
       >
-        Trace Graph
+        Project
       </button>
       <button
         onClick={onToggleAiChat}
         className={aiChatVisible ? "active" : ""}
       >
         AI Chat
+      </button>
+      <button
+        onClick={onToggleLean}
+        className={leanVisible ? "active" : ""}
+        title="Lean proof state at the cursor, from the language server"
+      >
+        Lean
       </button>
       <button
         onClick={onToggleSandbox}

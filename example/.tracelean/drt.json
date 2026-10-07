@@ -1,0 +1,429 @@
+{
+  "bindings": [
+    {
+      "req_id": "REQ-CHECKOUT",
+      "clause": "total",
+      "op": "REQ-CHECKOUT.total",
+      "model": {
+        "cmd": [
+          ".tracelean/drt/.lake/build/bin/drtRunner"
+        ],
+        "cwd": null,
+        "env": {}
+      },
+      "implementation": {
+        "language": "python",
+        "entry": "engine/pricing.py::price",
+        "params": {
+          "subtotalCents": "subtotal_cents"
+        }
+      },
+      "input": {
+        "type": "struct",
+        "fields": {
+          "remote": {
+            "type": "bool"
+          },
+          "subtotalCents": {
+            "type": "nat",
+            "max": null,
+            "edges": [
+              0,
+              1,
+              9,
+              10,
+              11,
+              14,
+              15,
+              16,
+              99,
+              100,
+              101,
+              399,
+              400,
+              401,
+              598,
+              599,
+              600,
+              4999,
+              5000,
+              5001,
+              9999,
+              10000,
+              10001,
+              19999,
+              20000,
+              20001
+            ]
+          }
+        }
+      },
+      "coverage_floor": {
+        "kind": "all-input-constructors"
+      }
+    },
+    {
+      "req_id": "REQ-DISCOUNT",
+      "clause": "tiers",
+      "op": "REQ-DISCOUNT.tiers",
+      "model": {
+        "cmd": [
+          ".tracelean/drt/.lake/build/bin/drtRunner"
+        ],
+        "cwd": null,
+        "env": {}
+      },
+      "implementation": {
+        "language": "python",
+        "entry": "engine/pricing.py::discount_cents",
+        "params": {
+          "subtotal": "subtotal_cents"
+        }
+      },
+      "input": {
+        "type": "struct",
+        "fields": {
+          "subtotal": {
+            "type": "nat",
+            "max": null,
+            "edges": [
+              0,
+              1,
+              9,
+              10,
+              11,
+              14,
+              15,
+              16,
+              99,
+              100,
+              101,
+              399,
+              400,
+              401,
+              598,
+              599,
+              600,
+              4999,
+              5000,
+              5001,
+              9999,
+              10000,
+              10001,
+              19999,
+              20000,
+              20001
+            ]
+          }
+        }
+      },
+      "coverage_floor": {
+        "kind": "all-input-constructors"
+      }
+    },
+    {
+      "req_id": "REQ-DISCOUNT",
+      "clause": "rounding",
+      "op": "REQ-DISCOUNT.rounding",
+      "model": {
+        "cmd": [
+          ".tracelean/drt/.lake/build/bin/drtRunner"
+        ],
+        "cwd": null,
+        "env": {}
+      },
+      "implementation": {
+        "language": "python",
+        "entry": "engine/pricing.py::discount_cents",
+        "params": {
+          "subtotal": "subtotal_cents"
+        }
+      },
+      "input": {
+        "type": "struct",
+        "fields": {
+          "subtotal": {
+            "type": "nat",
+            "max": null,
+            "edges": [
+              0,
+              1,
+              9,
+              10,
+              11,
+              14,
+              15,
+              16,
+              99,
+              100,
+              101,
+              399,
+              400,
+              401,
+              598,
+              599,
+              600,
+              4999,
+              5000,
+              5001,
+              9999,
+              10000,
+              10001,
+              19999,
+              20000,
+              20001
+            ]
+          }
+        }
+      },
+      "coverage_floor": {
+        "kind": "all-input-constructors"
+      }
+    },
+    {
+      "req_id": "REQ-SHIPPING",
+      "clause": "free",
+      "op": "REQ-SHIPPING.free",
+      "model": {
+        "cmd": [
+          ".tracelean/drt/.lake/build/bin/drtRunner"
+        ],
+        "cwd": null,
+        "env": {}
+      },
+      "implementation": {
+        "language": "python",
+        "entry": "engine/pricing.py::shipping_cents",
+        "params": {
+          "afterDiscount": "after_discount_cents"
+        }
+      },
+      "input": {
+        "type": "struct",
+        "fields": {
+          "afterDiscount": {
+            "type": "nat",
+            "max": null,
+            "edges": [
+              0,
+              1,
+              9,
+              10,
+              11,
+              14,
+              15,
+              16,
+              99,
+              100,
+              101,
+              399,
+              400,
+              401,
+              598,
+              599,
+              600,
+              4999,
+              5000,
+              5001,
+              9999,
+              10000,
+              10001,
+              19999,
+              20000,
+              20001
+            ]
+          },
+          "remote": {
+            "type": "bool"
+          }
+        }
+      },
+      "coverage_floor": {
+        "kind": "all-input-constructors"
+      }
+    },
+    {
+      "req_id": "REQ-SHIPPING",
+      "clause": "flat",
+      "op": "REQ-SHIPPING.flat",
+      "model": {
+        "cmd": [
+          ".tracelean/drt/.lake/build/bin/drtRunner"
+        ],
+        "cwd": null,
+        "env": {}
+      },
+      "implementation": {
+        "language": "python",
+        "entry": "engine/pricing.py::shipping_cents",
+        "params": {
+          "afterDiscount": "after_discount_cents"
+        }
+      },
+      "input": {
+        "type": "struct",
+        "fields": {
+          "afterDiscount": {
+            "type": "nat",
+            "max": null,
+            "edges": [
+              0,
+              1,
+              9,
+              10,
+              11,
+              14,
+              15,
+              16,
+              99,
+              100,
+              101,
+              399,
+              400,
+              401,
+              598,
+              599,
+              600,
+              4999,
+              5000,
+              5001,
+              9999,
+              10000,
+              10001,
+              19999,
+              20000,
+              20001
+            ]
+          },
+          "remote": {
+            "type": "bool"
+          }
+        }
+      },
+      "coverage_floor": {
+        "kind": "all-input-constructors"
+      }
+    },
+    {
+      "req_id": "REQ-SHIPPING",
+      "clause": "remote",
+      "op": "REQ-SHIPPING.remote",
+      "model": {
+        "cmd": [
+          ".tracelean/drt/.lake/build/bin/drtRunner"
+        ],
+        "cwd": null,
+        "env": {}
+      },
+      "implementation": {
+        "language": "python",
+        "entry": "engine/pricing.py::shipping_cents",
+        "params": {
+          "afterDiscount": "after_discount_cents"
+        }
+      },
+      "input": {
+        "type": "struct",
+        "fields": {
+          "afterDiscount": {
+            "type": "nat",
+            "max": null,
+            "edges": [
+              0,
+              1,
+              9,
+              10,
+              11,
+              14,
+              15,
+              16,
+              99,
+              100,
+              101,
+              399,
+              400,
+              401,
+              598,
+              599,
+              600,
+              4999,
+              5000,
+              5001,
+              9999,
+              10000,
+              10001,
+              19999,
+              20000,
+              20001
+            ]
+          },
+          "remote": {
+            "type": "bool"
+          }
+        }
+      },
+      "coverage_floor": {
+        "kind": "all-input-constructors"
+      }
+    },
+    {
+      "req_id": "REQ-DISCOUNT",
+      "clause": "cap",
+      "op": "REQ-DISCOUNT.cap",
+      "model": {
+        "cmd": [
+          ".tracelean/drt/.lake/build/bin/drtRunner"
+        ],
+        "cwd": null,
+        "env": {}
+      },
+      "implementation": {
+        "language": "python",
+        "entry": "engine/pricing.py::capped_discount_cents",
+        "params": {
+          "subtotal": "subtotal_cents"
+        }
+      },
+      "input": {
+        "type": "struct",
+        "fields": {
+          "subtotal": {
+            "type": "nat",
+            "max": null,
+            "edges": [
+              0,
+              1,
+              9,
+              10,
+              11,
+              14,
+              15,
+              16,
+              99,
+              100,
+              101,
+              399,
+              400,
+              401,
+              598,
+              599,
+              600,
+              4999,
+              5000,
+              5001,
+              9999,
+              10000,
+              10001,
+              19999,
+              20000,
+              20001
+            ]
+          }
+        }
+      },
+      "coverage_floor": {
+        "kind": "all-input-constructors"
+      }
+    }
+  ]
+}

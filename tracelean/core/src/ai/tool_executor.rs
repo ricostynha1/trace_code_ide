@@ -5,7 +5,6 @@ use super::tools::{ToolCall, ToolResult};
 use crate::commands::Command;
 use crate::parser::SymbolTable;
 use crate::state::AppState;
-use crate::trace_graph::TraceGraph;
 use std::path::{Path, PathBuf};
 
 /// Agent permissions — which tools/files/commands an agent can access.
@@ -182,7 +181,6 @@ pub fn execute_tool(
     project_root: &Path,
     state: &mut AppState,
     symbols: &SymbolTable,
-    graph: &TraceGraph,
     permissions: &AgentPermissions,
 ) -> ToolResult {
     execute_tool_with_index(
@@ -190,7 +188,6 @@ pub fn execute_tool(
         project_root,
         state,
         symbols,
-        graph,
         permissions,
         &None,
     )
@@ -202,7 +199,6 @@ pub fn execute_tool_with_index(
     project_root: &Path,
     state: &mut AppState,
     symbols: &SymbolTable,
-    graph: &TraceGraph,
     permissions: &AgentPermissions,
     embed_index: &Option<SharedIndex>,
 ) -> ToolResult {
@@ -211,7 +207,6 @@ pub fn execute_tool_with_index(
         project_root,
         state,
         symbols,
-        graph,
         permissions,
         embed_index,
         None,
@@ -225,7 +220,6 @@ pub fn execute_tool_reviewed(
     project_root: &Path,
     state: &mut AppState,
     symbols: &SymbolTable,
-    graph: &TraceGraph,
     permissions: &AgentPermissions,
     embed_index: &Option<SharedIndex>,
     review: Option<&mut ReviewSink>,
@@ -271,8 +265,8 @@ pub fn execute_tool_reviewed(
         "replace_str" => execute_str_replace(call, project_root, state, permissions, review),
         "delete_file" => execute_delete_file(call, project_root, state, permissions),
         "list_directory" => execute_list_directory(call, project_root),
-        "query_trace_graph" => execute_query_trace(call, graph),
-        "query_code_element" => execute_query_code(call, graph),
+        "query_project_graph" => execute_query_project_graph(call, project_root),
+        "lsp_query" => execute_lsp_query(call, project_root),
         "list_requirements" => execute_list_requirements(project_root),
         "get_symbols" => execute_get_symbols(call, symbols),
         "run_shell" => execute_run_shell(call, project_root, state, permissions, review),
@@ -1276,65 +1270,116 @@ fn execute_help_tool(call: &ToolCall) -> ToolResult {
 
 // emit_command removed — agents use edit_file/str_replace directly
 
-fn execute_query_trace(call: &ToolCall, graph: &TraceGraph) -> ToolResult {
-    let req_id = match get_str_arg(call, "req_id") {
-        Some(id) => id,
-        None => {
-            return ToolResult {
-                success: false,
-                content: "Missing 'req_id' argument. Expected: query_trace_graph(req_id)".into(),
-                data: None,
-            }
-        }
-    };
+/// Answer a question about the project graph: what a requirement is bound to,
+/// or what a piece of code is for.
+///
+/// This replaces `query_trace_graph` and `query_code_element`, which read a
+/// separate in-memory graph built by a second scanner. Two scanners over the
+/// same project is two answers to every question, and the agent was reading the
+/// one that knew nothing about evidence, staleness or findings.
+fn execute_query_project_graph(call: &ToolCall, project_root: &Path) -> ToolResult {
+    let index = crate::trace::build(project_root);
+    let graph = crate::trace::graph::build(
+        project_root,
+        &index,
+        &index.findings,
+        crate::trace::graph::DEFAULT_DECLARATION_CAP,
+    );
 
-    match graph.query_requirement_owned(&req_id) {
-        Some(trace) => ToolResult {
-            success: true,
-            content: serde_json::to_string_pretty(&trace).unwrap_or_default(),
-            data: Some(serde_json::to_value(&trace).unwrap_or_default()),
-        },
-        None => ToolResult {
+    let req_id = get_str_arg(call, "req_id");
+    let file = get_str_arg(call, "file");
+    let symbol = get_str_arg(call, "symbol");
+
+    let matches: Vec<&crate::trace::graph::GraphNode> = graph
+        .nodes
+        .iter()
+        .filter(|node| {
+            if let Some(req) = &req_id {
+                let hit = node
+                    .requirements
+                    .iter()
+                    .any(|r| r == req || r.starts_with(&format!("{req}.")));
+                if !hit {
+                    return false;
+                }
+            }
+            if let Some(file) = &file {
+                if node.file.to_string_lossy() != *file {
+                    return false;
+                }
+            }
+            if let Some(symbol) = &symbol {
+                if &node.name != symbol {
+                    return false;
+                }
+            }
+            // With no filter at all, the whole graph is the answer, which is
+            // rarely what was meant and always too long. Restrict it to the
+            // files, so the reply is a map rather than a dump.
+            req_id.is_some()
+                || file.is_some()
+                || symbol.is_some()
+                || node.kind == crate::trace::graph::NodeKind::File
+        })
+        .collect();
+
+    if matches.is_empty() {
+        let asked = [
+            req_id.as_ref().map(|r| format!("req_id={r}")),
+            file.as_ref().map(|f| format!("file={f}")),
+            symbol.as_ref().map(|s| format!("symbol={s}")),
+        ]
+        .into_iter()
+        .flatten()
+        .collect::<Vec<_>>()
+        .join(", ");
+        return ToolResult {
             success: false,
-            content: format!("Requirement '{}' not found in trace graph.", req_id),
+            content: format!(
+                "Nothing in the project graph matches {asked}. Note that a requirement with \
+                 no annotation anywhere has no code node at all -- that is a finding, not an \
+                 error in the query."
+            ),
             data: None,
-        },
+        };
     }
-}
 
-fn execute_query_code(call: &ToolCall, graph: &TraceGraph) -> ToolResult {
-    let file = match get_str_arg(call, "file") {
-        Some(f) => f,
-        None => {
-            return ToolResult {
-                success: false,
-                content: "Missing 'file' argument. Expected: query_code_element(file, name)".into(),
-                data: None,
-            }
-        }
-    };
-    let name = match get_str_arg(call, "name") {
-        Some(n) => n,
-        None => {
-            return ToolResult {
-                success: false,
-                content: "Missing 'name' argument. Expected: query_code_element(file, name)".into(),
-                data: None,
-            }
-        }
-    };
+    let content = matches
+        .iter()
+        .map(|node| {
+            let requirements = if node.requirements.is_empty() {
+                "untraced".to_string()
+            } else {
+                format!(
+                    "{} [{}]",
+                    node.requirements.join(", "),
+                    node.assurance
+                        .map(|a| a.as_str().to_string())
+                        .unwrap_or_else(|| "L1".into())
+                )
+            };
+            let findings = if node.findings.is_empty() {
+                String::new()
+            } else {
+                format!(" | {} finding(s)", node.findings.len())
+            };
+            let stale = if node.stale { " | STALE" } else { "" };
+            format!(
+                "{} ({:?}, {}:{}-{}) {requirements}{findings}{stale}",
+                node.id,
+                node.kind,
+                node.file.display(),
+                node.start_line + 1,
+                node.end_line + 1
+            )
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
 
-    match graph.query_code_element_owned(&PathBuf::from(&file), &name) {
-        Some(trace) => ToolResult {
-            success: true,
-            content: serde_json::to_string_pretty(&trace).unwrap_or_default(),
-            data: Some(serde_json::to_value(&trace).unwrap_or_default()),
-        },
-        None => ToolResult {
-            success: false,
-            content: format!("Code element '{}' in '{}' not found.", name, file),
-            data: None,
-        },
+    ToolResult {
+        success: true,
+        content,
+        data: Some(serde_json::to_value(&matches).unwrap_or_default()),
     }
 }
 
@@ -1386,10 +1431,10 @@ fn execute_get_symbols(call: &ToolCall, symbols: &SymbolTable) -> ToolResult {
 
 /// Any tool's output beyond either bound is spilled to a log file instead of
 /// returned inline, so a large `grep`/build log, symbol dump, requirements
-/// list, or trace-graph query can't blow the context window. Originally
+/// list, or project-graph query can't blow the context window. Originally
 /// shell-only (item 3); generalized to a single choke point in
 /// `execute_tool_reviewed` after auditing the other tools' executors —
-/// `list_requirements`, `get_symbols`, `query_trace_graph`/`query_code_element`,
+/// `list_requirements`, `get_symbols`, `query_project_graph`,
 /// and `find_semantic` all had no byte cap either, just count caps (or none at
 /// all), so a big-enough project could inundate the model through any of them.
 /// `read_file` is deliberately exempted: it already owns dedicated line-based
@@ -2152,7 +2197,6 @@ fn execute_find_semantic(call: &ToolCall, embed_index: &Option<SharedIndex>) -> 
 mod tests {
     use super::*;
     use crate::parser::{Symbol, SymbolKind, SymbolTable};
-    use crate::trace_graph::{ReqStatus, Requirement, TraceGraph};
     use serde_json::json;
     use std::path::PathBuf;
     use tempfile::TempDir;
@@ -2175,12 +2219,11 @@ mod tests {
         let tmp = TempDir::new().unwrap();
         let mut state = AppState::new();
         let symbols = SymbolTable::new();
-        let graph = TraceGraph::new();
         let perms = full_perms();
 
         // "path" is required by read_file's tools.json schema; omit it.
         let call = make_call("read_file", json!({"max_results": 10}));
-        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
+        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &perms);
         assert!(!result.success);
         assert!(result.content.contains("path"));
         assert!(result.content.contains("Usage:"));
@@ -2193,12 +2236,11 @@ mod tests {
         let tmp = TempDir::new().unwrap();
         let mut state = AppState::new();
         let symbols = SymbolTable::new();
-        let graph = TraceGraph::new();
         let perms = full_perms();
 
         // "path" must be a string per schema; send a number instead.
         let call = make_call("read_file", json!({"path": 5}));
-        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
+        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &perms);
         assert!(!result.success);
         assert!(result.content.contains("string"));
     }
@@ -2209,11 +2251,10 @@ mod tests {
         std::fs::write(tmp.path().join("f.txt"), "hi\n").unwrap();
         let mut state = AppState::new();
         let symbols = SymbolTable::new();
-        let graph = TraceGraph::new();
         let perms = full_perms();
 
         let call = make_call("read_file", json!({"path": "f.txt"}));
-        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
+        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &perms);
         assert!(result.success);
     }
 
@@ -2226,11 +2267,10 @@ mod tests {
 
         let mut state = AppState::new();
         let symbols = SymbolTable::new();
-        let graph = TraceGraph::new();
         let perms = full_perms();
 
         let call = make_call("read_file", json!({"path": "f.txt", "max_results": 200}));
-        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
+        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &perms);
         assert!(result.success);
         assert!(result.content.contains("line1"));
         assert!(result.content.contains("line3"));
@@ -2243,12 +2283,11 @@ mod tests {
 
         let mut state = AppState::new();
         let symbols = SymbolTable::new();
-        let graph = TraceGraph::new();
         let perms = full_perms();
 
         // offset=1, max_results=2 → lines b, c
         let call = make_call("read_file", json!({"path": "f.txt", "offset": 1, "max_results": 2}));
-        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
+        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &perms);
         assert!(result.success);
         assert!(result.content.contains("b"));
         assert!(result.content.contains("c"));
@@ -2267,11 +2306,10 @@ mod tests {
 
         let mut state = AppState::new();
         let symbols = SymbolTable::new();
-        let graph = TraceGraph::new();
         let perms = full_perms();
 
         let call = make_call("read_file", json!({"path": "giant.txt", "max_results": 2}));
-        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
+        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &perms);
         assert!(result.success);
         assert!(result.content.contains("[truncated, 2000/5000 chars shown]"));
         // The truncated line itself must actually be short in the response.
@@ -2291,12 +2329,11 @@ mod tests {
 
         let mut state = AppState::new();
         let symbols = SymbolTable::new();
-        let graph = TraceGraph::new();
         let perms = full_perms();
 
         // offset=-2, max_results=200 → last 2 lines (d, e)
         let call = make_call("read_file", json!({"path": "f.txt", "offset": -2, "max_results": 200}));
-        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
+        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &perms);
         assert!(result.success);
         assert!(result.content.contains("d"));
         assert!(result.content.contains("e"));
@@ -2307,11 +2344,10 @@ mod tests {
         let tmp = TempDir::new().unwrap();
         let mut state = AppState::new();
         let symbols = SymbolTable::new();
-        let graph = TraceGraph::new();
         let perms = full_perms();
 
         let call = make_call("read_file", json!({}));
-        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
+        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &perms);
         assert!(!result.success);
     }
 
@@ -2324,14 +2360,13 @@ mod tests {
 
         let mut state = AppState::new();
         let symbols = SymbolTable::new();
-        let graph = TraceGraph::new();
         let perms = full_perms();
 
         let call = make_call(
             "edit_file",
             json!({"path": "f.txt", "start": 0, "end": 0, "text": "// header\n"}),
         );
-        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
+        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &perms);
         assert!(result.success, "edit_file failed: {}", result.content);
 
         let on_disk = std::fs::read_to_string(tmp.path().join("f.txt")).unwrap();
@@ -2346,7 +2381,6 @@ mod tests {
 
         let mut state = AppState::new();
         let symbols = SymbolTable::new();
-        let graph = TraceGraph::new();
         let perms = full_perms();
 
         // -1 resolves to EOF
@@ -2354,7 +2388,7 @@ mod tests {
             "edit_file",
             json!({"path": "f.txt", "start": -1, "end": -1, "text": "// end\n"}),
         );
-        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
+        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &perms);
         assert!(result.success, "edit_file failed: {}", result.content);
 
         let on_disk = std::fs::read_to_string(tmp.path().join("f.txt")).unwrap();
@@ -2368,7 +2402,6 @@ mod tests {
 
         let mut state = AppState::new();
         let symbols = SymbolTable::new();
-        let graph = TraceGraph::new();
         let perms = full_perms();
 
         // Replace lines 1-3 (b, c, d) with "X\n"
@@ -2376,7 +2409,7 @@ mod tests {
             "edit_file",
             json!({"path": "f.txt", "start": 1, "end": 4, "text": "X\n"}),
         );
-        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
+        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &perms);
         assert!(result.success, "edit_file failed: {}", result.content);
 
         let on_disk = std::fs::read_to_string(tmp.path().join("f.txt")).unwrap();
@@ -2388,14 +2421,13 @@ mod tests {
         let tmp = TempDir::new().unwrap();
         let mut state = AppState::new();
         let symbols = SymbolTable::new();
-        let graph = TraceGraph::new();
         let perms = full_perms();
 
         let call = make_call(
             "edit_file",
             json!({"path": "new.txt", "start": 0, "end": 0, "text": "hello\n"}),
         );
-        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
+        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &perms);
         assert!(result.success, "edit_file failed: {}", result.content);
 
         let on_disk = std::fs::read_to_string(tmp.path().join("new.txt")).unwrap();
@@ -2409,7 +2441,6 @@ mod tests {
 
         let mut state = AppState::new();
         let symbols = SymbolTable::new();
-        let graph = TraceGraph::new();
         let perms = full_perms();
 
         let rel = PathBuf::from("f.txt");
@@ -2419,7 +2450,7 @@ mod tests {
             "edit_file",
             json!({"path": "f.txt", "start": 0, "end": 0, "text": "// added\n"}),
         );
-        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
+        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &perms);
         assert!(result.success);
 
         assert!(state.get_content(&rel).unwrap().contains("// added"));
@@ -2438,14 +2469,13 @@ mod tests {
 
         let mut state = AppState::new();
         let symbols = SymbolTable::new();
-        let graph = TraceGraph::new();
         let perms = full_perms();
 
         let call = make_call(
             "replace_str",
             json!({"path": "f.txt", "old_str": "world", "new_str": "rust"}),
         );
-        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
+        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &perms);
         assert!(result.success);
 
         let on_disk = std::fs::read_to_string(tmp.path().join("f.txt")).unwrap();
@@ -2459,14 +2489,13 @@ mod tests {
 
         let mut state = AppState::new();
         let symbols = SymbolTable::new();
-        let graph = TraceGraph::new();
         let perms = full_perms();
 
         let call = make_call(
             "replace_str",
             json!({"path": "f.txt", "old_str": "xyz", "new_str": "abc"}),
         );
-        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
+        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &perms);
         assert!(!result.success);
         assert!(result.content.contains("not found"));
     }
@@ -2478,7 +2507,6 @@ mod tests {
 
         let mut state = AppState::new();
         let symbols = SymbolTable::new();
-        let graph = TraceGraph::new();
         let perms = full_perms();
 
         state.load_file(PathBuf::from("f.txt"), "foo foo foo".into());
@@ -2486,7 +2514,7 @@ mod tests {
             "replace_str",
             json!({"path": "f.txt", "old_str": "foo", "new_str": "bar"}),
         );
-        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
+        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &perms);
         assert!(!result.success);
         assert!(result.content.contains("3 times"));
     }
@@ -2500,13 +2528,12 @@ mod tests {
         let tmp = TempDir::new().unwrap();
         let mut state = AppState::new();
         let symbols = SymbolTable::new();
-        let graph = TraceGraph::new();
         let perms = full_perms();
 
         let call = make_call("find_semantic", json!({"query": "auth handler"}));
         // execute_tool passes &None for the index, so this reports the index
         // isn't available yet rather than crashing.
-        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
+        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &perms);
         assert!(!result.success);
         assert!(result.content.contains("not available"));
     }
@@ -2516,12 +2543,11 @@ mod tests {
         let tmp = TempDir::new().unwrap();
         let mut state = AppState::new();
         let symbols = SymbolTable::new();
-        let graph = TraceGraph::new();
         let perms = full_perms();
 
         // Schema validation (required "query") rejects the call before dispatch.
         let call = make_call("find_semantic", json!({}));
-        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
+        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &perms);
         assert!(!result.success);
     }
 
@@ -2535,11 +2561,10 @@ mod tests {
 
         let mut state = AppState::new();
         let symbols = SymbolTable::new();
-        let graph = TraceGraph::new();
         let perms = full_perms();
 
         let call = make_call("list_directory", json!({}));
-        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
+        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &perms);
         assert!(result.success);
         assert!(result.content.contains("a.txt"));
         assert!(result.content.contains("sub/"));
@@ -2554,11 +2579,10 @@ mod tests {
 
         let mut state = AppState::new();
         let symbols = SymbolTable::new();
-        let graph = TraceGraph::new();
         let perms = full_perms();
 
         let call = make_call("delete_file", json!({"path": "del.txt"}));
-        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
+        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &perms);
         assert!(result.success);
         assert!(!tmp.path().join("del.txt").exists());
     }
@@ -2572,7 +2596,6 @@ mod tests {
 
         let mut state = AppState::new();
         let symbols = SymbolTable::new();
-        let graph = TraceGraph::new();
         let perms = AgentPermissions {
             agent_id: "restricted".into(),
             readable_paths: vec!["other/**".into()],
@@ -2580,7 +2603,7 @@ mod tests {
         };
 
         let call = make_call("read_file", json!({"path": "secret.txt"}));
-        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
+        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &perms);
         assert!(!result.success);
         assert!(result.content.to_lowercase().contains("denied"));
     }
@@ -2592,14 +2615,13 @@ mod tests {
 
         let mut state = AppState::new();
         let symbols = SymbolTable::new();
-        let graph = TraceGraph::new();
         let perms = AgentPermissions::read_only("ro-agent");
 
         let call = make_call(
             "edit_file",
             json!({"path": "f.txt", "start": 0, "end": 0, "text": "bad\n"}),
         );
-        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
+        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &perms);
         assert!(!result.success);
         assert!(
             result.content.to_lowercase().contains("denied")
@@ -2618,14 +2640,13 @@ mod tests {
 
         let mut state = AppState::new();
         let symbols = SymbolTable::new();
-        let graph = TraceGraph::new();
         let perms = AgentPermissions::read_only("ro-agent");
 
         let call = make_call(
             "replace_str",
             json!({"path": "f.txt", "old_str": "world", "new_str": "rust"}),
         );
-        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
+        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &perms);
         assert!(!result.success);
         assert!(result.content.to_lowercase().contains("denied"));
     }
@@ -2637,36 +2658,56 @@ mod tests {
         let tmp = TempDir::new().unwrap();
         let mut state = AppState::new();
         let symbols = SymbolTable::new();
-        let graph = TraceGraph::new();
         let perms = full_perms();
 
         let call = make_call("nonexistent_tool_xyz", json!({"path": "f.txt"}));
-        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
+        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &perms);
         assert!(!result.success);
         assert!(result.content.contains("Unknown tool"));
     }
 
-    // ===== query_trace_graph =====
+    // ===== query_project_graph =====
 
     #[test]
-    fn test_query_trace_graph_success() {
+    fn test_query_project_graph_finds_the_code_serving_a_requirement() {
+        // The graph is built from annotations, not from a `reqs/REQ-01.md`
+        // naming convention -- which is what the tool this replaces relied on,
+        // and why it answered nothing on a project laid out any other way.
+        let tmp = TempDir::new().unwrap();
+        std::fs::create_dir_all(tmp.path().join("product")).unwrap();
+        std::fs::write(
+            tmp.path().join("product/auth.md"),
+            "---\nid: REQ-01\ntitle: Auth\nstatus: approved\ndecomposition: complete\n---\n\n# Auth\n",
+        )
+        .unwrap();
+        std::fs::write(
+            tmp.path().join("login.py"),
+            "# @implements REQ-01\ndef login(user):\n    return user\n",
+        )
+        .unwrap();
+
+        let mut state = AppState::new();
+        let symbols = SymbolTable::new();
+        let perms = full_perms();
+
+        let call = make_call("query_project_graph", json!({"req_id": "REQ-01"}));
+        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &perms);
+        assert!(result.success, "{}", result.content);
+        assert!(result.content.contains("login.py"), "{}", result.content);
+        assert!(result.content.contains("REQ-01"), "{}", result.content);
+    }
+
+    #[test]
+    fn test_query_project_graph_says_so_when_nothing_matches() {
         let tmp = TempDir::new().unwrap();
         let mut state = AppState::new();
         let symbols = SymbolTable::new();
-        let mut graph = TraceGraph::new();
         let perms = full_perms();
 
-        graph.add_requirement(Requirement {
-            id: "REQ-01".into(),
-            title: "Auth".into(),
-            status: ReqStatus::Draft,
-            file: PathBuf::from("reqs/REQ-01.md"),
-        });
-
-        let call = make_call("query_trace_graph", json!({"req_id": "REQ-01"}));
-        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
-        assert!(result.success);
-        assert!(result.content.contains("REQ-01"));
+        let call = make_call("query_project_graph", json!({"req_id": "REQ-NOPE"}));
+        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &perms);
+        assert!(!result.success);
+        assert!(result.content.contains("REQ-NOPE"), "{}", result.content);
     }
 
     // ===== run_shell =====
@@ -2676,11 +2717,10 @@ mod tests {
         let tmp = TempDir::new().unwrap();
         let mut state = AppState::new();
         let symbols = SymbolTable::new();
-        let graph = TraceGraph::new();
         let perms = full_perms();
 
         let call = make_call("run_shell", json!({"command": "echo hello"}));
-        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
+        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &perms);
         assert!(result.success);
         assert!(result.content.contains("hello"));
     }
@@ -2690,11 +2730,10 @@ mod tests {
         let tmp = TempDir::new().unwrap();
         let mut state = AppState::new();
         let symbols = SymbolTable::new();
-        let graph = TraceGraph::new();
         let perms = AgentPermissions::read_only("ro");
 
         let call = make_call("run_shell", json!({"command": "echo hi"}));
-        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
+        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &perms);
         assert!(!result.success);
     }
 
@@ -2705,11 +2744,10 @@ mod tests {
         let tmp = TempDir::new().unwrap();
         let mut state = AppState::new();
         let symbols = SymbolTable::new();
-        let graph = TraceGraph::new();
         let perms = full_perms();
 
         let call = make_call("run_shell", json!({"command": "echo hello"}));
-        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
+        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &perms);
         assert!(result.success);
         assert!(result.content.contains("hello"));
         assert!(!std::fs::exists(tmp.path().join(".tracelean/tool_logs")).unwrap_or(false));
@@ -2720,7 +2758,6 @@ mod tests {
         let tmp = TempDir::new().unwrap();
         let mut state = AppState::new();
         let symbols = SymbolTable::new();
-        let graph = TraceGraph::new();
         let perms = full_perms();
 
         // 800 lines exceeds the 500-line spill threshold.
@@ -2728,7 +2765,7 @@ mod tests {
             "run_shell",
             json!({"command": "for i in $(seq 1 800); do echo line-$i; done"}),
         );
-        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
+        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &perms);
         assert!(result.success);
         assert!(result.content.contains(".tracelean/tool_logs/"));
         assert!(result.content.contains("read_file"));
@@ -2762,11 +2799,10 @@ mod tests {
         }
         let mut state = AppState::new();
         let symbols = SymbolTable::new();
-        let graph = TraceGraph::new();
         let perms = full_perms();
 
         let call = make_call("list_requirements", json!({}));
-        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
+        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &perms);
         assert!(result.success);
         assert!(
             result.content.contains(".tracelean/tool_logs/"),
@@ -2786,11 +2822,10 @@ mod tests {
 
         let mut state = AppState::new();
         let symbols = SymbolTable::new();
-        let graph = TraceGraph::new();
         let perms = full_perms();
 
         let call = make_call("read_file", json!({"path": "big.txt", "max_results": 150}));
-        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
+        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &perms);
         assert!(result.success);
         assert!(!result.content.contains(".tracelean/tool_logs/"));
         assert!(!std::fs::exists(tmp.path().join(".tracelean/tool_logs")).unwrap_or(false));
@@ -2807,11 +2842,10 @@ mod tests {
         let mut state = AppState::new();
         state.load_file(rel.clone(), "new unsaved content".to_string());
         let symbols = SymbolTable::new();
-        let graph = TraceGraph::new();
         let perms = full_perms();
 
         let call = make_call("run_shell", json!({"command": "cat a.txt"}));
-        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
+        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &perms);
         assert!(result.success);
         assert!(
             result.content.contains("new unsaved content"),
@@ -2831,7 +2865,6 @@ mod tests {
         let tmp = TempDir::new().unwrap();
         let mut state = AppState::new();
         let mut symbols = SymbolTable::new();
-        let graph = TraceGraph::new();
         let perms = full_perms();
 
         let path = PathBuf::from("src/main.rs");
@@ -2848,7 +2881,7 @@ mod tests {
         );
 
         let call = make_call("get_symbols", json!({"path": "src/main.rs"}));
-        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &graph, &perms);
+        let result = execute_tool(&call, tmp.path(), &mut state, &symbols, &perms);
         assert!(result.success);
         assert!(result.content.contains("main"));
     }
@@ -2949,8 +2982,7 @@ mod tests {
 mod review_tests {
     use super::*;
     use crate::parser::SymbolTable;
-    use crate::trace_graph::TraceGraph;
-    use serde_json::json;
+        use serde_json::json;
     use tempfile::TempDir;
 
     fn exec_reviewed(
@@ -2960,10 +2992,9 @@ mod review_tests {
         pending: &mut Vec<super::super::diff_pipeline::PendingDiff>,
     ) -> ToolResult {
         let symbols = SymbolTable::new();
-        let graph = TraceGraph::new();
         let perms = AgentPermissions::full_access("review-agent");
         let mut sink = ReviewSink { pending, agent: "review-agent".into() };
-        execute_tool_reviewed(call, root, state, &symbols, &graph, &perms, &None, Some(&mut sink))
+        execute_tool_reviewed(call, root, state, &symbols, &perms, &None, Some(&mut sink))
     }
 
     #[test]
@@ -3031,5 +3062,95 @@ mod review_tests {
         assert!(result.success);
         assert!(result.content.contains("data"));
         assert!(pending.is_empty());
+    }
+}
+
+
+/// Ask a language server about a position.
+///
+/// This is the agent's cheapest route to ground truth: a goal state or the
+/// current diagnostics cost a couple of hundred tokens, where re-reading the
+/// file to guess at them costs thousands. For Lean specifically, writing
+/// tactics without the goal is guessing.
+fn execute_lsp_query(call: &ToolCall, project_root: &Path) -> ToolResult {
+    use crate::lsp::{registry::LspRegistry, QueryMode};
+
+    let Some(path) = get_str_arg(call, "path") else {
+        return ToolResult {
+            success: false,
+            content: "Missing 'path'. Expected: lsp_query(path, mode, line, character)".into(),
+            data: None,
+        };
+    };
+    let Some(mode_str) = get_str_arg(call, "mode") else {
+        return ToolResult {
+            success: false,
+            content: "Missing 'mode'. One of: hover, definition, references, diagnostics, \
+                      symbols, code_actions, goal."
+                .into(),
+            data: None,
+        };
+    };
+    let Some(mode) = QueryMode::parse(&mode_str) else {
+        return ToolResult {
+            success: false,
+            content: format!(
+                "Unknown mode `{mode_str}`. One of: hover, definition, references, \
+                 diagnostics, symbols, code_actions, goal."
+            ),
+            data: None,
+        };
+    };
+
+    let line = call
+        .arguments
+        .get("line")
+        .and_then(|v| v.as_u64())
+        .unwrap_or(0) as u32;
+    let character = call
+        .arguments
+        .get("character")
+        .and_then(|v| v.as_u64())
+        .unwrap_or(0) as u32;
+
+    let full = project_root.join(&path);
+    let content = match std::fs::read_to_string(&full) {
+        Ok(c) => c,
+        Err(e) => {
+            return ToolResult {
+                success: false,
+                content: format!("Cannot read {path}: {e}"),
+                data: None,
+            }
+        }
+    };
+
+    // A fresh registry per call keeps this stateless; the cost is a server
+    // start, which is why the tool description steers toward asking a few
+    // pointed questions rather than polling.
+    let registry = LspRegistry::new(project_root);
+    if let Err(e) = registry.open(Path::new(&path), &content) {
+        return ToolResult {
+            success: false,
+            content: format!("{e}"),
+            data: None,
+        };
+    }
+
+    match registry.query(
+        Path::new(&path),
+        crate::lsp::Position { line, character },
+        mode,
+    ) {
+        Ok(value) => ToolResult {
+            success: true,
+            content: serde_json::to_string_pretty(&value).unwrap_or_else(|_| value.to_string()),
+            data: Some(value),
+        },
+        Err(e) => ToolResult {
+            success: false,
+            content: format!("{e}"),
+            data: None,
+        },
     }
 }

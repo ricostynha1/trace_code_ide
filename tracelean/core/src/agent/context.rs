@@ -5,7 +5,7 @@ use std::sync::{Arc, Mutex};
 
 use crate::{
     AiSettings, AppState, EventSink, InteractionLog, NullSink, SharedApp,
-    SymbolTable, TraceGraph,
+    SymbolTable,
     ai::tool_executor::AgentPermissions,
     ai::tools::ToolDefinition,
     ai::tracking::SessionStats,
@@ -23,7 +23,6 @@ pub const DEFAULT_CHARS_PER_TOKEN: f64 = 4.0;
 pub struct AgentContext {
     pub state: Arc<Mutex<AppState>>,
     pub symbols: Arc<Mutex<SymbolTable>>,
-    pub graph: Arc<Mutex<TraceGraph>>,
     pub settings: Arc<Mutex<AiSettings>>,
     pub stats: Arc<Mutex<SessionStats>>,
     pub log: Arc<Mutex<InteractionLog>>,
@@ -112,7 +111,6 @@ impl AgentContext {
         Self {
             state: Arc::clone(&app.state),
             symbols: Arc::clone(&app.symbols),
-            graph: Arc::clone(&app.graph),
             settings: Arc::clone(&app.ai_settings),
             stats: Arc::clone(&app.ai_stats),
             log: Arc::clone(&app.ai_log),
@@ -146,7 +144,6 @@ impl AgentContext {
         Self {
             state: Arc::new(Mutex::new(AppState::new())),
             symbols: Arc::new(Mutex::new(SymbolTable::new())),
-            graph: Arc::new(Mutex::new(TraceGraph::new())),
             settings: Arc::new(Mutex::new(AiSettings::default())),
             stats: Arc::new(Mutex::new(SessionStats::default())),
             log: Arc::new(Mutex::new(InteractionLog::new())),

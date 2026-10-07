@@ -87,16 +87,72 @@ struct CatalogIndex {
 /// `anthropic` itself, which marks a bare/non-region-prefixed id).
 const INFERENCE_PROFILE_PREFIXES: [&str; 6] = ["eu", "us", "apac", "au", "jp", "global"];
 
+/// Strip a Bedrock cross-region inference-profile prefix, if the id carries
+/// one: `us.anthropic.claude-sonnet-4-6` → `anthropic.claude-sonnet-4-6`.
+fn strip_inference_profile_prefix(id: &str) -> Option<&str> {
+    INFERENCE_PROFILE_PREFIXES
+        .iter()
+        .find_map(|prefix| id.strip_prefix(&format!("{prefix}.")))
+}
+
+/// Ranking for every catalog id, with region-prefixed ids inheriting their
+/// bare sibling's.
+///
+/// A coding ranking is a property of the *model*, not of the AWS region it is
+/// served from, but `data/models.json` is regenerated from upstream catalogs
+/// that only rank the bare id — so every `us.`/`eu.`/`global.` row arrives
+/// unranked. Those prefixed ids are precisely the ones the Bedrock picker
+/// offers, because bare Claude ids are not valid Converse identifiers and
+/// fail with "use an inference profile" the moment they are used. Without this
+/// pass every Bedrock-picked Claude model sorts as "unranked".
+///
+/// This was once fixed by hand-editing the prefixed rows in the data file. The
+/// edit did not survive the next catalog regeneration — which is the argument
+/// for deriving the value at load rather than storing it. A derivation cannot
+/// go stale.
+///
+/// **Only the ranking is inherited.** Pricing is deliberately left alone:
+/// Bedrock charges a cross-region uplift, so a `us.` row carries genuinely
+/// different numbers, and copying the bare row's price would understate every
+/// bill by about 10%.
+fn rankings_with_region_fallback(
+    entries: &[CatalogEntry],
+) -> HashMap<String, (Option<f64>, Option<u32>)> {
+    let declared: HashMap<&str, (Option<f64>, Option<u32>)> = entries
+        .iter()
+        .map(|e| (e.model.as_str(), (e.coding_index, e.coding_rank)))
+        .collect();
+
+    entries
+        .iter()
+        .map(|entry| {
+            let own = (entry.coding_index, entry.coding_rank);
+            if own.0.is_some() || own.1.is_some() {
+                return (entry.model.clone(), own);
+            }
+            let inherited = strip_inference_profile_prefix(&entry.model)
+                .and_then(|bare| declared.get(bare).copied())
+                .filter(|(index, rank)| index.is_some() || rank.is_some());
+            (entry.model.clone(), inherited.unwrap_or(own))
+        })
+        .collect()
+}
+
 fn build_index() -> CatalogIndex {
     let entries: Vec<CatalogEntry> = serde_json::from_str(CATALOG_JSON).unwrap_or_default();
+    let rankings = rankings_with_region_fallback(&entries);
     let mut by_key = HashMap::with_capacity(entries.len());
     let mut by_slug = HashMap::with_capacity(entries.len());
     let mut bedrock_claude_ids = Vec::new();
 
     for entry in entries {
+        let (coding_index, coding_rank) = rankings
+            .get(&entry.model)
+            .copied()
+            .unwrap_or((entry.coding_index, entry.coding_rank));
         let enrichment = ModelEnrichment {
-            coding_index: entry.coding_index,
-            coding_rank: entry.coding_rank,
+            coding_index,
+            coding_rank,
             supports_caching: entry.supports_prompt_caching,
             supports_tools: entry.supports_tool_calling,
             input_cost_per_m: entry.pricing.as_ref().and_then(|p| p.input_per_1m_tokens),
@@ -458,6 +514,31 @@ mod tests {
         assert!(bare.coding_index.is_some(), "bare entry should have a ranking to compare against");
         assert_eq!(prefixed.coding_index, bare.coding_index);
         assert_eq!(prefixed.coding_rank, bare.coding_rank);
+    }
+
+    /// The inheritance must stop at the ranking. Bedrock charges a
+    /// cross-region uplift, so a `us.`/`eu.` row's pricing is genuinely
+    /// different from its bare sibling's; copying it across would understate
+    /// every bill by roughly 10% — silently, and in the direction that matters.
+    #[test]
+    fn region_prefixed_entries_keep_their_own_pricing() {
+        let bare = lookup("anthropic.claude-sonnet-4-6").unwrap();
+        let prefixed = lookup("us.anthropic.claude-sonnet-4-6").unwrap();
+        assert_ne!(
+            prefixed.input_cost_per_m, bare.input_cost_per_m,
+            "cross-region pricing must not be inherited from the bare id"
+        );
+        assert!(prefixed.input_cost_per_m.unwrap() > bare.input_cost_per_m.unwrap());
+    }
+
+    /// Several region-prefixed rows share one slug (it is the bare model id),
+    /// so whichever is indexed last wins a slug lookup. Before the ranking was
+    /// derived at load, that made "is this model ranked?" depend on catalog
+    /// ordering; now every candidate carries the same answer.
+    #[test]
+    fn a_slug_shared_by_several_region_rows_resolves_to_a_ranked_entry() {
+        let by_slug = lookup("anthropic.claude-sonnet-4-6").unwrap();
+        assert!(by_slug.coding_index.is_some());
     }
 
     #[test]

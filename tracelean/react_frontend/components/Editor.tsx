@@ -2,11 +2,11 @@ import { useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { EditorState, StateField, StateEffect, RangeSet } from "@codemirror/state";
-import { EditorView, keymap, lineNumbers, highlightActiveLine, hoverTooltip, Tooltip, Decoration, DecorationSet, WidgetType } from "@codemirror/view";
+import { EditorView, keymap, lineNumbers, highlightActiveLine, hoverTooltip, Tooltip, Decoration, DecorationSet, WidgetType, gutter, GutterMarker } from "@codemirror/view";
 import { defaultKeymap } from "@codemirror/commands";
 import { oneDark } from "@codemirror/theme-one-dark";
 import { searchKeymap, highlightSelectionMatches } from "@codemirror/search";
-import { mythKeyName } from "./mythKeys";
+import { mythKeyName, type KeyBindingInfo } from "./mythKeys";
 import { EditorDiffBar } from "./EditorDiffBar";
 import { diffViewCache } from "./diffViewStore";
 
@@ -49,6 +49,51 @@ type EditorMode = "code" | "lean" | "requirement";
 
 // Myth (docs/myth_fable.md): the node under a position + the actions its
 // captures carry, from the core binding map.
+
+/** `file:///a/b.rs` → `/a/b.rs`, with percent-escapes decoded. */
+function uriToPath(uri: string): string {
+  const rest = uri.startsWith("file://") ? uri.slice("file://".length) : uri;
+  try {
+    return decodeURIComponent(rest);
+  } catch {
+    return rest;
+  }
+}
+
+/**
+ * Render one LSP answer as text. Deliberately lossy: the popup exists to answer
+ * a question at the cursor, and dumping the raw protocol payload would bury the
+ * answer in `range` objects.
+ */
+function summarizeLsp(mode: string, value: any): string {
+  if (value == null) return "no answer";
+  if (mode === "hover") {
+    const c = value.contents ?? value;
+    if (typeof c === "string") return c;
+    if (Array.isArray(c)) return c.map((x) => (typeof x === "string" ? x : x?.value ?? "")).join("\n");
+    return c?.value ?? JSON.stringify(value, null, 2);
+  }
+  if (mode === "goal") {
+    const goals = value.goals ?? value.rendered ?? value;
+    if (Array.isArray(goals)) return goals.length === 0 ? "no goals" : goals.join("\n\n");
+    return typeof goals === "string" ? goals : JSON.stringify(value, null, 2);
+  }
+  if (mode === "references" || mode === "symbols" || mode === "diagnostics") {
+    const list: any[] = Array.isArray(value) ? value : (value?.diagnostics ?? []);
+    if (list.length === 0) return "none";
+    return list
+      .slice(0, 50)
+      .map((x) => {
+        const line = x.line ?? x.range?.start?.line ?? x.location?.range?.start?.line ?? 0;
+        const where = x.uri ? uriToPath(x.uri).split("/").pop() : (x.file ?? "");
+        const what = x.message ?? x.name ?? "";
+        return `${where}:${line + 1}  ${what}`.trim();
+      })
+      .join("\n");
+  }
+  return JSON.stringify(value, null, 2);
+}
+
 interface MythNodeInfo {
   captures: string[];
   kind: string;
@@ -57,10 +102,21 @@ interface MythNodeInfo {
   text: string;
 }
 
+/** One offered action (core `myth::provider::Action`). */
+interface MythAction {
+  name: string;
+  title: string;
+  group: string;
+  priority: number;
+  args?: unknown;
+  provider: string;
+}
+
 interface MythContextMenu {
   x: number;
   y: number;
-  actions: string[];
+  /** Groups in core's display order: [group, actions]. */
+  groups: Array<[string, MythAction[]]>;
   charPos: number;
   node: MythNodeInfo | null;
 }
@@ -152,6 +208,102 @@ const highlightField = StateField.define<DecorationSet>({
     return value;
   },
   provide: (f) => EditorView.decorations.from(f),
+});
+
+
+// --- Traceability gutter (T1/T4) ---
+//
+// A chip beside every line an annotation anchors to, so the link between a
+// requirement and the code is visible *in the code* rather than only in a
+// panel. The role decides the glyph and colour; the tooltip names the
+// requirement, which is what you actually want to read at a glance.
+
+interface TraceLink {
+  role: string;
+  req_id: string;
+  clause: string | null;
+  line: number;
+  anchor: { start_line: number; end_line: number };
+}
+
+const ROLE_CHIP: Record<string, { glyph: string; color: string; label: string }> = {
+  models: { glyph: "M", color: "#c678dd", label: "Lean model" },
+  implements: { glyph: "I", color: "#61afef", label: "implementation" },
+  tests: { glyph: "T", color: "#98c379", label: "test" },
+  drt: { glyph: "D", color: "#e5c07b", label: "differential-test harness" },
+  proves: { glyph: "P", color: "#56b6c2", label: "proof" },
+};
+
+class TraceChip extends GutterMarker {
+  constructor(private readonly links: TraceLink[]) {
+    super();
+  }
+
+  eq(other: TraceChip) {
+    return (
+      other.links.length === this.links.length &&
+      other.links.every((l, i) => l.req_id === this.links[i].req_id && l.role === this.links[i].role)
+    );
+  }
+
+  toDOM() {
+    const span = document.createElement("span");
+    span.className = "trace-gutter-chip";
+    const first = ROLE_CHIP[this.links[0].role] ?? { glyph: "?", color: "#7f848e", label: this.links[0].role };
+    span.textContent = this.links.length > 1 ? String(this.links.length) : first.glyph;
+    span.style.color = first.color;
+    span.title = this.links
+      .map((l) => {
+        const chip = ROLE_CHIP[l.role] ?? { label: l.role };
+        return `${chip.label} of ${l.req_id}${l.clause ? "." + l.clause : ""}`;
+      })
+      .join("\n");
+    return span;
+  }
+}
+
+const setTraceLinks = StateEffect.define<TraceLink[]>();
+
+const traceLinkField = StateField.define<TraceLink[]>({
+  create() {
+    return [];
+  },
+  update(value, tr) {
+    for (const e of tr.effects) {
+      if (e.is(setTraceLinks)) return e.value;
+    }
+    // The index is rebuilt from disk, so an unsaved edit invalidates the line
+    // numbers rather than shifting them: drop the chips instead of drawing
+    // them next to the wrong lines.
+    if (tr.docChanged) return [];
+    return value;
+  },
+});
+
+const traceGutter = gutter({
+  class: "trace-gutter",
+  lineMarker(view, line) {
+    const links = view.state.field(traceLinkField);
+    if (links.length === 0) return null;
+    const lineNo = view.state.doc.lineAt(line.from).number - 1;
+    const here = links.filter((l) => l.line === lineNo);
+    return here.length > 0 ? new TraceChip(here) : null;
+  },
+  initialSpacer: () => new TraceChip([{ role: "implements", req_id: "", clause: null, line: 0, anchor: { start_line: 0, end_line: 0 } }]),
+  domEventHandlers: {
+    // Clicking a chip opens the requirement it names in the trace panel.
+    mousedown(view, line) {
+      const lineNo = view.state.doc.lineAt(line.from).number - 1;
+      const here = view.state.field(traceLinkField).filter((l) => l.line === lineNo);
+      if (here.length === 0) return false;
+      window.dispatchEvent(
+        new CustomEvent("tracelean-trace-action", {
+          detail: { kind: "show_evidence", req_id: here[0].req_id, clause: here[0].clause },
+        })
+      );
+      return true;
+    },
+  },
 });
 
 // --- T0: Diff overlay decorations for undo tree hover ---
@@ -331,6 +483,10 @@ export function Editor({ filePath, initialLine }: EditorProps) {
   const [traceLink, setTraceLink] = useState<string | null>(null);
   const [ctxMenu, setCtxMenu] = useState<MythContextMenu | null>(null);
   const [mythMode, setMythMode] = useState("Main");
+  // Entries of a dynamic mode (CodeActions): computed at the cursor by the
+  // providers in core, not looked up in keymap.json.
+  const dynamicRef = useRef<KeyBindingInfo[]>([]);
+  const [lspResult, setLspResult] = useState<{ title: string; body: string } | null>(null);
   // Read by the DOM capture handler (state would be stale inside CodeMirror callbacks)
   const mythModeRef = useRef("Main");
   const syncingFromBackend = useRef(false);
@@ -449,6 +605,8 @@ export function Editor({ filePath, initialLine }: EditorProps) {
             oneDark,
             highlightField,
             diffField,
+            traceLinkField,
+            traceGutter,
             symbolHoverTooltip(filePath),
             keymap.of([
               ...defaultKeymap.filter(
@@ -485,6 +643,21 @@ export function Editor({ filePath, initialLine }: EditorProps) {
               if (update.docChanged && !syncingFromBackend.current) {
                 sendChangesAsCommands(update);
                 scheduleHighlights(update.view);
+              }
+              // Anything that wants to follow the cursor subscribes to this
+              // rather than each panel installing its own CodeMirror listener.
+              // Debouncing is the subscriber's job: what "too often" means
+              // depends on what the subscriber does with it.
+              if (update.selectionSet || update.docChanged) {
+                const head = update.state.selection.main.head;
+                window.dispatchEvent(
+                  new CustomEvent("tracelean-cursor", {
+                    detail: {
+                      file: filePath,
+                      charPos: countCodePoints(update.state.doc.sliceString(0, head)),
+                    },
+                  })
+                );
               }
             }),
           ],
@@ -612,6 +785,36 @@ export function Editor({ filePath, initialLine }: EditorProps) {
   };
 
   // Scroll the editor to a 1-based line (diff bar navigation, bug 0.7).
+  // Traceability chips for this file. Reloaded when the file changes and when
+  // anything asks the trace layer to rescan, because an annotation added in
+  // another buffer changes what this one is linked to.
+  useEffect(() => {
+    let cancelled = false;
+    const load = () => {
+      invoke<TraceLink[]>("trace_links_in_file", { path: filePath })
+        .then((links) => {
+          const view = viewRef.current;
+          if (cancelled || !view) return;
+          view.dispatch({ effects: setTraceLinks.of(links ?? []) });
+        })
+        // No project open, or no annotations: chips simply do not appear.
+        .catch(() => {});
+    };
+    load();
+    window.addEventListener("tracelean-trace-refresh", load);
+    return () => {
+      cancelled = true;
+      window.removeEventListener("tracelean-trace-refresh", load);
+    };
+  }, [filePath]);
+
+  // The component only remounts when the *file* changes, so a second jump into
+  // the file already open (two annotations in one file) needs its own effect.
+  useEffect(() => {
+    if (initialLine && initialLine > 0) gotoLine(initialLine);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialLine]);
+
   const gotoLine = (line: number) => {
     const view = viewRef.current;
     if (!view) return;
@@ -717,19 +920,38 @@ export function Editor({ filePath, initialLine }: EditorProps) {
     const pos = view.posAtCoords({ x: e.clientX, y: e.clientY });
     if (pos == null) return;
     const charPos = countCodePoints(view.state.doc.sliceString(0, pos));
+    // Open immediately with whatever needs no round trip, then fill in the LSP
+    // half: a context menu that waits on rust-analyzer feels broken even when
+    // it is only slow.
     try {
-      const res = await invoke<{ actions: string[]; node: MythNodeInfo | null }>(
-        "list_actions_at",
-        { file: filePath, charPos }
-      );
-      setCtxMenu({ x: e.clientX, y: e.clientY, actions: res.actions ?? [], charPos, node: res.node });
+      const node = await invoke<MythNodeInfo | null>("myth_node_at", {
+        file: filePath,
+        charPos,
+      }).catch(() => null);
+      const res = await invoke<any>("myth_actions_at", {
+        file: filePath,
+        charPos,
+        includeLsp: true,
+      });
+      setCtxMenu({
+        x: e.clientX,
+        y: e.clientY,
+        groups: res?.groups ?? [],
+        charPos,
+        node,
+      });
     } catch (err) {
-      console.error("list_actions_at failed:", err);
+      console.error("myth_actions_at failed:", err);
       setCtxMenu(null);
     }
   };
 
-  const runMythAction = async (action: string, charPos: number, node: MythNodeInfo | null) => {
+  const runMythAction = async (
+    action: string,
+    charPos: number,
+    node: MythNodeInfo | null,
+    args?: unknown
+  ) => {
     setCtxMenu(null);
     try {
       const outcome = await invoke<any>("dispatch_action", {
@@ -740,6 +962,7 @@ export function Editor({ filePath, initialLine }: EditorProps) {
           node_text: node?.text ?? "",
           file: filePath,
           char_pos: charPos,
+          args: args ?? null,
         },
       });
       if (outcome?.kind !== "ui") return;
@@ -763,9 +986,107 @@ export function Editor({ filePath, initialLine }: EditorProps) {
         handleRedo();
       } else if (eff?.kind === "save_file") {
         handleSave();
+      } else if (eff?.kind === "lsp_query" && eff.mode === "goal") {
+        // `v g` pins the infoview at this position rather than flashing a
+        // popup: the point of a goal is to keep looking at it while you edit
+        // the tactic meant to close it.
+        window.dispatchEvent(
+          new CustomEvent("tracelean-pin-goal", { detail: { charPos: eff.char_pos ?? charPos } })
+        );
+        window.dispatchEvent(new CustomEvent("tracelean-show-lean-panel"));
+      } else if (eff?.kind === "lsp_query") {
+        await runLspQuery(eff.mode, eff.char_pos ?? charPos);
+      } else if (eff?.kind === "reveal") {
+        window.dispatchEvent(
+          new CustomEvent("tracelean-navigate", {
+            detail: { path: eff.file, line: eff.line },
+          })
+        );
+      } else if (eff?.kind === "no_target") {
+        // A gap is an answer, not an error — say it plainly and stay put.
+        setLspResult({ title: "Nothing to go to", body: String(eff.message ?? "") });
+      } else if (eff?.kind === "goto_node") {
+        window.dispatchEvent(
+          new CustomEvent("tracelean-goto-node", { detail: eff.provenance })
+        );
+      } else if (eff?.kind === "step_diagnostic") {
+        await stepDiagnostic(eff.direction ?? 1, charPos);
+      } else if (
+        eff?.kind === "run_drt" ||
+        eff?.kind === "run_judge" ||
+        eff?.kind === "replay_witness" ||
+        eff?.kind === "show_evidence" ||
+        eff?.kind === "explain_gap" ||
+        eff?.kind === "coverage_map" ||
+        eff?.kind === "zoom"
+      ) {
+        // Everything that belongs to the trace panel is routed there rather
+        // than duplicated in the editor.
+        window.dispatchEvent(new CustomEvent("tracelean-trace-action", { detail: eff }));
+      } else if (eff?.kind === "annotate") {
+        window.dispatchEvent(new CustomEvent("tracelean-annotate", { detail: eff }));
+      } else if (eff?.kind === "lake_build") {
+        window.dispatchEvent(new CustomEvent("tracelean-lake-build", { detail: eff }));
       }
     } catch (err) {
       console.error("dispatch_action failed:", err);
+      setLspResult({ title: "Action failed", body: String(err) });
+    }
+  };
+
+  /// Run one language-server query and show the answer.
+  const runLspQuery = async (mode: string, charPos: number) => {
+    setLspResult({ title: mode, body: "…" });
+    try {
+      const value = await invoke<any>("lsp_query", { file: filePath, charPos, mode });
+      if (mode === "definition") {
+        const target = Array.isArray(value) ? value[0] : value;
+        const uri: string | undefined = target?.uri ?? target?.targetUri;
+        const range = target?.range ?? target?.targetSelectionRange;
+        if (uri) {
+          setLspResult(null);
+          window.dispatchEvent(
+            new CustomEvent("tracelean-navigate", {
+              detail: { path: uriToPath(uri), line: range?.start?.line ?? 0 },
+            })
+          );
+          return;
+        }
+      }
+      setLspResult({ title: mode, body: summarizeLsp(mode, value) });
+    } catch (err) {
+      // "rust-analyzer is not installed" and "no answer here" must not look
+      // the same; the registry's error text says which.
+      setLspResult({ title: mode, body: String(err) });
+    }
+  };
+
+  const stepDiagnostic = async (direction: number, charPos: number) => {
+    try {
+      const value = await invoke<any>("lsp_query", {
+        file: filePath,
+        charPos,
+        mode: "diagnostics",
+      });
+      const list: any[] = Array.isArray(value) ? value : (value?.diagnostics ?? []);
+      if (list.length === 0) {
+        setLspResult({ title: "diagnostics", body: "no problems reported in this file" });
+        return;
+      }
+      const view = viewRef.current;
+      if (!view) return;
+      const current = view.state.doc.lineAt(view.state.selection.main.head).number - 1;
+      const lines = list
+        .map((d) => ({ d, line: d.line ?? d.range?.start?.line ?? 0 }))
+        .sort((a, b) => a.line - b.line);
+      const next =
+        direction > 0
+          ? (lines.find((x) => x.line > current) ?? lines[0])
+          : ([...lines].reverse().find((x) => x.line < current) ?? lines[lines.length - 1]);
+      gotoLine(next.line + 1);
+      setLspResult({ title: `line ${next.line + 1}`, body: next.d.message ?? "" });
+    } catch (err) {
+      setLspResult({ title: "diagnostics", body: String(err) });
     }
   };
 
@@ -775,18 +1096,76 @@ export function Editor({ filePath, initialLine }: EditorProps) {
     const view = viewRef.current;
     if (!view) return false;
     (async () => {
+      const head = view.state.selection.main.head;
+      const charPos = countCodePoints(view.state.doc.sliceString(0, head));
+
+      // A dynamic mode's entries came from the providers, not from
+      // keymap.json, so its keys are resolved here rather than in core. Escape
+      // still goes through the mode machine so the stack stays honest.
+      if (mythModeRef.current === "CodeActions" && keyName !== "Escape") {
+        const hit = dynamicRef.current.find((b) => b.key === keyName);
+        if (hit) {
+          await invoke<any>("myth_key_event", { key: "Escape" }).catch(() => {});
+          mythModeRef.current = "Verify";
+          setMythMode("Verify");
+          await runMythAction(hit.target, charPos, null, hit.args);
+          return;
+        }
+      }
+
       try {
         const res = await invoke<any>("myth_key_event", { key: keyName });
         const state = res?.state ?? "Main";
         mythModeRef.current = state;
         setMythMode(state);
+
+        if (state === "CodeActions") {
+          // Ask every provider what is available right here, and show that as
+          // the mode's which-key list.
+          try {
+            const at = await invoke<any>("myth_actions_at", {
+              file: filePath,
+              charPos,
+              includeLsp: true,
+            });
+            dynamicRef.current = at?.bindings ?? [];
+            const dropped: number = at?.dropped ?? 0;
+            window.dispatchEvent(
+              new CustomEvent("myth-mode", {
+                detail: {
+                  state,
+                  path: res?.path ?? [state],
+                  bindings: dynamicRef.current.length
+                    ? dynamicRef.current
+                    : [{ key: "Escape", target: "back", kind: "pop" }],
+                  note: dropped > 0 ? `${dropped} more not shown` : "",
+                },
+              })
+            );
+          } catch (err) {
+            dynamicRef.current = [];
+            window.dispatchEvent(
+              new CustomEvent("myth-mode", {
+                detail: {
+                  state,
+                  path: res?.path ?? [state],
+                  bindings: [{ key: "Escape", target: "back", kind: "pop" }],
+                  note: String(err),
+                },
+              })
+            );
+          }
+          return;
+        }
+
+        dynamicRef.current = [];
         // Which-key renders in the global bottom bar (Emacs-style)
         window.dispatchEvent(
-          new CustomEvent("myth-mode", { detail: { state, bindings: res?.bindings ?? [] } })
+          new CustomEvent("myth-mode", {
+            detail: { state, path: res?.path ?? [state], bindings: res?.bindings ?? [] },
+          })
         );
         if (res?.result?.kind === "dispatch") {
-          const head = view.state.selection.main.head;
-          const charPos = countCodePoints(view.state.doc.sliceString(0, head));
           await runMythAction(res.result.action, charPos, null);
         }
       } catch (err) {
@@ -845,16 +1224,27 @@ export function Editor({ filePath, initialLine }: EditorProps) {
               @{ctxMenu.node.captures[ctxMenu.node.captures.length - 1] ?? ctxMenu.node.kind}
             </div>
           )}
-          {ctxMenu.actions.length === 0 && <div className="myth-menu-empty">no actions</div>}
-          {ctxMenu.actions.map((a) => (
-            <div
-              key={a}
-              className="myth-menu-item"
-              onClick={() => runMythAction(a, ctxMenu.charPos, ctxMenu.node)}
-            >
-              {a.replace(/_/g, " ")}
+          {ctxMenu.groups.length === 0 && <div className="myth-menu-empty">no actions</div>}
+          {ctxMenu.groups.map(([group, actions]) => (
+            <div key={group} className="myth-menu-group">
+              <div className="myth-menu-group-label">{group}</div>
+              {actions.map((a, i) => (
+                <div
+                  key={`${a.name}-${i}`}
+                  className="myth-menu-item"
+                  onClick={() => runMythAction(a.name, ctxMenu.charPos, ctxMenu.node, a.args)}
+                >
+                  {a.title}
+                </div>
+              ))}
             </div>
           ))}
+        </div>
+      )}
+      {lspResult && (
+        <div className="lsp-popup" onClick={() => setLspResult(null)}>
+          <div className="lsp-popup-title">{lspResult.title}</div>
+          <pre className="lsp-popup-body">{lspResult.body}</pre>
         </div>
       )}
       {leanDiagnostics.length > 0 && (

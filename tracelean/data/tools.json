@@ -1,7 +1,7 @@
 {
   "conventions": {
     "pagination_hint": "{shown} of {total} matches shown, call again with offset={next_offset} to see the rest",
-    "giant_line_hint": "Line {line} of '{path}' is {actual} chars but only bytes {lower}-{upper} are shown here (truncated) — {line} is the line number to target, and in the cut range {lower} is the lower byte offset and {upper} is the upper byte offset of the shown slice. To read more of this single line, use run_shell with: sed -n '{line}p' '{path}' | cut -c{lower}-{upper}, then shift both offsets forward (e.g. cut -c{upper}-{next}) to page through the rest of the line."
+    "giant_line_hint": "Line {line} of '{path}' is {actual} chars but only bytes {lower}-{upper} are shown here (truncated) \u2014 {line} is the line number to target, and in the cut range {lower} is the lower byte offset and {upper} is the upper byte offset of the shown slice. To read more of this single line, use run_shell with: sed -n '{line}p' '{path}' | cut -c{lower}-{upper}, then shift both offsets forward (e.g. cut -c{upper}-{next}) to page through the rest of the line."
   },
   "tools": [
     {
@@ -30,7 +30,7 @@
       "example": {
         "query": "delete a file"
       },
-      "short_help": "discover_tools(query, max_results?) — Find and load additional tools by capability.",
+      "short_help": "discover_tools(query, max_results?) \u2014 Find and load additional tools by capability.",
       "aliases": [
         "find a tool",
         "what tools",
@@ -39,7 +39,7 @@
       ],
       "examples": [
         "Find a tool to delete files",
-        "What tools can query the trace graph"
+        "What tools can query the project graph"
       ]
     },
     {
@@ -47,7 +47,7 @@
       "tier": "static",
       "category": "filesystem",
       "description": "List files and directories.",
-      "embedded_txt": "List files and directories in a given path, with recursive listing, glob filtering, and depth limiting. Use to explore project structure, find files by pattern, or browse directory contents. Returns file names with type indicators (trailing / for dirs). For very large trees, prefer the shell (run_shell with find/ls) — large shell output is auto-written to a file you can read_file. Examples: list all .rs files in src/, show project root structure, find all test directories recursively.",
+      "embedded_txt": "List files and directories in a given path, with recursive listing, glob filtering, and depth limiting. Use to explore project structure, find files by pattern, or browse directory contents. Returns file names with type indicators (trailing / for dirs). For very large trees, prefer the shell (run_shell with find/ls) \u2014 large shell output is auto-written to a file you can read_file. Examples: list all .rs files in src/, show project root structure, find all test directories recursively.",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -74,7 +74,7 @@
         "recursive": true,
         "file_filter": "*.rs"
       },
-      "short_help": "list_directory(path?, recursive?, file_filter?, max_depth?) — List files/dirs.",
+      "short_help": "list_directory(path?, recursive?, file_filter?, max_depth?) \u2014 List files/dirs.",
       "aliases": [
         "show directory",
         "ls",
@@ -98,8 +98,8 @@
       "name": "find_semantic",
       "tier": "static",
       "category": "search",
-      "description": "Meaning-based (semantic) code search using local embeddings — finds code by what it does, not by exact text. Use for concepts, similar logic, or 'where is X handled' questions. For exact symbols, strings, or regex/glob matching use the shell (run_shell with grep/find) instead.",
-      "embedded_txt": "Semantic code search over a local embeddings index (fastembed, built automatically when the project opens). Finds code by meaning rather than exact text — use it for concepts ('where is authentication handled'), similar logic, or when you don't know the exact symbol name. Matches below a relevance floor are dropped, so an empty/short result means no good match exists, not that the index is broken. Each result shows a tight 3-line snippet (the best-matching lines within the larger ~30-line region that was actually ranked) plus that region's full file:line range — use read_file on that range for more surrounding context. For exact/regex/glob/filename search, use the shell via run_shell (grep, find) — frontier models are fluent with those and large output is auto-written to a file you can read_file. Params: query (natural language), optional path to scope the search to a subtree, max_results (default 10), is_recursive (default false — reserved), glob_filter_for_file_types (default '*' = no filter, e.g. '*.rs'). Examples: find authentication handling logic, locate code that validates uploads, find error-recovery logic similar to a description.",
+      "description": "Meaning-based (semantic) code search using local embeddings \u2014 finds code by what it does, not by exact text. Use for concepts, similar logic, or 'where is X handled' questions. For exact symbols, strings, or regex/glob matching use the shell (run_shell with grep/find) instead.",
+      "embedded_txt": "Semantic code search over a local embeddings index (fastembed, built automatically when the project opens). Finds code by meaning rather than exact text \u2014 use it for concepts ('where is authentication handled'), similar logic, or when you don't know the exact symbol name. Matches below a relevance floor are dropped, so an empty/short result means no good match exists, not that the index is broken. Each result shows a tight 3-line snippet (the best-matching lines within the larger ~30-line region that was actually ranked) plus that region's full file:line range \u2014 use read_file on that range for more surrounding context. For exact/regex/glob/filename search, use the shell via run_shell (grep, find) \u2014 frontier models are fluent with those and large output is auto-written to a file you can read_file. Params: query (natural language), optional path to scope the search to a subtree, max_results (default 10), is_recursive (default false \u2014 reserved), glob_filter_for_file_types (default '*' = no filter, e.g. '*.rs'). Examples: find authentication handling logic, locate code that validates uploads, find error-recovery logic similar to a description.",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -131,7 +131,7 @@
         "query": "authentication handling logic",
         "path": "src"
       },
-      "short_help": "find_semantic(query, path?, max_results?, is_recursive?, glob_filter_for_file_types?) — Meaning-based code search (local embeddings). Use the shell (grep/find) for exact/regex search.",
+      "short_help": "find_semantic(query, path?, max_results?, is_recursive?, glob_filter_for_file_types?) \u2014 Meaning-based code search (local embeddings). Use the shell (grep/find) for exact/regex search.",
       "aliases": [
         "semantic search",
         "find similar",
@@ -153,7 +153,7 @@
       "tier": "static",
       "category": "filesystem",
       "description": "Read file lines from offset. Returns file metadata (lines, bytes, size, modified, permissions, owner, group). Empty range = metadata only.",
-      "embedded_txt": "Read lines from a file with pagination support. Returns content plus file metadata: total lines, bytes, human-readable size, relative modification time, unix permissions string, owner and group. Reading with max_results=0 returns only metadata without content — use as a cheap stat check. Supports negative offset (-1 = last line). Paginated: check has_more and next_offset in response data. Individual lines over 2000 chars (e.g. minified JSON, a data dump) are truncated with a hint showing a run_shell sed/cut command to page through the rest of that specific line by byte offset. Subsumes old count_lines tool since metadata always includes line count. Examples: read first 50 lines of main.rs, check file size without reading content, read last 20 lines of a log file.",
+      "embedded_txt": "Read lines from a file with pagination support. Returns content plus file metadata: total lines, bytes, human-readable size, relative modification time, unix permissions string, owner and group. Reading with max_results=0 returns only metadata without content \u2014 use as a cheap stat check. Supports negative offset (-1 = last line). Paginated: check has_more and next_offset in response data. Individual lines over 2000 chars (e.g. minified JSON, a data dump) are truncated with a hint showing a run_shell sed/cut command to page through the rest of that specific line by byte offset. Subsumes old count_lines tool since metadata always includes line count. Examples: read first 50 lines of main.rs, check file size without reading content, read last 20 lines of a log file.",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -179,7 +179,7 @@
         "offset": 0,
         "max_results": 100
       },
-      "short_help": "read_file(path, offset?, max_results?) — Read file lines. Paginated. max_results=0 returns metadata only.",
+      "short_help": "read_file(path, offset?, max_results?) \u2014 Read file lines. Paginated. max_results=0 returns metadata only.",
       "aliases": [
         "read file",
         "open file",
@@ -210,7 +210,7 @@
       "tier": "static",
       "category": "editing",
       "description": "Replace line range [start, end) with text. start==end inserts. Both omitted replaces whole file. Creates file if not exists.",
-      "embedded_txt": "Edit a file by replacing a line range with new text. Versatile: start==end means pure insert at that line (no removal). Both start and end omitted means replace entire file content. If file does not exist, creates it. Supports negative indexing (-1 = last line). Use for: inserting code at specific locations, replacing function bodies, creating new files, appending content. For single unique-string replacements, prefer replace_str instead. To edit multiple occurrences in one pass, apply the edits back-to-front — highest line number first — so earlier line numbers don't shift. Examples: insert import at line 0, replace lines 5-10 with new implementation, create a new config file, append test at end of file.",
+      "embedded_txt": "Edit a file by replacing a line range with new text. Versatile: start==end means pure insert at that line (no removal). Both start and end omitted means replace entire file content. If file does not exist, creates it. Supports negative indexing (-1 = last line). Use for: inserting code at specific locations, replacing function bodies, creating new files, appending content. For single unique-string replacements, prefer replace_str instead. To edit multiple occurrences in one pass, apply the edits back-to-front \u2014 highest line number first \u2014 so earlier line numbers don't shift. Examples: insert import at line 0, replace lines 5-10 with new implementation, create a new config file, append test at end of file.",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -241,7 +241,7 @@
         "end": 5,
         "text": "fn new_code() {\n    todo!()\n}\n"
       },
-      "short_help": "edit_file(path, text, start?, end?) — Replace line range [start,end) with text. start==end inserts; omit both to replace whole file.",
+      "short_help": "edit_file(path, text, start?, end?) \u2014 Replace line range [start,end) with text. start==end inserts; omit both to replace whole file.",
       "aliases": [
         "write file",
         "edit file",
@@ -265,8 +265,8 @@
       "name": "replace_str",
       "tier": "static",
       "category": "editing",
-      "description": "Replace a unique string occurrence in a file. Fails if not exactly one match; failure errors include line numbers of near/duplicate matches — use them with edit_file as the fallback.",
-      "embedded_txt": "Find and replace an exact string in a file. The old_str must match exactly once in the file — fails with error if zero or multiple matches found. On failure the error lists the closest matching lines (0 matches) or every match's line number (multiple matches); fall back to edit_file with those line numbers when the string can't be made unique. This is the safest edit operation when you know the exact text to change. Preferred over edit_file for: renaming functions/variables, fixing typos, updating import paths, changing single values. Does not use regex — literal string match only. Examples: rename a function, fix a typo in a comment, update a dependency version string, change a constant value.",
+      "description": "Replace a unique string occurrence in a file. Fails if not exactly one match; failure errors include line numbers of near/duplicate matches \u2014 use them with edit_file as the fallback.",
+      "embedded_txt": "Find and replace an exact string in a file. The old_str must match exactly once in the file \u2014 fails with error if zero or multiple matches found. On failure the error lists the closest matching lines (0 matches) or every match's line number (multiple matches); fall back to edit_file with those line numbers when the string can't be made unique. This is the safest edit operation when you know the exact text to change. Preferred over edit_file for: renaming functions/variables, fixing typos, updating import paths, changing single values. Does not use regex \u2014 literal string match only. Examples: rename a function, fix a typo in a comment, update a dependency version string, change a constant value.",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -295,7 +295,7 @@
         "old_str": "let x = 1;",
         "new_str": "let x = 42;"
       },
-      "short_help": "replace_str(path, old_str, new_str) — Replace exact string in file (must match exactly once).",
+      "short_help": "replace_str(path, old_str, new_str) \u2014 Replace exact string in file (must match exactly once).",
       "aliases": [
         "replace text",
         "find and replace",
@@ -319,7 +319,7 @@
       "tier": "static",
       "category": "execution",
       "description": "Run a shell command (dirty open files are flushed to disk first). Output over 500 lines or 30KB is written to a file instead of returned inline.",
-      "embedded_txt": "Execute an arbitrary shell command in the project directory. Before running, any open file with unsaved buffer content is flushed to disk so grep/find/etc. see current content. Returns combined stdout+stderr; if that (or any other tool's result) exceeds 500 lines or 30KB, the full output is written to .tracelean/tool_logs/ and a short preview plus that file's path is returned instead — use read_file with an offset to page through it. Use for: exact/regex/glob file search (grep, find — you already know these well), running tests, building projects, installing dependencies, git operations, any CLI tool. Timeout configurable (default 30s). Examples: grep -rn TODO src/, find . -name '*.rs', cargo test, npm install, git status, python script.py, make build.",
+      "embedded_txt": "Execute an arbitrary shell command in the project directory. Before running, any open file with unsaved buffer content is flushed to disk so grep/find/etc. see current content. Returns combined stdout+stderr; if that (or any other tool's result) exceeds 500 lines or 30KB, the full output is written to .tracelean/tool_logs/ and a short preview plus that file's path is returned instead \u2014 use read_file with an offset to page through it. Use for: exact/regex/glob file search (grep, find \u2014 you already know these well), running tests, building projects, installing dependencies, git operations, any CLI tool. Timeout configurable (default 30s). Examples: grep -rn TODO src/, find . -name '*.rs', cargo test, npm install, git status, python script.py, make build.",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -340,7 +340,7 @@
         "command": "cargo test",
         "timeout_secs": 60
       },
-      "short_help": "run_shell(command, timeout_secs?) — Run a shell command; large output spills to a file.",
+      "short_help": "run_shell(command, timeout_secs?) \u2014 Run a shell command; large output spills to a file.",
       "aliases": [
         "execute shell",
         "terminal",
@@ -394,7 +394,7 @@
       "example": {
         "query": "rust tokio watch channel"
       },
-      "short_help": "web_search(query, max_results?) — Search the web; returns result titles + URLs.",
+      "short_help": "web_search(query, max_results?) \u2014 Search the web; returns result titles + URLs.",
       "aliases": [
         "search web",
         "google",
@@ -412,7 +412,7 @@
       "tier": "static",
       "category": "web",
       "description": "Fetch a URL; its readable text is saved to a project temp file for read_file/shell grep.",
-      "embedded_txt": "Fetch a web page by URL. The page is downloaded, HTML is stripped to readable text, and the result is saved under .tracelean/web/ inside the project. The tool returns the saved path, line count, and a short preview — use read_file, or run_shell with grep, on that path to inspect the content. Use after web_search returns candidate URLs, or directly when you already know the URL. Examples: fetch https://docs.rs/tokio, download a changelog page, read an API reference page.",
+      "embedded_txt": "Fetch a web page by URL. The page is downloaded, HTML is stripped to readable text, and the result is saved under .tracelean/web/ inside the project. The tool returns the saved path, line count, and a short preview \u2014 use read_file, or run_shell with grep, on that path to inspect the content. Use after web_search returns candidate URLs, or directly when you already know the URL. Examples: fetch https://docs.rs/tokio, download a changelog page, read an API reference page.",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -429,7 +429,7 @@
       "example": {
         "url": "https://docs.rs/tokio"
       },
-      "short_help": "web_fetch(url) — Fetch a URL as text into .tracelean/web/ readable with read_file/grep.",
+      "short_help": "web_fetch(url) \u2014 Fetch a URL as text into .tracelean/web/ readable with read_file/grep.",
       "aliases": [
         "fetch url",
         "web fetch",
@@ -463,7 +463,7 @@
       "example": {
         "tool_name": "edit_file"
       },
-      "short_help": "help_tool(tool_name) — Get detailed usage info for any tool.",
+      "short_help": "help_tool(tool_name) \u2014 Get detailed usage info for any tool.",
       "aliases": [
         "tool help",
         "how do I use",
@@ -472,6 +472,70 @@
       "examples": [
         "Get help for edit_file",
         "How do I use find_semantic"
+      ]
+    },
+    {
+      "name": "lsp_query",
+      "tier": "dynamic",
+      "category": "traceability",
+      "description": "Ask the language server about a position: hover, definition, references, diagnostics, symbols, code actions, or (Lean) the proof goal.",
+      "embedded_txt": "Ask a running language server a question about a specific position in a file, instead of reading the whole file. Modes: hover (type and docs at the cursor), definition (where a symbol is defined), references (everywhere it is used), diagnostics (the compiler's current errors and warnings for the file), symbols (the file's outline), code_actions (the named fixes and refactors valid here), and goal (Lean only: the proof state at the cursor). Use goal whenever writing or repairing a Lean proof \u2014 writing tactics without seeing the goal is guessing. Use diagnostics instead of compiling the whole project to find out whether an edit worked. These answers are far smaller than the file they come from.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "File path, relative to the project root."
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "hover",
+              "definition",
+              "references",
+              "diagnostics",
+              "symbols",
+              "code_actions",
+              "goal"
+            ],
+            "description": "What to ask for."
+          },
+          "line": {
+            "type": "integer",
+            "description": "Zero-based line. Ignored for diagnostics and symbols."
+          },
+          "character": {
+            "type": "integer",
+            "description": "Zero-based column. Defaults to 0."
+          }
+        },
+        "required": [
+          "path",
+          "mode"
+        ],
+        "additionalProperties": false
+      },
+      "example": {
+        "path": "model/Auth.lean",
+        "mode": "goal",
+        "line": 12,
+        "character": 2
+      },
+      "short_help": "lsp_query(path, mode, line, character) \u2014 Hover, definition, references, diagnostics, symbols, code actions, or the Lean goal.",
+      "aliases": [
+        "goal state",
+        "proof state",
+        "hover",
+        "go to definition",
+        "find references",
+        "diagnostics",
+        "compiler errors",
+        "code actions"
+      ],
+      "examples": [
+        "What is the proof goal at line 12 of the model",
+        "Show the current errors in auth.rs",
+        "Where is login defined"
       ]
     }
   ],
@@ -498,7 +562,7 @@
       "example": {
         "path": "src/obsolete.rs"
       },
-      "short_help": "delete_file(path) — Delete a file (reversible via undo).",
+      "short_help": "delete_file(path) \u2014 Delete a file (reversible via undo).",
       "aliases": [
         "remove file",
         "rm",
@@ -511,79 +575,50 @@
       ]
     },
     {
-      "name": "query_trace_graph",
+      "name": "query_project_graph",
       "tier": "dynamic",
       "category": "traceability",
-      "description": "Query traceability graph by requirement ID. Returns linked specs, code, tests.",
-      "embedded_txt": "Query the project traceability graph for a specific requirement. Returns all linked artifacts: formal specs (Lean4), implementing code elements (functions, structs), and test cases. Use to understand requirement coverage, find what code implements a requirement, or check test coverage for a feature. The trace graph is built from source annotations and spec files. Examples: what code implements REQ-01, show test coverage for REQ-03, find the formal spec for a requirement.",
+      "description": "Which code serves a requirement, and which requirements a file or function satisfies, with assurance level and findings.",
+      "embedded_txt": "Query the project graph, which is the code of the project with its requirements, assurance level and findings overlaid. Filter by req_id to see every file and declaration annotated for that requirement; by file and optionally symbol to see what a piece of code is for. With no filter it lists the files. Each result carries the requirements it serves, the weakest-link assurance level behind them (L1 annotated only, L2 judged, L3 differentially tested, L4 proved), whether its evidence has gone stale, and how many findings it has. Code with no requirement reports as untraced, which is different from L1: L1 means somebody claimed it and nothing has checked it, untraced means nobody claimed it. Use before changing code to see what depends on it, or to find what implements a requirement. Examples: what code implements REQ-01, which requirement engine/pricing.py serves, which requirement discount_cents serves.",
       "input_schema": {
         "type": "object",
         "properties": {
           "req_id": {
             "type": "string",
-            "description": "Requirement ID (e.g. REQ-01)."
+            "description": "Requirement id, e.g. REQ-DISCOUNT. Matches its clauses too."
+          },
+          "file": {
+            "type": "string",
+            "description": "Project-relative path, e.g. engine/pricing.py."
+          },
+          "symbol": {
+            "type": "string",
+            "description": "Declaration name within the file."
           }
         },
-        "required": [
-          "req_id"
-        ],
+        "required": [],
         "additionalProperties": false
       },
       "example": {
         "req_id": "REQ-01"
       },
-      "short_help": "query_trace_graph(req_id) — Linked specs, code, tests for a requirement.",
+      "short_help": "query_project_graph(req_id?, file?, symbol?) \u2014 What code serves a requirement, and what a piece of code is for.",
       "aliases": [
         "trace requirement",
         "find links",
         "requirement coverage",
         "what implements",
-        "trace link"
+        "trace link",
+        "trace code",
+        "code links",
+        "what requirement",
+        "impact analysis"
       ],
       "examples": [
         "What code implements REQ-01",
         "Show traceability for REQ-03",
-        "Find tests for requirement"
-      ]
-    },
-    {
-      "name": "query_code_element",
-      "tier": "dynamic",
-      "category": "traceability",
-      "description": "Query trace graph for a code element to find linked requirements and specs.",
-      "embedded_txt": "Query the traceability graph starting from a code element (function, struct, module) to find which requirements it satisfies and which formal specs verify it. Use for impact analysis: before modifying code, check what requirements would be affected. Also useful to understand the purpose of unfamiliar code. Examples: what requirement does the login function satisfy, find the spec for the upload handler, check which reqs are impacted by changes to auth.rs.",
-      "input_schema": {
-        "type": "object",
-        "properties": {
-          "file": {
-            "type": "string",
-            "description": "File containing the element."
-          },
-          "name": {
-            "type": "string",
-            "description": "Symbol name."
-          }
-        },
-        "required": [
-          "file",
-          "name"
-        ],
-        "additionalProperties": false
-      },
-      "example": {
-        "file": "src/auth.rs",
-        "name": "login"
-      },
-      "short_help": "query_code_element(file, name) — Requirements/specs linked to a code element.",
-      "aliases": [
-        "trace code",
-        "code links",
-        "what requirement",
-        "element trace"
-      ],
-      "examples": [
         "What requirement does login() satisfy",
-        "Find spec for upload function"
+        "Which requirements does src/auth.rs serve"
       ]
     },
     {
@@ -591,7 +626,7 @@
       "tier": "dynamic",
       "category": "requirements",
       "description": "List all project requirements with ID, title, and status.",
-      "embedded_txt": "List all requirements defined in the project. Returns each requirement's ID, title, and current status (implemented, pending, partial). Use to get an overview of project scope, find requirements to work on, or check overall progress. No parameters needed — returns the complete list. Examples: show all project requirements, what requirements exist, check implementation status.",
+      "embedded_txt": "List all requirements defined in the project. Returns each requirement's ID, title, and current status (implemented, pending, partial). Use to get an overview of project scope, find requirements to work on, or check overall progress. No parameters needed \u2014 returns the complete list. Examples: show all project requirements, what requirements exist, check implementation status.",
       "input_schema": {
         "type": "object",
         "properties": {},
@@ -599,7 +634,7 @@
         "additionalProperties": false
       },
       "example": {},
-      "short_help": "list_requirements() — List all requirements with ID, title, status.",
+      "short_help": "list_requirements() \u2014 List all requirements with ID, title, status.",
       "aliases": [
         "show requirements",
         "all requirements",
@@ -635,7 +670,7 @@
       "example": {
         "path": "src/types.rs"
       },
-      "short_help": "get_symbols(path) — Parsed symbols (functions, structs, classes) from a file.",
+      "short_help": "get_symbols(path) \u2014 Parsed symbols (functions, structs, classes) from a file.",
       "aliases": [
         "parse symbols",
         "functions in file",

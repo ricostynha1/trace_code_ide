@@ -1,0 +1,8 @@
+name = "checkout-model"
+defaultTargets = ["Checkout"]
+
+[[lean_lib]]
+name = "Checkout"
+
+[[lean_lib]]
+name = "CheckoutProofs"
