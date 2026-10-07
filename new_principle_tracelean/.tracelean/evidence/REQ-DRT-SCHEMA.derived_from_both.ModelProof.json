@@ -1,0 +1,25 @@
+{
+  "key": {
+    "reqId": "REQ-DRT-SCHEMA",
+    "clause": "derived_from_both",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Derive::an_int_pairs_with_i64",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "3c52ac63803f9ffc",
+  "inputs": [
+    [
+      "model",
+      "6b2ff6ff8b8e5376"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

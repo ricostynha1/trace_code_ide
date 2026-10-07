@@ -3079,6 +3079,26 @@
         "entry": "crates/core/src/trace/pinning.rs::standing",
         "params": { "theoremName": "theorem_name" }
       }
+    },
+    {
+      "req_id": "REQ-DRT-SCHEMA",
+      "clause": "derived_from_both",
+      "also_checks": ["outside_is_error"],
+      "floors": [
+        { "situation": "paired", "atLeast": 100 },
+        { "situation": "a structure paired", "atLeast": 5 },
+        { "situation": "a mismatch reported", "atLeast": 1000 }
+      ],
+      "model": {
+        "import": "TraceLean.Derive",
+        "function": "TraceLean.Derive.pair",
+        "arguments": ["lean", "rust", "leanStructs", "rustStructs", "fuel"]
+      },
+      "implementation": {
+        "language": "rust",
+        "entry": "crates/core/src/drt/derive.rs::pair",
+        "params": { "leanStructs": "lean_structs", "rustStructs": "rust_structs" }
+      }
     }
   ]
 }

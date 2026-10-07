@@ -2782,6 +2782,12 @@ impl Editor {
                         .unwrap_or_else(|| requirement.title.clone()),
                     level: levels.get(&(id.to_string(), clause.clone())).copied().unwrap_or(Level::L1),
                     chain: chain_of(&records, id, clause.as_deref()),
+                    tested: records.iter().any(|r| {
+                        r.key.req_id == id
+                            && r.key.clause == clause
+                            && r.key.bond == tracelean_core::evidence::Bond::ModelImpl
+                            && r.effective_level() >= Level::L3
+                    }),
                     key: clause,
                     claims,
                     pins,

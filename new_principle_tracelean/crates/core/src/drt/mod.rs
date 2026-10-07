@@ -1,7 +1,9 @@
 //! Differential testing.
 
+pub mod auto;
 pub mod coverage;
 pub mod config;
+pub mod derive;
 pub mod gen;
 pub mod lean_runner;
 pub mod pins;

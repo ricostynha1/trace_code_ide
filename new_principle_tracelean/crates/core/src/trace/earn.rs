@@ -92,6 +92,39 @@ pub fn drt_record(
 ) -> Result<Evidence, Unearned> {
     let link = link_hash(index, req_id, clause, Role::Drt)
         .ok_or(Unearned::NoLink { role: "drt" })?;
+    with_link(index, req_id, clause, level, seed, cases, op, link)
+}
+
+/// What a derived differential run established (`drt::derive`): the same
+/// record, resting on the `@implements` claim, because nobody wrote a `@drt`
+/// one — the run itself is the claim that the code was tested against the
+/// model, and retargeting the implementation still invalidates it.
+pub fn derived_drt_record(
+    index: &Index,
+    req_id: &str,
+    clause: Option<&str>,
+    level: Level,
+    seed: u64,
+    cases: u64,
+    op: &str,
+) -> Result<Evidence, Unearned> {
+    let link = link_hash(index, req_id, clause, Role::Drt)
+        .or_else(|| link_hash(index, req_id, clause, Role::Implements))
+        .ok_or(Unearned::NoLink { role: "implements" })?;
+    with_link(index, req_id, clause, level, seed, cases, op, link)
+}
+
+#[allow(clippy::too_many_arguments)]
+fn with_link(
+    index: &Index,
+    req_id: &str,
+    clause: Option<&str>,
+    level: Level,
+    seed: u64,
+    cases: u64,
+    op: &str,
+    link: String,
+) -> Result<Evidence, Unearned> {
     let model = anchor_hash(index, req_id, clause, Role::Models)
         .ok_or(Unearned::NoInput { name: "model" })?;
     let implementation = anchor_hash(index, req_id, clause, Role::Implements)

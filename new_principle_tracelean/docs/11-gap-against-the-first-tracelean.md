@@ -372,6 +372,12 @@ Lean/DRT where the core changed + editor + window, with tests
   view says pinned / attempted / open (`trace::pinning`, Lean `Pinning`, three
   DRT suites). The demo is in whole degrees, with both conversions pinned and
   the round trip proved for every input.
+- **Derived DRT.** `tracelean-trace . --drt` pairs each unbound clause's Lean
+  and Rust signatures (`drt::derive`, Lean `Derive`, one DRT suite), builds
+  both runners in a scratch directory — requiring the nearest Lake package or
+  packaging the model's directory, depending on the library crate or including
+  the file — and records L3 when they agree and every argument class was
+  generated. The demo shows `drt 2/4` with no binding and no `@drt`.
 - **Not done.** Opening a terminal for the user (ruled out by
   `ARCH-NO-DRIVING.user_runs_it`); Lean infoview and type-check on save (both
   start a process); LSP hover; coverage treemap and trend.

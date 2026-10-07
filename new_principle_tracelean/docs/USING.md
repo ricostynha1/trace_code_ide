@@ -91,6 +91,16 @@ then shows each clause **pinned**, **attempted** (with Lean's complaint) or
 **open** (with the theorem it owes). Editing any of the three puts it back to
 attempted. `demo/specs/Thermo.lean` has both kinds.
 
+**Differential tests without writing one.** `tracelean-trace . --drt` finds
+every clause a Lean `def` models and a Rust `fn` implements, pairs their
+arguments by position (`Int`/`i64`, `Nat`/`u32`, `Bool`, `String`, `List`/`Vec`,
+`Option`, structures with serde-matching fields), generates both runners in a
+scratch directory, and asks both 2000 cases. Agreement that reached every class
+of every argument (negative, zero, positive; empty and not; …) is recorded as
+L3 and counted under `drt` in the requirement. A divergence is shrunk and
+printed; a type the two sides do not share (`Float`, `&str`) is named and left
+untested. A binding in `.tracelean/drt.json` overrides it for its clause.
+
 ## Keys
 
 Everything has a mouse route (click, right-click) and a key route. You never

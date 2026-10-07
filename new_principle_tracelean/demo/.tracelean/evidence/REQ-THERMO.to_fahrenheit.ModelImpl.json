@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-THERMO",
+    "clause": "to_fahrenheit",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 1,
+      "cases": 2000,
+      "op": "REQ-THERMO.to_fahrenheit"
+    }
+  },
+  "linkHash": "5e5539eba707d94b",
+  "inputs": [
+    [
+      "implementation",
+      "6b9f318c2e01a1ce"
+    ],
+    [
+      "model",
+      "aa60593053f8af5a+e12c6e29b812465e"
+    ]
+  ]
+}

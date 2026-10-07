@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-DRT-SCHEMA",
+    "clause": "derived_from_both",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 321,
+      "cases": 20000,
+      "op": "REQ-DRT-SCHEMA.derived_from_both"
+    }
+  },
+  "linkHash": "4412a60400ea3163",
+  "inputs": [
+    [
+      "implementation",
+      "33d4a6ef8b8a7599"
+    ],
+    [
+      "model",
+      "6b2ff6ff8b8e5376"
+    ]
+  ]
+}

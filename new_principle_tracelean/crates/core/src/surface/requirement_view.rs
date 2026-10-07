@@ -44,6 +44,10 @@ pub struct ClauseShown {
     /// `pinned`, `attempted` or `open`, with the theorem, or what is owed.
     #[serde(default)]
     pub pins: Option<(String, String)>,
+    /// Whether the code was differentially tested against the model, however
+    /// the test came about — a `@drt` claim or `tracelean-trace --drt`.
+    #[serde(default)]
+    pub tested: bool,
 }
 
 /// Everything the view is produced from.
@@ -109,7 +113,14 @@ pub fn requirement_view(view: RequirementShown) -> Buffer {
     ]
     .into_iter()
     .map(|role| {
-        let reached = view.clauses.iter().filter(|c| c.claims.iter().any(|claim| claim.role == role.as_str())).count();
+        let reached = view
+            .clauses
+            .iter()
+            .filter(|c| {
+                c.claims.iter().any(|claim| claim.role == role.as_str())
+                    || (role == crate::trace::annotation::Role::Drt && c.tested)
+            })
+            .count();
         (role, format!("{} {reached}/{total}", role.as_str()))
     })
     .collect();
@@ -223,6 +234,7 @@ mod tests {
                     chain: "L2/L3/L2".into(),
                     claims: vec![Claim { role: "implements".into(), path: "src/x.rs".into(), line: 12, symbol: Some("hold".into()) }],
                     pins: Some(("pinned".into(), "X.holds_pinned".into())),
+                    tested: true,
                 },
                 ClauseShown {
                     key: Some("unclaimed".into()),
@@ -231,6 +243,7 @@ mod tests {
                     chain: "L1/L1/L1".into(),
                     claims: vec![],
                     pins: None,
+                    tested: false,
                 },
             ],
             width: 60,
@@ -255,6 +268,7 @@ mod tests {
         assert_eq!(actions_at(shown.clone(), offset_of(&shown, "ARCH-A")), vec!["trace.requirement".to_string()]);
         assert!(shown.text.contains("nothing claims it yet"));
         assert!(shown.text.contains("  pinned\n    X.holds_pinned"), "{}", shown.text);
+        assert!(shown.text.contains("drt 1/2"), "a derived test counts: {}", shown.text);
         assert!(shown.text.find("holds").unwrap() < shown.text.find("unclaimed").unwrap());
     }
 

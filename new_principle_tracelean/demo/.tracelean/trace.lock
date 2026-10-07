@@ -1,0 +1,235 @@
+{
+  "version": 1,
+  "requirements": {
+    "REQ-TABLE": {
+      "clauses": [
+        "boiling",
+        "every_sample"
+      ],
+      "content_hash": "34bb4cf7d97eda03",
+      "file": "reqs/REQ-TABLE.md",
+      "refines": [
+        "REQ-THERMO"
+      ],
+      "decomposition": "open"
+    },
+    "REQ-THERMO": {
+      "clauses": [
+        "agreement",
+        "round_trip",
+        "to_celsius",
+        "to_fahrenheit"
+      ],
+      "content_hash": "32e16ea621872a6a",
+      "file": "reqs/REQ-THERMO.md",
+      "refines": [],
+      "decomposition": "complete"
+    }
+  },
+  "links": [
+    {
+      "role": "implements",
+      "req": "REQ-TABLE",
+      "clause": "every_sample",
+      "file": "src/main.rs",
+      "anchor": "src/main.rs::main",
+      "body_hash": "c679d51386a2ea14",
+      "link_hash": "729b1e3fc677252c",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-THERMO",
+      "clause": "agreement",
+      "file": "src/celsius.rs",
+      "anchor": "src/celsius.rs::agreement",
+      "body_hash": "1cf93c29499220e6",
+      "link_hash": "5f52d8c975dc56c3",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-THERMO",
+      "clause": "to_celsius",
+      "file": "src/celsius.rs",
+      "anchor": "src/celsius.rs::to_celsius",
+      "body_hash": "596cfa44067bfd62",
+      "link_hash": "d6e5a2d4d2a4ee73",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-THERMO",
+      "clause": "to_fahrenheit",
+      "file": "src/celsius.rs",
+      "anchor": "src/celsius.rs::to_fahrenheit",
+      "body_hash": "6b9f318c2e01a1ce",
+      "link_hash": "5e5539eba707d94b",
+      "qualifier": null
+    },
+    {
+      "role": "models",
+      "req": "REQ-THERMO",
+      "clause": "to_celsius",
+      "file": "specs/Thermo.lean",
+      "anchor": "specs/Thermo.lean::Thermo::ToCelsius",
+      "body_hash": "558e54f5c2fc9ef6",
+      "link_hash": "a99d6e4b0c9f942d",
+      "qualifier": null
+    },
+    {
+      "role": "models",
+      "req": "REQ-THERMO",
+      "clause": "to_celsius",
+      "file": "specs/Thermo.lean",
+      "anchor": "specs/Thermo.lean::Thermo::toCelsius",
+      "body_hash": "01d2366e2d3c6be5",
+      "link_hash": "93dc00034cb1df0d",
+      "qualifier": null
+    },
+    {
+      "role": "models",
+      "req": "REQ-THERMO",
+      "clause": "to_fahrenheit",
+      "file": "specs/Thermo.lean",
+      "anchor": "specs/Thermo.lean::Thermo::ToFahrenheit",
+      "body_hash": "e12c6e29b812465e",
+      "link_hash": "380963cda5493d6d",
+      "qualifier": null
+    },
+    {
+      "role": "models",
+      "req": "REQ-THERMO",
+      "clause": "to_fahrenheit",
+      "file": "specs/Thermo.lean",
+      "anchor": "specs/Thermo.lean::Thermo::toFahrenheit",
+      "body_hash": "aa60593053f8af5a",
+      "link_hash": "8e5ff9c48b73614d",
+      "qualifier": null
+    },
+    {
+      "role": "pins",
+      "req": "REQ-THERMO",
+      "clause": "to_celsius",
+      "file": "specs/Thermo.lean",
+      "anchor": "specs/Thermo.lean::Thermo::to_celsius_pinned",
+      "body_hash": "70c318b48c92930a",
+      "link_hash": "2988cc2b27156ee1",
+      "qualifier": null
+    },
+    {
+      "role": "pins",
+      "req": "REQ-THERMO",
+      "clause": "to_fahrenheit",
+      "file": "specs/Thermo.lean",
+      "anchor": "specs/Thermo.lean::Thermo::to_fahrenheit_pinned",
+      "body_hash": "6841db247c41dac0",
+      "link_hash": "7360469d8b9447eb",
+      "qualifier": null
+    },
+    {
+      "role": "proves",
+      "req": "REQ-THERMO",
+      "clause": "agreement",
+      "file": "specs/Thermo.lean",
+      "anchor": "specs/Thermo.lean::Thermo::agree_at_minus_forty",
+      "body_hash": "1f2e7c603a8b631e",
+      "link_hash": "abb6dccc11f7da8b",
+      "qualifier": null
+    },
+    {
+      "role": "proves",
+      "req": "REQ-THERMO",
+      "clause": "round_trip",
+      "file": "specs/Thermo.lean",
+      "anchor": "specs/Thermo.lean::Thermo::round_trip",
+      "body_hash": "ce8f0c6bf3449d79",
+      "link_hash": "484f14ab2689e74f",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-THERMO",
+      "clause": "agreement",
+      "file": "tests/round_trip.rs",
+      "anchor": "tests/round_trip.rs::the_scales_meet_at_minus_forty",
+      "body_hash": "6a2df1465fb950fe",
+      "link_hash": "d1cc50603726bf42",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-THERMO",
+      "clause": "round_trip",
+      "file": "tests/round_trip.rs",
+      "anchor": "tests/round_trip.rs::converting_back_gives_what_went_in",
+      "body_hash": "adbafa3df76bf000",
+      "link_hash": "3083931956e74a1d",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-THERMO",
+      "clause": "to_celsius",
+      "file": "tests/round_trip.rs",
+      "anchor": "tests/round_trip.rs::converting_back_gives_what_went_in",
+      "body_hash": "adbafa3df76bf000",
+      "link_hash": "670fb9cbe4baf109",
+      "qualifier": null
+    }
+  ],
+  "evidence": [
+    {
+      "key": {
+        "reqId": "REQ-THERMO",
+        "clause": "to_celsius",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 1,
+          "cases": 2000,
+          "op": "REQ-THERMO.to_celsius"
+        }
+      },
+      "linkHash": "d6e5a2d4d2a4ee73",
+      "inputs": [
+        [
+          "implementation",
+          "596cfa44067bfd62"
+        ],
+        [
+          "model",
+          "01d2366e2d3c6be5+558e54f5c2fc9ef6"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-THERMO",
+        "clause": "to_fahrenheit",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 1,
+          "cases": 2000,
+          "op": "REQ-THERMO.to_fahrenheit"
+        }
+      },
+      "linkHash": "5e5539eba707d94b",
+      "inputs": [
+        [
+          "implementation",
+          "6b9f318c2e01a1ce"
+        ],
+        [
+          "model",
+          "aa60593053f8af5a+e12c6e29b812465e"
+        ]
+      ]
+    }
+  ]
+}

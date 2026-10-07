@@ -154,6 +154,47 @@ fn main() {
         return;
     }
 
+    // `--drt` tests every clause a Lean function models and a Rust function
+    // implements against each other, without a binding, records L3 where it
+    // was earned, and refreshes the lock so the editor sees it.
+    if std::env::args().any(|a| a == "--drt") {
+        use tracelean_core::drt::auto::{run_all, Outcome};
+        let files = tracelean_core::observe::workspace::snapshot(&root).files;
+        let outcomes = run_all(&root, &index, &files);
+        if outcomes.is_empty() {
+            println!("nothing to test: no clause has both a Lean `def` modelling it and a Rust `fn` implementing it, unbound");
+        }
+        for (candidate, outcome) in &outcomes {
+            let op = &candidate.op;
+            match outcome {
+                Outcome::Agreed { cases } => println!("agreed     {op}  {cases} cases, every class reached: L3"),
+                Outcome::Uncovered { missing } => println!("uncovered  {op}  never generated: {}", missing.join(", ")),
+                Outcome::Diverged { input, model, implementation } => {
+                    println!("DIVERGED   {op}\n    input {input}\n    model {model}\n    code  {implementation}")
+                }
+                Outcome::Mismatch(problems) => {
+                    println!("mismatch   {op}  ({} against {})", candidate.model.1, candidate.implementation.1);
+                    for problem in problems {
+                        println!("    {problem}");
+                    }
+                }
+                Outcome::Failed(why) => {
+                    println!("failed     {op}");
+                    for line in why.lines().take(15) {
+                        println!("    {line}");
+                    }
+                }
+            }
+        }
+        let index = trace::index::build(&root);
+        let held = trace::lockfile::read(&root).map(|l| l.evidence).unwrap_or_default();
+        let collected = trace::lockfile::collected(&index, held, trace::store::read_all(&root));
+        if let Err(error) = trace::lockfile::write(&root, &collected.lockfile) {
+            eprintln!("cannot write the lock: {error}");
+        }
+        return;
+    }
+
     // `--pins` asks Lean whether each `@pins` theorem pins its clause, keeps the
     // verdict under `.tracelean/pins`, and says what an unpinned clause owes.
     if std::env::args().any(|a| a == "--pins") {

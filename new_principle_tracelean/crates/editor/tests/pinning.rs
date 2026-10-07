@@ -10,18 +10,38 @@ use tracelean_editor::Editor;
 
 const KEYMAP: &str = include_str!("../../../assets/keymap.json");
 
-/// The demo's requirements and Lean, in a scratch directory.
-fn thermo() -> PathBuf {
+/// Parts of the demo, in a scratch directory.
+fn copy_of(name: &str, parts: &[&str]) -> PathBuf {
     let demo = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../demo");
-    let dir = std::env::temp_dir().join(format!("tracelean-pinning-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("tracelean-{name}-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
-    for sub in ["reqs", "specs"] {
+    for sub in parts {
         std::fs::create_dir_all(dir.join(sub)).unwrap();
         for entry in std::fs::read_dir(demo.join(sub)).unwrap().flatten() {
-            std::fs::copy(entry.path(), dir.join(sub).join(entry.file_name())).unwrap();
+            if entry.path().is_file() {
+                std::fs::copy(entry.path(), dir.join(sub).join(entry.file_name())).unwrap();
+            }
         }
     }
     dir
+}
+
+/// The demo's requirements and Lean.
+fn thermo() -> PathBuf {
+    copy_of("pinning", &["reqs", "specs"])
+}
+
+/// The demo as committed — its code, and the evidence `tracelean-trace --drt`
+/// left — counts both conversions as differentially tested, though nothing in
+/// it says `@drt`.
+///
+/// @tests REQ-DRT-SCHEMA.derived_from_both
+#[test]
+fn a_derived_test_counts_as_differential_testing() {
+    let root = copy_of("derived", &["reqs", "specs", "src", "tests", ".tracelean", ".tracelean/evidence"]);
+    let shown = requirement(&root);
+    assert!(shown.contains("drt 2/4"), "{shown}");
+    let _ = std::fs::remove_dir_all(&root);
 }
 
 fn requirement(root: &Path) -> String {

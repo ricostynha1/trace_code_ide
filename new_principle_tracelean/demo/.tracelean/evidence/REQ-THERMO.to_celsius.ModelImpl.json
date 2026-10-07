@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-THERMO",
+    "clause": "to_celsius",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 1,
+      "cases": 2000,
+      "op": "REQ-THERMO.to_celsius"
+    }
+  },
+  "linkHash": "d6e5a2d4d2a4ee73",
+  "inputs": [
+    [
+      "implementation",
+      "596cfa44067bfd62"
+    ],
+    [
+      "model",
+      "01d2366e2d3c6be5+558e54f5c2fc9ef6"
+    ]
+  ]
+}
