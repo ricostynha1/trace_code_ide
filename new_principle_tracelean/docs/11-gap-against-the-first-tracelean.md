@@ -384,6 +384,12 @@ Lean/DRT where the core changed + editor + window, with tests
   `Lines`, two DRT suites). The window marks covered and uncovered lines with
   the tests in the line's tooltip; a requirement shows each clause's lines
   run. Rust only; the terminal shows the per-clause summary, not the marks.
+- **Re-approval.** Differential-test and proof records carry the requirement's
+  hash as judgements did, so a reworded requirement re-opens all three;
+  `tracelean-trace . --stale` lists every stale record, pinning verdict,
+  document and coverage file with what to run, exit 1 if any
+  (`REQ-STALE.requirement_reopens_all`, `listed_for_a_script`). The explorer
+  ends with a legend of the marks it shows.
 - **Not done.** Opening a terminal for the user (ruled out by
   `ARCH-NO-DRIVING.user_runs_it`); Lean infoview and type-check on save (both
   start a process); LSP hover; coverage treemap and trend.

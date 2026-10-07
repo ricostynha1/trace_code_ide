@@ -19,7 +19,13 @@ How to work in a repository that uses the TraceLean method. Read
 ```bash
 tracelean-trace .                                  # what the project claims, and what is missing
 tracelean-trace . --context REQ-X.clause           # everything you need to change REQ-X.clause
+tracelean-trace . --stale                          # what your change re-opened, and what to run for each
 ```
+
+`--stale` lists every judgement, differential test, proof, pinning verdict,
+document and coverage measurement that something it rests on has changed
+under — a reworded requirement re-opens all of them — and exits 1 if any.
+**Run it after a change, and redo or report what it lists.**
 
 `--context` prints, as Markdown, the clause, what it refines, the code, tests
 and Lean models that claim it (with source), the tests likely to break, and

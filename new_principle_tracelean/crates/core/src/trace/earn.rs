@@ -141,8 +141,18 @@ fn with_link(
         inputs: vec![
             ("implementation".to_string(), implementation),
             ("model".to_string(), model),
+            ("requirement".to_string(), requirement_hash(index, req_id)?),
         ],
     })
+}
+
+/// The requirement's text, as every record that rests on it carries it: a
+/// requirement reworded re-opens the judgement of its model, and the tests
+/// and proofs made against that model too, until they are made again.
+///
+/// @implements REQ-STALE.requirement_reopens_all
+fn requirement_hash(index: &Index, req_id: &str) -> Result<String, Unearned> {
+    index.requirements.get(req_id).map(|r| r.content_hash.clone()).ok_or(Unearned::NoInput { name: "requirement" })
 }
 
 /// What a kernel-checked proof established for one clause.
@@ -176,7 +186,11 @@ pub fn proof_record(
             toolchain: toolchain.to_string(),
         },
         link_hash: link,
-        inputs: vec![("model".to_string(), model), ("toolchain".to_string(), toolchain.to_string())],
+        inputs: vec![
+            ("model".to_string(), model),
+            ("requirement".to_string(), requirement_hash(index, req_id)?),
+            ("toolchain".to_string(), toolchain.to_string()),
+        ],
     })
 }
 
@@ -236,6 +250,15 @@ pub fn still_standing(index: &Index, records: Vec<Evidence>) -> (Vec<Evidence>, 
         }
     }
     (valid, stale)
+}
+
+/// Why a record no longer stands, if it does not: which input moved, or that
+/// its claim was retargeted.
+///
+/// @implements REQ-STALE.stale_is_visible
+pub fn why_stale(index: &Index, record: &Evidence) -> Option<crate::trace::record::Staleness> {
+    let live: Vec<String> = index.links.iter().map(|link| link.link_hash.clone()).collect();
+    crate::trace::record::staleness(record, &live, &current_inputs(index, record))
 }
 
 /// What a record's named inputs hash to now.
@@ -306,7 +329,7 @@ mod tests {
             drt_record(&index, "REQ-A", Some("one"), Level::L3, 7, 500, "REQ-A.one").unwrap();
         assert_eq!(record.key.bond, Bond::ModelImpl);
         let named: Vec<&str> = record.inputs.iter().map(|(n, _)| n.as_str()).collect();
-        assert_eq!(named, vec!["implementation", "model"]);
+        assert_eq!(named, vec!["implementation", "model", "requirement"]);
         assert_eq!(
             crate::trace::record::reproducibility(record),
             crate::trace::record::Reproducibility::Reproducible
@@ -420,6 +443,24 @@ mod tests {
         let (valid, stale) = still_standing(&build(&dir), vec![*evidence]);
         assert!(valid.is_empty(), "the judgement survived a change to a model it covered");
         assert_eq!(stale.len(), 1);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// A requirement reworded re-opens what was earned against it: the tests
+    /// of its code against its model, and the proofs about that model.
+    ///
+    /// @tests REQ-STALE.requirement_reopens_all
+    #[test]
+    fn rewording_a_requirement_reopens_its_tests_and_proofs() {
+        let (dir, index) = tree(FILES);
+        let drt = drt_record(&index, "REQ-A", Some("one"), Level::L3, 7, 500, "REQ-A.one").unwrap();
+        let proof = proof_record(&index, "REQ-A", Some("one"), "a_theorem", "4.12.0").unwrap();
+        let (valid, _) = still_standing(&index, vec![drt.clone(), proof.clone()]);
+        assert_eq!(valid.len(), 2);
+        std::fs::write(dir.join("reqs/a.md"), "---\nid: REQ-A\nclauses:\n  one: First, reworded.\n---\nbody").unwrap();
+        let (valid, stale) = still_standing(&build(&dir), vec![drt, proof]);
+        assert!(valid.is_empty(), "a record survived its requirement being reworded");
+        assert_eq!(stale.len(), 2);
         let _ = std::fs::remove_dir_all(&dir);
     }
 

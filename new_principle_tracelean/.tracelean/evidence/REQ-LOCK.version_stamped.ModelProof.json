@@ -18,6 +18,10 @@
       "d8c49421dbdd21ef"
     ],
     [
+      "requirement",
+      "bac341f63b8d1e71"
+    ],
+    [
       "toolchain",
       "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
     ]

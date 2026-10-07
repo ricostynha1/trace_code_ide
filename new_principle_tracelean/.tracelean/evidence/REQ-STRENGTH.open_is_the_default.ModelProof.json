@@ -18,6 +18,10 @@
       "87d4da9d465362f8+b1d7f99240581683"
     ],
     [
+      "requirement",
+      "41e0e691b882ee2c"
+    ],
+    [
       "toolchain",
       "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
     ]

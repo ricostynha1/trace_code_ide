@@ -11,6 +11,8 @@ clauses:
   scanner_never_writes: The scanner shall mark a record stale and shall never rewrite, regenerate or delete one.
   stale_is_visible: A stale record shall be reported as stale rather than omitted.
   no_silent_revalidation: A record shall not become valid again except by the backend that owns it producing a new one.
+  requirement_reopens_all: Every record about a clause — judgement, differential test, proof — shall carry its requirement's text hash, so rewording the requirement re-opens all of them.
+  listed_for_a_script: Everything that must be approved, tested or proved again shall be listable by one command whose exit status says whether anything is.
 ---
 
 # Staleness and invalidation

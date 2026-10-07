@@ -148,6 +148,37 @@ pub fn tree_buffer(
         at += end + 1;
         lines.push(line);
     }
+    // What the marks mean, under the tree: only those it shows, each in its
+    // own colour.
+    let mut legend: Vec<(String, Role, &str)> = Vec::new();
+    let shown: BTreeSet<crate::trace::annotation::Role> =
+        rows.iter().filter(|r| !r.folder).filter_map(|r| claimed.get(&r.path)).flatten().copied().collect();
+    for kind in shown {
+        if let Some(letter) = crate::surface::chips::letter(kind) {
+            legend.push((letter.to_string(), Role::Claim { role: kind }, kind.as_str()));
+        }
+    }
+    let marks: BTreeSet<&str> = changed.values().map(String::as_str).collect();
+    for (kind, mark, role, said) in [
+        ("modified", "●", Role::Requirement, "changed by the agent"),
+        ("created", "+", Role::Added, "made by the agent"),
+        ("deleted", "✗", Role::Removed, "deleted by the agent"),
+        ("unsaved", "✎", Role::Entry, "not saved"),
+    ] {
+        if marks.contains(kind) {
+            legend.push((mark.to_string(), role, said));
+        }
+    }
+    if !legend.is_empty() {
+        lines.push(String::new());
+        at += 1;
+        for (mark, role, said) in legend {
+            let line = format!("{mark} {said}");
+            spans.push(Span { start: at, stop: at + mark.chars().count(), role, actions: Vec::new() });
+            at += line.chars().count() + 1;
+            lines.push(line);
+        }
+    }
     Buffer {
         id: format!("dir:{title}"),
         kind: BufferKind::Directory { path: title },
@@ -204,7 +235,7 @@ mod tests {
     fn waiting_changes_are_marked_on_the_file_and_its_folders() {
         let changed: BTreeMap<String, String> = [("src/notes/a.md".to_string(), "modified".to_string())].into();
         let buffer = tree_buffer("demo".into(), &rows(&files(), &BTreeSet::new()), &changed, &BTreeMap::new(), None);
-        assert_eq!(buffer.text, "DEMO\n▸ src  ●\n▸ tests\n  README.md");
+        assert_eq!(buffer.text, "DEMO\n▸ src  ●\n▸ tests\n  README.md\n\n● changed by the agent");
         assert!(faults(buffer.clone()).is_empty());
         let open: BTreeSet<String> = ["src".to_string(), "src/notes".to_string()].into();
         let buffer = tree_buffer("demo".into(), &rows(&files(), &open), &changed, &BTreeMap::new(), None);
@@ -241,6 +272,13 @@ mod tests {
         assert!(faults(buffer.clone()).is_empty());
         let at = buffer.text.find("I T").map(|b| buffer.text[..b].chars().count()).unwrap();
         assert!(buffer.spans.iter().any(|s| s.start == at && s.role == Role::Claim { role: Claimed::Implements }));
+        // Under the tree, what the letters it shows mean — and only those.
+        assert!(buffer.text.ends_with("\n\nI implements\nT tests"), "{}", buffer.text);
+        let key = buffer.text.rfind("\nT tests").map(|b| buffer.text[..b + 1].chars().count()).unwrap();
+        assert!(buffer.spans.iter().any(|s| s.start == key && s.role == Role::Claim { role: Claimed::Tests }));
+        // A row past the tree is not a file.
+        let rows = rows(&files(), &open);
+        assert!(path_at(&rows, &buffer.text, buffer.text.chars().count() - 1).is_none());
     }
 
     #[test]

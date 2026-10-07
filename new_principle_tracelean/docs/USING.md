@@ -101,6 +101,14 @@ L3 and counted under `drt` in the requirement. A divergence is shrunk and
 printed; a type the two sides do not share (`Float`, `&str`) is named and left
 untested. A binding in `.tracelean/drt.json` overrides it for its clause.
 
+**What a change re-opened.** Every record carries the hashes of what it rests
+on — the requirement's text, the model, the code, the toolchain — so rewording
+a requirement re-opens the judgement of its model and the tests and proofs
+made against it. `tracelean-trace . --stale` lists everything to approve, test,
+prove or measure again (pinning verdicts, documents and coverage too), with
+the command for each, and exits 1 if there is any: a script or an agent can
+check it after every change.
+
 **Coverage, test by test.** `tracelean-trace . --coverage` builds a Rust
 project's tests with `-C instrument-coverage` (needs `rustup component add
 llvm-tools`), runs each test alone, and keeps which tests ran each line and how

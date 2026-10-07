@@ -195,6 +195,70 @@ fn main() {
         return;
     }
 
+    // `--stale` lists everything that must be approved, tested, proved or
+    // measured again because something it rests on changed — evidence, pinning
+    // verdicts, documents, coverage — with what to run for each. Exit status 1
+    // when anything is listed, so a script or an agent can check it.
+    //
+    // @implements REQ-STALE.listed_for_a_script
+    if std::env::args().any(|a| a == "--stale") {
+        use trace::record::Staleness;
+        let files = tracelean_core::observe::workspace::snapshot(&root).files;
+        let mut found = 0;
+        let held = trace::lockfile::read(&root).map(|l| l.evidence).unwrap_or_default();
+        for record in trace::earn::merge(held, trace::store::read_all(&root)) {
+            let Some(why) = trace::earn::why_stale(&index, &record) else { continue };
+            found += 1;
+            let name = match &record.key.clause {
+                Some(clause) => format!("{}.{clause}", record.key.req_id),
+                None => record.key.req_id.clone(),
+            };
+            let why = match why {
+                Staleness::InputChanged { name } => format!("the {name} changed"),
+                Staleness::LinkRetargeted => "its annotation now points elsewhere".to_string(),
+            };
+            let (what, redo) = match record.key.bond {
+                tracelean_core::evidence::Bond::RequirementModel => {
+                    ("judgement", format!("tracelean-trace . --judge {name} --verdict agrees|disagrees --by <who>"))
+                }
+                tracelean_core::evidence::Bond::ModelImpl => ("differential test", "tracelean-trace . --drt (or its DRT suite)".to_string()),
+                tracelean_core::evidence::Bond::ModelProof => ("proof", "rebuild the Lean and earn the proof again".to_string()),
+            };
+            println!("{what:<18} {name}: {why}\n    redo: {redo}");
+        }
+        for plan in trace::pinning::plans(&index, &files) {
+            let Some(theorem) = &plan.theorem else { continue };
+            let record = tracelean_core::drt::pins::read_record(&root, &plan.req_id, plan.clause.as_deref());
+            if record.as_ref().is_some_and(|r| r.pinned && (&r.theorem_name != theorem || r.key != plan.key)) {
+                found += 1;
+                let name = format!("{}{}", plan.req_id, plan.clause.as_deref().map(|c| format!(".{c}")).unwrap_or_default());
+                println!("pinning            {name}: the specification, model or theorem changed\n    redo: tracelean-trace . --pins");
+            }
+        }
+        let hashes = trace::doclink::pairs(&trace::doclink::current_hashes(&index));
+        for link in &index.doc_links {
+            let state = trace::doclink::state(link.clone(), hashes.clone());
+            if !matches!(state, trace::doclink::State::Current) {
+                found += 1;
+                println!(
+                    "document           {} -> {}: {}\n    redo: review it, then record the hashes from tracelean-trace . --hashes",
+                    link.file,
+                    link.target,
+                    state_name(&state)
+                );
+            }
+        }
+        let coverage = tracelean_core::drt::lines_run::read(&root);
+        for (path, (hash, _)) in &coverage.files {
+            if files.get(path).map(|t| trace::hash::text(t)) != Some(hash.clone()) {
+                found += 1;
+                println!("coverage           {path}: changed since it was measured\n    redo: tracelean-trace . --coverage");
+            }
+        }
+        println!("{found} to redo");
+        std::process::exit(if found > 0 { 1 } else { 0 });
+    }
+
     // `--coverage` runs each Rust test alone under coverage and keeps, per
     // file, which tests ran each line and how often.
     if std::env::args().any(|a| a == "--coverage") {
