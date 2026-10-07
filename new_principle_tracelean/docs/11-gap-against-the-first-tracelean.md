@@ -346,7 +346,8 @@ Lean/DRT where the core changed + editor + window, with tests
   marks each file with the kinds of claim in it (I T M P D, chip colours).
   A requirement's document carries chips on each clause line; F12 on a
   requirement name opens its document at the clause; the index shows each
-  requirement's implemented clauses as a bar. On a requirement's document
+  requirement's implemented clauses as a bar (drawn by the core from the
+  node's counts, Lean-modelled, its filled cells in the implements colour). On a requirement's document
   the 🔗 trace lists each clause with every claim on it, counting the unmet.
   Inside a claiming item's body the which-key bar offers its clause (open,
   agent context).

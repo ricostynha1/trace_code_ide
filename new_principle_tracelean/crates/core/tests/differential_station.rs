@@ -31,6 +31,9 @@ fn node() -> Schema {
         },
     );
     fields.insert("level".to_string(), Schema::simple_enum(&["L1", "L2", "L3", "L4"]));
+    // Counts past each other too, so a bar more than full is drawn as full.
+    fields.insert("implemented".to_string(), Schema::Nat { max: Some(3), edges: vec![0, 7] });
+    fields.insert("clauses".to_string(), Schema::Nat { max: Some(3), edges: vec![0, 4] });
     Schema::Struct { fields }
 }
 

@@ -342,6 +342,9 @@ pub struct Node {
     pub title: String,
     pub refines: Vec<String>,
     pub level: crate::evidence::Level,
+    /// How many of its clauses something implements, of how many.
+    pub implemented: usize,
+    pub clauses: usize,
 }
 
 /// A node at a depth in the refinement graph.
@@ -385,8 +388,36 @@ fn row_spans(at: usize, indent: usize, node: &Node) -> Vec<Span> {
     ]
 }
 
+/// Cells of five a node's implemented clauses fill, rounded, never past five.
+fn filled_of(node: &Node) -> usize {
+    ((node.implemented * 5 + node.clauses / 2) / node.clauses.max(1)).min(5)
+}
+
+/// The coverage bar, read at a glance down the list: filled cells, then empty.
+fn bar_of(node: &Node) -> String {
+    "█".repeat(filled_of(node)) + &"░".repeat(5 - filled_of(node))
+}
+
 fn index_line(node: &Node) -> String {
-    format!("{}  {}  {}", grade_text(node.level), node.id, node.title)
+    format!(
+        "{}  {}  {} {}/{}  {}",
+        grade_text(node.level),
+        node.id,
+        bar_of(node),
+        node.implemented,
+        node.clauses,
+        node.title
+    )
+}
+
+/// The bar's filled cells, in the colour of what fills them.
+fn bar_spans(at: usize, node: &Node) -> Vec<Span> {
+    let start = at + 4 + node.id.chars().count() + 2;
+    let role = Role::Claim { role: crate::trace::annotation::Role::Implements };
+    match filled_of(node) {
+        0 => Vec::new(),
+        filled => vec![Span { start, stop: start + filled, role, actions: actions_for(role) }],
+    }
 }
 
 /// The requirement set as a buffer: one row a requirement, carrying what its
@@ -401,6 +432,7 @@ pub fn requirements_buffer(nodes: Vec<Node>) -> Buffer {
     let mut at = 0usize;
     for node in &nodes {
         spans.extend(row_spans(at, 0, node));
+        spans.extend(bar_spans(at, node));
         at += index_line(node).chars().count() + 1;
     }
     let text: String = nodes.iter().map(index_line).collect::<Vec<_>>().join("\n");
@@ -523,6 +555,25 @@ pub fn window(buffer: Buffer, start: usize, count: usize) -> Buffer {
 mod tests {
     use super::*;
     use crate::surface::view::{directory_buffer, faults, plain_text};
+
+    /// Three of four clauses implemented fill four cells of five, and those
+    /// cells are drawn in the colour of what fills them.
+    #[test]
+    fn the_index_draws_each_requirement_s_coverage_as_a_bar() {
+        let node = Node {
+            id: "REQ-A".into(),
+            title: "A thing".into(),
+            refines: vec![],
+            level: crate::evidence::Level::L1,
+            implemented: 3,
+            clauses: 4,
+        };
+        let shown = requirements_buffer(vec![node]);
+        assert_eq!(plain_text(shown.clone()), vec!["L1  REQ-A  ████░ 3/4  A thing"]);
+        let bar = shown.spans.iter().find(|s| matches!(s.role, Role::Claim { .. })).expect("a bar span");
+        assert_eq!((bar.start, bar.stop), (11, 15));
+        assert!(faults(shown).is_empty());
+    }
 
     fn mark(start: usize, stop: usize, role: Role) -> Mark {
         Mark { start, stop, role }

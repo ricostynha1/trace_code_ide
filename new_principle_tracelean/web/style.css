@@ -286,6 +286,18 @@ button.item {
 .claim-proves { background: var(--chips-proves); }
 .claim-drt { background: var(--chips-drt); }
 
+/* In a list, a claim is a coverage bar's filled cells: the glyphs themselves
+ * in the claim's colour, with no pill around them. */
+.pane.kind-menu .role-claim {
+  display: inline;
+  min-width: 0;
+  padding: 0;
+  font: inherit;
+  background: transparent;
+}
+
+.pane.kind-menu .claim-implements { color: var(--chips-implements); }
+
 /* An evidence level is a small pill in its grade's colour, so a column of
  * them reads at a glance. */
 .pane .role-level,

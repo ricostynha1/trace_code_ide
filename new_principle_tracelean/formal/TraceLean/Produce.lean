@@ -299,6 +299,9 @@ structure Node where
   title : String
   refines : List String
   level : TraceLean.Evidence.Level
+  /-- How many of its clauses something implements, of how many. -/
+  implemented : Nat
+  clauses : Nat
   deriving Repr, DecidableEq, Inhabited, ToJson, FromJson
 
 /-- A node at a depth in the refinement graph. -/
@@ -333,14 +336,31 @@ private def rowSpans (at_ : Nat) (indent : Nat) (node : Node) : List Span :=
        actions := actionsFor Role.requirement } : Span)
   [level, ident]
 
+/-- Cells of five a node's implemented clauses fill, rounded, never past five. -/
+private def filledOf (node : Node) : Nat :=
+  min 5 ((node.implemented * 5 + node.clauses / 2) / max node.clauses 1)
+
+/-- The coverage bar: filled cells, then empty ones. -/
+private def barOf (node : Node) : String :=
+  String.mk (List.replicate (filledOf node) '█') ++ String.mk (List.replicate (5 - filledOf node) '░')
+
 private def indexLine (node : Node) : String :=
-  gradeText node.level ++ "  " ++ node.id ++ "  " ++ node.title
+  gradeText node.level ++ "  " ++ node.id ++ "  " ++ barOf node ++ " " ++
+    toString node.implemented ++ "/" ++ toString node.clauses ++ "  " ++ node.title
+
+/-- The bar's filled cells, in the colour of what fills them. -/
+private def barSpans (at_ : Nat) (node : Node) : List Span :=
+  let start := at_ + 4 + node.id.length + 2
+  if filledOf node = 0 then []
+  else [{ start := start, stop := start + filledOf node,
+          role := Role.claim TraceLean.Annotation.Role.implements,
+          actions := actionsFor (Role.claim TraceLean.Annotation.Role.implements) }]
 
 private def indexSpans (at_ : Nat) : List Node → List Span
   | [] => []
   | node :: rest =>
     let line := indexLine node
-    rowSpans at_ 0 node ++ indexSpans (at_ + line.length + 1) rest
+    rowSpans at_ 0 node ++ barSpans at_ node ++ indexSpans (at_ + line.length + 1) rest
 
 /--
 The requirement set as a buffer: one row a requirement, carrying what its
