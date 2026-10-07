@@ -82,6 +82,11 @@ export function draw(into: HTMLElement, buffer: Buffer, act: (action: string, at
         span.className = classOf(piece.role);
         span.dataset.at = String(piece.at);
         span.textContent = piece.text;
+        // A claim's letter, in the tree, says what it stands for when rested on.
+        const role = piece.role;
+        if (typeof role === "object" && "claim" in role && piece.text.trim().length === 1) {
+          span.title = `something here ${role.claim.role} a requirement — 🔗 shows which`;
+        }
         row.appendChild(span);
         continue;
       }
