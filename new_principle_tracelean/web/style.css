@@ -202,6 +202,13 @@ button.item {
   font-size: var(--fonts-chromeSize);
 }
 
+/* A name that starts a panel's line — an item in the trace — heads what
+ * follows it, set apart from the links beside and under it. */
+.pane.kind-record .line > .token-function:first-child {
+  color: var(--ui-panelHeading);
+  font-weight: 600;
+}
+
 /* Code quoted in a panel — an agent's context, a fenced block — in the code's
  * own font, so it reads as the code it is. */
 .pane.kind-record .line .token-string {
