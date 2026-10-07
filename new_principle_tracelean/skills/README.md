@@ -27,6 +27,10 @@ what each clause still lacks. Choose parts with `--parts`
 (`requirement,refines,refined-by,code,tests,models,affected-tests`, or `all`).
 **Run it before changing anything a requirement covers.**
 
+In a TraceLean sandbox both are on hand: `tracelean-trace` is on `PATH` and
+`$TRACELEAN_SKILLS` is this directory. A project sends its agent here with a
+`CLAUDE.md` like `demo/CLAUDE.md`.
+
 ## The rules you will break first
 
 1. **No code without an annotation** linking it to a clause. No clause? Write

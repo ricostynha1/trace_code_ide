@@ -35,6 +35,12 @@ cpSync(resolve(here, tree), copy, { recursive: true, filter: (from) => !SKIP.has
 // The editor, one request a line.
 const editor = spawn("cargo", ["run", "-q", "-p", "tracelean-editor", "--example", "look", "--", copy],
   { cwd: here, stdio: ["pipe", "pipe", "inherit"] });
+// An editor that did not build, or died, answers nothing: stop rather than wait.
+editor.on("exit", (code) => {
+  console.error(`the editor exited (${code}); nothing to photograph`);
+  rmSync(dirname(copy), { recursive: true, force: true });
+  process.exit(1);
+});
 const replies = createInterface({ input: editor.stdout });
 const waiting = [];
 replies.on("line", (line) => waiting.shift()?.(line));
@@ -121,6 +127,7 @@ try {
   socket.close();
 } finally {
   chrome.kill();
+  editor.removeAllListeners("exit");
   editor.kill();
   server.close();
   rmSync(dirname(copy), { recursive: true, force: true });

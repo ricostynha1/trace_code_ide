@@ -36,6 +36,13 @@ pub struct Host {
     pub git: bool,
     pub runtime_dir: Option<String>,
     pub shell: String,
+    /// The directory holding `tracelean-trace`, put first on the agent's
+    /// `PATH` with the host's own `PATH` after it — so an agent gathers a
+    /// requirement's context itself (`tracelean-trace . --context REQ-X`).
+    pub tools: Option<(String, String)>,
+    /// Where the agent skills are, as `TRACELEAN_SKILLS` in the sandbox: the
+    /// project's `CLAUDE.md` (or its agent's equivalent) sends it there.
+    pub skills: Option<String>,
 }
 
 /// What, under the home directory, an agent's shell needs writable.
@@ -87,6 +94,12 @@ pub fn launch_args(session: &Session, host: &Host) -> Vec<String> {
     }
     if let Some(runtime) = &host.runtime_dir {
         push("--bind", runtime, runtime);
+    }
+    if let Some((tools, path)) = &host.tools {
+        push("--setenv", "PATH", &format!("{tools}:{path}"));
+    }
+    if let Some(skills) = &host.skills {
+        push("--setenv", "TRACELEAN_SKILLS", skills);
     }
     // `--tmpfs` takes one path, not two: the empty third argument is dropped.
     args.retain(|arg| !arg.is_empty());
@@ -167,7 +180,22 @@ mod tests {
             git: true,
             runtime_dir: None,
             shell: "/bin/bash".into(),
+            tools: None,
+            skills: None,
         }
+    }
+
+    /// The agent's shell finds TraceLean's own command and its skills, so it
+    /// can gather what a change touches without being told where they are.
+    #[test]
+    fn the_agent_finds_the_trace_command_and_the_skills() {
+        let mut with = host();
+        with.tools = Some(("/opt/tl/bin".into(), "/usr/bin".into()));
+        with.skills = Some("/opt/tl/skills".into());
+        let joined = launch_args(&session(), &with).join(" ");
+        assert!(joined.contains("--setenv PATH /opt/tl/bin:/usr/bin"), "{joined}");
+        assert!(joined.contains("--setenv TRACELEAN_SKILLS /opt/tl/skills"), "{joined}");
+        assert!(!launch_args(&session(), &host()).join(" ").contains("--setenv"));
     }
 
     /// The copy is where the project was, and the project is nowhere writable.

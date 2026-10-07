@@ -260,6 +260,8 @@ Lean/DRT where the core changed + editor + window, with tests
   shows them; click for the diff), accepts/rejects all or one
   file (`[✓]`/`[✗]`, `observe.accept_file/reject_file`), shows Claude Code's
   conversation newest first, and says on the status line when changes wait.
+  Inside, `tracelean-trace` is on `PATH` and `$TRACELEAN_SKILLS` names the
+  skills; a project's `CLAUDE.md` (`demo/CLAUDE.md`) sends the agent there.
   The cost estimate sits under an "Agent cost" heading, in the table's unit.
 - **Traceability.** A requirement opens in the document
   (`surface::requirement_view`): per clause its level, chain, text and each
@@ -360,6 +362,8 @@ Lean/DRT where the core changed + editor + window, with tests
   the skills were cut to a third and point to it. Side panels are set a
   size smaller (`fonts.panelSize`) and wrap rather than clip; a trace item's
   name heads its entry; tree claim letters explain themselves on hover.
+  The which-key menu under a prefix heads itself with the keys typed
+  (`Space f`) and lists only what continues them, keys coloured.
 - **Not done.** Opening a terminal for the user (ruled out by
   `ARCH-NO-DRIVING.user_runs_it`); Lean infoview and type-check on save (both
   start a process); LSP hover; coverage treemap and trend.

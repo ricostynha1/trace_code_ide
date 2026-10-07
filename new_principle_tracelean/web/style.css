@@ -637,6 +637,19 @@ button.actionable:focus {
 
 #menu .role-entry { color: var(--ui-menuText); }
 
+/* In a mode: the keys typed so far head the bar, across it, and each entry's
+ * key is in the key colour, as in the which-key bar. */
+#menu.mode .line:first-child {
+  grid-column: 1 / -1;
+  color: var(--ui-menuKey);
+  font-weight: 600;
+}
+
+#menu.mode .role-entry::first-letter {
+  color: var(--ui-menuKey);
+  font-weight: 600;
+}
+
 #menu button.actionable:hover,
 #menu button.actionable:focus {
   color: var(--ui-menuKey);

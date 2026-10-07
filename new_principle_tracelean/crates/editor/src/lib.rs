@@ -120,6 +120,8 @@ pub struct Editor {
     pub open_folders: BTreeSet<String>,
     /// Which parts of an agent's context the person has chosen to copy.
     pub context_parts: BTreeSet<tracelean_core::surface::context::Part>,
+    /// The keys typed so far in a sequence — `Space`, `f` — to head its menu.
+    typed: Vec<String>,
     /// Which nodes the history shows: all, the open file's, or the saved.
     pub history_filter: tracelean_core::surface::history_view::Filter,
     /// The history's nodes at which the work was saved.
@@ -332,6 +334,7 @@ impl Editor {
             open_folders: BTreeSet::new(),
             context_parts: tracelean_core::surface::context::default_parts(),
             history_filter: tracelean_core::surface::history_view::Filter::All,
+            typed: Vec::new(),
             saved_at: BTreeSet::new(),
             last_find: None,
             offering: None,
@@ -2021,6 +2024,23 @@ impl Editor {
         true
     }
 
+    /// The menu a mode offers, headed by the keys typed to reach it — `Space f`
+    /// — so the bar says where in the sequence the person is, and lists only
+    /// what can follow.
+    fn mode_menu(&mut self, mode: String) -> Buffer {
+        let menu = self.produce(BufferKind::Menu { title: mode });
+        let head = self.typed.join(" ") + "  …";
+        let shift = head.chars().count() + 1;
+        let mut spans = vec![tracelean_core::surface::view::Span {
+            start: 0,
+            stop: head.chars().count(),
+            role: tracelean_core::surface::view::Role::Heading,
+            actions: Vec::new(),
+        }];
+        spans.extend(menu.spans.iter().map(|s| tracelean_core::surface::view::Span { start: s.start + shift, stop: s.stop + shift, ..s.clone() }));
+        Buffer { text: format!("{head}\n{}", menu.text), spans, ..menu }
+    }
+
     /// One key, interpreted.
     ///
     /// Here rather than in a frontend because a key means the same thing in a
@@ -2029,6 +2049,10 @@ impl Editor {
     ///
     /// @implements REQ-ACT.one_path
     pub fn key(&mut self, key: &str) {
+        // A sequence starts from the root mode, however the last one ended.
+        if self.mode == self.keymap.root {
+            self.typed.clear();
+        }
         if self.offering.is_some() {
             self.pick_offer(key);
             return;
@@ -2055,6 +2079,7 @@ impl Editor {
                 // root mode: the root mode is the editor, not a list.
                 self.mode = mode;
                 self.menu = None;
+                self.typed.clear();
                 self.say("normal", ". lists what can be done here, Space opens the leader menu");
             }
             Outcome::Enter { mode } => {
@@ -2062,14 +2087,17 @@ impl Editor {
                 // core produces for that mode — beside the buffer, so the next
                 // key is still about whatever the cursor was on.
                 self.mode = mode.clone();
-                self.menu = Some(self.produce(BufferKind::Menu { title: mode }));
+                self.typed.push(key.to_string());
+                self.menu = Some(self.mode_menu(mode));
             }
             Outcome::Leave { mode } => {
                 self.mode = mode.clone();
+                self.typed.pop();
                 self.menu = if mode == self.keymap.root {
+                    self.typed.clear();
                     None
                 } else {
-                    Some(self.produce(BufferKind::Menu { title: mode }))
+                    Some(self.mode_menu(mode))
                 };
                 self.say("left", "back one mode");
             }
@@ -2077,6 +2105,7 @@ impl Editor {
                 let intent = dispatch(action, self.focus(), self.workspace());
                 self.perform(intent);
                 self.mode = self.keymap.root.clone();
+                self.typed.clear();
                 // Unless what it did was put up a list to pick from.
                 if self.offering.is_none() {
                     self.menu = None;

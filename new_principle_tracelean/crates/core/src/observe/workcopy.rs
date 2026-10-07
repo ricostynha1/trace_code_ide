@@ -142,6 +142,17 @@ pub fn host(root: &Path) -> Host {
         git: absolute(root).join(".git").exists(),
         runtime_dir: std::env::var("XDG_RUNTIME_DIR").ok().filter(|d| Path::new(d).is_dir()),
         shell: std::env::var("SHELL").unwrap_or_else(|_| "/bin/sh".to_string()),
+        // The checker beside the running editor, when it was built.
+        tools: std::env::current_exe()
+            .ok()
+            .and_then(|exe| exe.parent().map(Path::to_path_buf))
+            .filter(|dir| dir.join("tracelean-trace").is_file())
+            .map(|dir| (dir.display().to_string(), std::env::var("PATH").unwrap_or_default())),
+        // The skills shipped with this TraceLean, where it was built from.
+        skills: Some(Path::new(env!("CARGO_MANIFEST_DIR")).join("../../skills"))
+            .filter(|dir| dir.join("README.md").is_file())
+            .and_then(|dir| dir.canonicalize().ok())
+            .map(|dir| dir.display().to_string()),
     }
 }
 

@@ -110,10 +110,23 @@ The editor is modal, like Vim: `i` to type, `Escape` to stop. Outside typing,
 
 ## Working with an AI agent
 
-**Give it the context first.** Put the cursor on any requirement name — in a
-code annotation, a requirement, a panel — and choose *Context for an agent*
-from the bottom bar (or `Space c o`; every opened requirement also has a
-`for agent` link per clause). The context page lists what the change touches:
+**Use the sandbox; the agent finds its own context.**
+
+1. 🧪 (or `Space a n`) makes a sandbox: a copy of the tree the agent may change.
+2. Copy the command shown and run it in your own terminal, then start your
+   agent (e.g. `claude`) there. The editor never starts processes itself.
+3. In the sandbox, `tracelean-trace` is on the agent's `PATH` and
+   `TRACELEAN_SKILLS` points at the [agent skills](../skills/README.md). A
+   project's `CLAUDE.md` (see `demo/CLAUDE.md`) tells the agent to read them,
+   and they tell it to run `tracelean-trace . --context REQ-X.clause` before
+   changing anything. (Build the checker once so it is found:
+   `cargo build -p tracelean-core --bins`.)
+4. Its changes appear in the sandbox panel as they happen. Review each diff and
+   accept or reject per file.
+
+**Or hand it the context yourself**, for an agent outside the sandbox: put the
+cursor on any requirement name and choose *Context for an agent* from the
+bottom bar (`Space c o`). The page lists what the change touches:
 
 | Part | What it holds |
 |---|---|
@@ -128,17 +141,6 @@ from the bottom bar (or `Space c o`; every opened requirement also has a
 Click a part to include it or leave it out (`Space c t`), then
 **Copy for an agent** (`Space c y`) and paste it to your agent. The page
 shows exactly what will be copied. Nothing is sent anywhere by the editor.
-An agent can gather the same text itself:
-`tracelean-trace . --context REQ-X.clause [--parts code,tests,…|all]` — the
-agent skills (`skills/`) tell it to.
-
-Then let the agent work in a sandbox:
-
-1. 🧪 (or `Space a n`) makes a sandbox: a copy of the tree the agent may change.
-2. Copy the command shown and run it in your own terminal, then start your
-   agent (e.g. `claude`) there. The editor never starts processes itself.
-3. Its changes appear in the sandbox panel as they happen. Review each diff and
-   accept or reject per file.
 
 ## Writing a requirement
 
