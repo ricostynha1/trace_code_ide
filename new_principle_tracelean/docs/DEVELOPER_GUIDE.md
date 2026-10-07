@@ -143,6 +143,11 @@ terminal reads the same file. A project can override any key in its own
 To add a colour: add the key to `theme.json`, use `var(--section-key)` in
 `style.css` (or `theme::colour(theme, "section", "key")` in the TUI).
 
+Selectors available to `style.css`: a span's role (`role-*`, `token-*`,
+`claim-*`), its pane's buffer kind (`.pane.kind-record`, `kind-menu`, …), and
+on a clickable span its first action (`button[data-action="context.toggle"]`).
+Style by these; never by text, which the core may reword.
+
 ## Look at what you changed
 
 ```bash
