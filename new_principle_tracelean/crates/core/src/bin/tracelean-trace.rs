@@ -39,7 +39,7 @@ fn main() {
     let mut positional = Vec::new();
     let mut rest = std::env::args().skip(1);
     while let Some(arg) = rest.next() {
-        if arg == "--show" {
+        if matches!(arg.as_str(), "--show" | "--context" | "--parts") {
             let _ = rest.next();
         } else if !arg.starts_with("--") {
             positional.push(arg);
@@ -48,6 +48,25 @@ fn main() {
     let root = positional.first().map(PathBuf::from).unwrap_or_else(|| PathBuf::from("."));
     let root = root.canonicalize().unwrap_or(root);
     let index = trace::index::build(&root);
+
+    // `--context REQ-X[.clause] [--parts code,tests,…|all]` prints what an
+    // agent needs to change it — the editor's context page, as Markdown, for
+    // an agent to gather itself.
+    //
+    // @implements REQ-CONTEXT.from_the_shell
+    let args: Vec<String> = std::env::args().collect();
+    if let Some(target) = value_after(&args, "--context") {
+        let files = tracelean_core::observe::workspace::snapshot(&root).files;
+        let parts = value_after(&args, "--parts");
+        match tracelean_core::surface::context::for_the_shell(&target, parts.as_deref(), &index, &files) {
+            Ok(text) => print!("{text}"),
+            Err(why) => {
+                eprintln!("{why}");
+                std::process::exit(2);
+            }
+        }
+        return;
+    }
 
     // `--hashes` prints what every target currently hashes to, which is what a
     // document records when somebody confirms it against what it describes.

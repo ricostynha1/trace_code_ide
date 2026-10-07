@@ -113,6 +113,36 @@ pub fn default_parts() -> BTreeSet<Part> {
     ALL_PARTS.into_iter().filter(|p| *p != Part::RefinedBy).collect()
 }
 
+/// The context for `target` as an agent asks for it from a shell: `parts` is
+/// a comma-separated list of labels (a dash for a space: `refined-by`), or
+/// `all`, or nothing for the default. A part or a requirement that does not
+/// exist is refused with what does.
+///
+/// @implements REQ-CONTEXT.from_the_shell
+pub fn for_the_shell(
+    target: &str,
+    parts: Option<&str>,
+    index: &Index,
+    files: &BTreeMap<String, String>,
+) -> Result<String, String> {
+    let included = match parts {
+        None => default_parts(),
+        Some("all") => ALL_PARTS.into_iter().collect(),
+        Some(list) => list
+            .split(',')
+            .map(|name| {
+                let name = name.trim().replace('-', " ");
+                part_named(name.clone()).ok_or_else(|| {
+                    let known: Vec<String> = ALL_PARTS.iter().map(|p| p.label().replace(' ', "-")).collect();
+                    format!("no part is called `{name}`; the parts are {}", known.join(", "))
+                })
+            })
+            .collect::<Result<_, _>>()?,
+    };
+    let context = gather(target, index, files).ok_or_else(|| format!("no requirement is called `{target}`"))?;
+    Ok(context_text(&context, &included))
+}
+
 /// A requirement as the context says it.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Said {

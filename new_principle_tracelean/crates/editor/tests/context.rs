@@ -69,6 +69,30 @@ fn inside_a_claiming_item_its_clause_is_offered() {
     let _ = std::fs::remove_dir_all(&root);
 }
 
+/// From a shell, the same context, with parts chosen by label; a requirement
+/// or part that does not exist is refused, saying what does.
+///
+/// @tests REQ-CONTEXT.from_the_shell
+#[test]
+fn an_agent_gathers_the_context_from_the_shell() {
+    use tracelean_core::surface::context::for_the_shell;
+    let root = project(TREE);
+    let index = tracelean_core::trace::index::build(&root);
+    let files = tracelean_core::observe::workspace::snapshot(&root).files;
+
+    let all = for_the_shell("REQ-A.one", None, &index, &files).expect("REQ-A.one exists");
+    assert!(all.contains("## Code that implements it") && all.contains("pub fn thing()"), "{all}");
+
+    let tests_only = for_the_shell("REQ-A.one", Some("tests,refined-by"), &index, &files).unwrap();
+    assert!(tests_only.contains("fn it_does()") && tests_only.contains("REQ-B — A finer thing"), "{tests_only}");
+    assert!(!tests_only.contains("## Code that implements it"), "{tests_only}");
+
+    let unknown = for_the_shell("REQ-A.one", Some("everything"), &index, &files).unwrap_err();
+    assert!(unknown.contains("refined-by"), "the parts are named: {unknown}");
+    assert!(for_the_shell("REQ-NONE", None, &index, &files).is_err());
+    let _ = std::fs::remove_dir_all(&root);
+}
+
 fn here(editor: &mut Editor, action: &str, target: Option<&str>) {
     let pane = editor.screen.focus.clone();
     editor.choose(&pane, 0, action, target.map(str::to_string), None);

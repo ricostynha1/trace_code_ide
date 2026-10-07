@@ -128,6 +128,9 @@ from the bottom bar (or `Space c o`; every opened requirement also has a
 Click a part to include it or leave it out (`Space c t`), then
 **Copy for an agent** (`Space c y`) and paste it to your agent. The page
 shows exactly what will be copied. Nothing is sent anywhere by the editor.
+An agent can gather the same text itself:
+`tracelean-trace . --context REQ-X.clause [--parts code,tests,…|all]` — the
+agent skills (`skills/`) tell it to.
 
 Then let the agent work in a sandbox:
 
