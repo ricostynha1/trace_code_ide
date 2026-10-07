@@ -40,9 +40,19 @@ fn focus() -> Schema {
         Schema::Option {
             inner: Box::new(Schema::Str {
                 max_len: None,
-                // A part's label and a history switch, so the switches that
-                // name what they act on are reached too.
-                examples: vec!["a.rs".into(), "src/lib.rs".into(), "".into(), "code".into(), "Saved".into(), "base".into()],
+                // A part's label, a history switch and history points — the
+                // base `#0` and changes after it — so what names its target is
+                // reached too.
+                examples: vec![
+                    "a.rs".into(),
+                    "src/lib.rs".into(),
+                    "".into(),
+                    "code".into(),
+                    "Saved".into(),
+                    "#0".into(),
+                    "#1".into(),
+                    "#7".into(),
+                ],
             }),
         },
     );

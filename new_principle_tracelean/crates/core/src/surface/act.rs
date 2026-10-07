@@ -232,12 +232,11 @@ pub fn dispatch(action: String, focus: Focus, w: Workspace) -> Intent {
         "history.undo" => Intent::Travel { move_: Move::Back },
         "history.redo" => Intent::Travel { move_: Move::Forward },
         "history.branch" => Intent::Travel { move_: Move::Branch },
-        "history.jump" => match focus.under.as_deref() {
-            Some("base") => Intent::Travel { move_: Move::Base },
-            under => match under.and_then(node_number) {
-                None => needs("history.jump", "a point in the history"),
-                Some(node) => Intent::Travel { move_: Move::To { node } },
-            },
+        // `#0` is the tree as it was opened; `#k` the k-th change, node k-1.
+        "history.jump" => match focus.under.as_deref().and_then(node_number) {
+            None => needs("history.jump", "a point in the history"),
+            Some(0) => Intent::Travel { move_: Move::Base },
+            Some(k) => Intent::Travel { move_: Move::To { node: k - 1 } },
         },
         "history.tree" => report("history"),
         "observe.start" => Intent::Observe { watch: Watch::Start },

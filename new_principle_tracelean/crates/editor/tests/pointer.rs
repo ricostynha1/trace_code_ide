@@ -178,21 +178,22 @@ fn the_history_previews_a_change_and_filters_to_the_saved_points() {
     };
     let shown = history(&editor);
     let text = plain_text(shown.buffer.clone()).join("\n");
-    assert!(text.contains("#0") && text.contains("#1"), "{text}");
+    assert!(text.contains("#0") && text.contains("#1") && text.contains("#2"), "{text}");
 
     let offset_of = |text: &str, needle: &str| text[..text.find(needle).expect(needle)].chars().count();
-    let preview = editor.history_preview_at(&shown.pane, offset_of(&text, "#0")).expect("a preview of #0");
+    let preview = editor.history_preview_at(&shown.pane, offset_of(&text, "#1")).expect("a preview of #1");
     let said = plain_text(preview).join("\n");
     assert!(said.contains("+tXwo") && said.contains("-two"), "{said}");
     assert!(editor.history_preview_at(&shown.pane, 0).is_none(), "a switch is not a node");
+    assert!(editor.history_preview_at(&shown.pane, offset_of(&text, "#0")).is_none(), "the base changed nothing");
 
     editor.choose(&shown.pane, offset_of(&text, "Saved"), "history.filter", None, None);
     let saved = plain_text(history(&editor).buffer).join("\n");
-    assert!(saved.contains("#0") && !saved.contains("#1"), "only the saved point is left:\n{saved}");
+    assert!(saved.contains("#1") && !saved.contains("#2"), "only the saved point is left:\n{saved}");
     let _ = std::fs::remove_dir_all(&root);
 }
 
-/// Clicking `base` goes back to the tree as it was opened, and from there a
+/// Clicking `#0` goes back to the tree as it was opened, and from there a
 /// click on a node goes forward again.
 ///
 /// @tests REQ-UNDO.reachable
@@ -216,13 +217,13 @@ fn clicking_the_base_returns_to_the_tree_as_it_was_opened() {
 
     let shown = history(&editor);
     let text = plain_text(shown.buffer.clone()).join("\n");
-    editor.choose(&shown.pane, offset_of(&text, "base"), "history.jump", None, None);
-    assert_eq!(file(&editor), "one\ntwo\nthree\n", "the base is the tree as it was opened");
+    editor.choose(&shown.pane, offset_of(&text, "#0"), "history.jump", None, None);
+    assert_eq!(file(&editor), "one\ntwo\nthree\n", "#0 is the tree as it was opened");
 
     let shown = history(&editor);
     let text = plain_text(shown.buffer.clone()).join("\n");
-    assert!(text.contains("● base"), "{text}");
-    editor.choose(&shown.pane, offset_of(&text, "#1"), "history.jump", None, None);
+    assert!(text.contains("● #0"), "{text}");
+    editor.choose(&shown.pane, offset_of(&text, "#2"), "history.jump", None, None);
     assert_eq!(file(&editor), "one\ntXYwo\nthree\n");
     let _ = std::fs::remove_dir_all(&root);
 }

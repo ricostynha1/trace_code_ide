@@ -3554,7 +3554,8 @@ impl Editor {
         let offset = self.absolute(pane, at);
         let span = buffer.spans.iter().find(|s| s.start <= offset && offset < s.stop && s.actions.iter().any(|a| a == "history.jump"))?;
         let name: String = buffer.text.chars().skip(span.start).take(span.stop - span.start).collect();
-        self.history_preview(name.strip_prefix('#')?.parse().ok()?)
+        // The base made no change, so it has nothing to preview.
+        self.history_preview(tracelean_core::surface::history_view::named_point(&name)??)
     }
 
     /// The change node `#node` made, for a pointer resting on it: each file
@@ -3588,7 +3589,7 @@ impl Editor {
             .into_iter()
             .map(|p| Event {
                 kind: if p.here { "here".into() } else { "node".into() },
-                text: format!("#{}  {}", p.node, p.said),
+                text: format!("{}  {}", tracelean_core::surface::history_view::point_name(Some(p.node)), p.said),
             })
             .collect()
     }
