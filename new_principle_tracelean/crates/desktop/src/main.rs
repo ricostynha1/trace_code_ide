@@ -15,6 +15,7 @@
 //! - `place`  — a pointer pressed at a position: focus and cursor
 //! - `offers` — everything that can be done at a position (the context menu)
 //! - `offers_here` — the same at the cursor, for the which-key bar
+//! - `history_preview` — the change a history node made, for a pointer on it
 //! - `choose` — one of those, with its target and the answer typed for it
 //! - `chord`  — save, undo, redo, Home, End, PageUp, PageDown, Delete
 //! - `scroll` — a wheel over a pane
@@ -230,6 +231,12 @@ fn offers(
 #[tauri::command]
 fn offers_here(held: State<'_, Held>) -> (String, usize, Vec<tracelean_core::surface::offer::Offer>) {
     held.0.lock().expect("the editor").offers_here()
+}
+
+/// The change a history node made, for a pointer resting on its name.
+#[tauri::command]
+fn history_preview(held: State<'_, Held>, pane: String, offset: usize) -> Option<Buffer> {
+    held.0.lock().expect("the editor").history_preview_at(&pane, offset)
 }
 
 /// One entry of the context menu, with the answer typed for it if it asked.
@@ -452,7 +459,7 @@ fn main() {
             shown, cursor, menu, press, act, grab, bars, act_in_bar, theme, place, offers, choose,
             chord, scroll, paste, act_here, tick, take_clipboard, find, described, cut, quick, search,
             requirement_text, over_lines, brackets, mode, select, selection, replace,
-            problems, palette, selected, symbols, occurrences, offers_here
+            problems, palette, selected, symbols, occurrences, offers_here, history_preview
         ])
         .run(tauri::generate_context!())
         .expect("the window opens");

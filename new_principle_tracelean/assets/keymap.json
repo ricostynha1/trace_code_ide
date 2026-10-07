@@ -136,6 +136,7 @@
         "parent": "Leader",
         "bindings": [
           ["b", { "dispatch": { "action": "history.branch", "description": "switch branch" } }],
+          ["f", { "dispatch": { "action": "history.filter", "description": "show all, this file's, or the saved changes" } }],
           ["j", { "dispatch": { "action": "history.jump", "description": "go to this point" } }],
           ["r", { "dispatch": { "action": "history.redo", "description": "redo" } }],
           ["t", { "dispatch": { "action": "history.tree", "description": "show the tree" } }],

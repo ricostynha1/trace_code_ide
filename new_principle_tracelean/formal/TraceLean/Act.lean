@@ -3,6 +3,7 @@ import TraceLean.View
 import TraceLean.Command
 import TraceLean.Screen
 import TraceLean.Context
+import TraceLean.HistoryView
 
 /-!
 # From an action name to something the editor does
@@ -78,6 +79,8 @@ inductive Watch where
   | contextToggle (part : TraceLean.Context.Part)
   /-- Put the chosen parts of an agent's context on the clipboard. -/
   | contextCopy
+  /-- Show the history whole, for the open file, or at its saves. -/
+  | historyFilter (filter : TraceLean.HistoryView.Filter)
   deriving Repr, DecidableEq, Inhabited, ToJson, FromJson
 
 /-- Why nothing happened.
@@ -299,6 +302,10 @@ def dispatch (action : String) (focus : Focus) (w : Workspace) : Intent :=
     | none => Intent.refuse (Blocked.needsTarget "context.toggle" "a part of the context")
     | some part => Intent.observe (Watch.contextToggle part)
   | "context.copy" => Intent.observe Watch.contextCopy
+  | "history.filter" =>
+    match focus.under.bind TraceLean.HistoryView.filterNamed with
+    | none => Intent.refuse (Blocked.needsTarget "history.filter" "a view of the history")
+    | some filter => Intent.observe (Watch.historyFilter filter)
   | "trace.judge" =>
     match focus.under with
     | none => Intent.refuse (Blocked.needsTarget "trace.judge" "a clause")

@@ -13,6 +13,7 @@ use tracelean_core::drt::run::{run, RunOptions, RunnerSpec};
 use tracelean_core::drt::schema::Schema;
 use tracelean_core::drt::{Binding, CallSpec};
 
+mod harness;
 mod support;
 
 fn project_root() -> PathBuf {
@@ -155,7 +156,9 @@ fn lean_runner_for(function: &str, op: &str, arguments: &[&str], scratch: &Path)
     .expect("generated");
 
     let dir = lean_runner::package_dir(scratch);
-    let built = Process::new("lake").arg("build").current_dir(&dir).output().expect("lake runs");
+    // Under the shared guard, retried while another build holds Lake's lock:
+    // the suites build their runners at once, and Lake allows one at a time.
+    let built = harness::lake_build(&root.join("formal"), &dir);
     assert!(
         built.status.success(),
         "the generated Lean runner did not build:\n{}\n{}",

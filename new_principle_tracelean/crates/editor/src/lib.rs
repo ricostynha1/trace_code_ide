@@ -120,6 +120,10 @@ pub struct Editor {
     pub open_folders: BTreeSet<String>,
     /// Which parts of an agent's context the person has chosen to copy.
     pub context_parts: BTreeSet<tracelean_core::surface::context::Part>,
+    /// Which nodes the history shows: all, the open file's, or the saved.
+    pub history_filter: tracelean_core::surface::history_view::Filter,
+    /// The history's nodes at which the work was saved.
+    saved_at: BTreeSet<u64>,
     /// What was last searched for, so the next match is one key away.
     pub last_find: Option<String>,
     /// The list `.` offered, while it is up: the pane and position it is
@@ -327,6 +331,8 @@ impl Editor {
             clipboard: None,
             open_folders: BTreeSet::new(),
             context_parts: tracelean_core::surface::context::default_parts(),
+            history_filter: tracelean_core::surface::history_view::Filter::All,
+            saved_at: BTreeSet::new(),
             last_find: None,
             offering: None,
             index_cache: std::cell::RefCell::new(None),
@@ -1049,9 +1055,7 @@ impl Editor {
                 BufferKind::Directory { path } => self.listing_of(path),
                 // The history marks where the workspace is, which every
                 // change and every travel moves.
-                BufferKind::Record { title } if title == "history" => {
-                    tracelean_core::surface::history_view::history_view(&self.points())
-                }
+                BufferKind::Record { title } if title == "history" => self.history_buffer(),
                 BufferKind::File { path } => match workspace.files.get(path) {
                     Some(text) => make::file_buffer(path.clone(), text.clone(), marks_in(path, text)),
                     None => held.clone(),
@@ -2581,10 +2585,7 @@ impl Editor {
                 make::menu_buffer(title, entries)
             }
             BufferKind::Record { title } if title == "sandbox" => self.sandbox(),
-            BufferKind::Record { title } if title == "history" => {
-                use tracelean_core::surface::history_view::history_view;
-                history_view(&self.points())
-            }
+            BufferKind::Record { title } if title == "history" => self.history_buffer(),
             BufferKind::Record { title } if title == "findings" || title == "check" => {
                 // Checking the tree is asking about the disk as it is now,
                 // edits made elsewhere included.
@@ -3433,9 +3434,48 @@ impl Editor {
                     parent: node.parent.map(|p| p.0),
                     here: Some(*id) == here,
                     said: tracelean_core::history::command::describe(&node.command),
+                    file: file_of(&node.command),
+                    saved: self.saved_at.contains(&id.0),
                 }
             })
             .collect()
+    }
+
+    /// The history as the person has chosen to see it: all of it, the file
+    /// the document shows, or where the work was saved.
+    fn history_buffer(&self) -> Buffer {
+        let file = self.document_place().map(|(path, _)| path);
+        tracelean_core::surface::history_view::history_view(&self.points(), self.history_filter, file.as_deref())
+    }
+
+    /// The change made by the node named at `at` in `pane`'s window, if a
+    /// node's name is there — what a pointer resting on it shows.
+    pub fn history_preview_at(&self, pane: &str, at: usize) -> Option<Buffer> {
+        let buffer = self.buffer_in(pane)?;
+        let offset = self.absolute(pane, at);
+        let span = buffer.spans.iter().find(|s| s.start <= offset && offset < s.stop && s.actions.iter().any(|a| a == "history.jump"))?;
+        let name: String = buffer.text.chars().skip(span.start).take(span.stop - span.start).collect();
+        self.history_preview(name.strip_prefix('#')?.parse().ok()?)
+    }
+
+    /// The change node `#node` made, for a pointer resting on it: each file
+    /// it touched, before and after. Nothing moves.
+    ///
+    /// @implements REQ-UNDO.hover_shows_change
+    pub fn history_preview(&self, node: u64) -> Option<Buffer> {
+        let id = tracelean_core::history::tree::NodeId(node);
+        let (before, after) = self.tree.preview(id).ok()?;
+        let said = tracelean_core::history::command::describe(&self.tree.node(id)?.command);
+        let paths: BTreeSet<&String> = before.files.keys().chain(after.files.keys()).collect();
+        let changed: Vec<(String, String, String)> = paths
+            .into_iter()
+            .filter(|p| before.files.get(*p) != after.files.get(*p))
+            .map(|p| {
+                let text = |w: &Workspace| w.files.get(p).cloned().unwrap_or_default();
+                (p.clone(), text(&before), text(&after))
+            })
+            .collect();
+        Some(tracelean_core::surface::history_view::change_view(node, &said, &changed))
     }
 
     fn history(&self) -> Vec<Event> {
@@ -3642,6 +3682,10 @@ impl Editor {
                     }
                     None => self.say("nothing copied", "open the context of a requirement first (Space c o on its name)"),
                 }
+            }
+            Watch::HistoryFilter { filter } => {
+                self.history_filter = filter;
+                self.refresh_views();
             }
         }
     }
@@ -3921,6 +3965,10 @@ impl Editor {
         match tracelean_core::observe::workspace::write_into(&workspace, &self.root) {
             Ok(()) => {
                 self.saved = workspace;
+                // The history's `Saved` view shows where this happened.
+                if let Some(here) = self.tree.current() {
+                    self.saved_at.insert(here.0);
+                }
                 self.forget_index();
                 self.refresh_views();
                 self.say("saved", "the working tree matches the editor");
@@ -4045,6 +4093,22 @@ fn in_cells(rect: Rect, layout: Layout) -> Layout {
         })
         .collect();
     Layout::Split { axis, parts }
+}
+
+/// The one file a command touches, or `None` for a batch spanning several.
+fn file_of(command: &Command) -> Option<String> {
+    match command {
+        Command::Insert { file, .. } | Command::Delete { file, .. } => Some(file.clone()),
+        Command::CreateFile { path } | Command::DeleteFile { path, .. } => Some(path.clone()),
+        Command::RenameFile { to, .. } => Some(to.clone()),
+        Command::Batch { commands } => {
+            let files: BTreeSet<Option<String>> = commands.iter().map(file_of).collect();
+            match files.into_iter().collect::<Vec<_>>().as_slice() {
+                [one] => one.clone(),
+                _ => None,
+            }
+        }
+    }
 }
 
 /// The item an annotation sits on, by name, when it sits on one.

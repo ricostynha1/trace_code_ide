@@ -1,21 +1,21 @@
 {
   "key": {
-    "reqId": "REQ-ACT",
-    "clause": "unknown_is_refused",
+    "reqId": "REQ-UNDO",
+    "clause": "filtered_view",
     "bond": "modelProof"
   },
   "level": "L4",
   "detail": {
     "proof": {
-      "theoremName": "TraceLean.Act::an_unknown_action_is_refused",
+      "theoremName": "TraceLean.HistoryView::shown_are_kept",
       "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
     }
   },
-  "linkHash": "0ea10bc32e4ad4e3",
+  "linkHash": "9c744607a41eeeac",
   "inputs": [
     [
       "model",
-      "4d7c86ad412807d1+89443a0868ef5d99+d4629532127d15ae"
+      "ba47590b8d774998"
     ],
     [
       "toolchain",

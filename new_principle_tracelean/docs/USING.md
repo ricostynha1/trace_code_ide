@@ -39,7 +39,7 @@ The icons on the left are **stations**, always there:
 | 🧪 | the sandbox: run an AI agent on a copy of the tree, then review its changes |
 | 📋 | the requirements and how well each is evidenced |
 | 🕸 | the refinement graph: which requirement refines which |
-| 🌳 | the undo tree: every state the file has been in, branches included |
+| 🌳 | the undo tree: every state the project has been in, each branch in its own column. Click a node to go there, rest on it to see the change it made; **All / File / Saved** at the top show everything, only the open file's changes, or only where you saved (`Space h f`) |
 
 ## Finding your way between requirements and code
 

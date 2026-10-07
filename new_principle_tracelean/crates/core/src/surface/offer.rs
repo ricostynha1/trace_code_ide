@@ -160,6 +160,7 @@ pub fn offers(buffer: &Buffer, offset: usize, keymap: &Keymap) -> Vec<Offer> {
             "trace.context" => format!("Context for an agent to change {name}"),
             "context.toggle" => format!("Include or leave out {name}"),
             "context.copy" => "Copy the context for an agent".into(),
+            "history.filter" => format!("Show {name} in the history"),
             "trace.evidence" => format!("Evidence recorded for {name}"),
             "trace.findings" => "What the checker found".into(),
             "trace.check" => "Check the tree".into(),

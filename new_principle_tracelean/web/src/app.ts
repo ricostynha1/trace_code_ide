@@ -242,6 +242,25 @@ function drawChips(box: HTMLElement, pane: Pane) {
   }
 }
 
+// The change a history node made, in a box beside the pointer.
+async function showChange(pane: string, at: number, x: number, y: number) {
+  if (!ctx) return;
+  const change = (await ctx.invoke("history_preview", { pane, offset: at })) as Buffer | null;
+  hideChange();
+  if (!change) return;
+  const box = document.createElement("div");
+  box.id = "change";
+  box.className = "pane kind-record";
+  draw(box, change, () => {});
+  box.style.left = `${Math.max(8, x - 520)}px`;
+  box.style.top = `${Math.min(y, window.innerHeight - 260)}px`;
+  document.body.appendChild(box);
+}
+
+function hideChange() {
+  document.getElementById("change")?.remove();
+}
+
 // Whether the last press and release was a drag, so the click that follows
 // it is not taken as a click to place the cursor.
 let dragged = false;
@@ -267,6 +286,13 @@ function drawPane(into: HTMLElement, pane: Pane) {
       if (row instanceof HTMLElement) row.dataset.number = String((pane.top ?? 0) + index + 1);
     });
     drawChips(box, pane);
+  }
+
+  // A history node rested on shows the change it made, beside the pointer,
+  // as the editor draws it; nothing moves until it is clicked.
+  for (const node of box.querySelectorAll<HTMLElement>('button[data-action="history.jump"]')) {
+    node.addEventListener("mouseenter", (event) => void showChange(pane.pane, Number(node.dataset.at), event.clientX, event.clientY));
+    node.addEventListener("mouseleave", hideChange);
   }
 
   // A drag in a file ends as the editor's selection, drawn by it from then on.

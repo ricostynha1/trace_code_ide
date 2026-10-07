@@ -2988,6 +2988,43 @@
         "language": "rust",
         "entry": "crates/core/src/surface/context.rs::part_named"
       }
+    },
+    {
+      "req_id": "REQ-UNDO",
+      "clause": "tree_is_drawn",
+      "floors": [
+        { "situation": "a branch", "atLeast": 200 },
+        { "situation": "two branches from one node", "atLeast": 15 },
+        { "situation": "a node made after itself", "atLeast": 600 },
+        { "situation": "a node no row reaches", "atLeast": 1200 }
+      ],
+      "model": {
+        "import": "TraceLean.HistoryView",
+        "function": "TraceLean.HistoryView.historyGraph",
+        "arguments": ["points"]
+      },
+      "implementation": {
+        "language": "rust",
+        "entry": "crates/core/src/surface/history_view.rs::history_graph"
+      }
+    },
+    {
+      "req_id": "REQ-UNDO",
+      "clause": "filtered_view",
+      "floors": [
+        { "situation": "the position hidden and an ancestor marked", "atLeast": 35 },
+        { "situation": "a node lifted to a further ancestor", "atLeast": 700 },
+        { "situation": "nothing kept", "atLeast": 500 }
+      ],
+      "model": {
+        "import": "TraceLean.HistoryView",
+        "function": "TraceLean.HistoryView.shownPoints",
+        "arguments": ["points", "filter", "file"]
+      },
+      "implementation": {
+        "language": "rust",
+        "entry": "crates/core/src/surface/history_view.rs::shown_points"
+      }
     }
   ]
 }

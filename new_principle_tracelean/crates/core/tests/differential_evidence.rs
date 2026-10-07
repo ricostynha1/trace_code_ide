@@ -113,11 +113,8 @@ fn build_lean_runner(root: &Path, scratch: &Path) -> RunnerSpec {
     .expect("generated");
 
     let dir = lean_runner::package_dir(scratch);
-    let built = Command::new("lake")
-        .args(["build"])
-        .current_dir(&dir)
-        .output()
-        .expect("lake runs");
+    // Under the shared guard, retried while another build holds Lake's lock.
+    let built = harness::lake_build(&model_path, &dir);
     assert!(
         built.status.success(),
         "the generated Lean runner did not build:\n{}\n{}",

@@ -101,6 +101,7 @@ fn answer(editor: &mut Editor, command: &str, args: &Value) -> Value {
         }
         "offers" => json!(editor.offers_at(&text(args, "pane"), number(args, "offset"))),
         "offers_here" => json!(editor.offers_here()),
+        "history_preview" => json!(editor.history_preview_at(&text(args, "pane"), number(args, "offset"))),
         "choose" => {
             editor.choose(
                 &text(args, "pane"),

@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-UNDO",
+    "clause": "tree_is_drawn",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 301,
+      "cases": 2000,
+      "op": "REQ-UNDO.tree_is_drawn"
+    }
+  },
+  "linkHash": "7b7bd5f60be56cb5",
+  "inputs": [
+    [
+      "implementation",
+      "2d3762ce30fdc5e5"
+    ],
+    [
+      "model",
+      "dffba39f17e9bf07"
+    ]
+  ]
+}

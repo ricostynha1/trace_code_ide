@@ -134,6 +134,7 @@ pub const ACTIONS: &[&str] = &[
     "file.rename",
     "file.save",
     "history.branch",
+    "history.filter",
     "history.jump",
     "history.redo",
     "history.tree",

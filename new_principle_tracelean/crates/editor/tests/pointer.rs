@@ -156,6 +156,42 @@ fn clicking_into_a_file_places_the_cursor_and_typing_goes_there() {
     let _ = std::fs::remove_dir_all(&root);
 }
 
+/// Resting on a history node shows the change it made, and the history's
+/// switches keep it to the saved points or the open file.
+///
+/// @tests REQ-UNDO.hover_shows_change
+/// @tests REQ-UNDO.filtered_view
+#[test]
+fn the_history_previews_a_change_and_filters_to_the_saved_points() {
+    let (root, mut editor) = opened();
+    let at = row_of(&mut editor, "src/i.rs");
+    editor.choose(EXPLORER, at, "file.open", None, None);
+    editor.place(DOCUMENT, 5);
+    editor.key("X");
+    editor.chord("C-s");
+    editor.key("Y");
+    editor.perform(tracelean_core::surface::act::Intent::Display {
+        what: BufferKind::Record { title: "history".into() },
+    });
+    let history = |editor: &Editor| {
+        editor.laid_out(editor.region).into_iter().find(|p| p.buffer.id == "record:history").expect("the history is shown")
+    };
+    let shown = history(&editor);
+    let text = plain_text(shown.buffer.clone()).join("\n");
+    assert!(text.contains("#0") && text.contains("#1"), "{text}");
+
+    let offset_of = |text: &str, needle: &str| text[..text.find(needle).expect(needle)].chars().count();
+    let preview = editor.history_preview_at(&shown.pane, offset_of(&text, "#0")).expect("a preview of #0");
+    let said = plain_text(preview).join("\n");
+    assert!(said.contains("+tXwo") && said.contains("-two"), "{said}");
+    assert!(editor.history_preview_at(&shown.pane, 0).is_none(), "a switch is not a node");
+
+    editor.choose(&shown.pane, offset_of(&text, "Saved"), "history.filter", None, None);
+    let saved = plain_text(history(&editor).buffer).join("\n");
+    assert!(saved.contains("#0") && !saved.contains("#1"), "only the saved point is left:\n{saved}");
+    let _ = std::fs::remove_dir_all(&root);
+}
+
 /// The page reports offsets in the window it was given. Once the pane is
 /// scrolled, offset 0 is the first *visible* line, not the first line.
 #[test]

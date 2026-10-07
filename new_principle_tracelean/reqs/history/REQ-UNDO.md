@@ -11,6 +11,9 @@ clauses:
   preview_is_pure: Producing the diff a node represents shall not change current state.
   reachable: Every node ever created shall remain reachable.
   tree_is_shown: The history shall be shown with every node named, the one the workspace is at marked, and each node a way to jump to it.
+  tree_is_drawn: The history shall be drawn as a tree, each node once, under the node it was made after, a node's first child continuing its column and every later child opening a column of its own joined to it.
+  filtered_view: The history shall be shown whole, or only the nodes touching one file, or only those at which the work was saved, each shown node under its nearest shown ancestor and the one nearest the workspace's position marked.
+  hover_shows_change: Pointing at a node shall show the change it made, as the lines it added and removed, without moving the workspace.
 ---
 
 # History is a tree
