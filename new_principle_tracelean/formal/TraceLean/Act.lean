@@ -52,6 +52,8 @@ inductive Move where
   | branch
   /-- Straight to one node of the history, by its number. -/
   | to (node : Nat)
+  /-- Back to the tree as it was opened, before any change. -/
+  | base
   deriving Repr, DecidableEq, Inhabited, ToJson, FromJson
 
 /-- A change to what is being watched, or to what a watch produced. -/
@@ -269,7 +271,8 @@ def dispatch (action : String) (focus : Focus) (w : Workspace) : Intent :=
   | "history.redo" => Intent.travel Move.forward
   | "history.branch" => Intent.travel Move.branch
   | "history.jump" =>
-    match focus.under.bind nodeNumber with
+    if focus.under == some "base" then Intent.travel Move.base
+    else match focus.under.bind nodeNumber with
     | none => Intent.refuse (Blocked.needsTarget "history.jump" "a point in the history")
     | some node => Intent.travel (Move.to node)
   | "history.tree" => report "history"

@@ -217,8 +217,8 @@ pub fn history_view(points: &[Point], filter: Filter, file: Option<&str>) -> Buf
         };
         let from = at + graph + 1;
         let role = if here { Role::Heading } else { Role::Entry };
-        // The base is where everything starts; it is not a node to jump to.
-        let actions = if row.node.is_some() { vec!["history.jump".to_string()] } else { Vec::new() };
+        // The base is jumped to by name, as a node is by its number.
+        let actions = vec!["history.jump".to_string()];
         spans.push(Span { start: from, stop: from + name.chars().count(), role, actions });
         text.push_str(&format!("{cells} {name}  {said}"));
     }

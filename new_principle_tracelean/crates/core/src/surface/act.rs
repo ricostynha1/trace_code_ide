@@ -38,6 +38,8 @@ pub enum Move {
     Branch,
     /// Straight to one node of the history, by its number.
     To { node: u64 },
+    /// Back to the tree as it was opened, before any change.
+    Base,
 }
 
 /// A change to what is being watched, or to what a watch produced.
@@ -230,9 +232,12 @@ pub fn dispatch(action: String, focus: Focus, w: Workspace) -> Intent {
         "history.undo" => Intent::Travel { move_: Move::Back },
         "history.redo" => Intent::Travel { move_: Move::Forward },
         "history.branch" => Intent::Travel { move_: Move::Branch },
-        "history.jump" => match focus.under.as_deref().and_then(node_number) {
-            None => needs("history.jump", "a point in the history"),
-            Some(node) => Intent::Travel { move_: Move::To { node } },
+        "history.jump" => match focus.under.as_deref() {
+            Some("base") => Intent::Travel { move_: Move::Base },
+            under => match under.and_then(node_number) {
+                None => needs("history.jump", "a point in the history"),
+                Some(node) => Intent::Travel { move_: Move::To { node } },
+            },
         },
         "history.tree" => report("history"),
         "observe.start" => Intent::Observe { watch: Watch::Start },

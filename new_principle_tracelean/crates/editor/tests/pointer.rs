@@ -192,6 +192,41 @@ fn the_history_previews_a_change_and_filters_to_the_saved_points() {
     let _ = std::fs::remove_dir_all(&root);
 }
 
+/// Clicking `base` goes back to the tree as it was opened, and from there a
+/// click on a node goes forward again.
+///
+/// @tests REQ-UNDO.reachable
+#[test]
+fn clicking_the_base_returns_to_the_tree_as_it_was_opened() {
+    let (root, mut editor) = opened();
+    let at = row_of(&mut editor, "src/i.rs");
+    editor.choose(EXPLORER, at, "file.open", None, None);
+    editor.place(DOCUMENT, 5);
+    editor.key("X");
+    editor.key("Y");
+    editor.perform(tracelean_core::surface::act::Intent::Display {
+        what: BufferKind::Record { title: "history".into() },
+    });
+    let history = |editor: &Editor| {
+        editor.laid_out(editor.region).into_iter().find(|p| p.buffer.id == "record:history").expect("the history is shown")
+    };
+    let offset_of = |text: &str, needle: &str| text[..text.find(needle).expect(needle)].chars().count();
+    let file = |editor: &Editor| editor.workspace().files.get("src/i.rs").cloned().unwrap_or_default();
+    assert_eq!(file(&editor), "one\ntXYwo\nthree\n");
+
+    let shown = history(&editor);
+    let text = plain_text(shown.buffer.clone()).join("\n");
+    editor.choose(&shown.pane, offset_of(&text, "base"), "history.jump", None, None);
+    assert_eq!(file(&editor), "one\ntwo\nthree\n", "the base is the tree as it was opened");
+
+    let shown = history(&editor);
+    let text = plain_text(shown.buffer.clone()).join("\n");
+    assert!(text.contains("● base"), "{text}");
+    editor.choose(&shown.pane, offset_of(&text, "#1"), "history.jump", None, None);
+    assert_eq!(file(&editor), "one\ntXYwo\nthree\n");
+    let _ = std::fs::remove_dir_all(&root);
+}
+
 /// The page reports offsets in the window it was given. Once the pane is
 /// scrolled, offset 0 is the first *visible* line, not the first line.
 #[test]

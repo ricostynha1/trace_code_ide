@@ -3685,6 +3685,7 @@ impl Editor {
             Move::Branch => {
                 self.branch();
             }
+            Move::Base => while self.tree.undo().is_some() {},
             Move::To { node } => {
                 let id = tracelean_core::history::tree::NodeId(node);
                 if self.tree.node(id).is_some() {
