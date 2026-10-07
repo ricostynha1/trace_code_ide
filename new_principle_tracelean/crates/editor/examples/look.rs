@@ -12,10 +12,9 @@
 use std::io::{BufRead, Write};
 
 use serde_json::{json, Value};
-use tracelean_core::surface::act::Intent;
 use tracelean_core::surface::keymap;
 use tracelean_core::surface::produce::window;
-use tracelean_core::surface::screen::{Arrangement, Rect};
+use tracelean_core::surface::screen::Rect;
 use tracelean_editor::Editor;
 
 const KEYMAP: &str = include_str!("../../../assets/keymap.json");
@@ -160,11 +159,7 @@ fn answer(editor: &mut Editor, command: &str, args: &Value) -> Value {
             said(editor)
         }
         "grab" => {
-            editor.perform(Intent::Arrange { how: Arrangement::FocusPane { pane: text(args, "pane") } });
-            let amount = signed(args, "amount");
-            if amount != 0 {
-                editor.perform(Intent::Arrange { how: Arrangement::Resize { amount } });
-            }
+            editor.grab(&text(args, "pane"), signed(args, "amount"));
             said(editor)
         }
         "theme" => tracelean_editor::theme::load(&editor.root),

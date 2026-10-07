@@ -848,6 +848,27 @@ impl Editor {
             .collect()
     }
 
+    /// A pane's edge dragged by `cells` columns (or rows): the pane is focused
+    /// and the divider beside it moved that many cells.
+    ///
+    /// A split's weights are proportions, often as coarse as 1 : 2 : 1, where
+    /// one unit is a fifth of the window — so a drag of a few columns was cut
+    /// to nothing by the floor of one. The weights are first restated as the
+    /// cells each part already occupies, which draws exactly the same picture,
+    /// and then a cell dragged is a unit moved.
+    pub fn grab(&mut self, pane: &str, cells: i64) {
+        self.perform(Intent::Arrange { how: Arrangement::FocusPane { pane: pane.to_string() } });
+        if cells == 0 {
+            return;
+        }
+        // Before the frontend has said how big it is there are no cells to
+        // count, and the proportions are left as they are.
+        if self.region.width > 0 && self.region.height > 0 {
+            self.screen.layout = in_cells(self.region, self.screen.layout.clone());
+        }
+        self.perform(Intent::Arrange { how: Arrangement::Resize { amount: cells } });
+    }
+
     /// What a frontend draws: the part of the buffer that fits.
     ///
     /// A window is a buffer, so a frontend showing forty lines of a long file
@@ -4016,6 +4037,32 @@ fn named(req_id: &str, clause: &Option<String>) -> String {
         Some(clause) => format!("{req_id}.{clause}"),
         None => req_id.to_string(),
     }
+}
+
+/// `layout` with every split's weights restated as the cells each part takes
+/// in `rect` — the same panes in the same places, in units of one cell.
+fn in_cells(rect: Rect, layout: Layout) -> Layout {
+    let Layout::Split { axis, parts } = layout else { return layout };
+    let placed = place(rect, Layout::Split { axis, parts: parts.clone() });
+    let parts = parts
+        .into_iter()
+        .map(|(weight, inner)| {
+            let ids: Vec<String> = panes(&inner).into_iter().map(|(id, _)| id).collect();
+            let rects: Vec<Rect> = placed.iter().filter(|(id, _)| ids.contains(id)).map(|(_, r)| *r).collect();
+            let (Some(left), Some(top)) = (rects.iter().map(|r| r.left).min(), rects.iter().map(|r| r.top).min()) else {
+                return (weight, inner);
+            };
+            let right = rects.iter().map(|r| r.left + r.width).max().unwrap_or(left);
+            let bottom = rects.iter().map(|r| r.top + r.height).max().unwrap_or(top);
+            let span = Rect { left, top, width: right - left, height: bottom - top };
+            let size = match axis {
+                tracelean_core::surface::screen::Axis::Across => span.width,
+                tracelean_core::surface::screen::Axis::Down => span.height,
+            };
+            (size.max(1), in_cells(span, inner))
+        })
+        .collect();
+    Layout::Split { axis, parts }
 }
 
 /// The item an annotation sits on, by name, when it sits on one.

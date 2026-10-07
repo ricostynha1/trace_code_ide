@@ -49,10 +49,9 @@
 use std::sync::Mutex;
 
 use tauri::{Manager, State};
-use tracelean_core::surface::act::Intent;
 use tracelean_core::surface::keymap::{self, Keymap};
 use tracelean_core::surface::produce::window;
-use tracelean_core::surface::screen::{Arrangement, Rect};
+use tracelean_core::surface::screen::Rect;
 use tracelean_core::surface::view::Buffer;
 use tracelean_editor::Editor;
 
@@ -400,10 +399,7 @@ fn paste(held: State<'_, Held>, text: String) -> String {
 #[tauri::command]
 fn grab(held: State<'_, Held>, pane: String, amount: i64) -> String {
     let mut editor = held.0.lock().expect("the editor");
-    editor.perform(Intent::Arrange { how: Arrangement::FocusPane { pane } });
-    if amount != 0 {
-        editor.perform(Intent::Arrange { how: Arrangement::Resize { amount } });
-    }
+    editor.grab(&pane, amount);
     said(&editor)
 }
 

@@ -326,13 +326,26 @@ function drawPane(into: HTMLElement, pane: Pane) {
   handle.addEventListener("mousedown", (event) => {
     event.preventDefault();
     event.stopPropagation();
-    const from = event.clientX;
+    // Followed while held, a column at a time, so the edge goes where the
+    // pointer goes. The pane is redrawn under the pointer as it moves, which
+    // is why the listeners are on the document and not on this handle.
+    let from = event.clientX;
     const character = box.getBoundingClientRect().width / Math.max(1, pane.at.width);
-    const release = (up: MouseEvent) => {
-      document.removeEventListener("mouseup", release);
-      const moved = Math.round((up.clientX - from) / character);
-      if (moved !== 0) void run("grab", { pane: pane.pane, amount: moved });
+    let sending = false;
+    const follow = (move: MouseEvent) => {
+      const moved = Math.trunc((move.clientX - from) / character);
+      if (moved === 0 || sending) return;
+      from += moved * character;
+      sending = true;
+      void run("grab", { pane: pane.pane, amount: moved }).finally(() => (sending = false));
     };
+    const release = () => {
+      document.removeEventListener("mousemove", follow);
+      document.removeEventListener("mouseup", release);
+      document.body.classList.remove("dragging");
+    };
+    document.body.classList.add("dragging");
+    document.addEventListener("mousemove", follow);
     document.addEventListener("mouseup", release);
   });
   box.appendChild(handle);

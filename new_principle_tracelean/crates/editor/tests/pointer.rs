@@ -42,6 +42,24 @@ fn opened() -> (PathBuf, Editor) {
     (root, editor)
 }
 
+/// A pane's edge dragged a few columns moves exactly that many, both ways, and
+/// the panes still fill the window.
+#[test]
+fn a_dragged_edge_moves_by_the_columns_dragged() {
+    let (root, mut editor) = opened();
+    let width = |editor: &Editor, pane: &str| {
+        editor.laid_out(editor.region).into_iter().find(|p| p.pane == pane).expect("the pane").at.width
+    };
+    let (tree, document) = (width(&editor, EXPLORER), width(&editor, DOCUMENT));
+    editor.grab(EXPLORER, 3);
+    assert_eq!((width(&editor, EXPLORER), width(&editor, DOCUMENT)), (tree + 3, document - 3));
+    editor.grab(EXPLORER, -5);
+    assert_eq!((width(&editor, EXPLORER), width(&editor, DOCUMENT)), (tree - 2, document + 2));
+    let total: u64 = editor.laid_out(editor.region).iter().map(|p| p.at.width).sum();
+    assert_eq!(total, 120, "the panes still fill the window");
+    let _ = std::fs::remove_dir_all(&root);
+}
+
 /// Where the row naming `name` starts in the explorer's tree, if it is shown.
 fn find_row(editor: &Editor, name: &str) -> Option<usize> {
     let listing = shown_in(editor, EXPLORER);

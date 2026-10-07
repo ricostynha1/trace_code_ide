@@ -354,6 +354,14 @@ button.item {
   background: var(--ui-accent);
 }
 
+/* While an edge is held: the resize cursor everywhere, and no text selected
+ * by the pointer passing over it. */
+body.dragging,
+body.dragging * {
+  cursor: col-resize !important;
+  user-select: none !important;
+}
+
 /* A margin rather than padding, so the caret — placed in characters from the
  * line's own edge — moves with the text. */
 .line {

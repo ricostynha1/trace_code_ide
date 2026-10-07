@@ -201,6 +201,21 @@ try {
   check("the press itself does not redraw (which used to swallow the click)",
     !(await calls()).some(([c]) => c === "grab"), JSON.stringify(await calls()));
 
+  // Dragging a pane's edge sends the columns moved while the button is still
+  // held — the edge follows the pointer rather than jumping on release.
+  await reset();
+  const edge = await evaluate(`(() => { const d = [...document.querySelectorAll(".pane")][0].querySelector(".divider").getBoundingClientRect();
+    return { x: d.left + d.width / 2, y: d.top + 20, ch: [...document.querySelectorAll(".pane")][0].getBoundingClientRect().width / 20 }; })()`);
+  await cdp.send("Input.dispatchMouseEvent", { type: "mouseMoved", x: edge.x, y: edge.y });
+  await cdp.send("Input.dispatchMouseEvent", { type: "mousePressed", x: edge.x, y: edge.y, button: "left", clickCount: 1 });
+  await cdp.send("Input.dispatchMouseEvent", { type: "mouseMoved", x: edge.x + edge.ch * 4, y: edge.y, button: "left" });
+  await sleep(250);
+  const held = (await calls()).filter(([c]) => c === "grab").map(([, a]) => a);
+  await cdp.send("Input.dispatchMouseEvent", { type: "mouseReleased", x: edge.x + edge.ch * 4, y: edge.y, button: "left", clickCount: 1 });
+  await sleep(250);
+  check("dragging a pane's edge sends the columns moved before the release",
+    held.length > 0 && held.every((a) => a.pane === "explorer") && held.reduce((s, a) => s + a.amount, 0) >= 3, JSON.stringify(held));
+
   // A click into the document's text places the cursor where it was pressed.
   await reset();
   const w = await charAt(1, 6);
