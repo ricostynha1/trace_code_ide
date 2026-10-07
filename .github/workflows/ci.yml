@@ -1,8 +1,13 @@
 name: CI
 
+# Only the first TraceLean (`tracelean/`) is built here, so only changes to it
+# on main, or a pull request touching it, run this.
 on:
   push:
+    branches: [main]
+    paths: ["tracelean/**", ".github/workflows/ci.yml"]
   pull_request:
+    paths: ["tracelean/**"]
 
 jobs:
   test:
