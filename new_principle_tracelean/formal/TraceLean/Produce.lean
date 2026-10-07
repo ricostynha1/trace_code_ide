@@ -410,14 +410,16 @@ levels are drawn, which is one more than the deepest chain this project has. -/
 def designRows (nodes : List Node) : List Row :=
   expandAll 3 nodes 0 (nodes.filter (fun node => node.refines.isEmpty))
 
+/-- A row of the graph is a row of the index, indented under what it refines. -/
 private def designLine (row : Row) : String :=
-  spaces (row.indent * 2) ++ gradeText row.node.level ++ "  " ++ row.node.id ++ "  " ++ row.node.title
+  spaces (row.indent * 2) ++ indexLine row.node
 
 private def designSpans (at_ : Nat) : List Row → List Span
   | [] => []
   | row :: rest =>
     let line := designLine row
-    rowSpans at_ row.indent row.node ++ designSpans (at_ + line.length + 1) rest
+    rowSpans at_ row.indent row.node ++ barSpans (at_ + row.indent * 2) row.node ++
+      designSpans (at_ + line.length + 1) rest
 
 /--
 The refinement graph as a buffer: one row a requirement, indented under what it

@@ -479,8 +479,9 @@ pub fn design_rows(nodes: Vec<Node>) -> Vec<Row> {
     expand_all(3, &nodes, 0, &roots)
 }
 
+/// A row of the graph is a row of the index, indented under what it refines.
 fn design_line(row: &Row) -> String {
-    format!("{}{}  {}  {}", " ".repeat(row.indent * 2), grade_text(row.node.level), row.node.id, row.node.title)
+    " ".repeat(row.indent * 2) + &index_line(&row.node)
 }
 
 /// The refinement graph as a buffer: one row a requirement, indented under what
@@ -496,6 +497,7 @@ pub fn design_buffer(nodes: Vec<Node>) -> Buffer {
     let mut at = 0usize;
     for row in &rows {
         spans.extend(row_spans(at, row.indent, &row.node));
+        spans.extend(bar_spans(at + row.indent * 2, &row.node));
         at += design_line(row).chars().count() + 1;
     }
     let text: String = rows.iter().map(design_line).collect::<Vec<_>>().join("\n");
