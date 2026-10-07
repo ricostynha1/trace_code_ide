@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-STRENGTH",
+    "clause": "kernel_decides",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 312,
+      "cases": 2000,
+      "op": "REQ-STRENGTH.kernel_decides"
+    }
+  },
+  "linkHash": "1a70b5b964bb8ce3",
+  "inputs": [
+    [
+      "implementation",
+      "6c6b30e4c1d27b0b"
+    ],
+    [
+      "model",
+      "768c8e4c6e1ceeca"
+    ]
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-STRENGTH",
+    "clause": "verdict_kept",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 313,
+      "cases": 2000,
+      "op": "REQ-STRENGTH.verdict_kept"
+    }
+  },
+  "linkHash": "1b6e5cc7d2f57173",
+  "inputs": [
+    [
+      "implementation",
+      "06d292bc4ebb5653"
+    ],
+    [
+      "model",
+      "6199f5bbe7357785"
+    ]
+  ]
+}

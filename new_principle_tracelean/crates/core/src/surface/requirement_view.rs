@@ -40,6 +40,10 @@ pub struct ClauseShown {
     /// The chain the level is the minimum of, as `L2/L1/L3`.
     pub chain: String,
     pub claims: Vec<Claim>,
+    /// Whether its specification pins its model, for a modelled clause:
+    /// `pinned`, `attempted` or `open`, with the theorem, or what is owed.
+    #[serde(default)]
+    pub pins: Option<(String, String)>,
 }
 
 /// Everything the view is produced from.
@@ -138,6 +142,12 @@ pub fn requirement_view(view: RequirementShown) -> Buffer {
         if clause.claims.is_empty() {
             out.line(&[("  nothing claims it yet", Role::Removed, &[])]);
         }
+        // Whether the specification leaves one answer per input, as Lean said.
+        if let Some((state, said)) = &clause.pins {
+            let role = if state == "pinned" { Role::Added } else { Role::Removed };
+            out.line(&[("  ", Role::Plain, &[]), (state.as_str(), role, &[])]);
+            out.wrapped("    ", said, Role::Plain, &[]);
+        }
         // A clause a model claims can be judged against it, by a person: the
         // name opens the prompt to carry to them.
         if clause.claims.iter().any(|c| c.role == "models") {
@@ -212,6 +222,7 @@ mod tests {
                     level: Level::L2,
                     chain: "L2/L3/L2".into(),
                     claims: vec![Claim { role: "implements".into(), path: "src/x.rs".into(), line: 12, symbol: Some("hold".into()) }],
+                    pins: Some(("pinned".into(), "X.holds_pinned".into())),
                 },
                 ClauseShown {
                     key: Some("unclaimed".into()),
@@ -219,6 +230,7 @@ mod tests {
                     level: Level::L1,
                     chain: "L1/L1/L1".into(),
                     claims: vec![],
+                    pins: None,
                 },
             ],
             width: 60,
@@ -242,6 +254,7 @@ mod tests {
         assert_eq!(actions_at(shown.clone(), offset_of(&shown, "src/x.rs:12")), vec!["file.open".to_string()]);
         assert_eq!(actions_at(shown.clone(), offset_of(&shown, "ARCH-A")), vec!["trace.requirement".to_string()]);
         assert!(shown.text.contains("nothing claims it yet"));
+        assert!(shown.text.contains("  pinned\n    X.holds_pinned"), "{}", shown.text);
         assert!(shown.text.find("holds").unwrap() < shown.text.find("unclaimed").unwrap());
     }
 

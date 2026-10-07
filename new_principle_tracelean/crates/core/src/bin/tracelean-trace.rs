@@ -154,6 +154,36 @@ fn main() {
         return;
     }
 
+    // `--pins` asks Lean whether each `@pins` theorem pins its clause, keeps the
+    // verdict under `.tracelean/pins`, and says what an unpinned clause owes.
+    if std::env::args().any(|a| a == "--pins") {
+        use trace::pinning::{plans, statement};
+        let files = tracelean_core::observe::workspace::snapshot(&root).files;
+        for plan in plans(&index, &files) {
+            let name = match &plan.clause {
+                Some(clause) => format!("{}.{clause}", plan.req_id),
+                None => plan.req_id.clone(),
+            };
+            match tracelean_core::drt::pins::check(&root, &plan) {
+                Some(record) if record.pinned => println!("pinned     {name}  {}", record.theorem_name),
+                Some(record) => {
+                    println!("attempted  {name}  {}: Lean did not accept it", record.theorem_name);
+                    for line in record.said.lines().take(12) {
+                        println!("    {line}");
+                    }
+                }
+                None => match (&plan.spec, &plan.model) {
+                    (Some(spec), Some(model)) => println!(
+                        "open       {name}  owes, annotated @pins {name}:\n    theorem … : {}",
+                        statement(spec.clone(), model.clone(), plan.inputs)
+                    ),
+                    _ => println!("open       {name}  no specification: model it with a `def … : Prop` too"),
+                },
+            }
+        }
+        return;
+    }
+
     // `--strength` lists what each modelled declaration owes, and where it
     // stands. Nothing here confirms a pinning proof: only a build can say the
     // kernel accepted it, and this command builds nothing.

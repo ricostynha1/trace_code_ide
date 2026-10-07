@@ -82,6 +82,15 @@ weakest of three bonds — requirement↔model, model↔code, model↔proof — 
 unchecked bond shows as L1 however strong the others are; the chain beside
 the level (`L2/L1/L3`) says which bond holds it back.
 
+A proof says the model has a property, not that the property leaves one
+answer. Model a clause twice — a specification `def P (x y : Int) : Prop` and
+the function `f` — and prove, in a theorem annotated `@pins`, that `f` meets
+`P` and no input has two answers: `(∀ x, P x (f x)) ∧ (∀ x y1 y2, P x y1 → P x
+y2 → y1 = y2)`. `tracelean-trace . --pins` asks Lean; an opened requirement
+then shows each clause **pinned**, **attempted** (with Lean's complaint) or
+**open** (with the theorem it owes). Editing any of the three puts it back to
+attempted. `demo/specs/Thermo.lean` has both kinds.
+
 ## Keys
 
 Everything has a mouse route (click, right-click) and a key route. You never

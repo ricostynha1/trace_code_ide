@@ -364,6 +364,14 @@ Lean/DRT where the core changed + editor + window, with tests
   name heads its entry; tree claim letters explain themselves on hover.
   The which-key menu under a prefix heads itself with the keys typed
   (`Space f`) and lists only what continues them, keys coloured.
+- **Pinning.** A clause modelled by a predicate and a function owes
+  `(∀ x, P x (f x)) ∧ (∀ x y1 y2, P x y1 → P x y2 → y1 = y2)`;
+  `tracelean-trace . --pins` checks each `@pins` theorem against exactly that
+  (an appended `example` and `#print axioms`), keeps the verdict in
+  `.tracelean/pins` keyed by the declarations' hashes, and the requirement
+  view says pinned / attempted / open (`trace::pinning`, Lean `Pinning`, three
+  DRT suites). The demo is in whole degrees, with both conversions pinned and
+  the round trip proved for every input.
 - **Not done.** Opening a terminal for the user (ruled out by
   `ARCH-NO-DRIVING.user_runs_it`); Lean infoview and type-check on save (both
   start a process); LSP hover; coverage treemap and trend.

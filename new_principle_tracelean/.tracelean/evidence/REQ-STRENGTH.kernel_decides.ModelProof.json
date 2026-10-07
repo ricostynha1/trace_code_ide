@@ -1,21 +1,21 @@
 {
   "key": {
     "reqId": "REQ-STRENGTH",
-    "clause": "open_is_the_default",
+    "clause": "kernel_decides",
     "bond": "modelProof"
   },
   "level": "L4",
   "detail": {
     "proof": {
-      "theoremName": "TraceLean.Strength::an_unpinned_model_is_open_and_not_a_pass",
+      "theoremName": "TraceLean.Pinning::a_failed_run_is_not_accepted",
       "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
     }
   },
-  "linkHash": "2d75b17203b3055a",
+  "linkHash": "3e1e18734587f72a",
   "inputs": [
     [
       "model",
-      "87d4da9d465362f8+b1d7f99240581683"
+      "768c8e4c6e1ceeca"
     ],
     [
       "toolchain",

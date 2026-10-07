@@ -2,9 +2,8 @@
 /// @tests REQ-THERMO.to_celsius
 #[test]
 fn converting_back_gives_what_went_in() {
-    for degrees in [-40.0, 0.0, 37.0] {
-        let there_and_back = to_celsius(to_fahrenheit(degrees));
-        assert!((there_and_back - degrees).abs() < 1e-9);
+    for degrees in [-40, -1, 0, 1, 37, 100] {
+        assert_eq!(to_celsius(to_fahrenheit(degrees)), degrees);
     }
 }
 

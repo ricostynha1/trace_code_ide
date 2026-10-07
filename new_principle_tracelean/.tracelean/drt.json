@@ -3025,6 +3025,60 @@
         "language": "rust",
         "entry": "crates/core/src/surface/history_view.rs::shown_points"
       }
+    },
+    {
+      "req_id": "REQ-STRENGTH",
+      "clause": "per_input",
+      "floors": [
+        { "situation": "a model of no arguments", "atLeast": 50 },
+        { "situation": "a model of several arguments", "atLeast": 300 }
+      ],
+      "model": {
+        "import": "TraceLean.Pinning",
+        "function": "TraceLean.Pinning.statement",
+        "arguments": ["spec", "model", "inputs"]
+      },
+      "implementation": {
+        "language": "rust",
+        "entry": "crates/core/src/trace/pinning.rs::statement"
+      }
+    },
+    {
+      "req_id": "REQ-STRENGTH",
+      "clause": "kernel_decides",
+      "floors": [
+        { "situation": "accepted", "atLeast": 40 },
+        { "situation": "rejected for sorry", "atLeast": 20 },
+        { "situation": "rejected for an error", "atLeast": 20 }
+      ],
+      "model": {
+        "import": "TraceLean.Pinning",
+        "function": "TraceLean.Pinning.accepted",
+        "arguments": ["theoremName", "output", "exitedOk"]
+      },
+      "implementation": {
+        "language": "rust",
+        "entry": "crates/core/src/trace/pinning.rs::accepted",
+        "params": { "theoremName": "theorem_name", "exitedOk": "exited_ok" }
+      }
+    },
+    {
+      "req_id": "REQ-STRENGTH",
+      "clause": "verdict_kept",
+      "floors": [
+        { "situation": "pinned", "atLeast": 50 },
+        { "situation": "a verdict about other declarations", "atLeast": 100 }
+      ],
+      "model": {
+        "import": "TraceLean.Pinning",
+        "function": "TraceLean.Pinning.standing",
+        "arguments": ["theoremName", "record", "key"]
+      },
+      "implementation": {
+        "language": "rust",
+        "entry": "crates/core/src/trace/pinning.rs::standing",
+        "params": { "theoremName": "theorem_name" }
+      }
     }
   ]
 }

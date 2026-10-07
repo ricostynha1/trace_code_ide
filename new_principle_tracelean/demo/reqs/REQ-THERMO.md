@@ -4,9 +4,9 @@ title: Converting temperatures
 status: approved
 decomposition: complete
 clauses:
-  to_fahrenheit: Converting from Celsius shall multiply by nine fifths and add thirty-two.
-  to_celsius: Converting from Fahrenheit shall subtract thirty-two and multiply by five ninths.
-  round_trip: Converting a temperature to the other scale and back shall give the temperature that went in.
+  to_fahrenheit: Converting whole degrees Celsius shall multiply by nine fifths, round down and add thirty-two.
+  to_celsius: Converting whole degrees Fahrenheit shall subtract thirty-two, multiply by five ninths and round up.
+  round_trip: Converting whole degrees Celsius to Fahrenheit and back shall give the degrees that went in.
   agreement: The two scales shall agree at minus forty.
 ---
 

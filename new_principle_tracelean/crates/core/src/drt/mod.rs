@@ -4,6 +4,7 @@ pub mod coverage;
 pub mod config;
 pub mod gen;
 pub mod lean_runner;
+pub mod pins;
 pub mod protocol;
 pub mod rust_runner;
 pub mod run;

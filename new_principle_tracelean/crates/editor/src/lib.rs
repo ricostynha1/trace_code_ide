@@ -2754,10 +2754,15 @@ impl Editor {
             .map(|l| l.evidence)
             .unwrap_or_default();
         let levels = levels_of(&records);
+        let plans = tracelean_core::trace::pinning::plans(&index, &self.workspace().files);
         let clauses = requirement
             .clause_keys()
             .into_iter()
             .map(|clause| {
+                let pins = plans.iter().find(|p| p.req_id == id && p.clause == clause).map(|plan| {
+                    use tracelean_core::{drt::pins::read_record, trace::pinning::shown};
+                    shown(plan, read_record(&self.root, id, clause.as_deref()))
+                });
                 let mut claims: Vec<Claim> = index
                     .links
                     .iter()
@@ -2779,6 +2784,7 @@ impl Editor {
                     chain: chain_of(&records, id, clause.as_deref()),
                     key: clause,
                     claims,
+                    pins,
                 }
             })
             .collect();

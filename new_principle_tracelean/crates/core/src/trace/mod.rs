@@ -11,6 +11,7 @@ pub mod hash;
 pub mod index;
 pub mod lockfile;
 pub mod material;
+pub mod pinning;
 pub mod record;
 pub mod requirement;
 pub mod rollup;
