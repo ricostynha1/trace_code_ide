@@ -254,6 +254,7 @@ function drawPane(into: HTMLElement, pane: Pane) {
   const kind = Object.keys(pane.buffer.kind)[0] ?? "file";
   box.className = `pane kind-${kind}${pane.focused ? " focused" : ""}`;
   box.dataset.pane = pane.pane;
+  box.dataset.buffer = pane.buffer.id;
   box.style.left = `${pane.at.left}ch`;
   box.style.top = `${pane.at.top * LINE}px`;
   box.style.width = `${pane.at.width}ch`;

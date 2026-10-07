@@ -212,6 +212,18 @@ button.item {
   overflow-wrap: anywhere;
 }
 
+/* The undo tree is a drawing in columns, so it keeps the code's font, where
+ * every glyph is one column wide. */
+.pane[data-buffer="record:history"] .line {
+  font-family: var(--fonts-code);
+  font-size: var(--fonts-codeSize);
+  white-space: pre;
+}
+
+.pane[data-buffer="record:history"] .role-heading {
+  color: var(--ui-accent);
+}
+
 /* A name that starts a panel's line — an item in the trace — heads what
  * follows it, set apart from the links beside and under it. */
 .pane.kind-record .line > .token-function:first-child {

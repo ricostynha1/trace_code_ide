@@ -1050,10 +1050,7 @@ impl Editor {
                 // The history marks where the workspace is, which every
                 // change and every travel moves.
                 BufferKind::Record { title } if title == "history" => {
-                    tracelean_core::surface::history_view::history_view(
-                        &self.points(),
-                        self.tree.current().is_none(),
-                    )
+                    tracelean_core::surface::history_view::history_view(&self.points())
                 }
                 BufferKind::File { path } => match workspace.files.get(path) {
                     Some(text) => make::file_buffer(path.clone(), text.clone(), marks_in(path, text)),
@@ -2586,7 +2583,7 @@ impl Editor {
             BufferKind::Record { title } if title == "sandbox" => self.sandbox(),
             BufferKind::Record { title } if title == "history" => {
                 use tracelean_core::surface::history_view::history_view;
-                history_view(&self.points(), self.tree.current().is_none())
+                history_view(&self.points())
             }
             BufferKind::Record { title } if title == "findings" || title == "check" => {
                 // Checking the tree is asking about the disk as it is now,
@@ -3423,32 +3420,17 @@ impl Editor {
             .collect()
     }
 
-    /// Every node of the history, with how many branches lead to it and
-    /// what it did.
+    /// Every node of the history, with what it was made after and what it did.
     fn points(&self) -> Vec<tracelean_core::surface::history_view::Point> {
         let here = self.tree.current();
-        let roots = self.tree.roots();
         self.tree
             .ids()
             .iter()
             .map(|id| {
                 let node = self.tree.node(*id).expect("an id the tree gave");
-                // A node that is not the first child of its parent is a branch.
-                let depth = self
-                    .tree
-                    .ancestry(*id)
-                    .into_iter()
-                    .filter(|a| {
-                        let siblings = match self.tree.node(*a).and_then(|n| n.parent) {
-                            Some(p) => self.tree.node(p).map(|n| n.children.clone()).unwrap_or_default(),
-                            None => roots.clone(),
-                        };
-                        siblings.first() != Some(a)
-                    })
-                    .count();
                 tracelean_core::surface::history_view::Point {
                     node: id.0,
-                    depth: depth.min(12),
+                    parent: node.parent.map(|p| p.0),
                     here: Some(*id) == here,
                     said: tracelean_core::history::command::describe(&node.command),
                 }
@@ -3467,7 +3449,7 @@ impl Editor {
             .into_iter()
             .map(|p| Event {
                 kind: if p.here { "here".into() } else { "node".into() },
-                text: format!("{}{}", "  ".repeat(p.depth), p.said),
+                text: format!("#{}  {}", p.node, p.said),
             })
             .collect()
     }
