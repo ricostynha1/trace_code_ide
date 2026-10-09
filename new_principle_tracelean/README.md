@@ -22,7 +22,9 @@ crates/     core     the traceability kernel, and everything pure
             tui      the terminal frontend
             desktop  the window (Tauri)
 web/        the page the window loads — a second implementation, checked as one
-docs/       methodology, decisions, progress
+docs/       methodology, design, decisions, user guides
+work/       what is left to do: the action plan, ideas
+investigations/  analyses and proposals not yet decided
 assets/     keymap.json — the modal keymap this project ships
 demo/       a small ordinary tree to open the editor on, and the one
             the driving suite drives
@@ -181,6 +183,6 @@ at L1. See [docs/04-coverage.md](docs/04-coverage.md) and
 [ROLLOVER.md](ROLLOVER.md)
 
 `docs/` says how the system is and why. Work to do and status live in
-[work/](work/) (progress, the gap against the first TraceLean, the action plan,
-ideas); investigations and proposals not yet decided live in
+[work/](work/) (the action plan, ideas; a finished item is removed, git keeps
+it); investigations and proposals not yet decided live in
 [investigations/](investigations/).

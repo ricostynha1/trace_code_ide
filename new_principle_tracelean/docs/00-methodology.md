@@ -87,4 +87,4 @@ which only `≥ x%` may be rendered.
 [02-scope.md](02-scope.md) ·
 [03-doc-sync.md](03-doc-sync.md) ·
 [decisions/](decisions/) ·
-[progress.md](../work/progress.md)
+[what is left](../work/action-plan.md)

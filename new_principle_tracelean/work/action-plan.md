@@ -145,3 +145,20 @@ around it. Two steps:
   real check is the Rust test of writing and reading the lock.
 - Checker counts a model written by pattern matching (no named inputs) as
   taking no inputs; `shape` should count the arrows of its type instead.
+
+## 10. Carried over from the removed progress and gap documents
+
+- `menu_entries` in `crates/editor` builds a mode's menu from the keymap
+  itself instead of through `keymap::which_key`, so it omits the `Escape` row
+  the bar has: two which-keys (`REQ-MYTH.whichkey_is_a_query`; same root as
+  SHOW.menu_from_keymap in the review findings).
+- 31 of 106 bindings declare no coverage floors and stay at L1 (see
+  [ideas](ideas.md) §2).
+- Not built from the first TraceLean: Lean infoview and type-check on save
+  (both start a process, so the user must start them), LSP hover, a coverage
+  treemap and trend.
+- `cargo test` runs suites one at a time; `tools/differential-all.sh` is the
+  fast way to run every differential suite.
+- Only a person can check two things, and nothing will: that
+  `.tracelean/prices.json` holds today's prices, and that a glyph suits the
+  name it stands for.
