@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-CONTEXT",
+    "clause": "person_chooses",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review (simulated human)",
+      "promptVersion": "1"
+    }
+  },
+  "linkHash": "21da378a19146b2b",
+  "inputs": [
+    [
+      "requirement",
+      "ab20b5cf930e703c"
+    ],
+    [
+      "model",
+      "69c10bbdee04f493+94ef9d519eb1804d"
+    ]
+  ]
+}

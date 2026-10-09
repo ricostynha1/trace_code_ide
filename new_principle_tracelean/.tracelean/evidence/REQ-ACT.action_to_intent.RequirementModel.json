@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-ACT",
+    "clause": "action_to_intent",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review (simulated human)",
+      "promptVersion": "1"
+    }
+  },
+  "linkHash": "33347a8045ecd886",
+  "inputs": [
+    [
+      "requirement",
+      "773e2570c90705aa"
+    ],
+    [
+      "model",
+      "1f8874946f403509+551087119ffb87f1"
+    ]
+  ]
+}

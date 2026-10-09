@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-UNDO",
+    "clause": "tree_is_drawn",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review (simulated human)",
+      "promptVersion": "1"
+    }
+  },
+  "linkHash": "b63b4df9cb27b613",
+  "inputs": [
+    [
+      "requirement",
+      "27268e86b126a5f0"
+    ],
+    [
+      "model",
+      "dffba39f17e9bf07"
+    ]
+  ]
+}

@@ -8,7 +8,7 @@
   "detail": {
     "judge": {
       "verdict": "agrees",
-      "judgedBy": "independent-review-agent",
+      "judgedBy": "claude-review (simulated human)",
       "promptVersion": "1"
     }
   },
@@ -20,7 +20,7 @@
     ],
     [
       "model",
-      "72767d3112f95b11"
+      "103fb630b8405a26+72767d3112f95b11+8acab00f46da524b"
     ]
   ]
 }

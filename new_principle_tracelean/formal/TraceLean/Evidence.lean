@@ -208,4 +208,79 @@ theorem adding_a_record_never_lowers_assurance (records : List Record) (r : Reco
   unfold Level.min
   split <;> split <;> split <;> split <;> split <;> split <;> omega
 
+/-! ## Pinning `weakest_link`
+
+The theorems above say the assurance is below every bond and is one of them.
+The specification below says the same thing in the clause's own words, and the
+pinning theorem says that leaves exactly one answer: the minimum is not one
+acceptable aggregate among several, it is the only one.
+
+The specification is written here rather than beside the other specifications
+because this clause already has a pinning theorem of an older shape elsewhere,
+and the first one found for a clause is the one checked.
+-/
+
+namespace Level
+
+/-- Reading a level back from its rung. -/
+def ofRung : Nat → Level
+  | 1 => L1 | 2 => L2 | 3 => L3 | _ => L4
+
+theorem ofRung_toNat (a : Level) : ofRung a.toNat = a := by
+  cases a
+  all_goals rfl
+
+/-- Two levels on the same rung are the same level. -/
+theorem toNat_reflects_eq {a b : Level} (h : a.toNat = b.toNat) : a = b := by
+  rw [← ofRung_toNat a, ← ofRung_toNat b, h]
+
+/-- Each below the other is the same level. -/
+theorem le_both_eq {a b : Level} (h1 : a ≤ b) (h2 : b ≤ a) : a = b :=
+  toNat_reflects_eq (Nat.le_antisymm h1 h2)
+
+end Level
+
+/-- `y` is a link's assurance over `records`: the level of one of its bonds,
+and no higher than any of them. That is a minimum, and it is never an average,
+since an average need be none of the levels it was taken over.
+
+@models REQ-EVID.weakest_link -/
+def WeakestLink (records : List Record) (y : Level) : Prop :=
+  (∃ b, y = bondLevel records b) ∧ (∀ b, y ≤ bondLevel records b)
+
+/-- A level in the chain is some bond's level. -/
+theorem chain_member_is_a_bond {x : Level} {records : List Record}
+    (h : List.Mem x (chain records)) : ∃ b, x = bondLevel records b := by
+  revert h
+  simp only [chain, allBonds, List.map]
+  intro h
+  cases h
+  case head => exact ⟨Bond.requirementModel, rfl⟩
+  case tail h1 =>
+    cases h1
+    case head => exact ⟨Bond.modelImpl, rfl⟩
+    case tail h2 =>
+      cases h2
+      case head => exact ⟨Bond.modelProof, rfl⟩
+      case tail h3 => cases h3
+
+/-- The assurance meets the clause, and nothing else does.
+
+@pins REQ-EVID.weakest_link -/
+theorem weakest_link_pinned :
+    (∀ x1, WeakestLink x1 (assurance x1)) ∧
+    (∀ x1 y1 y2, WeakestLink x1 y1 → WeakestLink x1 y2 → y1 = y2) := by
+  constructor
+  · intro x1
+    exact ⟨chain_member_is_a_bond (assurance_mem_chain x1), assurance_le_bond x1⟩
+  · intro x1 y1 y2 h1 h2
+    refine h1.1.elim (fun b1 e1 => h2.1.elim (fun b2 e2 => ?_))
+    have below : y1 ≤ y2 := by
+      rw [e2]
+      exact h1.2 b2
+    have above : y2 ≤ y1 := by
+      rw [e1]
+      exact h2.2 b1
+    exact Level.le_both_eq below above
+
 end TraceLean.Evidence

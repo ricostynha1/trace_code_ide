@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-SCREEN",
+    "clause": "workbench_has_three_places",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review (simulated human)",
+      "promptVersion": "1"
+    }
+  },
+  "linkHash": "4c533b1b3941e286",
+  "inputs": [
+    [
+      "requirement",
+      "27d2afb9732374e5"
+    ],
+    [
+      "model",
+      "14540c4ee7843788"
+    ]
+  ]
+}

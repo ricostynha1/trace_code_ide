@@ -124,3 +124,22 @@ proof passes over one case or a hundred. Keeping it is right; reading it as
 "four shapes were checked" is not. Nothing proves anything about `padded`, and
 its `6 - digits.length` is Nat subtraction that saturates, correct here only
 because `amount % 1000000 < 1000000`.
+
+## Independent review — 2026-10-09
+
+Produced by claude-review simulating the human approver. Advice, not a record
+(`REQ-JUDGE.advice_is_not_evidence`).
+
+| Clause | Verdict |
+|---|---|
+| `price_is_per_model` | agrees, with a note |
+
+### `price_is_per_model` — note
+
+Both halves are in the models taken together: `priceOf` looks up by the model
+the usage names, and `spendOf` (through the private `accumulate`) names a model
+with no price in `unpriced` instead of adding zero. The 2026-09-20 binding note
+still applies: `--judge` prints `priceOf` alone and the recorded hash is
+`priceOf`'s, so a change to `accumulate` would not invalidate the judgement. The
+false `unknown` model from a non-object `usage` is fixed in `Transcript.lean`
+(`usageIn` now requires an object).

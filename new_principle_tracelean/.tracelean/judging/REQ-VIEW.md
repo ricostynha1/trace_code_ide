@@ -227,3 +227,73 @@ deltas exist to prevent is not addressed by this delta. And `applyDelta` keeps
 hypothesis rather than handling it. Both are defensible readings (a delta is a
 change *to one buffer*; which buffer is shown is `REQ-SCREEN`'s), but they are
 readings, and a person should make them deliberately.
+
+## claude-review (simulated human approver) — 2026-10-09
+
+Produced by claude-review, simulating the human approver, for the ten clauses
+below (`structure_has_one_type` and `frontend_is_checkable` were not in this
+review). Each verdict was entered with `--judge … --verdict … --by
+"claude-review (simulated human)"`; `agrees` writes a record, `drift` is
+recorded as no evidence. Read against the current `formal/TraceLean/View.lean`.
+
+| Clause | Verdict |
+|---|---|
+| `one_representation` | agrees |
+| `everything_is_a_buffer` | agrees |
+| `text_is_the_content` | drift |
+| `structure_over_text` | agrees |
+| `affordances_named` | drift |
+| `frontend_adds_nothing` | agrees, with a note |
+| `rendering_is_total` | agrees |
+| `changes_are_deltas` | agrees, with a note |
+| `screen_is_readable` | drift |
+| `presentation_may_be_symbolic` | drift |
+
+### `text_is_the_content` — drift
+
+`faults` and `plainText` keep spans inside the text, but the same model accepts
+two things shown that the text does not contain: a painted glyph
+(`presentedConformance` passes 📁 for `project`), and a `Role.level .L1` span
+over the characters `L3`, which is fault-free and is coloured as L1. The clause
+was not reworded when `presentation_may_be_symbolic` was added; the fix is a
+requirement edit ("nothing shall be *read off the screen* …") plus a check that
+a level span's grade matches its characters.
+
+### `affordances_named` — drift
+
+`Span.actions : List String` takes any string. `actions := ["file.explode"]` is
+fault-free, returned by `actionsAt`, and conformant to offer, while no keymap or
+`Act.dispatch` answers to it. "Using the names the keymap dispatches" is not
+modelled.
+
+### `screen_is_readable` — drift
+
+`presentedConformance` takes `rows` as an argument; nothing models deriving them
+from what was emitted to the screen. A frontend that paints `lib.rs` and reports
+`[{painted := "main.rs", name := "main.rs"}]` conforms. The half that gives the
+clause its point — not relying on the frontend's own account — is absent. It is
+expressible (a function from emitted bytes to rows, then the same comparison),
+so this is drift, not unmodelable.
+
+### `presentation_may_be_symbolic` — drift
+
+`accessible` concatenates names per row, and `Presented` has no position, so the
+proviso "carries *that region's own* text" is unchecked. On a line `main.rs`:
+`[{📁, "main.rs"}, {🗑, ""}]` conforms (a painted region with no name), and
+`[{📁, "mai"}, {📁, "n.rs"}]` conforms (no symbol's name is its region's text).
+`a_symbol_is_read_as_its_name` proves glyph-irrelevance, which is the permission
+half only.
+
+### Notes on clauses that agree
+
+*`frontend_adds_nothing`.* Invented actions are caught per offset. The check
+believes the frontend's `offered` list, so an affordance a frontend shows but
+does not report is invisible to it — that is `screen_is_readable`'s gap again.
+
+*`changes_are_deltas`.* `applyDelta` keeps the id, so the round-trip theorem
+assumes `sameId`; a delta changing which buffer is shown is not expressible.
+Read as "a change to one buffer", it agrees.
+
+*`one_representation`, `rendering_is_total`, `everything_is_a_buffer`.* Largely
+true by type; the teeth are in `conformance` (lines must equal `plainText`,
+offered actions must be declared, a frontend drawing nothing gets `lineMissing`).

@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-PERSIST",
+    "clause": "truncated_is_reported",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review (simulated human)",
+      "promptVersion": "1"
+    }
+  },
+  "linkHash": "a1fe4c112350ef42",
+  "inputs": [
+    [
+      "requirement",
+      "49ef47219ced0b32"
+    ],
+    [
+      "model",
+      "285fc2c91c36f32f+28d6b9470ce598fd"
+    ]
+  ]
+}

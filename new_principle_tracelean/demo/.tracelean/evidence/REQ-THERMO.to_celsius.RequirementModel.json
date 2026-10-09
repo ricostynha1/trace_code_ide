@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-THERMO",
+    "clause": "to_celsius",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review (simulated human)",
+      "promptVersion": "1"
+    }
+  },
+  "linkHash": "a99d6e4b0c9f942d",
+  "inputs": [
+    [
+      "requirement",
+      "32e16ea621872a6a"
+    ],
+    [
+      "model",
+      "01d2366e2d3c6be5+558e54f5c2fc9ef6"
+    ]
+  ]
+}

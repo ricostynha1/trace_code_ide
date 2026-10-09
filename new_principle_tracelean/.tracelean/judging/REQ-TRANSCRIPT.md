@@ -134,3 +134,33 @@ cleanest repair is the one the sibling clauses already took: split the
 modelable half ("an absent transcript is not an error") from the structural
 half and mark the second `@structural`, as `crates/core/tests/properties.rs`
 does for the other two.
+
+## Independent review — 2026-10-09
+
+Produced by claude-review simulating the human approver. Advice, not a record
+(`REQ-JUDGE.advice_is_not_evidence`).
+
+| Clause | Verdict |
+|---|---|
+| `partial_line_held` | agrees, with a note |
+| `unknown_preserved` | agrees |
+| `absent_is_fine` | drift |
+
+### `unknown_preserved` — agrees
+
+The 2026-09-20 drift is fixed. A line with no event is now unrecognised when it
+claimed a `type` *or* yielded no usage, so the content-block record is reported
+(and its usage kept), and `usageIn` requires `usage` to be an object, so
+`{"usage":123}` is unrecognised rather than a usage of model `unknown`.
+
+### `partial_line_held` — note
+
+Unchanged from 2026-09-20: met by `readTranscript`; `readChunks` joins with
+newlines, so only the last chunk can be cut mid-record, and a final record never
+terminated is held forever.
+
+### `absent_is_fine` — drift
+
+Unchanged: `readTranscript` has no input meaning "no transcript" and no output
+about the workspace; `empty_is_empty` is about the empty string. The
+workspace-alone half is unmodelled.

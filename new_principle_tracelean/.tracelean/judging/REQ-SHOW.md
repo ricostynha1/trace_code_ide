@@ -282,3 +282,101 @@ cheap to fix.
   `a_menu_offers_what_its_keys_dispatch`, is at line 518 and is unannotated. The
   report records `@proves menu_from_keymap -> threeLines`: a value, claimed as a
   proof.
+
+  *Since fixed* (seen 2026-10-09): both annotations now sit on `reviewBuffer` and
+  `a_menu_offers_what_its_keys_dispatch`.
+
+## claude-review (simulated human approver) — 2026-10-09
+
+Produced by claude-review, simulating the human approver, for the thirteen
+clauses below. Each verdict was entered with `--judge … --verdict … --by
+"claude-review (simulated human)"`; `agrees` writes a record, `drift` and
+`unmodelable` are recorded as no evidence. Read against the current
+`formal/TraceLean/Produce.lean` and `View.lean`.
+
+| Clause | Verdict |
+|---|---|
+| `core_produces` | unmodelable |
+| `file_from_text` | agrees, with a note |
+| `listing_from_entries` | agrees |
+| `review_from_change` | drift |
+| `menu_from_keymap` | drift |
+| `record_from_events` | agrees |
+| `index_from_requirements` | agrees |
+| `graph_from_refinement` | drift |
+| `sandbox_from_observation` | agrees, with a note |
+| `producers_are_total` | drift |
+| `producer_is_pure` | unmodelable |
+| `well_formed_by_construction` | agrees, with a note |
+| `window_is_a_buffer` | agrees |
+
+### `core_produces` — unmodelable
+
+Where a `Buffer` is constructed is a fact about the repository, not about any
+function's values. The bound `actionsFor` is a role-to-affordance table and
+belongs to `REQ-VIEW.affordances_named`. Carry this clause by a structural check
+on the frontends.
+
+### `review_from_change` — drift
+
+`reviewBuffer target before after` diffs two texts of one file. A change between
+two workspace states touching `a.rs` and `b.rs`, or creating or deleting a file,
+has no producer that yields *a* buffer showing it. Narrow the clause to one file
+or add a producer that folds per-file diffs under `Role.heading` rows.
+
+### `menu_from_keymap` — drift
+
+`menuBuffer` formats a caller-supplied `List MenuEntry`; each row's action is an
+argument, not looked up. No modelled function takes a `Keymap` mode to entries
+(`whichKey` gives key and description but no action). So
+`menuBuffer "leader" [{key := "x", description := "x", action := some "foo"}]`
+is produced for a mode that binds no `x`, and nothing can notice. The theorem
+`a_menu_offers_what_its_keys_dispatch` checks that a supplied action is carried,
+not that it is the one the key dispatches. The station menu is in fact
+hand-written (`stationEntries`), not derived from a keymap.
+
+### `graph_from_refinement` — drift
+
+Same conclusion as the sections above, reached independently. Not drawn at all:
+a requirement whose `refines` names a missing id; every member of a refines
+cycle with no root (`A` refines `B`, `B` refines `A`). Cut: anything below the
+fourth level. The body's own sentence — "a missing row is a lie about what
+exists" — is what the model does in the first two cases.
+
+### `producers_are_total` — drift
+
+The bound models are `tidy` and `window`. Neither says every `BufferKind` has a
+producer: add a sixth constructor with no producer and nothing in the model
+changes or fails. The second half ("answers for every state") holds of every
+Lean definition, so it is satisfied but not stated by these models. A single
+`produce : BufferKind → … → Buffer` would make exhaustiveness do the work.
+
+### `producer_is_pure` — unmodelable
+
+A Lean definition cannot read a disk, so this is true of every model, including
+a wrong one. The obligation is on the Rust producers' signatures.
+
+### Notes on clauses that agree
+
+*`file_from_text`.* Parsing is not modelled; marks arrive as an argument. `tidy`
+silently drops a mark that overlaps or runs backwards and clamps one past the
+end, so the spans are a well-formed subset of what the parser marked.
+
+*`sandbox_from_observation`.* The order is modelled and falsifiable. But a
+transcript event whose `kind` is `changed` or `cost` renders identically to an
+observed change or to the estimate; only position separates the account from
+the observation.
+
+*`well_formed_by_construction`.* True, but shown on concrete literals, not
+∀-quantified. `directoryBuffer` is a producer that bypasses `tidy`; it is
+fault-free by its own arithmetic (checked by hand), not by the argument the
+module header gives.
+
+*`listing_from_entries`, `index_from_requirements`, `record_from_events`.* An
+entry, id, title or event text containing `\n` breaks one-row-per-item; the
+spans still mark each item. Not a drift on file names in practice, but the
+models do not exclude it.
+
+*Records left behind.* `.tracelean/evidence/REQ-SHOW.review_from_change.RequirementModel.json`
+still holds an `agrees` by `independent-review-agent` against an older
+requirement hash. Entering `drift` did not remove it.

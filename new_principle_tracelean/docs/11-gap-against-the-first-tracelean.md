@@ -390,6 +390,17 @@ Lean/DRT where the core changed + editor + window, with tests
   document and coverage file with what to run, exit 1 if any
   (`REQ-STALE.requirement_reopens_all`, `listed_for_a_script`). The explorer
   ends with a legend of the marks it shows.
+- **First full review (2026-10-09, simulated).** Reviewer agents judged the
+  148 pending clauses, signed `claude-review (simulated human)`: 73 agree, 70
+  drift, 5 unmodelable, each explained in `.tracelean/judging/<REQ>.md`. A
+  drift or unmodelable verdict now withdraws an earlier agreement. 23 clauses
+  are pinned (`formal/TraceLean/Spec*.lean`); the rest have reasons in the
+  provers' reports, mostly "the text admits more than one answer". Open
+  findings worth fixing first: the roll-up's shared visited set (a diamond
+  loses a child), `REQ-SCREEN.buffer_goes_home` vs `homeOf`, Escape vs an
+  unbound key in `step`, `suppress` with `remaining > 1`, unmodelled expiry in
+  `qualifier_soundness`, and the annotation grammar rejecting common tactics
+  (`by_cases`, `obtain`, `cases … with |`, term-mode `by`).
 - **Not done.** Opening a terminal for the user (ruled out by
   `ARCH-NO-DRIVING.user_runs_it`); Lean infoview and type-check on save (both
   start a process); LSP hover; coverage treemap and trend.

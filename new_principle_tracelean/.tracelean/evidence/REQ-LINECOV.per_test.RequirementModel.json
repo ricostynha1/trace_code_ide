@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-LINECOV",
+    "clause": "per_test",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review (simulated human)",
+      "promptVersion": "1"
+    }
+  },
+  "linkHash": "4a444fcd2cf8999d",
+  "inputs": [
+    [
+      "requirement",
+      "ce9762f5d8b7df76"
+    ],
+    [
+      "model",
+      "2d6ac278459ecaae"
+    ]
+  ]
+}

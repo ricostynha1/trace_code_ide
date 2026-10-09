@@ -350,3 +350,123 @@ Three sentences in the body state obligations the clause keys do not carry.
   counter's obligation, and exactly where the `panes_are_distinct` drift lives.
 - "a drag is converted to an amount before it arrives rather than after" — the
   shell's half of `one_arrangement_path`, unkeyed and unmodelled.
+
+## Review by claude-review, simulating the human approver (2026-10-09)
+
+claude-review produced this review, simulating the human approver. It
+supersedes the advice above for every clause it lists. The verdicts were
+entered with `--judge … --verdict … --by "claude-review (simulated human)"`.
+Advice, not a record (`REQ-JUDGE.advice_is_not_evidence`).
+
+| Clause | Verdict |
+|---|---|
+| `screen_is_a_value` | agrees |
+| `opened_outlives_shown` | agrees |
+| `layout_tiles_the_region` | agrees |
+| `every_pane_is_opened` | agrees |
+| `panes_are_distinct` | agrees, with a note |
+| `split_keeps_the_buffer` | agrees |
+| `close_collapses_the_pane` | drift |
+| `resize_moves_one_divider` | agrees, with a note |
+| `resize_has_a_floor` | drift |
+| `focus_is_placed` | agrees |
+| `one_arrangement_path` | unmodelable |
+| `focus_follows_geometry` | agrees |
+| `strip_is_the_opened_set` | drift |
+| `stations_are_constant` | agrees |
+| `station_produces_a_buffer` | drift |
+| `station_opens_a_buffer` | agrees |
+| `workbench_has_three_places` | agrees |
+| `buffer_goes_home` | drift |
+
+### `strip_is_the_opened_set`: drift (new)
+
+The rows are the opened buffers, in order. The action a row carries does not
+show the row's buffer, though. Each row carries the bare `screen.show`, and
+`dispatch` resolves it through `showUnder` from `focus.under`, which is the
+**text of the row span**: `menuLine` gives `"1  a.rs"`, a key and a title. That
+text is not a buffer id. So `dispatch "screen.show" {kind := menu "opened",
+under := some "1  a.rs"}` is `arrange (showBuffer "1  a.rs")`, and
+`showBuffer` answers the screen unchanged because no opened buffer has that id.
+The editor works because it bypasses `dispatch`: `Editor::act_in_bar`
+special-cases `screen.show` and maps the row number to `screen.opened[row]`
+(`opened_at_row`). That bypass is also a second path for an action
+(`REQ-ACT.one_path`). Fix it in the model: put the buffer id where `under`
+reads it, or give each row an action that names its buffer.
+
+### `buffer_goes_home`: drift (new)
+
+The clause says "a menu or a record in the side panel". `homeOf` sends a record
+to the **document** pane when its title starts with any entry in
+`documentRecords` (`requirement `, `judge `, `context `, `definitions of `,
+`uses of `, `search `, `keys`). For example, `record "requirement REQ-X"` goes
+to `document`. The choice is reasonable, since such records read like files,
+but the sentence does not say it. Change the clause to name these records, or
+change the model.
+
+### `close_collapses_the_pane`: drift (still)
+
+The rewording accepted earlier fixed the region half. It did not fix the
+last-buffer case. With `opened = [b]` and `layout = pane p b`, `closeBuffer b`
+answers the screen unchanged, so `b` stays opened, while the clause makes
+dropping it unconditional. The body does not mention the exception either. Add
+"except the last opened buffer, which stays" to the clause.
+
+### `resize_has_a_floor`: drift (still)
+
+Take `split across [(5, a), (0, b)]` with focus on `a`, and apply
+`resizeFocus 3`. `room = Int.ofNat (0 - 1) = 0`, so `b` stays at `0`. The clause
+says a resize that would take a pane below one leaves it at one. The model only
+refuses to *move* weight out of a part at or below one. It never restores one.
+A resize cannot reach 0 from the shipped screens (workbench 1/2/1, split 1/1),
+so this is about starting states. Either state that weights are at least one
+as an invariant (`coherent` does not check it), or reword the clause as "shall
+not take weight from a part at one".
+
+### `station_produces_a_buffer`: drift (still)
+
+`stationKind` maps a name to a `BufferKind` tag: `requirements → menu
+"requirements"`, and `project → directory "."` whatever project is open. No
+modelled function turns that tag into the buffer's text and spans, so the model
+does not show that pressing a station produces the buffer the station stands
+for. `every_station_produces` checks two literal lists against each other and
+has no input that could make it fail. The body also still says "Four entries"
+while `stationEntries` now has six (`trace` and `history` were added).
+
+### `one_arrangement_path`: unmodelable (still)
+
+The clause claims that every change to the arrangement goes through `arrange`.
+That depends on call sites, and no argument to `arrange` can falsify it.
+`openBuffer` changes the layout without going through `Arrangement`, and
+`buffer_goes_home` (focus, then show) happens outside it too.
+
+### Notes on clauses that agree
+
+**`panes_are_distinct`**: the drift from the previous review is fixed.
+`splitFocus` now mints with `freeFrom`, which skips every `paneN` already
+placed. With `fuel = placed + 1`, among that many consecutive candidates at
+least one is free, so the unchecked `fuel = 0` branch is unreachable. A split of
+a distinct layout stays distinct. A layout that already has duplicates is not
+repaired. The clause does not ask for repair.
+
+**`resize_moves_one_divider`**: the divider is the outermost one beside the
+focus. With `split across [(2, split down [A, B]), (3, C)]` and focus on `A`,
+weight moves between the column and `C`. The clause leaves this open, so
+confirm it is what is meant.
+
+**`focus_follows_geometry`**: in a tiling, "nearest pane wholly beyond and
+overlapping across" is the adjacent pane. Ties are broken in reading order,
+which the clause does not specify.
+
+**`screen_is_a_value`**: structural, and true by the `Screen` type. The
+previous `@structural`/L2 suggestion still applies.
+
+**`station_opens_a_buffer`**: a focus that names no pane opens the buffer
+without showing it anywhere. `focus_is_placed` excludes that state.
+
+### Evidence that survives this review
+
+Before this review, `resize_has_a_floor` and `strip_is_the_opened_set` each had
+an `agrees` record by `independent-review-agent` (2026-09-21). Both are stale
+("the requirement changed"). A drift verdict records no evidence, so those
+files remain and `--stale` still asks for them to be redone.

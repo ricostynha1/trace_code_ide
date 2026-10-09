@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-DOCLINK",
+    "clause": "confirmation_is_human",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review (simulated human)",
+      "promptVersion": "1"
+    }
+  },
+  "linkHash": "169ba305075252fb",
+  "inputs": [
+    [
+      "requirement",
+      "ca9f26ad87c3cd2e"
+    ],
+    [
+      "model",
+      "80b8a4d54a1f21da"
+    ]
+  ]
+}

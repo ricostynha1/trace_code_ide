@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-DRT-RUST",
+    "clause": "params_from_source",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review (simulated human)",
+      "promptVersion": "1"
+    }
+  },
+  "linkHash": "fb299c5f99713bba",
+  "inputs": [
+    [
+      "requirement",
+      "590a37eb03100b9a"
+    ],
+    [
+      "model",
+      "3705ac7787f83732"
+    ]
+  ]
+}

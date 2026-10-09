@@ -939,4 +939,42 @@ theorem open_twice_holds_one (buffer : Buffer) (screen : Screen) :
   unfold openBuffer
   simp [held, show_keeps_opened]
 
+/-! ## Pinned
+
+A specification says which answers are right, read from the clause rather than
+from the function; it pins the model when the model meets it and no layout has
+two right answers. Here because the model leans on a private helper. -/
+
+/-- Whether a layout's panes are distinct, answered rightly: yes exactly when
+no identity occurs twice among the identities of its panes.
+
+@models REQ-SCREEN.panes_are_distinct -/
+def PanesDistinct (layout : Layout) (answer : Bool) : Prop :=
+  answer = true ↔ List.Nodup (paneIds layout)
+
+private theorem no_duplicate_iff_nodup (names : List String) :
+    hasDuplicate names = false ↔ List.Nodup names := by
+  induction names
+  case nil => simp [hasDuplicate]
+  case cons name rest ih => simp [hasDuplicate, List.nodup_cons, ih]
+
+/-- `distinctPanes` answers whether no two panes share an identity, and that
+question has one answer.
+
+@pins REQ-SCREEN.panes_are_distinct -/
+theorem panes_distinct_pinned :
+    (∀ x1, PanesDistinct x1 (distinctPanes x1)) ∧
+    (∀ x1 y1 y2, PanesDistinct x1 y1 → PanesDistinct x1 y2 → y1 = y2) := by
+  constructor
+  · intro layout
+    unfold PanesDistinct distinctPanes
+    rw [← no_duplicate_iff_nodup]
+    cases hasDuplicate (paneIds layout)
+    all_goals simp
+  · intro layout y1 y2 h1 h2
+    unfold PanesDistinct at h1 h2
+    cases y1
+    all_goals cases y2
+    all_goals simp_all
+
 end TraceLean.Screen

@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-STRENGTH",
+    "clause": "per_input",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review (simulated human)",
+      "promptVersion": "1"
+    }
+  },
+  "linkHash": "ccd6fb9f6052442b",
+  "inputs": [
+    [
+      "requirement",
+      "41e0e691b882ee2c"
+    ],
+    [
+      "model",
+      "7f7ee44ab1ea97e6"
+    ]
+  ]
+}

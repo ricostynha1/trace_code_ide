@@ -10,7 +10,7 @@
 
 use std::path::{Path, PathBuf};
 
-use super::record::Evidence;
+use super::record::{Evidence, Key};
 
 /// Where a project keeps earned records.
 pub fn dir_in(root: &Path) -> PathBuf {
@@ -25,9 +25,13 @@ pub fn dir_in(root: &Path) -> PathBuf {
 ///
 /// @implements ARCH-DETERMINISM.stable_ordering
 pub fn file_of(root: &Path, record: &Evidence) -> PathBuf {
-    let clause = record.key.clause.as_deref().unwrap_or("_");
-    let bond = format!("{:?}", record.key.bond);
-    dir_in(root).join(format!("{}.{clause}.{bond}.json", record.key.req_id))
+    slot_file(root, &record.key)
+}
+
+fn slot_file(root: &Path, key: &Key) -> PathBuf {
+    let clause = key.clause.as_deref().unwrap_or("_");
+    let bond = format!("{:?}", key.bond);
+    dir_in(root).join(format!("{}.{clause}.{bond}.json", key.req_id))
 }
 
 /// Write one record where the lock builder will find it.
@@ -65,7 +69,13 @@ pub fn read_all(root: &Path) -> Vec<Evidence> {
 
 /// Remove one record, for a backend that has decided it no longer holds.
 pub fn remove(root: &Path, record: &Evidence) -> std::io::Result<()> {
-    match std::fs::remove_file(file_of(root, record)) {
+    remove_slot(root, &record.key)
+}
+
+/// Empty one slot, whatever record is in it: a person who now says the clause
+/// and the model differ withdraws the agreement anyone recorded before.
+pub fn remove_slot(root: &Path, key: &Key) -> std::io::Result<()> {
+    match std::fs::remove_file(slot_file(root, key)) {
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),
         other => other,
     }
@@ -125,6 +135,18 @@ mod tests {
         write(&dir, &record("one")).unwrap();
         std::fs::write(dir_in(&dir).join("REQ-B._.ModelImpl.json"), "{ not json").unwrap();
         assert_eq!(read_all(&dir).len(), 1);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn emptying_a_slot_removes_only_its_record() {
+        let dir = scratch("slot");
+        write(&dir, &record("one")).unwrap();
+        write(&dir, &record("two")).unwrap();
+        remove_slot(&dir, &record("one").key).unwrap();
+        remove_slot(&dir, &record("one").key).unwrap();
+        let left: Vec<_> = read_all(&dir).iter().map(|r| r.key.clause.clone()).collect();
+        assert_eq!(left, vec![Some("two".to_string())]);
         let _ = std::fs::remove_dir_all(&dir);
     }
 

@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-MYTH",
+    "clause": "totality",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review (simulated human)",
+      "promptVersion": "1"
+    }
+  },
+  "linkHash": "1b5cb1cb48e88c89",
+  "inputs": [
+    [
+      "requirement",
+      "955386fbb4c82be8"
+    ],
+    [
+      "model",
+      "b2d0950b816b6710+fcbb441030da0cc9"
+    ]
+  ]
+}

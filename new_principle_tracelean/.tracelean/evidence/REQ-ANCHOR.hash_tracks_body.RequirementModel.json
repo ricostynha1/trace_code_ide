@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-ANCHOR",
+    "clause": "hash_tracks_body",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review (simulated human)",
+      "promptVersion": "1"
+    }
+  },
+  "linkHash": "a5e8f9f7d9edf1e0",
+  "inputs": [
+    [
+      "requirement",
+      "44406cdf4636390d"
+    ],
+    [
+      "model",
+      "0913a5732f797b56"
+    ]
+  ]
+}

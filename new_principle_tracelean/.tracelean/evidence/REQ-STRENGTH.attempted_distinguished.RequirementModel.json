@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-STRENGTH",
+    "clause": "attempted_distinguished",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review (simulated human)",
+      "promptVersion": "1"
+    }
+  },
+  "linkHash": "78b367083a15c26d",
+  "inputs": [
+    [
+      "requirement",
+      "41e0e691b882ee2c"
+    ],
+    [
+      "model",
+      "87d4da9d465362f8+b1d7f99240581683"
+    ]
+  ]
+}

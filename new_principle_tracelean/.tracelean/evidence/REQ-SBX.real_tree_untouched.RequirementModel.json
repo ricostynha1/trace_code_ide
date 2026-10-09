@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-SBX",
+    "clause": "real_tree_untouched",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review (simulated human)",
+      "promptVersion": "1"
+    }
+  },
+  "linkHash": "cabf7680ae03d236",
+  "inputs": [
+    [
+      "requirement",
+      "eb45d08674b26dcc"
+    ],
+    [
+      "model",
+      "3c82e4fcf9bfa9f2+8acab00f46da524b"
+    ]
+  ]
+}

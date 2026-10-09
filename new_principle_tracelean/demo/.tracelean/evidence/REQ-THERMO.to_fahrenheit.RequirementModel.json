@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-THERMO",
+    "clause": "to_fahrenheit",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review (simulated human)",
+      "promptVersion": "1"
+    }
+  },
+  "linkHash": "380963cda5493d6d",
+  "inputs": [
+    [
+      "requirement",
+      "32e16ea621872a6a"
+    ],
+    [
+      "model",
+      "aa60593053f8af5a+e12c6e29b812465e"
+    ]
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "key": {
+    "reqId": "REQ-EVID",
+    "clause": "record_reproducible",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review (simulated human)",
+      "promptVersion": "1"
+    }
+  },
+  "linkHash": "5fb7030406a3083f",
+  "inputs": [
+    [
+      "requirement",
+      "c3dfc3a07c7808a1"
+    ],
+    [
+      "model",
+      "bfd0a935cb3e6b8a"
+    ]
+  ]
+}

@@ -15,7 +15,7 @@ Prompt version 1. Material assembled by `tracelean-trace . --judge REQ-EVID.<cla
 | `bonds_separate` | **drift** — see below |
 | `ladder` | agrees, with a note |
 | `chain_rendered` | agrees |
-| `record_reproducible` | agrees |
+| `record_reproducible` | agrees, with a note (claude-review, simulating the human approver; recorded) |
 | `judgement_caps` | agrees |
 
 ## agrees
@@ -23,7 +23,9 @@ Prompt version 1. Material assembled by `tracelean-trace . --judge REQ-EVID.<cla
 **`weakest_link`** — "the minimum over its bonds, never an average". `assurance`
 folds `Level.min` from `L4` over `allBonds`, which is the minimum and cannot be
 anything else: `Pinned.lean::pins_assurance` now proves the two theorems about it
-admit no other function.
+admit no other function. Re-judged with its spec, `Evidence.WeakestLink`, which
+says the assurance is some bond's level and no higher than any bond's. That is
+the minimum, with no added convention. `weakest_link_pinned` holds.
 
 **`monotone`** — "adding a record shall never lower an assurance". Not visible in
 the definition's shape; it is a property, proved as
@@ -39,10 +41,15 @@ Exactly the clause.
 **`chain_rendered`** — `chain = allBonds.map (bondLevel records)` is the per-bond
 chain in a fixed order. The clause asks for presentability, which this is.
 
-**`record_reproducible`** — the clause has two halves and they are carried by two
-things: "shall not be expressible without it" by the datatype, whose variants
-have no optional fields, and "shall carry what is needed" by `missingField`,
-which rejects the empty string the type cannot. Together they answer it.
+**`record_reproducible`** — re-read by claude-review, simulating the human
+approver, and recorded as `agrees` with a note. `reproducibility` rejects a
+record whose method fields (`verdict`/`judgedBy`/`promptVersion`,
+`cases`/`op`, `theoremName`/`toolchain`) or `linkHash` are empty. *Note:* "not
+expressible without it" is carried by that predicate, not by the type — an
+`Evidence` with `theoremName := ""` is a well-typed value, rejected only when
+checked. And "what is needed to reproduce" is read narrowly: a differential
+record names seed, cases and the clause, but not the version of the generator
+or test that produced the cases.
 
 **`judgement_caps`** — `Detail.ceiling` maps `.judge` to `.L2`. Direct.
 

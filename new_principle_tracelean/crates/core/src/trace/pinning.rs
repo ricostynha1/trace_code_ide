@@ -145,15 +145,23 @@ pub fn shape(declaration: &str) -> Option<(bool, usize)> {
     let header = &declaration[at..];
     let header = &header[..header.find(":=").unwrap_or(header.len())];
     let (mut depth, mut names, mut group, mut result) = (0usize, 0usize, String::new(), None);
+    let mut explicit = false;
     for (i, c) in header.char_indices() {
         match c {
             '(' | '{' | '[' => {
                 depth += 1;
-                group.clear();
+                if depth == 1 {
+                    group.clear();
+                    explicit = c == '(';
+                } else {
+                    group.push(c);
+                }
             }
             ')' | '}' | ']' => {
                 depth = depth.saturating_sub(1);
-                if c == ')' {
+                if depth > 0 {
+                    group.push(c);
+                } else if explicit {
                     if let Some((binders, _)) = group.split_once(':') {
                         names += binders.split_whitespace().count();
                     }
@@ -163,7 +171,7 @@ pub fn shape(declaration: &str) -> Option<(bool, usize)> {
                 result = Some(header[i + 1..].trim());
                 break;
             }
-            _ if depth == 1 => group.push(c),
+            _ if depth >= 1 => group.push(c),
             _ => {}
         }
     }
@@ -253,6 +261,8 @@ mod tests {
         assert_eq!(shape("def toF (c : Int) : Int := c"), Some((false, 1)));
         assert_eq!(shape("def g {α : Type} [Inhabited α] (xs : List α) (n : Nat) : α := default"), Some((false, 2)));
         assert_eq!(shape("theorem t : 1 = 1 := rfl"), None);
+        assert_eq!(shape("def d (l : Link) (now : List (String × String)) : State := x"), Some((false, 2)));
+        assert_eq!(shape("def e (f : (Nat → Nat)) (p : Nat × (Nat × Nat)) : Nat := 0"), Some((false, 2)));
     }
 
     /// @tests REQ-STRENGTH.kernel_decides

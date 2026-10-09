@@ -137,6 +137,28 @@ fn main() {
             requirement_hash: material.requirement_hash.clone(),
             model_hash: material.model_hash.clone(),
         };
+        let slot = trace::record::Key {
+            req_id: material.req_id.clone(),
+            clause: material.clause.clone(),
+            bond: tracelean_core::evidence::Bond::RequirementModel,
+        };
+        // Anything but agreement withdraws an agreement recorded before, here
+        // and in the lock, or it would go on counting as evidence.
+        let withdraw = || {
+            if let Err(error) = trace::store::remove_slot(&root, &slot) {
+                eprintln!("cannot withdraw the earlier record: {error}");
+            }
+            if let Some(mut lock) = trace::lockfile::read(&root) {
+                let before = lock.evidence.len();
+                lock.evidence.retain(|record| record.key != slot);
+                if lock.evidence.len() != before {
+                    match trace::lockfile::write(&root, &lock) {
+                        Ok(_) => println!("withdrew the agreement recorded before"),
+                        Err(error) => eprintln!("cannot write the lock: {error}"),
+                    }
+                }
+            }
+        };
         match tracelean_core::judge::record(material, judgement, model_at.link_hash) {
             tracelean_core::judge::Outcome::Recorded { evidence } => {
                 match trace::store::write(&root, &evidence) {
@@ -145,9 +167,11 @@ fn main() {
                 }
             }
             tracelean_core::judge::Outcome::Drifted => {
+                withdraw();
                 println!("{target}: drift recorded as no evidence; the clause and the model differ")
             }
             tracelean_core::judge::Outcome::Proposed { proposal } => {
+                withdraw();
                 println!("{target}: a proposal, which nothing applies for you:\n  {}", proposal.suggestion)
             }
         }
@@ -219,7 +243,7 @@ fn main() {
             };
             let (what, redo) = match record.key.bond {
                 tracelean_core::evidence::Bond::RequirementModel => {
-                    ("judgement", format!("tracelean-trace . --judge {name} --verdict agrees|disagrees --by <who>"))
+                    ("judgement", format!("tracelean-trace . --judge {name} --verdict agrees|drift|unmodelable --by <who>"))
                 }
                 tracelean_core::evidence::Bond::ModelImpl => ("differential test", "tracelean-trace . --drt (or its DRT suite)".to_string()),
                 tracelean_core::evidence::Bond::ModelProof => ("proof", "rebuild the Lean and earn the proof again".to_string()),
