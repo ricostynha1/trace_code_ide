@@ -27,9 +27,7 @@ open Lean (ToJson FromJson)
 
 /-- What a link claims. `models` is the function computing what the clause
 talks about; `specifies` is the `Prop` saying which answers are right
-(ADR-0014).
-
-@models REQ-ANNOT.role_vocabulary -/
+(ADR-0014). -/
 inductive Role where
   | models | specifies | implements | tests | drt | proves | pins
   deriving Repr, DecidableEq, Inhabited, ToJson, FromJson
@@ -46,9 +44,7 @@ def Role.parse (word : String) : Option Role :=
   | "pins" => some .pins
   | _ => none
 
-/-- Modifies the claim made by the nearest annotation.
-
-@models REQ-ANNOT.qualifiers -/
+/-- Modifies the claim made by the nearest annotation. -/
 inductive Qualifier where
   /-- Caps a clause's contribution below full, and suppresses nothing. -/
   | «partial» (reason : Option String)
@@ -323,9 +319,7 @@ def parseComment (text : String) (firstLine : Nat) : ParsedComment :=
 
 Exists so a generator can compose comment bodies out of fragments: a flat string
 schema would never produce a newline, and multi-line comments are where line
-numbering can go wrong.
-
-@models REQ-ANNOT.totality -/
+numbering can go wrong. -/
 def parseCommentLines (lines : List String) (firstLine : Nat) : ParsedComment :=
   parseComment (String.intercalate "\n" lines) firstLine
 

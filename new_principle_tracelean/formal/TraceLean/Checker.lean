@@ -26,7 +26,7 @@ inductive Severity where
   | info | warn | error
   deriving Repr, DecidableEq, Inhabited, ToJson, FromJson
 
-/-- @models REQ-CHECK.named_kinds -/
+/-- The kinds of finding; `facts` is their model. -/
 inductive Kind where
   /-- An annotation names a requirement or clause that does not exist. -/
   | dangling
@@ -63,9 +63,7 @@ inductive Kind where
   | severalPins
   deriving Repr, DecidableEq, Inhabited, ToJson, FromJson
 
-/-- Whether this names work not yet done, rather than something broken.
-
-@models REQ-CHECK.progress_not_fault -/
+/-- Whether this names work not yet done, rather than something broken. -/
 def Kind.progress : Kind → Bool
   | .unmodeled => true
   | .unimplemented => true
@@ -86,9 +84,7 @@ def Kind.severity : Kind → Severity
   | _ => .error
 
 /-- Which kinds fail a build. Deliberately small: a requirement with no model
-yet is where the work is, not a broken build.
-
-@models REQ-CHECK.severity_policy -/
+yet is where the work is, not a broken build. -/
 def Kind.blocksByDefault : Kind → Bool
   | .dangling => true
   | .danglingRefines => true

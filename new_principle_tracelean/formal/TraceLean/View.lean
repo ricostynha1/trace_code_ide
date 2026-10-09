@@ -26,9 +26,7 @@ open TraceLean.Hash
 
 open Lean (ToJson FromJson)
 
-/-- What a buffer holds. Every shown thing is one of these.
-
-@models REQ-VIEW.everything_is_a_buffer -/
+/-- What a buffer holds. Every shown thing is one of these. -/
 inductive BufferKind where
   /-- The contents of a file on disk. -/
   | file (path : String)
@@ -64,9 +62,7 @@ inductive TokenKind where
 
 /-- What a region of text *is*. Never how it looks: a role a frontend does not
 recognise is still rendered as text, and one it does recognise it may render as
-richly as its medium allows.
-
-@models REQ-VIEW.structure_over_text -/
+richly as its medium allows. -/
 inductive Role where
   | plain
   /-- A path, in a listing or in a message. -/
@@ -101,9 +97,7 @@ inductive Role where
 /-- A region of a buffer's text, what it is, and what can be done there.
 
 `actions` names what is available, using the names the keymap dispatches. A
-frontend reads them; it does not invent them.
-
-@models REQ-VIEW.affordances_named -/
+frontend reads them; it does not invent them. -/
 structure Span where
   start : Nat
   stop : Nat
@@ -190,7 +184,6 @@ An action a frontend offers and this does not return is an affordance nobody
 declared, which is the thing that cannot be checked.
 
 @models REQ-VIEW.affordances_named
-@models REQ-VIEW.frontend_adds_nothing
 -/
 def actionsAt (buffer : Buffer) (offset : Nat) : List String :=
   buffer.spans.foldl
@@ -199,9 +192,7 @@ def actionsAt (buffer : Buffer) (offset : Nat) : List String :=
       | true => span.actions.foldl (fun seen a => if seen.contains a then seen else seen ++ [a]) acc
       | false => acc) []
 
-/-- Every action any span of a buffer names, sorted and without repeats.
-
-@models REQ-VIEW.frontend_adds_nothing -/
+/-- Every action any span of a buffer names, sorted and without repeats. -/
 def declaredActions (buffer : Buffer) : List String :=
   let all := buffer.spans.foldl (fun acc span => acc ++ span.actions) []
   (all.foldl (fun seen a => if seen.contains a then seen else seen ++ [a]) []).mergeSort
@@ -212,9 +203,6 @@ The rendering every frontend has to agree with: the buffer's text, as lines.
 
 A frontend with a richer medium draws more than this. What it may not do is
 show something else: the text is the content, and this is that text.
-
-@models REQ-VIEW.rendering_is_total
-@models REQ-VIEW.text_is_the_content
 -/
 def plainText (buffer : Buffer) : List String :=
   buffer.text.splitOn "\n"
@@ -244,7 +232,6 @@ private def listingSpans (entries : List (Nat × String)) (at_ : Nat) : List Spa
 A directory listing as a buffer: indentation, then the name, one entry a line.
 
 @models REQ-VIEW.structure_has_one_type
-@models REQ-VIEW.everything_is_a_buffer
 @models REQ-SHOW.listing_from_entries
 -/
 def directoryBuffer (path : String) (entries : List (Nat × String)) : Buffer :=
@@ -285,9 +272,7 @@ def delta (before after : Buffer) : Delta :=
     spans := if before.spans == after.spans then none else some after.spans,
     kind := if before.kind == after.kind then none else some after.kind }
 
-/-- Apply a change.
-
-@models REQ-VIEW.changes_are_deltas -/
+/-- Apply a change. -/
 def applyDelta (buffer : Buffer) (d : Delta) : Buffer :=
   { id := buffer.id,
     kind := d.kind.getD buffer.kind,
@@ -361,7 +346,6 @@ Everything a frontend got wrong about a buffer.
 
 @models REQ-VIEW.rendering_is_total
 @models REQ-VIEW.frontend_adds_nothing
-@models REQ-VIEW.one_representation
 -/
 def conformance (buffer : Buffer) (rendering : Rendering) : List Breach :=
   let lines := lineBreaches 0 rendering.lines (plainText buffer)
@@ -422,9 +406,7 @@ def accessible : List Presented → String
 /-- The regions a frontend chose to present as something other than their name.
 
 A frontend reports these so that a run can say it exercised the symbolic case
-rather than assuming it did.
-
-@models REQ-VIEW.presentation_may_be_symbolic -/
+rather than assuming it did. -/
 def symbolic (row : List Presented) : List Presented :=
   row.filter (fun piece => piece.painted != piece.name)
 
@@ -435,7 +417,6 @@ Its rows are read by their names and then compared exactly as any other
 rendering is: there is no second notion of conformance, only a second way of
 arriving at the lines.
 
-@models REQ-VIEW.presentation_may_be_symbolic
 @models REQ-VIEW.screen_is_readable -/
 def presentedConformance (buffer : Buffer) (rows : List (List Presented))
     (offered : List (Nat × String)) : List Breach :=

@@ -10910,16 +10910,6 @@
       "req": "ARCH-DETERMINISM",
       "clause": "replay_exact",
       "file": "formal/TraceLean/Persistence.lean",
-      "anchor": "formal/TraceLean/Persistence.lean::TraceLean.Persistence::replay",
-      "body_hash": "c7da65face5d5188",
-      "link_hash": "fb6ec75beb0a3952",
-      "qualifier": null
-    },
-    {
-      "role": "models",
-      "req": "ARCH-DETERMINISM",
-      "clause": "replay_exact",
-      "file": "formal/TraceLean/Persistence.lean",
       "anchor": "formal/TraceLean/Persistence.lean::TraceLean.Persistence::replayReport",
       "body_hash": "28d6b9470ce598fd",
       "link_hash": "b7136a0cad2af6d0",
@@ -11030,16 +11020,6 @@
       "req": "REQ-ACT",
       "clause": "unknown_is_refused",
       "file": "formal/TraceLean/Act.lean",
-      "anchor": "formal/TraceLean/Act.lean::TraceLean.Act::acts",
-      "body_hash": "4d7c86ad412807d1",
-      "link_hash": "25c38f89f03fb2bc",
-      "qualifier": null
-    },
-    {
-      "role": "models",
-      "req": "REQ-ACT",
-      "clause": "unknown_is_refused",
-      "file": "formal/TraceLean/Act.lean",
       "anchor": "formal/TraceLean/Act.lean::TraceLean.Act::dispatch",
       "body_hash": "71f2e2d445bdb099",
       "link_hash": "783852e2479edbcd",
@@ -11110,16 +11090,6 @@
       "req": "REQ-ANNOT",
       "clause": "qualifiers",
       "file": "formal/TraceLean/Annotation.lean",
-      "anchor": "formal/TraceLean/Annotation.lean::TraceLean.Annotation::Qualifier",
-      "body_hash": "52ee339a3d04e5c8",
-      "link_hash": "de84a11b990b3478",
-      "qualifier": null
-    },
-    {
-      "role": "models",
-      "req": "REQ-ANNOT",
-      "clause": "qualifiers",
-      "file": "formal/TraceLean/Annotation.lean",
       "anchor": "formal/TraceLean/Annotation.lean::TraceLean.Annotation::parseComment",
       "body_hash": "c3ada71c9c444a58",
       "link_hash": "70565e51b6a2c534",
@@ -11140,16 +11110,6 @@
       "req": "REQ-ANNOT",
       "clause": "role_vocabulary",
       "file": "formal/TraceLean/Annotation.lean",
-      "anchor": "formal/TraceLean/Annotation.lean::TraceLean.Annotation::Role",
-      "body_hash": "2890665f635d5969",
-      "link_hash": "e02bb3932b87b5e8",
-      "qualifier": null
-    },
-    {
-      "role": "models",
-      "req": "REQ-ANNOT",
-      "clause": "role_vocabulary",
-      "file": "formal/TraceLean/Annotation.lean",
       "anchor": "formal/TraceLean/Annotation.lean::TraceLean.Annotation::parseComment",
       "body_hash": "c3ada71c9c444a58",
       "link_hash": "4c47ca8c30975a90",
@@ -11163,16 +11123,6 @@
       "anchor": "formal/TraceLean/Annotation.lean::TraceLean.Annotation::parseComment",
       "body_hash": "c3ada71c9c444a58",
       "link_hash": "c4d09d9ff18b87a5",
-      "qualifier": null
-    },
-    {
-      "role": "models",
-      "req": "REQ-ANNOT",
-      "clause": "totality",
-      "file": "formal/TraceLean/Annotation.lean",
-      "anchor": "formal/TraceLean/Annotation.lean::TraceLean.Annotation::parseCommentLines",
-      "body_hash": "a99d19460921e69e",
-      "link_hash": "333c0d014a6c23f8",
       "qualifier": null
     },
     {
@@ -11200,16 +11150,6 @@
       "req": "REQ-CHECK",
       "clause": "named_kinds",
       "file": "formal/TraceLean/Checker.lean",
-      "anchor": "formal/TraceLean/Checker.lean::TraceLean.Checker::Kind",
-      "body_hash": "6011dcf0cd8b2359",
-      "link_hash": "aea838bffe1cc832",
-      "qualifier": null
-    },
-    {
-      "role": "models",
-      "req": "REQ-CHECK",
-      "clause": "named_kinds",
-      "file": "formal/TraceLean/Checker.lean",
       "anchor": "formal/TraceLean/Checker.lean::TraceLean.Checker::facts",
       "body_hash": "877ede27519bdf01",
       "link_hash": "b915689031951b87",
@@ -11230,16 +11170,6 @@
       "req": "REQ-CHECK",
       "clause": "progress_not_fault",
       "file": "formal/TraceLean/Checker.lean",
-      "anchor": "formal/TraceLean/Checker.lean::TraceLean.Checker::Kind.progress",
-      "body_hash": "ee0aee0c614287b3",
-      "link_hash": "8ad96f6d0c630ae0",
-      "qualifier": null
-    },
-    {
-      "role": "models",
-      "req": "REQ-CHECK",
-      "clause": "progress_not_fault",
-      "file": "formal/TraceLean/Checker.lean",
       "anchor": "formal/TraceLean/Checker.lean::TraceLean.Checker::facts",
       "body_hash": "877ede27519bdf01",
       "link_hash": "601b760900a967c8",
@@ -11253,16 +11183,6 @@
       "anchor": "formal/TraceLean/Checker.lean::TraceLean.Checker::qualifierKinds",
       "body_hash": "3f4f7a352fb0dd9a",
       "link_hash": "f125b0ccd563642d",
-      "qualifier": null
-    },
-    {
-      "role": "models",
-      "req": "REQ-CHECK",
-      "clause": "severity_policy",
-      "file": "formal/TraceLean/Checker.lean",
-      "anchor": "formal/TraceLean/Checker.lean::TraceLean.Checker::Kind.blocksByDefault",
-      "body_hash": "2c75247e2f4b7aa9",
-      "link_hash": "63dd77d35b387481",
       "qualifier": null
     },
     {
@@ -11368,16 +11288,6 @@
     {
       "role": "models",
       "req": "REQ-CONTEXT",
-      "clause": "neighbourhood_is_closed",
-      "file": "formal/TraceLean/Context.lean",
-      "anchor": "formal/TraceLean/Context.lean::TraceLean.Context::descendants",
-      "body_hash": "e5106c93ab873b56",
-      "link_hash": "8be732284096e12b",
-      "qualifier": null
-    },
-    {
-      "role": "models",
-      "req": "REQ-CONTEXT",
       "clause": "part_named",
       "file": "formal/TraceLean/Context.lean",
       "anchor": "formal/TraceLean/Context.lean::TraceLean.Context::partNamed",
@@ -11423,16 +11333,6 @@
       "anchor": "formal/TraceLean/Cost.lean::TraceLean.Cost::estimateLine",
       "body_hash": "bedf114c1b8e5b13",
       "link_hash": "ab3947fec050777f",
-      "qualifier": null
-    },
-    {
-      "role": "models",
-      "req": "REQ-COST",
-      "clause": "price_is_per_model",
-      "file": "formal/TraceLean/Cost.lean",
-      "anchor": "formal/TraceLean/Cost.lean::TraceLean.Cost::priceOf",
-      "body_hash": "15bf20ff869ca259",
-      "link_hash": "88198365bc8395e8",
       "qualifier": null
     },
     {
@@ -11543,16 +11443,6 @@
       "anchor": "formal/TraceLean/Drive.lean::TraceLean.Drive::drive",
       "body_hash": "b50bbd06a7e6541c",
       "link_hash": "8dcf140107b1ddd5",
-      "qualifier": null
-    },
-    {
-      "role": "models",
-      "req": "REQ-DRIVE",
-      "clause": "walk_follows_the_machine",
-      "file": "formal/TraceLean/Drive.lean",
-      "anchor": "formal/TraceLean/Drive.lean::TraceLean.Drive::modesVisited",
-      "body_hash": "676324c005184ec4",
-      "link_hash": "529787e9c70c9443",
       "qualifier": null
     },
     {
@@ -11940,16 +11830,6 @@
       "req": "REQ-JUDGE",
       "clause": "human_decides",
       "file": "formal/TraceLean/Judge.lean",
-      "anchor": "formal/TraceLean/Judge.lean::TraceLean.Judge::authority",
-      "body_hash": "7f6c4943914122f5",
-      "link_hash": "5bf61801b9ff4d96",
-      "qualifier": null
-    },
-    {
-      "role": "models",
-      "req": "REQ-JUDGE",
-      "clause": "human_decides",
-      "file": "formal/TraceLean/Judge.lean",
       "anchor": "formal/TraceLean/Judge.lean::TraceLean.Judge::record",
       "body_hash": "3402adaacf045c92",
       "link_hash": "4040d1ebe17eb926",
@@ -12300,16 +12180,6 @@
       "req": "REQ-PERSIST",
       "clause": "checkpoint_equivalent",
       "file": "formal/TraceLean/Persistence.lean",
-      "anchor": "formal/TraceLean/Persistence.lean::TraceLean.Persistence::replayFrom",
-      "body_hash": "6be21c1a89ec7df3",
-      "link_hash": "83e19dd05c6db22d",
-      "qualifier": null
-    },
-    {
-      "role": "models",
-      "req": "REQ-PERSIST",
-      "clause": "checkpoint_equivalent",
-      "file": "formal/TraceLean/Persistence.lean",
       "anchor": "formal/TraceLean/Persistence.lean::TraceLean.Persistence::replayReport",
       "body_hash": "28d6b9470ce598fd",
       "link_hash": "d55f9a4b8178e7b7",
@@ -12320,29 +12190,9 @@
       "req": "REQ-PERSIST",
       "clause": "replay_exact",
       "file": "formal/TraceLean/Persistence.lean",
-      "anchor": "formal/TraceLean/Persistence.lean::TraceLean.Persistence::replay",
-      "body_hash": "c7da65face5d5188",
-      "link_hash": "324c5e5c95262183",
-      "qualifier": null
-    },
-    {
-      "role": "models",
-      "req": "REQ-PERSIST",
-      "clause": "replay_exact",
-      "file": "formal/TraceLean/Persistence.lean",
       "anchor": "formal/TraceLean/Persistence.lean::TraceLean.Persistence::replayReport",
       "body_hash": "28d6b9470ce598fd",
       "link_hash": "581f9a532215d5a1",
-      "qualifier": null
-    },
-    {
-      "role": "models",
-      "req": "REQ-PERSIST",
-      "clause": "truncated_is_reported",
-      "file": "formal/TraceLean/Persistence.lean",
-      "anchor": "formal/TraceLean/Persistence.lean::TraceLean.Persistence::Log",
-      "body_hash": "7bb91dc59af7f2f4",
-      "link_hash": "e3cb65bd41d3672c",
       "qualifier": null
     },
     {
@@ -12413,16 +12263,6 @@
       "anchor": "formal/TraceLean/Provenance.lean::TraceLean.Provenance::origin",
       "body_hash": "8df56585372e9725",
       "link_hash": "5e16950dc1470ce0",
-      "qualifier": null
-    },
-    {
-      "role": "models",
-      "req": "REQ-PROV",
-      "clause": "position_question",
-      "file": "formal/TraceLean/Provenance.lean",
-      "anchor": "formal/TraceLean/Provenance.lean::TraceLean.Provenance::origins",
-      "body_hash": "ca2d351a50823b1b",
-      "link_hash": "6df4c57dd645a827",
       "qualifier": null
     },
     {
@@ -12510,29 +12350,9 @@
       "req": "REQ-REQDOC",
       "clause": "refines_dag",
       "file": "formal/TraceLean/Refinement.lean",
-      "anchor": "formal/TraceLean/Refinement.lean::TraceLean.Refinement::cycleIn",
-      "body_hash": "7a2fff81b24f3de4",
-      "link_hash": "07d71b403858ed1b",
-      "qualifier": null
-    },
-    {
-      "role": "models",
-      "req": "REQ-REQDOC",
-      "clause": "refines_dag",
-      "file": "formal/TraceLean/Refinement.lean",
       "anchor": "formal/TraceLean/Refinement.lean::TraceLean.Refinement::graphReport",
       "body_hash": "a2a6887eda815a9c",
       "link_hash": "de5c949f11d548fa",
-      "qualifier": null
-    },
-    {
-      "role": "models",
-      "req": "REQ-REQDOC",
-      "clause": "refines_resolves",
-      "file": "formal/TraceLean/Refinement.lean",
-      "anchor": "formal/TraceLean/Refinement.lean::TraceLean.Refinement::danglingIn",
-      "body_hash": "9ea64c735fbb374d",
-      "link_hash": "a207c532c2a864d0",
       "qualifier": null
     },
     {
@@ -12768,41 +12588,11 @@
     {
       "role": "models",
       "req": "REQ-SCREEN",
-      "clause": "opened_outlives_shown",
-      "file": "formal/TraceLean/Screen.lean",
-      "anchor": "formal/TraceLean/Screen.lean::TraceLean.Screen::showBuffer",
-      "body_hash": "5e3581c3e17298a5",
-      "link_hash": "d8f0d801f3433273",
-      "qualifier": null
-    },
-    {
-      "role": "models",
-      "req": "REQ-SCREEN",
       "clause": "panes_are_distinct",
       "file": "formal/TraceLean/Screen.lean",
       "anchor": "formal/TraceLean/Screen.lean::TraceLean.Screen::coherent",
       "body_hash": "039ea0dd4a02df36",
       "link_hash": "545e47b43b9862ac",
-      "qualifier": null
-    },
-    {
-      "role": "models",
-      "req": "REQ-SCREEN",
-      "clause": "panes_are_distinct",
-      "file": "formal/TraceLean/Screen.lean",
-      "anchor": "formal/TraceLean/Screen.lean::TraceLean.Screen::distinctPanes",
-      "body_hash": "f1ecad4716a4db3c",
-      "link_hash": "1f11884a0c876c99",
-      "qualifier": null
-    },
-    {
-      "role": "models",
-      "req": "REQ-SCREEN",
-      "clause": "panes_are_distinct",
-      "file": "formal/TraceLean/Screen.lean",
-      "anchor": "formal/TraceLean/Screen.lean::TraceLean.Screen::splitFocus",
-      "body_hash": "8be7de2bdd0a8aed",
-      "link_hash": "f1e0dfa010e55982",
       "qualifier": null
     },
     {
@@ -12823,16 +12613,6 @@
       "anchor": "formal/TraceLean/Screen.lean::TraceLean.Screen::resizeFocus",
       "body_hash": "38567ed311d04ebe",
       "link_hash": "25080e57fba0a821",
-      "qualifier": null
-    },
-    {
-      "role": "models",
-      "req": "REQ-SCREEN",
-      "clause": "screen_is_a_value",
-      "file": "formal/TraceLean/Screen.lean",
-      "anchor": "formal/TraceLean/Screen.lean::TraceLean.Screen::Layout",
-      "body_hash": "5d159a3d8229033d",
-      "link_hash": "9de4f7e7c520b578",
       "qualifier": null
     },
     {
@@ -13018,91 +12798,11 @@
     {
       "role": "models",
       "req": "REQ-SHOW",
-      "clause": "producer_is_pure",
-      "file": "formal/TraceLean/Produce.lean",
-      "anchor": "formal/TraceLean/Produce.lean::TraceLean.Produce::designBuffer",
-      "body_hash": "8062961bcf85f698",
-      "link_hash": "ea122aac9e938322",
-      "qualifier": null
-    },
-    {
-      "role": "models",
-      "req": "REQ-SHOW",
-      "clause": "producer_is_pure",
-      "file": "formal/TraceLean/Produce.lean",
-      "anchor": "formal/TraceLean/Produce.lean::TraceLean.Produce::fileBuffer",
-      "body_hash": "3ddda33e4b52c471",
-      "link_hash": "126599051e13a6aa",
-      "qualifier": null
-    },
-    {
-      "role": "models",
-      "req": "REQ-SHOW",
-      "clause": "producer_is_pure",
-      "file": "formal/TraceLean/Produce.lean",
-      "anchor": "formal/TraceLean/Produce.lean::TraceLean.Produce::menuBuffer",
-      "body_hash": "dd1183891445ce98",
-      "link_hash": "fc041ee075b33b5b",
-      "qualifier": null
-    },
-    {
-      "role": "models",
-      "req": "REQ-SHOW",
-      "clause": "producer_is_pure",
-      "file": "formal/TraceLean/Produce.lean",
-      "anchor": "formal/TraceLean/Produce.lean::TraceLean.Produce::recordBuffer",
-      "body_hash": "3ac7b9bbc53940f2",
-      "link_hash": "d581cf6e8d16a865",
-      "qualifier": null
-    },
-    {
-      "role": "models",
-      "req": "REQ-SHOW",
-      "clause": "producer_is_pure",
-      "file": "formal/TraceLean/Produce.lean",
-      "anchor": "formal/TraceLean/Produce.lean::TraceLean.Produce::requirementsBuffer",
-      "body_hash": "52ba70bac2e13a4f",
-      "link_hash": "2b54d634df9916b8",
-      "qualifier": null
-    },
-    {
-      "role": "models",
-      "req": "REQ-SHOW",
-      "clause": "producer_is_pure",
-      "file": "formal/TraceLean/Produce.lean",
-      "anchor": "formal/TraceLean/Produce.lean::TraceLean.Produce::reviewBuffer",
-      "body_hash": "78c5c7a3ec8c2c7a",
-      "link_hash": "b244fd8ebbe5483c",
-      "qualifier": null
-    },
-    {
-      "role": "models",
-      "req": "REQ-SHOW",
-      "clause": "producer_is_pure",
-      "file": "formal/TraceLean/Produce.lean",
-      "anchor": "formal/TraceLean/Produce.lean::TraceLean.Produce::sandboxEvents",
-      "body_hash": "abc562971ca8a349",
-      "link_hash": "cc8fb88ea71a9810",
-      "qualifier": null
-    },
-    {
-      "role": "models",
-      "req": "REQ-SHOW",
       "clause": "producers_are_total",
       "file": "formal/TraceLean/Produce.lean",
       "anchor": "formal/TraceLean/Produce.lean::TraceLean.Produce::tidy",
       "body_hash": "33b4dcb380ce6097",
       "link_hash": "d422f4df5cf2b6fb",
-      "qualifier": null
-    },
-    {
-      "role": "models",
-      "req": "REQ-SHOW",
-      "clause": "producers_are_total",
-      "file": "formal/TraceLean/Produce.lean",
-      "anchor": "formal/TraceLean/Produce.lean::TraceLean.Produce::window",
-      "body_hash": "7e374d2b880b864b",
-      "link_hash": "783723a4b90a7c37",
       "qualifier": null
     },
     {
@@ -13123,26 +12823,6 @@
       "anchor": "formal/TraceLean/Produce.lean::TraceLean.Produce::diffLines",
       "body_hash": "886dd32e573ce1bd",
       "link_hash": "7257aefc14322bbc",
-      "qualifier": null
-    },
-    {
-      "role": "models",
-      "req": "REQ-SHOW",
-      "clause": "review_from_change",
-      "file": "formal/TraceLean/Produce.lean",
-      "anchor": "formal/TraceLean/Produce.lean::TraceLean.Produce::reviewBuffer",
-      "body_hash": "78c5c7a3ec8c2c7a",
-      "link_hash": "daacf37e95a32450",
-      "qualifier": null
-    },
-    {
-      "role": "models",
-      "req": "REQ-SHOW",
-      "clause": "sandbox_from_observation",
-      "file": "formal/TraceLean/Produce.lean",
-      "anchor": "formal/TraceLean/Produce.lean::TraceLean.Produce::sandboxBuffer",
-      "body_hash": "6e900dc6464e1d0f",
-      "link_hash": "f95460a4e23b94a4",
       "qualifier": null
     },
     {
@@ -13198,16 +12878,6 @@
     {
       "role": "models",
       "req": "REQ-STALE",
-      "clause": "inputs_identified",
-      "file": "formal/TraceLean/Record.lean",
-      "anchor": "formal/TraceLean/Record.lean::TraceLean.Record::requiredInputs",
-      "body_hash": "3c4a8880d6037d3c",
-      "link_hash": "183c4737dacdea0d",
-      "qualifier": null
-    },
-    {
-      "role": "models",
-      "req": "REQ-STALE",
       "clause": "no_silent_revalidation",
       "file": "formal/TraceLean/Staleness.lean",
       "anchor": "formal/TraceLean/Staleness.lean::TraceLean.Staleness::revalidated",
@@ -13250,16 +12920,6 @@
       "req": "REQ-STRENGTH",
       "clause": "attempted_distinguished",
       "file": "formal/TraceLean/Strength.lean",
-      "anchor": "formal/TraceLean/Strength.lean::TraceLean.Strength::Strength",
-      "body_hash": "e36062331e664242",
-      "link_hash": "347fb471a3edec4c",
-      "qualifier": null
-    },
-    {
-      "role": "models",
-      "req": "REQ-STRENGTH",
-      "clause": "attempted_distinguished",
-      "file": "formal/TraceLean/Strength.lean",
       "anchor": "formal/TraceLean/Strength.lean::TraceLean.Strength::obligationsFrom",
       "body_hash": "87d4da9d465362f8",
       "link_hash": "e42377348aa6c654",
@@ -13290,16 +12950,6 @@
       "req": "REQ-STRENGTH",
       "clause": "nondeterministic_declared",
       "file": "formal/TraceLean/Strength.lean",
-      "anchor": "formal/TraceLean/Strength.lean::TraceLean.Strength::Strength",
-      "body_hash": "e36062331e664242",
-      "link_hash": "b1df17cdd5e9dd41",
-      "qualifier": null
-    },
-    {
-      "role": "models",
-      "req": "REQ-STRENGTH",
-      "clause": "nondeterministic_declared",
-      "file": "formal/TraceLean/Strength.lean",
       "anchor": "formal/TraceLean/Strength.lean::TraceLean.Strength::obligationsFrom",
       "body_hash": "87d4da9d465362f8",
       "link_hash": "4cfd8dbf007b4579",
@@ -13323,26 +12973,6 @@
       "anchor": "formal/TraceLean/Strength.lean::TraceLean.Strength::obligationSource",
       "body_hash": "9772b5a355704b31",
       "link_hash": "4443ca811974a39b",
-      "qualifier": null
-    },
-    {
-      "role": "models",
-      "req": "REQ-STRENGTH",
-      "clause": "open_is_the_default",
-      "file": "formal/TraceLean/Strength.lean",
-      "anchor": "formal/TraceLean/Strength.lean::TraceLean.Strength::Strength",
-      "body_hash": "e36062331e664242",
-      "link_hash": "6b636b4ee8550e20",
-      "qualifier": null
-    },
-    {
-      "role": "models",
-      "req": "REQ-STRENGTH",
-      "clause": "open_is_the_default",
-      "file": "formal/TraceLean/Strength.lean",
-      "anchor": "formal/TraceLean/Strength.lean::TraceLean.Strength::Strength.isSettled",
-      "body_hash": "b1d7f99240581683",
-      "link_hash": "dfee0abd7a555c51",
       "qualifier": null
     },
     {
@@ -13420,16 +13050,6 @@
       "req": "REQ-TRANSCRIPT",
       "clause": "partial_line_held",
       "file": "formal/TraceLean/Transcript.lean",
-      "anchor": "formal/TraceLean/Transcript.lean::TraceLean.Transcript::readChunks",
-      "body_hash": "dde87731c465dfa9",
-      "link_hash": "5cfb62f8e54d6797",
-      "qualifier": null
-    },
-    {
-      "role": "models",
-      "req": "REQ-TRANSCRIPT",
-      "clause": "partial_line_held",
-      "file": "formal/TraceLean/Transcript.lean",
       "anchor": "formal/TraceLean/Transcript.lean::TraceLean.Transcript::readTranscript",
       "body_hash": "bcd8789899d37482",
       "link_hash": "ec6febf803228bbb",
@@ -13460,29 +13080,9 @@
       "req": "REQ-UNDO",
       "clause": "jump_equivalence",
       "file": "formal/TraceLean/Tree.lean",
-      "anchor": "formal/TraceLean/Tree.lean::TraceLean.Tree::Tree::stateAt",
-      "body_hash": "8b3dbad264f46927",
-      "link_hash": "166e15fb4a254130",
-      "qualifier": null
-    },
-    {
-      "role": "models",
-      "req": "REQ-UNDO",
-      "clause": "jump_equivalence",
-      "file": "formal/TraceLean/Tree.lean",
       "anchor": "formal/TraceLean/Tree.lean::TraceLean.Tree::runScript",
       "body_hash": "4f4d41ec41bf2c80",
       "link_hash": "d3e34bbb80de4846",
-      "qualifier": null
-    },
-    {
-      "role": "models",
-      "req": "REQ-UNDO",
-      "clause": "no_loss_on_branch",
-      "file": "formal/TraceLean/Tree.lean",
-      "anchor": "formal/TraceLean/Tree.lean::TraceLean.Tree::Tree::push",
-      "body_hash": "34b25f64371a154e",
-      "link_hash": "12cf240d89c6cacd",
       "qualifier": null
     },
     {
@@ -13500,16 +13100,6 @@
       "req": "REQ-UNDO",
       "clause": "path_via_ancestor",
       "file": "formal/TraceLean/Tree.lean",
-      "anchor": "formal/TraceLean/Tree.lean::TraceLean.Tree::Tree::jumpTo",
-      "body_hash": "14cf9ad7939d2b17",
-      "link_hash": "3ab0c960db463154",
-      "qualifier": null
-    },
-    {
-      "role": "models",
-      "req": "REQ-UNDO",
-      "clause": "path_via_ancestor",
-      "file": "formal/TraceLean/Tree.lean",
       "anchor": "formal/TraceLean/Tree.lean::TraceLean.Tree::runScript",
       "body_hash": "4f4d41ec41bf2c80",
       "link_hash": "45614e16555c79cd",
@@ -13520,29 +13110,9 @@
       "req": "REQ-UNDO",
       "clause": "preview_is_pure",
       "file": "formal/TraceLean/Tree.lean",
-      "anchor": "formal/TraceLean/Tree.lean::TraceLean.Tree::Tree::preview",
-      "body_hash": "8ebf2ca2ea5e6aed",
-      "link_hash": "81a99e9c27eff067",
-      "qualifier": null
-    },
-    {
-      "role": "models",
-      "req": "REQ-UNDO",
-      "clause": "preview_is_pure",
-      "file": "formal/TraceLean/Tree.lean",
       "anchor": "formal/TraceLean/Tree.lean::TraceLean.Tree::runScript",
       "body_hash": "4f4d41ec41bf2c80",
       "link_hash": "044e5d5948d55efd",
-      "qualifier": null
-    },
-    {
-      "role": "models",
-      "req": "REQ-UNDO",
-      "clause": "reachable",
-      "file": "formal/TraceLean/Tree.lean",
-      "anchor": "formal/TraceLean/Tree.lean::TraceLean.Tree::Tree::push",
-      "body_hash": "34b25f64371a154e",
-      "link_hash": "ed51b8c8d68c6b4c",
       "qualifier": null
     },
     {
@@ -13570,29 +13140,9 @@
       "req": "REQ-VIEW",
       "clause": "affordances_named",
       "file": "formal/TraceLean/View.lean",
-      "anchor": "formal/TraceLean/View.lean::TraceLean.View::Span",
-      "body_hash": "0b802e5a56b1afd2",
-      "link_hash": "23fd605c2d525688",
-      "qualifier": null
-    },
-    {
-      "role": "models",
-      "req": "REQ-VIEW",
-      "clause": "affordances_named",
-      "file": "formal/TraceLean/View.lean",
       "anchor": "formal/TraceLean/View.lean::TraceLean.View::actionsAt",
       "body_hash": "91324f0af65e3f3a",
       "link_hash": "7352037f31a3f826",
-      "qualifier": null
-    },
-    {
-      "role": "models",
-      "req": "REQ-VIEW",
-      "clause": "changes_are_deltas",
-      "file": "formal/TraceLean/View.lean",
-      "anchor": "formal/TraceLean/View.lean::TraceLean.View::applyDelta",
-      "body_hash": "b5336c7f25bd3ecd",
-      "link_hash": "07a2dca904654808",
       "qualifier": null
     },
     {
@@ -13618,51 +13168,11 @@
     {
       "role": "models",
       "req": "REQ-VIEW",
-      "clause": "everything_is_a_buffer",
-      "file": "formal/TraceLean/View.lean",
-      "anchor": "formal/TraceLean/View.lean::TraceLean.View::BufferKind",
-      "body_hash": "c91db8e13b2cb37c",
-      "link_hash": "7a9b9be13cf3a14d",
-      "qualifier": null
-    },
-    {
-      "role": "models",
-      "req": "REQ-VIEW",
-      "clause": "everything_is_a_buffer",
-      "file": "formal/TraceLean/View.lean",
-      "anchor": "formal/TraceLean/View.lean::TraceLean.View::directoryBuffer",
-      "body_hash": "2c4a79afd9285f01",
-      "link_hash": "6a32c10d5f367e44",
-      "qualifier": null
-    },
-    {
-      "role": "models",
-      "req": "REQ-VIEW",
-      "clause": "frontend_adds_nothing",
-      "file": "formal/TraceLean/View.lean",
-      "anchor": "formal/TraceLean/View.lean::TraceLean.View::actionsAt",
-      "body_hash": "91324f0af65e3f3a",
-      "link_hash": "00dbbc57e92677ed",
-      "qualifier": null
-    },
-    {
-      "role": "models",
-      "req": "REQ-VIEW",
       "clause": "frontend_adds_nothing",
       "file": "formal/TraceLean/View.lean",
       "anchor": "formal/TraceLean/View.lean::TraceLean.View::conformance",
       "body_hash": "b9f69cf500f6df83",
       "link_hash": "c1226446e7ef741c",
-      "qualifier": null
-    },
-    {
-      "role": "models",
-      "req": "REQ-VIEW",
-      "clause": "frontend_adds_nothing",
-      "file": "formal/TraceLean/View.lean",
-      "anchor": "formal/TraceLean/View.lean::TraceLean.View::declaredActions",
-      "body_hash": "1a4ac4fed1f34dd3",
-      "link_hash": "4f10103e0acaa134",
       "qualifier": null
     },
     {
@@ -13678,16 +13188,6 @@
     {
       "role": "models",
       "req": "REQ-VIEW",
-      "clause": "one_representation",
-      "file": "formal/TraceLean/View.lean",
-      "anchor": "formal/TraceLean/View.lean::TraceLean.View::conformance",
-      "body_hash": "b9f69cf500f6df83",
-      "link_hash": "8fbd729d0edb4869",
-      "qualifier": null
-    },
-    {
-      "role": "models",
-      "req": "REQ-VIEW",
       "clause": "presentation_may_be_symbolic",
       "file": "formal/TraceLean/View.lean",
       "anchor": "formal/TraceLean/View.lean::TraceLean.View::accessible",
@@ -13698,41 +13198,11 @@
     {
       "role": "models",
       "req": "REQ-VIEW",
-      "clause": "presentation_may_be_symbolic",
-      "file": "formal/TraceLean/View.lean",
-      "anchor": "formal/TraceLean/View.lean::TraceLean.View::presentedConformance",
-      "body_hash": "7aca3c2e268cc9df",
-      "link_hash": "af59fa1059cad830",
-      "qualifier": null
-    },
-    {
-      "role": "models",
-      "req": "REQ-VIEW",
-      "clause": "presentation_may_be_symbolic",
-      "file": "formal/TraceLean/View.lean",
-      "anchor": "formal/TraceLean/View.lean::TraceLean.View::symbolic",
-      "body_hash": "c86f33b683c2c3eb",
-      "link_hash": "bf26f339d5a3c43f",
-      "qualifier": null
-    },
-    {
-      "role": "models",
-      "req": "REQ-VIEW",
       "clause": "rendering_is_total",
       "file": "formal/TraceLean/View.lean",
       "anchor": "formal/TraceLean/View.lean::TraceLean.View::conformance",
       "body_hash": "b9f69cf500f6df83",
       "link_hash": "14c022447f87a97d",
-      "qualifier": null
-    },
-    {
-      "role": "models",
-      "req": "REQ-VIEW",
-      "clause": "rendering_is_total",
-      "file": "formal/TraceLean/View.lean",
-      "anchor": "formal/TraceLean/View.lean::TraceLean.View::plainText",
-      "body_hash": "75cafef92d87592c",
-      "link_hash": "6f1507a677170da7",
       "qualifier": null
     },
     {
@@ -13760,16 +13230,6 @@
       "req": "REQ-VIEW",
       "clause": "structure_over_text",
       "file": "formal/TraceLean/View.lean",
-      "anchor": "formal/TraceLean/View.lean::TraceLean.View::Role",
-      "body_hash": "dace407b4893842e",
-      "link_hash": "c49fe925f8458616",
-      "qualifier": null
-    },
-    {
-      "role": "models",
-      "req": "REQ-VIEW",
-      "clause": "structure_over_text",
-      "file": "formal/TraceLean/View.lean",
       "anchor": "formal/TraceLean/View.lean::TraceLean.View::faults",
       "body_hash": "e713a595e72505b2",
       "link_hash": "f780bb5041cec411",
@@ -13783,16 +13243,6 @@
       "anchor": "formal/TraceLean/View.lean::TraceLean.View::faults",
       "body_hash": "e713a595e72505b2",
       "link_hash": "07891737ac591a1d",
-      "qualifier": null
-    },
-    {
-      "role": "models",
-      "req": "REQ-VIEW",
-      "clause": "text_is_the_content",
-      "file": "formal/TraceLean/View.lean",
-      "anchor": "formal/TraceLean/View.lean::TraceLean.View::plainText",
-      "body_hash": "75cafef92d87592c",
-      "link_hash": "bfa5e6c5fff2c9e7",
       "qualifier": null
     },
     {
@@ -24289,7 +23739,7 @@
         ],
         [
           "model",
-          "28d6b9470ce598fd+c7da65face5d5188"
+          "28d6b9470ce598fd"
         ],
         [
           "requirement",
@@ -24437,6 +23887,93 @@
         [
           "requirement",
           "883a5bf07791b64f"
+        ],
+        [
+          "toolchain",
+          "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-ACT",
+        "clause": "focus_is_carried",
+        "bond": "modelProof"
+      },
+      "level": "L4",
+      "detail": {
+        "proof": {
+          "theoremName": "TraceLean.Act::opening_follows_the_cursor",
+          "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        }
+      },
+      "linkHash": "8b73f399795a8658",
+      "inputs": [
+        [
+          "model",
+          "71f2e2d445bdb099"
+        ],
+        [
+          "requirement",
+          "ede60588e15e9208"
+        ],
+        [
+          "toolchain",
+          "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-ACT",
+        "clause": "missing_target_is_refused",
+        "bond": "modelProof"
+      },
+      "level": "L4",
+      "detail": {
+        "proof": {
+          "theoremName": "TraceLean.Act::a_missing_target_is_named",
+          "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        }
+      },
+      "linkHash": "171fdeddd48be875",
+      "inputs": [
+        [
+          "model",
+          "71f2e2d445bdb099"
+        ],
+        [
+          "requirement",
+          "1e8be2e211d3d529"
+        ],
+        [
+          "toolchain",
+          "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-ACT",
+        "clause": "unknown_is_refused",
+        "bond": "modelProof"
+      },
+      "level": "L4",
+      "detail": {
+        "proof": {
+          "theoremName": "TraceLean.Act::an_unknown_action_is_refused",
+          "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        }
+      },
+      "linkHash": "0ea10bc32e4ad4e3",
+      "inputs": [
+        [
+          "model",
+          "71f2e2d445bdb099"
+        ],
+        [
+          "requirement",
+          "4271d72c41e96d27"
         ],
         [
           "toolchain",
@@ -24697,7 +24234,7 @@
       "inputs": [
         [
           "model",
-          "a99d19460921e69e+c3ada71c9c444a58"
+          "c3ada71c9c444a58"
         ],
         [
           "requirement",
@@ -24873,7 +24410,7 @@
       "inputs": [
         [
           "model",
-          "877ede27519bdf01+ee0aee0c614287b3"
+          "877ede27519bdf01"
         ],
         [
           "requirement",
@@ -24902,7 +24439,7 @@
       "inputs": [
         [
           "model",
-          "2c75247e2f4b7aa9+877ede27519bdf01"
+          "877ede27519bdf01"
         ],
         [
           "requirement",
@@ -25176,7 +24713,7 @@
         ],
         [
           "model",
-          "7435c03d233292a6+e5106c93ab873b56"
+          "7435c03d233292a6"
         ],
         [
           "requirement",
@@ -25443,7 +24980,7 @@
         ],
         [
           "model",
-          "15bf20ff869ca259+c936fc28db5def24"
+          "c936fc28db5def24"
         ],
         [
           "requirement",
@@ -25827,7 +25364,7 @@
         ],
         [
           "model",
-          "676324c005184ec4+b50bbd06a7e6541c"
+          "b50bbd06a7e6541c"
         ],
         [
           "requirement",
@@ -25852,7 +25389,7 @@
       "inputs": [
         [
           "model",
-          "676324c005184ec4+b50bbd06a7e6541c"
+          "b50bbd06a7e6541c"
         ],
         [
           "requirement",
@@ -25915,6 +25452,35 @@
         [
           "requirement",
           "6a52f4f684e8bff3"
+        ],
+        [
+          "toolchain",
+          "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-DRT-COVER",
+        "clause": "classes_reached",
+        "bond": "modelProof"
+      },
+      "level": "L4",
+      "detail": {
+        "proof": {
+          "theoremName": "TraceLean.Coverage::classes_follow_the_bounds",
+          "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        }
+      },
+      "linkHash": "76605b7210128829",
+      "inputs": [
+        [
+          "model",
+          "5ba8c1a7c839c6b8"
+        ],
+        [
+          "requirement",
+          "886cf55c14fe0bcb"
         ],
         [
           "toolchain",
@@ -26043,6 +25609,35 @@
     {
       "key": {
         "reqId": "REQ-DRT-COVER",
+        "clause": "lines_run",
+        "bond": "modelProof"
+      },
+      "level": "L4",
+      "detail": {
+        "proof": {
+          "theoremName": "TraceLean.Coverage::a_repeated_line_not_run_shows",
+          "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        }
+      },
+      "linkHash": "7072e8f2f9ffe1a9",
+      "inputs": [
+        [
+          "model",
+          "7664682e5574b60a"
+        ],
+        [
+          "requirement",
+          "455457b332078c78"
+        ],
+        [
+          "toolchain",
+          "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-DRT-COVER",
         "clause": "vacuous_named",
         "bond": "modelImpl"
       },
@@ -26092,6 +25687,94 @@
         [
           "requirement",
           "3065f0f22a70c6af"
+        ],
+        [
+          "toolchain",
+          "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-DRT-COVER",
+        "clause": "waiver_reasoned",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 97,
+          "cases": 2000,
+          "op": "REQ-DRT-COVER.floor_stated"
+        }
+      },
+      "linkHash": "d032ae3737ad8f99",
+      "inputs": [
+        [
+          "implementation",
+          "19b5537beed725f1+ac6e78b542adad5c+fdb467a14ea0e0e3"
+        ],
+        [
+          "model",
+          "0d35122a8c37465e"
+        ],
+        [
+          "requirement",
+          "ccb9a407b9d66b52"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-DRT-COVER",
+        "clause": "waiver_reasoned",
+        "bond": "modelProof"
+      },
+      "level": "L4",
+      "detail": {
+        "proof": {
+          "theoremName": "TraceLean.Coverage::a_waiver_without_a_reason_excuses_nothing",
+          "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        }
+      },
+      "linkHash": "7d4be34a674d5c9d",
+      "inputs": [
+        [
+          "model",
+          "0d35122a8c37465e"
+        ],
+        [
+          "requirement",
+          "ccb9a407b9d66b52"
+        ],
+        [
+          "toolchain",
+          "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-DRT-COVER",
+        "clause": "waiver_unused_reported",
+        "bond": "modelProof"
+      },
+      "level": "L4",
+      "detail": {
+        "proof": {
+          "theoremName": "TraceLean.Coverage::a_reached_waiver_is_reported",
+          "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        }
+      },
+      "linkHash": "af9d5b96ba4e9e19",
+      "inputs": [
+        [
+          "model",
+          "9fe6cc24587bea2b"
+        ],
+        [
+          "requirement",
+          "242b0fc43375c93b"
         ],
         [
           "toolchain",
@@ -27480,7 +27163,7 @@
         ],
         [
           "model",
-          "3402adaacf045c92+7f6c4943914122f5"
+          "3402adaacf045c92"
         ],
         [
           "requirement",
@@ -27505,7 +27188,7 @@
       "inputs": [
         [
           "model",
-          "3402adaacf045c92+7f6c4943914122f5"
+          "3402adaacf045c92"
         ],
         [
           "requirement",
@@ -28666,7 +28349,7 @@
         ],
         [
           "model",
-          "28d6b9470ce598fd+6be21c1a89ec7df3"
+          "28d6b9470ce598fd"
         ],
         [
           "requirement",
@@ -28691,7 +28374,7 @@
       "inputs": [
         [
           "model",
-          "28d6b9470ce598fd+6be21c1a89ec7df3"
+          "28d6b9470ce598fd"
         ],
         [
           "requirement",
@@ -28725,7 +28408,7 @@
         ],
         [
           "model",
-          "28d6b9470ce598fd+c7da65face5d5188"
+          "28d6b9470ce598fd"
         ],
         [
           "requirement",
@@ -28755,7 +28438,7 @@
         ],
         [
           "model",
-          "28d6b9470ce598fd+7bb91dc59af7f2f4"
+          "28d6b9470ce598fd"
         ],
         [
           "requirement",
@@ -28964,7 +28647,7 @@
         ],
         [
           "model",
-          "8df56585372e9725+ca2d351a50823b1b"
+          "8df56585372e9725"
         ],
         [
           "requirement",
@@ -29377,7 +29060,7 @@
         ],
         [
           "model",
-          "7a2fff81b24f3de4+a2a6887eda815a9c"
+          "a2a6887eda815a9c"
         ],
         [
           "requirement",
@@ -29402,7 +29085,7 @@
       "inputs": [
         [
           "model",
-          "7a2fff81b24f3de4+a2a6887eda815a9c"
+          "a2a6887eda815a9c"
         ],
         [
           "requirement",
@@ -29436,7 +29119,7 @@
         ],
         [
           "model",
-          "9ea64c735fbb374d+a2a6887eda815a9c"
+          "a2a6887eda815a9c"
         ],
         [
           "requirement",
@@ -29461,7 +29144,7 @@
       "inputs": [
         [
           "model",
-          "9ea64c735fbb374d+a2a6887eda815a9c"
+          "a2a6887eda815a9c"
         ],
         [
           "requirement",
@@ -30297,7 +29980,7 @@
         ],
         [
           "model",
-          "5e3581c3e17298a5+c06eb9b1d8f88429"
+          "c06eb9b1d8f88429"
         ],
         [
           "requirement",
@@ -30322,7 +30005,7 @@
       "inputs": [
         [
           "model",
-          "5e3581c3e17298a5+c06eb9b1d8f88429"
+          "c06eb9b1d8f88429"
         ],
         [
           "requirement",
@@ -30356,7 +30039,7 @@
         ],
         [
           "model",
-          "039ea0dd4a02df36+8be7de2bdd0a8aed+f1ecad4716a4db3c"
+          "039ea0dd4a02df36"
         ],
         [
           "requirement",
@@ -30446,7 +30129,7 @@
         ],
         [
           "model",
-          "5d159a3d8229033d+8f043133e986f1ae"
+          "8f043133e986f1ae"
         ],
         [
           "requirement",
@@ -31082,36 +30765,6 @@
     {
       "key": {
         "reqId": "REQ-SHOW",
-        "clause": "producer_is_pure",
-        "bond": "modelImpl"
-      },
-      "level": "L3",
-      "detail": {
-        "drt": {
-          "seed": 71,
-          "cases": 2000,
-          "op": "REQ-SHOW.producer_is_pure"
-        }
-      },
-      "linkHash": "931a30d5effc1cc9",
-      "inputs": [
-        [
-          "implementation",
-          "14b231e70c2eb262+1e348090f50356c4+3ee59ad610e968c9+bf67249e2b36ef7e+d2a332a9dd7d677a+e6e898adf246d972+eceda53b15c639bd+fbc55b274e9687b0"
-        ],
-        [
-          "model",
-          "3ac7b9bbc53940f2+3ddda33e4b52c471+52ba70bac2e13a4f+78c5c7a3ec8c2c7a+8062961bcf85f698+abc562971ca8a349+dd1183891445ce98"
-        ],
-        [
-          "requirement",
-          "75246ab3e956294c"
-        ]
-      ]
-    },
-    {
-      "key": {
-        "reqId": "REQ-SHOW",
         "clause": "producers_are_total",
         "bond": "modelImpl"
       },
@@ -31131,7 +30784,7 @@
         ],
         [
           "model",
-          "33b4dcb380ce6097+7e374d2b880b864b"
+          "33b4dcb380ce6097"
         ],
         [
           "requirement",
@@ -31156,7 +30809,7 @@
       "inputs": [
         [
           "model",
-          "33b4dcb380ce6097+7e374d2b880b864b"
+          "33b4dcb380ce6097"
         ],
         [
           "requirement",
@@ -31220,7 +30873,7 @@
         ],
         [
           "model",
-          "78c5c7a3ec8c2c7a+886dd32e573ce1bd"
+          "886dd32e573ce1bd"
         ],
         [
           "requirement",
@@ -31245,7 +30898,7 @@
       "inputs": [
         [
           "model",
-          "78c5c7a3ec8c2c7a+886dd32e573ce1bd"
+          "886dd32e573ce1bd"
         ],
         [
           "requirement",
@@ -31279,7 +30932,7 @@
         ],
         [
           "model",
-          "6e900dc6464e1d0f+abc562971ca8a349"
+          "abc562971ca8a349"
         ],
         [
           "requirement",
@@ -31457,7 +31110,7 @@
         ],
         [
           "model",
-          "3c303b7e5462a2e6+3c4a8880d6037d3c"
+          "3c303b7e5462a2e6"
         ],
         [
           "requirement",
@@ -31482,7 +31135,7 @@
       "inputs": [
         [
           "model",
-          "3c303b7e5462a2e6+3c4a8880d6037d3c"
+          "3c303b7e5462a2e6"
         ],
         [
           "requirement",
@@ -31633,7 +31286,7 @@
         ],
         [
           "model",
-          "87d4da9d465362f8+e36062331e664242"
+          "87d4da9d465362f8"
         ],
         [
           "requirement",
@@ -31781,7 +31434,7 @@
         ],
         [
           "model",
-          "87d4da9d465362f8+e36062331e664242"
+          "87d4da9d465362f8"
         ],
         [
           "requirement",
@@ -31840,7 +31493,7 @@
         ],
         [
           "model",
-          "87d4da9d465362f8+b1d7f99240581683+e36062331e664242"
+          "87d4da9d465362f8"
         ],
         [
           "requirement",
@@ -31865,7 +31518,7 @@
       "inputs": [
         [
           "model",
-          "87d4da9d465362f8+b1d7f99240581683+e36062331e664242"
+          "87d4da9d465362f8"
         ],
         [
           "requirement",
@@ -32077,7 +31730,7 @@
         ],
         [
           "model",
-          "bcd8789899d37482+dde87731c465dfa9"
+          "bcd8789899d37482"
         ],
         [
           "requirement",
@@ -32102,7 +31755,7 @@
       "inputs": [
         [
           "model",
-          "bcd8789899d37482+dde87731c465dfa9"
+          "bcd8789899d37482"
         ],
         [
           "requirement",
@@ -32225,7 +31878,7 @@
         ],
         [
           "model",
-          "4f4d41ec41bf2c80+8b3dbad264f46927"
+          "4f4d41ec41bf2c80"
         ],
         [
           "requirement",
@@ -32250,7 +31903,7 @@
       "inputs": [
         [
           "model",
-          "4f4d41ec41bf2c80+8b3dbad264f46927"
+          "4f4d41ec41bf2c80"
         ],
         [
           "requirement",
@@ -32284,7 +31937,7 @@
         ],
         [
           "model",
-          "34b25f64371a154e+4f4d41ec41bf2c80"
+          "4f4d41ec41bf2c80"
         ],
         [
           "requirement",
@@ -32314,7 +31967,7 @@
         ],
         [
           "model",
-          "14cf9ad7939d2b17+4f4d41ec41bf2c80"
+          "4f4d41ec41bf2c80"
         ],
         [
           "requirement",
@@ -32344,7 +31997,7 @@
         ],
         [
           "model",
-          "4f4d41ec41bf2c80+8ebf2ca2ea5e6aed"
+          "4f4d41ec41bf2c80"
         ],
         [
           "requirement",
@@ -32374,7 +32027,7 @@
         ],
         [
           "model",
-          "34b25f64371a154e+4f4d41ec41bf2c80"
+          "4f4d41ec41bf2c80"
         ],
         [
           "requirement",
@@ -32434,7 +32087,7 @@
         ],
         [
           "model",
-          "0b802e5a56b1afd2+91324f0af65e3f3a"
+          "91324f0af65e3f3a"
         ],
         [
           "requirement",
@@ -32464,7 +32117,7 @@
         ],
         [
           "model",
-          "33cd2cc372099424+b5336c7f25bd3ecd"
+          "33cd2cc372099424"
         ],
         [
           "requirement",
@@ -32489,7 +32142,7 @@
       "inputs": [
         [
           "model",
-          "33cd2cc372099424+b5336c7f25bd3ecd"
+          "33cd2cc372099424"
         ],
         [
           "requirement",
@@ -32523,7 +32176,7 @@
         ],
         [
           "model",
-          "1a4ac4fed1f34dd3+91324f0af65e3f3a+b9f69cf500f6df83"
+          "b9f69cf500f6df83"
         ],
         [
           "requirement",
@@ -32548,7 +32201,7 @@
       "inputs": [
         [
           "model",
-          "1a4ac4fed1f34dd3+91324f0af65e3f3a+b9f69cf500f6df83"
+          "b9f69cf500f6df83"
         ],
         [
           "requirement",
@@ -32582,7 +32235,7 @@
         ],
         [
           "model",
-          "1893cd03055540ab+b9f69cf500f6df83"
+          "1893cd03055540ab"
         ],
         [
           "requirement",
@@ -32612,7 +32265,7 @@
         ],
         [
           "model",
-          "7aca3c2e268cc9df+c86f33b683c2c3eb+da75aeb5093b18ea"
+          "da75aeb5093b18ea"
         ],
         [
           "requirement",
@@ -32637,7 +32290,7 @@
       "inputs": [
         [
           "model",
-          "7aca3c2e268cc9df+c86f33b683c2c3eb+da75aeb5093b18ea"
+          "da75aeb5093b18ea"
         ],
         [
           "requirement",
@@ -32671,7 +32324,7 @@
         ],
         [
           "model",
-          "75cafef92d87592c+b9f69cf500f6df83"
+          "b9f69cf500f6df83"
         ],
         [
           "requirement",
@@ -32701,7 +32354,7 @@
         ],
         [
           "model",
-          "dace407b4893842e+e713a595e72505b2"
+          "e713a595e72505b2"
         ],
         [
           "requirement",
@@ -32731,7 +32384,7 @@
         ],
         [
           "model",
-          "75cafef92d87592c+e713a595e72505b2"
+          "e713a595e72505b2"
         ],
         [
           "requirement",
@@ -32756,7 +32409,7 @@
       "inputs": [
         [
           "model",
-          "75cafef92d87592c+e713a595e72505b2"
+          "e713a595e72505b2"
         ],
         [
           "requirement",

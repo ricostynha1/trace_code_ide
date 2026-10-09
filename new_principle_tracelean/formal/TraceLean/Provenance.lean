@@ -120,9 +120,7 @@ def origin (t : Tree) (atNode : Nat) (file : String) (position : Nat) : Origin :
   | .inr found => found
   | .inl _ => .base
 
-/-- `origin` for every node of a history built by a script.
-
-@models REQ-PROV.position_question -/
+/-- `origin` for every node of a history built by a script. -/
 def origins (base : Workspace) (script : List Step) (file : String) (position : Nat)
     : List Origin :=
   let t := fromScript base script

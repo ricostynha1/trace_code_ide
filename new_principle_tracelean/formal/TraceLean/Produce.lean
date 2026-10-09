@@ -110,7 +110,6 @@ The marks come from outside because Lean does not parse Rust. What is modelled
 is everything that happens to them afterwards, which is where the bugs are.
 
 @models REQ-SHOW.file_from_text
-@models REQ-SHOW.producer_is_pure
 -/
 def fileBuffer (path : String) (text : String) (marks : List Mark) : Buffer :=
   { id := "file:" ++ path,
@@ -173,8 +172,6 @@ private def lineText (line : DiffLine) : String := line.text
 /--
 A change between two states of a file, as a buffer a person can accept or reject.
 
-@models REQ-SHOW.review_from_change
-@models REQ-SHOW.producer_is_pure
 -/
 def reviewBuffer (target : String) (before after : String) : Buffer :=
   let lines := diffLines (before.splitOn "\n") (after.splitOn "\n")
@@ -213,7 +210,6 @@ private def menuSpans (at_ : Nat) : List MenuEntry → List Span
 A keymap mode as a buffer: one row a key, carrying what that key reaches.
 
 @models REQ-SHOW.menu_from_keymap
-@models REQ-SHOW.producer_is_pure
 -/
 def menuBuffer (title : String) (entries : List MenuEntry) : Buffer :=
   let text := String.intercalate "\n" (entries.map menuLine)
@@ -240,7 +236,6 @@ private def eventSpans (at_ : Nat) : List Event → List Span
 What was observed, as a buffer: one row an event, each leading to its diff.
 
 @models REQ-SHOW.record_from_events
-@models REQ-SHOW.producer_is_pure
 -/
 def recordBuffer (title : String) (events : List Event) : Buffer :=
   let text := String.intercalate "\n" (events.map eventLine)
@@ -261,7 +256,6 @@ anything. The estimate comes last because it is a reading of that account
 against a table, which is one step further from the workspace again.
 
 @models REQ-SHOW.sandbox_from_observation
-@models REQ-SHOW.producer_is_pure
 -/
 def sandboxEvents (changed : List String) (said : List Event)
     (spend : TraceLean.Cost.Spend) : List Event :=
@@ -276,7 +270,6 @@ A record like any other record, so the rows a frontend draws and the actions
 they carry are the ones `recordBuffer` already gives -- there is no second kind
 of buffer here and no second producer.
 
-@models REQ-SHOW.sandbox_from_observation
 -/
 def sandboxBuffer (changed : List String) (said : List Event)
     (spend : TraceLean.Cost.Spend) : Buffer :=
@@ -367,7 +360,6 @@ The requirement set as a buffer: one row a requirement, carrying what its
 evidence reached and what it is called.
 
 @models REQ-SHOW.index_from_requirements
-@models REQ-SHOW.producer_is_pure
 -/
 def requirementsBuffer (nodes : List Node) : Buffer :=
   let text := String.intercalate "\n" (nodes.map indexLine)
@@ -426,7 +418,6 @@ The refinement graph as a buffer: one row a requirement, indented under what it
 refines.
 
 @models REQ-SHOW.graph_from_refinement
-@models REQ-SHOW.producer_is_pure
 -/
 def designBuffer (nodes : List Node) : Buffer :=
   let rows := designRows nodes
@@ -466,7 +457,6 @@ private def clipSpan (shift : Nat) (size : Nat) (span : Span) : List Span :=
 The part of a buffer starting at line `start`, at most `count` lines of it.
 
 @models REQ-SHOW.window_is_a_buffer
-@models REQ-SHOW.producers_are_total
 -/
 def window (buffer : Buffer) (start : Nat) (count : Nat) : Buffer :=
   let lines := plainText buffer

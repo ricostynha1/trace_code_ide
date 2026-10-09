@@ -43,9 +43,7 @@ structure Spend where
   unpriced : List String
   deriving Repr, DecidableEq, Inhabited, ToJson, FromJson
 
-/-- The price for a model, if the table has one.
-
-@models REQ-COST.price_is_per_model -/
+/-- The price for a model, if the table has one. -/
 def priceOf : List Price → String → Option Price
   | [], _ => none
   | price :: rest, model => if price.model == model then some price else priceOf rest model

@@ -1,6 +1,6 @@
 {
   "theoremName": "TraceLean.SpecSorted.refines_resolves_pinned",
-  "key": "9cd352a7625d83a4+9ea64c735fbb374d+aecee0cf540edb63",
-  "pinned": true,
-  "said": ""
+  "key": "9cd352a7625d83a4+a2a6887eda815a9c+aecee0cf540edb63",
+  "pinned": false,
+  "said": "formal/TraceLean/SpecSorted.lean:962:59: error: application type mismatch\n  TraceLean.SpecSorted.UnresolvedRefines x1 (TraceLean.Refinement.graphReport x1)\nargument\n  TraceLean.Refinement.graphReport x1\nhas type\n  TraceLean.Refinement.GraphReport : Type\nbut is expected to have type\n  List (String × String) : Type\n'TraceLean.SpecSorted.refines_resolves_pinned' depends on axioms: [propext, Classical.choice, Quot.sound]\n"
 }

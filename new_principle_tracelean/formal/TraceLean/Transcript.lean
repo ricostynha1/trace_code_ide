@@ -170,9 +170,7 @@ def readTranscript (text : String) : TranscriptRead :=
 /-- `readTranscript`, over the fragments a transcript was written in.
 
 Exists so that a generator can produce the shape that matters -- a record cut
-off mid-write -- rather than only flat strings.
-
-@models REQ-TRANSCRIPT.partial_line_held -/
+off mid-write -- rather than only flat strings. -/
 def readChunks (chunks : List String) : TranscriptRead :=
   readTranscript (String.intercalate "\n" chunks)
 

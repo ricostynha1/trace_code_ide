@@ -158,8 +158,6 @@ Who may judge.
 A blank name is refused whatever the project says. Without a judges file a name
 is taken at its word. With one, a listed person judges in their own name, and
 anyone else only in the name of a listed person who delegates to them.
-
-@models REQ-JUDGE.human_decides
 -/
 def authority (judges : Option Judges) (judgedBy : String) (delegatedBy : Option String) :
     Authority :=

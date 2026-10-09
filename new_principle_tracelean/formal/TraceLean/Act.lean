@@ -395,9 +395,7 @@ def dispatch (action : String) (focus : Focus) (w : Workspace) (waiting : List C
       Intent.refuse (Blocked.unknownAction other)
 
 /-- Whether an intent is one the editor will act on. A refusal is an answer, not
-an action.
-
-@models REQ-ACT.unknown_is_refused -/
+an action. -/
 def acts : Intent → Bool
   | Intent.refuse _ => false
   | Intent.display _ => true

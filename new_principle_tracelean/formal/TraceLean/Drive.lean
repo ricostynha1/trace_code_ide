@@ -54,9 +54,7 @@ def drive (keymap : Keymap) (mode : String) : List String → List Step
 
 /-- The modes a session passed through, in order. A projection rather than a
 second walk: a reader that computed the modes itself could disagree with the
-session it is reading.
-
-@models REQ-DRIVE.walk_follows_the_machine -/
+session it is reading. -/
 def modesVisited (steps : List Step) : List String :=
   steps.map (·.mode)
 

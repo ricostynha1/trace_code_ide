@@ -60,8 +60,6 @@ Which buffers are on screen, and where.
 A pane carries its own identity as well as the buffer it shows.
 `REQ-SCREEN.split_keeps_the_buffer` puts one buffer in two panes, so a name that
 was the buffer's could not tell them apart.
-
-@models REQ-SCREEN.screen_is_a_value
 -/
 inductive Layout where
   /-- One buffer, filling its region. -/
@@ -190,8 +188,6 @@ private def hasDuplicate : List String → Bool
 
 /--
 No two panes share an identity.
-
-@models REQ-SCREEN.panes_are_distinct
 -/
 def distinctPanes (layout : Layout) : Bool :=
   !hasDuplicate (paneIds layout)
@@ -339,8 +335,6 @@ Show an opened buffer in the focused pane.
 A buffer that is not opened is not shown: the answer is the screen unchanged,
 because showing something the session does not hold would put a pane in front of
 a buffer nothing produced.
-
-@models REQ-SCREEN.opened_outlives_shown
 -/
 def showBuffer (id : String) (screen : Screen) : Screen :=
   if isOpened screen id then
@@ -497,7 +491,6 @@ A focus on no pane splits nothing and mints no identity: a counter advanced by
 a request that did nothing would leave a gap in the names for no reason.
 
 @models REQ-SCREEN.split_keeps_the_buffer
-@models REQ-SCREEN.panes_are_distinct
 -/
 def splitFocus (axis : Axis) (screen : Screen) : Screen :=
   -- The counter alone is not enough to mint a name nobody has. `nextPane` is a

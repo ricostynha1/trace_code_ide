@@ -49,9 +49,7 @@ def closure (next : String → List String) (nodes : List Node) (id : String) : 
 def ancestors (nodes : List Node) (id : String) : List String :=
   closure (parentsOf nodes) nodes id
 
-/-- Everything that refines `id`, transitively, each once, in name order.
-
-@models REQ-CONTEXT.neighbourhood_is_closed -/
+/-- Everything that refines `id`, transitively, each once, in name order. -/
 def descendants (nodes : List Node) (id : String) : List String :=
   closure (childrenOf nodes) nodes id
 

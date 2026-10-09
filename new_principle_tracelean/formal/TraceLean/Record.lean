@@ -114,9 +114,7 @@ A judgement depends on the requirement text and the model; a differential run on
 the model and the implementation; a proof on the model and the toolchain that
 checked it. Each is something that can change underneath the record, and
 something that changes and is not named is a record that stays valid through a
-change it should not have survived.
-
-@models REQ-STALE.inputs_identified -/
+change it should not have survived. -/
 def requiredInputs : Verdict → List String
   | .judge .. => ["requirement", "model"]
   | .drt _ _ _ => ["model", "implementation"]

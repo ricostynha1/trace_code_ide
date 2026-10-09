@@ -28,24 +28,16 @@ open Lean (ToJson FromJson)
 inductive Strength where
   /-- A pinning theorem exists and is finished. -/
   | pinned (theoremName : String)
-  /-- A pinning theorem exists and is not finished.
-
-  @models REQ-STRENGTH.attempted_distinguished -/
+  /-- A pinning theorem exists and is not finished. -/
   | attempted (theoremName : String)
   /-- Nobody has said anything. The default, and not a failure -- but not a pass
-  either, which is the whole point of naming the state.
-
-  @models REQ-STRENGTH.open_is_the_default -/
+  either, which is the whole point of naming the state. -/
   | «open»
-  /-- Declared unpinnable, with a reason.
-
-  @models REQ-STRENGTH.nondeterministic_declared -/
+  /-- Declared unpinnable, with a reason. -/
   | nondeterministic (reason : String)
   deriving Repr, DecidableEq, Inhabited, ToJson, FromJson
 
-/-- Whether this may be presented as a pass. `open` may not.
-
-@models REQ-STRENGTH.open_is_the_default -/
+/-- Whether this may be presented as a pass. `open` may not. -/
 def Strength.isSettled : Strength → Bool
   | .pinned _ => true
   | .nondeterministic _ => true

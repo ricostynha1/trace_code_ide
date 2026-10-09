@@ -1,6 +1,6 @@
 {
   "theoremName": "TraceLean.Screen.panes_distinct_pinned",
-  "key": "26bae9bb50bdf4bc+54d1819c2f2dfea9+f1ecad4716a4db3c",
-  "pinned": true,
-  "said": ""
+  "key": "039ea0dd4a02df36+26bae9bb50bdf4bc+54d1819c2f2dfea9",
+  "pinned": false,
+  "said": "formal/TraceLean/Screen.lean:982:78: error: application type mismatch\n  TraceLean.Screen.coherent x1\nargument\n  x1\nhas type\n  TraceLean.Screen.Layout : Type\nbut is expected to have type\n  TraceLean.Screen.Screen : Type\n'TraceLean.Screen.panes_distinct_pinned' depends on axioms: [propext]\n"
 }

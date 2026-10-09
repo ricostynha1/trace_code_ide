@@ -33,9 +33,7 @@ structure Checkpoint where
 /-- What a log yielded, and what was wrong with it. -/
 structure Log where
   commands : List Command
-  /-- Set when the record ends mid-entry.
-
-  @models REQ-PERSIST.truncated_is_reported -/
+  /-- Set when the record ends mid-entry. -/
   truncatedAfter : Option Nat
   deriving Repr, Inhabited, ToJson, FromJson
 
@@ -83,10 +81,7 @@ private def replayStep (acc : Except Refusal Workspace) (c : Command)
   | .error e => .error e
   | .ok w => apply w c
 
-/-- Replay commands onto a base state.
-
-@models REQ-PERSIST.replay_exact
-@models ARCH-DETERMINISM.replay_exact -/
+/-- Replay commands onto a base state. -/
 def replay (base : Workspace) (commands : List Command) : Except Refusal Workspace :=
   commands.foldl replayStep (.ok base.canon)
 
@@ -97,9 +92,7 @@ def checkpoint (base : Workspace) (commands : List Command) (entries : Nat)
   | .error e => .error e
   | .ok w => .ok { workspace := w, entries := entries }
 
-/-- Replay from a checkpoint, skipping the entries it already accounts for.
-
-@models REQ-PERSIST.checkpoint_equivalent -/
+/-- Replay from a checkpoint, skipping the entries it already accounts for. -/
 def replayFrom (point : Checkpoint) (commands : List Command) : Except Refusal Workspace :=
   replay point.workspace (commands.drop point.entries)
 

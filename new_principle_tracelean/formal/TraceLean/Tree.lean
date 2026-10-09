@@ -72,9 +72,7 @@ def ancestry (t : Tree) (id : Nat) : List Nat :=
 
 /-- The state at a node, by replaying its ancestry from the base.
 
-This is the *definition* of a node's state.
-
-@models REQ-UNDO.jump_equivalence -/
+This is the *definition* of a node's state. -/
 def stateAt (t : Tree) (id : Nat) : Except Refusal Workspace :=
   (t.ancestry id).foldl
     (fun acc nodeId =>
@@ -91,9 +89,7 @@ after.
 
 Purely a question about the tree — it computes two states and returns them.
 Nothing moves, which in a value-typed model is free and is exactly the thing the
-implementation has to be checked for.
-
-@models REQ-UNDO.preview_is_pure -/
+implementation has to be checked for. -/
 def preview (t : Tree) (id : Nat) : Except Refusal (Workspace × Workspace) :=
   match t.node? id with
   | none => .error (.noSuchFile "")
@@ -118,10 +114,7 @@ def state (t : Tree) : Except Refusal Workspace :=
 /-- Record a command, applying it to the current state.
 
 A command recorded after an undo becomes a *sibling* of what was undone, so the
-abandoned path is still there; a refused command leaves no node at all.
-
-@models REQ-UNDO.no_loss_on_branch
-@models REQ-UNDO.reachable -/
+abandoned path is still there; a refused command leaves no node at all. -/
 def push (t : Tree) (command : Command) : Tree :=
   match t.state with
   | .error _ => t
@@ -179,9 +172,7 @@ def sharedPrefix : List Nat → List Nat → Nat
   | _, _ => 0
 
 /-- Travel to a node by way of the nearest common ancestor: invert on the way
-up, apply on the way down.
-
-@models REQ-UNDO.path_via_ancestor -/
+up, apply on the way down. -/
 def jumpTo (t : Tree) (target : Nat) : Except Refusal Workspace × Tree :=
   let from_ := match t.current with
     | none => []

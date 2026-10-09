@@ -105,8 +105,6 @@ def searchFrom (g : Graph) (fuel : Nat)
 
 /--
 A cycle in the refinement graph, as the identifiers on it.
-
-@models REQ-REQDOC.refines_dag
 -/
 def cycleIn (g : Graph) : Option (List String) :=
   -- Each node is opened once and closed once, and each edge is followed once,
@@ -115,9 +113,7 @@ def cycleIn (g : Graph) : Option (List String) :=
   searchFrom g budget (roots g) []
 
 /-- Identifiers named by `refines:` that no document declares, sorted and
-without repeats.
-
-@models REQ-REQDOC.refines_resolves -/
+without repeats. -/
 def danglingIn (g : Graph) : List (String × String) :=
   let pairs := g.foldl
     (fun acc e => acc ++ (e.2.filter (fun p => !hasNode g p)).map (fun p => (e.1, p))) []
