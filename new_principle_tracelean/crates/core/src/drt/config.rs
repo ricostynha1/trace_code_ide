@@ -10,7 +10,7 @@ use std::path::{Path, PathBuf};
 /// shared runner dispatching on a name two bindings both use answers one of
 /// them with the other's function, and nothing reports it.
 ///
-/// @implements REQ-DRT-PROTO.op_dispatch
+/// @implements REQ-DRT-PROTO.ops_unique
 pub fn qualified_op(req_id: &str, clause: Option<&str>) -> String {
     match clause {
         Some(c) => format!("{req_id}.{c}"),
@@ -139,6 +139,18 @@ pub struct Binding {
     /// @implements REQ-DRT-COVER.floor_stated
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub floors: Vec<crate::drt::coverage::Floor>,
+    /// Classes or lines this binding's runs are excused from reaching, each
+    /// with its reason (ADR-0017).
+    ///
+    /// Every class of the arguments and every line of the implementing item is
+    /// a floor whether or not `floors` names it; this is the one place a
+    /// person says one of them cannot be reached and why. It sits beside the
+    /// floors for the same reason they are here: where it can be read, argued
+    /// with and diffed. A waiver that excuses nothing is reported.
+    ///
+    /// @implements REQ-DRT-COVER.waiver_reasoned
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub waive: Vec<crate::drt::coverage::Waiver>,
 }
 
 impl Binding {

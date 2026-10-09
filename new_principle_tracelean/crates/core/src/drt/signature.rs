@@ -18,10 +18,18 @@
 /// Returns `None` when no such function is declared, which is a different
 /// answer from `Some(vec![])` — a function that takes nothing.
 ///
+/// Read from the source with comments and strings blanked, so a signature in a
+/// comment is not a declaration; and two declarations of the name answer `None`
+/// rather than the first, which would call one and report agreement about the
+/// other.
+///
 /// @implements REQ-DRT-RUST.params_from_source
-/// @implements REQ-DRT-RUST.types_inferred
 /// @implements REQ-DRT-BIND.call_only
 pub fn parameters(source: &str, symbol: &str) -> Option<Vec<String>> {
+    let source = &blanked(source, &['"'], true);
+    if declarations_in(source, symbol) > 1 {
+        return None;
+    }
     let open = signature_open_paren(source, symbol)?;
     let close = matching(source, open, '(', ')')?;
     let params = &source[open + 1..close];
@@ -62,9 +70,7 @@ pub fn parameters(source: &str, symbol: &str) -> Option<Vec<String>> {
 /// them. See ADR-0010.
 ///
 /// @implements REQ-DRT-RUST.params_from_source
-/// @implements REQ-DRT-RUST.types_inferred
 /// @drt REQ-DRT-RUST.params_from_source
-/// @drt REQ-DRT-RUST.types_inferred
 pub fn parameters_of(source: String, symbol: String) -> Option<Vec<String>> {
     parameters(&source, &symbol)
 }
@@ -76,8 +82,15 @@ pub fn parameters_of(source: String, symbol: String) -> Option<Vec<String>> {
 /// what lets the caller refuse instead of taking the first — which is a wrong
 /// call that compiles, runs, and reports agreement about the wrong function.
 ///
+/// A signature inside a comment or a string is not a declaration.
+///
 /// @implements REQ-DRT-BIND.call_only
 pub fn declarations(source: &str, symbol: &str) -> usize {
+    declarations_in(&blanked(source, &['"'], true), symbol)
+}
+
+/// `declarations`, over text already blanked.
+fn declarations_in(source: &str, symbol: &str) -> usize {
     let mut count = 0;
     let mut from = 0usize;
     while let Some(open) = signature_open_paren(&source[from..], symbol) {
@@ -85,6 +98,63 @@ pub fn declarations(source: &str, symbol: &str) -> usize {
         from += open + 1;
     }
     count
+}
+
+/// Where the blanking walk is.
+#[derive(Clone, Copy, PartialEq)]
+enum Mode {
+    Code,
+    Line,
+    Block,
+    Quoted(char),
+}
+
+/// The source with every comment and string literal blanked to spaces, keeping
+/// newlines.
+///
+/// `// fn f(b, a)` above `fn f(a, b)` is a signature only to a reader of text.
+/// `quotes` are the characters that open a string; with `char_literals`, a Rust
+/// character literal such as `'"'` is kept whole so its quote opens nothing.
+/// Character for character, so every offset into the result is one into a
+/// string of the same characters. Shared with the TypeScript reader.
+pub(crate) fn blanked(source: &str, quotes: &[char], char_literals: bool) -> String {
+    let cs: Vec<char> = source.chars().collect();
+    let keep_newline = |c: char| if c == '\n' { '\n' } else { ' ' };
+    let mut out = String::with_capacity(source.len());
+    let mut mode = Mode::Code;
+    let mut i = 0;
+    while i < cs.len() {
+        let c = cs[i];
+        let next = cs.get(i + 1).copied();
+        let (emitted, consumed, after): (Vec<char>, usize, Mode) = match mode {
+            Mode::Code if c == '/' && next == Some('/') => (vec![' ', ' '], 2, Mode::Line),
+            Mode::Code if c == '/' && next == Some('*') => (vec![' ', ' '], 2, Mode::Block),
+            Mode::Code => {
+                let third = cs.get(i + 2).copied();
+                let fourth = cs.get(i + 3).copied();
+                if char_literals && c == '\'' && next == Some('\\') && fourth == Some('\'') && third.is_some() {
+                    (cs[i..i + 4].to_vec(), 4, Mode::Code)
+                } else if char_literals && c == '\'' && next.is_some() && third == Some('\'') {
+                    (cs[i..i + 3].to_vec(), 3, Mode::Code)
+                } else if quotes.contains(&c) {
+                    (vec![' '], 1, Mode::Quoted(c))
+                } else {
+                    (vec![c], 1, Mode::Code)
+                }
+            }
+            Mode::Line if c == '\n' => (vec!['\n'], 1, Mode::Code),
+            Mode::Line => (vec![' '], 1, Mode::Line),
+            Mode::Block if c == '*' && next == Some('/') => (vec![' ', ' '], 2, Mode::Code),
+            Mode::Block => (vec![keep_newline(c)], 1, Mode::Block),
+            Mode::Quoted(q) if c == '\\' && next.is_some() => (vec![' ', ' '], 2, Mode::Quoted(q)),
+            Mode::Quoted(q) if c == q => (vec![' '], 1, Mode::Code),
+            Mode::Quoted(q) => (vec![keep_newline(c)], 1, Mode::Quoted(q)),
+        };
+        out.extend(emitted);
+        i += consumed;
+        mode = after;
+    }
+    out
 }
 
 /// Byte offset of the `(` opening the parameter list of `fn {symbol}`.
@@ -267,5 +337,19 @@ mod tests {
         assert_eq!(declarations(src, "blocks"), 2);
         assert_eq!(declarations(src, "absent"), 0);
         assert_eq!(declarations("pub fn f(x: u8) {}", "f"), 1);
+    }
+
+    /// A signature in a comment or a string is not a declaration, and two real
+    /// declarations are refused rather than the first taken.
+    ///
+    /// @tests REQ-DRT-RUST.params_from_source
+    #[test]
+    fn a_commented_signature_does_not_win_and_two_are_refused() {
+        let two = || Some(vec!["a".to_string(), "b".to_string()]);
+        assert_eq!(names("// fn f(b: u8, a: u8)\nfn f(a: u8, b: u8) {}", "f"), two());
+        assert_eq!(names("/* fn f(b: u8, a: u8) */ fn f(a: u8, b: u8) {}", "f"), two());
+        assert_eq!(names("const S: &str = \"fn f(b: u8)\";\nfn f(a: u8, b: u8) {}", "f"), two());
+        assert_eq!(declarations("// fn f(b: u8)\nfn f(a: u8) {}", "f"), 1);
+        assert_eq!(names("fn f(a: u8) {}\nimpl S { fn f(&self, b: u8) {} }", "f"), None);
     }
 }

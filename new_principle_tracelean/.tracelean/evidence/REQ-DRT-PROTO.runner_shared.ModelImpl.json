@@ -1,0 +1,30 @@
+{
+  "key": {
+    "reqId": "REQ-DRT-PROTO",
+    "clause": "runner_shared",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 41,
+      "cases": 2000,
+      "op": "REQ-DRT-PROTO.runner_shared"
+    }
+  },
+  "linkHash": "236a4a21a2dc8908",
+  "inputs": [
+    [
+      "implementation",
+      "7e2b54afd3d95123+8442049306205dc4+8659ae1b9dc17737+a2378f98b00f5343"
+    ],
+    [
+      "model",
+      "19ba9a69554ca2c8"
+    ],
+    [
+      "requirement",
+      "e5346fcb81fb2829"
+    ]
+  ]
+}

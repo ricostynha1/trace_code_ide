@@ -7,15 +7,15 @@
   "level": "L4",
   "detail": {
     "proof": {
-      "theoremName": "TraceLean.Protocol::an_empty_line_is_not_json",
+      "theoremName": "TraceLean.Protocol::a_failed_runner_did_not_answer",
       "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
     }
   },
-  "linkHash": "2d8b5ea5025cdd0f",
+  "linkHash": "639302b5f6a1bb82",
   "inputs": [
     [
       "model",
-      "fc56830a116db684"
+      "d59e4611436ca6dc"
     ],
     [
       "requirement",

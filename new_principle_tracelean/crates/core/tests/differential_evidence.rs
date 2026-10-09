@@ -53,6 +53,7 @@ fn build_rust_runner(root: &Path, scratch: &Path) -> RunnerSpec {
         also_checks: Vec::new(),
         also_implemented_by: Vec::new(),
         floors: Vec::new(),
+        waive: Vec::new(),
         model: None,
         implementation: CallSpec {
             language: "rust".into(),
@@ -178,6 +179,7 @@ fn a_real_disagreement_is_found_and_reduced() {
         also_checks: Vec::new(),
         also_implemented_by: Vec::new(),
         floors: Vec::new(),
+        waive: Vec::new(),
         model: None,
         implementation: CallSpec {
             language: "rust".into(),

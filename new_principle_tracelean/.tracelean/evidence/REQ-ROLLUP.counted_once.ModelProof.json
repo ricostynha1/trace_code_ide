@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-ROLLUP",
+    "clause": "counted_once",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.SpecRollup::rollUp_is_minimum_over_reach",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "238bbb28f22832ac",
+  "inputs": [
+    [
+      "model",
+      "f96f84510583693b"
+    ],
+    [
+      "requirement",
+      "012f642ed7aceab2"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

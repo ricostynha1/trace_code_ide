@@ -55,6 +55,19 @@ pub const HOME_WRITABLE: &[&str] =
 /// What, under the home directory, an agent's shell may read.
 pub const HOME_READABLE: &[&str] = &[".gitconfig", ".local/bin"];
 
+/// The protected roots the sandbox shows the tool from the real tree,
+/// read-only, rather than through the copy: `.git`, when the project has one.
+/// `.tracelean` is copied instead (`workcopy::create`), since tools write there.
+///
+/// @implements REQ-OBS.workspace_is_a_copy
+pub fn bound(host: &Host) -> Vec<String> {
+    if host.git {
+        vec![".git".to_string()]
+    } else {
+        Vec::new()
+    }
+}
+
 /// The bubblewrap arguments for a session.
 ///
 /// The host is read-only; the home directory is emptied and only what an agent
@@ -88,9 +101,9 @@ pub fn launch_args(session: &Session, host: &Host) -> Vec<String> {
     }
     push("--tmpfs", "/tmp", "");
     push("--bind", &session.work, &session.root);
-    if host.git {
-        let git = format!("{}/.git", session.root);
-        push("--ro-bind", &git, &git);
+    for name in bound(host) {
+        let path = format!("{}/{name}", session.root);
+        push("--ro-bind", &path, &path);
     }
     if let Some(runtime) = &host.runtime_dir {
         push("--bind", runtime, runtime);

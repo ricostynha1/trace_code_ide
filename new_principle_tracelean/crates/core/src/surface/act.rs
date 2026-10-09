@@ -47,7 +47,8 @@ pub enum Move {
 #[serde(rename_all = "camelCase")]
 pub enum Watch {
     Start,
-    Accept,
+    /// Take in every waiting change: the commands that make it, as one batch.
+    Accept { command: Command },
     Reject,
     /// Make a sandbox: a copy of the project for an agent the user starts.
     Create,
@@ -61,8 +62,9 @@ pub enum Watch {
     CopyLine,
     /// Put a file's path on the clipboard.
     CopyPath { path: String },
-    /// Take one file's observed change in, leaving the rest waiting.
-    AcceptFile { path: String },
+    /// Take one file's observed change in, leaving the rest waiting: the
+    /// commands that make it, as one batch.
+    AcceptFile { path: String, command: Command },
     /// Take one file's observed change back out, leaving the rest waiting.
     RejectFile { path: String },
     /// Include a part of an agent's context, or leave it out.
@@ -182,13 +184,43 @@ fn needs(action: &str, what: &str) -> Intent {
     }
 }
 
+/// What a command is about, as a row of waiting changes names it: the file
+/// it edits, makes or deletes, `from → to` for a rename, and a batch's parts
+/// joined by commas.
+pub fn touched(command: &Command) -> String {
+    match command {
+        Command::Insert { file, .. } | Command::Delete { file, .. } => file.clone(),
+        Command::CreateFile { path } | Command::DeleteFile { path, .. } => path.clone(),
+        Command::RenameFile { from, to } => format!("{from} → {to}"),
+        Command::Batch { commands } => commands.iter().map(touched).collect::<Vec<_>>().join(", "),
+    }
+}
+
+/// The name a definition or a reference is looked up by: in a file, the
+/// identifier at the cursor in the workspace's text of it; anywhere else, what
+/// the span under the cursor says (a requirement, a symbol in a list).
+fn name_at(focus: &Focus, w: &Workspace) -> Option<String> {
+    match focus_path(focus).and_then(|path| w.files.get(&path).cloned()) {
+        Some(text) => crate::surface::definition::identifier_at(&text, focus.offset),
+        None => focus.under.clone().filter(|name| !name.is_empty()),
+    }
+}
+
 /// What an action means, here, now.
 ///
 /// Total: every name the keymap can dispatch has an answer, and every name it
 /// cannot has a refusal. Nothing falls through.
 ///
 /// The workspace is here because deleting carries the content it removed — the
-/// witness is part of the command, which is what gives it an inverse.
+/// witness is part of the command, which is what gives it an inverse — and a
+/// definition is looked up by the name at the cursor in a file's text. What is
+/// `waiting` is the changes observed and not yet taken in, so that accepting
+/// them is an intent carrying their commands rather than a flag the shell
+/// resolves later from its own state.
+///
+/// An action may carry its target after its name (`screen.show file:a.rs`,
+/// see `view::action_name`); that target stands in for what is under the
+/// cursor.
 ///
 /// @implements REQ-ACT.action_to_intent
 /// @implements REQ-ACT.focus_is_carried
@@ -202,7 +234,12 @@ fn needs(action: &str, what: &str) -> Intent {
 /// @drt REQ-ACT.missing_target_is_refused
 /// @drt REQ-ACT.edits_are_commands
 /// @drt REQ-ACT.dispatch_is_pure
-pub fn dispatch(action: String, focus: Focus, w: Workspace) -> Intent {
+pub fn dispatch(action: String, focus: Focus, w: Workspace, waiting: Vec<Command>) -> Intent {
+    let focus = match crate::surface::view::action_target(&action) {
+        Some(target) => Focus { under: Some(target.to_string()), ..focus },
+        None => focus,
+    };
+    let action = crate::surface::view::action_name(&action).to_string();
     match action.as_str() {
         "file.open" => match &focus.under {
             None => needs("file.open", "a path"),
@@ -240,11 +277,32 @@ pub fn dispatch(action: String, focus: Focus, w: Workspace) -> Intent {
         },
         "history.tree" => report("history"),
         "observe.start" => Intent::Observe { watch: Watch::Start },
-        "observe.accept" => Intent::Observe { watch: Watch::Accept },
+        "observe.accept" => {
+            if waiting.is_empty() {
+                needs("observe.accept", "a change waiting")
+            } else {
+                Intent::Observe {
+                    watch: Watch::Accept { command: Command::Batch { commands: waiting } },
+                }
+            }
+        }
         "observe.reject" => Intent::Observe { watch: Watch::Reject },
         "observe.accept_file" => match changed_file(&focus) {
             None => needs("observe.accept_file", "a changed file"),
-            Some(path) => Intent::Observe { watch: Watch::AcceptFile { path } },
+            Some(path) => {
+                let taken: Vec<Command> =
+                    waiting.into_iter().filter(|command| touched(command) == path).collect();
+                if taken.is_empty() {
+                    needs("observe.accept_file", "a change waiting to that file")
+                } else {
+                    Intent::Observe {
+                        watch: Watch::AcceptFile {
+                            path,
+                            command: Command::Batch { commands: taken },
+                        },
+                    }
+                }
+            }
         },
         "observe.reject_file" => match changed_file(&focus) {
             None => needs("observe.reject_file", "a changed file"),
@@ -287,8 +345,17 @@ pub fn dispatch(action: String, focus: Focus, w: Workspace) -> Intent {
             None => needs("file.copy_path", "a file"),
             Some(path) => Intent::Observe { watch: Watch::CopyPath { path } },
         },
-        "file.definition" => report("definition"),
-        "file.references" => report("references"),
+        // The name is read here, from the focus, so the intent carries it: a
+        // shell that read the cursor again afterwards would be resolving the
+        // target itself.
+        "file.definition" => match name_at(&focus, &w) {
+            None => needs("file.definition", "a name"),
+            Some(name) => report(&format!("definition {name}")),
+        },
+        "file.references" => match name_at(&focus, &w) {
+            None => needs("file.references", "a name"),
+            Some(name) => report(&format!("references {name}")),
+        },
         "trace.new_requirement" => match &focus.under {
             None => needs("trace.new_requirement", "an identifier"),
             Some(id) => {
@@ -421,10 +488,12 @@ mod tests {
             // A switch above the history.
             Focus { kind: BufferKind::Record { title: "history".into() }, offset: 0, under: Some("Saved".into()) },
         ];
+        // Accepting takes in what is waiting, so something has to be.
+        let waiting = vec![Command::Insert { file: "src/lib.rs".into(), offset: 0, text: "x".into() }];
         for action in keymap::ACTIONS {
             let answers: Vec<Intent> = cursors
                 .iter()
-                .map(|focus| dispatch(action.to_string(), focus.clone(), workspace.clone()))
+                .map(|focus| dispatch(action.to_string(), focus.clone(), workspace.clone(), waiting.clone()))
                 .collect();
             assert!(
                 answers.iter().any(|intent| acts(intent.clone())),
@@ -439,9 +508,9 @@ mod tests {
     /// @tests REQ-ACT.focus_is_carried
     #[test]
     fn opening_follows_the_cursor_not_the_buffer() {
-        let from_file = dispatch("file.open".into(), in_file(Some("src/lib.rs")), Workspace::default());
+        let from_file = dispatch("file.open".into(), in_file(Some("src/lib.rs")), Workspace::default(), Vec::new());
         let from_listing =
-            dispatch("file.open".into(), in_listing(Some("src/lib.rs")), Workspace::default());
+            dispatch("file.open".into(), in_listing(Some("src/lib.rs")), Workspace::default(), Vec::new());
         assert_eq!(from_file, from_listing);
         assert_eq!(
             from_file,
@@ -453,7 +522,7 @@ mod tests {
     #[test]
     fn an_action_without_its_target_says_what_is_missing() {
         assert_eq!(
-            dispatch("file.open".into(), in_listing(None), Workspace::default()),
+            dispatch("file.open".into(), in_listing(None), Workspace::default(), Vec::new()),
             Intent::Refuse {
                 why: Blocked::NeedsTarget { action: "file.open".into(), what: "a path".into() }
             }
@@ -461,7 +530,7 @@ mod tests {
         // A file that is not in the workspace cannot be deleted with a witness,
         // and a delete without one has no inverse.
         assert_eq!(
-            dispatch("file.delete".into(), in_file(None), Workspace::default()),
+            dispatch("file.delete".into(), in_file(None), Workspace::default(), Vec::new()),
             Intent::Refuse {
                 why: Blocked::NeedsTarget {
                     action: "file.delete".into(),
@@ -474,7 +543,7 @@ mod tests {
     /// @tests REQ-ACT.unknown_is_refused
     #[test]
     fn a_name_no_keymap_dispatches_is_refused_by_name() {
-        let intent = dispatch("file.explode".into(), in_file(None), Workspace::default());
+        let intent = dispatch("file.explode".into(), in_file(None), Workspace::default(), Vec::new());
         assert!(!acts(intent.clone()));
         assert_eq!(
             intent,
@@ -494,7 +563,7 @@ mod tests {
         workspace.files.insert("a.rs".to_string(), "x".to_string());
         let edits: Vec<Intent> = ["file.new", "file.rename", "file.delete"]
             .iter()
-            .map(|action| dispatch(action.to_string(), in_file(Some("b.rs")), workspace.clone()))
+            .map(|action| dispatch(action.to_string(), in_file(Some("b.rs")), workspace.clone(), Vec::new()))
             .collect();
         for intent in edits {
             assert!(

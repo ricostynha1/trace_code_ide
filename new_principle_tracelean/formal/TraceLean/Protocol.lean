@@ -65,10 +65,8 @@ def isExclusive (output : Option Json) (error : Option String) : Bool :=
 /--
 Read one line of a runner's output, given the case that was asked.
 
-@models REQ-DRT-PROTO.line_delimited
+@models REQ-DRT-PROTO.reply_one_line
 @models REQ-DRT-PROTO.case_echoed
-@models REQ-DRT-PROTO.reply_exclusive
-@models REQ-DRT-PROTO.failure_named
 -/
 def hear (expected : Nat) (line : String) : Heard :=
   match Json.parse line.trim with
@@ -101,7 +99,7 @@ def hear (expected : Nat) (line : String) : Heard :=
 
 /-! ## Dispatch
 
-`op_dispatch` and `runner_shared`. One runner process serves every binding of
+`ops_unique` and `runner_shared`. One runner process serves every binding of
 its language, so its dispatch is a table keyed by op. Two bindings with the same
 op means the first arm wins and the second requirement is silently answered by
 the wrong function — which is what happened in stage 0, where ops defaulted to
@@ -114,8 +112,7 @@ Empty is the only acceptable answer. Reporting *which* rather than a bool is
 what lets the message name the requirement whose answers were being produced by
 somebody else's function.
 
-@models REQ-DRT-PROTO.op_dispatch
-@models REQ-DRT-PROTO.runner_shared -/
+@models REQ-DRT-PROTO.ops_unique -/
 def duplicateOps (ops : List String) : List String :=
   let dupes := ops.foldl
     (fun (acc : List String × List String) op =>
@@ -162,15 +159,164 @@ theorem a_reply_to_another_case_is_not_an_answer :
 
 /-- An empty line is not a reply, and says which way it failed.
 
-@proves REQ-DRT-PROTO.failure_named -/
+@proves REQ-DRT-PROTO.reply_one_line -/
 theorem an_empty_line_is_not_json :
     (hear 0 "").kind = "notAReply" := by
   native_decide
 
 /-- Nothing is duplicated in nothing.
 
-@proves REQ-DRT-PROTO.op_dispatch -/
+@proves REQ-DRT-PROTO.ops_unique -/
 theorem no_ops_no_collisions : duplicateOps [] = [] := by
+  native_decide
+
+/-! ## Writing a case
+
+`case_one_line` and `case_names_op`. A case is written as one JSON object, its
+keys in the order the protocol is documented in — `case`, `op`, `input` — and
+with every character that could end a line escaped. The escaping is spelled
+out here, as the implementation's JSON writer does it, rather than borrowed from
+`Json.compress`: that writer spells a tab `\u0009` where the implementation's
+spells it `\t`, and the line is what is being compared, byte for byte.
+-/
+
+/-- A character as a four-digit lower-case hex escape. -/
+def hexEscape (c : Char) : String :=
+  let n := c.toNat
+  "\\u" ++ String.mk [Nat.digitChar (n / 4096), Nat.digitChar ((n % 4096) / 256),
+    Nat.digitChar ((n % 256) / 16), Nat.digitChar (n % 16)]
+
+/-- One character as it appears inside a written JSON string. Compared by code
+rather than written as a character literal, which the grammar that reads these
+annotations does not take for every escape (ADR-0008). -/
+def escapeChar (c : Char) : String :=
+  let n := c.toNat
+  if n == 34 then "\\\""
+  else if n == 92 then "\\\\"
+  else if n == 10 then "\\n"
+  else if n == 13 then "\\r"
+  else if n == 9 then "\\t"
+  else if n == 8 then "\\b"
+  else if n == 12 then "\\f"
+  else if n < 32 then hexEscape c
+  else String.singleton c
+
+/-- A string as a JSON string literal. -/
+def quoted (s : String) : String :=
+  "\"" ++ String.join (s.toList.map escapeChar) ++ "\""
+
+/-- Text between braces, built rather than written: the grammar that reads these
+annotations takes a brace inside a string for an interpolation (ADR-0008). -/
+def braced (inner : String) : String :=
+  String.mk [Char.ofNat 123] ++ inner ++ String.mk [Char.ofNat 125]
+
+/-- A JSON value on one line, object keys in ascending order. -/
+partial def written : Json → String
+  | .null => "null"
+  | .bool b => if b then "true" else "false"
+  | .num n => n.toString
+  | .str s => quoted s
+  | .arr items => "[" ++ ",".intercalate (items.toList.map written) ++ "]"
+  | .obj fields =>
+    let pairs := fields.fold (fun (acc : List String) k v => acc ++ [quoted k ++ ":" ++ written v]) []
+    braced (",".intercalate pairs)
+
+/-- The line a case is written as, naming the op it exercises.
+
+@models REQ-DRT-PROTO.case_one_line
+@models REQ-DRT-PROTO.case_names_op -/
+def caseLine (number : Nat) (op : String) (input : Json) : String :=
+  braced ("\"case\":" ++ toString number ++ ",\"op\":" ++ quoted op ++ ",\"input\":" ++ written input)
+
+/-- A line break inside the input is escaped, so the case stays on one line.
+
+@proves REQ-DRT-PROTO.case_one_line -/
+theorem a_newline_in_the_input_is_escaped :
+    (caseLine 1 "x" (Json.str (String.mk [Char.ofNat 10]))).contains (Char.ofNat 10) = false := by
+  native_decide
+
+/-! ## A runner that did not answer
+
+`failure_named`. Reading a line is one thing that can happen when a case is
+asked; a runner can also fail to start, say nothing in time, or have its pipe
+break or close. Each is concluded as its own outcome, and only a line that
+`hear` reads as an answer is one.
+-/
+
+/-- What happened when a runner was asked a case. `read` with `none` is the end
+of the runner's output: how a process that exited looks from the reading side. -/
+inductive Event where
+  | couldNotStart (reason : String)
+  | noReplyInTime
+  | pipeBroke (reason : String)
+  | read (expected : Nat) (got : Option String)
+  deriving Inhabited, ToJson, FromJson
+
+/-- What one asked case came to. -/
+inductive Outcome where
+  | cannotStart (reason : String)
+  | timedOut
+  | died (reason : String)
+  | heard (conclusion : Heard)
+  deriving Inhabited, ToJson, FromJson
+
+/-- Conclude what an event means.
+
+@models REQ-DRT-PROTO.failure_named -/
+def outcome : Event → Outcome
+  | .couldNotStart reason => .cannotStart reason
+  | .noReplyInTime => .timedOut
+  | .pipeBroke reason => .died reason
+  | .read _ none => .died "closed its pipe"
+  | .read expected (some line) => .heard (hear expected line)
+
+/-- Whether an outcome is an answer. -/
+def Outcome.answered : Outcome → Bool
+  | .heard (.answered ..) => true
+  | _ => false
+
+/-- No failure of the process is an answer, whatever it carries.
+
+@proves REQ-DRT-PROTO.failure_named -/
+theorem a_failed_runner_did_not_answer (reason : String) (n : Nat) :
+    (outcome (.couldNotStart reason)).answered = false ∧
+    (outcome .noReplyInTime).answered = false ∧
+    (outcome (.pipeBroke reason)).answered = false ∧
+    (outcome (.read n none)).answered = false := by
+  simp [outcome, Outcome.answered]
+
+/-! ## One runner per language
+
+`runner_shared`. The plan the harness builds runners from: one entry per
+language, each carrying every op of that language once.
+-/
+
+/-- One binding's implementation, by op and language. -/
+structure Placed where
+  op : String
+  language : String
+  deriving Inhabited, ToJson, FromJson
+
+/-- One runner process: its language and every op it answers. -/
+structure Shared where
+  language : String
+  ops : List String
+  deriving Inhabited, ToJson, FromJson
+
+/-- The runner processes a project needs: one per language, in language order,
+each answering every op of that language once, in declaration order.
+
+@models REQ-DRT-PROTO.runner_shared -/
+def sharedRunners (placed : List Placed) : List Shared :=
+  let languages := ((placed.map (fun p => p.language)).eraseDups).mergeSort (· <= ·)
+  languages.map (fun l =>
+    { language := l, ops := ((placed.filter (fun p => p.language == l)).map (fun p => p.op)).eraseDups })
+
+/-- Two bindings of one language share one runner.
+
+@proves REQ-DRT-PROTO.runner_shared -/
+theorem one_language_one_runner :
+    (sharedRunners [{ op := "a", language := "rust" }, { op := "b", language := "rust" }]).length = 1 := by
   native_decide
 
 /-! ## Comparing two answers

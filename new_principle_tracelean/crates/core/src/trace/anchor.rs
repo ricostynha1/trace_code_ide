@@ -457,22 +457,18 @@ pub fn resolve(
     }
 }
 
-/// The Lean declaration a comment sits inside, innermost first: an inductive
-/// whose constructor carries the doc comment, or a structure whose field does.
+/// The declaration a comment sits inside, innermost first: a Lean inductive
+/// whose constructor carries the doc comment or a structure whose field does,
+/// a Rust enum whose variant does, a struct whose field does, or a function
+/// whose body holds the comment.
 ///
-/// A constructor or a field is not a declaration of its own, so the first
-/// declaration after such a comment is the *next* top-level one — and the
-/// annotation used to bind there, to something its author never pointed at.
-/// When nothing is declared between the comment and the end of the enclosing
-/// declaration, the claim is about that declaration.
-///
-/// Lean only. Rust has the same shape (a doc comment on an enum variant or a
-/// struct field), and those annotations are left where they bind today until
-/// they are sorted out, since moving them changes their links' identities.
+/// A constructor, a variant or a field is not a declaration of its own, so the
+/// first declaration after such a comment is the *next* top-level one — and
+/// the annotation used to bind there, to something its author never pointed
+/// at. When nothing is declared between the comment and the end of the
+/// enclosing declaration, the claim is about that declaration. The same rule
+/// in both languages (ADR-0014).
 fn enclosing(scan: &Scan, comment_end: usize) -> Option<&Decl> {
-    if scan.lang != Some(Lang::Lean4) {
-        return None;
-    }
     let (comment_start, _) = scan.comment_ranges.iter().find(|(_, end)| *end == comment_end)?;
     scan.declarations
         .iter()
@@ -627,6 +623,31 @@ impl Holder {
         assert_eq!(bound("REQ-X.c"), AnchorKind::Decl { symbol_path: "N::Origin".into() });
         // An annotation before a declaration still binds to that declaration.
         assert_eq!(bound("REQ-X.d"), AnchorKind::Decl { symbol_path: "N::after".into() });
+    }
+
+    /// The same rule in Rust: a variant's or a field's doc comment, or a
+    /// comment inside a function body, is about the enclosing item — not the
+    /// item declared next.
+    ///
+    /// @tests REQ-ANCHOR.symbol_not_line
+    #[test]
+    fn a_rust_comment_inside_an_item_binds_to_that_item() {
+        let src = "pub enum State {\n    /// @implements REQ-X.v\n    Current,\n}\n\npub struct Holder {\n    /// @implements REQ-X.f\n    pub field: u8,\n}\n\nfn body() {\n    // @implements REQ-X.b\n    let _ = 1;\n}\n\nimpl Holder {\n    /// @implements REQ-X.m\n    fn method(&self) {}\n}\n\nfn later() {}\n";
+        let scanned = scan(src, Some(Lang::Rust));
+        let bound = |needle: &str| {
+            let end = scanned
+                .comment_ranges
+                .iter()
+                .find(|(s, e)| src[*s..*e].contains(needle))
+                .map(|(_, e)| *e)
+                .unwrap();
+            resolve("f.rs", src, &scanned, &annotation(0), end).kind
+        };
+        assert_eq!(bound("REQ-X.v"), AnchorKind::Decl { symbol_path: "State".into() });
+        assert_eq!(bound("REQ-X.f"), AnchorKind::Decl { symbol_path: "Holder".into() });
+        assert_eq!(bound("REQ-X.b"), AnchorKind::Decl { symbol_path: "body".into() });
+        // A method's doc comment still binds to the method that follows it.
+        assert_eq!(bound("REQ-X.m"), AnchorKind::Decl { symbol_path: "Holder::method".into() });
     }
 
     /// @tests REQ-ANCHOR.imprecise_capped

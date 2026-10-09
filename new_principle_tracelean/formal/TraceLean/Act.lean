@@ -59,7 +59,8 @@ inductive Move where
 /-- A change to what is being watched, or to what a watch produced. -/
 inductive Watch where
   | start
-  | accept
+  /-- Take in every waiting change: the commands that make it, as one batch. -/
+  | accept (command : Command)
   | reject
   /-- Make a sandbox: a copy of the project for an agent the user starts. -/
   | create
@@ -73,8 +74,9 @@ inductive Watch where
   | copyLine
   /-- Put a file's path on the clipboard. -/
   | copyPath (path : String)
-  /-- Take one file's observed change in, leaving the rest waiting. -/
-  | acceptFile (path : String)
+  /-- Take one file's observed change in, leaving the rest waiting: the
+  commands that make it, as one batch. -/
+  | acceptFile (path : String) (command : Command)
   /-- Take one file's observed change back out, leaving the rest waiting. -/
   | rejectFile (path : String)
   /-- Include a part of an agent's context, or leave it out. -/
@@ -83,22 +85,19 @@ inductive Watch where
   | contextCopy
   /-- Show the history whole, for the open file, or at its saves. -/
   | historyFilter (filter : TraceLean.HistoryView.Filter)
-  deriving Repr, DecidableEq, Inhabited, ToJson, FromJson
+  -- No `DecidableEq`, for the reason `Intent` has none: `Command` is recursive.
+  deriving Repr, Inhabited, ToJson, FromJson
 
 /-- Why nothing happened.
 
 A key that appears to do nothing is the failure nobody reports, so the reason is
-a value the editor can show.
-
-@models REQ-ACT.unknown_is_refused -/
+a value the editor can show. -/
 inductive Blocked where
   | unknownAction (action : String)
   | needsTarget (action : String) (what : String)
   deriving Repr, DecidableEq, Inhabited, ToJson, FromJson
 
-/-- What the editor is to do next.
-
-@models REQ-ACT.action_to_intent -/
+/-- What the editor is to do next. -/
 inductive Intent where
   /-- Produce this buffer and show it. Which producer that is follows from the
   kind, and the shell knows that producing a report means computing one. -/
@@ -215,6 +214,33 @@ private def changedFile (focus : Focus) : Option String :=
   | BufferKind.review target => some target
   | _ => focus.under
 
+/-- What an identifier may be made of: ASCII letters and digits, `_`, `.` inside
+a Lean name, and `!`. -/
+private def identChar (c : Char) : Bool :=
+  c.isAlphanum || c == '_' || c == '.' || c == '!'
+
+/-- The identifier around a position, as the implementation reads it: the run
+of identifier characters through the position, without dots at its ends or `!`
+at its end, and not nothing but digits. -/
+def identifierAt (text : String) (offset : Nat) : Option String :=
+  let chars := text.toList
+  let here := min offset chars.length
+  let before := ((chars.take here).reverse.takeWhile identChar).reverse
+  let after := (chars.drop here).takeWhile identChar
+  let word := before ++ after
+  let unfronted := word.dropWhile (fun c => c == '.')
+  let unended := (unfronted.reverse.dropWhile (fun c => c == '.')).reverse
+  let unbanged := (unended.reverse.dropWhile (fun c => c == '!')).reverse
+  if unbanged.isEmpty || unbanged.all Char.isDigit then none else some (String.mk unbanged)
+
+/-- The name a definition or a reference is looked up by: in a file, the
+identifier at the cursor in the workspace's text of it; anywhere else, what the
+span under the cursor says. -/
+private def nameAt (focus : Focus) (w : Workspace) : Option String :=
+  match (focusPath focus).bind (fun path => Workspace.get (Workspace.canon w) path) with
+  | some text => identifierAt text focus.offset
+  | none => focus.under.filter (fun name => !name.isEmpty)
+
 /-- Open the requirement the cursor is on: its clauses and what claims each. -/
 private def requirementUnder (focus : Focus) : Intent :=
   match focus.under with
@@ -259,7 +285,7 @@ cannot has a refusal. Nothing falls through.
 @models REQ-ACT.edits_are_commands
 @models REQ-ACT.dispatch_is_pure
 -/
-def dispatch (action : String) (focus : Focus) (w : Workspace) : Intent :=
+def dispatch (action : String) (focus : Focus) (w : Workspace) (waiting : List Command) : Intent :=
   match action with
   | "file.open" => openUnder focus
   | "file.new" => newUnder focus
@@ -278,12 +304,18 @@ def dispatch (action : String) (focus : Focus) (w : Workspace) : Intent :=
     | some (k + 1) => Intent.travel (Move.to k)
   | "history.tree" => report "history"
   | "observe.start" => Intent.observe Watch.start
-  | "observe.accept" => Intent.observe Watch.accept
+  | "observe.accept" =>
+    match waiting with
+    | [] => Intent.refuse (Blocked.needsTarget "observe.accept" "a change waiting")
+    | _ => Intent.observe (Watch.accept (Command.batch waiting))
   | "observe.reject" => Intent.observe Watch.reject
   | "observe.accept_file" =>
     match changedFile focus with
     | none => Intent.refuse (Blocked.needsTarget "observe.accept_file" "a changed file")
-    | some path => Intent.observe (Watch.acceptFile path)
+    | some path =>
+      match waiting.filter (fun command => touched command == path) with
+      | [] => Intent.refuse (Blocked.needsTarget "observe.accept_file" "a change waiting to that file")
+      | taken => Intent.observe (Watch.acceptFile path (Command.batch taken))
   | "observe.reject_file" =>
     match changedFile focus with
     | none => Intent.refuse (Blocked.needsTarget "observe.reject_file" "a changed file")
@@ -320,8 +352,14 @@ def dispatch (action : String) (focus : Focus) (w : Workspace) : Intent :=
     match focusPath focus with
     | none => Intent.refuse (Blocked.needsTarget "file.copy_path" "a file")
     | some path => Intent.observe (Watch.copyPath path)
-  | "file.definition" => report "definition"
-  | "file.references" => report "references"
+  | "file.definition" =>
+    match nameAt focus w with
+    | none => Intent.refuse (Blocked.needsTarget "file.definition" "a name")
+    | some name => report ("definition " ++ name)
+  | "file.references" =>
+    match nameAt focus w with
+    | none => Intent.refuse (Blocked.needsTarget "file.references" "a name")
+    | some name => report ("references " ++ name)
   | "trace.new_requirement" =>
     match focus.under with
     | none => Intent.refuse (Blocked.needsTarget "trace.new_requirement" "an identifier")
@@ -394,15 +432,15 @@ what it opens is what is under the cursor and nothing else.
 
 @proves REQ-ACT.focus_is_carried -/
 theorem opening_follows_the_cursor :
-    same (dispatch "file.open" cursorInFile noFiles)
-      (dispatch "file.open" cursorInListing noFiles) = true := by
+    same (dispatch "file.open" cursorInFile noFiles [])
+      (dispatch "file.open" cursorInListing noFiles []) = true := by
   native_decide
 
 /-- An action whose target is missing refuses, and says what was missing.
 
 @proves REQ-ACT.missing_target_is_refused -/
 theorem a_missing_target_is_named :
-    same (dispatch "file.open" cursorOverNothing noFiles)
+    same (dispatch "file.open" cursorOverNothing noFiles [])
       (Intent.refuse (Blocked.needsTarget "file.open" "a path")) = true := by
   native_decide
 
@@ -410,7 +448,7 @@ theorem a_missing_target_is_named :
 
 @proves REQ-ACT.unknown_is_refused -/
 theorem an_unknown_action_is_refused :
-    acts (dispatch "file.explode" cursorInFile noFiles) = false := by
+    acts (dispatch "file.explode" cursorInFile noFiles []) = false := by
   native_decide
 
 end TraceLean.Act

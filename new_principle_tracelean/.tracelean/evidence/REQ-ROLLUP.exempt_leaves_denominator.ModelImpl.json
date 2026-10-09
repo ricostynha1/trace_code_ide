@@ -8,7 +8,7 @@
   "detail": {
     "drt": {
       "seed": 91,
-      "cases": 3000,
+      "cases": 10000,
       "op": "REQ-ROLLUP.open_is_lower_bound"
     }
   },
@@ -16,15 +16,15 @@
   "inputs": [
     [
       "implementation",
-      "8bc9971e95aa3caf+d33f902cb75709f5"
+      "8bc9971e95aa3caf+94bf5fb9b2a867da"
     ],
     [
       "model",
-      "bcea34ec26edd655"
+      "f96f84510583693b"
     ],
     [
       "requirement",
-      "f540930c1bce8042"
+      "8d3bda74a5062f4f"
     ]
   ]
 }

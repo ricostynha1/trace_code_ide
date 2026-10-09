@@ -25,7 +25,7 @@ pub fn package_dir(root: &Path) -> PathBuf {
 }
 
 /// What a binding resolved to, once its source has been read.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct Entry {
     pub op: String,
     /// `tracelean_core::drt::signature::parameters`
@@ -206,15 +206,64 @@ pub fn cargo_toml(crate_deps: &BTreeMap<String, String>) -> String {
     out
 }
 
-/// The generated `main.rs`.
+/// `text` as a Rust string literal.
 ///
-/// Types are never named: each argument is `serde_json::from_value(..)`, whose
-/// return type the compiler resolves from the parameter it is passed into. A
-/// binding therefore cannot name a wrong type, and a binding that does not fit
-/// the function is a compile error rather than a wrong answer.
+/// Spelled out rather than taken from `{:?}`, so that what the generator
+/// writes is defined here and can be checked against a model: printable ASCII
+/// stays, `"` and `\` are escaped, and anything else is a `\u{..}` escape.
+fn literal(text: &str) -> String {
+    let mut out = String::from("\"");
+    for c in text.chars() {
+        match c {
+            '"' => out.push_str("\\\""),
+            '\\' => out.push_str("\\\\"),
+            ' '..='~' => out.push(c),
+            other => out.push_str(&format!("\\u{{{:x}}}", other as u32)),
+        }
+    }
+    out.push('"');
+    out
+}
+
+/// The generated dispatch arm for one entry: the call site.
+///
+/// No type is named anywhere in it. Each argument is a local bound by
+/// `serde_json::from_str`, whose return type the compiler infers from the
+/// parameter the local is passed into, and the result goes to
+/// `serde_json::to_value`, generic in what it is given. Arguments are bound to
+/// locals first so that a deserialisation failure names the parameter it was
+/// for; inlining them would report only that some argument did not parse.
 ///
 /// @implements REQ-DRT-RUST.types_inferred
-/// @implements REQ-DRT-PROTO.line_delimited
+/// @drt REQ-DRT-RUST.types_inferred
+pub fn call_site(entry: Entry) -> String {
+    let mut out = format!("        {} => {{\n", literal(&entry.op));
+    for (parameter, source) in entry.parameters.iter().zip(&entry.sources) {
+        out.push_str(&format!(
+            "            let {parameter} = serde_json::from_str(field(input, {}))\n\
+             \x20               .map_err(|e| format!(\"argument `{parameter}`: {{e}}\"))?;\n",
+            literal(source)
+        ));
+    }
+    out.push_str(&format!(
+        "            let out = {}({});\n\
+         \x20           serde_json::to_value(out).map_err(|e| e.to_string())\n\
+         \x20       }}\n",
+        entry.call_path,
+        entry.parameters.join(", ")
+    ));
+    out
+}
+
+/// The generated `main.rs`.
+///
+/// Types are never named: each entry's arm is `call_site`'s, where every
+/// argument's type is resolved from the parameter it is passed into. A binding
+/// therefore cannot name a wrong type, and a binding that does not fit the
+/// function is a compile error rather than a wrong answer.
+///
+/// @implements REQ-DRT-PROTO.reply_one_line
+/// @implements REQ-DRT-PROTO.case_names_op
 /// @implements REQ-DRT-PROTO.runner_shared
 pub fn main_rs(entries: &[Entry]) -> String {
     let mut out = String::from(
@@ -237,23 +286,7 @@ pub fn main_rs(entries: &[Entry]) -> String {
          \x20   match op {\n",
     );
     for entry in entries {
-        out.push_str(&format!("        {:?} => {{\n", entry.op));
-        // Arguments are bound to locals first so that a deserialisation failure
-        // names the parameter it was for. Inlining them into the call would
-        // report only that some argument of some type did not parse.
-        for (parameter, source) in entry.parameters.iter().zip(&entry.sources) {
-            out.push_str(&format!(
-                "            let {parameter} = serde_json::from_str(field(input, {source:?}))\n\
-                 \x20               .map_err(|e| format!(\"argument `{parameter}`: {{e}}\"))?;\n"
-            ));
-        }
-        let args = entry.parameters.join(", ");
-        out.push_str(&format!(
-            "            let out = {}({args});\n\
-             \x20           serde_json::to_value(out).map_err(|e| e.to_string())\n\
-             \x20       }}\n",
-            entry.call_path
-        ));
+        out.push_str(&call_site(entry.clone()));
     }
     out.push_str(
         "        other => Err(format!(\"no binding for op {other:?}\")),\n\
@@ -322,6 +355,7 @@ mod tests {
             also_checks: Vec::new(),
             also_implemented_by: Vec::new(),
             floors: Vec::new(),
+            waive: Vec::new(),
             op: None,
             model: None,
             implementation: super::super::CallSpec {

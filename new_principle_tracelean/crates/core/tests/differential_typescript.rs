@@ -214,6 +214,95 @@ fn the_typescript_and_the_model_agree_on_what_a_presented_row_reads_as() {
     );
 }
 
+/// TypeScript sources for the parameter reader: the plain shapes, and the three
+/// that made the first textual match the wrong one — a signature in a comment
+/// or a string, the type-only `this`, and two declarations of one name.
+fn ts_signature_input() -> Schema {
+    let mut fields = BTreeMap::new();
+    fields.insert(
+        "source".to_string(),
+        Schema::Str {
+            max_len: None,
+            examples: vec![
+                "export function f(a: number, b: string) {}".into(),
+                "export function f() {}".into(),
+                "function g() {}".into(),
+                "export function f(this: Window) {}".into(),
+                "function g(x: Map<string, number>): void {}".into(),
+                "function g<T>(xs: T[], n: number) {}".into(),
+                "export function f(a: number, b?: number) {}".into(),
+                "export function f(a = 1) {}".into(),
+                "const f = (a) => a".into(),
+                "// was: function f(b, a)\nexport function f(a: number, b: number) {}".into(),
+                "/* function f(b, a) */ export function f(a, b) {}".into(),
+                "const s = 'function f(b, a)';\nexport function f(a, b) {}".into(),
+                "const t = `function g(y)`;\nfunction g(x) {}".into(),
+                "export function f(this: Window, a: number) {}".into(),
+                "function f(a) {}\nexport function f(a, b) {}".into(),
+                "function g(x) {}\n// function g(z)\nfunction g(y) {}".into(),
+                "function f(a) {}\nfunction g(a) {}\nfunction f(b) {}\nfunction g(b) {}".into(),
+                "".into(),
+            ],
+        },
+    );
+    fields.insert(
+        "symbol".to_string(),
+        Schema::Str { max_len: None, examples: vec!["f".into(), "g".into(), "absent".into()] },
+    );
+    Schema::Struct { fields }
+}
+
+/// Every answer the TypeScript parameter reader can give, and each of the
+/// three ways the first textual match was wrong, must occur.
+///
+/// @tests REQ-DRT-TS.params_from_source
+#[test]
+fn generation_reaches_every_way_a_typescript_signature_can_mislead() {
+    use tracelean_core::drt::gen;
+    use tracelean_core::drt::ts_runner::{ts_declarations, ts_parameters_of};
+
+    let schema = ts_signature_input();
+    let mut rng = gen::Rng::new(109);
+    let (mut named, mut empty, mut refused, mut absent) = (0u64, 0u64, 0u64, 0u64);
+    let (mut past_comment, mut this, mut ambiguous) = (0u64, 0u64, 0u64);
+    // As many cases as the differential run asks, from the same seed.
+    for _ in 0..3_000 {
+        let v = gen::value(&schema, &mut rng);
+        let source = v["source"].as_str().unwrap();
+        let symbol = v["symbol"].as_str().unwrap();
+        let answer = ts_parameters_of(source, symbol);
+        let textual = source.matches(&format!("function {symbol}(")).count();
+        let declared = ts_declarations(source, symbol);
+        if textual > declared && declared == 1 && answer.is_some() {
+            past_comment += 1;
+        }
+        if source.contains(&format!("function {symbol}(this")) && answer.is_some() {
+            this += 1;
+        }
+        if declared > 1 && answer.is_none() {
+            ambiguous += 1;
+        }
+        match answer {
+            Some(names) if !names.is_empty() => named += 1,
+            Some(_) => empty += 1,
+            None if declared > 0 => refused += 1,
+            None => absent += 1,
+        }
+    }
+    support::covered(
+        "REQ-DRT-TS.params_from_source",
+        &[
+            ("a signature yielding names", named),
+            ("a signature taking no parameters", empty),
+            ("a declared signature refused", refused),
+            ("an absent symbol", absent),
+            ("a signature in a comment or string passed over", past_comment),
+            ("a this parameter dropped", this),
+            ("two declarations refused", ambiguous),
+        ],
+    );
+}
+
 /// The parameter reader, which is what lets a binding name a TypeScript
 /// function without also naming its argument order.
 ///
@@ -226,7 +315,7 @@ fn model_and_implementation_agree_on_a_typescript_signature() {
     let implementation = harness::rust_runner(
         "REQ-DRT-TS",
         "params_from_source",
-        "crates/core/src/drt/ts_runner.rs::ts_parameters_of",
+        "crates/core/src/drt/ts_runner.rs::ts_parameters_owned",
         &scratch,
     );
     let model = harness::lean_runner(
@@ -237,33 +326,12 @@ fn model_and_implementation_agree_on_a_typescript_signature() {
         &scratch,
     );
 
-    let mut fields = BTreeMap::new();
-    fields.insert(
-        "source".to_string(),
-        Schema::Str {
-            max_len: None,
-            examples: vec![
-                "export function f(a: number, b: string) {}".into(),
-                "export function f() {}".into(),
-                "function g(x: Map<string, number>): void {}".into(),
-                "export function f(a: number, b?: number) {}".into(),
-                "export function f(a = 1) {}".into(),
-                "const f = (a) => a".into(),
-                "".into(),
-            ],
-        },
-    );
-    fields.insert(
-        "symbol".to_string(),
-        Schema::Str { max_len: None, examples: vec!["f".into(), "g".into(), "absent".into()] },
-    );
-
     let result = run(
         "REQ-DRT-TS.params_from_source",
-        &Schema::Struct { fields },
+        &ts_signature_input(),
         &model,
         &implementation,
-        RunOptions { seed: 109, cases: 2_000, shrink_rounds: 100 },
+        RunOptions { seed: 109, cases: 3_000, shrink_rounds: 100 },
     )
     .expect("both runners answer");
     support::agreed(&result);

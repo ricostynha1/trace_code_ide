@@ -16,7 +16,6 @@ use serde::{Deserialize, Serialize};
 use crate::surface::sandbox_view::Lines;
 use crate::surface::view::{Buffer, Role};
 use crate::trace::anchor::AnchorKind;
-use crate::trace::annotation::Role as Claimed;
 use crate::trace::index::{Index, Link};
 
 /// A requirement as the refinement graph sees it: its name and its parents.
@@ -43,19 +42,22 @@ fn closure(id: &str, next: impl Fn(&str) -> Vec<String>) -> Vec<String> {
 }
 
 /// Everything `id` refines, transitively.
-///
-/// @implements REQ-CONTEXT.neighbourhood_is_closed
-/// @drt REQ-CONTEXT.neighbourhood_is_closed
 pub fn ancestors(nodes: Vec<Node>, id: String) -> Vec<String> {
     closure(&id, |at| nodes.iter().filter(|n| n.id == at).flat_map(|n| n.refines.clone()).collect())
 }
 
 /// Everything that refines `id`, transitively.
+pub fn descendants(nodes: Vec<Node>, id: String) -> Vec<String> {
+    closure(&id, |at| nodes.iter().filter(|n| n.refines.iter().any(|p| p == at)).map(|n| n.id.clone()).collect())
+}
+
+/// The neighbourhood of `id`: what it refines and what refines it, each
+/// transitively, each once, in name order, and never `id` itself.
 ///
 /// @implements REQ-CONTEXT.neighbourhood_is_closed
 /// @drt REQ-CONTEXT.neighbourhood_is_closed
-pub fn descendants(nodes: Vec<Node>, id: String) -> Vec<String> {
-    closure(&id, |at| nodes.iter().filter(|n| n.refines.iter().any(|p| p == at)).map(|n| n.id.clone()).collect())
+pub fn neighbourhood(nodes: Vec<Node>, id: String) -> (Vec<String>, Vec<String>) {
+    (ancestors(nodes.clone(), id.clone()), descendants(nodes, id))
 }
 
 /// One part of a context.
@@ -113,10 +115,50 @@ pub fn default_parts() -> BTreeSet<Part> {
     ALL_PARTS.into_iter().filter(|p| *p != Part::RefinedBy).collect()
 }
 
-/// The context for `target` as an agent asks for it from a shell: `parts` is
-/// a comma-separated list of labels (a dash for a space: `refined-by`), or
-/// `all`, or nothing for the default. A part or a requirement that does not
-/// exist is refused with what does.
+/// What a shell's `--parts` chose: the parts, in their fixed order and each
+/// once, or the first name that is no part.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum ShellParts {
+    Chosen { parts: Vec<Part> },
+    Unknown { name: String },
+}
+
+/// Space, tab, carriage return and line feed: what is trimmed from a name or a
+/// line. Written out so the model trims the same characters.
+fn blank(c: char) -> bool {
+    c == ' ' || c == '\t' || c == '\r' || c == '\n'
+}
+
+/// The parts a shell asked for: `parts` is a comma-separated list of labels
+/// (a dash for a space: `refined-by`), or `all`, or nothing for the default.
+/// The first label that names no part is refused.
+///
+/// @implements REQ-CONTEXT.from_the_shell
+pub fn shell_parts(parts: Option<String>) -> ShellParts {
+    let chosen: BTreeSet<Part> = match parts.as_deref() {
+        None => default_parts(),
+        Some("all") => ALL_PARTS.into_iter().collect(),
+        Some(list) => {
+            let mut chosen = BTreeSet::new();
+            for name in list.split(',') {
+                let name = name.trim_matches(blank).replace('-', " ");
+                match part_named(name.clone()) {
+                    Some(part) => {
+                        chosen.insert(part);
+                    }
+                    None => return ShellParts::Unknown { name },
+                }
+            }
+            chosen
+        }
+    };
+    ShellParts::Chosen { parts: chosen.into_iter().collect() }
+}
+
+/// The context for `target` as an agent asks for it from a shell, with the
+/// parts `shell_parts` chose. A part or a requirement that does not exist is
+/// refused with what does.
 ///
 /// @implements REQ-CONTEXT.from_the_shell
 pub fn for_the_shell(
@@ -125,19 +167,12 @@ pub fn for_the_shell(
     index: &Index,
     files: &BTreeMap<String, String>,
 ) -> Result<String, String> {
-    let included = match parts {
-        None => default_parts(),
-        Some("all") => ALL_PARTS.into_iter().collect(),
-        Some(list) => list
-            .split(',')
-            .map(|name| {
-                let name = name.trim().replace('-', " ");
-                part_named(name.clone()).ok_or_else(|| {
-                    let known: Vec<String> = ALL_PARTS.iter().map(|p| p.label().replace(' ', "-")).collect();
-                    format!("no part is called `{name}`; the parts are {}", known.join(", "))
-                })
-            })
-            .collect::<Result<_, _>>()?,
+    let included: BTreeSet<Part> = match shell_parts(parts.map(str::to_string)) {
+        ShellParts::Chosen { parts } => parts.into_iter().collect(),
+        ShellParts::Unknown { name } => {
+            let known: Vec<String> = ALL_PARTS.iter().map(|p| p.label().replace(' ', "-")).collect();
+            return Err(format!("no part is called `{name}`; the parts are {}", known.join(", ")));
+        }
     };
     let context = gather(target, index, files).ok_or_else(|| format!("no requirement is called `{target}`"))?;
     Ok(context_text(&context, &included))
@@ -242,13 +277,29 @@ fn said(index: &Index, id: &str) -> Option<Said> {
     })
 }
 
-fn item(link: &Link, files: &BTreeMap<String, String>) -> Item {
-    Item {
+/// A claim as the context reads it: one annotation, flattened, with the
+/// source of the item it sits on already cut from its file.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Claim {
+    /// `implements`, `tests`, `models`, `proves`, `drt`, `pins`, `specifies`.
+    pub role: String,
+    pub req: String,
+    pub clause: Option<String>,
+    /// The anchor's identity: one item, however many annotations it carries.
+    pub ident: String,
+    pub path: String,
+    /// One-based.
+    pub line: u32,
+    pub symbol: Option<String>,
+    pub source: String,
+}
+
+fn claim(link: &Link, files: &BTreeMap<String, String>) -> Claim {
+    Claim {
         role: link.role.as_str().to_string(),
-        claims: match &link.clause {
-            Some(clause) => format!("{}.{clause}", link.req_id),
-            None => link.req_id.clone(),
-        },
+        req: link.req_id.clone(),
+        clause: link.clause.clone(),
+        ident: link.anchor.ident(),
         path: link.anchor.file.clone(),
         line: link.line,
         symbol: match &link.anchor.kind {
@@ -259,14 +310,85 @@ fn item(link: &Link, files: &BTreeMap<String, String>) -> Item {
     }
 }
 
-/// Whether `text` names `word` as a whole word.
+fn item(claim: &Claim) -> Item {
+    Item {
+        role: claim.role.clone(),
+        claims: match &claim.clause {
+            Some(clause) => format!("{}.{clause}", claim.req),
+            None => claim.req.clone(),
+        },
+        path: claim.path.clone(),
+        line: claim.line,
+        symbol: claim.symbol.clone(),
+        source: claim.source.clone(),
+    }
+}
+
+/// Whether a claim is on the target: its requirement, and its clause when
+/// one was asked for.
+fn on_target(claim: &Claim, id: &str, clause: &Option<String>) -> bool {
+    claim.req == id && (clause.is_none() || claim.clause == *clause)
+}
+
+/// The claims on the target with one of `roles`, an item an anchor: an item
+/// claiming two of the clauses is shown once, naming both — merged into the
+/// first item of its anchor when that one has the same role.
+fn of_roles(claims: &[Claim], id: &str, clause: &Option<String>, roles: &[&str]) -> Vec<Item> {
+    let mut out: Vec<(String, Item)> = Vec::new();
+    for claim in claims.iter().filter(|c| on_target(c, id, clause) && roles.contains(&c.role.as_str())) {
+        let found = item(claim);
+        match out.iter_mut().find(|(ident, _)| *ident == claim.ident) {
+            Some((_, held)) if held.role == found.role => held.claims = format!("{}, {}", held.claims, found.claims),
+            _ => out.push((claim.ident.clone(), found)),
+        }
+    }
+    out.into_iter().map(|(_, item)| item).collect()
+}
+
+/// What claims a target, by kind.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Claimed {
+    pub code: Vec<Item>,
+    pub tests: Vec<Item>,
+    pub models: Vec<Item>,
+}
+
+/// Every claim on `id` (and `clause`, when one was asked for), each with its
+/// place and source: implementations, tests, and models with their proofs.
+///
+/// @implements REQ-CONTEXT.claims_with_source
+pub fn claims_on(claims: Vec<Claim>, id: String, clause: Option<String>) -> Claimed {
+    Claimed {
+        code: of_roles(&claims, &id, &clause, &["implements"]),
+        tests: of_roles(&claims, &id, &clause, &["tests"]),
+        models: of_roles(&claims, &id, &clause, &["models", "proves", "drt", "pins"]),
+    }
+}
+
+/// A letter, a digit or an underscore, ASCII only so the model agrees.
+fn is_word(c: char) -> bool {
+    c.is_ascii_alphanumeric() || c == '_'
+}
+
+/// Whether `text` names `word` as a whole word. Matches are taken left to
+/// right without overlapping, as `str::match_indices` takes them.
 fn names(text: &str, word: &str) -> bool {
-    let is_word = |c: char| c.is_alphanumeric() || c == '_';
-    text.match_indices(word).any(|(at, _)| {
-        let before = text[..at].chars().next_back();
-        let after = text[at + word.len()..].chars().next();
-        !before.is_some_and(is_word) && !after.is_some_and(is_word)
-    })
+    let text: Vec<char> = text.chars().collect();
+    let word: Vec<char> = word.chars().collect();
+    let mut at = 0;
+    while at <= text.len() {
+        if text[at..].starts_with(&word) {
+            let before = if at == 0 { None } else { Some(text[at - 1]) };
+            let after = text.get(at + word.len()).copied();
+            if !before.is_some_and(is_word) && !after.is_some_and(is_word) {
+                return true;
+            }
+            at += word.len().max(1);
+        } else {
+            at += 1;
+        }
+    }
+    false
 }
 
 /// A path that holds tests by where it is or what it is called.
@@ -274,11 +396,88 @@ fn is_test_path(path: &str) -> bool {
     path.split('/').any(|part| part == "tests" || part == "test" || part.contains("_test") || part.starts_with("test_"))
 }
 
+/// A text's lines: split at line feeds, no line after a final one, and a
+/// carriage return before a line feed dropped.
+fn lines_of(text: &str) -> Vec<String> {
+    let mut pieces: Vec<&str> = text.split('\n').collect();
+    let ended = pieces.last() == Some(&"");
+    if ended {
+        pieces.pop();
+    }
+    let last = pieces.len();
+    pieces
+        .into_iter()
+        .enumerate()
+        .map(|(n, piece)| {
+            let followed = n + 1 < last || ended;
+            if followed { piece.strip_suffix('\r').unwrap_or(piece).to_string() } else { piece.to_string() }
+        })
+        .collect()
+}
+
 /// The most lines named outside any claim that an affected list carries.
 const MOST_USES: usize = 20;
 
+/// The tests a change to the target may break, past those that claim it: tests
+/// claiming what refines it (`down`), tests whose source names an item that
+/// implements it, and — for a test nobody annotated — lines of test files
+/// that name one, at most `MOST_USES` of them. An item is placed once.
+///
+/// @implements REQ-CONTEXT.affected_tests
+pub fn affected(
+    claims: Vec<Claim>,
+    id: String,
+    clause: Option<String>,
+    down: Vec<String>,
+    files: Vec<(String, String)>,
+) -> Vec<Item> {
+    let claimed = claims_on(claims.clone(), id.clone(), clause.clone());
+    let mut placed: BTreeSet<String> =
+        claims.iter().filter(|c| c.role == "tests" && on_target(c, &id, &clause)).map(|c| c.ident.clone()).collect();
+    let mut out = Vec::new();
+    for claim in claims.iter().filter(|c| c.role == "tests" && down.contains(&c.req)) {
+        if placed.insert(claim.ident.clone()) {
+            out.push(item(claim));
+        }
+    }
+    let symbols: Vec<String> = claimed
+        .code
+        .iter()
+        .filter_map(|c| c.symbol.as_deref())
+        .map(|s| s.rsplit("::").next().unwrap_or(s).to_string())
+        .collect();
+    for claim in claims.iter().filter(|c| c.role == "tests") {
+        if placed.contains(&claim.ident) {
+            continue;
+        }
+        if symbols.iter().any(|s| names(&claim.source, s)) {
+            placed.insert(claim.ident.clone());
+            out.push(item(claim));
+        }
+    }
+    let claimed_files: Vec<String> = out.iter().chain(claimed.tests.iter()).map(|i| i.path.clone()).collect();
+    let mut uses = 0;
+    for (path, text) in files.iter().filter(|(p, _)| is_test_path(p) && !claimed_files.contains(p)) {
+        for (n, line) in lines_of(text).iter().enumerate() {
+            if uses < MOST_USES && symbols.iter().any(|s| names(line, s)) {
+                out.push(Item {
+                    role: "uses".into(),
+                    claims: String::new(),
+                    path: path.clone(),
+                    line: n as u32 + 1,
+                    symbol: None,
+                    source: line.trim_matches(blank).to_string(),
+                });
+                uses += 1;
+            }
+        }
+    }
+    out
+}
+
 /// The context of `target` — `REQ-X` or `REQ-X.clause` — or nothing when no
-/// requirement is called that.
+/// requirement is called that. The shell around `neighbourhood`, `claims_on`
+/// and `affected`: it reads the index and cuts each claim's source.
 ///
 /// @implements REQ-CONTEXT.claims_with_source
 /// @implements REQ-CONTEXT.affected_tests
@@ -290,73 +489,11 @@ pub fn gather(target: &str, index: &Index, files: &BTreeMap<String, String>) -> 
     let requirement = said(index, id)?;
     let nodes: Vec<Node> =
         index.requirements.values().map(|r| Node { id: r.id.clone(), refines: r.refines.clone() }).collect();
-    let up = ancestors(nodes.clone(), id.to_string());
-    let down = descendants(nodes, id.to_string());
-
-    let on_target = |link: &&Link| link.req_id == id && (clause.is_none() || link.clause == clause);
-    let claims: Vec<&Link> = index.links.iter().filter(on_target).collect();
-    // One item an anchor: an item claiming two of the clauses is shown once,
-    // naming both.
-    let of = |roles: &[Claimed]| -> Vec<Item> {
-        let mut out: Vec<(String, Item)> = Vec::new();
-        for link in claims.iter().filter(|l| roles.contains(&l.role)) {
-            let found = item(link, files);
-            match out.iter_mut().find(|(ident, _)| *ident == link.anchor.ident()) {
-                Some((_, held)) if held.role == found.role => held.claims = format!("{}, {}", held.claims, found.claims),
-                _ => out.push((link.anchor.ident(), found)),
-            }
-        }
-        out.into_iter().map(|(_, item)| item).collect()
-    };
-    let code = of(&[Claimed::Implements]);
-    let tests = of(&[Claimed::Tests]);
-    let models = of(&[Claimed::Models, Claimed::Proves, Claimed::Drt, Claimed::Pins]);
-
-    // Affected: tests claiming what refines the target, and tests naming
-    // what implements it, past those that claim the target already.
-    // An item is placed once, however many clauses its annotations name.
-    let mut placed: BTreeSet<String> =
-        claims.iter().filter(|l| l.role == Claimed::Tests).map(|l| l.anchor.ident()).collect();
-    let mut affected = Vec::new();
-    for link in index.links.iter().filter(|l| l.role == Claimed::Tests && down.contains(&l.req_id)) {
-        if placed.insert(link.anchor.ident()) {
-            affected.push(item(link, files));
-        }
-    }
-    let symbols: BTreeSet<String> = code
-        .iter()
-        .filter_map(|c| c.symbol.as_deref())
-        .map(|s| s.rsplit("::").next().unwrap_or(s).to_string())
-        .collect();
-    for link in index.links.iter().filter(|l| l.role == Claimed::Tests) {
-        if placed.contains(&link.anchor.ident()) {
-            continue;
-        }
-        let found = item(link, files);
-        if symbols.iter().any(|s| names(&found.source, s)) {
-            placed.insert(link.anchor.ident());
-            affected.push(found);
-        }
-    }
-    // A test nobody annotated still breaks: lines in test files that name an
-    // implementing item.
-    let claimed_files: BTreeSet<String> = affected.iter().chain(tests.iter()).map(|i| i.path.clone()).collect();
-    let mut uses = 0;
-    for (path, text) in files.iter().filter(|(p, _)| is_test_path(p) && !claimed_files.contains(*p)) {
-        for (n, line) in text.lines().enumerate() {
-            if uses < MOST_USES && symbols.iter().any(|s| names(line, s)) {
-                affected.push(Item {
-                    role: "uses".into(),
-                    claims: String::new(),
-                    path: path.clone(),
-                    line: n as u32 + 1,
-                    symbol: None,
-                    source: line.trim().to_string(),
-                });
-                uses += 1;
-            }
-        }
-    }
+    let (up, down) = neighbourhood(nodes, id.to_string());
+    let claims: Vec<Claim> = index.links.iter().map(|link| claim(link, files)).collect();
+    let Claimed { code, tests, models } = claims_on(claims.clone(), id.to_string(), clause.clone());
+    let files: Vec<(String, String)> = files.iter().map(|(p, t)| (p.clone(), t.clone())).collect();
+    let affected = affected(claims, id.to_string(), clause.clone(), down.clone(), files);
 
     Some(Context {
         target: target.to_string(),

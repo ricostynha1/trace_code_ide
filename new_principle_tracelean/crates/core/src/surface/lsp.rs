@@ -37,8 +37,8 @@ pub struct Position {
 /// `None` when the column falls inside a character, which is a position no
 /// buffer has and must not be rounded to a neighbouring one.
 ///
-/// @implements REQ-LSP.encoding_round_trip
-/// @drt REQ-LSP.encoding_round_trip
+/// @implements REQ-LSP.column_to_offset
+/// @drt REQ-LSP.column_to_offset
 pub fn to_byte_offset(line_text: String, character: u32, encoding: Encoding) -> Option<usize> {
     let mut counted: u32 = 0;
     for (offset, ch) in line_text.char_indices() {
@@ -60,7 +60,10 @@ pub fn to_byte_offset(line_text: String, character: u32, encoding: Encoding) -> 
 
 /// Column in `encoding` for a byte offset within `line_text`.
 ///
-/// @implements REQ-LSP.encoding_round_trip
+/// `None` when the offset is past the end or inside a character.
+///
+/// @implements REQ-LSP.offset_to_column
+/// @drt REQ-LSP.offset_to_column
 pub fn to_character(line_text: String, offset: usize, encoding: Encoding) -> Option<usize> {
     if offset > line_text.len() || !line_text.is_char_boundary(offset) {
         return None;
@@ -266,7 +269,8 @@ mod tests {
     /// The class of bug this closes: an off-by-some on exactly the lines with
     /// non-ASCII text.
     ///
-    /// @tests REQ-LSP.encoding_round_trip
+    /// @tests REQ-LSP.offset_to_column
+    /// @tests REQ-LSP.column_to_offset
     #[test]
     fn positions_round_trip_in_every_encoding() {
         for line in ["plain ascii", "héllo wörld", "emoji 😀 here", "日本語のテキスト", ""] {

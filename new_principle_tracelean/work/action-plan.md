@@ -4,6 +4,12 @@ What the 2026-10-09 review and pinning pass found, what was decided, and how to
 fix each. In order of priority. Findings per clause: [review findings](../investigations/review-findings-2026-10-09.md);
 the two harder problems explained: [structural clauses and model choice](../investigations/structural-clauses-and-model-choice.md).
 
+**Status (2026-10-10):** implemented and green: §1, §2, §4, §5, the roll-up
+reachable set (§3, Rust, Lean, DRT), coverage verdicts with waivers (§10 code), 26 pins.
+Open: §6 structural clauses with negative tests, §7 cleanup of clauses with several
+models and unmodeled clauses, §8 grammar, a `SharedRefinement` finding, the Rust
+annotation binding fix, and re-earning stale evidence (`--stale`).
+
 ## 1. Agent judgements count when a person delegated them — decided
 
 An agent's verdict counts as L2 if a named person authorised that agent to

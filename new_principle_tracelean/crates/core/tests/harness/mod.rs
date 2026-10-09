@@ -159,6 +159,7 @@ fn binding_for(req: &str, clause: &str, implementation: CallSpec) -> Binding {
         also_checks: Vec::new(),
         also_implemented_by: Vec::new(),
         floors: Vec::new(),
+        waive: Vec::new(),
         model: None,
         implementation,
     }
@@ -234,9 +235,20 @@ fn shared_rust_runner(req: &str, clause: &str, wanted: &CallSpec) -> Option<Runn
     }
 
     let shared = project_root().join("target").join("tracelean-drt-rust");
-    let rust: Vec<Binding> = declared
+    // Which ops the one Rust process carries is `shared_runners`' decision, not
+    // a filter written here: one process per language, every op of it once.
+    use tracelean_core::drt::protocol::{shared_runners, Placed};
+    let plan = shared_runners(
+        declared
+            .iter()
+            .map(|b| Placed { op: b.op(), language: b.implementation.language.clone() })
+            .collect(),
+    );
+    let ops: Vec<String> =
+        plan.into_iter().find(|s| s.language == "rust").map(|s| s.ops).unwrap_or_default();
+    let rust: Vec<Binding> = ops
         .iter()
-        .filter(|b| b.implementation.language == "rust")
+        .filter_map(|op| declared.iter().find(|b| &b.op() == op))
         .cloned()
         .collect();
     let wanted = rust_mark_of(&rust);
@@ -276,6 +288,7 @@ pub fn ts_runner(req: &str, clause: &str, entry_path: &str, scratch: &Path) -> R
         also_checks: Vec::new(),
         also_implemented_by: Vec::new(),
         floors: Vec::new(),
+        waive: Vec::new(),
         model: None,
         implementation: CallSpec {
             language: "typescript".into(),

@@ -7,9 +7,9 @@ decomposition: complete
 clauses:
   totality: Every key in every mode shall have a defined outcome, and no key shall be silently swallowed.
   outcomes_closed: An outcome shall be exactly one of entering a mode, dispatching an action, leaving a mode, or passing the key to the surface.
-  escape_pops_one: Leaving a mode shall move exactly one level toward the root.
-  escape_terminates: Repeated leaving shall reach the root mode in finitely many steps.
-  modes_defined: Every mode named as a transition target shall exist.
+  escape_pops_one: Escape shall move exactly one level toward the root; any other unbound key outside the root shall return to the root.
+  escape_terminates: Repeated Escape shall reach the root mode in finitely many steps, so a mode other than the root without a parent, or with a parent that does not exist, shall be reported at load.
+  modes_defined: Every mode named as a transition target, a binding's target or a mode's parent, shall exist.
   actions_defined: Every action named by a binding shall exist.
   actions_reachable: Every action shall be reachable from the root mode by some key sequence.
   whichkey_is_a_query: The list of available keys shall be computed from the keymap and shall not be maintained separately.

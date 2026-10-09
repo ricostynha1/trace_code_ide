@@ -45,11 +45,52 @@ pub fn create(root: &Path, holds: &Workspace) -> std::io::Result<Session> {
     let work = sessions_dir(&root).join(&id).join("work");
     std::fs::create_dir_all(&work)?;
     write_into(holds, &work)?;
+    copy_state(&root.join(".tracelean"), &work.join(".tracelean"))?;
     Ok(Session {
         id,
         root: root.to_string_lossy().to_string(),
         work: work.to_string_lossy().to_string(),
     })
+}
+
+/// What `.tracelean` holds that is one person's, not the project's: the
+/// sessions themselves, and what the editor had open.
+const NOT_COPIED: &[&str] = &["sessions", "editor.json"];
+
+/// Copy the project's own state directory into the session, so a tool in it
+/// reads the bindings and evidence the project has (`tracelean-trace` does)
+/// and may write there. Protected, so nothing written comes back.
+///
+/// @implements REQ-OBS.workspace_is_a_copy
+fn copy_state(from: &Path, to: &Path) -> std::io::Result<()> {
+    let Ok(entries) = std::fs::read_dir(from) else { return Ok(()) };
+    std::fs::create_dir_all(to)?;
+    for entry in entries.flatten() {
+        let name = entry.file_name();
+        if NOT_COPIED.iter().any(|skip| name.to_str() == Some(*skip)) {
+            continue;
+        }
+        let path = entry.path();
+        if path.is_dir() {
+            copy_tree(&path, &to.join(&name))?;
+        } else {
+            std::fs::copy(&path, to.join(&name))?;
+        }
+    }
+    Ok(())
+}
+
+fn copy_tree(from: &Path, to: &Path) -> std::io::Result<()> {
+    std::fs::create_dir_all(to)?;
+    for entry in std::fs::read_dir(from)?.flatten() {
+        let path = entry.path();
+        if path.is_dir() {
+            copy_tree(&path, &to.join(entry.file_name()))?;
+        } else {
+            std::fs::copy(&path, to.join(entry.file_name()))?;
+        }
+    }
+    Ok(())
 }
 
 /// Write the session's launcher, so the command a person copies is short.
@@ -172,11 +213,29 @@ mod tests {
         std::fs::create_dir_all(root.join(".git")).unwrap();
         std::fs::write(root.join("src/a.rs"), "a").unwrap();
         std::fs::write(root.join(".git/HEAD"), "x").unwrap();
+        std::fs::create_dir_all(root.join(".tracelean/pins")).unwrap();
+        std::fs::write(root.join(".tracelean/drt.json"), "{}").unwrap();
+        std::fs::write(root.join(".tracelean/pins/p.json"), "[]").unwrap();
+        std::fs::write(root.join(".tracelean/editor.json"), "mine").unwrap();
 
         let session = create(&root, &snapshot(&root)).unwrap();
         let work = Path::new(&session.work);
         assert_eq!(std::fs::read_to_string(work.join("src/a.rs")).unwrap(), "a");
-        assert!(!work.join(".git").exists(), "a protected path was copied");
+        // Version control is shown read-only by the launch, not copied.
+        assert!(!work.join(".git").exists(), "version control was copied");
+        // The project's state is there for a tool to read; one person's is not,
+        // and nor are the sessions, which would copy the copy into itself.
+        assert_eq!(std::fs::read_to_string(work.join(".tracelean/drt.json")).unwrap(), "{}");
+        assert!(work.join(".tracelean/pins/p.json").exists());
+        assert!(!work.join(".tracelean/editor.json").exists());
+        assert!(!work.join(".tracelean/sessions").exists());
+
+        // And the copy law holds of what the tool is given.
+        use crate::observe::effects::run_violations;
+        use crate::observe::sandbox::bound;
+        let seen = bound(&Host { git: true, ..Host::default() });
+        let law = run_violations(crate::observe::workspace::witness(&root, work, &seen, vec![]));
+        assert_eq!(law, vec![], "a session broke the copy law");
         assert_eq!(list(&root).first().map(|s| s.id.clone()), Some(session.id.clone()));
 
         // An agent writes in the copy; syncing to the original state undoes it.

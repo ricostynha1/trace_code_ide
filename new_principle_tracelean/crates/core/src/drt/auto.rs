@@ -15,9 +15,9 @@ use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
+use super::classes;
 use super::coverage::{level, verdict, Floor, Observed, Verdict};
 use super::derive::{self, Derived};
-use super::gen;
 use super::lean_runner::{self, LeanEntry};
 use super::run::{run, RunOptions, RunnerSpec};
 use super::rust_runner::{self, Entry};
@@ -282,21 +282,15 @@ fn exercise(c: &Candidate, model: &RunnerSpec, implementation: &RunnerSpec) -> O
         };
         return Outcome::Diverged { input: d.input.to_string(), model: said(&d.model), implementation: said(&d.implementation) };
     }
-    // The same stream the run drew, counted by class.
-    let mut rng = gen::Rng::new(SEED);
-    let mut reached: BTreeMap<String, u64> = BTreeMap::new();
-    for _ in 0..result.cases {
-        for s in derive::situation_of(&derived.schema, &gen::value(&derived.schema, &mut rng)) {
-            *reached.entry(s).or_default() += 1;
-        }
-    }
-    let wanted = derive::situations(&derived.schema);
-    let floors: Vec<Floor> = wanted.iter().map(|s| Floor { situation: s.clone(), at_least: 1 }).collect();
-    let observed: Vec<Observed> =
-        wanted.iter().map(|s| Observed { situation: s.clone(), reached: reached.get(s).copied().unwrap_or(0) }).collect();
-    let judged = verdict(floors, observed);
+    // The same stream the run drew, counted by class: every class of every
+    // argument must be reached (REQ-DRT-COVER.classes_reached).
+    let observed: Vec<Observed> = classes::reached(derived.schema.clone(), SEED, result.cases);
+    let floors: Vec<Floor> =
+        observed.iter().map(|o| Floor { situation: o.situation.clone(), at_least: 1 }).collect();
+    let missing: Vec<String> =
+        observed.iter().filter(|o| o.reached == 0).map(|o| o.situation.clone()).collect();
+    let judged = verdict(floors, observed, Vec::new());
     if judged != Verdict::Met {
-        let missing = wanted.into_iter().filter(|s| !reached.contains_key(s)).collect();
         return Outcome::Uncovered { missing };
     }
     let _ = level(true, judged);

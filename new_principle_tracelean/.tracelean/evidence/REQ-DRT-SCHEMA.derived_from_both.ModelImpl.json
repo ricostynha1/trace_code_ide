@@ -7,20 +7,20 @@
   "level": "L3",
   "detail": {
     "drt": {
-      "seed": 321,
-      "cases": 20000,
+      "seed": 322,
+      "cases": 60000,
       "op": "REQ-DRT-SCHEMA.derived_from_both"
     }
   },
-  "linkHash": "4412a60400ea3163",
+  "linkHash": "65662d9f8f62ad0a",
   "inputs": [
     [
       "implementation",
-      "33d4a6ef8b8a7599"
+      "13fa215d9bf311b2+d993e0d742f7b425"
     ],
     [
       "model",
-      "6b2ff6ff8b8e5376"
+      "4b07cf3e01b89cb3"
     ],
     [
       "requirement",

@@ -33,6 +33,7 @@ fn path() -> Schema {
             "src/a.rs".into(),
             "src/b.rs".into(),
             "README.md".into(),
+            ".git".into(),
             ".git/HEAD".into(),
             ".tracelean/drt.json".into(),
             "target/out".into(),
@@ -150,6 +151,7 @@ fn generation_reaches_every_violation() {
     let mut rng = gen::Rng::new(53);
     let (mut missing, mut differs, mut changed, mut escaped, mut unreported, mut clean) =
         (0u64, 0u64, 0u64, 0u64, 0u64, 0u64);
+    let (mut extra, mut protected_missing) = (0u64, 0u64);
     for _ in 0..2_000 {
         let value = gen::value(&schema, &mut rng);
         let witness: RunWitness = serde_json::from_value(value["witness"].clone())
@@ -160,8 +162,12 @@ fn generation_reaches_every_violation() {
         }
         for violation in violations {
             match violation {
+                Violation::MissingFromCopy { path } if path.starts_with(".git") || path.starts_with(".tracelean") => {
+                    protected_missing += 1
+                }
                 Violation::MissingFromCopy { .. } => missing += 1,
                 Violation::CopyDiffers { .. } => differs += 1,
+                Violation::ExtraInCopy { .. } => extra += 1,
                 Violation::RealTreeChanged { .. } => changed += 1,
                 Violation::Escaped { .. } => escaped += 1,
                 Violation::ContainmentUnreported => unreported += 1,
@@ -181,6 +187,8 @@ fn generation_reaches_every_violation() {
     let floors = vec![
         Floor { situation: "missing from copy".into(), at_least: 20 },
         Floor { situation: "copy differs".into(), at_least: 10 },
+        Floor { situation: "extra in copy".into(), at_least: 20 },
+        Floor { situation: "protected root unseen".into(), at_least: 20 },
         Floor { situation: "real tree changed".into(), at_least: 20 },
         Floor { situation: "escaped".into(), at_least: 20 },
         Floor { situation: "containment unreported".into(), at_least: 20 },
@@ -189,12 +197,14 @@ fn generation_reaches_every_violation() {
     let observed = vec![
         Observed { situation: "missing from copy".into(), reached: missing },
         Observed { situation: "copy differs".into(), reached: differs },
+        Observed { situation: "extra in copy".into(), reached: extra },
+        Observed { situation: "protected root unseen".into(), reached: protected_missing },
         Observed { situation: "real tree changed".into(), reached: changed },
         Observed { situation: "escaped".into(), reached: escaped },
         Observed { situation: "containment unreported".into(), reached: unreported },
         Observed { situation: "no violation at all".into(), reached: clean },
     ];
-    let reached = verdict(floors, observed);
+    let reached = verdict(floors, observed, Vec::new());
     assert_eq!(reached, Verdict::Met, "the run did not reach its declared floor");
     assert_eq!(
         level(true, reached),

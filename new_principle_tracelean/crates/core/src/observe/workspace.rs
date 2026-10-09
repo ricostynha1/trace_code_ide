@@ -19,7 +19,7 @@ use crate::history::command::Workspace;
 
 use super::effects::{CopyWitness, RunWitness};
 use super::mirror::FileState;
-use super::policy::{is_mirrored, Capability};
+use super::policy::{is_mirrored, Capability, PROTECTED};
 
 /// The containment mechanisms this project knows how to name, best first.
 ///
@@ -43,15 +43,28 @@ pub fn snapshot(root: &Path) -> Workspace {
     survey(root).0
 }
 
-/// Every mirrored file under `root`, and the paths that exist and are not text.
+/// A short digest of a file's bytes (FNV-1a): enough to tell a changed binary
+/// from an unchanged one, which is all it is for.
+fn bytes_hash(bytes: &[u8]) -> String {
+    let mut h: u64 = 0xcbf2_9ce4_8422_2325;
+    for b in bytes {
+        h ^= *b as u64;
+        h = h.wrapping_mul(0x0000_0100_0000_01B3);
+    }
+    format!("{h:016x}")
+}
+
+/// Every mirrored file under `root`, and the paths that exist and are not
+/// text, each with a hash of its bytes.
 ///
 /// The second list is what `snapshot` used to drop on the floor. A file the
 /// editor cannot represent is a change the user still needs to hear about, and
-/// silently omitting it means a tool can alter a binary and nothing says so.
+/// silently omitting it means a tool can alter a binary and nothing says so;
+/// without its hash, two versions of it were indistinguishable.
 ///
 /// @implements REQ-MIRROR.binary_handled
 /// @implements REQ-OBS.workspace_is_a_copy
-pub fn survey(root: &Path) -> (Workspace, Vec<String>) {
+pub fn survey(root: &Path) -> (Workspace, Vec<(String, String)>) {
     let mut out = Workspace::new();
     let mut stack = vec![root.to_path_buf()];
     let mut files: Vec<PathBuf> = Vec::new();
@@ -87,7 +100,10 @@ pub fn survey(root: &Path) -> (Workspace, Vec<String>) {
             // this is the case `REQ-MIRROR.binary_handled` exists for, and a
             // snapshot that omitted it would make a change to a binary
             // invisible rather than unmirrorable.
-            Err(_) => opaque.push(rel.to_string()),
+            Err(_) => {
+                let hash = std::fs::read(&path).map(|bytes| bytes_hash(&bytes)).unwrap_or_default();
+                opaque.push((rel.to_string(), hash));
+            }
         }
     }
     (out, opaque)
@@ -96,11 +112,13 @@ pub fn survey(root: &Path) -> (Workspace, Vec<String>) {
 /// What one path looked like in a survey.
 ///
 /// @implements REQ-MIRROR.binary_handled
-pub fn state_of(survey: &(Workspace, Vec<String>), path: &str) -> FileState {
+pub fn state_of(survey: &(Workspace, Vec<(String, String)>), path: &str) -> FileState {
     match survey.0.files.get(path) {
         Some(content) => FileState::Text { content: content.clone() },
-        None if survey.1.iter().any(|p| p == path) => FileState::Opaque,
-        None => FileState::Absent,
+        None => match survey.1.iter().find(|(p, _)| p == path) {
+            Some((_, hash)) => FileState::Opaque { hash: hash.clone() },
+            None => FileState::Absent,
+        },
     }
 }
 
@@ -144,19 +162,39 @@ pub fn probe_containment() -> Capability {
     }
 }
 
+/// The protected roots (`.git`, `.tracelean`) present under `dir`.
+pub fn protected_roots(dir: &Path) -> Vec<String> {
+    PROTECTED.iter().filter(|root| dir.join(root).exists()).map(|root| root.to_string()).collect()
+}
+
+/// A tree as the copy law sees it: its mirrored files, and each of `roots` as
+/// one entry whose content is not read — whether a tool can see version
+/// control is the copy's business, what it does inside is its own.
+pub fn view(dir: &Path, roots: &[String]) -> Workspace {
+    let mut out = snapshot(dir);
+    for root in roots {
+        out.files.insert(root.clone(), String::new());
+    }
+    out
+}
+
 /// Take the three snapshots a copy law is judged on.
 ///
-/// The caller supplies the paths the run was observed writing to; this module
-/// has no way to know them, and inventing them would make the escape law a
-/// claim about nothing.
+/// The caller supplies the paths the run was observed writing to, and the
+/// protected roots the sandbox shows the tool from the real tree
+/// (`sandbox::bound`); this module has no way to know either, and inventing
+/// them would make the laws claims about nothing.
 ///
 /// @implements ARCH-EFFECT-LAW.law_checked
-pub fn witness(root: &Path, workspace_root: &Path, writes: Vec<String>) -> RunWitness {
+pub fn witness(root: &Path, workspace_root: &Path, bound: &[String], writes: Vec<String>) -> RunWitness {
+    let mut seen = protected_roots(workspace_root);
+    // A bind of a root the real tree does not have shows the tool nothing.
+    seen.extend(bound.iter().filter(|name| root.join(name).exists()).cloned());
     RunWitness {
         copy: CopyWitness {
-            before: snapshot(root),
-            workspace: snapshot(workspace_root),
-            after: snapshot(root),
+            before: view(root, &protected_roots(root)),
+            workspace: view(workspace_root, &seen),
+            after: view(root, &protected_roots(root)),
         },
         writes,
         containment: probe_containment(),
@@ -195,15 +233,25 @@ mod tests {
 
         let before = snapshot(&root);
         // The protected and regenerable files are not in the snapshot at all,
-        // which is why they are neither copied nor compared.
+        // which is why they are not copied as files.
         assert_eq!(before.files.len(), 2);
         write_into(&before, &sandbox).unwrap();
 
-        let observed = witness(&root, &sandbox, vec![]);
+        // The sandbox shows the tool the real `.git`, read-only.
+        let bound = vec![".git".to_string()];
+        let observed = witness(&root, &sandbox, &bound, vec![]);
         assert_eq!(
             run_violations(observed),
             vec![],
             "a faithful copy of a real tree broke a law"
+        );
+
+        // Without that, the tool cannot see the project's version control, and
+        // the copy is not one.
+        use crate::observe::effects::Violation;
+        assert_eq!(
+            run_violations(witness(&root, &sandbox, &[], vec![])),
+            vec![Violation::MissingFromCopy { path: ".git".into() }]
         );
 
         let _ = std::fs::remove_dir_all(&base);
@@ -226,7 +274,7 @@ mod tests {
         std::fs::write(root.join("b.rs").as_path(), "y").unwrap();
         std::fs::write(sandbox.join("a.rs").as_path(), "x").unwrap();
 
-        let violations = run_violations(witness(&root, &sandbox, vec!["/etc/passwd".into()]));
+        let violations = run_violations(witness(&root, &sandbox, &[], vec!["/etc/passwd".into()]));
         assert!(violations.contains(&Violation::MissingFromCopy { path: "b.rs".into() }));
         assert!(violations.contains(&Violation::Escaped { path: "/etc/passwd".into() }));
 
@@ -253,23 +301,24 @@ mod tests {
 
         let before = survey(&base);
         assert_eq!(before.0.files.len(), 1, "the text file was not surveyed");
-        assert_eq!(before.1, vec!["logo.png".to_string()], "the binary was dropped");
+        assert_eq!(before.1.iter().map(|(p, _)| p.as_str()).collect::<Vec<_>>(), vec!["logo.png"], "the binary was dropped");
 
-        assert_eq!(
-            state_of(&before, "logo.png"),
-            FileState::Opaque,
+        let was = state_of(&before, "logo.png");
+        assert!(
+            matches!(was, FileState::Opaque { .. }),
             "a binary read as absent, which is how a change to it disappears"
         );
         assert_eq!(state_of(&before, "a.rs"), FileState::Text { content: "fn a() {}".into() });
         assert_eq!(state_of(&before, "nothing.rs"), FileState::Absent);
 
-        // And a change to it is reported without being mirrored.
-        let changes = change_at(
-            "logo.png".into(),
-            FileState::Opaque,
-            FileState::Text { content: "text now".into() },
-        );
+        // And a change to it is reported without being mirrored: to text, and
+        // to other bytes, which is the change a hashless state could not see.
+        let changes = change_at("logo.png".into(), was.clone(), FileState::Text { content: "text now".into() });
         assert_eq!(changes, vec![Change::ReportOnly { path: "logo.png".into() }]);
+        std::fs::write(base.join("logo.png"), [0x89u8, 0x50, 0xff, 0xfe, 0x01]).unwrap();
+        let now = state_of(&survey(&base), "logo.png");
+        assert_eq!(change_at("logo.png".into(), was.clone(), now), vec![Change::ReportOnly { path: "logo.png".into() }]);
+        assert!(change_at("logo.png".into(), was.clone(), was).is_empty());
 
         let _ = std::fs::remove_dir_all(&base);
     }

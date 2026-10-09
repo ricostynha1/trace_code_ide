@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-DRT-RUST",
+    "clause": "types_inferred",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.RustRunner::an_arm_names_no_type",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "43748beea4346ec8",
+  "inputs": [
+    [
+      "model",
+      "e220b1c1a1d939a6"
+    ],
+    [
+      "requirement",
+      "d40604b7f460dc6f"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

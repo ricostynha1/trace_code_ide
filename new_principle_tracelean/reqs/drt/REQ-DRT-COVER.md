@@ -9,6 +9,10 @@ clauses:
   floor_unmet_is_not_pass: A run below its floor shall not produce L3 evidence.
   law_coverage: A law shall record whether generated cases reached the situation it constrains.
   vacuous_named: A law satisfied only because no case reached its precondition shall be reported as vacuous, not as passing.
+  classes_reached: The argument classes a run's cases reach shall be listed from the binding's input shape, so a class no case reached is a named gap.
+  lines_run: The implementing lines a run executed shall be recorded, so a line no case ran is a named gap.
+  waiver_reasoned: A coverage waiver shall carry a reason, and a waiver without one shall not count.
+  waiver_unused_reported: A waiver covering a situation the run did reach shall be reported as unused.
 ---
 
 # Coverage qualifies a passing run
@@ -17,8 +21,8 @@ A run that found nothing must have had a chance of finding something — the sam
 qualification a proof needs, and why `REQ-STRENGTH` exists for L4 and this for
 L3.
 
-`law_coverage` and `vacuous_named` are open work, and the reason this is `draft`.
-Once effects are checked by their laws, a per-binding floor is insufficient: "a
-protected path is never written" is satisfied perfectly by a run where no case
-named a protected path. The floor must be stated per law, over that law's
-precondition, and that is not yet designed.
+The target is complete coverage: every argument class reached and every
+implementing line run. Anything less is waived with a reason (ADR-0016).
+A per-binding floor alone is insufficient for laws: "a protected path is never
+written" holds perfectly in a run where no case named a protected path, so the
+floor is also stated per law, over its precondition.

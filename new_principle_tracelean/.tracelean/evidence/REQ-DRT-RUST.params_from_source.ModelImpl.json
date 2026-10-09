@@ -8,7 +8,7 @@
   "detail": {
     "drt": {
       "seed": 64,
-      "cases": 3000,
+      "cases": 4000,
       "op": "REQ-DRT-RUST.params_from_source"
     }
   },
@@ -16,11 +16,11 @@
   "inputs": [
     [
       "implementation",
-      "33697d66d10ea7f2+6468d7394e5921bb+66f99267d36ee4b8"
+      "33697d66d10ea7f2+6468d7394e5921bb+e022b9e8c3ddcaed"
     ],
     [
       "model",
-      "3705ac7787f83732"
+      "76463bde45524054"
     ],
     [
       "requirement",

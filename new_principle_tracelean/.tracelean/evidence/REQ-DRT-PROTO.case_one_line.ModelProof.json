@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-DRT-PROTO",
+    "clause": "case_one_line",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Protocol::a_newline_in_the_input_is_escaped",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "8262f7dc6cea7b37",
+  "inputs": [
+    [
+      "model",
+      "fec732bf5fa6209d"
+    ],
+    [
+      "requirement",
+      "c7a15a671459f411"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

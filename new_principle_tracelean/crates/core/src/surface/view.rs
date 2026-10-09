@@ -111,6 +111,22 @@ pub struct Span {
     pub actions: Vec<String>,
 }
 
+/// An action as a span carries it: a name the keymap dispatches, optionally
+/// followed by one space and the target it is about (`screen.show file:a.rs`).
+///
+/// The target is for a span whose text does not spell what it is about — a
+/// tab's text is a number and a title, never its buffer's identity. Without
+/// it the shell had to work the target out from the row, which is a second
+/// path for the action (`REQ-SCREEN.strip_is_the_opened_set`).
+pub fn action_name(action: &str) -> &str {
+    action.split_once(' ').map_or(action, |(name, _)| name)
+}
+
+/// The target an action carries after its name, if any. See `action_name`.
+pub fn action_target(action: &str) -> Option<&str> {
+    action.split_once(' ').map(|(_, target)| target)
+}
+
 /// What is on screen, or could be.
 ///
 /// @implements REQ-VIEW.one_representation

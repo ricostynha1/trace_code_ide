@@ -1005,7 +1005,7 @@ fn a_modelled_clause_opens_its_judge_prompt_to_copy() {
     editor.choose(DOCUMENT, shown[..name].chars().count(), "trace.judge", None, None);
     let prompt = shown_in(&editor, DOCUMENT);
     assert!(prompt.contains("It shall hold.") && prompt.contains("def holds"), "{prompt}");
-    editor.perform(tracelean_core::surface::act::dispatch("file.copy".into(), editor.focus(), editor.workspace()));
+    editor.perform(tracelean_core::surface::act::dispatch("file.copy".into(), editor.focus(), editor.workspace(), Vec::new()));
     assert_eq!(editor.clipboard.as_deref(), Some(editor.buffer().text.as_str()));
     let _ = std::fs::remove_dir_all(&root);
 }

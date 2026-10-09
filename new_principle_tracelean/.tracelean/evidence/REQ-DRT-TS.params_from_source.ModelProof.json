@@ -7,15 +7,15 @@
   "level": "L4",
   "detail": {
     "proof": {
-      "theoremName": "TraceLean.Signature::a_pattern_parameter_is_refused",
+      "theoremName": "TraceLean.Signature::a_comment_this_and_a_second_declaration_do_not_reorder",
       "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
     }
   },
-  "linkHash": "c603aec8fda06ae9",
+  "linkHash": "2f826ce0a29befe5",
   "inputs": [
     [
       "model",
-      "565272414f63ae4a+7185a5312eb0532f"
+      "1858205b7022e979"
     ],
     [
       "requirement",

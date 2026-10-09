@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-DRT-COVER",
+    "clause": "waiver_reasoned",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Coverage::a_waiver_without_a_reason_excuses_nothing",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "7d4be34a674d5c9d",
+  "inputs": [
+    [
+      "model",
+      "0d35122a8c37465e"
+    ],
+    [
+      "requirement",
+      "ccb9a407b9d66b52"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

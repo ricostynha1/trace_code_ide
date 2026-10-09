@@ -47,37 +47,42 @@ private def mirrorStep (before after : Workspace) (path : String)
 The commands that carry `before` to `after`, for the paths that are mirrored.
 
 Ordered so that applying them in sequence never depends on a state that does not
-yet exist: deletions first, then creations, then content changes.
-
-@models REQ-MIRROR.diff_is_pure
-@models REQ-MIRROR.minimal
-@models REQ-MIRROR.ordering_defined
--/
+yet exist: deletions first, then creations, then content changes. -/
 def mutations (before after : Workspace) : List Command :=
   let parts := (touchedPaths before after).map (mirrorStep before after)
   (parts.bind (·.1)) ++ (parts.bind (·.2.1)) ++ (parts.bind (·.2.2))
 
-/-- Apply one mirrored command, keeping the state a refusal left untouched. -/
-private def mirrorApply (acc : Workspace) (c : Command) : Workspace :=
-  match apply acc c with
-  | .ok next => next
-  | .error _ => acc
+/-- What mirroring reached, and every derived command that was refused on the
+way. A refusal means the mutations did not fit the state they were derived
+from -- the law failing -- and is named rather than skipped. -/
+structure Mirroring where
+  reached : Workspace
+  refused : List Command
+  deriving Repr, Inhabited, ToJson, FromJson
+
+/-- Apply one mirrored command; a refusal leaves the state as it was and is
+recorded. -/
+private def mirrorApply (acc : Mirroring) (c : Command) : Mirroring :=
+  match apply acc.reached c with
+  | .ok next => { acc with reached := next }
+  | .error _ => { acc with refused := acc.refused ++ [c] }
 
 /--
-The state mirroring reaches.
+The state mirroring reaches, and what was refused.
 
 The law in one call, so both sides of a differential test answer the same
-question.
+question: `reached` is the observed tree on every mirrored path and the original
+on every other, and `refused` is empty.
 
 @models REQ-MIRROR.apply_reproduces
 -/
-def mirrored (before after : Workspace) : Workspace :=
+def mirrored (before after : Workspace) : Mirroring :=
   let b := before.canon
   let a := after.canon
   -- The step is a definition rather than a lambda holding a `match` over
   -- several lines, which the grammar that reads these annotations cannot read
   -- (ADR-0008).
-  (mutations b a).foldl mirrorApply b
+  (mutations b a).foldl mirrorApply { reached := b, refused := [] }
 
 /-- `mutations`, over canonical snapshots.
 
@@ -85,6 +90,9 @@ A `Workspace` here is a list, so it admits a state a real tree cannot have: one
 path listed twice. Canonicalising first is what `mirrored` already does, and the
 comparison is against an implementation whose workspace is a map -- so this is
 the same question asked of both, not a concession by either.
+
+Applying them never depends on a state that does not yet exist: deletions
+first, then creations, then content changes.
 
 @models REQ-MIRROR.diff_is_pure
 @models REQ-MIRROR.minimal
@@ -105,12 +113,17 @@ use, and aged out.
 -/
 
 /-- A write this system performed, to be ignored when it is observed coming
-back. -/
+back.
+
+One write, one suppression: a matching observation consumes it whole. How long
+it may wait for that observation is a separate count, `age`, spent by `expire`
+and never by a match -- one field serving as both let a write with rounds to
+spare suppress as many observations as it had rounds. -/
 structure SelfWrite where
   path : String
   content : String
-  /-- Observations this may still suppress. -/
-  remaining : Nat
+  /-- Rounds this may still wait to be observed before it expires. -/
+  age : Nat
   deriving Repr, DecidableEq, Inhabited, ToJson, FromJson
 
 /-- Whether an observation was this system's own write, and what is left
@@ -127,8 +140,9 @@ def decrement (n : Nat) : Nat := n - 1
 Whether an observation is this system's own write coming back, and the pending
 set with that suppression consumed.
 
-At most one suppression is spent per observation, and it is the first match in
-order: two identical pending writes suppress two observations, not one.
+One pending write is spent per observation, the first match in order, and it is
+removed whatever its age: two identical pending writes suppress two
+observations, one suppresses one.
 
 @models REQ-SELFWRITE.own_writes_ignored
 @models REQ-SELFWRITE.suppression_is_consumed
@@ -137,11 +151,8 @@ order: two identical pending writes suppress two observations, not one.
 -/
 def suppress (pending : List SelfWrite) (path content : String) : Suppression :=
   let step := fun (acc : Bool × List SelfWrite) (write : SelfWrite) =>
-    if !acc.1 && write.path == path && write.content == content then
-      let left := decrement write.remaining
-      (true, if left == 0 then acc.2 else acc.2 ++ [{ write with remaining := left }])
-    else
-      (acc.1, acc.2 ++ [write])
+    if !acc.1 && write.path == path && write.content == content then (true, acc.2)
+    else (acc.1, acc.2 ++ [write])
   let result := pending.foldl step (false, [])
   { suppressed := result.1, pending := result.2 }
 
@@ -149,7 +160,7 @@ def suppress (pending : List SelfWrite) (path content : String) : Suppression :=
 
 @models REQ-SELFWRITE.no_deadlock -/
 def expire (pending : List SelfWrite) : List SelfWrite :=
-  (pending.map (fun w => { w with remaining := decrement w.remaining })).filter (·.remaining != 0)
+  (pending.map (fun w => { w with age := decrement w.age })).filter (·.age != 0)
 
 /-- An observation matching nothing pending is external, and leaves the pending
 set exactly as it was.
@@ -158,6 +169,16 @@ set exactly as it was.
 theorem nothing_pending_is_external (path content : String) :
     suppress [] path content = { suppressed := false, pending := [] } := by
   rfl
+
+/-- A write with rounds to spare suppresses the first observation of it and not
+the second: the case the old single counter got wrong.
+
+@proves REQ-SELFWRITE.suppression_is_consumed -/
+theorem one_write_suppresses_one_observation (path content : String) :
+    (suppress [{ path := path, content := content, age := 3 }] path content).suppressed = true ∧
+    (suppress (suppress [{ path := path, content := content, age := 3 }] path content).pending
+      path content).suppressed = false := by
+  simp [suppress]
 
 /-! ## Files the editor cannot represent
 
@@ -176,8 +197,9 @@ they cannot review in place.
 inductive FileState where
   | absent
   | text (content : String)
-  /-- Present, and not representable as text. -/
-  | opaque
+  /-- Present, and not representable as text: known by a hash of its bytes, so
+  that a changed binary can be told from an unchanged one. -/
+  | opaque (hash : String)
   deriving Repr, DecidableEq, Inhabited, ToJson, FromJson
 
 /-- What the mirror does about one path. -/
@@ -194,18 +216,17 @@ inductive Change where
 What the mirror does about one path, given what the two snapshots saw.
 
 @models REQ-MIRROR.binary_handled
-@models REQ-MIRROR.protected_excluded
 -/
 def changeAt (path : String) (before after : FileState) : List Change :=
   if !isMirrored path then []
   else
     match before, after with
     | .absent, .absent => []
-    -- Two opaque snapshots are indistinguishable to this layer, so the honest
-    -- answer is that nothing is known to have changed.
-    | .opaque, .opaque => []
-    | .opaque, _ => [.reportOnly path]
-    | _, .opaque => [.reportOnly path]
+    -- Two opaque snapshots are told apart by their hashes: the same bytes are
+    -- no change, different bytes are one, reported.
+    | .opaque old, .opaque new => if old == new then [] else [.reportOnly path]
+    | .opaque _, _ => [.reportOnly path]
+    | _, .opaque _ => [.reportOnly path]
     | .absent, .text content =>
       Change.mirror (Command.createFile path) ::
         (if content == "" then [] else [.mirror (Command.insert path 0 content)])
@@ -226,9 +247,22 @@ it. Reported, but never turned into a command that would write its bytes into a
 text buffer and corrupt it on the way back.
 
 @proves REQ-MIRROR.binary_handled -/
-theorem an_opaque_file_is_never_mirrored (path : String) (after : FileState) :
-    (changeAt path .opaque after).all Change.isReportOnly = true := by
+theorem an_opaque_file_is_never_mirrored (path hash : String) (after : FileState) :
+    (changeAt path (.opaque hash) after).all Change.isReportOnly = true := by
   unfold changeAt
-  cases after <;> split <;> simp [Change.isReportOnly]
+  cases after
+  all_goals split
+  all_goals simp [Change.isReportOnly]
+  all_goals split
+  all_goals simp [Change.isReportOnly]
+
+/-- A binary whose bytes changed between snapshots is reported. Before the hash
+it was not: two opaque snapshots were the same snapshot.
+
+@proves REQ-MIRROR.binary_handled -/
+theorem a_changed_binary_is_reported :
+    (changeAt "logo.png" (.opaque "1") (.opaque "2")).length = 1 ∧
+    (changeAt "logo.png" (.opaque "1") (.opaque "1")).length = 0 := by
+  native_decide
 
 end TraceLean.Mirror

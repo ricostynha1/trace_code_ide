@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-DRT-PROTO",
+    "clause": "runner_shared",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Protocol::one_language_one_runner",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "f6019c1bab53eb0c",
+  "inputs": [
+    [
+      "model",
+      "19ba9a69554ca2c8"
+    ],
+    [
+      "requirement",
+      "e5346fcb81fb2829"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

@@ -7,7 +7,7 @@
   "level": "L4",
   "detail": {
     "proof": {
-      "theoremName": "TraceLean.Coverage::nothing_reached_is_vacuous_not_short",
+      "theoremName": "TraceLean.Coverage::every_gap_is_reported_and_zero_is_vacuous",
       "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
     }
   },
@@ -15,7 +15,7 @@
   "inputs": [
     [
       "model",
-      "562694efc2002317"
+      "0d35122a8c37465e"
     ],
     [
       "requirement",

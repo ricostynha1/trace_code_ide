@@ -1,0 +1,30 @@
+{
+  "key": {
+    "reqId": "REQ-DRT-PROTO",
+    "clause": "ops_unique",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 23,
+      "cases": 2000,
+      "op": "REQ-DRT-PROTO.ops_unique"
+    }
+  },
+  "linkHash": "dd7b8cf2c7a73f2e",
+  "inputs": [
+    [
+      "implementation",
+      "cada1eca93330079+ef386bcc2888a4fa"
+    ],
+    [
+      "model",
+      "9b2ae0dec8de59b8"
+    ],
+    [
+      "requirement",
+      "7423db5056a673ee"
+    ]
+  ]
+}

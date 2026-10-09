@@ -2,12 +2,14 @@
 
 use std::io::{BufRead, BufReader, Write};
 use std::path::PathBuf;
-use std::process::{Child, ChildStdin, ChildStdout, Command, Stdio};
+use std::process::{Child, ChildStdin, Command, Stdio};
+use std::sync::mpsc::{self, Receiver, RecvTimeoutError};
+use std::time::Duration;
 
 use serde_json::Value;
 
 use super::gen::{self, Rng};
-use super::protocol::{self, Heard, Reply, RunnerError};
+use super::protocol::{self, Event, Reply, RunnerError};
 use super::schema::Schema;
 
 /// How to start one side.
@@ -17,11 +19,21 @@ pub struct RunnerSpec {
     pub cwd: Option<PathBuf>,
 }
 
+/// How long one case may take before its runner is declared timed out.
+///
+/// Generous: a model is compiled and a case costs microseconds, so anything
+/// near this is a runner stuck in a loop, not a slow one.
+pub const REPLY_TIMEOUT: Duration = Duration::from_secs(120);
+
 /// A live runner process.
+///
+/// Its output is read on a thread of its own and handed over line by line, so
+/// that waiting for a reply can stop at `REPLY_TIMEOUT` instead of blocking
+/// forever on a runner that never answers.
 pub struct Runner {
     child: Child,
     stdin: ChildStdin,
-    stdout: BufReader<ChildStdout>,
+    lines: Receiver<std::io::Result<String>>,
 }
 
 impl Runner {
@@ -34,42 +46,53 @@ impl Runner {
         if let Some(cwd) = &spec.cwd {
             command.current_dir(cwd);
         }
-        let mut child = command.spawn().map_err(|e| RunnerError::Spawn(e.to_string()))?;
+        let mut child = match command.spawn() {
+            Ok(child) => child,
+            Err(e) => {
+                let failed = protocol::outcome(Event::CouldNotStart { reason: e.to_string() });
+                return Err(protocol::into_reply(failed, "").err().unwrap_or(RunnerError::Spawn(e.to_string())));
+            }
+        };
         let stdin = child.stdin.take().expect("piped");
-        let stdout = BufReader::new(child.stdout.take().expect("piped"));
-        Ok(Runner { child, stdin, stdout })
+        let mut stdout = BufReader::new(child.stdout.take().expect("piped"));
+        let (send, lines) = mpsc::channel();
+        std::thread::spawn(move || loop {
+            let mut line = String::new();
+            match stdout.read_line(&mut line) {
+                // The end of its output: dropping the sender says so.
+                Ok(0) => break,
+                Ok(_) => {
+                    if send.send(Ok(line)).is_err() {
+                        break;
+                    }
+                }
+                Err(e) => {
+                    let _ = send.send(Err(e));
+                    break;
+                }
+            }
+        });
+        Ok(Runner { child, stdin, lines })
     }
 
     /// Ask one case and read one reply.
+    ///
+    /// What happened is put into an `Event` and `protocol::outcome` decides
+    /// what it means — a total function, differentially tested. What is left
+    /// here is the IO and turning that conclusion into this function's result.
     pub fn ask(&mut self, case: u64, op: &str, input: &Value) -> Result<Reply, RunnerError> {
-        let line = serde_json::json!({"case": case, "op": op, "input": input});
-        writeln!(self.stdin, "{line}").map_err(|e| RunnerError::Died(e.to_string()))?;
-        self.stdin.flush().map_err(|e| RunnerError::Died(e.to_string()))?;
-
-        let mut reply = String::new();
-        match self.stdout.read_line(&mut reply) {
-            Ok(0) => return Err(RunnerError::Died("closed its pipe".to_string())),
-            Ok(_) => {}
-            Err(e) => return Err(RunnerError::Died(e.to_string())),
-        }
-        // Every way this line can fail is decided by `hear`, which is a total
-        // function and is differentially tested. What is left here is turning
-        // its conclusion into this function's error type.
-        match crate::drt::protocol::hear(case, reply.clone()) {
-            Heard::Answered { case_number, output, error } => {
-                Ok(Reply { case: case_number, output, error })
-            }
-            Heard::WrongCase { expected, got } => Err(RunnerError::Protocol(format!(
-                "runner answered case {got} when case {expected} was asked"
-            ))),
-            Heard::NotAReply { reason } => Err(RunnerError::Protocol(format!(
-                "{reason:?}: {}",
-                reply.trim()
-            ))),
-            Heard::NotExclusive { .. } => Err(RunnerError::Protocol(
-                "a reply carried both an output and an error, or neither".to_string(),
-            )),
-        }
+        let line = protocol::case_line(case, op.to_string(), input.clone());
+        let written = writeln!(self.stdin, "{line}").and_then(|()| self.stdin.flush());
+        let (event, reply) = match written {
+            Err(e) => (Event::PipeBroke { reason: e.to_string() }, String::new()),
+            Ok(()) => match self.lines.recv_timeout(REPLY_TIMEOUT) {
+                Ok(Ok(reply)) => (Event::Read { expected: case, got: Some(reply.clone()) }, reply),
+                Ok(Err(e)) => (Event::PipeBroke { reason: e.to_string() }, String::new()),
+                Err(RecvTimeoutError::Timeout) => (Event::NoReplyInTime, String::new()),
+                Err(RecvTimeoutError::Disconnected) => (Event::Read { expected: case, got: None }, String::new()),
+            },
+        };
+        protocol::into_reply(protocol::outcome(event), &reply)
     }
 }
 
@@ -95,6 +118,12 @@ pub struct DrtResult {
     pub seed: u64,
     pub cases: u64,
     pub divergence: Option<Divergence>,
+    /// The shape the cases were drawn from, so the run can be replayed.
+    pub schema: Schema,
+    /// How many of the cases asked reached each class of the arguments
+    /// (`classes::reached`): the coverage the run reached, beside its count
+    /// and its seed.
+    pub reached: Vec<super::coverage::Observed>,
 }
 
 impl DrtResult {
@@ -168,6 +197,8 @@ pub fn run(
                 seed: options.seed,
                 cases: case,
                 divergence: Some(reduced),
+                schema: schema.clone(),
+                reached: super::classes::reached(schema.clone(), options.seed, case),
             });
         }
     }
@@ -177,6 +208,8 @@ pub fn run(
         seed: options.seed,
         cases: options.cases,
         divergence: None,
+        schema: schema.clone(),
+        reached: super::classes::reached(schema.clone(), options.seed, options.cases),
     })
 }
 

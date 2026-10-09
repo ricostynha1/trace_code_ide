@@ -290,16 +290,16 @@ fn encoding_input() -> Schema {
     ])
 }
 
-/// @drt REQ-LSP.encoding_round_trip
-/// @tests REQ-LSP.encoding_round_trip
+/// @drt REQ-LSP.column_to_offset
+/// @tests REQ-LSP.column_to_offset
 #[test]
 #[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
 fn model_and_implementation_agree_on_position_encoding() {
     let scratch = harness::scratch("lsp");
-    let op = "REQ-LSP.encoding_round_trip";
+    let op = "REQ-LSP.column_to_offset";
     let implementation = harness::rust_runner_with_params(
         "REQ-LSP",
-        "encoding_round_trip",
+        "column_to_offset",
         "crates/core/src/surface/lsp.rs::to_byte_offset",
         &[("lineText", "line_text")],
         &scratch,
@@ -352,10 +352,96 @@ fn generation_reaches_positions_where_the_encodings_differ() {
         }
     }
     support::covered(
-        "REQ-LSP.encoding_round_trip",
+        "REQ-LSP.column_to_offset",
         &[
             ("the encodings disagreed", differing),
             ("a position inside a character or past the end", inside),
+        ],
+    );
+}
+
+/// The same lines, read the other way: a byte offset in, a column out.
+fn offset_input() -> Schema {
+    let Schema::Struct { mut fields } = encoding_input() else { unreachable!() };
+    fields.remove("character");
+    fields.insert("offset".to_string(), Schema::Nat { max: Some(10), edges: vec![0, 1, 2, 3] });
+    Schema::Struct { fields }
+}
+
+/// @drt REQ-LSP.offset_to_column
+/// @tests REQ-LSP.offset_to_column
+#[test]
+#[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
+fn model_and_implementation_agree_on_columns_for_offsets() {
+    let scratch = harness::scratch("lsp-column");
+    let op = "REQ-LSP.offset_to_column";
+    let implementation = harness::rust_runner_with_params(
+        "REQ-LSP",
+        "offset_to_column",
+        "crates/core/src/surface/lsp.rs::to_character",
+        &[("lineText", "line_text")],
+        &scratch,
+    );
+    let model = harness::lean_runner(
+        "TraceLean.Lsp",
+        "TraceLean.Lsp.toCharacter",
+        op,
+        &["lineText", "offset", "encoding"],
+        &scratch,
+    );
+
+    let result = run(
+        op,
+        &offset_input(),
+        &model,
+        &implementation,
+        RunOptions { seed: 32, cases: 2_000, shrink_rounds: 100 },
+    )
+    .expect("both runners answer");
+
+    support::agreed(&result);
+
+    let _ = std::fs::remove_dir_all(&scratch);
+}
+
+/// An offset inside a character is the case a careless conversion rounds, and
+/// one past the end the case it clamps; both must be reached, and wherever a
+/// column comes back, converting it back must return the offset.
+///
+/// @tests REQ-LSP.offset_to_column
+/// @tests REQ-DRT-COVER.law_coverage
+#[test]
+fn generation_reaches_offsets_inside_characters_and_they_round_trip() {
+    use tracelean_core::drt::gen;
+    use tracelean_core::surface::lsp::{to_byte_offset, to_character, Encoding};
+
+    let schema = offset_input();
+    let mut rng = gen::Rng::new(32);
+    let (mut inside, mut past, mut answered) = (0, 0, 0);
+    for _ in 0..2_000 {
+        let v = gen::value(&schema, &mut rng);
+        let line = v["lineText"].as_str().unwrap_or_default().to_string();
+        let offset = v["offset"].as_u64().unwrap_or(0) as usize;
+        let encoding: Encoding = serde_json::from_value(v["encoding"].clone()).unwrap();
+        match to_character(line.clone(), offset, encoding) {
+            Some(column) => {
+                answered += 1;
+                assert_eq!(
+                    to_byte_offset(line.clone(), column as u32, encoding),
+                    Some(offset),
+                    "{line:?} at {offset} in {encoding:?} does not round-trip"
+                );
+            }
+            None if offset > line.len() => past += 1,
+            None => inside += 1,
+        }
+    }
+    support::covered(
+        "REQ-LSP.offset_to_column",
+        &[
+            ("an offset inside a character", inside),
+            ("an offset past the end", past),
+            ("an offset with a column", answered),
         ],
     );
 }

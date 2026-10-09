@@ -191,6 +191,22 @@ decreasing_by
   exact Nat.lt_trans (List.sizeOf_lt_of_mem c.property) (by omega)
 
 /--
+What a command is about, as a row of waiting changes names it: the file it
+edits, makes or deletes, `from → to` for a rename, and a batch's parts joined
+by commas. Recursion as `inverse` has it, for the same reason.
+-/
+def touched : Command → String
+  | .insert file _ _ => file
+  | .delete file _ _ => file
+  | .createFile path => path
+  | .deleteFile path _ => path
+  | .renameFile from_ to => from_ ++ " → " ++ to
+  | .batch commands => String.intercalate ", " (commands.attach.map (fun c => touched c.val))
+decreasing_by
+  simp_wf
+  exact Nat.lt_trans (List.sizeOf_lt_of_mem c.property) (by omega)
+
+/--
 Apply a command and then its inverse.
 
 The law is one call, so both sides of a differential test answer the same

@@ -818,25 +818,32 @@ fn generation_reaches_the_floor_and_the_far_side_of_a_split() {
                 if index + 1 == weights.len() && weights.len() > 1 {
                     last += 1;
                 }
-                // The room the divider has, which is what the floor cuts an
-                // over-long drag down to.
-                let (here, next) = if index + 1 < weights.len() {
-                    (weights[index], weights[index + 1])
+                // The two sides of the divider: the focused part grows by the
+                // amount and its neighbour gives it, or the resize is refused.
+                let sides = if index + 1 < weights.len() {
+                    Some((weights[index], weights[index + 1]))
                 } else if index > 0 {
-                    (weights[index], weights[index - 1])
+                    Some((weights[index], weights[index - 1]))
                 } else {
-                    (0, 0)
+                    None
                 };
-                let room = if amount >= 0 { next.saturating_sub(1) } else { here.saturating_sub(1) };
-                if amount != 0 && room < amount.unsigned_abs() {
-                    floored += 1;
+                if let Some((here, next)) = sides {
+                    let crosses = (here as i64 + amount) < 1 || (next as i64 - amount) < 1;
+                    if crosses {
+                        floored += 1;
+                        assert_eq!(
+                            resize_focus(amount, s.clone()),
+                            s,
+                            "a resize that would take a part below one is refused"
+                        );
+                    }
                 }
             }
         }
         // The clause, in two halves. Weight moves between the two sides of one
         // divider: the total is unchanged and at most two parts differ, so a
-        // third pane cannot have drifted. And the floor holds: nothing that had
-        // a weight is left with none.
+        // third pane cannot have drifted. And the floor holds: every weight a
+        // resize changed is at least one.
         let after = resize_focus(amount, s.clone());
         let was = weights_of(&s.layout);
         let now = weights_of(&after.layout);
@@ -847,7 +854,7 @@ fn generation_reaches_the_floor_and_the_far_side_of_a_split() {
             "a resize moves one divider"
         );
         for (before, after) in was.iter().zip(&now) {
-            assert!(*before == 0 || *after >= 1, "a resize does not take a pane below one");
+            assert!(before == after || *after >= 1, "a resize does not take a part below one");
         }
     }
     support::covered(
@@ -855,7 +862,7 @@ fn generation_reaches_the_floor_and_the_far_side_of_a_split() {
         &[
             ("grew the focused pane", grew),
             ("shrank the focused pane", shrank),
-            ("stopped at the floor", floored),
+            ("refused at the floor", floored),
             ("resized the last part of a split", last),
             ("resized with nothing to move against", nothing),
         ],
@@ -1105,7 +1112,31 @@ fn generation_reaches_an_empty_strip_and_a_name_outside_ascii() {
             let named = row.split_once("  ").map_or("", |(_, rest)| rest);
             assert!(named == title || named.starts_with(&format!("{title} · ")), "the row names the buffer it shows: {row:?} {title:?}");
         }
-        assert!(bar.spans.iter().all(|span| span.actions == vec!["screen.show".to_string()]));
+        // Each row's action names the buffer it lists, and resolving it — with
+        // nothing under the cursor at all — shows exactly that buffer. Before,
+        // every row carried a bare `screen.show`, which `dispatch` resolved
+        // from the row's text, a number and a title, and so showed nothing.
+        for (span, held) in bar.spans.iter().zip(&s.opened) {
+            assert_eq!(span.actions, vec![format!("screen.show {}", held.id)]);
+            let focus = tracelean_core::surface::act::Focus {
+                kind: bar.kind.clone(),
+                offset: span.start,
+                under: None,
+            };
+            assert_eq!(
+                tracelean_core::surface::act::dispatch(
+                    span.actions[0].clone(),
+                    focus,
+                    Default::default(),
+                    Vec::new()
+                ),
+                tracelean_core::surface::act::Intent::Arrange {
+                    how: tracelean_core::surface::screen::Arrangement::ShowBuffer {
+                        buffer: held.id.clone()
+                    }
+                }
+            );
+        }
     }
     support::covered(
         "REQ-SCREEN.strip_is_the_opened_set",

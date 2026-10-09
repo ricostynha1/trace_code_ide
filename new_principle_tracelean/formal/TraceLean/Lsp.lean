@@ -36,7 +36,7 @@ Byte offset for a column, or `none` when the column falls inside a character.
 A column inside a character is a position no buffer has, and rounding it to a
 neighbour is how an editor ends up acting on the wrong text.
 
-@models REQ-LSP.encoding_round_trip
+@models REQ-LSP.column_to_offset
 -/
 def toByteOffset (lineText : String) (character : Nat) (encoding : Encoding) : Option Nat :=
   let rec go (cs : List Char) (counted : Nat) (offset : Nat) : Option Nat :=
@@ -53,7 +53,7 @@ def toByteOffset (lineText : String) (character : Nat) (encoding : Encoding) : O
 /--
 Column for a byte offset, or `none` when the offset is not a character boundary.
 
-@models REQ-LSP.encoding_round_trip
+@models REQ-LSP.offset_to_column
 -/
 def toCharacter (lineText : String) (offset : Nat) (encoding : Encoding) : Option Nat :=
   let rec go (cs : List Char) (seen : Nat) (counted : Nat) : Option Nat :=

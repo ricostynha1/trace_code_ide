@@ -45,6 +45,18 @@ fn source() -> Schema {
             "fn f(x: u8)".into(),
             "fn f(x: u8".into(),
             "// fn f(x: u8) {}".into(),
+            // A signature in a comment or a string above the real one, which
+            // the first textual match used to take.
+            "// fn f(b: u8, a: u8)\nfn f(a: u8, b: u8) {}".into(),
+            "/* fn f(b: u8, a: u8) */ fn f(a: u8, b: u8) {}".into(),
+            "const S: &str = \"fn f(b: u8)\";\nfn f(a: u8) {}".into(),
+            "const Q: char = '\"';\nfn f(a: u8) {}".into(),
+            // Two declarations: refused, not the first one taken.
+            "fn f(a: u8) {}\nimpl S { fn f(&self, b: u8) {} }".into(),
+            "fn g(a: u8) {}\nfn g(b: u8, c: u8) {}".into(),
+            "fn h() {}\nimpl S { fn h(&self) {} }".into(),
+            "fn apply(x: u8) {}\n// fn apply(z: u8)\nfn apply(y: u8) {}".into(),
+            "fn f(a: u8) {}\nfn g(a: u8) {}\nfn h(a: u8) {}\nfn f(b: u8) {}\nfn g(b: u8) {}\nfn h(b: u8) {}".into(),
             "".into(),
         ],
     }
@@ -90,7 +102,7 @@ fn model_and_implementation_agree_on_a_signature() {
         &input_schema(),
         &model,
         &implementation,
-        RunOptions { seed: 64, cases: 3_000, shrink_rounds: 100 },
+        RunOptions { seed: 64, cases: 4_000, shrink_rounds: 100 },
     )
     .expect("both runners answer");
 
@@ -108,15 +120,24 @@ fn model_and_implementation_agree_on_a_signature() {
 #[test]
 fn generation_reaches_every_answer_the_parser_can_give() {
     use tracelean_core::drt::gen;
-    use tracelean_core::drt::signature::parameters;
+    use tracelean_core::drt::signature::{declarations, parameters};
 
     let schema = input_schema();
     let mut rng = gen::Rng::new(64);
     let (mut named, mut empty, mut refused, mut absent) = (0, 0, 0, 0);
-    for _ in 0..3_000 {
+    let (mut past_comment, mut ambiguous) = (0, 0);
+    // As many cases as the differential run asks, from the same seed.
+    for _ in 0..4_000 {
         let v = gen::value(&schema, &mut rng);
         let source = v["source"].as_str().unwrap();
         let symbol = v["symbol"].as_str().unwrap();
+        let textual = source.matches(&format!("fn {symbol}(")).count();
+        if textual > 1 && declarations(source, symbol) == 1 && parameters(source, symbol).is_some() {
+            past_comment += 1;
+        }
+        if declarations(source, symbol) > 1 && parameters(source, symbol).is_none() {
+            ambiguous += 1;
+        }
         match parameters(source, symbol) {
             Some(names) if !names.is_empty() => named += 1,
             Some(_) => empty += 1,
@@ -131,6 +152,8 @@ fn generation_reaches_every_answer_the_parser_can_give() {
             ("a signature taking no parameters", empty),
             ("a declared signature refused", refused),
             ("an absent symbol", absent),
+            ("a signature in a comment or string passed over", past_comment),
+            ("two declarations refused", ambiguous),
         ],
     );
 }

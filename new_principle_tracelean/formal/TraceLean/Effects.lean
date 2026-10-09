@@ -33,10 +33,13 @@ than return a bool, because `false` cannot be reviewed.
 -/
 
 inductive Violation where
-  /-- A mirrored file in the real tree is missing from the workspace. -/
+  /-- A mirrored file, or a protected root, of the real tree is not in what the
+  tool was given. -/
   | missingFromCopy (path : String)
   /-- A mirrored file in the workspace differs from the tree it was copied from. -/
   | copyDiffers (path : String)
+  /-- A mirrored file in the workspace that the real tree does not have. -/
+  | extraInCopy (path : String)
   /-- The real tree changed while the workspace was live. -/
   | realTreeChanged (path : String)
   /-- Something outside the workspace was written. -/
@@ -50,33 +53,44 @@ inductive Violation where
 `REQ-OBS.workspace_is_a_copy` and `REQ-SBX.real_tree_untouched`. The effect is
 `sandboxCopy`; what can be observed about it is three snapshots — the tree
 before, the workspace handed to the tool, and the tree after the tool exited.
+
+A snapshot holds every mirrored file with its content, and each protected root
+that is there (`.git`, `.tracelean`) as one entry whose content is not read:
+what the tool may do inside a protected root is its own business, whether it
+can see it at all is the copy's. Build output is in neither.
 -/
 
 structure CopyWitness where
   /-- The real tree before the workspace was made. -/
   before : Workspace := {}
-  /-- What the tool was given. -/
+  /-- What the tool was given: the copy, and the protected roots it can see. -/
   workspace : Workspace := {}
   /-- The real tree after the tool exited. -/
   after : Workspace := {}
   deriving Repr, DecidableEq, Inhabited, ToJson, FromJson
 
 /--
-The law of copying, as something that can be checked.
+Whether what the tool was given is a copy of the project at one path.
 
-Two claims: the workspace holds every mirrored file of the tree it came from,
-with the same bytes; and the real tree is the same afterwards as before. Only
-mirrored paths are compared — a protected path is deliberately not replayed, and
-build output is deliberately regenerated.
+A mirrored path must be in both with the same bytes, or in neither: missing
+from the copy, different in it, or in the copy and not the project are each
+named. A protected path the project has must be there for the tool to read;
+its content is not compared, because writes there are the tool's own and never
+come back. Build output is not compared at all — it is regenerated.
 
 @models REQ-OBS.workspace_is_a_copy
-@models REQ-SBX.real_tree_untouched
 -/
-def copyCheck (workspace : Workspace) (entry : String × String) : Option Violation :=
-  if isMirrored entry.1 then
-    match workspace.get entry.1 with
-    | none => some (Violation.missingFromCopy entry.1)
-    | some content => if content == entry.2 then none else some (.copyDiffers entry.1)
+def copyCheck (before workspace : Workspace) (path : String) : Option Violation :=
+  if isMirrored path then
+    match before.get path, workspace.get path with
+    | some _, none => some (Violation.missingFromCopy path)
+    | some a, some b => if a == b then none else some (Violation.copyDiffers path)
+    | none, some _ => some (Violation.extraInCopy path)
+    | none, none => none
+  else if classify path == Class.«protected» then
+    match before.get path, workspace.get path with
+    | some _, none => some (Violation.missingFromCopy path)
+    | _, _ => none
   else none
 
 /-- Every path either snapshot of the real tree mentions, sorted and without
@@ -86,14 +100,21 @@ def bothPaths (before after : Workspace) : List String :=
   let names := before.files.map (·.1) ++ after.files.map (·.1)
   (names.foldl (fun acc n => if acc.contains n then acc else acc ++ [n]) []).mergeSort (· <= ·)
 
+/-- Every way the copy differs from the project, path by path in order. -/
+def copyFaults (before workspace : Workspace) : List Violation :=
+  (bothPaths before workspace).filterMap (copyCheck before workspace)
+
+/-- Every path at which the real tree after the run differs from the tree
+before it: written, created or removed, wherever it is.
+
+@models REQ-SBX.real_tree_untouched -/
+def treeChanges (before after : Workspace) : List Violation :=
+  (bothPaths before after).filterMap (fun path =>
+    if before.get path == after.get path then none else some (Violation.realTreeChanged path))
+
 def copyViolations (witness : CopyWitness) : List Violation :=
   let before := witness.before.canon
-  let workspace := witness.workspace.canon
-  let after := witness.after.canon
-  let missing := before.files.filterMap (copyCheck workspace)
-  let changed := (bothPaths before after).filterMap (fun path =>
-    if before.get path == after.get path then none else some (Violation.realTreeChanged path))
-  missing ++ changed
+  copyFaults before witness.workspace.canon ++ treeChanges before witness.after.canon
 
 /-- Making a workspace and running a tool in it. Opaque: Lean cannot copy a
 directory, and does not need to in order to say what copying must achieve. -/
@@ -211,12 +232,9 @@ structure RunWitness where
   deriving Repr, DecidableEq, Inhabited, ToJson, FromJson
 
 /--
-Everything a single observed run got wrong.
-
-@models REQ-OBS.workspace_is_a_copy
-@models REQ-SBX.real_tree_untouched
-@models REQ-SBX.capability_reported
-@models REQ-SBX.escape_is_not_silent
+Everything a single observed run got wrong: the copy, the real tree, the
+escapes and the containment report, in that order. Each is modelled by its own
+function above; this is what a differential test calls.
 -/
 def runViolations (witness : RunWitness) : List Violation :=
   copyViolations witness.copy
@@ -230,23 +248,37 @@ rest of the system relies on, derived from the definitions above rather than
 added to the assumption set.
 -/
 
-/-- A protected path never causes a copy violation, because it is never
-compared. The sandbox depends on this: `.git` inside the workspace is expected
-to diverge from `.git` outside it.
+/-- A protected path the tool can see never causes a copy violation, whatever
+it holds, because its content is never compared. The sandbox depends on this:
+`.git` inside the workspace is expected to diverge from `.git` outside it.
 
 @proves REQ-SBX.protected_never_mirrored -/
 theorem a_protected_path_is_never_a_copy_violation
-    (workspace : Workspace) (entry : String × String)
-    (h : classify entry.1 = Class.«protected») :
-    copyCheck workspace entry = none := by
-  have notMirrored : isMirrored entry.1 = false := protected_is_not_mirrored entry.1 h
-  simp [copyCheck, notMirrored]
+    (before workspace : Workspace) (path content : String)
+    (h : classify path = Class.«protected») (seen : workspace.get path = some content) :
+    copyCheck before workspace path = none := by
+  have notMirrored : isMirrored path = false := protected_is_not_mirrored path h
+  simp [copyCheck, notMirrored, h, seen]
 
 /-- Nothing is wrong with copying nothing.
 
 @proves REQ-OBS.workspace_is_a_copy -/
 theorem an_empty_tree_copies_cleanly :
     copyViolations {} = [] := by
+  native_decide
+
+/-- A copy that is short of a file, has one the project lacks, cannot see the
+project's version control, or differs in one, is named at each -- and a faithful
+copy beside a regenerated build directory is clean.
+
+@proves REQ-OBS.workspace_is_a_copy -/
+theorem a_copy_is_checked_both_ways :
+    copyFaults ⟨[(".git", ""), ("a.rs", "x"), ("b.rs", "y"), ("target/o", "1")]⟩
+        ⟨[("a.rs", "x"), ("b.rs", "z"), ("c.rs", "new")]⟩ =
+      [Violation.missingFromCopy ".git", Violation.copyDiffers "b.rs",
+       Violation.extraInCopy "c.rs"] ∧
+    copyFaults ⟨[(".git", ""), ("a.rs", "x"), ("target/o", "1")]⟩
+        ⟨[(".git", ""), ("a.rs", "x")]⟩ = [] := by
   native_decide
 
 /-- A run that did nothing, in a host that named its mechanism, is clean. The

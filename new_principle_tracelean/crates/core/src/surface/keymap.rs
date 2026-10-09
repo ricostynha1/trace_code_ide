@@ -255,14 +255,19 @@ impl Mode {
 /// @drt REQ-MYTH.escape_pops_one
 /// @drt REQ-MYTH.outcomes_closed
 pub fn step(keymap: Keymap, mode: String, key: String) -> Outcome {
-    let Some(current) = keymap.mode(&mode) else {
+    step_in(&keymap, &mode, &key)
+}
+
+/// `step`, borrowing: the walk in `validate` asks it once per mode it passes.
+fn step_in(keymap: &Keymap, mode: &str, key: &str) -> Outcome {
+    let Some(current) = keymap.mode(mode) else {
         // A mode that does not exist cannot bind anything, and pretending it
         // does would hide the misconfiguration. Falling back to the root is the
         // behaviour a user can recover from.
         return Outcome::PassThrough;
     };
 
-    if let Some(binding) = current.binding(&key) {
+    if let Some(binding) = current.binding(key) {
         return match binding {
             Binding::Enter { mode, .. } => Outcome::Enter { mode: mode.clone() },
             Binding::Dispatch { action, .. } => Outcome::Dispatch { action: action.clone() },
@@ -334,6 +339,11 @@ pub enum Problem {
     UnreachableAction { action: String },
     /// The declared root does not exist.
     NoRoot { root: String },
+    /// A mode's parent does not exist: leaving would land nowhere.
+    UndefinedParent { mode: String, parent: String },
+    /// Repeated Escape from this mode stops short of the root, in a mode with
+    /// no parent that does not bind Escape, or in one that does not exist.
+    Stranded { mode: String },
 }
 
 /// Check a keymap against the actions that exist.
@@ -374,15 +384,37 @@ pub fn validate(keymap: &Keymap, actions: &BTreeSet<String>) -> Vec<Problem> {
             }
         }
 
-        // Leaving must reach the root in finitely many steps.
+        // A parent is a transition target too: `step` leaves to it.
+        if let Some(parent) = &mode.parent {
+            if !keymap.has_mode(parent) {
+                problems.push(Problem::UndefinedParent {
+                    mode: name.clone(),
+                    parent: parent.clone(),
+                });
+            }
+        }
+
+        // Repeated Escape must reach the root in finitely many steps. Followed
+        // through the machine itself, so a mode binding Escape (insert) is
+        // followed through its binding rather than its parent.
         let mut seen = BTreeSet::from([name.clone()]);
-        let mut cursor = mode.parent.clone();
-        while let Some(parent) = cursor {
-            if !seen.insert(parent.clone()) {
+        let mut cursor = name.clone();
+        loop {
+            let target = match step_in(keymap, &cursor, LEAVE) {
+                Outcome::Dispatch { .. } => break,
+                Outcome::PassThrough => {
+                    if cursor != keymap.root {
+                        problems.push(Problem::Stranded { mode: name.clone() });
+                    }
+                    break;
+                }
+                Outcome::Enter { mode: target } | Outcome::Leave { mode: target } => target,
+            };
+            if !seen.insert(target.clone()) {
                 problems.push(Problem::ParentCycle { mode: name.clone() });
                 break;
             }
-            cursor = keymap.mode(&parent).and_then(|m| m.parent.clone());
+            cursor = target;
         }
     }
 
@@ -588,6 +620,34 @@ Outcome::Leave { mode: "Main".into() }
         assert!(validate(&map, &actions())
             .iter()
             .any(|p| matches!(p, Problem::ParentCycle { .. })));
+    }
+
+    /// The two keymaps the first review found passing although Escape never
+    /// reached the root: before `Stranded`/`UndefinedParent`, both validated
+    /// clean. A parentless mode binding Escape back (insert) is fine.
+    ///
+    /// @tests REQ-MYTH.escape_terminates
+    /// @tests REQ-MYTH.modes_defined
+    #[test]
+    fn a_mode_whose_leaving_reaches_nowhere_is_reported() {
+        let mut map = keymap();
+        map.mode_mut("File").unwrap().parent = None;
+        assert_eq!(validate(&map, &actions()), vec![Problem::Stranded { mode: "File".into() }]);
+
+        let mut map = keymap();
+        map.mode_mut("File").unwrap().parent = Some("Ghost".into());
+        assert_eq!(
+            validate(&map, &actions()),
+            vec![
+                Problem::UndefinedParent { mode: "File".into(), parent: "Ghost".into() },
+                Problem::Stranded { mode: "File".into() },
+            ]
+        );
+
+        let mut map = keymap();
+        map.mode_mut("File").unwrap().parent = None;
+        map.mode_mut("File").unwrap().bind(LEAVE, enter("Main"));
+        assert_eq!(validate(&map, &actions()), vec![]);
     }
 
     /// @tests REQ-MYTH.actions_reachable

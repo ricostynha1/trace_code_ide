@@ -26,11 +26,15 @@ pub struct Declared {
     pub text: String,
 }
 
-/// The identifier around a position: letters, digits, `_`, and `.` inside a
-/// Lean name (`Workspace.canon`).
+/// The identifier around a position: ASCII letters, digits, `_`, and `.`
+/// inside a Lean name (`Workspace.canon`).
+///
+/// ASCII, because `dispatch` reads the name with it and is compared with a
+/// model (`TraceLean.Act.identifierAt`) whose characters are classified the
+/// same way on both sides; the identifiers of the languages read here are.
 pub fn identifier_at(text: &str, offset: usize) -> Option<String> {
     let chars: Vec<char> = text.chars().collect();
-    let part = |c: char| c.is_alphanumeric() || c == '_' || c == '.' || c == '!';
+    let part = |c: char| c.is_ascii_alphanumeric() || c == '_' || c == '.' || c == '!';
     let at = offset.min(chars.len());
     let mut start = at;
     while start > 0 && part(chars[start - 1]) {

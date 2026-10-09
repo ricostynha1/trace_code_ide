@@ -31,6 +31,7 @@ fn generated_runner_answers_cases() {
         also_checks: Vec::new(),
         also_implemented_by: Vec::new(),
         floors: Vec::new(),
+        waive: Vec::new(),
         model: None,
         implementation: CallSpec {
             language: "rust".into(),

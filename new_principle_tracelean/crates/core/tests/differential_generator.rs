@@ -128,40 +128,27 @@ fn model_and_implementation_agree_on_generated_numbers() {
 /// @tests REQ-DRT-GEN.seed_reproduces
 #[test]
 #[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
-fn model_and_implementation_agree_on_generated_strings() {
-    let scratch = harness::scratch("strstream");
+fn model_and_implementation_agree_on_every_shape_of_generated_value() {
+    let scratch = harness::scratch("shapestream");
     let op = "REQ-DRT-GEN.seed_reproduces";
-    let implementation = harness::rust_runner_with_params(
+    let implementation = harness::rust_runner(
         "REQ-DRT-GEN",
         "seed_reproduces",
-        "crates/core/src/drt/gen.rs::str_stream",
-        &[("maxLen", "max_len")],
+        "crates/core/src/drt/gen.rs::shape_stream",
         &scratch,
     );
     let model = harness::lean_runner(
         "TraceLean.Generator",
-        "TraceLean.Generator.strStream",
+        "TraceLean.Generator.shapeStream",
         op,
-        &["seed", "maxLen", "examples", "count"],
+        &["seed", "shape", "count"],
         &scratch,
     );
 
+    // `shape` is counted round the list of ten, so every shape is drawn.
     let schema = strukt(&[
         ("seed", seed()),
-        (
-            "maxLen",
-            Schema::Option { inner: Box::new(Schema::Nat { max: Some(6), edges: vec![0, 1] }) },
-        ),
-        (
-            "examples",
-            Schema::List {
-                inner: Box::new(Schema::Str {
-                    max_len: Some(0),
-                    examples: vec!["one".into(), "".into()],
-                }),
-                max_len: Some(2),
-            },
-        ),
+        ("shape", Schema::Nat { max: Some(9), edges: vec![0, 9] }),
         ("count", count()),
     ]);
 

@@ -194,6 +194,8 @@ fn generation_reaches_every_problem_and_the_bar_matches_the_machine() {
                     Problem::UnreachableMode { .. } => "unreachableMode",
                     Problem::UnreachableAction { .. } => "unreachableAction",
                     Problem::NoRoot { .. } => "noRoot",
+                    Problem::UndefinedParent { .. } => "undefinedParent",
+                    Problem::Stranded { .. } => "stranded",
                 })
                 .or_default() += 1;
         }
@@ -216,6 +218,8 @@ fn generation_reaches_every_problem_and_the_bar_matches_the_machine() {
         "unreachableMode",
         "unreachableAction",
         "noRoot",
+        "undefinedParent",
+        "stranded",
     ]
     .iter()
     .map(|name| (*name, seen.get(name).copied().unwrap_or(0)))

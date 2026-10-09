@@ -106,4 +106,17 @@ theorem min_not_mean_pinned :
       have m2 := h2.2 n
       exact level_le_both_eq (m1.2 y2 m2.1) (m2.2 y1 m1.1)
 
+/-- A requirement's assurance is the minimum over its reachable set: one of the
+levels of the requirements below it, and above none of them — whichever path
+reaches each.
+
+@proves REQ-ROLLUP.counted_once
+@proves ARCH-HONEST.weakest_link -/
+theorem rollUp_is_minimum_over_reach (nodes : List Node)
+    (levels : List ((String × Option String) × Level)) (root : String) (floor : Level) :
+    MinimumOf (reachLevels (canonNodes nodes) (canonLevels levels) root)
+      (rollUp nodes levels root floor).assurance := by
+  rw [assurance_is_over_the_reachable_set]
+  exact min_not_mean_pinned.1 _
+
 end TraceLean.SpecRollup

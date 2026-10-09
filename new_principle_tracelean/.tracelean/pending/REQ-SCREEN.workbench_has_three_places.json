@@ -1,6 +1,9 @@
 {
   "agreed": {
-    "83": 2000
+    "83": {
+      "cases": 2000,
+      "stamp": "f41e19e0215b0d05"
+    }
   },
-  "covered": true
+  "covered": "f41e19e0215b0d05"
 }

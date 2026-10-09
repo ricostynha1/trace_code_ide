@@ -1,6 +1,6 @@
 {
   "theoremName": "TraceLean.SpecSorted.op_dispatch_pinned",
-  "key": "39bb1a2a5af36bcf+746c3d87563788f3+9b2ae0dec8de59b8",
-  "pinned": true,
-  "said": ""
+  "key": "39bb1a2a5af36bcf+746c3d87563788f3",
+  "pinned": false,
+  "said": "formal/TraceLean/SpecSorted.lean:962:14: error: unknown constant 'TraceLean.SpecSorted.op_dispatch_pinned'\n"
 }

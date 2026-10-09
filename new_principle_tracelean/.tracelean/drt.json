@@ -229,7 +229,7 @@
     },
     {
       "req_id": "REQ-LSP",
-      "clause": "encoding_round_trip",
+      "clause": "column_to_offset",
       "floors": [
         {
           "situation": "the encodings disagreed",
@@ -252,6 +252,40 @@
       "implementation": {
         "language": "rust",
         "entry": "crates/core/src/surface/lsp.rs::to_byte_offset",
+        "params": {
+          "lineText": "line_text"
+        }
+      }
+    },
+    {
+      "req_id": "REQ-LSP",
+      "clause": "offset_to_column",
+      "floors": [
+        {
+          "situation": "an offset inside a character",
+          "atLeast": 50
+        },
+        {
+          "situation": "an offset past the end",
+          "atLeast": 50
+        },
+        {
+          "situation": "an offset with a column",
+          "atLeast": 300
+        }
+      ],
+      "model": {
+        "import": "TraceLean.Lsp",
+        "function": "TraceLean.Lsp.toCharacter",
+        "arguments": [
+          "lineText",
+          "offset",
+          "encoding"
+        ]
+      },
+      "implementation": {
+        "language": "rust",
+        "entry": "crates/core/src/surface/lsp.rs::to_character",
         "params": {
           "lineText": "line_text"
         }
@@ -340,7 +374,11 @@
           "atLeast": 100
         },
         {
-          "situation": "a suppression with observations left over",
+          "situation": "a matched write with rounds to spare",
+          "atLeast": 30
+        },
+        {
+          "situation": "a suppression with an identical write left pending",
           "atLeast": 10
         }
       ],
@@ -1106,6 +1144,14 @@
         {
           "situation": "noRoot",
           "atLeast": 1
+        },
+        {
+          "situation": "undefinedParent",
+          "atLeast": 1
+        },
+        {
+          "situation": "stranded",
+          "atLeast": 1
         }
       ],
       "also_checks": [
@@ -1221,20 +1267,16 @@
       "clause": "seed_reproduces",
       "model": {
         "import": "TraceLean.Generator",
-        "function": "TraceLean.Generator.strStream",
+        "function": "TraceLean.Generator.shapeStream",
         "arguments": [
           "seed",
-          "maxLen",
-          "examples",
+          "shape",
           "count"
         ]
       },
       "implementation": {
         "language": "rust",
-        "entry": "crates/core/src/drt/gen.rs::str_stream",
-        "params": {
-          "maxLen": "max_len"
-        }
+        "entry": "crates/core/src/drt/gen.rs::shape_stream"
       }
     },
     {
@@ -1256,10 +1298,15 @@
         {
           "situation": "an absent symbol",
           "atLeast": 100
+        },
+        {
+          "situation": "a signature in a comment or string passed over",
+          "atLeast": 20
+        },
+        {
+          "situation": "two declarations refused",
+          "atLeast": 20
         }
-      ],
-      "also_checks": [
-        "types_inferred"
       ],
       "model": {
         "import": "TraceLean.Signature",
@@ -1275,6 +1322,35 @@
       }
     },
     {
+      "req_id": "ARCH-HONEST",
+      "clause": "lower_bound_marked",
+      "floors": [
+        {
+          "situation": "an open figure",
+          "atLeast": 300
+        },
+        {
+          "situation": "an exact figure",
+          "atLeast": 300
+        },
+        {
+          "situation": "nothing counted",
+          "atLeast": 20
+        }
+      ],
+      "model": {
+        "import": "TraceLean.Rollup",
+        "function": "TraceLean.Rollup.render",
+        "arguments": [
+          "figure"
+        ]
+      },
+      "implementation": {
+        "language": "rust",
+        "entry": "crates/core/src/trace/rollup.rs::render_figure"
+      }
+    },
+    {
       "req_id": "REQ-ROLLUP",
       "clause": "open_is_lower_bound",
       "floors": [
@@ -1287,15 +1363,28 @@
           "atLeast": 100
         },
         {
+          "situation": "a root with a partial clause",
+          "atLeast": 100
+        },
+        {
           "situation": "a roll-up with children",
           "atLeast": 300
+        },
+        {
+          "situation": "a diamond",
+          "atLeast": 50
+        },
+        {
+          "situation": "a cycle",
+          "atLeast": 50
         }
       ],
       "also_checks": [
         "never_complete_when_open",
         "exempt_leaves_denominator",
+        "partial_capped",
         "deterministic_order",
-        "ARCH-HONEST.lower_bound_marked"
+        "counted_once"
       ],
       "model": {
         "import": "TraceLean.Rollup",
@@ -1366,7 +1455,7 @@
     },
     {
       "req_id": "REQ-DRT-PROTO",
-      "clause": "line_delimited",
+      "clause": "reply_one_line",
       "floors": [
         {
           "situation": "an answer",
@@ -1382,9 +1471,7 @@
         }
       ],
       "also_checks": [
-        "case_echoed",
-        "reply_exclusive",
-        "failure_named"
+        "case_echoed"
       ],
       "model": {
         "import": "TraceLean.Protocol",
@@ -1401,9 +1488,16 @@
     },
     {
       "req_id": "REQ-DRT-PROTO",
-      "clause": "op_dispatch",
-      "also_checks": [
-        "runner_shared"
+      "clause": "ops_unique",
+      "floors": [
+        {
+          "situation": "a collision",
+          "atLeast": 50
+        },
+        {
+          "situation": "no collision",
+          "atLeast": 50
+        }
       ],
       "model": {
         "import": "TraceLean.Protocol",
@@ -1415,6 +1509,136 @@
       "implementation": {
         "language": "rust",
         "entry": "crates/core/src/drt/protocol.rs::duplicate_ops"
+      }
+    },
+    {
+      "req_id": "REQ-DRT-PROTO",
+      "clause": "reply_exclusive",
+      "floors": [
+        {
+          "situation": "an output only",
+          "atLeast": 50
+        },
+        {
+          "situation": "an error only",
+          "atLeast": 50
+        },
+        {
+          "situation": "both",
+          "atLeast": 50
+        },
+        {
+          "situation": "neither",
+          "atLeast": 50
+        }
+      ],
+      "model": {
+        "import": "TraceLean.Protocol",
+        "function": "TraceLean.Protocol.isExclusive",
+        "arguments": [
+          "output",
+          "error"
+        ]
+      },
+      "implementation": {
+        "language": "rust",
+        "entry": "crates/core/src/drt/protocol.rs::is_exclusive"
+      }
+    },
+    {
+      "req_id": "REQ-DRT-PROTO",
+      "clause": "failure_named",
+      "floors": [
+        {
+          "situation": "cannot start",
+          "atLeast": 50
+        },
+        {
+          "situation": "timed out",
+          "atLeast": 50
+        },
+        {
+          "situation": "died",
+          "atLeast": 50
+        },
+        {
+          "situation": "a non-reply",
+          "atLeast": 50
+        },
+        {
+          "situation": "answered",
+          "atLeast": 25
+        }
+      ],
+      "model": {
+        "import": "TraceLean.Protocol",
+        "function": "TraceLean.Protocol.outcome",
+        "arguments": [
+          "event"
+        ]
+      },
+      "implementation": {
+        "language": "rust",
+        "entry": "crates/core/src/drt/protocol.rs::outcome"
+      }
+    },
+    {
+      "req_id": "REQ-DRT-PROTO",
+      "clause": "case_one_line",
+      "floors": [
+        {
+          "situation": "an input with a line break",
+          "atLeast": 50
+        },
+        {
+          "situation": "an input with a quote or backslash",
+          "atLeast": 50
+        },
+        {
+          "situation": "an input with a control character",
+          "atLeast": 50
+        }
+      ],
+      "also_checks": [
+        "case_names_op"
+      ],
+      "model": {
+        "import": "TraceLean.Protocol",
+        "function": "TraceLean.Protocol.caseLine",
+        "arguments": [
+          "number",
+          "op",
+          "input"
+        ]
+      },
+      "implementation": {
+        "language": "rust",
+        "entry": "crates/core/src/drt/protocol.rs::case_line"
+      }
+    },
+    {
+      "req_id": "REQ-DRT-PROTO",
+      "clause": "runner_shared",
+      "floors": [
+        {
+          "situation": "two languages",
+          "atLeast": 50
+        },
+        {
+          "situation": "an op placed twice",
+          "atLeast": 50
+        }
+      ],
+      "model": {
+        "import": "TraceLean.Protocol",
+        "function": "TraceLean.Protocol.sharedRunners",
+        "arguments": [
+          "placed"
+        ]
+      },
+      "implementation": {
+        "language": "rust",
+        "entry": "crates/core/src/drt/protocol.rs::shared_runners"
       }
     },
     {
@@ -1792,19 +2016,71 @@
       ],
       "also_checks": [
         "law_coverage",
-        "vacuous_named"
+        "vacuous_named",
+        "waiver_reasoned"
       ],
       "model": {
         "import": "TraceLean.Coverage",
         "function": "TraceLean.Coverage.coverageVerdict",
         "arguments": [
           "floors",
-          "observed"
+          "observed",
+          "waivers"
         ]
       },
       "implementation": {
         "language": "rust",
         "entry": "crates/core/src/drt/coverage.rs::verdict"
+      }
+    },
+    {
+      "req_id": "REQ-DRT-COVER",
+      "clause": "waiver_unused_reported",
+      "model": {
+        "import": "TraceLean.Coverage",
+        "function": "TraceLean.Coverage.unusedWaivers",
+        "arguments": [
+          "floors",
+          "observed",
+          "waivers"
+        ]
+      },
+      "implementation": {
+        "language": "rust",
+        "entry": "crates/core/src/drt/coverage.rs::unused_waivers"
+      }
+    },
+    {
+      "req_id": "REQ-DRT-COVER",
+      "clause": "lines_run",
+      "model": {
+        "import": "TraceLean.Coverage",
+        "function": "TraceLean.Coverage.lineReach",
+        "arguments": [
+          "hits",
+          "item"
+        ]
+      },
+      "implementation": {
+        "language": "rust",
+        "entry": "crates/core/src/drt/coverage.rs::line_reach"
+      }
+    },
+    {
+      "req_id": "REQ-DRT-COVER",
+      "clause": "classes_reached",
+      "model": {
+        "import": "TraceLean.Coverage",
+        "function": "TraceLean.Coverage.reachedShape",
+        "arguments": [
+          "shape",
+          "seed",
+          "cases"
+        ]
+      },
+      "implementation": {
+        "language": "rust",
+        "entry": "crates/core/src/drt/classes.rs::reached_shape"
       }
     },
     {
@@ -2347,6 +2623,15 @@
     {
       "req_id": "REQ-DRT-TS",
       "clause": "params_from_source",
+      "floors": [
+        { "situation": "a signature yielding names", "atLeast": 100 },
+        { "situation": "a signature taking no parameters", "atLeast": 10 },
+        { "situation": "a declared signature refused", "atLeast": 10 },
+        { "situation": "an absent symbol", "atLeast": 100 },
+        { "situation": "a signature in a comment or string passed over", "atLeast": 20 },
+        { "situation": "a this parameter dropped", "atLeast": 20 },
+        { "situation": "two declarations refused", "atLeast": 20 }
+      ],
       "model": {
         "import": "TraceLean.Signature",
         "function": "TraceLean.Signature.tsParameters",
@@ -2357,7 +2642,7 @@
       },
       "implementation": {
         "language": "rust",
-        "entry": "crates/core/src/drt/ts_runner.rs::ts_parameters_of"
+        "entry": "crates/core/src/drt/ts_runner.rs::ts_parameters_owned"
       }
     },
     {
@@ -2690,7 +2975,8 @@
         "arguments": [
           "action",
           "focus",
-          "w"
+          "w",
+          "waiting"
         ]
       },
       "implementation": {
@@ -2921,7 +3207,7 @@
       "floors": [
         { "situation": "grew the focused pane", "atLeast": 600 },
         { "situation": "shrank the focused pane", "atLeast": 600 },
-        { "situation": "stopped at the floor", "atLeast": 200 },
+        { "situation": "refused at the floor", "atLeast": 200 },
         { "situation": "resized the last part of a split", "atLeast": 60 },
         { "situation": "resized with nothing to move against", "atLeast": 1000 }
       ],
@@ -3121,6 +3407,25 @@
     },
     {
       "req_id": "REQ-STRENGTH",
+      "clause": "inputs_counted",
+      "floors": [
+        { "situation": "a definition by pattern matching", "atLeast": 200 },
+        { "situation": "arguments both named and arrowed", "atLeast": 100 },
+        { "situation": "a proposition", "atLeast": 100 },
+        { "situation": "not a definition", "atLeast": 50 }
+      ],
+      "model": {
+        "import": "TraceLean.Pinning",
+        "function": "TraceLean.Pinning.shape",
+        "arguments": ["declaration"]
+      },
+      "implementation": {
+        "language": "rust",
+        "entry": "crates/core/src/trace/pinning.rs::shape"
+      }
+    },
+    {
+      "req_id": "REQ-STRENGTH",
       "clause": "kernel_decides",
       "floors": [
         { "situation": "accepted", "atLeast": 40 },
@@ -3158,8 +3463,7 @@
     },
     {
       "req_id": "REQ-DRT-SCHEMA",
-      "clause": "derived_from_both",
-      "also_checks": ["outside_is_error"],
+      "clause": "outside_is_error",
       "floors": [
         { "situation": "paired", "atLeast": 100 },
         { "situation": "a structure paired", "atLeast": 5 },
@@ -3174,6 +3478,45 @@
         "language": "rust",
         "entry": "crates/core/src/drt/derive.rs::pair",
         "params": { "leanStructs": "lean_structs", "rustStructs": "rust_structs" }
+      }
+    },
+    {
+      "req_id": "REQ-DRT-SCHEMA",
+      "clause": "derived_from_both",
+      "floors": [
+        { "situation": "every argument paired", "atLeast": 50 },
+        { "situation": "arities differ", "atLeast": 50 },
+        { "situation": "an argument refused", "atLeast": 50 },
+        { "situation": "the result refused", "atLeast": 50 },
+        { "situation": "a parameter renamed", "atLeast": 20 }
+      ],
+      "model": {
+        "import": "TraceLean.Derive",
+        "function": "TraceLean.Derive.derive",
+        "arguments": ["model", "implementation", "lean", "rust"]
+      },
+      "implementation": {
+        "language": "rust",
+        "entry": "crates/core/src/drt/derive.rs::derive_of"
+      }
+    },
+    {
+      "req_id": "REQ-DRT-RUST",
+      "clause": "types_inferred",
+      "floors": [
+        { "situation": "an entry taking nothing", "atLeast": 20 },
+        { "situation": "an entry taking several arguments", "atLeast": 100 },
+        { "situation": "an argument read from a renamed field", "atLeast": 100 },
+        { "situation": "a literal needing an escape", "atLeast": 50 }
+      ],
+      "model": {
+        "import": "TraceLean.RustRunner",
+        "function": "TraceLean.RustRunner.callSite",
+        "arguments": ["entry"]
+      },
+      "implementation": {
+        "language": "rust",
+        "entry": "crates/core/src/drt/rust_runner.rs::call_site"
       }
     },
     {

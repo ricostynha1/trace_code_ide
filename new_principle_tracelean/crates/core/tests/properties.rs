@@ -121,6 +121,7 @@ fn a_binding_declares_a_call_and_cannot_compute_anything() {
         also_checks: Vec::new(),
         also_implemented_by: Vec::new(),
         floors: Vec::new(),
+        waive: Vec::new(),
         model: None,
         implementation: CallSpec {
             language: "rust".into(),
@@ -165,7 +166,8 @@ fn a_binding_declares_a_call_and_cannot_compute_anything() {
 
 /// A case is one JSON object on one line, and so is a reply.
 ///
-/// @tests REQ-DRT-PROTO.line_delimited
+/// @tests REQ-DRT-PROTO.case_one_line
+/// @tests REQ-DRT-PROTO.reply_one_line
 /// @tests REQ-DRT-PROTO.case_echoed
 #[test]
 fn a_case_and_a_reply_are_each_one_line() {
@@ -176,8 +178,11 @@ fn a_case_and_a_reply_are_each_one_line() {
         // protocol if they were not escaped.
         input: serde_json::json!({"text": "a\nb\r\nc", "n": 1}),
     };
-    let line = serde_json::to_string(&case).expect("a case serialises");
+    // The line the runner actually writes, not a serialisation of the struct.
+    let line = tracelean_core::drt::protocol::case_line(case.case, case.op.clone(), case.input.clone());
     assert!(!line.contains('\n'), "a case spanned more than one line: {line}");
+    let read: Case = serde_json::from_str(&line).expect("a case line is a case");
+    assert_eq!(read, case);
 
     let reply = Reply::ok(case.case, serde_json::json!({"out": "x\ny"}));
     let line = serde_json::to_string(&reply).expect("a reply serialises");
@@ -220,8 +225,7 @@ fn a_reply_carries_exactly_one_of_an_output_and_an_error() {
 /// A shared runner dispatches on this name, so two bindings sharing one would
 /// answer one of them with the other's function and nothing would report it.
 ///
-/// @tests REQ-DRT-PROTO.op_dispatch
-/// @tests REQ-DRT-PROTO.runner_shared
+/// @tests REQ-DRT-PROTO.ops_unique
 #[test]
 fn every_op_in_this_project_is_unique() {
     let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap().parent().unwrap();
@@ -297,6 +301,8 @@ fn a_result_carries_the_seed_and_the_case_count_it_actually_reached() {
         seed: 7,
         cases: 2_000,
         divergence: None,
+        schema: tracelean_core::drt::schema::Schema::Bool,
+        reached: Vec::new(),
     };
     assert!(clean.agreed());
     assert_eq!((clean.seed, clean.cases), (7, 2_000));

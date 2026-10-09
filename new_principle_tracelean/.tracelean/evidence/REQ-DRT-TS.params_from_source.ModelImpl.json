@@ -1,0 +1,30 @@
+{
+  "key": {
+    "reqId": "REQ-DRT-TS",
+    "clause": "params_from_source",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 109,
+      "cases": 3000,
+      "op": "REQ-DRT-TS.params_from_source"
+    }
+  },
+  "linkHash": "2999d9225243398f",
+  "inputs": [
+    [
+      "implementation",
+      "18222db5812e1aa8+8207ad5a20663add"
+    ],
+    [
+      "model",
+      "1858205b7022e979"
+    ],
+    [
+      "requirement",
+      "f3a19935acf61c9e"
+    ]
+  ]
+}

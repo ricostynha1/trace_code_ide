@@ -116,6 +116,7 @@ fn every_binding_resolves_against_the_source() {
             also_checks: Vec::new(),
             also_implemented_by: Vec::new(),
             floors: Vec::new(),
+            waive: Vec::new(),
             model: None,
             implementation: CallSpec {
                 language: implementation["language"].as_str().unwrap_or_default().to_string(),

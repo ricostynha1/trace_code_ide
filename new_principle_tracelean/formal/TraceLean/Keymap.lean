@@ -71,9 +71,8 @@ def step (keymap : Keymap) (mode : String) (key : String) : Outcome :=
         | none => .passThrough
         | some _ => .leave keymap.root
 
-/-- The mode a key leaves the machine in.
-
-@models REQ-MYTH.totality -/
+/-- The mode a key leaves the machine in. A helper over `step`, which is the
+model of `totality`. -/
 def nextMode (keymap : Keymap) (mode : String) (key : String) : String :=
   match step keymap mode key with
   | .enter target => target
@@ -129,6 +128,11 @@ inductive Problem where
   | unreachableAction (action : String)
   /-- The declared root does not exist. -/
   | noRoot (root : String)
+  /-- A mode's parent does not exist: leaving would land nowhere. -/
+  | undefinedParent (mode parent : String)
+  /-- Repeated Escape from this mode stops short of the root, in a mode that
+  has no parent and does not bind Escape, or in one that does not exist. -/
+  | stranded (mode : String)
   deriving Repr, DecidableEq, Inhabited, ToJson, FromJson
 
 /-- Variant first, then content: the order a derived comparison gives, written
@@ -140,6 +144,8 @@ def Problem.key : Problem → Nat × List String
   | .unreachableMode m => (3, [m])
   | .unreachableAction a => (4, [a])
   | .noRoot r => (5, [r])
+  | .undefinedParent m p => (6, [m, p])
+  | .stranded m => (7, [m])
 
 def listLe : List String → List String → Bool
   | [], _ => true
@@ -153,23 +159,45 @@ def problemLe (a b : Problem) : Bool :=
 
 def Keymap.hasMode (k : Keymap) (name : String) : Bool := (k.mode name).isSome
 
-/-- Whether following parents from `mode` revisits something, which would make
-leaving loop forever.
+/-- Where pressing Escape over and over ends. -/
+inductive Leaving where
+  /-- At the root, which Escape does not move away from. -/
+  | reachesRoot
+  /-- Back in a mode already passed: it would go round for ever. -/
+  | loops
+  /-- In a mode other than the root where Escape does nothing: the mode has no
+  parent and does not bind Escape, or it does not exist. -/
+  | stops
+  deriving Repr, DecidableEq
 
-@models REQ-MYTH.escape_terminates -/
-def parentCycleFrom (keymap : Keymap) : Nat → List String → Option String → Bool
-  | 0, _, _ => true
-  | _ + 1, _, none => false
-  | fuel + 1, seen, some parent =>
-    if seen.contains parent then true
-    else parentCycleFrom keymap fuel (seen ++ [parent])
-      ((keymap.mode parent).bind (·.parent))
+/-- Press Escape from `mode` until something settles, following the machine
+itself (`step`), so a mode that binds Escape (as an insert mode does) is
+followed through its binding rather than its parent. Each step visits a name
+not in `seen`, and only the last can be a name that is no mode, so
+`modes.length + 2` fuel always suffices. A helper of `validate`, which models
+`escape_terminates`. -/
+def leaveFrom (keymap : Keymap) : Nat → List String → String → Leaving
+  | 0, _, _ => .loops
+  | fuel + 1, seen, mode =>
+    match step keymap mode leaveKey with
+    | .dispatch _ => .reachesRoot
+    | .passThrough => if mode == keymap.root then .reachesRoot else .stops
+    | .enter target =>
+      if seen.contains target then .loops else leaveFrom keymap fuel (seen ++ [target]) target
+    | .leave target =>
+      if seen.contains target then .loops else leaveFrom keymap fuel (seen ++ [target]) target
 
 /-- The modes a mode's bindings enter. -/
 def enterTargets (m : Mode) : List String :=
   m.bindings.filterMap (fun b => match b.2 with | .enter target _ => some target | _ => none)
 
-/-- Modes reachable from a starting set by following `enter` bindings. -/
+/-- Modes reachable from a starting set by following `enter` bindings.
+
+Only modes that exist are queued (a dangling target is `undefinedMode`, not a
+place to explore), and none twice, so every unit of fuel after the first is
+spent on a distinct mode of the keymap: `modes.length + 1` always suffices. A
+queue that also held dangling names could run out first and report real
+modes unreachable. -/
 def reachableFrom (keymap : Keymap) : Nat → List String → List String → List String
   | 0, seen, _ => seen
   | _ + 1, seen, [] => seen
@@ -178,7 +206,7 @@ def reachableFrom (keymap : Keymap) : Nat → List String → List String → Li
     | none => reachableFrom keymap fuel seen frontier
     | some m =>
       -- Deduplicated before pushing, so the same mode is never queued twice.
-      let fresh := (enterTargets m).filter (fun t => !seen.contains t)
+      let fresh := (enterTargets m).filter (fun t => !seen.contains t && keymap.hasMode t)
       let queue := fresh.foldl (fun acc t => if acc.contains t then acc else acc ++ [t]) []
       reachableFrom keymap fuel (seen ++ queue) (frontier ++ queue)
 
@@ -196,16 +224,27 @@ private def bindingProblem (keymap : Keymap) (actions : List String) (name : Str
     if actions.contains action then acc
     else acc ++ [Problem.undefinedAction name b.1 action]
 
+/-- A mode's parent is a transition target (`step` leaves to it), so it must
+exist. -/
+private def parentProblem (keymap : Keymap) (name : String) : Option String → List Problem
+  | none => []
+  | some parent => if keymap.hasMode parent then [] else [Problem.undefinedParent name parent]
+
+/-- What repeated Escape from a mode is wrong about. -/
+private def leavingProblem (name : String) : Leaving → List Problem
+  | .reachesRoot => []
+  | .loops => [Problem.parentCycle name]
+  | .stops => [Problem.stranded name]
+
 /-- Everything one mode is wrong about, its bindings included. -/
 private def modeProblems (keymap : Keymap) (actions : List String) (acc : List Problem)
     (entry : String × Mode) : List Problem :=
   let name := entry.1
   let m := entry.2
   let bindingProblems := m.bindings.foldl (bindingProblem keymap actions name) acc
+  let parentProblems := parentProblem keymap name m.parent
   let budget := keymap.modes.length + 2
-  match parentCycleFrom keymap budget [name] m.parent with
-  | true => bindingProblems ++ [Problem.parentCycle name]
-  | false => bindingProblems
+  bindingProblems ++ parentProblems ++ leavingProblem name (leaveFrom keymap budget [name] name)
 
 /-- The actions a mode dispatches, added to what is already reachable. -/
 private def dispatchableIn (keymap : Keymap) (acc : List String) (name : String) : List String :=
@@ -233,7 +272,7 @@ def validate (keymap : Keymap) (actions : List String) : List Problem :=
     []).mergeSort (fun a b => decide (a ≤ b))
   let noRoot := if keymap.hasMode keymap.root then [] else [Problem.noRoot keymap.root]
   let perMode := keymap.modes.foldl (modeProblems keymap actions) []
-  let reachable := reachableFrom keymap (keymap.modes.length + 2) [keymap.root] [keymap.root]
+  let reachable := reachableFrom keymap (keymap.modes.length + 1) [keymap.root] [keymap.root]
   let unreachableModes := (keymap.modes.map (·.1)).filterMap
     (fun name => if reachable.contains name then none else some (Problem.unreachableMode name))
   let dispatchable := reachable.foldl (dispatchableIn keymap) []
@@ -247,6 +286,35 @@ first key pressed.
 @proves REQ-MYTH.keymap_is_data -/
 theorem a_missing_root_is_reported_at_load :
     validate { root := "Main", modes := [] } [] = [Problem.noRoot "Main"] := by
+  native_decide
+
+/-- The two keymaps the first review found `validate` passing although Escape
+never reaches the root: a mode with no parent, and a mode whose parent does
+not exist. A parentless mode that binds Escape back to the root (an insert
+mode) is fine.
+
+@proves REQ-MYTH.escape_terminates -/
+theorem a_mode_leaving_nowhere_is_reported :
+    validate { root := "A", modes := [("A", { bindings := [("b", .enter "B" "")] }),
+                                      ("B", {})] } []
+      = [Problem.stranded "B"]
+    ∧ validate { root := "A", modes := [("A", { bindings := [("b", .enter "B" "")] }),
+                                        ("B", { parent := some "Ghost" })] } []
+      = [Problem.undefinedParent "B" "Ghost", Problem.stranded "B"]
+    ∧ validate { root := "A", modes := [("A", { bindings := [("i", .enter "I" "")] }),
+                                        ("I", { bindings := [("Escape", .enter "A" "")] })] } []
+      = [] := by
+  native_decide
+
+/-- Dangling `enter` targets queued ahead of a real mode used to spend the
+search's fuel, so a mode the root does reach was reported unreachable. -/
+theorem dangling_targets_do_not_hide_a_reachable_mode :
+    validate { root := "A", modes := [
+        ("A", { bindings := [("1", .enter "G1" ""), ("2", .enter "G2" ""),
+                             ("3", .enter "G3" ""), ("4", .enter "B" "")] }),
+        ("B", { parent := some "A" })] } []
+      = [Problem.undefinedMode "A" "1" "G1", Problem.undefinedMode "A" "2" "G2",
+         Problem.undefinedMode "A" "3" "G3"] := by
   native_decide
 
 end TraceLean.Keymap

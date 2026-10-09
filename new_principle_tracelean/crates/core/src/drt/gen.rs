@@ -61,9 +61,7 @@ pub fn raw_stream(seed: u64, count: u64) -> Vec<u64> {
 /// Drives the real generator rather than repeating it: the schema is built here
 /// and handed to `value`, so what is compared is what runs.
 ///
-/// @implements REQ-DRT-GEN.seed_reproduces
 /// @implements REQ-DRT-GEN.edges_sampled
-/// @drt REQ-DRT-GEN.seed_reproduces
 /// @drt REQ-DRT-GEN.edges_sampled
 pub fn nat_stream(seed: u64, max: Option<u64>, edges: Vec<u64>, count: u64) -> Vec<u64> {
     let schema = Schema::Nat { max, edges };
@@ -71,21 +69,40 @@ pub fn nat_stream(seed: u64, max: Option<u64>, edges: Vec<u64>, count: u64) -> V
     (0..count).map(|_| value(&schema, &mut rng).as_u64().unwrap_or(0)).collect()
 }
 
-/// The first `count` values a `Str` schema generates from a seed.
+/// The first `count` values any schema generates from a seed: the cases a
+/// differential run with that seed asks, in its order.
+///
+/// Every shape, not one: a run draws structures, lists, options, booleans,
+/// integers and enums, and a seed is only auditable if all of them are fixed.
+pub fn value_stream(seed: u64, schema: Schema, count: u64) -> Vec<Value> {
+    let mut rng = Rng::new(seed);
+    (0..count).map(|_| value(&schema, &mut rng)).collect()
+}
+
+/// One schema of every shape, as the JSON a binding writes them in. The Lean
+/// model reads the same text, so the two streams are over the same shapes.
+const SHAPES: &str = "[{\"type\":\"nat\",\"max\":50,\"edges\":[7]},{\"type\":\"int\",\"min\":-5,\"max\":5},{\"type\":\"bool\"},{\"type\":\"str\",\"max_len\":4,\"examples\":[\"one\",\"\"]},{\"type\":\"option\",\"inner\":{\"type\":\"nat\",\"max\":9}},{\"type\":\"list\",\"inner\":{\"type\":\"int\",\"min\":0,\"max\":3},\"max_len\":3},{\"type\":\"tuple\",\"items\":[{\"type\":\"bool\"},{\"type\":\"nat\",\"max\":3}]},{\"type\":\"struct\",\"fields\":{\"a\":{\"type\":\"bool\"},\"b\":{\"type\":\"str\",\"max_len\":2}}},{\"type\":\"enum\",\"variants\":{\"x\":null,\"y\":{\"type\":\"nat\",\"max\":2}}},{\"type\":\"list\",\"inner\":{\"type\":\"struct\",\"fields\":{\"n\":{\"type\":\"option\",\"inner\":{\"type\":\"int\",\"min\":-1,\"max\":1}}}},\"max_len\":2}]";
+
+/// The first `count` values the `shape`-th schema of `SHAPES` (counted round
+/// the list) generates from a seed: the same seed, the same cases, for every
+/// shape a run can draw.
 ///
 /// @implements REQ-DRT-GEN.seed_reproduces
 /// @drt REQ-DRT-GEN.seed_reproduces
-pub fn str_stream(
-    seed: u64,
-    max_len: Option<usize>,
-    examples: Vec<String>,
-    count: u64,
-) -> Vec<String> {
-    let schema = Schema::Str { max_len, examples };
-    let mut rng = Rng::new(seed);
-    (0..count)
-        .map(|_| value(&schema, &mut rng).as_str().unwrap_or_default().to_string())
-        .collect()
+pub fn shape_stream(seed: u64, shape: u64, count: u64) -> Vec<Value> {
+    match shape_at(shape) {
+        Some(schema) => value_stream(seed, schema, count),
+        None => Vec::new(),
+    }
+}
+
+/// The `shape`-th schema of `SHAPES`, counted round the list.
+pub fn shape_at(shape: u64) -> Option<Schema> {
+    let shapes: Vec<Schema> = serde_json::from_str(SHAPES).unwrap_or_default();
+    match shapes.len() as u64 {
+        0 => None,
+        n => Some(shapes[(shape % n) as usize].clone()),
+    }
 }
 
 /// Generate one value of the declared shape.

@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-LSP",
+    "clause": "column_to_offset",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.SpecLsp::column_round_trip",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "2417861035bfaf56",
+  "inputs": [
+    [
+      "model",
+      "206b4076cc50f710"
+    ],
+    [
+      "requirement",
+      "d80751441c2e153d"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

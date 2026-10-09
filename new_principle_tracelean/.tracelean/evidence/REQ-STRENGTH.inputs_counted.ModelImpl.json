@@ -1,0 +1,30 @@
+{
+  "key": {
+    "reqId": "REQ-STRENGTH",
+    "clause": "inputs_counted",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 314,
+      "cases": 2000,
+      "op": "REQ-STRENGTH.inputs_counted"
+    }
+  },
+  "linkHash": "5088fe0ff84d13df",
+  "inputs": [
+    [
+      "implementation",
+      "da06cae00631e27f"
+    ],
+    [
+      "model",
+      "e371ebfa8a19952f"
+    ],
+    [
+      "requirement",
+      "2102500c7e68f518"
+    ]
+  ]
+}

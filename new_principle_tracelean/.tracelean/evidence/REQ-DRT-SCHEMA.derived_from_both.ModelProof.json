@@ -7,15 +7,15 @@
   "level": "L4",
   "detail": {
     "proof": {
-      "theoremName": "TraceLean.Derive::an_int_pairs_with_i64",
+      "theoremName": "TraceLean.Derive::different_arities_are_refused",
       "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
     }
   },
-  "linkHash": "3c52ac63803f9ffc",
+  "linkHash": "6b4e90e9f460a069",
   "inputs": [
     [
       "model",
-      "6b2ff6ff8b8e5376"
+      "4b07cf3e01b89cb3"
     ],
     [
       "requirement",

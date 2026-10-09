@@ -128,13 +128,18 @@ fn the_two_kernels_agree_about_this_tree() {
     });
     // A liveness check on the rule, not a target: annotations that move onto
     // their enclosing type (ADR-0014) lower the count.
-    assert!(refined > 10, "only {refined} anchors were refinements; the rule may be dead");
+    assert!(refined > 5,"only {refined} anchors were refinements; the rule may be dead");
 
-    // 6. An annotation inside a Lean declaration — a constructor's doc comment
-    //    — binds to that declaration in the port and to the next declaration
-    //    in stage 0 (ADR-0014). The same claim in the same Lean file, once on
+    // 6. An annotation inside a declaration — a Lean constructor's doc comment,
+    //    a Rust variant's or field's, a comment in a function body — binds to
+    //    that declaration in the port and to the next declaration in stage 0
+    //    (ADR-0014). The same claim in the same Lean or Rust file, once on
     //    each side, is that one rebinding.
-    let lean_file = |a: &str| a.split_once(".lean::").map(|(f, _)| f.to_string());
+    let lean_file = |a: &str| {
+        a.split_once("::")
+            .map(|(f, _)| f.to_string())
+            .filter(|f| f.ends_with(".lean") || f.ends_with(".rs"))
+    };
     let rebound: Vec<(String, String)> = only_old
         .iter()
         .filter(|(key, anchor)| {
@@ -144,6 +149,16 @@ fn the_two_kernels_agree_about_this_tree() {
         .collect();
     only_old.retain(|(key, anchor)| !rebound.contains(&(key.clone(), lean_file(anchor).unwrap_or_default())));
     only_new.retain(|(key, anchor)| !rebound.contains(&(key.clone(), lean_file(anchor).unwrap_or_default())));
+    // When stage 0's next declaration already carried the same claim from an
+    // annotation of its own, the rebinding has no old half: links are a set,
+    // so the moved one merged into it. A port-only link whose claim stage 0
+    // also makes in the same file, with nothing else left over, is that.
+    if only_old.is_empty() {
+        only_new.retain(|(key, anchor)| {
+            let file = lean_file(anchor);
+            file.is_none() || !old_set.iter().any(|(k, a)| k == key && lean_file(a) == file)
+        });
+    }
 
     assert!(
         only_old.is_empty() && only_new.is_empty(),

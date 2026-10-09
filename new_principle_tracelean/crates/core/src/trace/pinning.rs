@@ -145,13 +145,48 @@ pub fn shown(plan: &PinPlan, record: Option<PinRecord>) -> (String, String) {
 
 /// A declaration's shape, from its source: whether it is a proposition, and how
 /// many explicit arguments it takes. `None` for what is not a `def`.
-pub fn shape(declaration: &str) -> Option<(bool, usize)> {
+///
+/// An argument is either named in a binder before the colon or only an arrow
+/// of the type after it: a definition by pattern matching
+/// (`def f : List Nat → Nat | … `) names none and still takes one. What the
+/// type finally returns, after its last top-level arrow, says whether it is a
+/// proposition. The header ends at `:=`, or at a top-level `|` that starts the
+/// first pattern.
+///
+/// @implements REQ-STRENGTH.inputs_counted
+/// @drt REQ-STRENGTH.inputs_counted
+pub fn shape(declaration: String) -> Option<(bool, usize)> {
     let at = declaration.find("def ").or_else(|| declaration.find("abbrev "))?;
     let header = &declaration[at..];
     let header = &header[..header.find(":=").unwrap_or(header.len())];
-    let (mut depth, mut names, mut group, mut result) = (0usize, 0usize, String::new(), None);
+    let (mut depth, mut names, mut group) = (0usize, 0usize, String::new());
     let mut explicit = false;
-    for (i, c) in header.char_indices() {
+    // After the top-level colon: the type, its arrows, and the text after the last.
+    let (mut typed, mut arrows, mut result) = (false, 0usize, String::new());
+    for c in header.chars() {
+        if typed {
+            match c {
+                '(' | '{' | '[' => {
+                    depth += 1;
+                    result.push(c);
+                }
+                ')' | '}' | ']' => {
+                    depth = depth.saturating_sub(1);
+                    result.push(c);
+                }
+                '|' if depth == 0 => break,
+                '→' if depth == 0 => {
+                    arrows += 1;
+                    result.clear();
+                }
+                '>' if depth == 0 && result.ends_with('-') => {
+                    arrows += 1;
+                    result.clear();
+                }
+                _ => result.push(c),
+            }
+            continue;
+        }
         match c {
             '(' | '{' | '[' => {
                 depth += 1;
@@ -172,15 +207,12 @@ pub fn shape(declaration: &str) -> Option<(bool, usize)> {
                     }
                 }
             }
-            ':' if depth == 0 => {
-                result = Some(header[i + 1..].trim());
-                break;
-            }
+            ':' if depth == 0 => typed = true,
             _ if depth >= 1 => group.push(c),
             _ => {}
         }
     }
-    Some((result == Some("Prop"), names))
+    Some((typed && result.trim() == "Prop", names + arrows))
 }
 
 /// A Lean declaration's name, from an anchor's `Ns::name`.
@@ -256,7 +288,7 @@ pub fn plans(index: &Index, files: &std::collections::BTreeMap<String, String>) 
             // about — read from the theorem, never chosen by position.
             let models: Vec<_> = all(Role::Models)
                 .into_iter()
-                .filter_map(|(symbol, link)| shape(&text_of(link)).map(|(_, inputs)| (symbol, link, inputs)))
+                .filter_map(|(symbol, link)| shape(text_of(link)).map(|(_, inputs)| (symbol, link, inputs)))
                 .collect();
             let named: Vec<_> = match &pin {
                 Some((_, link)) if models.len() > 1 => {
@@ -315,12 +347,33 @@ mod tests {
 
     #[test]
     fn a_declaration_says_whether_it_is_a_proposition_and_what_it_takes() {
+        let shape = |s: &str| shape(s.to_string());
         assert_eq!(shape("/-- doc -/\ndef ToF (c f : Int) : Prop :=\n  c = f"), Some((true, 2)));
         assert_eq!(shape("def toF (c : Int) : Int := c"), Some((false, 1)));
         assert_eq!(shape("def g {α : Type} [Inhabited α] (xs : List α) (n : Nat) : α := default"), Some((false, 2)));
         assert_eq!(shape("theorem t : 1 = 1 := rfl"), None);
         assert_eq!(shape("def d (l : Link) (now : List (String × String)) : State := x"), Some((false, 2)));
         assert_eq!(shape("def e (f : (Nat → Nat)) (p : Nat × (Nat × Nat)) : Nat := 0"), Some((false, 2)));
+    }
+
+    /// A definition by pattern matching names no argument and still takes
+    /// them: they are the arrows of its type. Counted as none, the obligation
+    /// would quantify over nothing and could never be stated.
+    ///
+    /// @tests REQ-STRENGTH.inputs_counted
+    #[test]
+    fn a_pattern_matched_definition_takes_the_arrows_of_its_type() {
+        let shape = |s: &str| shape(s.to_string());
+        assert_eq!(
+            shape("def firstBadRange (content : String) : List Edit → Option LowerError\n  | [] => none\n  | e :: rest => let x := e; x"),
+            Some((false, 2))
+        );
+        assert_eq!(shape("def unavailableBecause : ServerState → String\n  | .running _ => \"a\""), Some((false, 1)));
+        assert_eq!(shape("def Holds : Nat → List Nat -> Prop\n  | _, _ => True"), Some((true, 2)));
+        // An arrow inside an argument's type is not an argument.
+        assert_eq!(shape("def h : (Nat → Nat) → Nat := fun f => f 0"), Some((false, 1)));
+        // A function-valued result is still taking its arguments.
+        assert_eq!(shape("def k (n : Nat) : Nat → Prop := fun _ => True"), Some((true, 2)));
     }
 
     fn plans_of(text: &str) -> Vec<PinPlan> {

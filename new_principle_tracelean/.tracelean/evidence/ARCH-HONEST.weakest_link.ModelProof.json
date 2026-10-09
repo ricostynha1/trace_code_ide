@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "ARCH-HONEST",
+    "clause": "weakest_link",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.SpecRollup::rollUp_is_minimum_over_reach",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "168c012c5cfd9c01",
+  "inputs": [
+    [
+      "model",
+      "30f0a5ab73add768"
+    ],
+    [
+      "requirement",
+      "883a5bf07791b64f"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

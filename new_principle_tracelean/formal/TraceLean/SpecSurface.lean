@@ -35,13 +35,13 @@ def reportFor (keymap : Keymap) (mode : String) (keys : List String) (n : Nat)
     mode := modeAfter keymap mode (keys.take (n + 1)),
     menu := whichKey keymap (modeAfter keymap mode (keys.take (n + 1))) }
 
-/-- A run of the editor from a keymap and a starting mode: for every list of
-keys, what it produces at each index is that key's report, and there is
-something at an index exactly when there is a key there.
+/-- What a run of the editor from a keymap and a starting mode produces for a
+list of keys: at each index that key's report, and something at an index exactly
+when there is a key there.
 
 @specifies REQ-DRIVE.session_is_a_value -/
-def SessionOf (keymap : Keymap) (mode : String) (run : List String → List Step) : Prop :=
-  ∀ keys n, (run keys).get? n = (keys.get? n).map (reportFor keymap mode keys n)
+def SessionOf (keymap : Keymap) (mode : String) (keys : List String) (steps : List Step) : Prop :=
+  ∀ n, steps.get? n = (keys.get? n).map (reportFor keymap mode keys n)
 
 theorem drive_reports (keymap : Keymap) (keys : List String) :
     ∀ mode n, (drive keymap mode keys).get? n = (keys.get? n).map (reportFor keymap mode keys n) := by
@@ -67,16 +67,15 @@ theorem drive_reports (keymap : Keymap) (keys : List String) :
 
 @pins REQ-DRIVE.session_is_a_value -/
 theorem session_pinned :
-    (∀ x1 x2, SessionOf x1 x2 (drive x1 x2)) ∧
-    (∀ x1 x2 y1 y2, SessionOf x1 x2 y1 → SessionOf x1 x2 y2 → y1 = y2) := by
+    (∀ x1 x2 x3, SessionOf x1 x2 x3 (drive x1 x2 x3)) ∧
+    (∀ x1 x2 x3 y1 y2, SessionOf x1 x2 x3 y1 → SessionOf x1 x2 x3 y2 → y1 = y2) := by
   constructor
   · intro keymap mode keys n
     exact drive_reports keymap keys mode n
-  · intro keymap mode y1 y2 h1 h2
-    funext keys
+  · intro keymap mode keys y1 y2 h1 h2
     apply List.ext_get?
     intro n
-    rw [h1 keys n, h2 keys n]
+    rw [h1 n, h2 n]
 
 /-! ## Reading a symbolic row -/
 
@@ -84,8 +83,8 @@ theorem session_pinned :
 nothing of what was painted.
 
 @specifies REQ-VIEW.presentation_may_be_symbolic -/
-def ReadAsNames (read : List Presented → String) : Prop :=
-  ∀ row, read row = String.join (row.map (fun piece => piece.name))
+def ReadAsNames (row : List Presented) (read : String) : Prop :=
+  read = String.join (row.map (fun piece => piece.name))
 
 theorem foldl_from (l : List String) :
     ∀ s, l.foldl (fun r t => r ++ t) s = s ++ l.foldl (fun r t => r ++ t) "" := by
@@ -107,17 +106,18 @@ theorem join_cons (first : String) (rest : List String) :
 
 @pins REQ-VIEW.presentation_may_be_symbolic -/
 theorem read_as_names_pinned :
-    (ReadAsNames accessible) ∧
-    (∀ y1 y2, ReadAsNames y1 → ReadAsNames y2 → y1 = y2) := by
+    (∀ x1, ReadAsNames x1 (accessible x1)) ∧
+    (∀ x1 y1 y2, ReadAsNames x1 y1 → ReadAsNames x1 y2 → y1 = y2) := by
   constructor
   · intro row
     induction row
     case nil => rfl
     case cons piece rest ih =>
-      simp [accessible, ih, join_cons]
-  · intro y1 y2 h1 h2
-    funext row
-    rw [h1 row, h2 row]
+      unfold ReadAsNames at ih ⊢
+      rw [List.map_cons, join_cons, ← ih]
+      simp [accessible]
+  · intro row y1 y2 h1 h2
+    exact Eq.trans h1 (Eq.symm h2)
 
 /-! ## The parts of a context -/
 

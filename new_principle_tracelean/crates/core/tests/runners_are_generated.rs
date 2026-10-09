@@ -67,6 +67,7 @@ fn the_rust_runner_is_a_generated_crate_under_the_cache() {
         also_checks: Vec::new(),
         also_implemented_by: Vec::new(),
         floors: Vec::new(),
+        waive: Vec::new(),
         model: None,
         implementation: CallSpec {
             language: "rust".into(),
@@ -308,6 +309,7 @@ fn a_binding_describes_a_call_and_nothing_more() {
             also_checks: Vec::new(),
             also_implemented_by: Vec::new(),
         floors: Vec::new(),
+        waive: Vec::new(),
             model: None,
             implementation: CallSpec {
                 language: "rust".into(),

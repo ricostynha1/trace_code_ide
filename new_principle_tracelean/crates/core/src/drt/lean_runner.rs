@@ -80,7 +80,8 @@ pub fn lakefile(model_package: &str, model_path: &str) -> String {
 /// always produces the same bytes and a rebuild is a no-op.
 ///
 /// @implements REQ-DRT-LEAN.encoding_declared
-/// @implements REQ-DRT-PROTO.line_delimited
+/// @implements REQ-DRT-PROTO.reply_one_line
+/// @implements REQ-DRT-PROTO.case_names_op
 /// @implements REQ-DRT-PROTO.runner_shared
 pub fn main_lean(imports: &[&str], entries: &[LeanEntry]) -> String {
     let unique: std::collections::BTreeSet<&str> = imports.iter().copied().collect();
@@ -216,7 +217,7 @@ mod tests {
     /// A shared runner is asked for ops it may not have; answering one of them
     /// with another's function is the failure that would look like agreement.
     ///
-    /// @tests REQ-DRT-PROTO.op_dispatch
+    /// @tests REQ-DRT-PROTO.case_names_op
     #[test]
     fn an_op_the_runner_does_not_carry_is_refused() {
         let main = main_lean(&["TraceLean.Evidence"], &[entry("REQ-EVID.weakest_link", "f")]);

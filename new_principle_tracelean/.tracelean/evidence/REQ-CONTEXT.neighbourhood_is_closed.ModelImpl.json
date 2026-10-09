@@ -12,11 +12,11 @@
       "op": "REQ-CONTEXT.neighbourhood_is_closed"
     }
   },
-  "linkHash": "00c410ecd1957642",
+  "linkHash": "133a7410b482942c",
   "inputs": [
     [
       "implementation",
-      "91dd8f294c4f559d+9d3e26f6fa20e4bb"
+      "6c82b4089bfc34e0"
     ],
     [
       "model",

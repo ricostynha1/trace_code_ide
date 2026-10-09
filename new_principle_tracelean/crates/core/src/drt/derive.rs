@@ -88,9 +88,7 @@ fn fields_of<'a>(structs: &'a Structs, name: &str) -> Option<&'a Vec<(String, Ty
 ///
 /// `fuel` bounds the walk through structures, which may refer to each other.
 ///
-/// @implements REQ-DRT-SCHEMA.derived_from_both
 /// @implements REQ-DRT-SCHEMA.outside_is_error
-/// @drt REQ-DRT-SCHEMA.derived_from_both
 /// @drt REQ-DRT-SCHEMA.outside_is_error
 pub fn pair(lean: Ty, rust: Ty, lean_structs: Structs, rust_structs: Structs, fuel: u32) -> Paired {
     let mismatch = || Paired::Err(format!("Lean `{}` against Rust `{}`", show(&lean), show(&rust)));
@@ -377,53 +375,9 @@ pub fn rust_structs(source: &str) -> Structs {
     out
 }
 
-/// The situations a derived test must reach, as its floors: each argument in
-/// each of its classes — below, at and above zero; empty and not; absent and
-/// present; both truths.
-pub fn situations(schema: &Schema) -> Vec<String> {
-    let Schema::Struct { fields } = schema else { return Vec::new() };
-    let mut out = Vec::new();
-    for (name, field) in fields {
-        let classes: &[&str] = match field {
-            Schema::Int { .. } => &["negative", "zero", "positive"],
-            Schema::Nat { .. } => &["zero", "positive"],
-            Schema::Bool => &["true", "false"],
-            Schema::Str { .. } | Schema::List { .. } => &["empty", "not empty"],
-            Schema::Option { .. } => &["absent", "present"],
-            _ => &[],
-        };
-        out.extend(classes.iter().map(|class| format!("{name} {class}")));
-    }
-    out
-}
-
-/// Which of `situations` one generated input is in.
-pub fn situation_of(schema: &Schema, input: &serde_json::Value) -> Vec<String> {
-    let Schema::Struct { fields } = schema else { return Vec::new() };
-    let mut out = Vec::new();
-    for (name, field) in fields {
-        let value = &input[name];
-        let class = match field {
-            Schema::Int { .. } | Schema::Nat { .. } => match value.as_i64() {
-                Some(n) if n < 0 => "negative",
-                Some(0) => "zero",
-                Some(_) => "positive",
-                None => continue,
-            },
-            Schema::Bool => if value.as_bool() == Some(true) { "true" } else { "false" },
-            Schema::Str { .. } => if value.as_str().is_some_and(str::is_empty) { "empty" } else { "not empty" },
-            Schema::List { .. } => if value.as_array().is_some_and(Vec::is_empty) { "empty" } else { "not empty" },
-            Schema::Option { .. } => if value.is_null() { "absent" } else { "present" },
-            _ => continue,
-        };
-        out.push(format!("{name} {class}"));
-    }
-    out
-}
-
 /// What a derived test needs: the schema of its input, the model's argument
 /// names in order, and which Rust parameter reads which of them.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct Derived {
     pub schema: Schema,
     pub arguments: Vec<String>,
@@ -432,6 +386,12 @@ pub struct Derived {
 }
 
 /// Pair a model with an implementation, or say every reason they cannot be.
+///
+/// Arguments pair by position. Different arities are refused before any type
+/// is looked at; otherwise every argument and the result are paired, and every
+/// pair that fails is reported, not only the first.
+///
+/// @implements REQ-DRT-SCHEMA.derived_from_both
 pub fn derive(
     model: (Vec<(String, Ty)>, Ty),
     implementation: (Vec<(String, Ty)>, Ty),
@@ -465,6 +425,19 @@ pub fn derive(
         return Err(problems);
     }
     Ok(Derived { schema: Schema::Struct { fields }, arguments: theirs.into_iter().map(|(n, _)| n).collect(), params })
+}
+
+/// `derive`, over owned arguments, for the differential runner (ADR-0010).
+///
+/// @implements REQ-DRT-SCHEMA.derived_from_both
+/// @drt REQ-DRT-SCHEMA.derived_from_both
+pub fn derive_of(
+    model: (Vec<(String, Ty)>, Ty),
+    implementation: (Vec<(String, Ty)>, Ty),
+    lean: Structs,
+    rust: Structs,
+) -> Result<Derived, Vec<String>> {
+    derive(model, implementation, &lean, &rust)
 }
 
 #[cfg(test)]
@@ -508,6 +481,35 @@ mod tests {
         .unwrap_err();
         assert!(problems[0].contains("Float"), "{problems:?}");
         assert!(problems[1].contains("Lean `Int` against Rust `u8`"), "{problems:?}");
+    }
+
+    /// Arities that differ are refused before any type is paired; a borrowed
+    /// `&str` is read as something outside the grammar and refused, and every
+    /// failing pair is named, not only the first.
+    ///
+    /// @tests REQ-DRT-SCHEMA.derived_from_both
+    /// @tests REQ-DRT-SCHEMA.outside_is_error
+    #[test]
+    fn arity_borrowed_strings_and_every_problem_are_reported() {
+        let problems = derive(
+            lean_signature("def f (a : Int) (b : Int) : Int := a").unwrap(),
+            rust_signature("fn f(a: i64) -> i64 { a }", "f").unwrap(),
+            &vec![],
+            &vec![],
+        )
+        .unwrap_err();
+        assert_eq!(problems, vec!["the model takes 2 arguments and the code 1".to_string()]);
+        assert_eq!(rust_type("&str"), Ty::Other { text: "&str".into() });
+        let problems = derive(
+            lean_signature("def f (a : String) (b : Bool) : Int := 0").unwrap(),
+            rust_signature("fn f(a: &str, b: f64) -> bool { true }", "f").unwrap(),
+            &vec![],
+            &vec![],
+        )
+        .unwrap_err();
+        assert_eq!(problems.len(), 3, "{problems:?}");
+        assert!(problems[0].contains("Rust `&str`"), "{problems:?}");
+        assert!(problems[2].starts_with("result:"), "{problems:?}");
     }
 
     #[test]

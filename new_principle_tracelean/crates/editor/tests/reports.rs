@@ -44,7 +44,7 @@ const TREE: &[(&str, &str)] = &[
 
 /// Run an action and read what the editor put on screen.
 fn ask(editor: &mut Editor, action: &str) -> String {
-    let intent = dispatch(action.to_string(), editor.focus(), editor.workspace());
+    let intent = dispatch(action.to_string(), editor.focus(), editor.workspace(), editor.waiting());
     editor.perform(intent);
     plain_text(editor.buffer()).join("\n")
 }
@@ -143,7 +143,7 @@ fn a_roll_up_says_what_it_is_a_bound_on() {
     let mut editor = Editor::open(root.clone(), keymap());
     let shown = ask(&mut editor, "trace.rollup");
     assert!(shown.contains("REQ-A"), "the requirement is missing:\n{shown}");
-    assert!(shown.contains('≥'), "an open decomposition read as exact:\n{shown}");
+    assert!(shown.contains("provisional"), "an open decomposition read as exact:\n{shown}");
     let _ = std::fs::remove_dir_all(&root);
 }
 

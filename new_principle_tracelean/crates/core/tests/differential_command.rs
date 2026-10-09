@@ -106,6 +106,7 @@ fn rust_runner_for(entry_path: &str, op_clause: &str, scratch: &Path) -> RunnerS
         also_checks: Vec::new(),
         also_implemented_by: Vec::new(),
         floors: Vec::new(),
+        waive: Vec::new(),
         model: None,
         implementation: CallSpec {
             language: "rust".into(),

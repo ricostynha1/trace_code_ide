@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "ARCH-HONEST",
+    "clause": "lower_bound_marked",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Rollup::an_open_figure_is_marked",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "4053edf5343ed981",
+  "inputs": [
+    [
+      "model",
+      "ffcc9c4258d7e4e1"
+    ],
+    [
+      "requirement",
+      "0c39d3c85032dd96"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

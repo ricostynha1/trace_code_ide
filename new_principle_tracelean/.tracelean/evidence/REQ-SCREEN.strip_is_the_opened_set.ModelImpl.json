@@ -12,11 +12,11 @@
       "op": "REQ-SCREEN.strip_is_the_opened_set"
     }
   },
-  "linkHash": "623fc07d298fc9ae",
+  "linkHash": "5fd7e465ddf6759d",
   "inputs": [
     [
       "implementation",
-      "e42970a5172721e4+f0a15131ac4ae15c"
+      "bf0d193d928e290d+f0a15131ac4ae15c"
     ],
     [
       "model",
@@ -24,7 +24,7 @@
     ],
     [
       "requirement",
-      "1e5a2b318039c557"
+      "fb3df61a693e6618"
     ]
   ]
 }

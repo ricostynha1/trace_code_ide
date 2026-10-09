@@ -7,7 +7,10 @@ decomposition: complete
 clauses:
   classification_total: Every path shall classify as exactly one of protected, mirrored, passed-through or outside.
   protected_never_mirrored: A change under a protected path shall never be replayed onto the real tree.
-  passthrough_not_mirrored: Regenerable build and cache directories shall be writable in the workspace and shall not be mirrored.
+  passthrough_not_mirrored:
+    text: Regenerable build and cache directories shall be writable in the workspace and shall not be mirrored.
+    anywhere: A directory only tools write — target, node_modules, __pycache__, .lake, .venv, .cache, .mypy_cache, .pytest_cache, .ruff_cache, .gradle, .tox — is regenerable at any depth.
+    at_root: A name a person also gives a source directory — build, dist, venv — is regenerable only at the project root, so src/build/mod.rs is mirrored.
   real_tree_untouched: The real tree shall not be written while the workspace is live.
   capability_reported: An unavailable containment mechanism shall be reported as a named state, and the system shall not silently fall back to no containment.
   escape_is_not_silent: A write outside the workspace shall be reported.

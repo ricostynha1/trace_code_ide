@@ -5,7 +5,7 @@ status: approved
 decomposition: open
 clauses:
   weakest_link: An aggregate assurance shall be the minimum over its parts, never an average.
-  lower_bound_marked: A percentage over an incompletely decomposed parent shall be rendered as a lower bound and never as an exact figure.
+  lower_bound_marked: A percentage over an incompletely decomposed parent shall be rendered marked provisional, saying it can only fall, and never as an exact figure.
   untraced_visible: Code that nothing claims shall appear in every view that reports coverage.
   absence_is_not_pass: A check that did not run shall be reported as not run, and never as passing.
   confidence_carried: A derived or inferred relationship shall be distinguishable from an asserted one wherever it is shown.

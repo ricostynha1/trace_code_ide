@@ -70,6 +70,36 @@ fn action() -> Schema {
     Schema::Str { max_len: None, examples }
 }
 
+/// Changes an agent made and nobody has taken in yet: commands on the files the
+/// cursors name, so accepting one file finds its change and the rest do not.
+fn waiting() -> Schema {
+    let file = Schema::Str { max_len: None, examples: vec!["a.rs".into(), "src/lib.rs".into()] };
+    let text = Schema::Str { max_len: Some(2), examples: vec!["x".into()] };
+    let at = Schema::Nat { max: Some(2), edges: vec![0] };
+    let strukt = |fields: &[(&str, Schema)]| Schema::Struct {
+        fields: fields.iter().map(|(k, v)| (k.to_string(), v.clone())).collect(),
+    };
+    let mut variants: BTreeMap<String, Option<Box<Schema>>> = BTreeMap::new();
+    variants.insert(
+        "insert".into(),
+        Some(Box::new(strukt(&[("file", file.clone()), ("offset", at.clone()), ("text", text.clone())]))),
+    );
+    variants.insert(
+        "delete".into(),
+        Some(Box::new(strukt(&[("file", file.clone()), ("offset", at), ("deleted", text.clone())]))),
+    );
+    variants.insert("createFile".into(), Some(Box::new(strukt(&[("path", file.clone())]))));
+    variants.insert(
+        "deleteFile".into(),
+        Some(Box::new(strukt(&[("path", file.clone()), ("content", text)]))),
+    );
+    variants.insert(
+        "renameFile".into(),
+        Some(Box::new(strukt(&[("from_", file.clone()), ("to", file)]))),
+    );
+    Schema::List { inner: Box::new(Schema::Enum { variants }), max_len: Some(3) }
+}
+
 fn workspace() -> Schema {
     let mut fields = BTreeMap::new();
     fields.insert(
@@ -120,11 +150,12 @@ fn model_and_implementation_agree_on_what_an_action_means() {
     fields.insert("action".to_string(), action());
     fields.insert("focus".to_string(), focus());
     fields.insert("w".to_string(), workspace());
+    fields.insert("waiting".to_string(), waiting());
     check(
         "REQ-ACT.action_to_intent",
         "TraceLean.Act.dispatch",
         "crates/core/src/surface/act.rs::dispatch",
-        &["action", "focus", "w"],
+        &["action", "focus", "w", "waiting"],
         Schema::Struct { fields },
         83,
     );
@@ -138,7 +169,7 @@ fn model_and_implementation_agree_on_whether_anything_happens() {
     let mut travel = BTreeMap::new();
     travel.insert("move".to_string(), Schema::simple_enum(&["back", "forward", "branch"]));
     let mut observe = BTreeMap::new();
-    observe.insert("watch".to_string(), Schema::simple_enum(&["start", "accept", "reject"]));
+    observe.insert("watch".to_string(), Schema::simple_enum(&["start", "reject", "create"]));
     let mut display = BTreeMap::new();
     display.insert("what".to_string(), kind());
     let mut unknown = BTreeMap::new();
@@ -234,8 +265,8 @@ fn a_key_and_a_button_reach_the_same_dispatch() {
                 under: Some("a.rs".into()),
             };
             assert_eq!(
-                dispatch(action.clone(), focus.clone(), Workspace::default()),
-                dispatch(offered[0].clone(), focus, Workspace::default())
+                dispatch(action.clone(), focus.clone(), Workspace::default(), Vec::new()),
+                dispatch(offered[0].clone(), focus, Workspace::default(), Vec::new())
             );
             pairs += 1;
         }

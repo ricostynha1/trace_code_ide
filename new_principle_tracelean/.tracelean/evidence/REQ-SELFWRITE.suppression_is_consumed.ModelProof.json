@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-SELFWRITE",
+    "clause": "suppression_is_consumed",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Mirror::one_write_suppresses_one_observation",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "8065ec27f69a5f6a",
+  "inputs": [
+    [
+      "model",
+      "9ab2185425ad9027"
+    ],
+    [
+      "requirement",
+      "88b1d15d370024b5"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

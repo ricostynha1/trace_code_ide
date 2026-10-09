@@ -37,9 +37,17 @@ pub enum Class {
 /// Paths whose changes are discarded even where they are writable.
 pub const PROTECTED: &[&str] = &[".git", ".tracelean"];
 
-/// Regenerable directories: writable, not mirrored.
-pub const PASS_THROUGH: &[&str] =
-    &["target", "node_modules", "dist", "build", ".venv", "venv", "__pycache__", ".lake"];
+/// Directories only tools write: writable, not mirrored, wherever they sit.
+/// Cargo leaves a `target` beside every crate outside a workspace, and every
+/// language's cache directory is named for the tool that fills it.
+pub const PASS_THROUGH_ANYWHERE: &[&str] = &[
+    "target", "node_modules", "__pycache__", ".lake", ".venv",
+    ".cache", ".mypy_cache", ".pytest_cache", ".ruff_cache", ".gradle", ".tox",
+];
+
+/// Names a person also gives a source directory: regenerable only at the
+/// project root. `src/build/mod.rs` is somebody's code.
+pub const PASS_THROUGH_AT_ROOT: &[&str] = &["build", "dist", "venv"];
 
 /// Classify a project-relative path.
 ///
@@ -50,7 +58,6 @@ pub const PASS_THROUGH: &[&str] =
 /// @implements REQ-SBX.classification_total
 /// @implements REQ-SBX.protected_never_mirrored
 /// @implements REQ-SBX.passthrough_not_mirrored
-/// @implements REQ-SBX.escape_is_not_silent
 /// @drt REQ-SBX.classification_total
 /// @drt REQ-SBX.protected_never_mirrored
 /// @drt REQ-SBX.passthrough_not_mirrored
@@ -88,7 +95,11 @@ pub fn classify(path: String) -> Class {
     if PROTECTED.contains(&first) {
         return Class::Protected;
     }
-    if resolved.iter().any(|segment| PASS_THROUGH.contains(segment)) {
+    // A name like `build` is output at the root and somebody's source module
+    // further down; a tool-only name is output wherever it is.
+    if PASS_THROUGH_AT_ROOT.contains(&first)
+        || resolved.iter().any(|segment| PASS_THROUGH_ANYWHERE.contains(segment))
+    {
         return Class::PassThrough;
     }
     Class::Mirrored
@@ -149,9 +160,25 @@ mod tests {
     #[test]
     fn build_output_is_writable_and_not_mirrored() {
         assert_eq!(classify("target/debug/x".into()), Class::PassThrough);
-        assert_eq!(classify("crates/core/target/x".into()), Class::PassThrough);
+        assert_eq!(classify("tools/stage0/target/x".into()), Class::PassThrough);
         assert_eq!(classify("formal/.lake/build/x".into()), Class::PassThrough);
+        assert_eq!(classify("build/out.o".into()), Class::PassThrough);
         assert!(!is_mirrored("node_modules/a/b.js"));
+    }
+
+    /// A name a person also gives a source module is output only at the root,
+    /// and a cache is a cache wherever it is. Both failed before: the first
+    /// was never mirrored back, the second always was.
+    ///
+    /// @tests REQ-SBX.passthrough_not_mirrored
+    #[test]
+    fn source_named_like_output_is_mirrored_and_caches_are_not() {
+        assert_eq!(classify("src/build/mod.rs".into()), Class::Mirrored);
+        assert_eq!(classify("web/dist/notes.md".into()), Class::Mirrored);
+        assert_eq!(classify("lib/venv.py".into()), Class::Mirrored);
+        for cache in [".cache/x", "py/.mypy_cache/x", ".pytest_cache/v", "app/.gradle/x", ".ruff_cache/a", ".tox/x"] {
+            assert_eq!(classify(cache.into()), Class::PassThrough, "{cache}");
+        }
     }
 
     /// A path trying not to be answered still gets exactly one answer.

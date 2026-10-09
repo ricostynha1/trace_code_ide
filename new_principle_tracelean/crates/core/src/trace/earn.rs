@@ -146,6 +146,59 @@ fn with_link(
     })
 }
 
+/// The inputs a differential claim would rest on if it were recorded now: for
+/// every clause it establishes, the link and the hashed inputs its record would
+/// name, folded into one hash.
+///
+/// A differential record is earned in two halves that arrive from two test
+/// processes — the runs agreed, the generator reached its floors — and each half
+/// is stamped with this when it is established. A half stamped against other
+/// code is about other code.
+///
+/// @implements REQ-STALE.no_silent_revalidation
+pub fn drt_stamp(index: &Index, clauses: &[String]) -> String {
+    let mut parts: Vec<String> = clauses
+        .iter()
+        .map(|qualified| {
+            let (req_id, clause) = match qualified.split_once('.') {
+                Some((req, clause)) => (req, Some(clause)),
+                None => (qualified.as_str(), None),
+            };
+            match drt_record(index, req_id, clause, Level::L1, 0, 0, "")
+                .or_else(|_| derived_drt_record(index, req_id, clause, Level::L1, 0, 0, ""))
+            {
+                Ok(record) => {
+                    let inputs: Vec<String> =
+                        record.inputs.iter().map(|(name, hash)| format!("{name}={hash}")).collect();
+                    format!("{qualified}|{}|{}", record.link_hash, inputs.join(","))
+                }
+                Err(why) => format!("{qualified}|unearned {why:?}"),
+            }
+        })
+        .collect();
+    parts.sort();
+    crate::trace::hash::text(&parts.join("\n"))
+}
+
+/// Whether the two halves of a differential claim may be composed into a record.
+///
+/// Only when the coverage half and at least one agreeing run per implementation
+/// were all established against the inputs that are current now. Without the
+/// stamps an "agreed" half left over from before a change, joined by a fresh
+/// coverage half, wrote an L3 record before any run had compared the new code
+/// with the model — a record made valid by a backend that never ran on it.
+///
+/// @implements REQ-STALE.no_silent_revalidation
+pub fn halves_compose(
+    agreed: &[String],
+    covered: Option<&str>,
+    current: &str,
+    implementations: usize,
+) -> bool {
+    covered == Some(current)
+        && agreed.iter().filter(|stamp| stamp.as_str() == current).count() >= implementations
+}
+
 /// The clause's text, as every record about it carries it: a clause reworded
 /// or narrowed re-opens the judgement of its model, and the tests and proofs
 /// made against that model too, until they are made again — and rewording a
@@ -337,6 +390,34 @@ mod tests {
             crate::trace::record::reproducibility(record),
             crate::trace::record::Reproducibility::Reproducible
         );
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// A stale "agreed" half and a fresh coverage half do not make a record:
+    /// the run that agreed was a run against other code.
+    ///
+    /// @tests REQ-STALE.no_silent_revalidation
+    #[test]
+    fn halves_stamped_against_other_inputs_do_not_compose() {
+        let (dir, before) = tree(FILES);
+        let clauses = vec!["REQ-A.one".to_string()];
+        let old = drt_stamp(&before, &clauses);
+        let _ = std::fs::remove_dir_all(&dir);
+        let (dir, after) = tree(&[
+            ("reqs/a.md", "---\nid: REQ-A\nclauses:\n  one: First.\n---\nbody"),
+            (
+                "src/i.rs",
+                "// @models REQ-A.one\npub fn m() {}\n\n// @implements REQ-A.one\npub fn f() { changed() }\n\n// @drt REQ-A.one\npub fn d() {}\n",
+            ),
+        ]);
+        let new = drt_stamp(&after, &clauses);
+        assert_ne!(old, new, "changing the implementation changes the stamp");
+        assert!(!halves_compose(&[old.clone()], Some(&new), &new, 1), "a stale agreed half composed");
+        assert!(!halves_compose(&[new.clone()], Some(&old), &new, 1), "a stale coverage half composed");
+        assert!(!halves_compose(&[new.clone()], None, &new, 1));
+        assert!(!halves_compose(&[new.clone(), old.clone()], Some(&new), &new, 2));
+        assert!(halves_compose(&[new.clone()], Some(&new), &new, 1));
+        assert_eq!(drt_stamp(&after, &clauses), new, "the stamp is a function of the tree");
         let _ = std::fs::remove_dir_all(&dir);
     }
 

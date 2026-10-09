@@ -79,7 +79,8 @@ clauses:
 
 `decomposition: complete` claims the clauses exhaust the requirement, and is the
 denominator of every percentage shown about it. It defaults to `open`, under
-which only `≥ x%` may be rendered.
+which a figure is rendered `≤ x% (provisional)`: an unwritten clause has no
+evidence, so writing it can only lower the figure.
 
 ## Reading order
 

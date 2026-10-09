@@ -576,20 +576,23 @@ private def holdsPane (pane : String) (layout : Layout) : Bool :=
   (paneIds layout).contains pane
 
 /-- Move `amount` of weight from the part at `index + 1` to the part at `index`,
-or the other way when it is negative, keeping both at one or more. -/
+or the other way when it is negative -- or refuse, changing nothing, when
+either side would end below one.
+
+A refusal rather than a cut. A cut stopped at "what the giver can spare above
+one", which is nothing for a part already at zero, and so left that part at
+zero: the floor held only for parts that started on it. A drag arrives a
+column at a time, so refusing the step that would cross the floor is where a
+drag stops anyway. -/
 private def shiftAt (index : Nat) (amount : Int) (parts : List (Nat × Layout)) :
     List (Nat × Layout) :=
   match parts.get? index, parts.get? (index + 1) with
   | some here, some next =>
-    -- What can actually move: the taker cannot fall below one, so the amount is
-    -- cut to what each side can spare. Stated as a cut rather than a refusal
-    -- because a drag that went too far should stop at the floor, not undo.
-    let room : Int :=
-      if amount ≥ 0 then Int.ofNat (next.1 - 1) else Int.ofNat (here.1 - 1)
-    let moved : Int := if amount ≥ 0 then min amount room else max amount (-room)
-    let hereWeight := (Int.ofNat here.1 + moved).toNat
-    let nextWeight := (Int.ofNat next.1 - moved).toNat
-    (parts.set index (hereWeight, here.2)).set (index + 1) (nextWeight, next.2)
+    let hereWeight : Int := Int.ofNat here.1 + amount
+    let nextWeight : Int := Int.ofNat next.1 - amount
+    if hereWeight ≥ 1 && nextWeight ≥ 1 then
+      (parts.set index (hereWeight.toNat, here.2)).set (index + 1) (nextWeight.toNat, next.2)
+    else parts
   | _, _ => parts
 
 private def indexHolding (pane : String) : Nat → List (Nat × Layout) → Option Nat
@@ -817,7 +820,8 @@ def stripTitle (opened : List Buffer) (buffer : Buffer) : String :=
 private def stripEntries (opened : List Buffer) (at_ : Nat) : List Buffer → List MenuEntry
   | [] => []
   | buffer :: rest =>
-    { key := toString at_, description := stripTitle opened buffer, action := some "screen.show" }
+    { key := toString at_, description := stripTitle opened buffer,
+      action := some ("screen.show " ++ buffer.id) }
       :: stripEntries opened (at_ + 1) rest
 
 /--
@@ -825,9 +829,10 @@ The opened set, as a buffer.
 
 A rendering of `opened` rather than a list kept beside it: a strip maintained
 separately is a second answer to what the session holds, which is the failure
-`REQ-VIEW` prevents one level up. The row carries `screen.show` and nothing
-more -- which buffer it means is the row under the cursor, the way
-`REQ-ACT.focus_is_carried` already resolves a target.
+`REQ-VIEW` prevents one level up. Each row carries `screen.show <id>`: its text
+is a number and a title, not the buffer's identity, so the action names the
+buffer rather than leaving the shell to work it out from the row (which the
+first review found the shell doing, around `dispatch`).
 
 @models REQ-SCREEN.strip_is_the_opened_set
 -/

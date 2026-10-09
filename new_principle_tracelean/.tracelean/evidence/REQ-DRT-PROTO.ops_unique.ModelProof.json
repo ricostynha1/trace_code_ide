@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-DRT-PROTO",
+    "clause": "ops_unique",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Protocol::no_ops_no_collisions",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "b7c85ce0ce6c4a01",
+  "inputs": [
+    [
+      "model",
+      "9b2ae0dec8de59b8"
+    ],
+    [
+      "requirement",
+      "7423db5056a673ee"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

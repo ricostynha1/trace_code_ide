@@ -1,0 +1,30 @@
+{
+  "key": {
+    "reqId": "REQ-LSP",
+    "clause": "column_to_offset",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 31,
+      "cases": 2000,
+      "op": "REQ-LSP.column_to_offset"
+    }
+  },
+  "linkHash": "29d8ce6f50499737",
+  "inputs": [
+    [
+      "implementation",
+      "2cbeb1d7deb0d0d5"
+    ],
+    [
+      "model",
+      "206b4076cc50f710"
+    ],
+    [
+      "requirement",
+      "d80751441c2e153d"
+    ]
+  ]
+}

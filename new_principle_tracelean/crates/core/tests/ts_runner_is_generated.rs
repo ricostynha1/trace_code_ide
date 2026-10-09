@@ -31,6 +31,7 @@ fn binding(entry: &str) -> Binding {
         also_checks: Vec::new(),
         also_implemented_by: Vec::new(),
         floors: Vec::new(),
+        waive: Vec::new(),
         model: None,
         implementation: CallSpec {
             language: "typescript".into(),

@@ -540,20 +540,25 @@ fn holds_pane(pane: &str, layout: &Layout) -> bool {
 }
 
 /// Move `amount` of weight from the part at `index + 1` to the part at `index`,
-/// or the other way when it is negative, keeping both at one or more.
+/// or the other way when it is negative — or refuse, changing nothing, when
+/// either side would end below one.
+///
+/// A refusal rather than a cut: a cut moved "what the giver can spare above
+/// one", which is nothing for a part already at zero, so that part stayed at
+/// zero. A drag arrives a column at a time, so refusing the step that would
+/// cross the floor is where a drag stops anyway.
 fn shift_at(index: usize, amount: i64, mut parts: Vec<(u64, Layout)>) -> Vec<(u64, Layout)> {
     let (Some(here), Some(next)) =
         (parts.get(index).map(|part| part.0), parts.get(index + 1).map(|part| part.0))
     else {
         return parts;
     };
-    // What can actually move: the taker cannot fall below one, so the amount is
-    // cut to what each side can spare. A cut rather than a refusal, because a
-    // drag that went too far should stop at the floor and not undo itself.
-    let room = if amount >= 0 { next.saturating_sub(1) } else { here.saturating_sub(1) } as i64;
-    let moved = if amount >= 0 { amount.min(room) } else { amount.max(-room) };
-    parts[index].0 = (here as i64 + moved).max(0) as u64;
-    parts[index + 1].0 = (next as i64 - moved).max(0) as u64;
+    let here_weight = here as i128 + amount as i128;
+    let next_weight = next as i128 - amount as i128;
+    if here_weight >= 1 && next_weight >= 1 {
+        parts[index].0 = here_weight as u64;
+        parts[index + 1].0 = next_weight as u64;
+    }
     parts
 }
 
@@ -767,16 +772,6 @@ pub fn arrange(how: Arrangement, rect: Rect, screen: Screen) -> Screen {
 
 // ------------------------------------------------- the strip and stations
 
-/// The opened set, as a buffer.
-///
-/// A rendering of `opened` rather than a list kept beside it: a strip maintained
-/// separately is a second answer to what the session holds, which is the failure
-/// `REQ-VIEW` prevents one level up. The row carries `screen.show` and nothing
-/// more — which buffer it means is the row under the cursor, the way
-/// `REQ-ACT.focus_is_carried` already resolves a target.
-///
-/// @implements REQ-SCREEN.strip_is_the_opened_set
-/// @drt REQ-SCREEN.strip_is_the_opened_set
 /// The folders a path sits in, outermost first.
 fn folders_of(path: &str) -> Vec<&str> {
     let mut parts: Vec<&str> = path.split('/').collect();
@@ -819,6 +814,16 @@ fn strip_title(opened: &[Buffer], buffer: &Buffer) -> String {
     }
 }
 
+/// The opened set, as a buffer.
+///
+/// A rendering of `opened` rather than a list kept beside it: a strip maintained
+/// separately is a second answer to what the session holds, which is the failure
+/// `REQ-VIEW` prevents one level up. Each row carries `screen.show <id>`: its
+/// text is a number and a title, not the buffer's identity, so the action names
+/// the buffer rather than leaving the shell to work it out from the row.
+///
+/// @implements REQ-SCREEN.strip_is_the_opened_set
+/// @drt REQ-SCREEN.strip_is_the_opened_set
 pub fn strip(screen: Screen) -> Buffer {
     strip_with_unsaved(screen, &[])
 }
@@ -839,7 +844,7 @@ pub fn strip_with_unsaved(screen: Screen, unsaved: &[String]) -> Buffer {
             MenuEntry {
                 key: (at + 1).to_string(),
                 description: if dirty { format!("{title} ●") } else { title },
-                action: Some("screen.show".to_string()),
+                action: Some(format!("screen.show {}", buffer.id)),
             }
         })
         .collect();
@@ -1055,15 +1060,41 @@ mod tests {
         assert!(coherent(after));
     }
 
+    /// @tests REQ-SCREEN.resize_has_a_floor
     #[test]
     fn resizing_cannot_take_a_pane_below_one() {
         let split = split_focus(Axis::Across, screen(&["one"]));
         let shrunk = resize_focus(-50, split);
         let Layout::Split { parts, .. } = &shrunk.layout else { panic!("a split") };
-        assert_eq!(parts[0].0, 1);
-        // The weight the floor refused to give up stayed where it was: a
-        // resize moves weight, it does not destroy it.
-        assert_eq!(parts[0].0 + parts[1].0, 2);
+        // Refused: both parts keep the weight they had.
+        assert_eq!((parts[0].0, parts[1].0), (1, 1));
+    }
+
+    /// The first review found the clause's "leave it at one" false for a
+    /// neighbour already at zero: a cut moved what the giver could spare,
+    /// nothing, and left it at zero. The resize is now refused whenever a side
+    /// would end below one — which fails under the cut for an over-long resize
+    /// (5, 2) + 3, which the cut answered (6, 1). A resize that gives a part at
+    /// zero weight lifts it.
+    ///
+    /// @tests REQ-SCREEN.resize_has_a_floor
+    #[test]
+    fn a_resize_that_would_cross_the_floor_is_refused() {
+        let two = |left: u64, right: u64| Screen {
+            layout: Layout::Split {
+                axis: Axis::Across,
+                parts: vec![
+                    (left, Layout::Pane { id: "a".into(), buffer: "one".into() }),
+                    (right, Layout::Pane { id: "b".into(), buffer: "one".into() }),
+                ],
+            },
+            focus: "a".into(),
+            ..screen(&["one"])
+        };
+        assert_eq!(resize_focus(3, two(5, 2)), two(5, 2));
+        assert_eq!(resize_focus(1, two(5, 2)), two(6, 1));
+        assert_eq!(resize_focus(3, two(5, 0)), two(5, 0));
+        assert_eq!(resize_focus(-2, two(5, 0)), two(3, 2));
     }
 
     #[test]
@@ -1117,7 +1148,13 @@ mod tests {
         let opened = screen(&["one", "two", "three"]);
         let bar = strip(opened);
         assert_eq!(bar.text, "1  one\n2  two\n3  three");
-        assert!(bar.spans.iter().all(|span| span.actions == vec!["screen.show".to_string()]));
+        let actions: Vec<Vec<String>> = bar.spans.iter().map(|span| span.actions.clone()).collect();
+        assert_eq!(
+            actions,
+            vec![vec!["screen.show one".to_string()], vec!["screen.show two".to_string()], vec![
+                "screen.show three".to_string()
+            ]]
+        );
     }
 
     /// Two opened files with one name say which folder each is in.

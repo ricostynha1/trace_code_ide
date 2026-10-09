@@ -111,6 +111,21 @@ structure Span where
   actions : List String
   deriving Repr, DecidableEq, Inhabited, ToJson, FromJson
 
+/-- An action as a span carries it: a name the keymap dispatches, optionally
+followed by one space and the target it is about (`screen.show file:a.rs`) --
+for a span whose text does not spell what it is about, as a tab's does not. -/
+def actionName (action : String) : String :=
+  match action.splitOn " " with
+  | [] => action
+  | name :: _ => name
+
+/-- The target an action carries after its name, if any. See `actionName`. -/
+def actionTarget (action : String) : Option String :=
+  match action.splitOn " " with
+  | [] => none
+  | [_] => none
+  | _ :: rest => some (" ".intercalate rest)
+
 /-- What is on screen, or could be.
 
 @models REQ-VIEW.one_representation

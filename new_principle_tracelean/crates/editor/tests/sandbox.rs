@@ -28,7 +28,7 @@ fn project(name: &str) -> PathBuf {
 }
 
 fn act(editor: &mut Editor, action: &str) {
-    let intent = tracelean_core::surface::act::dispatch(action.into(), editor.focus(), editor.workspace());
+    let intent = tracelean_core::surface::act::dispatch(action.into(), editor.focus(), editor.workspace(), editor.waiting());
     editor.perform(intent);
 }
 

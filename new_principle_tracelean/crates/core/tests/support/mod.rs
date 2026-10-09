@@ -53,7 +53,7 @@ pub fn floors_met(counts: &[(&str, u64, u64)]) {
         .iter()
         .map(|(s, _, reached)| Observed { situation: (*s).into(), reached: *reached })
         .collect();
-    let reached = verdict(floors, observed);
+    let reached = verdict(floors, observed, Vec::new());
     assert_eq!(reached, Verdict::Met, "the run did not reach its declared floor");
     assert_eq!(
         level(true, reached),
@@ -104,13 +104,31 @@ fn root() -> std::path::PathBuf {
 /// than one implementation: `also_implemented_by` binds a second frontend to the
 /// same model, and both are run against it. Recording L3 after one of them
 /// agreed would be recording that the clause is checked when half of it is.
+///
+/// Each half carries the stamp (`earn::drt_stamp`) of the inputs current when
+/// it was established, and composes only with halves of the same, current
+/// stamp: an "agreed" half left from before a change is about other code.
+/// A file in an older shape reads as nothing established.
 #[derive(serde::Serialize, serde::Deserialize, Default)]
 struct Half {
-    /// Seed -> how many cases that run covered. One entry per agreeing run.
+    /// Seed -> the agreeing run. One entry per agreeing run.
     #[serde(default)]
-    agreed: std::collections::BTreeMap<String, u64>,
-    /// The generator reached the situations the binding declared.
-    covered: Option<bool>,
+    agreed: std::collections::BTreeMap<String, Run>,
+    /// The stamp under which the generator reached the situations the binding
+    /// declared.
+    covered: Option<String>,
+}
+
+#[derive(serde::Serialize, serde::Deserialize)]
+struct Run {
+    cases: u64,
+    stamp: String,
+}
+
+/// The stamp of the inputs an op's records would rest on now.
+fn current_stamp(op: &str) -> String {
+    let index = tracelean_core::trace::index::build(&root());
+    tracelean_core::trace::earn::drt_stamp(&index, &binding_for(op).clauses())
 }
 
 fn half_path(op: &str) -> std::path::PathBuf {
@@ -147,8 +165,10 @@ pub fn agreed(result: &tracelean_core::drt::run::DrtResult) {
         result.divergence.as_ref().map(|d| &d.model),
         result.divergence.as_ref().map(|d| &d.implementation),
     );
+    let stamp = current_stamp(&result.op);
     let mut half = read_half(&result.op);
-    half.agreed.insert(result.seed.to_string(), result.cases);
+    half.agreed.retain(|_, run| run.stamp == stamp);
+    half.agreed.insert(result.seed.to_string(), Run { cases: result.cases, stamp });
     write_half(&result.op, &half);
     compose(&result.op);
 }
@@ -185,11 +205,13 @@ pub fn covered(op: &str, counts: &[(&str, u64)]) {
             reached: *reached,
         })
         .collect();
-    let reached = verdict(binding.floors.clone(), observed);
+    let reached = verdict(binding.floors.clone(), observed, binding.waive.clone());
     assert_eq!(reached, Verdict::Met, "`{op}` did not reach its declared floor");
 
+    let stamp = current_stamp(op);
     let mut half = read_half(op);
-    half.covered = Some(true);
+    half.agreed.retain(|_, run| run.stamp == stamp);
+    half.covered = Some(stamp);
     write_half(op, &half);
     compose(op);
 }
@@ -215,13 +237,18 @@ fn binding_for(op: &str) -> tracelean_core::drt::Binding {
 /// @implements REQ-DRT-BIND.binding_is_the_bond
 fn compose(op: &str) {
     let half = read_half(op);
-    if half.covered != Some(true) {
-        return;
-    }
     let root = root();
     let binding = binding_for(op);
-    // Every implementation the binding declares, not merely one of them.
-    if half.agreed.len() < binding.implementations().len() {
+    // Every implementation the binding declares, not merely one of them, and
+    // both halves established against the inputs as they are now.
+    let current = current_stamp(op);
+    let stamps: Vec<String> = half.agreed.values().map(|run| run.stamp.clone()).collect();
+    if !tracelean_core::trace::earn::halves_compose(
+        &stamps,
+        half.covered.as_deref(),
+        &current,
+        binding.implementations().len(),
+    ) {
         return;
     }
     // The run the record names, chosen by lowest seed so that the bytes do not
@@ -231,7 +258,8 @@ fn compose(op: &str) {
     let mut runs: Vec<(u64, u64)> = half
         .agreed
         .iter()
-        .filter_map(|(seed, cases)| seed.parse::<u64>().ok().map(|seed| (seed, *cases)))
+        .filter(|(_, run)| run.stamp == current)
+        .filter_map(|(seed, run)| seed.parse::<u64>().ok().map(|seed| (seed, run.cases)))
         .collect();
     // By the seed as a number, not as the string it is stored under: `"103"`
     // sorts before `"29"` and the lowest seed should mean the lowest seed.

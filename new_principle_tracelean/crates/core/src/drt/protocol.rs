@@ -10,8 +10,7 @@ use serde::{Deserialize, Serialize};
 
 /// One generated case, sent to both sides.
 ///
-/// @implements REQ-DRT-PROTO.line_delimited
-/// @implements REQ-DRT-PROTO.op_dispatch
+/// @implements REQ-DRT-PROTO.case_names_op
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Case {
     pub case: u64,
@@ -143,21 +142,22 @@ pub enum Heard {
 /// that — so presence is about the field being there, not about it being
 /// non-null.
 ///
+/// Owned rather than borrowed so that a generated runner can call it directly
+/// (ADR-0010).
+///
 /// @implements REQ-DRT-PROTO.reply_exclusive
-pub fn is_exclusive(output: &Option<serde_json::Value>, error: &Option<String>) -> bool {
+/// @drt REQ-DRT-PROTO.reply_exclusive
+pub fn is_exclusive(output: Option<serde_json::Value>, error: Option<String>) -> bool {
     output.is_some() != error.is_some()
 }
 
 /// Read one line of a runner's output, given the case that was asked.
 ///
-/// @implements REQ-DRT-PROTO.line_delimited
+/// @implements REQ-DRT-PROTO.reply_one_line
 /// @implements REQ-DRT-PROTO.case_echoed
 /// @implements REQ-DRT-PROTO.reply_exclusive
-/// @implements REQ-DRT-PROTO.failure_named
-/// @drt REQ-DRT-PROTO.line_delimited
+/// @drt REQ-DRT-PROTO.reply_one_line
 /// @drt REQ-DRT-PROTO.case_echoed
-/// @drt REQ-DRT-PROTO.reply_exclusive
-/// @drt REQ-DRT-PROTO.failure_named
 pub fn hear(expected: u64, line: String) -> Heard {
     let Ok(value) = serde_json::from_str::<serde_json::Value>(line.trim()) else {
         return Heard::NotAReply { reason: NotAReply::NotJson };
@@ -179,7 +179,7 @@ pub fn hear(expected: u64, line: String) -> Heard {
             Some(message) => Some(message.to_string()),
         },
     };
-    if is_exclusive(&output, &error) {
+    if is_exclusive(output.clone(), error.clone()) {
         Heard::Answered { case_number: got, output, error }
     } else {
         Heard::NotExclusive { case_number: got }
@@ -192,10 +192,8 @@ pub fn hear(expected: u64, line: String) -> Heard {
 /// a table keyed by op. Two bindings with the same op means the first arm wins
 /// and the second requirement is silently answered by the wrong function.
 ///
-/// @implements REQ-DRT-PROTO.op_dispatch
-/// @implements REQ-DRT-PROTO.runner_shared
-/// @drt REQ-DRT-PROTO.op_dispatch
-/// @drt REQ-DRT-PROTO.runner_shared
+/// @implements REQ-DRT-PROTO.ops_unique
+/// @drt REQ-DRT-PROTO.ops_unique
 pub fn duplicate_ops(ops: Vec<String>) -> Vec<String> {
     let mut seen: BTreeSet<String> = BTreeSet::new();
     let mut dupes: BTreeSet<String> = BTreeSet::new();
@@ -205,6 +203,134 @@ pub fn duplicate_ops(ops: Vec<String>) -> Vec<String> {
         }
     }
     dupes.into_iter().collect()
+}
+
+/// The line a case is written as: one JSON object, naming the op it exercises,
+/// with no newline inside it.
+///
+/// Spelled out rather than left to a `json!` map, so that the key order —
+/// `case`, `op`, `input`, the order the protocol is documented in — does not
+/// depend on whether some crate in the build turned on `preserve_order`. A
+/// newline inside a string is escaped by the JSON writer, which is what keeps
+/// the case on one line; `Runner::ask` adds the one that ends it.
+///
+/// @implements REQ-DRT-PROTO.case_one_line
+/// @implements REQ-DRT-PROTO.case_names_op
+/// @drt REQ-DRT-PROTO.case_one_line
+/// @drt REQ-DRT-PROTO.case_names_op
+pub fn case_line(number: u64, op: String, input: serde_json::Value) -> String {
+    format!("{{\"case\":{number},\"op\":{},\"input\":{input}}}", serde_json::Value::from(op))
+}
+
+/// What happened when a runner was asked a case, before anything is concluded
+/// from it.
+///
+/// The process-level half of the protocol: a runner that never started, one
+/// that said nothing in time, one whose pipe broke, and one that produced a
+/// line (or `None`: the end of its output, which is how a process that exited
+/// looks from the reading side).
+///
+/// @implements REQ-DRT-PROTO.failure_named
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", rename_all_fields = "camelCase")]
+pub enum Event {
+    CouldNotStart { reason: String },
+    NoReplyInTime,
+    /// Writing the case, or reading the reply, failed at the pipe.
+    PipeBroke { reason: String },
+    Read { expected: u64, got: Option<String> },
+}
+
+/// What one asked case came to: an answer, or one of the named ways a runner
+/// fails to give one.
+///
+/// @implements REQ-DRT-PROTO.failure_named
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", rename_all_fields = "camelCase")]
+pub enum Outcome {
+    /// The command could not be started at all.
+    CannotStart { reason: String },
+    /// No line within the per-case timeout.
+    TimedOut,
+    /// The process exited, or its pipe broke.
+    Died { reason: String },
+    /// A line came back; what it says, which may still be a non-reply.
+    Heard { conclusion: Heard },
+}
+
+/// Conclude what an event means.
+///
+/// A runner that answered is `Heard { Answered }`; every other result names
+/// which way it failed, so a timeout is never read as a crash and neither is
+/// read as a disagreement about a value.
+///
+/// @implements REQ-DRT-PROTO.failure_named
+/// @drt REQ-DRT-PROTO.failure_named
+pub fn outcome(event: Event) -> Outcome {
+    match event {
+        Event::CouldNotStart { reason } => Outcome::CannotStart { reason },
+        Event::NoReplyInTime => Outcome::TimedOut,
+        Event::PipeBroke { reason } => Outcome::Died { reason },
+        Event::Read { got: None, .. } => Outcome::Died { reason: "closed its pipe".to_string() },
+        Event::Read { expected, got: Some(line) } => Outcome::Heard { conclusion: hear(expected, line) },
+    }
+}
+
+/// An outcome as the runner's result: a reply, or the error naming the failure.
+///
+/// A projection, deciding nothing: `outcome` decided.
+pub fn into_reply(outcome: Outcome, line: &str) -> Result<Reply, RunnerError> {
+    match outcome {
+        Outcome::CannotStart { reason } => Err(RunnerError::Spawn(reason)),
+        Outcome::TimedOut => Err(RunnerError::Timeout),
+        Outcome::Died { reason } => Err(RunnerError::Died(reason)),
+        Outcome::Heard { conclusion } => match conclusion {
+            Heard::Answered { case_number, output, error } => Ok(Reply { case: case_number, output, error }),
+            Heard::WrongCase { expected, got } => Err(RunnerError::Protocol(format!(
+                "runner answered case {got} when case {expected} was asked"
+            ))),
+            Heard::NotAReply { reason } => {
+                Err(RunnerError::Protocol(format!("{reason:?}: {}", line.trim())))
+            }
+            Heard::NotExclusive { .. } => Err(RunnerError::Protocol(
+                "a reply carried both an output and an error, or neither".to_string(),
+            )),
+        },
+    }
+}
+
+/// One binding's implementation, by op and the language it is written in.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Placed {
+    pub op: String,
+    pub language: String,
+}
+
+/// One runner process: its language and every op it answers.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Shared {
+    pub language: String,
+    pub ops: Vec<String>,
+}
+
+/// The runner processes a project needs: one per language, in language order,
+/// each answering every op of that language once, in the order the bindings
+/// declare them.
+///
+/// The plan rather than the processes: the harness builds one runner per entry
+/// of it, so "one process per language" is a property of this value.
+///
+/// @implements REQ-DRT-PROTO.runner_shared
+/// @drt REQ-DRT-PROTO.runner_shared
+pub fn shared_runners(placed: Vec<Placed>) -> Vec<Shared> {
+    let mut by_language: std::collections::BTreeMap<String, Vec<String>> = Default::default();
+    for p in placed {
+        let ops = by_language.entry(p.language).or_default();
+        if !ops.contains(&p.op) {
+            ops.push(p.op);
+        }
+    }
+    by_language.into_iter().map(|(language, ops)| Shared { language, ops }).collect()
 }
 
 /// Two replies agree when they are the same answer.
@@ -304,5 +430,61 @@ mod tests {
     #[test]
     fn a_reply_without_a_case_number_is_refused() {
         assert!(Reply::from_json(&serde_json::json!({"output": 1})).is_err());
+    }
+
+    /// A case is one line even when its input carries line breaks, and it
+    /// names its op.
+    ///
+    /// @tests REQ-DRT-PROTO.case_one_line
+    /// @tests REQ-DRT-PROTO.case_names_op
+    #[test]
+    fn a_case_is_one_line_naming_its_op() {
+        let line = case_line(3, "REQ-X.c".into(), serde_json::json!({"t": "a\nb\r\n\t"}));
+        assert!(!line.contains('\n') && !line.contains('\r'), "{line}");
+        let read: Case = serde_json::from_str(&line).unwrap();
+        assert_eq!(read.case, 3);
+        assert_eq!(read.op, "REQ-X.c");
+        assert_eq!(read.input, serde_json::json!({"t": "a\nb\r\n\t"}));
+    }
+
+    /// The four failures are four outcomes, and none of them is an answer.
+    ///
+    /// @tests REQ-DRT-PROTO.failure_named
+    #[test]
+    fn each_failure_is_named_and_none_is_an_answer() {
+        let outcomes = [
+            outcome(Event::CouldNotStart { reason: "no node".into() }),
+            outcome(Event::NoReplyInTime),
+            outcome(Event::Read { expected: 1, got: None }),
+            outcome(Event::Read { expected: 1, got: Some("not json".into()) }),
+        ];
+        assert!(matches!(outcomes[0], Outcome::CannotStart { .. }));
+        assert_eq!(outcomes[1], Outcome::TimedOut);
+        assert!(matches!(outcomes[2], Outcome::Died { .. }));
+        assert!(matches!(outcomes[3], Outcome::Heard { conclusion: Heard::NotAReply { .. } }));
+        for o in outcomes {
+            assert!(into_reply(o, "").is_err());
+        }
+        let answered = outcome(Event::Read { expected: 1, got: Some(r#"{"case":1,"output":2}"#.into()) });
+        assert!(into_reply(answered, "").is_ok());
+    }
+
+    /// @tests REQ-DRT-PROTO.runner_shared
+    #[test]
+    fn one_runner_per_language_carries_every_op_of_it() {
+        let placed = |op: &str, language: &str| Placed { op: op.into(), language: language.into() };
+        let plan = shared_runners(vec![
+            placed("b", "rust"),
+            placed("a", "typescript"),
+            placed("c", "rust"),
+            placed("b", "rust"),
+        ]);
+        assert_eq!(
+            plan,
+            vec![
+                Shared { language: "rust".into(), ops: vec!["b".into(), "c".into()] },
+                Shared { language: "typescript".into(), ops: vec!["a".into()] },
+            ]
+        );
     }
 }

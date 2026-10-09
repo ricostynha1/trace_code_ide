@@ -48,6 +48,9 @@ pub enum ResolveError {
     /// pattern, an optional one. Refused rather than guessed at: supplying the
     /// wrong argument produces agreement about the wrong thing.
     NoSuchFunction { file: PathBuf, symbol: String },
+    /// Two declarations of one name. Taking the first would call one function
+    /// and report agreement about the other.
+    AmbiguousFunction { file: PathBuf, symbol: String, count: usize },
 }
 
 impl std::fmt::Display for ResolveError {
@@ -63,21 +66,34 @@ impl std::fmt::Display for ResolveError {
                  than a name",
                 file.display()
             ),
+            ResolveError::AmbiguousFunction { file, symbol, count } => write!(
+                f,
+                "{}: {count} functions are named `{symbol}`; a binding must name exactly one",
+                file.display()
+            ),
         }
     }
 }
+
+/// The characters that open a TypeScript string.
+const TS_QUOTES: &[char] = &['"', '\'', '`'];
 
 /// The parameters of a TypeScript function, in the order it declares them.
 ///
 /// A name, then optionally a type after `:` or a default after `=`. Anything
 /// else answers `None`, because a parameter this cannot name is one the runner
-/// cannot supply.
+/// cannot supply. `this` is TypeScript's type-only receiver annotation, never
+/// passed by a caller, so it is dropped rather than shifting every argument.
 ///
-/// @implements REQ-DRT-TS.params_from_source
-/// @drt REQ-DRT-TS.params_from_source
+/// Read from the source with comments and strings blanked, so `// was:
+/// function f(b, a)` is not a declaration; two declarations answer `None`.
 pub fn ts_parameters_of(source: &str, symbol: &str) -> Option<Vec<String>> {
-    use super::signature::{is_identifier, matching, split_top_level};
+    use super::signature::{blanked, is_identifier, matching, split_top_level};
 
+    let source = &blanked(source, TS_QUOTES, false);
+    if declarations_in(source, symbol) > 1 {
+        return None;
+    }
     let open = signature_open_paren(source, symbol)?;
     let close = matching(source, open, '(', ')')?;
 
@@ -94,9 +110,38 @@ pub fn ts_parameters_of(source: &str, symbol: &str) -> Option<Vec<String>> {
         if named.is_empty() || !is_identifier(named) {
             return None;
         }
-        out.push(named.to_string());
+        if named != "this" {
+            out.push(named.to_string());
+        }
     }
     Some(out)
+}
+
+/// `ts_parameters_of`, over owned arguments, which is what a binding's entry
+/// point has to take: JSON escapes make a borrowed `&str` impossible to supply
+/// (ADR-0010).
+///
+/// @implements REQ-DRT-TS.params_from_source
+/// @drt REQ-DRT-TS.params_from_source
+pub fn ts_parameters_owned(source: String, symbol: String) -> Option<Vec<String>> {
+    ts_parameters_of(&source, &symbol)
+}
+
+/// How many functions in `source` are declared with this name, outside
+/// comments and strings.
+pub fn ts_declarations(source: &str, symbol: &str) -> usize {
+    declarations_in(&super::signature::blanked(source, TS_QUOTES, false), symbol)
+}
+
+/// `ts_declarations`, over text already blanked.
+fn declarations_in(source: &str, symbol: &str) -> usize {
+    let mut count = 0;
+    let mut from = 0usize;
+    while let Some(open) = signature_open_paren(&source[from..], symbol) {
+        count += 1;
+        from += open + 1;
+    }
+    count
 }
 
 /// The `(` that opens `function <symbol>`'s parameter list.
@@ -116,10 +161,22 @@ fn signature_open_paren(source: &str, symbol: &str) -> Option<usize> {
         if &rest[..name_len] != symbol {
             continue;
         }
-        let after = &rest[name_len..];
-        let spaces = after.len() - after.trim_start().len();
-        if after.trim_start().starts_with('(') {
-            return Some(at + 9 + name_len + spaces);
+        // Generic parameters are skipped by balance, as on the Rust side.
+        let skip_space = |mut cursor: usize| {
+            while source[cursor..].starts_with([' ', '\t', '\r', '\n']) {
+                cursor += 1;
+            }
+            cursor
+        };
+        let mut cursor = skip_space(at + 9 + name_len);
+        if source[cursor..].starts_with('<') {
+            match super::signature::matching(source, cursor, '<', '>') {
+                Some(end) => cursor = skip_space(end + 1),
+                None => cursor = source.len(),
+            }
+        }
+        if source[cursor..].starts_with('(') {
+            return Some(cursor);
         }
     }
     None
@@ -140,6 +197,17 @@ pub fn resolve(root: &Path, binding: &Binding, spec: &super::CallSpec) -> Result
     let file = root.join(rel);
     let source =
         std::fs::read_to_string(&file).map_err(|_| ResolveError::MissingFile(file.clone()))?;
+
+    // The same guard the Rust side has: two declarations of one name is not a
+    // resolution to guess at.
+    let declared = ts_declarations(&source, symbol);
+    if declared > 1 {
+        return Err(ResolveError::AmbiguousFunction {
+            file: file.clone(),
+            symbol: symbol.to_string(),
+            count: declared,
+        });
+    }
 
     let parameters = ts_parameters_of(&source, symbol).ok_or_else(|| {
         ResolveError::NoSuchFunction { file: file.clone(), symbol: symbol.to_string() }
@@ -174,7 +242,8 @@ pub fn resolve(root: &Path, binding: &Binding, spec: &super::CallSpec) -> Result
 ///
 /// @implements REQ-DRT-TS.generated
 /// @implements REQ-DRT-TS.failure_is_an_answer
-/// @implements REQ-DRT-PROTO.line_delimited
+/// @implements REQ-DRT-PROTO.reply_one_line
+/// @implements REQ-DRT-PROTO.case_names_op
 /// @implements REQ-DRT-PROTO.runner_shared
 pub fn runner_source(entries: &[Entry]) -> String {
     let mut modules: BTreeMap<&str, Vec<&Entry>> = BTreeMap::new();
@@ -281,6 +350,31 @@ mod tests {
         // And a parameter this cannot name is refused.
         assert_eq!(ts_parameters_of("export function f(a: number, b?: number) {}", "f"), None);
         assert_eq!(ts_parameters_of("export function f({a, b}: Pair) {}", "f"), None);
+    }
+
+    /// The three ways the first textual match was the wrong one: a signature in
+    /// a comment, TypeScript's type-only `this` taken for an argument, and two
+    /// declarations of one name.
+    ///
+    /// @tests REQ-DRT-TS.params_from_source
+    #[test]
+    fn a_comment_this_and_a_second_declaration_do_not_reorder_the_arguments() {
+        let two = || vec!["a".to_string(), "b".to_string()];
+        assert_eq!(
+            ts_parameters_of("// was: function f(b, a)\nexport function f(a: number, b: number) {}", "f"),
+            Some(two())
+        );
+        assert_eq!(
+            ts_parameters_of("/* function f(b, a) */ export function f(a, b) {}", "f"),
+            Some(two())
+        );
+        assert_eq!(
+            ts_parameters_of("const s = \"function f(b, a)\";\nexport function f(a, b) {}", "f"),
+            Some(two())
+        );
+        assert_eq!(ts_parameters_of("export function f(this: Window, a, b) {}", "f"), Some(two()));
+        assert_eq!(ts_parameters_of("function f(a) {}\nexport function f(a, b) {}", "f"), None);
+        assert_eq!(ts_declarations("function f(a) {}\n// function f(b)\nfunction f(a, b) {}", "f"), 2);
     }
 
     /// The generated runner imports each module once and dispatches by op.

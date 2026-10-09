@@ -1,6 +1,9 @@
 {
   "agreed": {
-    "301": 2000
+    "301": {
+      "cases": 2000,
+      "stamp": "c2715efaa95f8c84"
+    }
   },
-  "covered": true
+  "covered": "c2715efaa95f8c84"
 }

@@ -12,7 +12,7 @@ use std::collections::BTreeMap;
 use tracelean_core::drt::gen;
 use tracelean_core::drt::run::{run, RunOptions};
 use tracelean_core::drt::schema::Schema;
-use tracelean_core::trace::pinning::{accepted, standing, PinRecord};
+use tracelean_core::trace::pinning::{accepted, shape, standing, PinRecord};
 
 fn small(examples: &[&str]) -> Schema {
     Schema::Str { max_len: Some(0), examples: examples.iter().map(|s| s.to_string()).collect() }
@@ -88,6 +88,37 @@ fn model_and_implementation_agree_on_the_obligation() {
     check("per_input", "TraceLean.Pinning.statement", "crates/core/src/trace/pinning.rs::statement", &["spec", "model", "inputs"], statement(), 311);
 }
 
+/// Declarations in the shapes a model takes: binders, arrows only (a
+/// definition by pattern matching), both, an arrow inside an argument, an
+/// ASCII arrow, a proposition, and what is not a definition at all.
+const DECLARATIONS: &[&str] = &[
+    "def toF (c : Int) : Int := c",
+    "/-- doc -/\ndef ToF (c f : Int) : Prop :=\n  c = f",
+    "def g {α : Type} [Inhabited α] (xs : List α) (n : Nat) : α := default",
+    "def firstBadRange (content : String) : List Edit → Option LowerError\n  | [] => none\n  | e :: rest => let x := e; x",
+    "def unavailableBecause : ServerState → String\n  | .running _ => \"a\"\n  | _ => \"b\"",
+    "def Holds : Nat → List Nat -> Prop\n  | _, _ => True",
+    "def h : (Nat → Nat) → Nat := fun f => f 0",
+    "def k (n : Nat) : Nat → Prop := fun _ => True",
+    "def walk (g : List Nat) (fuel : Nat) : String → List String → Nat × List String\n  | _, _ => (0, [])",
+    "abbrev Levels := List Nat",
+    "def x := 5",
+    "theorem t : 1 = 1 := rfl",
+    "instance : Inhabited Nat := ⟨0⟩",
+];
+
+fn declaration() -> BTreeMap<String, Schema> {
+    fields(vec![("declaration", small(DECLARATIONS))])
+}
+
+/// @drt REQ-STRENGTH.inputs_counted
+/// @tests REQ-STRENGTH.inputs_counted
+#[test]
+#[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
+fn model_and_implementation_agree_on_what_a_model_takes() {
+    check("inputs_counted", "TraceLean.Pinning.shape", "crates/core/src/trace/pinning.rs::shape", &["declaration"], declaration(), 314);
+}
+
 /// @drt REQ-STRENGTH.kernel_decides
 /// @tests REQ-STRENGTH.kernel_decides
 #[test]
@@ -150,4 +181,35 @@ fn generation_reaches_each_answer_and_each_verdict() {
         }
     }
     support::covered("REQ-STRENGTH.verdict_kept", &[("pinned", pinned), ("a verdict about other declarations", other)]);
+
+    let mut rng = gen::Rng::new(314);
+    let (mut matched, mut both, mut prop, mut not_def) = (0u64, 0u64, 0u64, 0u64);
+    for _ in 0..2_000 {
+        let text = gen::value(&Schema::Struct { fields: declaration() }, &mut rng)["declaration"].as_str().unwrap().to_string();
+        let header = text.split(":=").next().unwrap_or_default();
+        match shape(text.clone()) {
+            None => not_def += 1,
+            Some((is_prop, _)) => {
+                if is_prop {
+                    prop += 1;
+                }
+                if header.contains('|') {
+                    matched += 1;
+                }
+                let typed = header.split_once(") :").map(|(_, t)| t).unwrap_or(header);
+                if header.contains('(') && (typed.contains('→') || typed.contains("->")) {
+                    both += 1;
+                }
+            }
+        }
+    }
+    support::covered(
+        "REQ-STRENGTH.inputs_counted",
+        &[
+            ("a definition by pattern matching", matched),
+            ("arguments both named and arrowed", both),
+            ("a proposition", prop),
+            ("not a definition", not_def),
+        ],
+    );
 }

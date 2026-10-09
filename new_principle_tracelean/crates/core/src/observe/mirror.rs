@@ -89,27 +89,35 @@ pub fn mutations(before: Workspace, after: Workspace) -> Vec<Command> {
     out
 }
 
-/// The state reached by mirroring, in one call.
+/// What mirroring reached, and every derived command refused on the way.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Mirroring {
+    pub reached: Workspace,
+    /// A refusal means the derived mutations did not fit the state they were
+    /// derived from — the law failing — and is named rather than skipped.
+    pub refused: Vec<Command>,
+}
+
+/// The state reached by mirroring, and what was refused, in one call.
 ///
 /// Exists so the law is a single function on both sides of a differential
 /// test: applying the derived mutations to the original tree yields the
-/// observed tree, for everything that is mirrored at all.
+/// observed tree on every mirrored path, the original on every other, and no
+/// refusal.
 ///
 /// @implements REQ-MIRROR.apply_reproduces
 /// @drt REQ-MIRROR.apply_reproduces
-pub fn mirrored(before: Workspace, after: Workspace) -> Workspace {
-    let mut workspace = before.clone();
+pub fn mirrored(before: Workspace, after: Workspace) -> Mirroring {
+    let mut out = Mirroring { reached: before.clone(), refused: Vec::new() };
     for command in mutations(before, after) {
-        match apply(&workspace, &command) {
-            Ok(next) => workspace = next,
-            // A refusal here would mean the derived mutations do not fit the
-            // state they were derived from, which is the law failing. Returning
-            // what was reached lets the comparison show it rather than hiding
-            // it behind a panic.
-            Err(_) => return workspace,
+        match apply(&out.reached, &command) {
+            Ok(next) => out.reached = next,
+            // Recorded and passed over, so one refusal does not hide what the
+            // rest of the mutations would have done.
+            Err(_) => out.refused.push(command),
         }
     }
-    workspace
+    out
 }
 
 /// A write this system performed, to be ignored when it is observed coming
@@ -122,11 +130,13 @@ pub struct SelfWrite {
     /// What was written. Matching on the path alone would swallow a genuine
     /// external change to a file this system happened to touch.
     pub content: String,
-    /// Observations this may still suppress. A suppression for a write that is
-    /// never observed would otherwise block the next real change forever.
+    /// Rounds this may still wait to be observed before it expires. A
+    /// suppression for a write that is never observed would otherwise block
+    /// the next real change forever. Spent by `expire`, never by a match: a
+    /// match consumes the whole write.
     ///
     /// @implements REQ-SELFWRITE.no_deadlock
-    pub remaining: u32,
+    pub age: u32,
 }
 
 /// Whether an observation is this system's own write coming back, and the
@@ -142,15 +152,11 @@ pub fn suppress(pending: Vec<SelfWrite>, path: String, content: String) -> Suppr
     let mut rest = Vec::new();
     let mut suppressed = false;
 
-    for mut write in pending {
+    for write in pending {
         if !suppressed && write.path == path && write.content == content {
+            // Consumed whole, whatever its age: one write covers one
+            // observation, so a second identical change from outside is seen.
             suppressed = true;
-            // Consumed: one suppression covers one observation, so a second
-            // identical change from outside is still seen.
-            write.remaining = write.remaining.saturating_sub(1);
-            if write.remaining > 0 {
-                rest.push(write);
-            }
             continue;
         }
         rest.push(write);
@@ -174,8 +180,8 @@ pub fn expire(pending: Vec<SelfWrite>) -> Vec<SelfWrite> {
     pending
         .into_iter()
         .filter_map(|mut write| {
-            write.remaining = write.remaining.saturating_sub(1);
-            (write.remaining > 0).then_some(write)
+            write.age = write.age.saturating_sub(1);
+            (write.age > 0).then_some(write)
         })
         .collect()
 }
@@ -191,8 +197,9 @@ pub fn expire(pending: Vec<SelfWrite>) -> Vec<SelfWrite> {
 pub enum FileState {
     Absent,
     Text { content: String },
-    /// Present, and not representable as text.
-    Opaque,
+    /// Present, and not representable as text: known by a hash of its bytes,
+    /// so that a changed binary can be told from an unchanged one.
+    Opaque { hash: String },
 }
 
 /// What the mirror does about one path.
@@ -218,7 +225,6 @@ pub enum Change {
 /// cannot review in place.
 ///
 /// @implements REQ-MIRROR.binary_handled
-/// @implements REQ-MIRROR.protected_excluded
 /// @drt REQ-MIRROR.binary_handled
 pub fn change_at(path: String, before: FileState, after: FileState) -> Vec<Change> {
     if !is_mirrored(&path) {
@@ -227,10 +233,15 @@ pub fn change_at(path: String, before: FileState, after: FileState) -> Vec<Chang
     match (&before, &after) {
         (FileState::Absent, FileState::Absent) => Vec::new(),
         // Either side opaque: report if anything changed, and never mirror.
-        // Two opaque snapshots are indistinguishable to this layer, so the
-        // honest answer is that nothing is known to have changed.
-        (FileState::Opaque, FileState::Opaque) => Vec::new(),
-        (FileState::Opaque, _) | (_, FileState::Opaque) => {
+        // Two opaque snapshots are told apart by the hash of their bytes.
+        (FileState::Opaque { hash: old }, FileState::Opaque { hash: new }) => {
+            if old == new {
+                Vec::new()
+            } else {
+                vec![Change::ReportOnly { path }]
+            }
+        }
+        (FileState::Opaque { .. }, _) | (_, FileState::Opaque { .. }) => {
             vec![Change::ReportOnly { path }]
         }
         (FileState::Absent, FileState::Text { content }) => {
@@ -282,7 +293,35 @@ mod tests {
     fn applying_the_mutations_reproduces_what_was_observed() {
         let before = ws(&[("a.rs", "one"), ("b.rs", "two"), ("gone.rs", "x")]);
         let after = ws(&[("a.rs", "ONE"), ("b.rs", "two"), ("new.rs", "three")]);
-        assert_eq!(mirrored(before, after.clone()), after);
+        let result = mirrored(before, after.clone());
+        assert_eq!(result.reached, after);
+        assert!(result.refused.is_empty());
+    }
+
+    /// On mirrored paths only: a protected or regenerated path keeps what the
+    /// original tree had.
+    ///
+    /// @tests REQ-MIRROR.apply_reproduces
+    #[test]
+    fn an_unmirrored_path_keeps_the_original() {
+        let before = ws(&[(".git/x", "a"), ("target/o", "1"), ("a.rs", "one")]);
+        let after = ws(&[(".git/x", "b"), ("target/o", "2"), ("a.rs", "two")]);
+        let result = mirrored(before, after);
+        assert_eq!(result.reached, ws(&[(".git/x", "a"), ("target/o", "1"), ("a.rs", "two")]));
+    }
+
+    /// A binary whose bytes changed is reported; one whose bytes did not is
+    /// not. Before the opaque state carried a hash, both were silent.
+    ///
+    /// @tests REQ-MIRROR.binary_handled
+    #[test]
+    fn a_changed_binary_is_reported_and_an_unchanged_one_is_not() {
+        let state = |hash: &str| FileState::Opaque { hash: hash.into() };
+        assert_eq!(
+            change_at("logo.png".into(), state("1"), state("2")),
+            vec![Change::ReportOnly { path: "logo.png".into() }]
+        );
+        assert!(change_at("logo.png".into(), state("1"), state("1")).is_empty());
     }
 
     /// @tests REQ-MIRROR.minimal
@@ -332,7 +371,7 @@ mod tests {
         assert!(matches!(commands[0], Command::CreateFile { .. }));
         assert!(matches!(commands[1], Command::Insert { .. }));
         // And the sequence applies without refusal.
-        assert_eq!(mirrored(ws(&[]), ws(&[("new.rs", "content")])).get("new.rs").unwrap(), "content");
+        assert_eq!(mirrored(ws(&[]), ws(&[("new.rs", "content")])).reached.get("new.rs").unwrap(), "content");
     }
 
     #[test]
@@ -347,9 +386,22 @@ mod tests {
             .map(|(p, c)| SelfWrite {
                 path: p.to_string(),
                 content: c.to_string(),
-                remaining: 1,
+                age: 1,
             })
             .collect()
+    }
+
+    /// A write with rounds to spare still suppresses one observation, not one
+    /// per round: with a single counter for both, it suppressed three.
+    ///
+    /// @tests REQ-SELFWRITE.suppression_is_consumed
+    #[test]
+    fn a_write_with_time_left_is_still_consumed_by_one_observation() {
+        let waiting = vec![SelfWrite { path: "a.rs".into(), content: "x".into(), age: 3 }];
+        let first = suppress(waiting, "a.rs".into(), "x".into());
+        assert!(first.suppressed);
+        assert!(first.pending.is_empty(), "the write outlived its one observation");
+        assert!(!suppress(first.pending, "a.rs".into(), "x".into()).suppressed);
     }
 
     /// @tests REQ-SELFWRITE.own_writes_ignored

@@ -11,18 +11,20 @@ clauses:
   every_pane_is_opened: Every buffer a layout places shall be one of the opened buffers.
   panes_are_distinct: No two panes of a layout shall have the same identity, so that a pane can always be named.
   split_keeps_the_buffer: Splitting a pane shall leave the buffer that was there in both halves, so that neither half is empty.
-  close_collapses_the_pane: Closing shall drop the buffer from the opened set and give its region to the rest of the layout, leaving no region without a pane.
+  close_collapses_the_pane: Closing shall drop the buffer from the opened set and give its region to the rest of the layout, leaving no region without a pane — except the last opened buffer, which stays.
   resize_moves_one_divider: Resizing shall move weight between the two sides of one divider and shall change no other pane's weight.
-  resize_has_a_floor: A resize shall not take a pane below a weight of one, and a resize that would shall leave it at one.
+  resize_has_a_floor: A resize shall not leave either part beside its divider below a weight of one; a resize that would shall be refused, changing no weight.
   focus_is_placed: The focused pane shall be one the layout places.
   one_arrangement_path: Every change to the arrangement shall go through one function, so that a key and a pointer make the same change.
   focus_follows_geometry: Moving the focus in a direction shall move it to the pane adjacent in that direction, and shall leave it where it is when there is none.
-  strip_is_the_opened_set: The strip shall be a buffer whose rows are the opened buffers, in the order they were opened, each carrying the action that shows it.
+  strip_is_the_opened_set: The strip shall be a buffer whose rows are the opened buffers, in the order they were opened, each carrying an action that names the buffer it shows.
   stations_are_constant: The stations shall be produced for every state, so that a session can always reach them.
   station_produces_a_buffer: Pressing a station shall produce the buffer that station stands for.
   station_opens_a_buffer: Opening a station's buffer shall show it in the focused pane and shall change the layout in no other way.
   workbench_has_three_places: A session shall open on three panes side by side — the explorer holding the listing, the document, and the side panel — with the focus on the explorer.
-  buffer_goes_home: Showing a buffer shall show it in the pane its kind belongs in — a listing in the explorer, a file or a review in the document, a menu or a record in the side panel — and, when the layout no longer places that pane, in the focused pane.
+  buffer_goes_home:
+    text: Showing a buffer shall show it in the pane its kind belongs in — a listing in the explorer; a file, a review or a record read as a page in the document; a menu or any other record in the side panel — and, when the layout no longer places that pane, in the focused pane.
+    pages: A record is read as a page when its title starts with "requirement ", "judge ", "context ", "definitions of ", "uses of ", "search " or "keys".
 ---
 
 # What is opened, and what is shown
@@ -68,7 +70,10 @@ rebuilt it, and anything it had accumulated was gone. Here a buffer is opened
 once and placed or not placed. The strip is how a person reaches one that is
 opened and not currently on screen, and `strip_is_the_opened_set` makes the
 strip a *rendering of that list* rather than a second list maintained beside it
-— which is the same failure `REQ-VIEW` prevents one level up.
+— which is the same failure `REQ-VIEW` prevents one level up. A row's text is a
+number and a title, not the buffer's identity, so its action names the buffer
+(`screen.show <id>`): a row that only said `screen.show` left the shell to work
+out which buffer from the row, a second path for the action.
 
 `every_pane_is_opened` and `focus_is_placed` are the two directions of the same
 invariant, and both are worth stating because both are reachable by an ordinary
@@ -93,7 +98,11 @@ either side, and would quietly drift everything else.
 
 `resize_has_a_floor` puts the floor at one rather than at zero. A pane asked for
 nothing is not one a person can find again, and a layout that can reach that
-state has one from which the only escape is closing something.
+state has one from which the only escape is closing something. A resize that
+would cross the floor is refused rather than cut short: a cut moved what the
+giver could spare, which for a part already at zero was nothing, so the floor
+held only for parts that started on it. A drag arrives a column at a time, so
+refusing is where it stops anyway.
 
 The floor is on the *weight*, not on the characters a pane ends up with. A
 region too narrow to give every pane a character is a small screen, and the

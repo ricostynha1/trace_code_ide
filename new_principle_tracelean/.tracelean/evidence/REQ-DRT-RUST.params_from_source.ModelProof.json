@@ -7,7 +7,7 @@
   "level": "L4",
   "detail": {
     "proof": {
-      "theoremName": "TraceLean.Signature::an_arrow_in_a_bound_is_not_a_closing_bracket",
+      "theoremName": "TraceLean.Signature::a_commented_rust_signature_does_not_win",
       "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
     }
   },
@@ -15,7 +15,7 @@
   "inputs": [
     [
       "model",
-      "3705ac7787f83732"
+      "76463bde45524054"
     ],
     [
       "requirement",

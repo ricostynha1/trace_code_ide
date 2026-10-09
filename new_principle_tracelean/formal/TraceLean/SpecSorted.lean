@@ -557,12 +557,12 @@ theorem colliding_result (f : List String × List String → String → List Str
 /-- The ops that more than one binding of a project names: each such op once,
 in ascending order. An op named once is unique, and is not among them.
 
-@specifies REQ-DRT-PROTO.op_dispatch -/
+@specifies REQ-DRT-PROTO.ops_unique -/
 def CollidingOps (ops : List String) (y : List String) : Prop :=
   Ascending y ∧ ∀ op, List.Mem op y ↔ 1 < ops.count op
 
-/-- @pins REQ-DRT-PROTO.op_dispatch -/
-theorem op_dispatch_pinned :
+/-- @pins REQ-DRT-PROTO.ops_unique -/
+theorem ops_unique_pinned :
     (∀ x1, CollidingOps x1 (TraceLean.Protocol.duplicateOps x1)) ∧
     (∀ x1 y1 y2, CollidingOps x1 y1 → CollidingOps x1 y2 → y1 = y2) := by
   constructor

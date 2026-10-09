@@ -75,17 +75,16 @@ fn input() -> Schema {
     }
 }
 
-/// @drt REQ-DRT-SCHEMA.derived_from_both
-/// @tests REQ-DRT-SCHEMA.derived_from_both
+/// @drt REQ-DRT-SCHEMA.outside_is_error
 /// @tests REQ-DRT-SCHEMA.outside_is_error
 #[test]
 #[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
 fn model_and_implementation_agree_on_how_two_types_pair() {
-    let op = "REQ-DRT-SCHEMA.derived_from_both";
+    let op = "REQ-DRT-SCHEMA.outside_is_error";
     let scratch = harness::scratch("derive");
     let implementation = harness::rust_runner_with_params(
         "REQ-DRT-SCHEMA",
-        "derived_from_both",
+        "outside_is_error",
         "crates/core/src/drt/derive.rs::pair",
         &[("leanStructs", "lean_structs"), ("rustStructs", "rust_structs")],
         &scratch,
@@ -128,7 +127,128 @@ fn generation_reaches_pairs_structures_and_mismatches() {
         }
     }
     support::covered(
-        "REQ-DRT-SCHEMA.derived_from_both",
+        "REQ-DRT-SCHEMA.outside_is_error",
         &[("paired", paired), ("a structure paired", structure), ("a mismatch reported", refused)],
+    );
+}
+
+// ─── Pairing two signatures ──────────────────────────────────────────────────
+
+/// One argument or result type, from a smaller alphabet than `side`: pairing a
+/// whole signature needs every position to agree, and eleven shapes a side
+/// would make that too rare to reach.
+fn signature_type(lean: bool) -> Schema {
+    let mut variants: BTreeMap<String, Option<Box<Schema>>> = BTreeMap::new();
+    let field = |name: &str, schema: Schema| {
+        Some(Box::new(Schema::Struct { fields: [(name.to_string(), schema)].into_iter().collect() }))
+    };
+    variants.insert("int".into(), field("bits", bits(lean)));
+    variants.insert("bool".into(), None);
+    variants.insert("float".into(), None);
+    variants.insert("named".into(), field("name", small(&["P"])));
+    variants.insert("other".into(), field("text", small(&["&str"])));
+    let mut inner: BTreeMap<String, Option<Box<Schema>>> = BTreeMap::new();
+    inner.insert("int".into(), field("bits", bits(lean)));
+    inner.insert("bool".into(), None);
+    variants.insert("list".into(), field("inner", Schema::Enum { variants: inner }));
+    Schema::Enum { variants }
+}
+
+/// A signature as `lean_signature` / `rust_signature` give it: named
+/// arguments, then the result.
+fn signature(lean: bool) -> Schema {
+    // The two sides draw names from overlapping alphabets, so a parameter the
+    // code names differently from the model is common and so is one it names
+    // the same.
+    let names: &[&str] = if lean { &["a", "b"] } else { &["a", "x"] };
+    let argument = Schema::Tuple { items: vec![small(names), signature_type(lean)] };
+    Schema::Tuple {
+        items: vec![Schema::List { inner: Box::new(argument), max_len: Some(2) }, signature_type(lean)],
+    }
+}
+
+fn signatures() -> Schema {
+    Schema::Struct {
+        fields: [
+            ("model".to_string(), signature(true)),
+            ("implementation".to_string(), signature(false)),
+            ("lean".to_string(), structs(true)),
+            ("rust".to_string(), structs(false)),
+        ]
+        .into_iter()
+        .collect(),
+    }
+}
+
+/// @drt REQ-DRT-SCHEMA.derived_from_both
+/// @tests REQ-DRT-SCHEMA.derived_from_both
+#[test]
+#[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
+fn model_and_implementation_agree_on_how_two_signatures_pair() {
+    let op = "REQ-DRT-SCHEMA.derived_from_both";
+    let scratch = harness::scratch("derive-signatures");
+    let implementation = harness::rust_runner(
+        "REQ-DRT-SCHEMA",
+        "derived_from_both",
+        "crates/core/src/drt/derive.rs::derive_of",
+        &scratch,
+    );
+    let model = harness::lean_runner(
+        "TraceLean.Derive",
+        "TraceLean.Derive.derive",
+        op,
+        &["model", "implementation", "lean", "rust"],
+        &scratch,
+    );
+    let result = run(op, &signatures(), &model, &implementation, RunOptions { seed: 322, cases: 60_000, shrink_rounds: 100 })
+        .expect("both runners answer");
+    support::agreed(&result);
+    let _ = std::fs::remove_dir_all(&scratch);
+}
+
+/// The generator reaches signatures that pair, arities that differ, a refused
+/// argument, a refused result, and a parameter the code names differently.
+///
+/// @tests REQ-DRT-COVER.law_coverage
+#[test]
+fn generation_reaches_every_way_two_signatures_pair_or_not() {
+    use tracelean_core::drt::derive::derive_of;
+    type Signature = (Vec<(String, Ty)>, Ty);
+    let mut rng = gen::Rng::new(322);
+    let mut counts = [0u64; 5];
+    for _ in 0..60_000 {
+        let v = gen::value(&signatures(), &mut rng);
+        let model: Signature = serde_json::from_value(v["model"].clone()).unwrap();
+        let implementation: Signature = serde_json::from_value(v["implementation"].clone()).unwrap();
+        let lean: Structs = serde_json::from_value(v["lean"].clone()).unwrap();
+        let rust: Structs = serde_json::from_value(v["rust"].clone()).unwrap();
+        let arities_differ = model.0.len() != implementation.0.len();
+        match derive_of(model, implementation, lean, rust) {
+            Ok(derived) => {
+                counts[0] += 1;
+                if !derived.params.is_empty() {
+                    counts[4] += 1;
+                }
+            }
+            Err(_) if arities_differ => counts[1] += 1,
+            Err(problems) => {
+                if problems.iter().any(|p| p.starts_with("argument")) {
+                    counts[2] += 1;
+                }
+                if problems.iter().any(|p| p.starts_with("result")) {
+                    counts[3] += 1;
+                }
+            }
+        }
+    }
+    support::covered(
+        "REQ-DRT-SCHEMA.derived_from_both",
+        &[
+            ("every argument paired", counts[0]),
+            ("arities differ", counts[1]),
+            ("an argument refused", counts[2]),
+            ("the result refused", counts[3]),
+            ("a parameter renamed", counts[4]),
+        ],
     );
 }

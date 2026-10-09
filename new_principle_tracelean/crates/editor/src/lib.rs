@@ -25,7 +25,7 @@ use tracelean_core::evidence::Level;
 use tracelean_core::history::command::{Command, Workspace};
 use tracelean_core::history::tree::Tree;
 use tracelean_core::observe::transcript::Event;
-use tracelean_core::surface::act::{dispatch, Blocked, Focus, Intent, Move, Watch};
+use tracelean_core::surface::act::{dispatch, touched, Blocked, Focus, Intent, Move, Watch};
 use tracelean_core::surface::keymap::{Binding, Keymap, Outcome};
 use tracelean_core::surface::explorer;
 use tracelean_core::surface::produce as make;
@@ -466,6 +466,12 @@ impl Editor {
         }
     }
 
+    /// What an agent changed and nobody has taken in: the commands `dispatch`
+    /// is given so that accepting is an intent carrying them.
+    pub fn waiting(&self) -> Vec<Command> {
+        self.pending.clone()
+    }
+
     /// The workspace as it is now: the base plus everything done to it.
     pub fn workspace(&self) -> Workspace {
         let here = self.tree.current();
@@ -707,7 +713,7 @@ impl Editor {
         }
         let buffer = if station { self.stations() } else { self.strip() };
         let focus = focus_in(&buffer, offset);
-        let intent = dispatch(action.to_string(), focus, self.workspace());
+        let intent = dispatch(action.to_string(), focus, self.workspace(), self.pending.clone());
         self.perform(intent);
     }
 
@@ -1313,7 +1319,7 @@ impl Editor {
                 }
             }
         }
-        let intent = dispatch(action.to_string(), focus, self.workspace());
+        let intent = dispatch(action.to_string(), focus, self.workspace(), self.pending.clone());
         let approving = action == "trace.approve" && matches!(intent, Intent::Edit { .. });
         self.perform(intent);
         if approving {
@@ -1417,7 +1423,7 @@ impl Editor {
             _ => None,
         };
         if let Some(action) = action {
-            let intent = dispatch(action.to_string(), self.focus(), self.workspace());
+            let intent = dispatch(action.to_string(), self.focus(), self.workspace(), self.pending.clone());
             self.perform(intent);
             return;
         }
@@ -1606,7 +1612,7 @@ impl Editor {
     /// the cursor is; the menu, and any list `.` put up, goes away.
     pub fn act_here(&mut self, action: &str) {
         self.offering = None;
-        let intent = dispatch(action.to_string(), self.focus(), self.workspace());
+        let intent = dispatch(action.to_string(), self.focus(), self.workspace(), self.pending.clone());
         self.perform(intent);
         self.mode = self.keymap.root.clone();
         if self.offering.is_none() {
@@ -1685,9 +1691,10 @@ impl Editor {
         self.say("found", &format!("{count} lines{more} hold {needle}"));
     }
 
-    /// Go to where the name under the cursor is declared.
-    fn go_to_definition(&mut self) {
-        use tracelean_core::surface::definition::{declarations, identifier_at};
+    /// Go to where `name` — the name `dispatch` read under the cursor — is
+    /// declared.
+    fn go_to_definition(&mut self, name: String) {
+        use tracelean_core::surface::definition::declarations;
         // A requirement name is defined where its document says it: at the
         // clause's own line, or the top for the requirement.
         let buffer = self.buffer();
@@ -1712,10 +1719,6 @@ impl Editor {
                 return;
             }
         }
-        let Some(name) = identifier_at(&self.buffer().text, self.offset) else {
-            self.say("no name here", "put the cursor on a name");
-            return;
-        };
         let workspace = self.workspace();
         let found = declarations(workspace.files.iter(), &name);
         match found.as_slice() {
@@ -2159,7 +2162,7 @@ impl Editor {
                 self.say("left", "back one mode");
             }
             Outcome::Dispatch { action } => {
-                let intent = dispatch(action, self.focus(), self.workspace());
+                let intent = dispatch(action, self.focus(), self.workspace(), self.pending.clone());
                 self.perform(intent);
                 self.mode = self.keymap.root.clone();
                 self.typed.clear();
@@ -2521,15 +2524,15 @@ impl Editor {
             }
             // Where the name under the cursor is declared: there, when it is
             // one place, else a list of the places.
-            Intent::Display { what: BufferKind::Record { title } } if title == "definition" => {
-                self.go_to_definition();
+            Intent::Display { what: BufferKind::Record { title } }
+                if title.starts_with("definition ") =>
+            {
+                self.go_to_definition(title["definition ".len()..].to_string());
             }
-            Intent::Display { what: BufferKind::Record { title } } if title == "references" => {
-                use tracelean_core::surface::definition::identifier_at;
-                match identifier_at(&self.buffer().text, self.offset) {
-                    Some(name) => self.list_occurrences(&name, true),
-                    None => self.say("no name here", "put the cursor on a name"),
-                }
+            Intent::Display { what: BufferKind::Record { title } }
+                if title.starts_with("references ") =>
+            {
+                self.list_occurrences(&title["references ".len()..], true);
             }
             // The list of what can be done here goes where a mode's menu goes,
             // beside the buffer, and the next key picks from it.
@@ -3402,8 +3405,8 @@ impl Editor {
     /// Assurance and coverage over the refinement graph.
     ///
     /// One tree per requirement that refines nothing. Coverage of a requirement
-    /// whose decomposition is open is written as a lower bound, because that is
-    /// what it is.
+    /// whose decomposition is open is written marked provisional, because an
+    /// unwritten clause can only lower it.
     ///
     /// @implements REQ-ROLLUP.open_is_lower_bound
     fn rollup(&self) -> Vec<Event> {
@@ -3729,7 +3732,7 @@ impl Editor {
     fn watch(&mut self, watch: Watch) {
         match watch {
             Watch::Start => self.observe(),
-            Watch::Accept => self.accept(),
+            Watch::Accept { command } => self.accept(command),
             Watch::Reject => self.reject(),
             Watch::Create => self.create_session(),
             Watch::Copy => self.copy_command(),
@@ -3757,7 +3760,7 @@ impl Editor {
                 self.say("copied", &path);
                 self.clipboard = Some(path);
             }
-            Watch::AcceptFile { path } => self.accept_file(&path),
+            Watch::AcceptFile { path, command } => self.accept_file(&path, command),
             Watch::RejectFile { path } => self.reject_file(&path),
             Watch::ContextToggle { part } => {
                 if !self.context_parts.remove(&part) {
@@ -3942,12 +3945,17 @@ impl Editor {
     /// agent's work is undoable for the same reason typing is.
     ///
     /// @implements REQ-ACT.edits_are_commands
-    fn accept(&mut self) {
-        if self.pending.is_empty() {
+    fn accept(&mut self, command: Command) {
+        let taken = match command {
+            Command::Batch { commands } => commands,
+            other => vec![other],
+        };
+        if taken.is_empty() {
             self.say("nothing to accept", "nothing has been observed");
             return;
         }
-        let taken = std::mem::take(&mut self.pending);
+        // The intent carried every waiting change, so none is left waiting.
+        self.pending.clear();
         let count = taken.len();
         for command in taken {
             if let Err(refusal) = self.push(command) {
@@ -3974,10 +3982,12 @@ impl Editor {
     /// Take in the waiting change to one file, and only that.
     ///
     /// @implements REQ-ACT.edits_are_commands
-    fn accept_file(&mut self, path: &str) {
-        let (taken, kept): (Vec<Command>, Vec<Command>) =
-            std::mem::take(&mut self.pending).into_iter().partition(|c| touched(c) == path);
-        self.pending = kept;
+    fn accept_file(&mut self, path: &str, command: Command) {
+        let taken = match command {
+            Command::Batch { commands } => commands,
+            other => vec![other],
+        };
+        self.pending.retain(|c| touched(c) != path);
         if taken.is_empty() {
             self.say("nothing to accept", &format!("{path} has no change waiting"));
             return;
@@ -4153,18 +4163,6 @@ fn continues(prev: &Command, next: &Command) -> bool {
             Command::Delete { file: b, offset, deleted },
         ) => a == b && deleted.chars().count() == 1 && offset + 1 == *at,
         _ => false,
-    }
-}
-
-/// The path a command is about, for a list somebody reads before deciding.
-fn touched(command: &Command) -> String {
-    match command {
-        Command::Insert { file, .. } | Command::Delete { file, .. } => file.clone(),
-        Command::CreateFile { path } | Command::DeleteFile { path, .. } => path.clone(),
-        Command::RenameFile { from, to } => format!("{from} → {to}"),
-        Command::Batch { commands } => {
-            commands.iter().map(touched).collect::<Vec<_>>().join(", ")
-        }
     }
 }
 

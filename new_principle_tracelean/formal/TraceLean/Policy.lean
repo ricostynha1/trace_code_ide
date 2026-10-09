@@ -25,8 +25,17 @@ inductive Class where
 
 def protectedRoots : List String := [".git", ".tracelean"]
 
-def passThroughDirs : List String :=
-  ["target", "node_modules", "dist", "build", ".venv", "venv", "__pycache__", ".lake"]
+/-- Directories only tools write: regenerable wherever they sit. Cargo leaves a
+`target` beside every crate outside a workspace, and every language's cache
+directory is named for the tool that fills it. -/
+def passThroughAnywhere : List String :=
+  ["target", "node_modules", "__pycache__", ".lake", ".venv",
+   ".cache", ".mypy_cache", ".pytest_cache", ".ruff_cache", ".gradle", ".tox"]
+
+/-- Names a person also gives a source directory: regenerable only at the
+project root. `src/build/mod.rs` is somebody's code, and matching the name at
+any depth never mirrored it back. -/
+def passThroughAtRoot : List String := ["build", "dist", "venv"]
 
 /-- Resolve `.` and `..` left to right, or fail when the path climbs out.
 
@@ -56,7 +65,6 @@ to be answered: an absolute path, or one that climbs out of the project, is
 @models REQ-SBX.classification_total
 @models REQ-SBX.protected_never_mirrored
 @models REQ-SBX.passthrough_not_mirrored
-@models REQ-SBX.escape_is_not_silent
 -/
 def classify (path : String) : Class :=
   if path == "" then .outside
@@ -70,12 +78,11 @@ def classify (path : String) : Class :=
     | some [] => .outside
     | some (first :: rest) =>
       if protectedRoots.contains first then .«protected»
-      else if (first :: rest).any (fun s => passThroughDirs.contains s) then .passThrough
+      else if passThroughAtRoot.contains first then .passThrough
+      else if (first :: rest).any (fun s => passThroughAnywhere.contains s) then .passThrough
       else .mirrored
 
-/-- Whether a change at this path is replayed onto the real tree.
-
-@models REQ-MIRROR.protected_excluded -/
+/-- Whether a change at this path is replayed onto the real tree. -/
 def isMirrored (path : String) : Bool :=
   classify path == .mirrored
 

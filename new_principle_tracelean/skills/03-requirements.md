@@ -19,7 +19,7 @@ Why these clauses; the failure each prevents; what is not claimed.
 - **`id`** is the identity, never the path.
 - **`refines`** builds a graph; cycles and unknown ids are reported.
 - **`decomposition`**: `complete` (clauses exhaust it) or `open` (coverage is
-  a lower bound; usual for architecture).
+  provisional — it can only fall; usual for architecture).
 - **Narrowings**: a clause may be a block — `text:` is the clause, every other
   key fixes which answer it allows (the empty case, an order). Annotations
   name only the clause; narrowings are judged and hashed with it and do not

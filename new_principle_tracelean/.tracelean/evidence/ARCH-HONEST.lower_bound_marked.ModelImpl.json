@@ -7,24 +7,24 @@
   "level": "L3",
   "detail": {
     "drt": {
-      "seed": 91,
-      "cases": 3000,
-      "op": "REQ-ROLLUP.open_is_lower_bound"
+      "seed": 53,
+      "cases": 1000,
+      "op": "ARCH-HONEST.lower_bound_marked"
     }
   },
-  "linkHash": "498c60e0b67f602e",
+  "linkHash": "4c444ec1644a0321",
   "inputs": [
     [
       "implementation",
-      "b40bb852be10fd2f+d33f902cb75709f5"
+      "cf4c1fe63fd33e8f"
     ],
     [
       "model",
-      "24edb474b2447bdd+bcea34ec26edd655"
+      "ffcc9c4258d7e4e1"
     ],
     [
       "requirement",
-      "f5526530a884b6bf"
+      "0c39d3c85032dd96"
     ]
   ]
 }

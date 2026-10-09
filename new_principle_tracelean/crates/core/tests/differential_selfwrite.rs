@@ -33,7 +33,7 @@ fn self_write() -> Schema {
     strukt(&[
         ("path", path()),
         ("content", content()),
-        ("remaining", Schema::Nat { max: Some(3), edges: vec![0, 1] }),
+        ("age", Schema::Nat { max: Some(3), edges: vec![0, 1] }),
     ])
 }
 
@@ -85,8 +85,8 @@ fn model_and_implementation_agree_on_suppression() {
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
-/// Both outcomes, and the case that distinguishes *consumed* from *kept*: a
-/// pending write with more than one observation left.
+/// Both outcomes, and the cases that distinguish *consumed* from *kept*: the
+/// matched write had rounds to spare, and another identical write stays.
 ///
 /// @tests REQ-DRT-COVER.law_coverage
 #[test]
@@ -96,20 +96,24 @@ fn generation_reaches_suppression_and_passthrough() {
 
     let schema = input_schema();
     let mut rng = gen::Rng::new(37);
-    let (mut hit, mut miss, mut survived) = (0, 0, 0);
+    let (mut hit, mut miss, mut aged, mut twin) = (0, 0, 0, 0);
     for _ in 0..2_000 {
         let v = gen::value(&schema, &mut rng);
         let pending: Vec<SelfWrite> = serde_json::from_value(v["pending"].clone()).unwrap();
-        let before = pending.len();
-        let result = suppress(
-            pending,
-            v["path"].as_str().unwrap().to_string(),
-            v["content"].as_str().unwrap().to_string(),
-        );
+        let (path, content) =
+            (v["path"].as_str().unwrap().to_string(), v["content"].as_str().unwrap().to_string());
+        let matching: Vec<&SelfWrite> =
+            pending.iter().filter(|w| w.path == path && w.content == content).collect();
+        let first_age = matching.first().map(|w| w.age);
+        let twins = matching.len();
+        let result = suppress(pending, path, content);
         if result.suppressed {
             hit += 1;
-            if result.pending.len() == before {
-                survived += 1;
+            if first_age.unwrap_or(0) > 1 {
+                aged += 1;
+            }
+            if twins > 1 {
+                twin += 1;
             }
         } else {
             miss += 1;
@@ -120,7 +124,8 @@ fn generation_reaches_suppression_and_passthrough() {
         &[
             ("a suppressed observation", hit),
             ("an external observation", miss),
-            ("a suppression with observations left over", survived),
+            ("a matched write with rounds to spare", aged),
+            ("a suppression with an identical write left pending", twin),
         ],
     );
 }
