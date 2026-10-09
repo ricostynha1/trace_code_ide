@@ -47,41 +47,48 @@ person's look too.
 | DRT-COVER.law_coverage | its own prose says laws are not designed yet | mark `@partial` until they are |
 | STRENGTH.obligation_generated | the old `--strength` generator emits `True`; `pinning::statement` replaced it | re-point the clause at `pinning::statement`, delete the old generator |
 
-## The model covers part of the clause — extend it or split
+## The model covers part of the clause — split, extend or fix
 
-| Clause | Missing part |
-|---|---|
-| ACT.focus_is_carried, missing_target_is_refused | definition/references ignore the focus in `dispatch` — move the cursor read into `dispatch` |
-| ACT.edits_are_commands | sandbox accept resolves to no commands — resolve it to the diff as a batch |
-| SHOW.review_from_change | multi-file, add and delete changes |
-| SHOW.menu_from_keymap | build entries from the keymap mode in core |
-| SHOW.graph_from_refinement | requirements with a missing parent or in a cycle; chains deeper than 4 |
-| SHOW.producers_are_total | a kind → producer table with a totality proof |
-| VIEW.affordances_named | span actions checked against the actions the keymap knows |
-| VIEW.presentation_may_be_symbolic †, text_is_the_content | conformance per region, not per row; a level colour checked against its text |
-| VIEW.screen_is_readable | split: "read back from the frontend" is the page test's job (`pointer.mjs`) |
-| ROLLUP.exempt_leaves_denominator | partial clauses' capped contribution |
-| DOCLINK.decisions_exempt | require `affects:` on a decision record |
-| JUDGE.advice_is_not_evidence | its model is the prompt; it should be `record` |
-| LINECOV.clause_summary † | combining several implementing items |
-| STALE.inputs_identified | proof records name the theorem's hash; DRT records the test's |
-| STALE.no_silent_revalidation | only a fresh record from the owning backend revalidates |
-| STRENGTH.nondeterministic_declared | shown as excluded, not as a pass; reason required |
-| ANCHOR.imprecise_capped † | tie `precise` to "a grammar read this file" |
-| ANCHOR.stable_under_move | identity by symbol path, not byte offsets (moves across scopes: text should exclude) |
-| ANNOT.qualifiers | attach to the preceding annotation; orphan qualifier reported |
-| CHECK.named_kinds | split `malformed` into its kinds |
-| CHECK.structural_is_not_exempt | model the cap |
-| DRT-COVER.vacuous_named | floor 0 is vacuous; report every short floor |
-| DRT-GEN.seed_reproduces | the other schemas (struct, list, option, bool, int, enum) |
-| DRT-PROTO.failure_named, line_delimited, op_dispatch †, runner_shared | start failure, timeout, death; writing a case; dispatch on `op`; one process per language |
-| DRT-RUST.types_inferred, DRT-SCHEMA.derived_from_both | model `derive` and the generated call site |
-| REQDOC.clause_addressable | hash per clause — [action plan](../work/action-plan.md) §5 |
-| REQDOC.decomposition_claimed | render the provisional mark |
-| ARCH-DETERMINISM.stable_ordering | too broad for one model: split per collection, or structural |
-| OBS.workspace_is_a_copy † | extra files in the copy; missing `.git`/`.tracelean` |
-| TRANSCRIPT.absent_is_fine | "no transcript" as an input (`Option`) |
-| UNDO.filtered_view † | a node touching two files carries both |
+Rule ([action plan](../work/action-plan.md) §7): **split** when the parts can
+be met independently, preferred; **extend** the model when one mechanism
+serves every input; **fix** when the code or an annotation is simply wrong.
+
+| Clause | Do | Missing part, or the split |
+|---|---|---|
+| ACT.focus_is_carried, missing_target_is_refused | fix | definition/references ignore the focus in `dispatch` — move the cursor read into `dispatch` |
+| ACT.edits_are_commands | fix | sandbox accept resolves to no commands — resolve it to the diff as a batch |
+| SHOW.menu_from_keymap | fix | build entries from the keymap mode in core |
+| CHECK.named_kinds | fix | split the `malformed` finding into its kinds |
+| JUDGE.advice_is_not_evidence | fix | its model is the prompt; it should be `record` |
+| UNDO.filtered_view † | fix | a node touching two files carries both |
+| REQDOC.clause_addressable | fix | hash per clause — [action plan](../work/action-plan.md) §5 |
+| VIEW.screen_is_readable | split | the frontend draws it · it can be read back without trusting the frontend (`pointer.mjs`) |
+| ROLLUP.exempt_leaves_denominator | split | exempt clauses leave the denominator · partial clauses count capped |
+| DOCLINK.decisions_exempt | split | decision records are exempt · they must declare `affects:` |
+| LINECOV.clause_summary † | split | coverage per implementing item · how items combine for the clause |
+| STALE.inputs_identified | split | one clause per record kind: judgement, DRT (names the test), proof (names the theorem) |
+| STRENGTH.nondeterministic_declared | split | shown as excluded, not a pass · a reason is required |
+| ANCHOR.stable_under_move | split | inserting above keeps the identity (symbol path, not offsets) · moving across scopes (new text) |
+| ANNOT.qualifiers | split | attaches to the preceding annotation · an orphan qualifier is reported |
+| CHECK.structural_is_not_exempt | split | needs a test, not a model · stays in the denominator · capped below L3 |
+| DRT-PROTO.op_dispatch † | split | op names are unique · a case dispatches on its `op` |
+| REQDOC.decomposition_claimed | split | open by default · rendered as provisional |
+| ARCH-DETERMINISM.stable_ordering | split | one clause per collection written out (or structural) |
+| TRANSCRIPT.absent_is_fine | split | a missing transcript reads as empty (`Option` input) · the workspace alone suffices |
+| DRT-GEN.seed_reproduces | extend | the other schemas (struct, list, option, bool, int, enum) |
+| DRT-PROTO.failure_named | extend | start failure, timeout, death |
+| DRT-PROTO.line_delimited | extend | writing a case as one line |
+| DRT-PROTO.runner_shared | extend | one process per language |
+| DRT-RUST.types_inferred, DRT-SCHEMA.derived_from_both | extend | model `derive` and the generated call site |
+| DRT-COVER.vacuous_named | extend | floor 0 is vacuous; report every short floor |
+| SHOW.review_from_change | extend | multi-file, add and delete changes |
+| SHOW.graph_from_refinement | extend | requirements with a missing parent or in a cycle; chains deeper than 4 |
+| SHOW.producers_are_total | extend | a kind → producer table with a totality proof |
+| VIEW.affordances_named | extend | span actions checked against the actions the keymap knows |
+| VIEW.presentation_may_be_symbolic †, text_is_the_content | extend | conformance per region, not per row; a level colour checked against its text |
+| ANCHOR.imprecise_capped † | extend | tie `precise` to "a grammar read this file" |
+| STALE.no_silent_revalidation | extend | only a fresh record from the owning backend revalidates |
+| OBS.workspace_is_a_copy † | extend | extra files in the copy; missing `.git`/`.tracelean` |
 
 ## Structural — no function can show it
 

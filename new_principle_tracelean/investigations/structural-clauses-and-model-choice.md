@@ -54,8 +54,18 @@ is wrong. Cases the review hit:
 | EVID.weakest_link | the new pin in `Evidence.lean` | — | the old `@pins` in `Pinned.lean` is silently ignored |
 | SBX.escape_is_not_silent | `Policy` | `Effects.escapeViolations` (`Effects.lean` sorts before `Policy.lean`) | a spec would have to be written against whichever sorts first |
 
-**Fix** ([action plan](../work/action-plan.md) §7): say the role instead of relying on
-position — a spec is annotated `@specifies REQ-X.c` (not `@models`), and the
-checker reports a clause with two `@models` functions, two specs or two `@pins`
-as a finding ("which one?") unless one is marked primary. `--judge` shows all of
-them.
+**Why there are several at all.** Position is the symptom. 79 of 219 modelled
+clauses carry several `@models` because the role is used for five different
+relationships: the function answering the clause; a `Prop` spec of it; an
+operation that must keep the property (`splitFocus` for `panes_are_distinct`);
+a type the clause mentions (`Buffer` for `everything_is_a_buffer`); every
+member of a family (seven producers for `producer_is_pure`) or each step of a
+pipeline (`classify` → `escapeViolations` → `runViolations`). Reviewers were
+shown whichever came first — often a helper or a type — which explains some
+drift verdicts.
+
+**Fix** ([action plan](../work/action-plan.md) §7): `@models` means only the
+function that computes what the clause talks about, at most one per clause; a
+spec is `@specifies`; an invariant is a theorem over the operations; types and
+helpers carry nothing; a universal claim is structural or a theorem. A clause
+that still needs two functions says two things and is split.

@@ -114,14 +114,56 @@ Six clauses are about the shape of the code. Mark them `@structural(reason=…)`
 remove their Lean models, and give each an architecture test that reads the
 tree (e.g. nothing outside `cmd/` calls `Workspace::set`).
 
-## 7. Say which model is which — explained in [structural clauses and model choice](../investigations/structural-clauses-and-model-choice.md)
+**Every structural check needs a positive and a negative test — decided.** A
+check that only passes on today's tree also passes when the check is broken or
+looks for the wrong thing. So:
 
-- New role `@specifies REQ-X.c` for the `Prop` spec; `@models` for functions.
-- A clause with more than one function model, spec or `@pins` is a finding
-  unless one is marked `@models(primary)`.
-- `--judge` prints every model, not the first.
-- Fix the scanner binding a constructor's doc comment to the next declaration
-  (PROV.base_is_honest).
+- each check is a function from a set of files to its violations
+  (`fn violations(files) -> Vec<(path, line, why)>`), so one implementation
+  serves both tests;
+- **positive**: over the real tree, no violations;
+- **negative**: over a small made-up tree that breaks the rule (a file outside
+  `cmd/` calling `Workspace::set`), it reports exactly that file and line —
+  and, where the rule has an allowed place, a file there is *not* reported;
+- a structural clause counts only with both: a new requirement clause (in
+  REQ-CHECK, next to `structural_is_not_exempt`) says a structural test must
+  show its check rejects a violating tree, and the checker reports a
+  structural clause whose tests are positive-only.
+
+The 13 existing tests in `crates/core/tests/architecture.rs` are all
+positive-only (each scans the real tree through `sources()`); they get the same
+split and a negative case each. In general the same rule is worth applying to
+any test whose pass is "nothing found" — a search that finds nothing must be
+shown able to find something — but structural checks come first.
+
+## 7. One model per clause — decided; explained in [structural clauses and model choice](../investigations/structural-clauses-and-model-choice.md)
+
+79 of 219 modelled clauses carry several `@models`, because the role is used
+for five different relationships. `@models` comes to mean exactly *the
+function that computes what the clause talks about*, and the checker allows
+at most one per clause:
+
+| Annotated today | Becomes |
+|---|---|
+| the function answering the clause | the one `@models` |
+| a `Prop` spec (from pinning) | `@specifies`, at most one per clause |
+| an operation that must keep the property | nothing: the clause is an invariant, modelled by a theorem over the operations (`@proves`) |
+| a type the clause mentions | nothing: a type is vocabulary |
+| every member of a family, or pipeline helpers | a universal claim is structural or a theorem; only a pipeline's entry point is annotated |
+
+A clause that still seems to need two functions says two things: split it.
+Also at most one `@pins` per clause; `--judge` shows the model and the spec;
+fix the scanner binding a constructor's doc comment to the next declaration
+(PROV.base_is_honest). Cleanup: sort the 79 clauses into these cases.
+
+**Split, extend or fix.** When a model covers only part of a clause: *split*
+when the parts can be met independently (they have their own implementation
+and evidence — e.g. "support 8 image formats" is 8 clauses, or 8 child
+requirements if each has several obligations); *extend* the model when one
+mechanism serves every input (e.g. one seeded generator for every schema);
+*fix* the code when it is simply wrong. Splitting is preferred for simpler
+requirements and models; do the splits after §5, so evidence re-opens once.
+The per-clause choice is in the review findings.
 
 ## 8. The Lean grammar — fix by extending it
 
