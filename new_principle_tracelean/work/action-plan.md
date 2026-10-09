@@ -72,15 +72,24 @@ Your proposal: next to `refines` (sub-requirements), a field of entries that
   decomposition here, and the two must not be confused: decomposition splits
   *what* is required (and counts in the roll-up); a narrowing fixes *which
   answer* a clause allows (and does not add to the denominator).
-- **Attach them to a clause**, since a pin is per clause:
+- **Nest them under their clause**, so a clause and what narrows it sit
+  together (your layout, kept valid YAML so GitHub and YAML tools still read
+  the frontmatter):
 
   ```yaml
   clauses:
-    min_not_mean: The aggregate shall be the minimum of its parts' levels.
-  narrowings:
+    weakest_link: The minimum over bonds.        # no narrowings: unchanged
     min_not_mean:
+      text: The aggregate shall be the minimum of its parts' levels.
       empty: With no parts, the aggregate shall be L1.
+      order: Parts shall be listed in ascending id.
   ```
+
+  A clause without narrowings keeps its one-line form; with narrowings it is a
+  block whose `text:` is the base clause and whose other keys are narrowings
+  (`[A-Za-z0-9_]`, `text` reserved). Annotations still name only the clause.
+  The parser reads two levels instead of one (ADR-0001's freeze ended at
+  stage 2); a new ADR records the change.
 
 - **Hash them with the clause** (§5), so adding a narrowing re-opens the
   clause's judgement and pin. The spec may use only the clause and its
