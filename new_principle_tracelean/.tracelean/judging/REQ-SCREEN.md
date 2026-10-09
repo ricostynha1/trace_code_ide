@@ -63,7 +63,7 @@ The model covers the second half and not the first. `openBuffer` is handed a
 buffer that already exists and decides where it goes; producing it — reading the
 project tree, tailing a transcript, rendering the refinement graph — is the
 shell's work under `ARCH-CORE-SHELL`, and none of it exists yet (phases E and F
-of `docs/10-screen.md`).
+of `investigations/screen-proposal.md`).
 
 **Accepted, by splitting.** The project's own rule decides it: one claim per
 clause, and a sentence whose "and" joins two independent obligations is two

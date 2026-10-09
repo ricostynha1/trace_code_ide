@@ -1,4 +1,4 @@
-# 13 — Two problems explained: clauses no model can check, and which model a clause gets
+# Two problems explained: clauses no model can check, and which model a clause gets
 
 ## 1. Clauses about the shape of the code, not about a value
 
@@ -54,7 +54,7 @@ is wrong. Cases the review hit:
 | EVID.weakest_link | the new pin in `Evidence.lean` | — | the old `@pins` in `Pinned.lean` is silently ignored |
 | SBX.escape_is_not_silent | `Policy` | `Effects.escapeViolations` (`Effects.lean` sorts before `Policy.lean`) | a spec would have to be written against whichever sorts first |
 
-**Fix** ([14](14-action-plan.md) §7): say the role instead of relying on
+**Fix** ([action plan](../work/action-plan.md) §7): say the role instead of relying on
 position — a spec is annotated `@specifies REQ-X.c` (not `@models`), and the
 checker reports a clause with two `@models` functions, two specs or two `@pins`
 as a finding ("which one?") unless one is marked primary. `--judge` shows all of

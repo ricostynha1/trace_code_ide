@@ -19,7 +19,7 @@ Living status. Structure is stable; the checklists move.
 | Frontends — terminal, window, page | built, conformance-checked on both rungs |
 | Evidence is earned, not annotated (`REQ-EVID`, `REQ-LOCK`) | 235 records in the lock — 150 `L3` from the model↔implementation bond, 85 `L4` from the proof bond |
 | The editor driven end to end (`REQ-DRIVE`) | modelled, differentially tested, and driven on a real pseudo-terminal over `demo/` |
-| Model namespacing (`docs/08-ideas.md` §0) | done — every module under its own namespace, no name means two things |
+| Model namespacing (`work/ideas.md` §0) | done — every module under its own namespace, no name means two things |
 | One shared runner per side (§1) | done — 135 generated packages became 2; a full differential run is 86s through `tools/differential-all.sh`, from about 1364s |
 | Stage 2 — self-application fixpoint | the tree checks itself; `Imprecise 1` is the only finding |
 

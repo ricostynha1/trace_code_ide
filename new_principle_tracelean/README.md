@@ -174,10 +174,13 @@ at L1. See [docs/04-coverage.md](docs/04-coverage.md) and
 [docs/05-view.md](docs/05-view.md) ·
 [docs/06-editor.md](docs/06-editor.md) ·
 [docs/07-frontends.md](docs/07-frontends.md) ·
-[docs/08-ideas.md](docs/08-ideas.md) ·
 [docs/09-using-the-tui.md](docs/09-using-the-tui.md) ·
 [reqs/README.md](reqs/README.md) ·
 [skills/README.md](skills/README.md) ·
 [docs/decisions/](docs/decisions/) ·
-[docs/progress.md](docs/progress.md) ·
 [ROLLOVER.md](ROLLOVER.md)
+
+`docs/` says how the system is and why. Work to do and status live in
+[work/](work/) (progress, the gap against the first TraceLean, the action plan,
+ideas); investigations and proposals not yet decided live in
+[investigations/](investigations/).

@@ -900,7 +900,7 @@ typing was completely broken (`Insert` had a parent, so `keymap::step` answered
 itself), and the leader menu replaced the buffer instead of sitting beside it
 (`editor.menu` now sits beside it; all three frontends draw it).
 
-**Ideas** are written down in [docs/08-ideas.md](docs/08-ideas.md), including
+**Ideas** are written down in [work/ideas.md](work/ideas.md), including
 the measured performance finding: a full `--include-ignored` run is ~1364s
 across 55 suites, and **68 `harness::lean_runner` sites mean 68 separate lake
 builds of the same package, serialised behind one lock**. `main_lean` already
@@ -954,7 +954,7 @@ test of nothing.
 The surface could show one buffer, because `shown` answered with one and there
 was no value that said otherwise. `REQ-SCREEN` is that value: buffers opened, a
 layout placing some of them, which pane has focus, and the two menus a session
-always has. Planned in [docs/10-screen.md](docs/10-screen.md), which was written
+always has. Planned in [investigations/screen-proposal.md](investigations/screen-proposal.md), which was written
 first and checked against what the surface is meant to be.
 
 - `reqs/surface/REQ-SCREEN.md`, 14 clauses, refining `REQ-VIEW` and `REQ-SHOW`.
@@ -1168,7 +1168,7 @@ protocol error instead of a counterexample. It counts from 2^50 now.
 10. **The price table is a fact about the outside world.** Nothing here can
     check that `.tracelean/prices.json` holds the prices anyone charges.
 11. **The project map, the Lean infoview and a terminal panel** are still not
-    restored — see the table in [docs/10-screen.md](docs/10-screen.md), which
+    restored — see the table in [investigations/screen-proposal.md](investigations/screen-proposal.md), which
     says why for each.
 
 ### Superseded plan — the four phases
@@ -1290,7 +1290,7 @@ Also still open, unchanged:
 | Editor behaviour under keys | `crates/editor/tests/{editing,reports}.rs` |
 | Producers and dispatch | `crates/core/src/surface/{produce,act}.rs` |
 | What is opened and what is shown | `crates/core/src/surface/screen.rs`, `formal/TraceLean/Screen.lean` |
-| The plan for the surface | `docs/10-screen.md` |
+| The plan for the surface | `investigations/screen-proposal.md` |
 | Terminal, window, page | `crates/tui/`, `crates/desktop/`, `web/` |
 | The keymap, as data | `assets/keymap.json` |
 

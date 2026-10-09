@@ -1,11 +1,11 @@
-# 12 — What the first review found wrong, and which side should change
+# What the first review found wrong, and which side should change
 
-The 2026-10-09 review (simulated, see [14](14-action-plan.md) §1) judged 148
+The 2026-10-09 review (simulated, see [action plan](../work/action-plan.md) §1) judged 148
 clauses: 70 drift, 5 unmodelable. Details per clause are in
 `.tracelean/judging/<REQ>.md`. This is my opinion on each: fix the **code**
 (the model and Rust are wrong), fix the **text** (the requirement is wrong or
 vague), **split** (one clause says two things, only one is modelled), or
-**structural** (see [13](13-structural-and-model-choice.md)).
+**structural** (see [structural clauses and model choice](structural-clauses-and-model-choice.md)).
 
 Clauses marked † were pinned after being judged drift; their spec needs a
 person's look too.
@@ -14,7 +14,7 @@ person's look too.
 
 | Clause | What happens | Fix |
 |---|---|---|
-| ROLLUP.min_not_mean †, deterministic_order, ARCH-HONEST.weakest_link † | a diamond loses a child under one parent | [14](14-action-plan.md) §3 |
+| ROLLUP.min_not_mean †, deterministic_order, ARCH-HONEST.weakest_link † | a diamond loses a child under one parent | [action plan](../work/action-plan.md) §3 |
 | SCREEN.resize_has_a_floor | a neighbour at 0 stays at 0 (subtraction clamps) | refuse the resize when a neighbour would drop below 1 |
 | SCREEN.strip_is_the_opened_set | a strip row's action carries its text, not a buffer id; the editor bypasses `dispatch` | row action `screen.show <id>`, drop the bypass |
 | SBX.passthrough_not_mirrored | `src/build/mod.rs` is never mirrored; `.cache` is | match pass-through names at the root only; add the cache dirs |
@@ -26,7 +26,7 @@ person's look too.
 | STRENGTH.kernel_decides † | `sorryAx` wrapped onto a later line of `#print axioms` is missed | read the whole axiom list, not line by line |
 | MYTH.escape_terminates, modes_defined | a mode with a missing parent passes `validate`; Escape then loops | `validate` reports missing or absent parents |
 | MYTH (side finding) | `reachableFrom` fuel spent by bad `enter`s reports real modes unreachable | fuel = number of modes, not of bindings |
-| JUDGE.human_decides | an empty `--by` records L2 | refuse it; delegation per [14](14-action-plan.md) §1 |
+| JUDGE.human_decides | an empty `--by` records L2 | refuse it; delegation per [action plan](../work/action-plan.md) §1 |
 | PROV.base_is_honest | the scanner binds a constructor's doc comment to the next declaration | fix the binding; put `@models` on `origin` |
 | ANNOT.totality | `@Models` (capital) is silently dropped | report an unknown role |
 | CHECK.qualifier_soundness | an expired exemption is not reported | give the check today's date as input |
@@ -76,7 +76,7 @@ person's look too.
 | DRT-GEN.seed_reproduces | the other schemas (struct, list, option, bool, int, enum) |
 | DRT-PROTO.failure_named, line_delimited, op_dispatch †, runner_shared | start failure, timeout, death; writing a case; dispatch on `op`; one process per language |
 | DRT-RUST.types_inferred, DRT-SCHEMA.derived_from_both | model `derive` and the generated call site |
-| REQDOC.clause_addressable | hash per clause — [14](14-action-plan.md) §5 |
+| REQDOC.clause_addressable | hash per clause — [action plan](../work/action-plan.md) §5 |
 | REQDOC.decomposition_claimed | render the provisional mark |
 | ARCH-DETERMINISM.stable_ordering | too broad for one model: split per collection, or structural |
 | OBS.workspace_is_a_copy † | extra files in the copy; missing `.git`/`.tracelean` |
@@ -86,7 +86,7 @@ person's look too.
 ## Structural — no function can show it
 
 ACT.one_path, CMD.single_path, SCREEN.one_arrangement_path, SHOW.core_produces,
-SHOW.producer_is_pure, PERSIST.append_only. See [13](13-structural-and-model-choice.md).
+SHOW.producer_is_pure, PERSIST.append_only. See [structural clauses and model choice](structural-clauses-and-model-choice.md).
 
 Also wrongly attached though judged *agrees*: SBX.real_tree_untouched (its
 model is `copyCheck`; the real check is `copyViolations`), CMD.round_trip (holds

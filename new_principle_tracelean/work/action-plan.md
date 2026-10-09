@@ -1,8 +1,8 @@
-# 14 — Action plan after the first review
+# Action plan after the first review
 
 What the 2026-10-09 review and pinning pass found, what was decided, and how to
-fix each. In order of priority. Findings per clause: [12](12-review-findings.md);
-the two harder problems explained: [13](13-structural-and-model-choice.md).
+fix each. In order of priority. Findings per clause: [review findings](../investigations/review-findings-2026-10-09.md);
+the two harder problems explained: [structural clauses and model choice](../investigations/structural-clauses-and-model-choice.md).
 
 ## 1. Agent judgements count when a person delegated them — decided
 
@@ -21,14 +21,14 @@ judge. Today nothing records the authorisation, and `--by ""` is accepted.
 
 ## 2. Drift: change the requirement or the code — open, to evaluate later
 
-[12](12-review-findings.md) gives an opinion for each of the 75 clauses. Nothing
+[review findings](../investigations/review-findings-2026-10-09.md) gives an opinion for each of the 75 clauses. Nothing
 is changed until each requirement's owner decides.
 
 Related gap: a **drift verdict is not recorded** — it only withdraws an
 agreement. So when the model changes after a drift, nothing re-opens, and the
 UI cannot show "judged: drift". Record drift and unmodelable as records at L1
 with the same input hashes; they then go stale like any other record. Nine
-clauses were pinned after being judged drift (marked † in 12) and need a look.
+clauses were pinned after being judged drift (marked † in the review findings) and need a look.
 
 ## 3. Nothing may be counted twice or lost in the roll-up — decided: fix
 
@@ -99,13 +99,13 @@ narrowings. The prose around the clauses is covered by document review
 (`doclink`), not by evidence. Records already carry `("requirement", hash)`;
 only what is hashed changes, so existing records go stale once, then settle.
 
-## 6. Structural clauses — explained in [13](13-structural-and-model-choice.md)
+## 6. Structural clauses — explained in [structural clauses and model choice](../investigations/structural-clauses-and-model-choice.md)
 
 Six clauses are about the shape of the code. Mark them `@structural(reason=…)`,
 remove their Lean models, and give each an architecture test that reads the
 tree (e.g. nothing outside `cmd/` calls `Workspace::set`).
 
-## 7. Say which model is which — explained in [13](13-structural-and-model-choice.md)
+## 7. Say which model is which — explained in [structural clauses and model choice](../investigations/structural-clauses-and-model-choice.md)
 
 - New role `@specifies REQ-X.c` for the `Prop` spec; `@models` for functions.
 - A clause with more than one function model, spec or `@pins` is a finding
