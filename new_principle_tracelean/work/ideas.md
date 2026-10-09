@@ -27,21 +27,7 @@ against a threshold that would make a slow machine look like a failed proof.
 The stored value must therefore not enter the lockfile's bytes, or two machines
 would produce two lockfiles for the same work.
 
-## 2. Coverage floors that a machine proposes
-
-**Now.** Each floor is a number somebody chose after watching a generator run.
-75 of 106 bindings declare floors; the other 31 stay at L1 because nobody has
-watched them yet.
-
-**Change.** A mode that runs a generator, reports how often each named situation
-occurred, and prints the `floors` block it would write. A person still enters
-it — the same rule as judging.
-
-**True if.** The proposal is never applied automatically. A floor the generator
-proposed from its own behaviour and then met is a tautology, and it would look
-exactly like evidence.
-
-## 3. Shrinking that reports what it removed
+## 2. Shrinking that reports what it removed
 
 **Now.** `RunOptions.shrink_rounds` is 100 everywhere and the shrunk input is
 what a divergence reports. Nothing says how much was removed, so a shrinker that
@@ -50,7 +36,7 @@ quietly stopped working would still produce a plausible-looking failure.
 **Change.** Report the original input beside the shrunk one and the number of
 rounds that made progress.
 
-## 4. The judging queue as a report
+## 3. The judging queue as a report
 
 **Now.** `--stale` lists judgements whose inputs changed, but not clauses that
 were never judged. Finding those meant a one-off script over the lock in the
@@ -61,7 +47,7 @@ requirement↔model bond is at L1 with a model present — the clauses where a
 person's reading is the only thing that would raise the level — ordered by how
 many implementations depend on them.
 
-## 5. A report that finds two models of one concept
+## 4. A report that finds two models of one concept
 
 **Now.** Eleven names once meant two things each, found by accident when
 somebody imported every module at once and the compiler objected. Nothing looks

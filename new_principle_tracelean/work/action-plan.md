@@ -146,14 +146,38 @@ around it. Two steps:
 - Checker counts a model written by pattern matching (no named inputs) as
   taking no inputs; `shape` should count the arrows of its type instead.
 
-## 10. Carried over from the removed progress and gap documents
+## 10. Differential coverage is complete or waived — decided
+
+A differential test only counts if its random inputs reached every case that
+matters. Today a binding names *situations* and a floor for each ("deletes a
+file: at least 20 cases"); 31 of 106 bindings name none and stay at L1, and a
+list somebody wrote can always miss a case.
+
+Rule: the target is 100%, waived only exceptionally, with a reason.
+
+- **Every argument class reached.** Derive the classes from the types, as
+  `--drt` already does (negative/zero/positive, empty/not, each `Option` and
+  enum case, each struct field's classes). All must be reached; a binding's
+  hand-named situations are added on top, never instead.
+- **Every line of the implementation run by the differential cases.** Measure
+  it with the per-test line coverage (`trace::lines`) over the DRT run, per
+  implementing item. Below 100% is not L3.
+- **A waiver** names the classes or lines it excuses and why
+  (`@waive(lines=…, reason=…)`, like `@exempt`), is shown in the requirement
+  view, and is checked by the reviewer like any judgement. An unused waiver
+  (the lines are now reached) is reported, so waivers cannot pile up.
+- Floors as counts (`atLeast: 20`) stay only as "how often", never as a
+  substitute for "reached at all"; the default becomes at least one.
+
+Requirement changes: REQ-DRT-COVER gains clauses for the class and line rules
+and the waiver; `coverage::verdict` and its Lean model change to match.
+
+## 11. Carried over from the removed progress and gap documents
 
 - `menu_entries` in `crates/editor` builds a mode's menu from the keymap
   itself instead of through `keymap::which_key`, so it omits the `Escape` row
   the bar has: two which-keys (`REQ-MYTH.whichkey_is_a_query`; same root as
   SHOW.menu_from_keymap in the review findings).
-- 31 of 106 bindings declare no coverage floors and stay at L1 (see
-  [ideas](ideas.md) §2).
 - Not built from the first TraceLean: Lean infoview and type-check on save
   (both start a process, so the user must start them), LSP hover, a coverage
   treemap and trend.
