@@ -129,19 +129,19 @@ tree (e.g. nothing outside `cmd/` calls `Workspace::set`).
 `match` in tactics, `first |`, `by` inside a term, typed `fun` binders,
 `mutual`, and `simp … at h` before `have`. A rejected file anchors to the whole
 file and caps at L1 (ADR-0008). The provers spent most of their time writing
-around it. Two steps:
+around it.
 
-1. **Now, cheap**: the scanner needs declaration *boundaries*, not proof
-   *contents*. Before parsing, blank out each proof body (from `:= by` to the
-   next top-level keyword) with spaces, keeping byte offsets. Every tactic
-   problem disappears; anchors are unchanged. Test: every file in `formal/`
-   parses cleanly with no rewrite.
-2. **Then**: check upstream for a newer grammar; otherwise vendor
-   `tree-sitter-lean4` into the repo (`grammar.js` → generated `parser.c`, a
-   path dependency) and add `mutual`, `where` and `termination_by`, which do
-   affect declaration boundaries. Keep a corpus test of this project's own
-   files so a grammar change cannot silently lose a declaration. ADR-0008's
-   rewrites can then be undone.
+Check upstream for a newer grammar; otherwise vendor `tree-sitter-lean4` into
+the repo (`grammar.js` → generated `parser.c`, a path dependency) and add
+`mutual`, `where` and `termination_by`, which do affect declaration
+boundaries. Keep a corpus test of this project's own files so a grammar change
+cannot silently lose a declaration. ADR-0008's rewrites can then be undone.
+
+Upstream, as checked 2026-10-09 (not yet compared against this tree's files):
+`wvhulle/tree-sitter-lean` (the crate's source) has commits to 2026-05-10,
+e.g. doc comments on constructors and `show`/`suffices`; `Julian/tree-sitter-lean`
+regenerated its parser 2026-10-04. The tree-sitter CLI (0.25.10) is installed,
+and the crate already builds `parser.c` from `grammar.js` when it is absent.
 
 ## 9. Small
 
