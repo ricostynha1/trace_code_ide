@@ -8,9 +8,10 @@ its filename — so parsing takes the text and nothing else, and a model that
 agreed with an implementation which had started consulting the path would be
 impossible to write.
 
-The frontmatter grammar is deliberately tiny: `key: value`, `key: [a, b]`, and
-one level of nesting under a bare key. There is no YAML dependency, which is
-what makes the failure modes small enough to enumerate.
+The frontmatter grammar is deliberately tiny: `key: value`, `key: [a, b]`, one
+level of nesting under a bare key, and under `clauses:` a clause written as a
+block of `text:` and narrowings (ADR-0016). There is no YAML dependency, which
+is what makes the failure modes small enough to enumerate.
 -/
 
 namespace TraceLean.Requirement
@@ -37,6 +38,19 @@ inductive FrontmatterKind where
   /-- `id:` is present and empty, so the document claims to be a requirement
   and does not say which one. -/
   | emptyId
+  /-- The opening `---` is never closed, so nothing in the document is read. -/
+  | unclosedFrontmatter
+  /-- A top-level key the format does not have: in a requirement, or one that
+  differs from a requirement key only in case. -/
+  | unknownKey
+  /-- A clause key declared twice in one document. -/
+  | duplicateClause
+  /-- A narrowing, or `text`, given twice in one clause's block. -/
+  | duplicateNarrowing
+  /-- A clause written as a block with no, or an empty, `text:`. -/
+  | missingText
+  /-- A clause or narrowing key outside `[A-Za-z0-9_]`. -/
+  | invalidKey
   deriving Repr, DecidableEq, Inhabited, ToJson, FromJson
 
 structure Parsed where
@@ -47,8 +61,10 @@ structure Parsed where
   decomposition : Decomposition := .«open»
   status : Status := .draft
   clauses : List (String × String) := []
+  /-- Each clause that has narrowings, with them, both sorted by key. -/
+  narrowings : List (String × List (String × String)) := []
   /-- The clauses a link may attach to: the declared keys, or one implicit
-  clause when there are none. -/
+  clause when there are none. Never a narrowing. -/
   addressable : List (Option String) := []
   /-- Line and kind only. Two implementations cannot be expected to phrase a
   complaint the same way, and the phrasing is not the claim. -/
@@ -109,14 +125,47 @@ def splitFrontmatter (lines : List String) : Option (List String × List String)
       | none => none
       | some i => some (rest.take i, rest.drop (i + 1))
 
+/-- A document that opens a fence and never closes it. Ordinary markdown does
+not open with `---`; one that does and reads as nothing is the silent skip
+`malformed_reported` forbids. -/
+def fenceUnclosed (lines : List String) : Bool :=
+  match lines with
+  | [] => false
+  | first :: rest => first == "---" && !rest.isEmpty && (splitFrontmatter lines).isNone
+
 /-! ## The frontmatter grammar -/
+
+/-- The top-level keys of a requirement's frontmatter. -/
+def knownKeys : List String := ["id", "title", "refines", "status", "decomposition", "clauses"]
+
+/-- Whether a clause or narrowing key can be named by an annotation. -/
+def validKey (key : String) : Bool :=
+  !key.isEmpty && key.all (fun c => c.isAlphanum || c == '_')
+
+def indentOf (line : String) : Nat :=
+  (line.toList.takeWhile (fun c => c == ' ' || c == '\t')).length
+
+/-- A clause being read as a block: its key, the indentation of its line, and
+that line, so a block missing its `text:` is reported where it starts. -/
+structure Block where
+  clause : String
+  indent : Nat
+  line : Nat
+  hasText : Bool := false
+  deriving Inhabited
 
 structure Fields where
   scalars : List (String × String) := []
   lists : List (String × List String) := []
   maps : List (String × List (String × String)) := []
+  /-- Clause key to its narrowings. -/
+  narrowings : List (String × List (String × String)) := []
+  /-- Top-level keys the format does not have, with their lines; whether each
+  is reported is decided once the document is known to be a requirement. -/
+  unknown : List (Nat × String) := []
   problems : List (Nat × FrontmatterKind) := []
   current : Option String := none
+  block : Option Block := none
   deriving Inhabited
 
 def listInsert (entries : List (String × List String)) (key : String)
@@ -131,24 +180,100 @@ def mapInsert (entries : List (String × List (String × String))) (key : String
     (inner : List (String × String)) : List (String × List (String × String)) :=
   (entries.filter (·.1 != key)) ++ [(key, inner)]
 
+def problem (fields : Fields) (lineNo : Nat) (kind : FrontmatterKind) : Fields :=
+  { fields with problems := fields.problems ++ [(lineNo, kind)] }
+
+def narrowingsOf (fields : Fields) (clause : String) : List (String × String) :=
+  ((fields.narrowings.find? (·.1 == clause)).map (·.2)).getD []
+
+/-- End the block being read, reporting it if it never said what the clause
+is. -/
+def closeBlock (fields : Fields) : Fields :=
+  match fields.block with
+  | none => fields
+  | some b =>
+    let cleared := { fields with block := none }
+    let text := (lookup? (mapEntry fields.maps "clauses") b.clause).getD ""
+    if text.isEmpty then problem cleared b.line .missingText else cleared
+
+/-- A block's `text:` line: the clause itself. -/
+private def setText (fields : Fields) (b : Block) (lineNo : Nat) (value : String) : Fields :=
+  let noted := if b.hasText then problem fields lineNo .duplicateNarrowing else fields
+  let entries := insertSorted (mapEntry noted.maps "clauses") b.clause value
+  { noted with
+    maps := mapInsert noted.maps "clauses" entries
+    block := some { b with hasText := true } }
+
+/-- A block's other lines: narrowings of the clause. -/
+private def addNarrowing (fields : Fields) (b : Block) (lineNo : Nat) (key value : String) :
+    Fields :=
+  let existing := narrowingsOf fields b.clause
+  let noted := if existing.any (·.1 == key) then problem fields lineNo .duplicateNarrowing else fields
+  { noted with narrowings := mapInsert noted.narrowings b.clause (insertSorted existing key value) }
+
+/-- One line inside a clause's block. -/
+private def readNarrowing (fields : Fields) (b : Block) (lineNo : Nat) (line : String) : Fields :=
+  match splitOnFirst line.trim ':' with
+  | none => problem fields lineNo .notAKeyValue
+  | some (rawKey, rawValue) =>
+    let key := rawKey.trim
+    let value := rawValue.trim
+    let checked := if validKey key then fields else problem fields lineNo .invalidKey
+    if key == "text" then setText checked b lineNo value
+    else addNarrowing checked b lineNo key value
+
+/-- One entry under `clauses:`. With no value it opens a block; declared again
+it replaces the earlier declaration whole, narrowings too, and is reported. -/
+private def readClause (fields : Fields) (lineNo indent : Nat) (key value : String) : Fields :=
+  let checked := if validKey key then fields else problem fields lineNo .invalidKey
+  let existing := mapEntry checked.maps "clauses"
+  let noted := if existing.any (·.1 == key) then problem checked lineNo .duplicateClause else checked
+  let opened : Option Block :=
+    if value.isEmpty then some { clause := key, indent := indent, line := lineNo } else none
+  { noted with
+    maps := mapInsert noted.maps "clauses" (insertSorted existing key value)
+    narrowings := noted.narrowings.filter (·.1 != key)
+    block := opened }
+
+/-- One entry under a top-level map key. -/
+private def readEntry (fields : Fields) (mapKey : String) (lineNo : Nat) (line : String) :
+    Fields :=
+  match splitOnFirst line.trim ':' with
+  | none => problem fields lineNo .notAKeyValue
+  | some (k, v) =>
+    if mapKey == "clauses" then readClause fields lineNo (indentOf line) k.trim v.trim
+    else
+      { fields with
+        maps := mapInsert fields.maps mapKey (insertSorted (mapEntry fields.maps mapKey) k.trim v.trim) }
+
+/-- An indented line: inside the open block if deeper than its clause, else an
+entry of the map above. -/
+private def readNested (fields : Fields) (mapKey : String) (lineNo : Nat) (line : String) :
+    Fields :=
+  match fields.block with
+  | some b =>
+    if indentOf line > b.indent then readNarrowing fields b lineNo line
+    else readEntry (closeBlock fields) mapKey lineNo line
+  | none => readEntry fields mapKey lineNo line
+
 /-- Read one line of frontmatter into the fields so far. -/
 private def readIndented (fields : Fields) (lineNo : Nat) (line : String) : Fields :=
   match fields.current with
-  | none => { fields with problems := fields.problems ++ [(lineNo, .indentedWithoutKey)] }
-  | some mapKey =>
-    match splitOnFirst line.trim ':' with
-    | some (k, v) =>
-      let entries := insertSorted (mapEntry fields.maps mapKey) k.trim v.trim
-      { fields with maps := mapInsert fields.maps mapKey entries }
-    | none => { fields with problems := fields.problems ++ [(lineNo, .notAKeyValue)] }
+  | none => problem fields lineNo .indentedWithoutKey
+  | some mapKey => readNested fields mapKey lineNo line
+
+private def noteUnknown (fields : Fields) (lineNo : Nat) (key : String) : Fields :=
+  if knownKeys.contains key then fields
+  else { fields with unknown := fields.unknown ++ [(lineNo, key)] }
 
 private def readKeyValue (fields : Fields) (lineNo : Nat) (line : String) : Fields :=
-  let cleared := { fields with current := none }
+  let cleared := { closeBlock fields with current := none }
   match splitOnFirst line ':' with
   | none => { cleared with problems := cleared.problems ++ [(lineNo, .notAKeyValue)] }
   | some (rawKey, rawValue) =>
     let key := rawKey.trim
     let value := rawValue.trim
+    let cleared := noteUnknown cleared lineNo key
     match value.isEmpty with
     | true => { cleared with current := some key }
     | false =>
@@ -177,7 +302,18 @@ def readLine (fields : Fields) (lineNo : Nat) (raw : String) : Fields :=
 /-- Every frontmatter line, in order. Line numbers are file lines: one for the
 opening fence, one for counting from one. -/
 def readFrontmatter (lines : List String) : Fields :=
-  (lines.enum).foldl (fun fields pair => readLine fields (pair.1 + 2) pair.2) {}
+  closeBlock ((lines.enum).foldl (fun fields pair => readLine fields (pair.1 + 2) pair.2) {})
+
+/-- The unknown keys to report: all of them in a requirement, and otherwise
+those that are a requirement key misspelt in case (`iD:`), which is how a
+document stops being a requirement without anyone noticing. -/
+def unknownProblems (fields : Fields) (inRequirement : Bool) : List (Nat × FrontmatterKind) :=
+  (fields.unknown.filter (fun u => inRequirement || knownKeys.contains u.2.toLower)).map
+    (fun u => (u.1, FrontmatterKind.unknownKey))
+
+/-- Each clause that has narrowings, sorted by clause. -/
+def sortedNarrowings (fields : Fields) : List (String × List (String × String)) :=
+  (fields.narrowings.filter (fun n => !n.2.isEmpty)).mergeSort (fun a b => a.1 ≤ b.1)
 
 def firstHeading (body : List String) : Option String :=
   (body.find? (·.startsWith "# ")).map (fun line => (line.drop 2).trim)
@@ -206,6 +342,8 @@ Parse a document given as lines.
 @models REQ-REQDOC.clauseless_uniform
 @models REQ-REQDOC.decomposition_claimed
 @models REQ-REQDOC.malformed_reported
+@models REQ-REQDOC.narrowings_nest
+@models REQ-REQDOC.clause_unique
 -/
 def parseLines (lines : List String) : Parsed :=
   -- The argument is a document, joined with newlines. An element carrying a
@@ -213,14 +351,14 @@ def parseLines (lines : List String) : Parsed :=
   -- produces a whole well-formed document as one draw.
   let lines := (String.intercalate "\n" lines).splitOn "\n"
   match splitFrontmatter lines with
-  | none => {}
+  | none => if fenceUnclosed lines then { problems := [(1, .unclosedFrontmatter)] } else {}
   | some (frontmatter, body) =>
     let fields := readFrontmatter frontmatter
     match lookup? fields.scalars "id" with
-    | none => { problems := fields.problems }
+    | none => { problems := fields.problems ++ unknownProblems fields false }
     | some id =>
       if id.isEmpty then
-        { problems := fields.problems ++ [(1, .emptyId)] }
+        { problems := fields.problems ++ unknownProblems fields false ++ [(1, .emptyId)] }
       else
         let clauses := mapEntry fields.maps "clauses"
         { isRequirement := true
@@ -230,9 +368,10 @@ def parseLines (lines : List String) : Parsed :=
           decomposition := decompositionOf fields
           status := statusOf fields
           clauses := clauses
+          narrowings := sortedNarrowings fields
           addressable :=
             if clauses.isEmpty then [none] else clauses.map (fun c => some c.1)
-          problems := fields.problems }
+          problems := fields.problems ++ unknownProblems fields true }
 
 /-- Ordinary markdown is not a malformed requirement.
 
@@ -254,6 +393,29 @@ theorem no_clauses_is_one_implicit_clause :
 @proves REQ-REQDOC.decomposition_claimed -/
 theorem decomposition_defaults_to_open :
     (parseLines ["---", "id: REQ-X", "---"]).decomposition = Decomposition.«open» := by
+  native_decide
+
+/-- A fence opened and never closed is reported, not read as nothing.
+
+@proves REQ-REQDOC.malformed_reported -/
+theorem an_unclosed_fence_is_reported :
+    (parseLines ["---", "id: REQ-X"]).problems = [(1, FrontmatterKind.unclosedFrontmatter)] := by
+  native_decide
+
+/-- A narrowing is part of its clause and never a clause a link can name.
+
+@proves REQ-REQDOC.narrowings_nest -/
+theorem a_narrowing_is_not_addressable :
+    (parseLines ["---", "id: REQ-X", "clauses:", "  c:", "    text: T", "    empty: E", "---"]).addressable
+      = [some "c"] := by
+  native_decide
+
+/-- A clause key declared twice is reported where it is declared again.
+
+@proves REQ-REQDOC.clause_unique -/
+theorem a_clause_declared_twice_is_reported :
+    (parseLines ["---", "id: REQ-X", "clauses:", "  c: A", "  c: B", "---"]).problems
+      = [(5, FrontmatterKind.duplicateClause)] := by
   native_decide
 
 /-! ## Identity

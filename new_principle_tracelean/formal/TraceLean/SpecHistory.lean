@@ -80,7 +80,7 @@ def position (ps : List Point) : Option Nat :=
 under its nearest shown ancestor, and the one nearest the workspace's position
 marked.
 
-@models REQ-UNDO.filtered_view -/
+@specifies REQ-UNDO.filtered_view -/
 def FilteredView (points : List Point) (filter : Filter) (file : String) (y : List Point) : Prop :=
   ViewOf points filter file (position points) points y
 

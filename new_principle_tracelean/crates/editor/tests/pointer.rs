@@ -956,6 +956,30 @@ fn a_requirement_opens_and_its_claims_open_the_code() {
     let _ = std::fs::remove_dir_all(&root);
 }
 
+/// A clause written as a block shows its text, and its narrowings indented
+/// under it — read from the document, not counted as clauses.
+///
+/// @tests REQ-REQDOC.narrowings_nest
+#[test]
+fn a_requirement_shows_narrowings_under_their_clause() {
+    let root = project();
+    std::fs::create_dir_all(root.join("reqs")).unwrap();
+    std::fs::write(
+        root.join("reqs/REQ-X.md"),
+        "---\nid: REQ-X\ntitle: Something holds\nstatus: approved\nclauses:\n  holds:\n    text: It shall hold.\n    empty: With nothing, it holds.\n  other: Nobody does this.\n---\n\n# REQ-X\n",
+    )
+    .unwrap();
+    let mut editor = Editor::open(root.clone(), keymap());
+    editor.region = tracelean_core::surface::screen::Rect { left: 0, top: 0, width: 160, height: 30 };
+    editor.perform(tracelean_core::surface::act::Intent::Display {
+        what: BufferKind::Record { title: "requirement REQ-X".into() },
+    });
+    let shown = shown_in(&editor, DOCUMENT);
+    assert!(shown.contains("  It shall hold.\n    empty: With nothing, it holds.\n"), "{shown}");
+    assert!(shown.contains("implements 0/2"), "a narrowing was counted as a clause:\n{shown}");
+    let _ = std::fs::remove_dir_all(&root);
+}
+
 /// A clause a model claims offers its judge's prompt, which opens as a buffer
 /// and is copied whole.
 ///

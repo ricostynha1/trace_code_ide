@@ -136,43 +136,49 @@ fn model_and_implementation_agree_on_the_body_hash() {
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
-/// A requirement's hash is keyed by clause name, so renaming a clause moves it.
+/// A clause's hash is keyed by its name and covers its narrowings, so renaming
+/// or narrowing a clause moves it; without a key it is the body's.
 ///
 /// @drt REQ-REQDOC.clause_addressable
 /// @tests REQ-REQDOC.clause_addressable
 #[test]
 #[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
-fn model_and_implementation_agree_on_a_requirements_hash() {
-    let scratch = harness::scratch("reqhash");
+fn model_and_implementation_agree_on_a_clause_hash() {
+    let scratch = harness::scratch("clausehash");
     let op = "REQ-REQDOC.clause_addressable";
-    let implementation = harness::rust_runner_with_params(
+    let implementation = harness::rust_runner(
         "REQ-REQDOC",
         "clause_addressable",
-        "crates/core/src/trace/hash.rs::requirement_of",
-        &[("bodyText", "body_text")],
+        "crates/core/src/trace/hash.rs::clause_of",
         &scratch,
     );
     let model = harness::lean_runner(
         "TraceLean.Hash",
-        "TraceLean.Hash.requirementHash",
+        "TraceLean.Hash.clauseHash",
         op,
-        &["clauses", "bodyText"],
+        &["key", "text", "narrowings"],
         &scratch,
     );
 
     let word = Schema::Str {
         max_len: Some(1),
-        examples: vec!["ladder".into(), "weakest_link".into(), "shall be ordered".into()],
+        examples: vec![
+            "ladder".into(),
+            "weakest_link".into(),
+            "empty".into(),
+            " shall be  ordered ".into(),
+        ],
     };
     let schema = strukt(&[
+        ("key", Schema::Option { inner: Box::new(word.clone()) }),
+        ("text", word.clone()),
         (
-            "clauses",
+            "narrowings",
             Schema::List {
-                inner: Box::new(Schema::Tuple { items: vec![word.clone(), word.clone()] }),
+                inner: Box::new(Schema::Tuple { items: vec![word.clone(), word] }),
                 max_len: Some(3),
             },
         ),
-        ("bodyText", word),
     ]);
 
     let result = run(

@@ -55,6 +55,12 @@ inductive Kind where
   /-- A source file did not parse cleanly, so its annotations anchor to the
   whole file and are capped at the lowest evidence level. Not an error. -/
   | imprecise
+  /-- A clause with more than one `models` declaration (ADR-0014). -/
+  | severalModels
+  /-- A clause with more than one `specifies` declaration. -/
+  | severalSpecs
+  /-- A clause with more than one `pins` theorem. -/
+  | severalPins
   deriving Repr, DecidableEq, Inhabited, ToJson, FromJson
 
 /-- Whether this names work not yet done, rather than something broken.
@@ -73,6 +79,10 @@ def Kind.severity : Kind → Severity
   | .unbound => .warn
   | .unsoundQualifier => .warn
   | .imprecise => .warn
+  -- Warnings while the clauses carrying several are sorted out; errors after.
+  | .severalModels => .warn
+  | .severalSpecs => .warn
+  | .severalPins => .warn
   | _ => .error
 
 /-- Which kinds fail a build. Deliberately small: a requirement with no model
@@ -162,6 +172,30 @@ def qualifierKinds (qualifier : Option Qualifier) : List Kind :=
   -- indistinguishable from one nobody got round to modelling.
   | some (.structural none) => [Kind.unsoundQualifier]
   | _ => []
+
+/-- Which roles a clause carries more than one of, as the kinds that report it:
+one model, at most one specification, at most one pin (ADR-0014). `roles` holds
+one entry per declaration claiming the clause.
+
+@models REQ-CHECK.one_of_each_role -/
+def crowdedKinds (roles : List Role) : List Kind :=
+  [(Role.models, Kind.severalModels), (Role.specifies, Kind.severalSpecs),
+    (Role.pins, Kind.severalPins)].filterMap (fun pair =>
+      if (roles.filter (· == pair.1)).length > 1 then some pair.2 else none)
+
+/-- One model is never reported.
+
+@proves REQ-CHECK.one_of_each_role -/
+theorem one_model_is_not_crowded :
+    crowdedKinds [Role.models, Role.specifies, Role.pins, Role.tests, Role.tests] = [] := by
+  decide
+
+/-- Two models are.
+
+@proves REQ-CHECK.one_of_each_role -/
+theorem two_models_are_crowded :
+    crowdedKinds [Role.models, Role.implements, Role.models] = [Kind.severalModels] := by
+  decide
 
 /-- At most one of the chain kinds is ever reported for a clause.
 

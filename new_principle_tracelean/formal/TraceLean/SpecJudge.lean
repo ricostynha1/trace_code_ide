@@ -16,7 +16,7 @@ exactly when neither the requirement text nor the model has changed since it
 was made: the hashes it was made against are the hashes in front of us. Either
 one differing invalidates it.
 
-@models REQ-JUDGE.invalidated_by_change -/
+@specifies REQ-JUDGE.invalidated_by_change -/
 def StillStands (judgement : Judgement) (material : Material) (applies : Bool) : Prop :=
   applies = true ↔
     (judgement.requirementHash = material.requirementHash ∧

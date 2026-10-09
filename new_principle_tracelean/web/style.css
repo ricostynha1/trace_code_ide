@@ -332,6 +332,7 @@ button.item {
 .claim-implements { background: var(--chips-implements); }
 .claim-tests { background: var(--chips-tests); }
 .claim-models { background: var(--chips-models); }
+.claim-specifies { background: var(--chips-specifies); }
 .claim-proves { background: var(--chips-proves); }
 .claim-drt { background: var(--chips-drt); }
 

@@ -74,14 +74,54 @@ pub struct Requirement {
     pub refines: Vec<String>,
     pub decomposition: Decomposition,
     /// Clause key -> clause text, ordered so hashes and output are stable.
+    /// For a clause written as a block this is its `text:`.
     pub clauses: BTreeMap<String, String>,
+    /// Clause key -> its narrowings (key -> text). Only clauses that have any
+    /// appear. A narrowing fixes which answer its clause allows; it is part of
+    /// the clause, never a clause of its own (ADR-0016).
+    #[serde(default)]
+    pub narrowings: BTreeMap<String, BTreeMap<String, String>>,
     pub status: Status,
     pub body: String,
-    /// Hash of the semantic content, driving re-judgement when it changes.
+    /// Hash of the whole document — clauses, narrowings and prose — which is
+    /// what a document describing the requirement is reviewed against.
+    /// Evidence rests on `clause_hash` instead.
     pub content_hash: String,
 }
 
 impl Requirement {
+    /// What evidence about one clause rests on: that clause's key, text and
+    /// narrowings, and nothing else — rewording a sibling clause or the prose
+    /// leaves it standing. A requirement without clauses is one implicit
+    /// clause whose text is the body. `None` for a clause it does not declare.
+    ///
+    /// @implements REQ-REQDOC.clause_addressable
+    /// @implements REQ-STALE.requirement_reopens_all
+    pub fn clause_hash(&self, clause: Option<&str>) -> Option<String> {
+        let none = BTreeMap::new();
+        match clause {
+            None if self.clauses.is_empty() => Some(super::hash::clause(None, &self.body, &none)),
+            // A requirement-level record about a requirement that has clauses
+            // rests on all of it.
+            None => Some(self.content_hash.clone()),
+            Some(key) => self.clauses.get(key).map(|text| {
+                super::hash::clause(Some(key), text, self.narrowings.get(key).unwrap_or(&none))
+            }),
+        }
+    }
+
+    /// A clause's text followed by its narrowings, one per line, as a reader
+    /// (a judge, a prompt) has to see it: the narrowings are part of what the
+    /// clause requires.
+    pub fn clause_text_with_narrowings(&self, clause: &str) -> Option<String> {
+        let text = self.clauses.get(clause)?;
+        let mut out = text.clone();
+        for (key, narrowing) in self.narrowings.get(clause).into_iter().flatten() {
+            out.push_str(&format!("\n  {key}: {narrowing}"));
+        }
+        Some(out)
+    }
+
     /// Clause keys, or a single implicit clause when the document declares
     /// none — so callers treat requirement-level links uniformly.
     ///
@@ -107,6 +147,7 @@ impl Requirement {
 ///
 /// @implements ARCH-HONEST.named_findings
 /// @implements REQ-REQDOC.malformed_reported
+/// @implements REQ-REQDOC.clause_unique
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum FrontmatterKind {
@@ -117,6 +158,28 @@ pub enum FrontmatterKind {
     /// `id:` is present and empty, so the document claims to be a requirement
     /// and does not say which one.
     EmptyId,
+    /// The opening `---` is never closed, so nothing in the document is read.
+    UnclosedFrontmatter,
+    /// A top-level key the format does not have — in a requirement, or one
+    /// that differs from a requirement key only in case (`iD:`).
+    UnknownKey,
+    /// A clause key declared twice in one document.
+    DuplicateClause,
+    /// A narrowing (or `text`) given twice in one clause's block.
+    DuplicateNarrowing,
+    /// A clause written as a block with no (or an empty) `text:`.
+    MissingText,
+    /// A clause or narrowing key with a character outside `[A-Za-z0-9_]`,
+    /// which an annotation could not name.
+    InvalidKey,
+}
+
+/// The top-level keys of a requirement's frontmatter.
+const KEYS: [&str; 6] = ["id", "title", "refines", "status", "decomposition", "clauses"];
+
+/// Whether a clause or narrowing key can be named by an annotation.
+fn valid_key(key: &str) -> bool {
+    !key.is_empty() && key.chars().all(|c| c.is_ascii_alphanumeric() || c == '_')
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -141,18 +204,48 @@ pub enum ParseOutcome {
 /// Parse a markdown document into a requirement, if it declares an `id`.
 ///
 /// The supported frontmatter is deliberately tiny — `key: value`,
-/// `key: [a, b]`, and one level of nesting under a map key — so there is no
-/// YAML dependency and the failure modes stay predictable.
+/// `key: [a, b]`, one level of nesting under a map key, and under `clauses:`
+/// a clause written as a block of `text:` and narrowings (ADR-0016) — so
+/// there is no YAML dependency and the failure modes stay predictable.
 ///
 /// @implements REQ-REQDOC.id_is_identity
 /// @implements REQ-REQDOC.malformed_reported
+/// @implements REQ-REQDOC.narrowings_nest
+/// @implements REQ-REQDOC.clause_unique
 pub fn parse_markdown(file: &str, content: &str) -> ParseOutcome {
     let mut problems = Vec::new();
 
-    let Some((frontmatter, body)) = split_frontmatter(content) else {
-        return ParseOutcome::NotARequirement(problems);
+    let (frontmatter, body) = match split_frontmatter(content) {
+        Fence::Absent => return ParseOutcome::NotARequirement(problems),
+        // A fence opened and never closed: everything after it would be read
+        // as nothing, which is the silent skip this clause forbids.
+        Fence::Unclosed => {
+            problems.push(FrontmatterProblem {
+                file: file.to_string(),
+                line: 1,
+                kind: FrontmatterKind::UnclosedFrontmatter,
+                message: "the frontmatter's `---` is never closed".into(),
+            });
+            return ParseOutcome::NotARequirement(problems);
+        }
+        Fence::Split(frontmatter, body) => (frontmatter, body),
     };
     let fields = parse_frontmatter(frontmatter, file, &mut problems);
+
+    // An unknown key is reported in a requirement; in other markdown only
+    // when it is a requirement key misspelt in case, which is how a document
+    // stops being a requirement without anyone noticing.
+    let is_requirement = fields.scalars.get("id").is_some_and(|id| !id.is_empty());
+    for (line, key) in &fields.unknown {
+        if is_requirement || KEYS.contains(&key.to_ascii_lowercase().as_str()) {
+            problems.push(FrontmatterProblem {
+                file: file.to_string(),
+                line: *line,
+                kind: FrontmatterKind::UnknownKey,
+                message: format!("`{key}` is not a requirement frontmatter key"),
+            });
+        }
+    }
 
     let Some(id) = fields.scalars.get("id").cloned() else {
         return ParseOutcome::NotARequirement(problems);
@@ -174,7 +267,18 @@ pub fn parse_markdown(file: &str, content: &str) -> ParseOutcome {
         .or_else(|| first_heading(body))
         .unwrap_or_else(|| id.clone());
     let clauses = fields.maps.get("clauses").cloned().unwrap_or_default();
-    let content_hash = super::hash::requirement(&clauses, body);
+    let narrowings: BTreeMap<String, BTreeMap<String, String>> =
+        fields.narrowings.into_iter().filter(|(_, n)| !n.is_empty()).collect();
+    // The whole document: a narrowing is written `clause.narrowing`, which no
+    // clause key can collide with, so a requirement without narrowings hashes
+    // as it always did.
+    let mut whole = clauses.clone();
+    for (clause, entries) in &narrowings {
+        for (key, text) in entries {
+            whole.insert(format!("{clause}.{key}"), text.clone());
+        }
+    }
+    let content_hash = super::hash::requirement(&whole, body);
 
     ParseOutcome::Requirement(
         Box::new(Requirement {
@@ -188,6 +292,7 @@ pub fn parse_markdown(file: &str, content: &str) -> ParseOutcome {
                 .map(|s| Decomposition::parse(s))
                 .unwrap_or_default(),
             clauses,
+            narrowings,
             status: fields.scalars.get("status").map(|s| Status::parse(s)).unwrap_or_default(),
             body: body.to_string(),
             content_hash,
@@ -196,16 +301,27 @@ pub fn parse_markdown(file: &str, content: &str) -> ParseOutcome {
     )
 }
 
-fn split_frontmatter(content: &str) -> Option<(&str, &str)> {
-    let rest = content.strip_prefix("---\n").or_else(|| content.strip_prefix("---\r\n"))?;
+/// Where a document's frontmatter is, if it has one.
+enum Fence<'a> {
+    /// The document does not open with `---`: ordinary markdown.
+    Absent,
+    /// It opens with `---` and nothing closes it.
+    Unclosed,
+    Split(&'a str, &'a str),
+}
+
+fn split_frontmatter(content: &str) -> Fence<'_> {
+    let Some(rest) = content.strip_prefix("---\n").or_else(|| content.strip_prefix("---\r\n")) else {
+        return Fence::Absent;
+    };
     let mut offset = 0usize;
     for line in rest.split_inclusive('\n') {
         if line.trim_end_matches(['\r', '\n']).trim_end() == "---" {
-            return Some((&rest[..offset], &rest[offset + line.len()..]));
+            return Fence::Split(&rest[..offset], &rest[offset + line.len()..]);
         }
         offset += line.len();
     }
-    None
+    Fence::Unclosed
 }
 
 #[derive(Default)]
@@ -213,11 +329,115 @@ struct Fields {
     scalars: BTreeMap<String, String>,
     lists: BTreeMap<String, Vec<String>>,
     maps: BTreeMap<String, BTreeMap<String, String>>,
+    /// Clause key -> narrowing key -> text.
+    narrowings: BTreeMap<String, BTreeMap<String, String>>,
+    /// Top-level keys the format does not have, with their lines. Whether one
+    /// is reported depends on whether the document is a requirement, which is
+    /// known only once every line is read.
+    unknown: Vec<(u32, String)>,
+}
+
+/// A clause being read as a block: its key, the indentation of its line, and
+/// that line, so a block missing its `text:` is reported where it starts.
+struct Block {
+    clause: String,
+    indent: usize,
+    line: u32,
+    has_text: bool,
+}
+
+fn problem(problems: &mut Vec<FrontmatterProblem>, file: &str, line: u32, kind: FrontmatterKind, message: String) {
+    problems.push(FrontmatterProblem { file: file.to_string(), line, kind, message });
+}
+
+/// End the block being read, reporting it if it never said what the clause is.
+fn close_block(fields: &Fields, block: &mut Option<Block>, file: &str, problems: &mut Vec<FrontmatterProblem>) {
+    let Some(open) = block.take() else { return };
+    let text = fields.maps.get("clauses").and_then(|m| m.get(&open.clause));
+    if !matches!(text, Some(t) if !t.is_empty()) {
+        problem(
+            problems,
+            file,
+            open.line,
+            FrontmatterKind::MissingText,
+            format!("the clause `{}` is a block without `text:`", open.clause),
+        );
+    }
+}
+
+/// One line inside a clause's block: its `text:` or a narrowing.
+fn read_narrowing(
+    fields: &mut Fields,
+    open: &mut Block,
+    line_no: u32,
+    line: &str,
+    file: &str,
+    problems: &mut Vec<FrontmatterProblem>,
+) {
+    let Some((key, value)) = line.split_once(':') else {
+        problem(problems, file, line_no, FrontmatterKind::NotAKeyValue, format!("`{line}` is not a `key: value` entry"));
+        return;
+    };
+    let (key, value) = (key.trim(), value.trim());
+    if !valid_key(key) {
+        problem(problems, file, line_no, FrontmatterKind::InvalidKey, format!("`{key}` is not a valid narrowing key"));
+    }
+    if key == "text" {
+        if open.has_text {
+            problem(problems, file, line_no, FrontmatterKind::DuplicateNarrowing, format!("`{}` has two `text:` lines", open.clause));
+        }
+        open.has_text = true;
+        fields.maps.entry("clauses".into()).or_default().insert(open.clause.clone(), value.to_string());
+        return;
+    }
+    let entries = fields.narrowings.entry(open.clause.clone()).or_default();
+    if entries.contains_key(key) {
+        problem(problems, file, line_no, FrontmatterKind::DuplicateNarrowing, format!("`{}.{key}` is given twice", open.clause));
+    }
+    entries.insert(key.to_string(), value.to_string());
+}
+
+/// One entry under a top-level map key. Under `clauses:` an entry with no
+/// value opens a block.
+#[allow(clippy::too_many_arguments)]
+fn read_entry(
+    fields: &mut Fields,
+    block: &mut Option<Block>,
+    map_key: &str,
+    indent: usize,
+    line_no: u32,
+    line: &str,
+    file: &str,
+    problems: &mut Vec<FrontmatterProblem>,
+) {
+    let Some((key, value)) = line.split_once(':') else {
+        problem(problems, file, line_no, FrontmatterKind::NotAKeyValue, format!("`{line}` is not a `key: value` entry"));
+        return;
+    };
+    let (key, value) = (key.trim(), value.trim());
+    if map_key != "clauses" {
+        fields.maps.entry(map_key.to_string()).or_default().insert(key.to_string(), value.to_string());
+        return;
+    }
+    if !valid_key(key) {
+        problem(problems, file, line_no, FrontmatterKind::InvalidKey, format!("`{key}` is not a valid clause key"));
+    }
+    let clauses = fields.maps.entry("clauses".into()).or_default();
+    if clauses.contains_key(key) {
+        problem(problems, file, line_no, FrontmatterKind::DuplicateClause, format!("the clause `{key}` is declared twice"));
+    }
+    // The later declaration replaces the earlier one whole, narrowings too.
+    clauses.insert(key.to_string(), value.to_string());
+    fields.narrowings.remove(key);
+    if value.is_empty() {
+        *block = Some(Block { clause: key.to_string(), indent, line: line_no, has_text: false });
+    }
 }
 
 fn parse_frontmatter(text: &str, file: &str, problems: &mut Vec<FrontmatterProblem>) -> Fields {
     let mut fields = Fields::default();
     let mut current_map: Option<String> = None;
+    let mut block: Option<Block> = None;
 
     for (index, raw) in text.lines().enumerate() {
         let line_no = index as u32 + 2; // +1 opening fence, +1 for 1-indexing
@@ -226,35 +446,24 @@ fn parse_frontmatter(text: &str, file: &str, problems: &mut Vec<FrontmatterProbl
             continue;
         }
 
-        let indented = line.starts_with(' ') || line.starts_with('\t');
-        if indented {
+        let indent = line.len() - line.trim_start_matches([' ', '\t']).len();
+        if indent > 0 {
             let Some(map_key) = current_map.clone() else {
-                problems.push(FrontmatterProblem {
-                    file: file.to_string(),
-                    line: line_no,
-                    kind: FrontmatterKind::IndentedWithoutKey,
-                    message: "indented entry without a key above it".into(),
-                });
+                problem(problems, file, line_no, FrontmatterKind::IndentedWithoutKey, "indented entry without a key above it".into());
                 continue;
             };
-            match line.trim().split_once(':') {
-                Some((k, v)) => {
-                    fields
-                        .maps
-                        .entry(map_key)
-                        .or_default()
-                        .insert(k.trim().to_string(), v.trim().to_string());
+            if let Some(open) = block.as_mut() {
+                if indent > open.indent {
+                    read_narrowing(&mut fields, open, line_no, line.trim(), file, problems);
+                    continue;
                 }
-                None => problems.push(FrontmatterProblem {
-                    file: file.to_string(),
-                    line: line_no,
-                    kind: FrontmatterKind::NotAKeyValue,
-                    message: format!("`{}` is not a `key: value` entry", line.trim()),
-                }),
             }
+            close_block(&fields, &mut block, file, problems);
+            read_entry(&mut fields, &mut block, &map_key, indent, line_no, line.trim(), file, problems);
             continue;
         }
 
+        close_block(&fields, &mut block, file, problems);
         current_map = None;
         let Some((key, value)) = line.split_once(':') else {
             problems.push(FrontmatterProblem {
@@ -267,6 +476,9 @@ fn parse_frontmatter(text: &str, file: &str, problems: &mut Vec<FrontmatterProbl
         };
         let key = key.trim().to_string();
         let value = value.trim();
+        if !KEYS.contains(&key.as_str()) {
+            fields.unknown.push((line_no, key.clone()));
+        }
 
         if value.is_empty() {
             current_map = Some(key);
@@ -283,6 +495,7 @@ fn parse_frontmatter(text: &str, file: &str, problems: &mut Vec<FrontmatterProbl
         }
         fields.scalars.insert(key, value.trim_matches(['"', '\'']).to_string());
     }
+    close_block(&fields, &mut block, file, problems);
 
     fields
 }
@@ -511,6 +724,116 @@ mod tests {
         assert_ne!(a.content_hash, c.content_hash);
     }
 
+    fn kinds(content: &str) -> Vec<(u32, FrontmatterKind)> {
+        match parse_markdown("reqs/x.md", content) {
+            ParseOutcome::Requirement(_, problems) | ParseOutcome::NotARequirement(problems) => {
+                problems.iter().map(|p| (p.line, p.kind)).collect()
+            }
+        }
+    }
+
+    const BLOCK: &str = "---\nid: REQ-R\nclauses:\n  weakest_link: The minimum over bonds.\n  min_not_mean:\n    text: The minimum of its parts.\n    empty: With no parts, L1.\n    order: Ascending id.\n---\nProse.\n";
+
+    /// A clause written as a block: its `text:` is the clause, every other key
+    /// a narrowing of it, and a narrowing is not something a link can name.
+    ///
+    /// @tests REQ-REQDOC.narrowings_nest
+    #[test]
+    fn a_block_clause_carries_its_narrowings() {
+        let req = parse(BLOCK);
+        assert_eq!(req.clauses["min_not_mean"], "The minimum of its parts.");
+        assert_eq!(req.clauses["weakest_link"], "The minimum over bonds.");
+        assert_eq!(req.narrowings["min_not_mean"]["empty"], "With no parts, L1.");
+        assert_eq!(req.narrowings["min_not_mean"].len(), 2);
+        assert!(!req.narrowings.contains_key("weakest_link"));
+        assert_eq!(
+            req.clause_keys(),
+            vec![Some("min_not_mean".to_string()), Some("weakest_link".to_string())]
+        );
+        assert_eq!(
+            req.clause_text_with_narrowings("min_not_mean").unwrap(),
+            "The minimum of its parts.\n  empty: With no parts, L1.\n  order: Ascending id."
+        );
+    }
+
+    /// @tests REQ-REQDOC.narrowings_nest
+    /// @tests REQ-REQDOC.malformed_reported
+    #[test]
+    fn a_block_without_text_is_reported_where_it_starts() {
+        let doc = "---\nid: REQ-R\nclauses:\n  one:\n    empty: With none, L1.\n  two: Fine.\n---\n";
+        assert_eq!(kinds(doc), vec![(4, FrontmatterKind::MissingText)]);
+        // At the end of the frontmatter as well as before a sibling.
+        let doc = "---\nid: REQ-R\nclauses:\n  one:\n---\n";
+        assert_eq!(kinds(doc), vec![(4, FrontmatterKind::MissingText)]);
+    }
+
+    /// @tests REQ-REQDOC.clause_unique
+    #[test]
+    fn a_clause_or_narrowing_given_twice_is_reported() {
+        let doc = "---\nid: REQ-R\nclauses:\n  one: First.\n  one: Again.\n---\n";
+        assert_eq!(kinds(doc), vec![(5, FrontmatterKind::DuplicateClause)]);
+        let doc = "---\nid: REQ-R\nclauses:\n  one:\n    text: T.\n    empty: A.\n    empty: B.\n    text: U.\n---\n";
+        assert_eq!(
+            kinds(doc),
+            vec![(7, FrontmatterKind::DuplicateNarrowing), (8, FrontmatterKind::DuplicateNarrowing)]
+        );
+    }
+
+    /// The two silences the review found: a fence that never closes, and a key
+    /// misspelt so the document stops being a requirement.
+    ///
+    /// @tests REQ-REQDOC.malformed_reported
+    #[test]
+    fn an_unclosed_fence_and_an_unknown_key_are_reported() {
+        assert_eq!(
+            kinds("---\nid: REQ-X\nclauses:\n  one: t\n"),
+            vec![(1, FrontmatterKind::UnclosedFrontmatter)]
+        );
+        // Misspelt in case: not a requirement, and said so.
+        assert_eq!(kinds("---\niD: REQ-X\n---\n"), vec![(2, FrontmatterKind::UnknownKey)]);
+        // In a requirement every key the format lacks is reported.
+        assert_eq!(kinds("---\nid: REQ-X\nclauess:\n---\n"), vec![(3, FrontmatterKind::UnknownKey)]);
+        // Ordinary markdown keeps its own keys.
+        assert_eq!(kinds("---\nadr: 3\ntitle: A decision\n---\n"), vec![]);
+        // Markdown without a fence is not unclosed.
+        assert_eq!(kinds("# Notes\n---\n"), vec![]);
+    }
+
+    /// @tests REQ-REQDOC.malformed_reported
+    #[test]
+    fn a_key_an_annotation_cannot_name_is_reported() {
+        let doc = "---\nid: REQ-R\nclauses:\n  weakest-link: T.\n  one:\n    text: T.\n    two words: N.\n---\n";
+        assert_eq!(
+            kinds(doc),
+            vec![(4, FrontmatterKind::InvalidKey), (7, FrontmatterKind::InvalidKey)]
+        );
+    }
+
+    /// Evidence rests on its own clause: rewording one clause moves that
+    /// clause's hash and no other, a narrowing is part of its clause, and the
+    /// prose is not part of any.
+    ///
+    /// @tests REQ-REQDOC.clause_addressable
+    /// @tests REQ-STALE.requirement_reopens_all
+    #[test]
+    fn a_clause_hash_moves_with_that_clause_only() {
+        let a = parse(BLOCK);
+        let reworded = parse(&BLOCK.replace("The minimum over bonds.", "The least over bonds."));
+        let narrowed = parse(&BLOCK.replace("With no parts, L1.", "With no parts, L0."));
+        let prose = parse(&BLOCK.replace("Prose.", "Other prose."));
+        let hash = |r: &Requirement, c: &str| r.clause_hash(Some(c)).unwrap();
+        assert_ne!(hash(&a, "weakest_link"), hash(&reworded, "weakest_link"));
+        assert_eq!(hash(&a, "min_not_mean"), hash(&reworded, "min_not_mean"));
+        assert_ne!(hash(&a, "min_not_mean"), hash(&narrowed, "min_not_mean"));
+        assert_eq!(hash(&a, "weakest_link"), hash(&narrowed, "weakest_link"));
+        assert_eq!(hash(&a, "weakest_link"), hash(&prose, "weakest_link"));
+        assert_ne!(a.content_hash, prose.content_hash, "a document about it is reviewed against the prose");
+        assert_eq!(a.clause_hash(Some("absent")), None);
+        // Without clauses, the body is the one implicit clause.
+        let bare = parse("---\nid: REQ-X\n---\nbody");
+        assert_eq!(bare.clause_hash(None), Some(bare.content_hash.clone()));
+    }
+
     fn graph(edges: &[(&str, &[&str])]) -> BTreeMap<String, Requirement> {
         edges
             .iter()
@@ -577,8 +900,10 @@ pub struct Parsed {
     pub status: Status,
     #[serde(with = "crate::wire::pairs")]
     pub clauses: BTreeMap<String, String>,
+    /// Each clause that has narrowings, with them, both sorted by key.
+    pub narrowings: Vec<(String, Vec<(String, String)>)>,
     /// The clauses a link may attach to: the declared keys, or one implicit
-    /// clause when there are none.
+    /// clause when there are none. Never a narrowing.
     pub addressable: Vec<Option<String>>,
     /// Line and kind only. Two implementations cannot be expected to phrase a
     /// complaint the same way, and the phrasing is not the claim.
@@ -597,10 +922,14 @@ pub struct Parsed {
 /// @implements REQ-REQDOC.clauseless_uniform
 /// @implements REQ-REQDOC.decomposition_claimed
 /// @implements REQ-REQDOC.malformed_reported
+/// @implements REQ-REQDOC.narrowings_nest
+/// @implements REQ-REQDOC.clause_unique
 /// @drt REQ-REQDOC.id_is_identity
 /// @drt REQ-REQDOC.clauseless_uniform
 /// @drt REQ-REQDOC.decomposition_claimed
 /// @drt REQ-REQDOC.malformed_reported
+/// @drt REQ-REQDOC.narrowings_nest
+/// @drt REQ-REQDOC.clause_unique
 pub fn parse_lines(lines: Vec<String>) -> Parsed {
     let content = lines.join("\n");
     match parse_markdown("", &content) {
@@ -612,6 +941,7 @@ pub fn parse_lines(lines: Vec<String>) -> Parsed {
             decomposition: Decomposition::Open,
             status: Status::Draft,
             clauses: BTreeMap::new(),
+            narrowings: Vec::new(),
             addressable: Vec::new(),
             // A document that is not a requirement is not silently skipped:
             // whatever was wrong with its frontmatter is still reported.
@@ -625,6 +955,13 @@ pub fn parse_lines(lines: Vec<String>) -> Parsed {
             decomposition: req.decomposition,
             status: req.status,
             clauses: req.clauses.clone(),
+            narrowings: req
+                .narrowings
+                .iter()
+                .map(|(clause, entries)| {
+                    (clause.clone(), entries.iter().map(|(k, v)| (k.clone(), v.clone())).collect())
+                })
+                .collect(),
             addressable: req.clause_keys(),
             problems: problems.iter().map(|p| (p.line, p.kind)).collect(),
         },

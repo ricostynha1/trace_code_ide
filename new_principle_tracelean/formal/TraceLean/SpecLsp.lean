@@ -38,7 +38,7 @@ when some prefix of the line spans that many columns and that many bytes; a
 column no prefix ends at -- inside a character, or past the end -- has no byte
 offset.
 
-@models REQ-LSP.encoding_round_trip -/
+@specifies REQ-LSP.encoding_round_trip -/
 def ByteOffsetAt (lineText : String) (character : Nat) (encoding : Encoding) (y : Option Nat) : Prop :=
   ∀ b, y = some b ↔
     ∃ pre post, lineText.toList = pre ++ post ∧ columnsOf encoding pre = character ∧ bytesOf pre = b

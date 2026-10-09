@@ -48,12 +48,18 @@ pub struct ModelAt {
 ///
 /// @implements ARCH-DETERMINISM.stable_ordering
 pub fn model_of(index: &Index, req_id: &str, clause: Option<&str>) -> Option<ModelAt> {
+    declarations_of(index, req_id, clause, Role::Models).into_iter().next()
+}
+
+/// Every declaration claiming a clause in one role, in file and line order.
+///
+/// A clause has one model and at most one specification (ADR-0014); until the
+/// clauses with several are sorted out, the judge is shown all of them.
+pub fn declarations_of(index: &Index, req_id: &str, clause: Option<&str>, role: Role) -> Vec<ModelAt> {
     let mut found: Vec<ModelAt> = index
         .links
         .iter()
-        .filter(|link| {
-            link.role == Role::Models && link.req_id == req_id && link.clause.as_deref() == clause
-        })
+        .filter(|link| link.role == role && link.req_id == req_id && link.clause.as_deref() == clause)
         .map(|link| ModelAt {
             file: link.anchor.file.clone(),
             start_line: link.anchor.start_line,
@@ -63,7 +69,34 @@ pub fn model_of(index: &Index, req_id: &str, clause: Option<&str>) -> Option<Mod
         })
         .collect();
     found.sort_by(|a, b| (&a.file, a.start_line).cmp(&(&b.file, b.start_line)));
-    found.into_iter().next()
+    found.dedup_by(|a, b| a.file == b.file && a.start_line == b.start_line);
+    found
+}
+
+/// What the judge reads as "the model": each model and the specification, with
+/// their sources, labelled where there is more than the one model.
+///
+/// `models` and `specs` pair each declaration with its source text. One model
+/// and no specification reads exactly as the model's own source.
+///
+/// @implements REQ-JUDGE.prompt_exported
+pub fn shown_source(models: &[(ModelAt, String)], specs: &[(ModelAt, String)]) -> String {
+    if models.len() == 1 && specs.is_empty() {
+        return models[0].1.clone();
+    }
+    let mut sections = Vec::new();
+    for (n, (at, source)) in models.iter().enumerate() {
+        let label = if models.len() == 1 {
+            "model".to_string()
+        } else {
+            format!("model {} of {} (a clause should have one)", n + 1, models.len())
+        };
+        sections.push(format!("-- {label}: {}:{}\n{}", at.file, at.start_line + 1, source.trim_end()));
+    }
+    for (at, source) in specs {
+        sections.push(format!("-- specification: {}:{}\n{}", at.file, at.start_line + 1, source.trim_end()));
+    }
+    sections.join("\n\n")
 }
 
 /// What every declaration modelling a clause hashes to, together.
@@ -114,13 +147,19 @@ pub fn assemble(
         .get(req_id)
         .ok_or_else(|| Missing::NoRequirement { req_id: req_id.to_string() })?;
 
+    // A clause's narrowings are part of what it requires, so the judge reads
+    // them with it, and the hash below covers them.
     let clause_text = match clause {
         None => requirement.body.clone(),
-        Some(key) => requirement.clauses.get(key).cloned().ok_or_else(|| Missing::NoClause {
+        Some(key) => requirement.clause_text_with_narrowings(key).ok_or_else(|| Missing::NoClause {
             req_id: req_id.to_string(),
             clause: key.to_string(),
         })?,
     };
+    let requirement_hash = requirement.clause_hash(clause).ok_or_else(|| Missing::NoClause {
+        req_id: req_id.to_string(),
+        clause: clause.unwrap_or_default().to_string(),
+    })?;
 
     let at = model_of(index, req_id, clause).ok_or(Missing::NoModel)?;
     let material = Material {
@@ -128,7 +167,7 @@ pub fn assemble(
         clause: clause.map(str::to_string),
         clause_text,
         model_source,
-        requirement_hash: requirement.content_hash.clone(),
+        requirement_hash,
         // Every model of the clause, not the one whose source is shown: the
         // judgement is about the pair when there are two, and the staleness
         // check asks the tree the same question this way.
@@ -173,6 +212,27 @@ mod tests {
         assert!(!material.requirement_hash.is_empty());
         assert_eq!(material.model_hash, at.body_hash);
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// The judge sees the model and the specification, each labelled with
+    /// where it is; a lone model reads as itself.
+    ///
+    /// @tests REQ-JUDGE.prompt_exported
+    #[test]
+    fn the_model_and_the_specification_are_both_shown() {
+        let at = |file: &str, line: u32| ModelAt {
+            file: file.into(),
+            start_line: line,
+            end_line: line,
+            body_hash: String::new(),
+            link_hash: String::new(),
+        };
+        let model = (at("m.lean", 3), "def f := 1".to_string());
+        assert_eq!(shown_source(&[model.clone()], &[]), "def f := 1");
+        let both = shown_source(&[model.clone()], &[(at("s.lean", 9), "def P : Prop := True".into())]);
+        assert_eq!(both, "-- model: m.lean:4\ndef f := 1\n\n-- specification: s.lean:10\ndef P : Prop := True");
+        let two = shown_source(&[model.clone(), (at("m.lean", 7), "def g := 2".into())], &[]);
+        assert!(two.contains("model 1 of 2") && two.contains("model 2 of 2") && two.contains("def g := 2"), "{two}");
     }
 
     #[test]

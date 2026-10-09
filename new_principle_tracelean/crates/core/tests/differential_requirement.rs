@@ -39,6 +39,20 @@ fn line() -> Schema {
             "---\nid: REQ-X\nstatus: approved\ndecomposition: complete\n---".into(),
             "---\nid: REQ-Y\nclauses:\n  one: does a thing\n  two: does another\n---".into(),
             "---\nid: REQ-Z\nrefines: [REQ-X, REQ-Y]\nclauses:\n  one: t\n---".into(),
+            // Clauses written as blocks, and every way a block goes wrong.
+            "---\nid: REQ-N\nclauses:\n  one: plain\n  two:\n    text: base\n    empty: none is L1\n---".into(),
+            "---\nid: REQ-N\nclauses:\n  two:\n    empty: no text\n  one: t\n---".into(),
+            "---\nid: REQ-N\nclauses:\n  two:\n    text: a\n    text: b\n    e: x\n    e: y\n---".into(),
+            "---\nid: REQ-N\nclauses:\n  one: t\n  one: again\n---".into(),
+            "---\nid: REQ-N\nclauses:\n  bad-key: t\n  two:\n    text: a\n    two words: n\n---".into(),
+            "---\nid: REQ-N\niD: REQ-M\nclauess:\n---".into(),
+            "---\niD: REQ-X\n---".into(),
+            "---\nid: REQ-N\nclauses:".into(),
+            "  two:".into(),
+            "    text: base".into(),
+            "    empty: none".into(),
+            "\ttab: x".into(),
+            "Title: cased".into(),
             "---\nid:\n---".into(),
             // `id:` with nothing after it opens a map rather than setting the
             // identifier; the empty identifier is the quoted one.
@@ -87,6 +101,8 @@ fn input_schema() -> Schema {
 /// @tests REQ-REQDOC.clauseless_uniform
 /// @tests REQ-REQDOC.decomposition_claimed
 /// @tests REQ-REQDOC.malformed_reported
+/// @tests REQ-REQDOC.narrowings_nest
+/// @tests REQ-REQDOC.clause_unique
 #[test]
 #[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
 fn model_and_implementation_agree_on_what_a_document_declares() {
@@ -133,6 +149,7 @@ fn generation_reaches_requirements_and_every_fault() {
     let schema = input_schema();
     let mut rng = gen::Rng::new(61);
     let (mut requirements, mut clauseless, mut with_clauses, mut complete) = (0, 0, 0, 0);
+    let mut narrowed = 0;
     let mut kinds = BTreeSet::new();
     for _ in 0..2_000 {
         let value = gen::value(&schema, &mut rng);
@@ -150,6 +167,9 @@ fn generation_reaches_requirements_and_every_fault() {
             {
                 complete += 1;
             }
+            if !parsed.narrowings.is_empty() {
+                narrowed += 1;
+            }
         }
         for (_, kind) in parsed.problems {
             kinds.insert(format!("{kind:?}"));
@@ -163,9 +183,10 @@ fn generation_reaches_requirements_and_every_fault() {
             ("a requirement declaring no clauses", clauseless),
             ("a requirement declaring clauses", with_clauses),
             ("a requirement claiming a complete decomposition", complete),
+            ("a requirement with a narrowed clause", narrowed),
         ],
     );
-    assert_eq!(kinds.len(), 3, "not every frontmatter fault occurred: {kinds:?}");
+    assert_eq!(kinds.len(), 9, "not every frontmatter fault occurred: {kinds:?}");
 }
 
 /// Which identifiers are redeclared, checked against the model.

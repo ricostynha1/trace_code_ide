@@ -1,17 +1,22 @@
 # Annotations
 
 The **only** link between things. Recognised only inside comments; attached to
-the **nearest following declaration** (put it in that item's doc comment).
-Moving a file changes nothing.
+the **nearest following declaration** (put it in that item's doc comment); in a
+Lean constructor's or field's doc comment, to the enclosing inductive or
+structure. Moving a file changes nothing.
 
 | Role | On | Says |
 |---|---|---|
-| `@models` | a model function | this is what the clause means |
+| `@models` | the one function computing what the clause talks about | this is what the clause means |
+| `@specifies` | a `def … : Prop` beside the model | which answers are right |
 | `@implements` | code | this realises the clause |
 | `@tests` | a test | this exercises the clause |
 | `@drt` | a differential comparison's entry | compared by generated cases |
 | `@proves` | a theorem | discharges the clause as a property |
-| `@pins` | a proof about a model | the model is pinned |
+| `@pins` | a proof that the spec pins the model | the model is pinned |
+
+At most one `@models`, one `@specifies` and one `@pins` per clause (ADR-0014);
+more is reported as `SeveralModels`/`SeveralSpecs`/`SeveralPins`.
 
 Unknown role-shaped tokens are reported, not ignored.
 

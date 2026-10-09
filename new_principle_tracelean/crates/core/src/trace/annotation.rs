@@ -13,11 +13,15 @@ use std::collections::BTreeMap;
 
 /// What a link claims.
 ///
+/// `Models` is exactly the function that computes what the clause talks about,
+/// and `Specifies` the `Prop` that says which answers are right (ADR-0014).
+///
 /// @implements REQ-ANNOT.role_vocabulary
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Role {
     Models,
+    Specifies,
     Implements,
     Tests,
     Drt,
@@ -29,6 +33,7 @@ impl Role {
     pub fn parse(word: &str) -> Option<Role> {
         Some(match word {
             "models" => Role::Models,
+            "specifies" => Role::Specifies,
             "implements" => Role::Implements,
             "tests" => Role::Tests,
             "drt" => Role::Drt,
@@ -41,6 +46,7 @@ impl Role {
     pub fn as_str(self) -> &'static str {
         match self {
             Role::Models => "models",
+            Role::Specifies => "specifies",
             Role::Implements => "implements",
             Role::Tests => "tests",
             Role::Drt => "drt",
@@ -367,6 +373,20 @@ mod tests {
             }
             other => panic!("{other:?}"),
         }
+    }
+
+    /// A specification is its own role, not a second model.
+    ///
+    /// @tests REQ-ANNOT.role_vocabulary
+    #[test]
+    fn a_specification_is_its_own_role() {
+        let parsed = one("@specifies REQ-THERMO.to_fahrenheit");
+        assert!(parsed.problems.is_empty(), "{:?}", parsed.problems);
+        match &parsed.directives[0] {
+            Directive::Annotation { annotation: a } => assert_eq!(a.role, Role::Specifies),
+            other => panic!("{other:?}"),
+        }
+        assert_eq!(Role::Specifies.as_str(), "specifies");
     }
 
     /// A hyphen is legal in an identifier and not in a clause, so the clause

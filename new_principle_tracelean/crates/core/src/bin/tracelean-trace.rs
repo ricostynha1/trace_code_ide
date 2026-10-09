@@ -97,11 +97,25 @@ fn main() {
             None => (target.clone(), None),
         };
 
-        let Some(model_at) = trace::material::model_of(&index, &req_id, clause.as_deref()) else {
+        let Some(_) = trace::material::model_of(&index, &req_id, clause.as_deref()) else {
             eprintln!("nothing models {target}, so there is nothing to judge it against");
             return;
         };
-        let source = read_lines(&root.join(&model_at.file), model_at.start_line, model_at.end_line);
+        // The model and the specification, and every model while a clause
+        // still has several (ADR-0014).
+        let read = |role| -> Vec<(trace::material::ModelAt, String)> {
+            trace::material::declarations_of(&index, &req_id, clause.as_deref(), role)
+                .into_iter()
+                .map(|at| {
+                    let text = read_lines(&root.join(&at.file), at.start_line, at.end_line);
+                    (at, text)
+                })
+                .collect()
+        };
+        let source = trace::material::shown_source(
+            &read(trace::annotation::Role::Models),
+            &read(trace::annotation::Role::Specifies),
+        );
         let assembled =
             trace::material::assemble(&index, &req_id, clause.as_deref(), source, None);
         let (material, model_at) = match assembled {
@@ -133,47 +147,58 @@ fn main() {
         let judgement = tracelean_core::judge::Judgement {
             verdict,
             judged_by: by,
+            delegated_by: value_after(&args, "--delegated-by"),
             note: value_after(&args, "--note"),
             requirement_hash: material.requirement_hash.clone(),
             model_hash: material.model_hash.clone(),
         };
-        let slot = trace::record::Key {
-            req_id: material.req_id.clone(),
-            clause: material.clause.clone(),
-            bond: tracelean_core::evidence::Bond::RequirementModel,
-        };
-        // Anything but agreement withdraws an agreement recorded before, here
-        // and in the lock, or it would go on counting as evidence.
-        let withdraw = || {
-            if let Err(error) = trace::store::remove_slot(&root, &slot) {
-                eprintln!("cannot withdraw the earlier record: {error}");
-            }
-            if let Some(mut lock) = trace::lockfile::read(&root) {
-                let before = lock.evidence.len();
-                lock.evidence.retain(|record| record.key != slot);
-                if lock.evidence.len() != before {
-                    match trace::lockfile::write(&root, &lock) {
-                        Ok(_) => println!("withdrew the agreement recorded before"),
-                        Err(error) => eprintln!("cannot write the lock: {error}"),
-                    }
+        // Who may judge: `.tracelean/judges.json`. Without one, a name is taken
+        // at its word, and the person recording is told so.
+        let judges = match std::fs::read_to_string(root.join(".tracelean").join("judges.json")) {
+            Ok(text) => match tracelean_core::judge::parse_judges(&text) {
+                Ok(judges) => Some(judges),
+                Err(why) => {
+                    eprintln!("{why}");
+                    std::process::exit(2);
                 }
+            },
+            Err(_) => {
+                println!("no .tracelean/judges.json: this verdict is attributed to a name, not to a listed person");
+                None
             }
         };
-        match tracelean_core::judge::record(material, judgement, model_at.link_hash) {
-            tracelean_core::judge::Outcome::Recorded { evidence } => {
-                match trace::store::write(&root, &evidence) {
-                    Ok(path) => println!("recorded {target} as judged: {}", path.display()),
-                    Err(error) => eprintln!("cannot write the record: {error}"),
-                }
+        use tracelean_core::judge::Outcome;
+        // Every verdict goes in the clause's one judgement slot, so a drift
+        // replaces an agreement recorded before, in the store and — once the
+        // lock is collected again below — in the lock.
+        let (evidence, said) = match tracelean_core::judge::record(material, judgement, judges, model_at.link_hash) {
+            Outcome::Refused { reason } => {
+                eprintln!("refused: {reason}");
+                std::process::exit(2);
             }
-            tracelean_core::judge::Outcome::Drifted => {
-                withdraw();
-                println!("{target}: drift recorded as no evidence; the clause and the model differ")
+            Outcome::Recorded { evidence } => (evidence, format!("{target}: agrees, recorded at L2")),
+            Outcome::Drifted { evidence } => {
+                (evidence, format!("{target}: drift recorded at L1; the clause and the model differ"))
             }
-            tracelean_core::judge::Outcome::Proposed { proposal } => {
-                withdraw();
-                println!("{target}: a proposal, which nothing applies for you:\n  {}", proposal.suggestion)
+            Outcome::Proposed { evidence, proposal } => (
+                evidence,
+                format!(
+                    "{target}: unmodelable, recorded at L1, and a proposal which nothing applies for you:\n  {}",
+                    proposal.suggestion
+                ),
+            ),
+        };
+        match trace::store::write(&root, &evidence) {
+            Ok(path) => println!("{said}: {}", path.display()),
+            Err(error) => {
+                eprintln!("cannot write the record: {error}");
+                std::process::exit(1);
             }
+        }
+        let held = trace::lockfile::read(&root).map(|l| l.evidence).unwrap_or_default();
+        let collected = trace::lockfile::collected(&index, held, trace::store::read_all(&root));
+        if let Err(error) = trace::lockfile::write(&root, &collected.lockfile) {
+            eprintln!("cannot write the lock: {error}");
         }
         return;
     }
@@ -330,7 +355,7 @@ fn main() {
                         "open       {name}  owes, annotated @pins {name}:\n    theorem … : {}",
                         statement(spec.clone(), model.clone(), plan.inputs)
                     ),
-                    _ => println!("open       {name}  no specification: model it with a `def … : Prop` too"),
+                    _ => println!("open       {name}  {}", trace::pinning::OPEN_WITHOUT_BOTH),
                 },
             }
         }

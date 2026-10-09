@@ -24,7 +24,7 @@ def StateNamed : Capability → Prop
 its state, and the one complaint that containment went unreported when it names
 nothing -- the silent fallback is never accepted.
 
-@models REQ-SBX.capability_reported -/
+@specifies REQ-SBX.capability_reported -/
 def CapabilityReported (reported : Capability) (vs : List Violation) : Prop :=
   (StateNamed reported → vs = []) ∧
   (¬ StateNamed reported → vs = [Violation.containmentUnreported])
@@ -34,7 +34,7 @@ given. A path the policy does not mirror is not compared. A mirrored path must
 be in the copy with the same content; otherwise it is named as missing from the
 copy, or as differing from it.
 
-@models REQ-OBS.workspace_is_a_copy -/
+@specifies REQ-OBS.workspace_is_a_copy -/
 def CopiedFaithfully (workspace : Workspace) (entry : String × String)
     (r : Option Violation) : Prop :=
   (classify entry.1 ≠ Class.mirrored → r = none) ∧

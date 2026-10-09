@@ -30,10 +30,59 @@ structure Key where
 /-- Backend-specific detail, typed rather than free-form so a record cannot
 quietly omit what makes it reproducible. -/
 inductive Detail where
-  | judge (verdict judgedBy promptVersion : String)
+  | judge (verdict judgedBy : String) (delegatedBy : Option String) (promptVersion : String)
+      (note : Option String)
   | drt (seed cases : Nat) (op : String)
   | proof (theoremName toolchain : String)
-  deriving Repr, Inhabited, ToJson, FromJson
+  deriving Repr, Inhabited
+
+def Detail.judgeFromJson (p : Lean.Json) : Except String Detail := do
+  let verdict ← p.getObjValAs? String "verdict"
+  let judgedBy ← p.getObjValAs? String "judgedBy"
+  let delegatedBy ← p.getObjValAs? (Option String) "delegatedBy"
+  let promptVersion ← p.getObjValAs? String "promptVersion"
+  let note ← p.getObjValAs? (Option String) "note"
+  pure (Detail.judge verdict judgedBy delegatedBy promptVersion note)
+
+def Detail.drtFromJson (p : Lean.Json) : Except String Detail := do
+  let seed ← p.getObjValAs? Nat "seed"
+  let cases ← p.getObjValAs? Nat "cases"
+  let op ← p.getObjValAs? String "op"
+  pure (Detail.drt seed cases op)
+
+def Detail.proofFromJson (p : Lean.Json) : Except String Detail := do
+  let theoremName ← p.getObjValAs? String "theoremName"
+  let toolchain ← p.getObjValAs? String "toolchain"
+  pure (Detail.proof theoremName toolchain)
+
+/-- Read a detail; an absent delegate or note is `none`, as in records made
+before either existed. -/
+def Detail.fromJson? (j : Lean.Json) : Except String Detail :=
+  match j.getObjVal? "judge", j.getObjVal? "drt", j.getObjVal? "proof" with
+  | .ok p, _, _ => Detail.judgeFromJson p
+  | _, .ok p, _ => Detail.drtFromJson p
+  | _, _, .ok p => Detail.proofFromJson p
+  | _, _, _ => .error "no inductive constructor matched"
+
+instance : FromJson Detail := ⟨Detail.fromJson?⟩
+
+/-- The wire form, which leaves out an absent delegate or note rather than
+writing `null`, as the records on disk do. -/
+def Detail.toJson : Detail → Lean.Json
+  | .judge verdict judgedBy delegatedBy promptVersion note =>
+    Lean.Json.mkObj [("judge", Lean.Json.mkObj
+      ([("verdict", Lean.toJson verdict), ("judgedBy", Lean.toJson judgedBy)] ++
+        Lean.Json.opt "delegatedBy" delegatedBy ++
+        [("promptVersion", Lean.toJson promptVersion)] ++
+        Lean.Json.opt "note" note))]
+  | .drt seed cases op =>
+    Lean.Json.mkObj [("drt", Lean.Json.mkObj
+      [("seed", Lean.toJson seed), ("cases", Lean.toJson cases), ("op", Lean.toJson op)])]
+  | .proof theoremName toolchain =>
+    Lean.Json.mkObj [("proof", Lean.Json.mkObj
+      [("theoremName", Lean.toJson theoremName), ("toolchain", Lean.toJson toolchain)])]
+
+instance : ToJson Detail := ⟨Detail.toJson⟩
 
 /-- The highest level each kind of evidence can establish.
 
@@ -74,10 +123,63 @@ structure Material where
 structure Judgement where
   verdict : Verdict
   judgedBy : String
+  delegatedBy : Option String
   note : Option String
   requirementHash : String
   modelHash : String
   deriving Repr, DecidableEq, Inhabited, ToJson, FromJson
+
+/-- One person who may judge, and whom they authorise to judge for them. -/
+structure Person where
+  name : String
+  delegatesTo : List String
+  deriving Repr, DecidableEq, Inhabited, ToJson, FromJson
+
+/-- Who may judge on a project: `.tracelean/judges.json`. -/
+structure Judges where
+  people : List Person
+  deriving Repr, DecidableEq, Inhabited, ToJson, FromJson
+
+/-- Whether a judge may record a verdict, and in whose name. -/
+inductive Authority where
+  | accepted (delegatedBy : Option String)
+  | refused (reason : String)
+  deriving Repr, DecidableEq, Inhabited, ToJson, FromJson
+
+def isPerson (judges : Judges) (name : String) : Bool :=
+  judges.people.any (fun p => p.name == name)
+
+def delegatesTo (judges : Judges) (person delegate : String) : Bool :=
+  judges.people.any (fun p => p.name == person && p.delegatesTo.any (fun d => d == delegate))
+
+/--
+Who may judge.
+
+A blank name is refused whatever the project says. Without a judges file a name
+is taken at its word. With one, a listed person judges in their own name, and
+anyone else only in the name of a listed person who delegates to them.
+
+@models REQ-JUDGE.human_decides
+-/
+def authority (judges : Option Judges) (judgedBy : String) (delegatedBy : Option String) :
+    Authority :=
+  if judgedBy.all Char.isWhitespace then
+    .refused "a judgement names who made it, and --by is empty"
+  else
+    match judges with
+    | none => .accepted delegatedBy
+    | some js =>
+      if isPerson js judgedBy then .accepted none
+      else
+        match delegatedBy with
+        | none =>
+          .refused (judgedBy ++ " is not a person in .tracelean/judges.json; name the person who " ++
+            "delegates to them with --delegated-by")
+        | some person =>
+          if delegatesTo js person judgedBy then .accepted (some person)
+          else
+            .refused (person ++ " does not delegate to " ++ judgedBy ++ "; add " ++ judgedBy ++
+              " to the delegatesTo of " ++ person ++ " in .tracelean/judges.json to authorise it")
 
 /-- A change a judgement suggests, which nothing applies automatically. -/
 structure Proposal where
@@ -89,47 +191,64 @@ structure Proposal where
 /-- What recording a judgement produced. -/
 inductive JudgeOutcome where
   | recorded (evidence : EvidenceRecord)
-  | drifted
-  | proposed (proposal : Proposal)
+  | drifted (evidence : EvidenceRecord)
+  | proposed (evidence : EvidenceRecord) (proposal : Proposal)
+  | refused (reason : String)
   deriving Repr, Inhabited, ToJson, FromJson
 
+/-- The record an outcome writes, if it writes one. -/
+def JudgeOutcome.evidence? : JudgeOutcome → Option EvidenceRecord
+  | .recorded e => some e
+  | .drifted e => some e
+  | .proposed e _ => some e
+  | .refused _ => none
+
 def promptVersion : String := "1"
+
+/-- The record a verdict writes in the clause's judgement slot. The inputs are
+the two hashes the judgement was about, so that changing either half means
+nobody has judged the pair that now exists. -/
+def entry (material : Material) (judgement : Judgement) (delegatedBy : Option String)
+    (verdict : String) (level : Level) (linkHash : String) : EvidenceRecord :=
+  -- The brace opens on its own line: the grammar that reads these annotations
+  -- cannot follow a constructor applied to a structure instance whose `{` ends
+  -- the line (ADR-0008).
+  { key := { reqId := material.reqId, clause := material.clause, bond := .requirementModel },
+    level := level,
+    detail := .judge verdict judgement.judgedBy delegatedBy promptVersion judgement.note,
+    linkHash := linkHash,
+    inputs := [("requirement", judgement.requirementHash), ("model", judgement.modelHash)] }
 
 /--
 Record a judgement.
 
-Three things are stated here and all three are the requirement. Agreement writes
-evidence at `L2` and no higher. Drift writes nothing -- a judge who says the
-model is wrong has not established anything about it. And `unmodelable`
-produces a proposal rather than a change: the judge is saying the clause cannot
-be formalised as written, and rewriting somebody's requirement on that basis is
-not a conclusion a tool gets to draw.
-
-The inputs recorded are the two hashes the judgement was about, so that changing
-either half means nobody has judged the pair that now exists.
+Four things are stated here and all four are the requirement. A judge who is
+not authorised records nothing. Agreement writes evidence at `L2` and no
+higher. Drift and `unmodelable` are recorded too, at `L1` -- a judge who says the
+model is wrong has established nothing about it, but the verdict is shown, and
+goes stale when either half changes. And `unmodelable` produces a proposal
+rather than a change: the judge is saying the clause cannot be formalised as
+written, and rewriting somebody's requirement on that basis is not a conclusion
+a tool gets to draw.
 
 @models REQ-JUDGE.caps_at_judgement
 @models REQ-JUDGE.proposal_not_mutation
 @models REQ-JUDGE.human_decides
+@models REQ-JUDGE.drift_recorded
 -/
-def record (material : Material) (judgement : Judgement) (linkHash : String) : JudgeOutcome :=
-  match judgement.verdict with
-  | .agrees =>
-    -- The brace opens on its own line: the grammar that reads these annotations
-    -- cannot follow a constructor applied to a structure instance whose `{`
-    -- ends the line (ADR-0008).
-    .recorded
-      { key := { reqId := material.reqId, clause := material.clause, bond := .requirementModel },
-        level := .L2,
-        detail := .judge "agrees" judgement.judgedBy promptVersion,
-        linkHash := linkHash,
-        inputs := [("requirement", judgement.requirementHash), ("model", judgement.modelHash)] }
-  | .drift => .drifted
-  | .unmodelable =>
-    .proposed
-      { reqId := material.reqId,
-        clause := material.clause,
-        suggestion := judgement.note.getD "the clause cannot be modelled as written" }
+def record (material : Material) (judgement : Judgement) (judges : Option Judges)
+    (linkHash : String) : JudgeOutcome :=
+  match authority judges judgement.judgedBy judgement.delegatedBy with
+  | .refused reason => .refused reason
+  | .accepted delegatedBy =>
+    match judgement.verdict with
+    | .agrees => .recorded (entry material judgement delegatedBy "agrees" .L2 linkHash)
+    | .drift => .drifted (entry material judgement delegatedBy "drift" .L1 linkHash)
+    | .unmodelable =>
+      .proposed (entry material judgement delegatedBy "unmodelable" .L1 linkHash)
+        { reqId := material.reqId,
+          clause := material.clause,
+          suggestion := judgement.note.getD "the clause cannot be modelled as written" }
 
 /-- Whether a judgement still applies to the material in front of us.
 
@@ -148,27 +267,77 @@ example-based check would have to guess which branch.
 @proves REQ-JUDGE.caps_at_judgement
 -/
 theorem judgement_never_exceeds_L2
-    (material : Material) (judgement : Judgement) (linkHash : String) (e : EvidenceRecord)
-    (h : record material judgement linkHash = .recorded e) :
-    e.level = .L2 ∧ e.detail.ceiling = .L2 := by
+    (material : Material) (judgement : Judgement) (judges : Option Judges) (linkHash : String)
+    (e : EvidenceRecord) (h : (record material judgement judges linkHash).evidence? = some e) :
+    (e.level = .L1 ∨ e.level = .L2) ∧ e.detail.ceiling = .L2 := by
   -- `simp only [record]` rather than `unfold record`, and `split` rather than
   -- `cases hv : …`: the same steps, in the subset of Lean the annotation
   -- grammar reads (ADR-0008).
   simp only [record] at h
   split at h
-  all_goals simp at h
+  all_goals try split at h
+  all_goals simp [JudgeOutcome.evidence?] at h
   all_goals subst h
-  all_goals exact ⟨rfl, rfl⟩
+  all_goals simp [entry, Detail.ceiling]
 
-/-- Drift establishes nothing, and `unmodelable` changes nothing. The other two
-branches of the same requirement.
+/-- Drift is recorded, at `L1`, with the note and the hashes it was about; and
+`unmodelable` writes a record and a proposal, never a change.
 
+@proves REQ-JUDGE.drift_recorded
 @proves REQ-JUDGE.proposal_not_mutation -/
-theorem drift_records_nothing
-    (material : Material) (judgement : Judgement) (linkHash : String)
-    (h : judgement.verdict = .drift) :
-    record material judgement linkHash = .drifted := by
-  simp [record, h]
+theorem drift_is_recorded_at_L1
+    (material : Material) (judgement : Judgement) (judges : Option Judges) (linkHash : String)
+    (delegatedBy : Option String) (h : judgement.verdict = .drift)
+    (ok : authority judges judgement.judgedBy judgement.delegatedBy = .accepted delegatedBy) :
+    record material judgement judges linkHash =
+      .drifted (entry material judgement delegatedBy "drift" .L1 linkHash) := by
+  simp [record, h, ok]
+
+/-- A blank name records nothing, whoever else is listed.
+
+@proves REQ-JUDGE.human_decides -/
+theorem a_blank_judge_records_nothing
+    (material : Material) (judgement : Judgement) (judges : Option Judges) (linkHash : String)
+    (h : judgement.judgedBy.all Char.isWhitespace = true) :
+    (record material judgement judges linkHash).evidence? = none := by
+  simp [record, authority, h, JudgeOutcome.evidence?]
+
+/-! ## Showing a judgement
+
+`judgement_shown`. An agreement names its judge and its level, a drift or
+`unmodelable` verdict says so with its note, and a delegated verdict names the
+person who delegated it -- so a delegated `L2` never reads as a person's own.
+-/
+
+/-- A clause's judgement as the requirement view shows it. -/
+structure Judged where
+  verdict : String
+  judgedBy : String
+  delegatedBy : Option String
+  note : Option String
+  level : Level
+  deriving Repr, DecidableEq, Inhabited, ToJson, FromJson
+
+def levelName : Level → String
+  | .L1 => "L1"
+  | .L2 => "L2"
+  | .L3 => "L3"
+  | .L4 => "L4"
+
+def delegatedText : Option String → String
+  | some person => " (delegated by " ++ person ++ ")"
+  | none => ""
+
+/-- One line for a judgement.
+
+@models REQ-JUDGE.judgement_shown -/
+def judgedText (judged : Judged) : String :=
+  if judged.verdict == "agrees" then
+    "agrees by " ++ judged.judgedBy ++ " — " ++ levelName judged.level ++
+      delegatedText judged.delegatedBy
+  else
+    "judged: " ++ judged.verdict ++ " — " ++ judged.note.getD "no note" ++ "  by " ++
+      judged.judgedBy ++ delegatedText judged.delegatedBy
 
 /-! ## The prompt
 

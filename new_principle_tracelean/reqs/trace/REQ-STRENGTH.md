@@ -11,7 +11,7 @@ clauses:
   attempted_distinguished: An obligation stated but unfinished shall be distinguished from one never attempted and from one discharged.
   nondeterministic_declared: A model that cannot be pinned shall be declarable as such with a reason, and shall then be excluded rather than reported as open forever.
   qualifies_proof: A proof level shall be presented together with its strength, in the way a testing level is presented together with its coverage.
-  per_input: Where a clause is modelled by both a specification predicate and a function, the obligation shall be that the function meets the predicate and that no input has two answers the predicate accepts.
+  per_input: Where a clause has both a specification predicate (its one specifies declaration) and a model function (its one models declaration), the obligation shall be that the function meets the predicate and that no input has two answers the predicate accepts.
   kernel_decides: A clause shall be reported pinned only when Lean accepted its pinning theorem, stated as the obligation, without error and without depending on sorry.
   verdict_kept: A verdict shall hold only for the theorem and the declarations it was given for; a change to any of them shall return the clause to attempted.
 ---

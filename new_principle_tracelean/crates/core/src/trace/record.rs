@@ -24,7 +24,8 @@ pub struct Key {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", rename_all_fields = "camelCase")]
 pub enum Detail {
-    /// A person judged requirement and model consistent.
+    /// A person, or a delegate a person authorised, judged requirement against
+    /// model: `agrees` at L2, `drift` or `unmodelable` at L1.
     Judge {
         verdict: String,
         /// Who decided. A judgement is attributable or it is not a judgement.
@@ -35,7 +36,19 @@ pub enum Detail {
         ///
         /// @implements REQ-JUDGE.human_decides
         judged_by: String,
+        /// The listed person who authorised `judged_by` to judge, when the
+        /// judge is not a person themselves (ADR-0015). Absent in records made
+        /// before delegation existed, which still load.
+        ///
+        /// @implements REQ-JUDGE.human_decides
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        delegated_by: Option<String>,
         prompt_version: String,
+        /// Why, in the judge's words: what a drift differs on.
+        ///
+        /// @implements REQ-JUDGE.drift_recorded
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        note: Option<String>,
     },
     /// Differential testing ran and found no disagreement.
     Drt { seed: u64, cases: u64, op: String },
@@ -118,7 +131,7 @@ pub fn required_inputs(detail: &Detail) -> &'static [&'static str] {
 /// @drt REQ-STALE.inputs_identified
 pub fn reproducibility(record: Evidence) -> Reproducibility {
     let missing_field = match &record.detail {
-        Detail::Judge { verdict, judged_by, prompt_version } => {
+        Detail::Judge { verdict, judged_by, prompt_version, .. } => {
             if verdict.is_empty() {
                 Some("verdict")
             } else if judged_by.is_empty() {
@@ -403,7 +416,9 @@ mod tests {
         r.detail = Detail::Judge {
             verdict: "agrees".into(),
             judged_by: "ana".into(),
+            delegated_by: None,
             prompt_version: "1".into(),
+            note: None,
         };
         assert_eq!(r.effective_level(), Level::L2);
     }

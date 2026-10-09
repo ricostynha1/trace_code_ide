@@ -948,7 +948,7 @@ two right answers. Here because the model leans on a private helper. -/
 /-- Whether a layout's panes are distinct, answered rightly: yes exactly when
 no identity occurs twice among the identities of its panes.
 
-@models REQ-SCREEN.panes_are_distinct -/
+@specifies REQ-SCREEN.panes_are_distinct -/
 def PanesDistinct (layout : Layout) (answer : Bool) : Prop :=
   answer = true ↔ List.Nodup (paneIds layout)
 

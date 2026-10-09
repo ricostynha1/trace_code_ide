@@ -16,7 +16,7 @@ open TraceLean.Lockfile
 record that went in at that position, and nothing past the last of them. No
 record dropped, added, reordered or altered.
 
-@models REQ-LOCK.evidence_preserved -/
+@specifies REQ-LOCK.evidence_preserved -/
 def CarriedUnchanged (evidence carried : List Evidence) : Prop :=
   ∀ i, carried.get? i = evidence.get? i
 

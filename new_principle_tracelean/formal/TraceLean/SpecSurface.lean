@@ -39,7 +39,7 @@ def reportFor (keymap : Keymap) (mode : String) (keys : List String) (n : Nat)
 keys, what it produces at each index is that key's report, and there is
 something at an index exactly when there is a key there.
 
-@models REQ-DRIVE.session_is_a_value -/
+@specifies REQ-DRIVE.session_is_a_value -/
 def SessionOf (keymap : Keymap) (mode : String) (run : List String → List Step) : Prop :=
   ∀ keys n, (run keys).get? n = (keys.get? n).map (reportFor keymap mode keys n)
 
@@ -83,7 +83,7 @@ theorem session_pinned :
 /-- What is read off a row is the names of its regions, one after another, and
 nothing of what was painted.
 
-@models REQ-VIEW.presentation_may_be_symbolic -/
+@specifies REQ-VIEW.presentation_may_be_symbolic -/
 def ReadAsNames (read : List Presented → String) : Prop :=
   ∀ row, read row = String.join (row.map (fun piece => piece.name))
 
@@ -125,7 +125,7 @@ theorem read_as_names_pinned :
 included it and it has something in it, and the parts come in the one fixed
 order `allParts` lists them in.
 
-@models REQ-CONTEXT.person_chooses -/
+@specifies REQ-CONTEXT.person_chooses -/
 def ChosenParts (included : List Part) (filled : List Part) (shown : List Part) : Prop :=
   (∀ p, List.Mem p shown ↔ (List.Mem p included ∧ List.Mem p filled)) ∧
     List.Sublist shown allParts
@@ -215,7 +215,7 @@ theorem chosen_parts_pinned :
 /-- A name picks out the part whose label it is, and only that one: no part
 when it is no part's label.
 
-@models REQ-CONTEXT.part_named -/
+@specifies REQ-CONTEXT.part_named -/
 def NamedPart (name : String) (answer : Option Part) : Prop :=
   ∀ p, answer = some p ↔ label p = name
 

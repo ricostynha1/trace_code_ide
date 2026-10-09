@@ -57,19 +57,39 @@ fn input_schema() -> Schema {
             "judgement",
             strukt(&[
                 ("verdict", verdict()),
-                ("judgedBy", text(&["ana", "sam"])),
+                // A person, a delegate, and a blank name.
+                ("judgedBy", text(&["ana", "sam", "rev", " ", ""])),
+                ("delegatedBy", Schema::Option { inner: Box::new(text(&["ana", "bob"])) }),
                 ("note", Schema::Option { inner: Box::new(text(&["unclear"])) }),
                 ("requirementHash", hash()),
                 ("modelHash", hash()),
             ]),
         ),
+        ("judges", judges_schema()),
         ("linkHash", text(&["link1", "link2"])),
     ])
+}
+
+/// A project's judges file, or none: people who delegate to `rev` or `sam`.
+fn judges_schema() -> Schema {
+    let names = |names: &[&str]| Schema::Str {
+        max_len: Some(3),
+        examples: names.iter().map(|s| s.to_string()).collect(),
+    };
+    let person = strukt(&[
+        ("name", names(&["ana", "bob"])),
+        ("delegatesTo", Schema::List { inner: Box::new(names(&["rev", "sam"])), max_len: Some(2) }),
+    ]);
+    Schema::Option {
+        inner: Box::new(strukt(&[("people", Schema::List { inner: Box::new(person), max_len: Some(2) })])),
+    }
 }
 
 /// @drt REQ-JUDGE.caps_at_judgement
 /// @tests REQ-JUDGE.caps_at_judgement
 /// @tests REQ-JUDGE.proposal_not_mutation
+/// @tests REQ-JUDGE.human_decides
+/// @tests REQ-JUDGE.drift_recorded
 #[test]
 #[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
 fn model_and_implementation_agree_on_what_a_judgement_records() {
@@ -86,7 +106,7 @@ fn model_and_implementation_agree_on_what_a_judgement_records() {
         "TraceLean.Judge",
         "TraceLean.Judge.record",
         op,
-        &["material", "judgement", "linkHash"],
+        &["material", "judgement", "judges", "linkHash"],
         &scratch,
     );
 
@@ -104,17 +124,21 @@ fn model_and_implementation_agree_on_what_a_judgement_records() {
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
-/// All three verdicts occur, and the recorded ones never exceed `L2` — the
-/// property stated directly against the implementation, not only through the
-/// model.
+/// Every outcome occurs — including a delegate accepted and refused — and the
+/// recorded ones never exceed `L2`, drift and `unmodelable` sitting at `L1`:
+/// the property stated directly against the implementation, not only through
+/// the model.
 ///
 /// @tests REQ-JUDGE.caps_at_judgement
+/// @tests REQ-JUDGE.drift_recorded
+/// @tests REQ-JUDGE.human_decides
 /// @tests REQ-DRT-COVER.law_coverage
 #[test]
 fn generation_reaches_every_verdict_and_none_exceeds_l2() {
     use tracelean_core::drt::gen;
     use tracelean_core::evidence::Level;
-    use tracelean_core::judge::{record, Judgement, Material, Outcome};
+    use tracelean_core::judge::{record, Judgement, Judges, Material, Outcome};
+    use tracelean_core::trace::record::Detail;
 
     let schema = input_schema();
     let mut rng = gen::Rng::new(17);
@@ -123,22 +147,35 @@ fn generation_reaches_every_verdict_and_none_exceeds_l2() {
         let v = gen::value(&schema, &mut rng);
         let material: Material = serde_json::from_value(v["material"].clone()).unwrap();
         let judgement: Judgement = serde_json::from_value(v["judgement"].clone()).unwrap();
+        let judges: Option<Judges> = serde_json::from_value(v["judges"].clone()).unwrap();
         let link = v["linkHash"].as_str().unwrap().to_string();
-        match record(material, judgement, link) {
+        let evidence = match record(material, judgement, judges, link) {
             Outcome::Recorded { evidence } => {
                 *seen.entry("recorded").or_default() += 1;
                 assert_eq!(evidence.level, Level::L2, "a judgement recorded above L2");
                 assert_eq!(evidence.effective_level(), Level::L2);
+                evidence
             }
-            Outcome::Drifted => {
+            Outcome::Drifted { evidence } => {
                 *seen.entry("drifted").or_default() += 1;
+                assert_eq!(evidence.level, Level::L1, "a drift raised something");
+                evidence
             }
-            Outcome::Proposed { .. } => {
+            Outcome::Proposed { evidence, .. } => {
                 *seen.entry("proposed").or_default() += 1;
+                assert_eq!(evidence.level, Level::L1, "an unmodelable clause raised something");
+                evidence
             }
+            Outcome::Refused { .. } => {
+                *seen.entry("refused").or_default() += 1;
+                continue;
+            }
+        };
+        if let Detail::Judge { delegated_by: Some(_), .. } = &evidence.detail {
+            *seen.entry("delegated").or_default() += 1;
         }
     }
-    let counts: Vec<(&str, u64)> = ["recorded", "drifted", "proposed"]
+    let counts: Vec<(&str, u64)> = ["recorded", "drifted", "proposed", "refused", "delegated"]
         .iter()
         .map(|name| (*name, seen.get(name).copied().unwrap_or(0)))
         .collect();
@@ -203,6 +240,7 @@ fn ceiling_input() -> Schema {
         Some(Box::new(strukt(&[
             ("verdict", text(&["agrees"])),
             ("judgedBy", text(&["ana"])),
+            ("delegatedBy", Schema::Option { inner: Box::new(text(&["bo"])) }),
             ("promptVersion", text(&["1"])),
         ]))),
     );
@@ -386,6 +424,90 @@ fn generation_reaches_every_backend_and_none_exceeds_its_method() {
             ("a judgement's ceiling", judged),
             ("a differential run's ceiling", tested),
             ("a proof's ceiling", proved),
+        ],
+    );
+}
+
+/// A judgement as the requirement view shows it.
+fn judged_input() -> Schema {
+    let mut verdicts = BTreeMap::new();
+    verdicts.insert("L1".to_string(), None);
+    verdicts.insert("L2".to_string(), None);
+    strukt(&[(
+        "judged",
+        strukt(&[
+            ("verdict", text(&["agrees", "drift", "unmodelable"])),
+            ("judgedBy", text(&["ana", "claude-review"])),
+            ("delegatedBy", Schema::Option { inner: Box::new(text(&["ricostynha"])) }),
+            ("note", Schema::Option { inner: Box::new(text(&["it rounds"])) }),
+            ("level", Schema::Enum { variants: verdicts }),
+        ]),
+    )])
+}
+
+/// How a judgement reads, checked against the model: a delegated `L2` must
+/// never read as a person's own, nor a drift as an agreement.
+///
+/// @drt REQ-JUDGE.judgement_shown
+/// @tests REQ-JUDGE.judgement_shown
+#[test]
+#[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
+fn model_and_implementation_agree_on_how_a_judgement_reads() {
+    let scratch = harness::scratch("judged");
+    let op = "REQ-JUDGE.judgement_shown";
+    let implementation = harness::rust_runner(
+        "REQ-JUDGE",
+        "judgement_shown",
+        "crates/core/src/surface/requirement_view.rs::judged_text",
+        &scratch,
+    );
+    let model =
+        harness::lean_runner("TraceLean.Judge", "TraceLean.Judge.judgedText", op, &["judged"], &scratch);
+    let result = run(
+        op,
+        &judged_input(),
+        &model,
+        &implementation,
+        RunOptions { seed: 23, cases: 1_000, shrink_rounds: 100 },
+    )
+    .expect("both runners answer");
+    support::agreed(&result);
+    let _ = std::fs::remove_dir_all(&scratch);
+}
+
+/// Each kind of judgement is generated, so the agreement above is about all
+/// of them.
+///
+/// @tests REQ-JUDGE.judgement_shown
+/// @tests REQ-DRT-COVER.law_coverage
+#[test]
+fn generation_reaches_every_kind_of_judgement_shown() {
+    use tracelean_core::drt::gen;
+    use tracelean_core::surface::requirement_view::{judged_text, Judged};
+
+    let mut rng = gen::Rng::new(23);
+    let (mut agreed, mut drift, mut delegated) = (0u64, 0u64, 0u64);
+    for _ in 0..1_000 {
+        let v = gen::value(&judged_input(), &mut rng);
+        let judged: Judged = serde_json::from_value(v["judged"].clone()).unwrap();
+        let said = judged_text(judged.clone());
+        if judged.verdict == "agrees" {
+            agreed += 1;
+        } else if judged.verdict == "drift" || judged.verdict == "unmodelable" {
+            assert!(said.starts_with(&format!("judged: {}", judged.verdict)), "{said}");
+            drift += 1;
+        }
+        if let Some(person) = &judged.delegated_by {
+            assert!(said.contains(&format!("(delegated by {person})")), "{said}");
+            delegated += 1;
+        }
+    }
+    support::covered(
+        "REQ-JUDGE.judgement_shown",
+        &[
+            ("an agreement", agreed),
+            ("a drift or unmodelable verdict", drift),
+            ("a delegated judgement", delegated),
         ],
     );
 }

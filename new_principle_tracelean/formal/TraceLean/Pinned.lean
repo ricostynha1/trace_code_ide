@@ -104,7 +104,9 @@ two of its theorems and would still be pinned with the third added. The rule
 this file follows is that no conjunct may be *added* beyond what was proved;
 proving more with less is not the failure that rule guards against.
 
-@pins REQ-EVID.weakest_link
+The clause's pin is `weakest_link_pinned` in `Evidence.lean`, stated against
+the clause's specification `WeakestLink` (ADR-0014: at most one pin a clause).
+This theorem is kept for the stronger reading above, and claims nothing.
 -/
 theorem pins_assurance (f g : List Record → Level)
     (hf : SpecAssurance f) (hg : SpecAssurance g) : f = g := by

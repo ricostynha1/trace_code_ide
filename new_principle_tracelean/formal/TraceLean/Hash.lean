@@ -106,21 +106,41 @@ def digest (s : String) : String :=
 def bodyHash (source : String) (removed protected_ : List (Nat × Nat)) : String :=
   digest (normalize source removed protected_)
 
-/-- Hash of a requirement's semantic content: its clauses and its prose.
-
-Keyed by clause name, so renaming a clause changes the hash -- a judgement was
-about the pair, and a renamed clause is a different pair.
-
-@models REQ-REQDOC.clause_addressable -/
-def requirementHash (clauses : List (String × String)) (bodyText : String) : String :=
-  let sorted := (clauses.foldl
+/-- Keyed text, `key ␁ text ␂` per entry in key order; a key given twice keeps
+its later text, as a map does. -/
+def keyedBuffer (entries : List (String × String)) : String :=
+  let sorted := (entries.foldl
     (fun acc kv =>
       if acc.any (·.1 == kv.1) then acc.map (fun p => if p.1 == kv.1 then kv else p)
       else acc ++ [kv]) []).mergeSort (fun a b => decide (a.1 ≤ b.1))
-  let buffer := sorted.foldl
+  sorted.foldl
     (fun acc kv =>
       acc ++ kv.1 ++ String.mk [Char.ofNat 1] ++ kv.2.trim ++ String.mk [Char.ofNat 2]) ""
-  digest (buffer ++ normalize bodyText [] [])
+
+/-- Hash of one clause: what evidence about it rests on.
+
+Its key, its text and its narrowings, and nothing else -- so rewording a
+sibling clause, or the prose, leaves the clause's evidence standing, and a
+narrowing added re-opens it. Keyed by name, so a renamed clause is a different
+clause. Without a key it is a requirement's one implicit clause, whose text is
+the body, hashed as a normalised body.
+
+@models REQ-REQDOC.clause_addressable -/
+def clauseHash (key : Option String) (text : String) (narrowings : List (String × String)) :
+    String :=
+  match key with
+  | none => digest (normalize text [] [])
+  | some k =>
+    digest (k ++ String.mk [Char.ofNat 1] ++ text.trim ++ String.mk [Char.ofNat 2]
+      ++ String.mk [Char.ofNat 3] ++ keyedBuffer narrowings)
+
+/-- A narrowing is part of its clause: adding one moves the clause's hash, so
+the clause's evidence re-opens.
+
+@proves REQ-REQDOC.clause_addressable -/
+theorem a_narrowing_moves_its_clause_hash :
+    clauseHash (some "c") "T" [] ≠ clauseHash (some "c") "T" [("empty", "E")] := by
+  native_decide
 
 /-- Reindenting a body does not move its hash: the whole reason whitespace is
 normalised before hashing.

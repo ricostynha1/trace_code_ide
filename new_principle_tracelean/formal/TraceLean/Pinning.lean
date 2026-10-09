@@ -3,8 +3,9 @@ import TraceLean.Strength
 /-!
 # Pinning, per input
 
-Models the per-input half of `REQ-STRENGTH`. A clause modelled by a
-specification predicate `P` and a function `f` owes
+Models the per-input half of `REQ-STRENGTH`. A clause with a specification
+predicate `P` (its one `specifies` declaration) and a model function `f` (its
+one `models` declaration, ADR-0014) owes
 `(∀ x, P x (f x)) ∧ (∀ x y1 y2, P x y1 → P x y2 → y1 = y2)`: the function meets
 the specification, and no input has two answers it accepts. A person proves it
 in a `@pins` theorem; the system states it, asks Lean, and believes only a

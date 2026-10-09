@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-REQDOC",
+    "clause": "clause_unique",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Requirement::a_clause_declared_twice_is_reported",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "4de348cad5605de9",
+  "inputs": [
+    [
+      "model",
+      "cad3550825a70c07"
+    ],
+    [
+      "requirement",
+      "9321b8d470678fe5"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

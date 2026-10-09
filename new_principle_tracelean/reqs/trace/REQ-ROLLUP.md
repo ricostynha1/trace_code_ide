@@ -5,7 +5,9 @@ refines: [ARCH-HONEST, ARCH-CORE-SHELL]
 status: approved
 decomposition: complete
 clauses:
-  min_not_mean: An aggregate over children shall take the minimum assurance, never the mean.
+  min_not_mean:
+    text: An aggregate over children shall take the minimum assurance, never the mean.
+    empty: With no parts to aggregate, the aggregate shall be L1.
   open_is_lower_bound: A roll-up over an unclaimed decomposition shall be a lower bound on the true value.
   never_complete_when_open: A requirement with an unclaimed decomposition shall never render as finished.
   exempt_leaves_denominator: An exempted clause shall leave the coverage denominator, and a partial clause shall remain in it with a capped contribution.

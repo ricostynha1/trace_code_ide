@@ -18,10 +18,11 @@ pub struct Chip {
 }
 
 /// The letter a role is marked with, in the order marks are laid out. A pin
-/// is a record, not a claim about the code, and has none.
+/// is a record, not a claim about the code, and has none. A specification is
+/// the other half of a clause's model, so it is marked as modelling.
 pub fn letter(role: Role) -> Option<char> {
     match role {
-        Role::Models => Some('M'),
+        Role::Models | Role::Specifies => Some('M'),
         Role::Implements => Some('I'),
         Role::Tests => Some('T'),
         Role::Drt => Some('D'),
@@ -77,7 +78,9 @@ pub fn clause_chips(text: &str, id: &str, claims: &[(Option<String>, Role)]) -> 
 }
 
 /// Each clause of a requirement's document, as its zero-based line and key: an
-/// indented `key: text` in the frontmatter.
+/// indented `key: text` in the frontmatter. A clause written as a block is
+/// marked on its key's line; the deeper `text:` and narrowing lines are not
+/// clauses.
 pub fn clause_lines(text: &str) -> Vec<(usize, String)> {
     let mut out = Vec::new();
     let mut fences = 0;
@@ -89,7 +92,13 @@ pub fn clause_lines(text: &str) -> Vec<(usize, String)> {
             }
             continue;
         }
-        let Some((key, _)) = row.strip_prefix("  ").and_then(|r| r.split_once(':')) else { continue };
+        let Some((key, _)) = row
+            .strip_prefix("  ")
+            .filter(|r| !r.starts_with([' ', '\t']))
+            .and_then(|r| r.split_once(':'))
+        else {
+            continue;
+        };
         let key = key.trim();
         if !key.is_empty() && !key.contains(' ') {
             out.push((line, key.to_string()));

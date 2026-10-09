@@ -74,6 +74,7 @@
   },
   "chips": {
     "models": "#c678dd",
+    "specifies": "#c678dd",
     "implements": "#61afef",
     "tests": "#98c379",
     "drt": "#56b6c2",

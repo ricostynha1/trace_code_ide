@@ -2837,6 +2837,11 @@ impl Editor {
                         .as_ref()
                         .and_then(|k| requirement.clauses.get(k).cloned())
                         .unwrap_or_else(|| requirement.title.clone()),
+                    narrowings: clause
+                        .as_ref()
+                        .and_then(|k| requirement.narrowings.get(k))
+                        .map(|n| n.iter().map(|(k, v)| (k.clone(), v.clone())).collect())
+                        .unwrap_or_default(),
                     level: levels.get(&(id.to_string(), clause.clone())).copied().unwrap_or(Level::L1),
                     chain: chain_of(&records, id, clause.as_deref()),
                     tested: records.iter().any(|r| {
@@ -2846,6 +2851,7 @@ impl Editor {
                             && r.effective_level() >= Level::L3
                     }),
                     lines: self.clause_lines(&index, id, &clause),
+                    judged: tracelean_core::surface::requirement_view::judged_of(&records, id, clause.as_deref()),
                     key: clause,
                     claims,
                     pins,

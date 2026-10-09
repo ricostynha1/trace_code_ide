@@ -87,7 +87,13 @@ fn the_two_kernels_agree_about_this_tree() {
     new_links.sort();
 
     let old_set: BTreeSet<(String, String)> = old_links.iter().filter_map(split_link).collect();
-    let new_set: BTreeSet<(String, String)> = new_links.iter().filter_map(split_link).collect();
+    // 5. `@specifies` is a role stage 0 does not have (ADR-0014): it reads
+    //    none of those annotations, so the port's are not held against it.
+    let new_set: BTreeSet<(String, String)> = new_links
+        .iter()
+        .filter_map(split_link)
+        .filter(|(claim, _)| !claim.starts_with("@specifies "))
+        .collect();
 
     let mut only_old: Vec<&(String, String)> = old_set.difference(&new_set).collect();
     let mut only_new: Vec<&(String, String)> = new_set.difference(&old_set).collect();
@@ -120,7 +126,24 @@ fn the_two_kernels_agree_about_this_tree() {
                 && matches!(&anchor[a.len()..a.len() + 1], ":" | ".")
         })
     });
-    assert!(refined > 20, "only {refined} anchors were refinements; the rule may be dead");
+    // A liveness check on the rule, not a target: annotations that move onto
+    // their enclosing type (ADR-0014) lower the count.
+    assert!(refined > 10, "only {refined} anchors were refinements; the rule may be dead");
+
+    // 6. An annotation inside a Lean declaration — a constructor's doc comment
+    //    — binds to that declaration in the port and to the next declaration
+    //    in stage 0 (ADR-0014). The same claim in the same Lean file, once on
+    //    each side, is that one rebinding.
+    let lean_file = |a: &str| a.split_once(".lean::").map(|(f, _)| f.to_string());
+    let rebound: Vec<(String, String)> = only_old
+        .iter()
+        .filter(|(key, anchor)| {
+            only_new.iter().filter(|(k, a)| k == key && lean_file(a).is_some() && lean_file(a) == lean_file(anchor)).count() == 1
+        })
+        .map(|(key, anchor)| (key.clone(), lean_file(anchor).unwrap_or_default()))
+        .collect();
+    only_old.retain(|(key, anchor)| !rebound.contains(&(key.clone(), lean_file(anchor).unwrap_or_default())));
+    only_new.retain(|(key, anchor)| !rebound.contains(&(key.clone(), lean_file(anchor).unwrap_or_default())));
 
     assert!(
         only_old.is_empty() && only_new.is_empty(),

@@ -1,0 +1,30 @@
+{
+  "key": {
+    "reqId": "REQ-JUDGE",
+    "clause": "drift_recorded",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 17,
+      "cases": 2000,
+      "op": "REQ-JUDGE.caps_at_judgement"
+    }
+  },
+  "linkHash": "1247b3cdf33d6e88",
+  "inputs": [
+    [
+      "implementation",
+      "79e8f4b682a14a28+cc47d150967b06d6"
+    ],
+    [
+      "model",
+      "3402adaacf045c92"
+    ],
+    [
+      "requirement",
+      "afcf0a707f2f5e72"
+    ]
+  ]
+}

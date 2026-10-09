@@ -36,6 +36,9 @@ pub struct ClauseShown {
     /// `None` for a requirement that declares no clauses.
     pub key: Option<String>,
     pub text: String,
+    /// What narrows the clause, key and text, shown indented under it.
+    #[serde(default)]
+    pub narrowings: Vec<(String, String)>,
     pub level: Level,
     /// The chain the level is the minimum of, as `L2/L1/L3`.
     pub chain: String,
@@ -52,6 +55,69 @@ pub struct ClauseShown {
     /// executable lines run, executable lines, and how many tests ran them.
     #[serde(default)]
     pub lines: Option<(u64, u64, u64)>,
+    /// The judgement recorded for the clause against its model, if any.
+    #[serde(default)]
+    pub judged: Option<Judged>,
+}
+
+/// A clause's judgement as the view shows it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Judged {
+    /// `agrees`, `drift` or `unmodelable`.
+    pub verdict: String,
+    /// `judgedBy` rather than `by`, which the model's language reserves.
+    pub judged_by: String,
+    pub delegated_by: Option<String>,
+    pub note: Option<String>,
+    pub level: Level,
+}
+
+/// The judgement among a clause's records: what sits in its judgement slot.
+///
+/// @implements REQ-JUDGE.judgement_shown
+pub fn judged_of(
+    records: &[crate::trace::record::Evidence],
+    req_id: &str,
+    clause: Option<&str>,
+) -> Option<Judged> {
+    records.iter().find_map(|record| {
+        if record.key.req_id != req_id
+            || record.key.clause.as_deref() != clause
+            || record.key.bond != crate::evidence::Bond::RequirementModel
+        {
+            return None;
+        }
+        match &record.detail {
+            crate::trace::record::Detail::Judge { verdict, judged_by, delegated_by, note, .. } => Some(Judged {
+                verdict: verdict.clone(),
+                judged_by: judged_by.clone(),
+                delegated_by: delegated_by.clone(),
+                note: note.clone(),
+                level: record.effective_level(),
+            }),
+            _ => None,
+        }
+    })
+}
+
+/// A judgement in one line: `agrees by claude-review — L2 (delegated by ana)`,
+/// or `judged: drift — <note>` for a verdict that the two differ.
+///
+/// @implements REQ-JUDGE.judgement_shown
+/// @drt REQ-JUDGE.judgement_shown
+pub fn judged_text(judged: Judged) -> String {
+    let delegated = judged
+        .delegated_by
+        .as_deref()
+        .map(|person| format!(" (delegated by {person})"))
+        .unwrap_or_default();
+    if judged.verdict == "agrees" {
+        format!("agrees by {} — {:?}{delegated}", judged.judged_by, judged.level)
+    } else {
+        let note = judged.note.as_deref().unwrap_or("no note");
+        format!("judged: {} — {note}  by {}{delegated}", judged.verdict, judged.judged_by)
+    }
 }
 
 /// Everything the view is produced from.
@@ -150,6 +216,11 @@ pub fn requirement_view(view: RequirementShown) -> Buffer {
             (&chain, Role::Plain, &[]),
         ]);
         out.wrapped("  ", &clause.text, Role::Plain, &[]);
+        // Narrowings belong to the clause: indented under its text, never
+        // given a level or a line of their own in the counts above.
+        for (key, text) in &clause.narrowings {
+            out.wrapped("    ", &format!("{key}: {text}"), Role::Plain, &[]);
+        }
         if let Some(key) = &clause.key {
             let name = format!("{}.{key}", view.id);
             out.line(&[("  for agent   ", Role::Plain, &[]), (&name, Role::Requirement, &["trace.context"])]);
@@ -177,6 +248,16 @@ pub fn requirement_view(view: RequirementShown) -> Buffer {
                 None => view.id.clone(),
             };
             out.line(&[("  judge       ", Role::Plain, &[]), (&name, Role::Requirement, &["trace.judge"])]);
+        }
+        // What was judged: an agreement plainly, a drift as a fault, and a
+        // delegated verdict with the person who delegated it.
+        if let Some(judged) = &clause.judged {
+            let said = judged_text(judged.clone());
+            if judged.verdict == "agrees" {
+                out.line(&[("  judged      ", Role::Plain, &[]), (&said, Role::Plain, &[])]);
+            } else {
+                out.wrapped("  ", &said, Role::Removed, &[]);
+            }
         }
         // Each claim's kind in its chip's colour, then the link to it.
         for claim in &clause.claims {
@@ -240,22 +321,38 @@ mod tests {
                 ClauseShown {
                     key: Some("holds".into()),
                     text: "It shall hold.".into(),
+                    narrowings: vec![("empty".into(), "With nothing, it holds.".into())],
                     level: Level::L2,
                     chain: "L2/L3/L2".into(),
                     claims: vec![Claim { role: "implements".into(), path: "src/x.rs".into(), line: 12, symbol: Some("hold".into()) }],
                     pins: Some(("pinned".into(), "X.holds_pinned".into())),
                     tested: true,
                     lines: Some((3, 4, 2)),
+                    judged: Some(Judged {
+                        verdict: "agrees".into(),
+                        judged_by: "claude-review".into(),
+                        delegated_by: Some("ana".into()),
+                        note: None,
+                        level: Level::L2,
+                    }),
                 },
                 ClauseShown {
                     key: Some("unclaimed".into()),
                     text: "Nobody does this.".into(),
+                    narrowings: vec![],
                     level: Level::L1,
                     chain: "L1/L1/L1".into(),
                     claims: vec![],
                     pins: None,
                     tested: false,
                     lines: None,
+                    judged: Some(Judged {
+                        verdict: "drift".into(),
+                        judged_by: "ana".into(),
+                        delegated_by: None,
+                        note: Some("the model rounds".into()),
+                        level: Level::L1,
+                    }),
                 },
             ],
             width: 60,
@@ -283,6 +380,39 @@ mod tests {
         assert!(shown.text.contains("drt 1/2"), "a derived test counts: {}", shown.text);
         assert!(shown.text.contains("covered     3/4 lines run, by 2 tests"), "{}", shown.text);
         assert!(shown.text.find("holds").unwrap() < shown.text.find("unclaimed").unwrap());
+    }
+
+    /// A narrowing is shown indented under its clause's text, and is not
+    /// counted as a clause.
+    ///
+    /// @tests REQ-REQDOC.narrowings_nest
+    #[test]
+    fn narrowings_are_indented_under_their_clause() {
+        let shown = requirement_view(view());
+        assert!(
+            shown.text.contains("  It shall hold.\n    empty: With nothing, it holds.\n"),
+            "{}",
+            shown.text
+        );
+        assert!(shown.text.contains("implements 1/2"), "{}", shown.text);
+    }
+
+    /// A delegated agreement names who delegated it; a drift is shown as one,
+    /// with its note, in the fault colour.
+    ///
+    /// @tests REQ-JUDGE.judgement_shown
+    #[test]
+    fn a_judgement_shows_its_verdict_and_who_delegated_it() {
+        let shown = requirement_view(view());
+        assert!(
+            shown.text.contains("judged      agrees by claude-review — L2 (delegated by ana)"),
+            "{}",
+            shown.text
+        );
+        let drift = offset_of(&shown, "judged: drift — the model rounds");
+        assert!(shown.text.contains("judged: drift — the model rounds  by ana"), "{}", shown.text);
+        let role = shown.spans.iter().find(|s| s.start <= drift && drift < s.stop).map(|s| s.role);
+        assert_eq!(role, Some(Role::Removed), "a drift is not shown as a fault");
     }
 
     #[test]

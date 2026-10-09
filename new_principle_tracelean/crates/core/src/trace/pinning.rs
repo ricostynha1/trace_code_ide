@@ -1,8 +1,9 @@
 //! Whether a clause's specification pins its model, as the Lean kernel says.
 //!
-//! A clause may be modelled twice: by a **specification**, a predicate saying
-//! which answers are right (`def ToFahrenheit (c f : Int) : Prop`), and by a
-//! **model**, the function the code is tested against. The specification pins
+//! A clause may have a **specification**, a predicate saying which answers are
+//! right (`def ToFahrenheit (c f : Int) : Prop`, annotated `@specifies`), beside
+//! its **model**, the function the code is tested against (`@models`). The
+//! specification pins
 //! the model when the model meets it and no input has two right answers:
 //!
 //! ```text
@@ -29,9 +30,9 @@ use super::strength::Strength;
 pub struct PinPlan {
     pub req_id: String,
     pub clause: Option<String>,
-    /// The Prop-valued `@models` declaration, as Lean names it.
+    /// The clause's `@specifies` declaration, a `Prop`, as Lean names it.
     pub spec: Option<String>,
-    /// The other `@models` declaration: the function the code is tested against.
+    /// The clause's one `@models` declaration: the function the code is tested against.
     pub model: Option<String>,
     /// How many explicit arguments the model takes.
     pub inputs: usize,
@@ -116,6 +117,10 @@ pub fn standing(theorem_name: Option<String>, record: Option<PinRecord>, key: St
     }
 }
 
+/// What an open clause owes when it lacks a specification or a single model.
+pub const OPEN_WITHOUT_BOTH: &str =
+    "needs one `@models` function and one `@specifies` `def … : Prop` beside it";
+
 /// A clause's standing as a person reads it: the state, and the theorem, why
 /// it is not yet pinned, or what it owes.
 pub fn shown(plan: &PinPlan, record: Option<PinRecord>) -> (String, String) {
@@ -133,7 +138,7 @@ pub fn shown(plan: &PinPlan, record: Option<PinRecord>) -> (String, String) {
             (Some(spec), Some(model)) => {
                 ("open".into(), format!("owes a theorem annotated @pins: {}", statement(spec.clone(), model.clone(), plan.inputs)))
             }
-            _ => ("open".into(), "no specification: model it with a `def … : Prop` beside the function".into()),
+            _ => ("open".into(), OPEN_WITHOUT_BOTH.into()),
         },
     }
 }
@@ -183,14 +188,21 @@ fn lean_name(symbol: &str) -> String {
     symbol.replace("::", ".")
 }
 
-/// The plan for every clause a `@models` or `@pins` claims, from the index and
-/// the files' text.
+/// The plan for every clause a `@models`, `@specifies` or `@pins` claims, from
+/// the index and the files' text.
+///
+/// The specification is the clause's `@specifies` declaration, the model its
+/// `@models` declaration and the theorem its `@pins` (ADR-0014). Each is taken
+/// only when it is the only one of its role — with two, which one is meant is
+/// not something to guess by position, and the checker reports the clause —
+/// except that of several models, the one the pinning theorem names is the one
+/// it is about.
 pub fn plans(index: &Index, files: &std::collections::BTreeMap<String, String>) -> Vec<PinPlan> {
     use super::anchor::AnchorKind;
     let mut clauses: Vec<(String, Option<String>)> = index
         .links
         .iter()
-        .filter(|l| matches!(l.role, Role::Models | Role::Pins))
+        .filter(|l| matches!(l.role, Role::Models | Role::Specifies | Role::Pins))
         .map(|l| (l.req_id.clone(), l.clause.clone()))
         .collect();
     clauses.sort();
@@ -199,10 +211,25 @@ pub fn plans(index: &Index, files: &std::collections::BTreeMap<String, String>) 
         .into_iter()
         .map(|(req_id, clause)| {
             let mut plan = PinPlan { req_id: req_id.clone(), clause: clause.clone(), ..Default::default() };
-            let mut hashes: Vec<String> = Vec::new();
-            for link in index.links.iter().filter(|l| l.req_id == req_id && l.clause == clause) {
-                let AnchorKind::Decl { symbol_path } = &link.anchor.kind else { continue };
-                let text: String = files
+            let all = |role: Role| {
+                let mut found: Vec<_> = index
+                    .links
+                    .iter()
+                    .filter(|l| l.req_id == req_id && l.clause == clause && l.role == role)
+                    .filter_map(|l| match &l.anchor.kind {
+                        AnchorKind::Decl { symbol_path } => Some((symbol_path.clone(), l)),
+                        _ => None,
+                    })
+                    .collect();
+                found.dedup_by(|a, b| a.0 == b.0 && a.1.anchor.file == b.1.anchor.file);
+                found
+            };
+            let the_one = |role: Role| {
+                let mut found = all(role);
+                if found.len() == 1 { found.pop() } else { None }
+            };
+            let text_of = |link: &super::index::Link| -> String {
+                files
                     .get(&link.anchor.file)
                     .map(|t| {
                         t.lines()
@@ -211,22 +238,36 @@ pub fn plans(index: &Index, files: &std::collections::BTreeMap<String, String>) 
                             .collect::<Vec<_>>()
                             .join("\n")
                     })
-                    .unwrap_or_default();
-                match link.role {
-                    Role::Models => match shape(&text) {
-                        Some((true, _)) if plan.spec.is_none() => plan.spec = Some(lean_name(symbol_path)),
-                        Some((false, inputs)) if plan.model.is_none() => {
-                            plan.model = Some(lean_name(symbol_path));
-                            plan.inputs = inputs;
-                        }
-                        _ => continue,
-                    },
-                    Role::Pins if plan.theorem.is_none() => {
-                        plan.theorem = Some(lean_name(symbol_path));
-                        plan.file = Some(link.anchor.file.clone());
-                    }
-                    _ => continue,
+                    .unwrap_or_default()
+            };
+            let mut hashes: Vec<String> = Vec::new();
+            if let Some((symbol, link)) = the_one(Role::Specifies) {
+                plan.spec = Some(lean_name(&symbol));
+                hashes.push(link.anchor.body_hash.clone());
+            }
+            let pin = the_one(Role::Pins);
+            if let Some((symbol, link)) = &pin {
+                plan.theorem = Some(lean_name(symbol));
+                plan.file = Some(link.anchor.file.clone());
+                hashes.push(link.anchor.body_hash.clone());
+            }
+            // The model is the clause's one `@models`. While a clause still has
+            // several, the one its pinning theorem names is the one it is
+            // about — read from the theorem, never chosen by position.
+            let models: Vec<_> = all(Role::Models)
+                .into_iter()
+                .filter_map(|(symbol, link)| shape(&text_of(link)).map(|(_, inputs)| (symbol, link, inputs)))
+                .collect();
+            let named: Vec<_> = match &pin {
+                Some((_, link)) if models.len() > 1 => {
+                    let theorem = text_of(link);
+                    models.iter().filter(|(symbol, _, _)| mentions(&theorem, short_name(symbol))).collect()
                 }
+                _ => models.iter().collect(),
+            };
+            if let [(symbol, link, inputs)] = named.as_slice() {
+                plan.model = Some(lean_name(symbol));
+                plan.inputs = *inputs;
                 hashes.push(link.anchor.body_hash.clone());
             }
             hashes.sort();
@@ -234,6 +275,23 @@ pub fn plans(index: &Index, files: &std::collections::BTreeMap<String, String>) 
             plan
         })
         .collect()
+}
+
+/// The last segment of a symbol path: what a theorem in the same namespace
+/// calls the declaration.
+fn short_name(symbol: &str) -> &str {
+    let last = symbol.rsplit("::").next().unwrap_or(symbol);
+    last.rsplit('.').next().unwrap_or(last)
+}
+
+/// Whether `name` occurs in `text` as a whole identifier.
+fn mentions(text: &str, name: &str) -> bool {
+    let ident = |c: char| c.is_alphanumeric() || c == '_' || c == '\'';
+    text.match_indices(name).any(|(at, _)| {
+        let before = text[..at].chars().next_back();
+        let after = text[at + name.len()..].chars().next();
+        !before.is_some_and(ident) && !after.is_some_and(ident)
+    })
 }
 
 /// Where a clause's verdict is kept.
@@ -263,6 +321,48 @@ mod tests {
         assert_eq!(shape("theorem t : 1 = 1 := rfl"), None);
         assert_eq!(shape("def d (l : Link) (now : List (String × String)) : State := x"), Some((false, 2)));
         assert_eq!(shape("def e (f : (Nat → Nat)) (p : Nat × (Nat × Nat)) : Nat := 0"), Some((false, 2)));
+    }
+
+    fn plans_of(text: &str) -> Vec<PinPlan> {
+        let file = "specs/T.lean";
+        let index = Index { links: crate::trace::index::links_of(file, text), ..Default::default() };
+        let files = [(file.to_string(), text.to_string())].into_iter().collect();
+        plans(&index, &files)
+    }
+
+    /// The specification is the `@specifies` declaration and the model the
+    /// `@models` one, wherever each stands in the file.
+    ///
+    /// @tests REQ-STRENGTH.per_input
+    #[test]
+    fn the_spec_and_the_model_are_named_by_their_roles_not_their_order() {
+        let text = "namespace T\n\n/-- @models REQ-A.c -/\ndef f (c : Int) : Int := c\n\n\
+                    /-- @specifies REQ-A.c -/\ndef P (c y : Int) : Prop := y = c\n\n\
+                    /-- @pins REQ-A.c -/\ntheorem t : True := trivial\n\nend T\n";
+        let plan = &plans_of(text)[0];
+        assert_eq!(plan.spec.as_deref(), Some("T.P"));
+        assert_eq!(plan.model.as_deref(), Some("T.f"));
+        assert_eq!(plan.inputs, 1);
+        assert_eq!(plan.theorem.as_deref(), Some("T.t"));
+        assert_eq!(plan.key.matches('+').count(), 2, "{}", plan.key);
+    }
+
+    /// Two models: which one the specification is about is not guessed.
+    #[test]
+    fn with_two_models_there_is_no_model_to_pin() {
+        let text = "/-- @models REQ-A.c -/\ndef f (c : Int) : Int := c\n\n\
+                    /-- @models REQ-A.c -/\ndef g (c : Int) : Int := c\n\n\
+                    /-- @specifies REQ-A.c -/\ndef P (c y : Int) : Prop := y = c\n";
+        let plan = &plans_of(text)[0];
+        assert_eq!(plan.spec.as_deref(), Some("P"));
+        assert_eq!(plan.model, None);
+        assert_eq!(shown(plan, None).1, OPEN_WITHOUT_BOTH);
+
+        // The pinning theorem says which one it is about.
+        let pinned = format!("{text}\n/-- @pins REQ-A.c -/\ntheorem t : ∀ x, P x (g x) := fun _ => rfl\n");
+        let plan = &plans_of(&pinned)[0];
+        assert_eq!(plan.model.as_deref(), Some("g"));
+        assert!(!mentions("theorem t : gg x", "g") && mentions("(g x)", "g"));
     }
 
     /// @tests REQ-STRENGTH.kernel_decides

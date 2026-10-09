@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-REQDOC",
+    "clause": "narrowings_nest",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Requirement::a_narrowing_is_not_addressable",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "7a87838506c1455e",
+  "inputs": [
+    [
+      "model",
+      "cad3550825a70c07"
+    ],
+    [
+      "requirement",
+      "f2f4bcd33cdbb247"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

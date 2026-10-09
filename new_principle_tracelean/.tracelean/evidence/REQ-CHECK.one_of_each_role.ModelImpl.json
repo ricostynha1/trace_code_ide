@@ -1,0 +1,30 @@
+{
+  "key": {
+    "reqId": "REQ-CHECK",
+    "clause": "one_of_each_role",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 44,
+      "cases": 2000,
+      "op": "REQ-CHECK.one_of_each_role"
+    }
+  },
+  "linkHash": "36c91b41050a3a7b",
+  "inputs": [
+    [
+      "implementation",
+      "906f592542952f00"
+    ],
+    [
+      "model",
+      "9dc960882470908a"
+    ],
+    [
+      "requirement",
+      "30adeb5154ba69b4"
+    ]
+  ]
+}

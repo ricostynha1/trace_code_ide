@@ -44,6 +44,10 @@ were never about the judge being a machine:
 - a judgement is invalidated when the requirement text or the model changes,
   since it was about the pair.
 
+Amended by [ADR-0015](ADR-0015-delegated-judges-and-recorded-drift.md): a
+listed person may delegate judging to an agent, the record naming both, and
+drift and `unmodelable` are recorded at L1 rather than writing nothing.
+
 The witness-execution machinery is dropped with the LLM. It existed to catch a
 model confabulating about Lean, and a human reading the model does not need a
 second system to check that they read it.

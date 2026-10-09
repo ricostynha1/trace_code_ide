@@ -155,6 +155,10 @@ A clause that still seems to need two functions says two things: split it.
 Also at most one `@pins` per clause; `--judge` shows the model and the spec;
 fix the scanner binding a constructor's doc comment to the next declaration
 (PROV.base_is_honest). Cleanup: sort the 79 clauses into these cases.
+*Mechanism done (ADR-0014):* `@specifies`, the three warning kinds, pinning
+by role, `--judge` showing all, the constructor binding (Lean only — 43 Rust
+variant/field/in-body annotations still bind to the next item). Left: the
+cleanup (64 `SeveralModels`), then make the kinds errors.
 
 **Split, extend or fix.** When a model covers only part of a clause: *split*
 when the parts can be met independently (they have their own implementation

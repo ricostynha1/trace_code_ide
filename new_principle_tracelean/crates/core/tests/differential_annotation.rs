@@ -25,6 +25,8 @@ fn line() -> Schema {
         examples: vec![
             "@implements REQ-X.clause".into(),
             "@models REQ-EVID".into(),
+            "@specifies REQ-THERMO.to_celsius".into(),
+            "@pins REQ-A.b".into(),
             "@tests REQ-A.b @drt REQ-A.b".into(),
             "@proves REQ-A begin".into(),
             "@end".into(),

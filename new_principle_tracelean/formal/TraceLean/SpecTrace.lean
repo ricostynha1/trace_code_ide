@@ -29,7 +29,7 @@ open Lean (Json)
 /-- A reply is exclusive when it carries an output and no error, or an error
 and no output.
 
-@models REQ-DRT-PROTO.reply_exclusive -/
+@specifies REQ-DRT-PROTO.reply_exclusive -/
 def ReplyExclusive (output : Option Json) (error : Option String) (y : Bool) : Prop :=
   y = true ↔ ((output ≠ none ∧ error = none) ∨ (output = none ∧ error ≠ none))
 
@@ -65,7 +65,7 @@ anchor the grammar found, and only the lowest level of the ladder -- the level
 at or below every other -- through one that names the whole file because no
 grammar was available.
 
-@models REQ-ANCHOR.imprecise_capped -/
+@specifies REQ-ANCHOR.imprecise_capped -/
 def CappedLevel (precise : Bool) (claimed : Level) (y : Level) : Prop :=
   (precise = true → y = claimed) ∧ (precise = false → ∀ l : Level, y ≤ l)
 
@@ -111,7 +111,7 @@ pinned only when the verdict kept is Lean's acceptance of that theorem for the
 declarations as they now are; a verdict about anything else leaves it
 attempted.
 
-@models REQ-STRENGTH.verdict_kept -/
+@specifies REQ-STRENGTH.verdict_kept -/
 def VerdictStanding (theoremName : Option String) (record : Option PinRecord) (key : String)
     (s : Strength) : Prop :=
   (theoremName = none → s = Strength.«open») ∧
@@ -270,7 +270,7 @@ theorem starts_iff (line pat : String) :
 error, and some line of what it printed lists the axioms of exactly this
 theorem without `sorryAx` among them.
 
-@models REQ-STRENGTH.kernel_decides -/
+@specifies REQ-STRENGTH.kernel_decides -/
 def KernelAccepted (theoremName output : String) (exitedOk : Bool) (y : Bool) : Prop :=
   y = true ↔
     (exitedOk = true ∧ ¬ Contains output ": error" ∧
@@ -349,8 +349,8 @@ and hashing as the document recorded, it is current. Its target there and
 hashing to anything else, it is in review, saying what was recorded and what
 the target hashes to now.
 
-@models REQ-DOCLINK.hash_moves_review
-@models REQ-DOCLINK.dangling_reported -/
+@specifies REQ-DOCLINK.hash_moves_review
+@specifies REQ-DOCLINK.dangling_reported -/
 def DocStanding (link : DocLink) (current : List (String × String)) (y : DocState) : Prop :=
   ((∀ p, List.Mem p current → p.1 ≠ link.target) → y = DocState.dangling) ∧
   ∀ now, HashedNow current link.target now →

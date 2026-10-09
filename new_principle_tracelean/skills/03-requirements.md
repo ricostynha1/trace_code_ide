@@ -20,6 +20,17 @@ Why these clauses; the failure each prevents; what is not claimed.
 - **`refines`** builds a graph; cycles and unknown ids are reported.
 - **`decomposition`**: `complete` (clauses exhaust it) or `open` (coverage is
   a lower bound; usual for architecture).
+- **Narrowings**: a clause may be a block — `text:` is the clause, every other
+  key fixes which answer it allows (the empty case, an order). Annotations
+  name only the clause; narrowings are judged and hashed with it and do not
+  count as clauses.
+
+  ```yaml
+  clauses:
+    min_not_mean:
+      text: The aggregate shall be the minimum of its parts' levels.
+      empty: With no parts, the aggregate shall be L1.
+  ```
 
 ## A good clause
 
@@ -34,8 +45,9 @@ Why these clauses; the failure each prevents; what is not claimed.
 
 - **Adding**: check the index first — usually you want a clause, not a
   document. Each new clause is a new `Unmodeled`: work you signed up for.
-- **Changing** a clause makes its evidence stale, and documents describing it go
-  into review. Never reword a clause to fit the code.
+- **Changing** a clause (or its narrowings) makes that clause's evidence stale
+  — not its siblings' — and documents describing it go into review. Never
+  reword a clause to fit the code.
 - **Deleting**: `grep` its id first; retarget or delete every annotation, or
   they become `Dangling`.
 

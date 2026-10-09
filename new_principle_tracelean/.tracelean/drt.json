@@ -445,6 +445,35 @@
     },
     {
       "req_id": "REQ-JUDGE",
+      "clause": "judgement_shown",
+      "floors": [
+        {
+          "situation": "an agreement",
+          "atLeast": 100
+        },
+        {
+          "situation": "a drift or unmodelable verdict",
+          "atLeast": 100
+        },
+        {
+          "situation": "a delegated judgement",
+          "atLeast": 100
+        }
+      ],
+      "model": {
+        "import": "TraceLean.Judge",
+        "function": "TraceLean.Judge.judgedText",
+        "arguments": [
+          "judged"
+        ]
+      },
+      "implementation": {
+        "language": "rust",
+        "entry": "crates/core/src/surface/requirement_view.rs::judged_text"
+      }
+    },
+    {
+      "req_id": "REQ-JUDGE",
       "clause": "caps_at_judgement",
       "floors": [
         {
@@ -458,11 +487,20 @@
         {
           "situation": "proposed",
           "atLeast": 1
+        },
+        {
+          "situation": "refused",
+          "atLeast": 1
+        },
+        {
+          "situation": "delegated",
+          "atLeast": 1
         }
       ],
       "also_checks": [
         "proposal_not_mutation",
-        "human_decides"
+        "human_decides",
+        "drift_recorded"
       ],
       "model": {
         "import": "TraceLean.Judge",
@@ -470,6 +508,7 @@
         "arguments": [
           "material",
           "judgement",
+          "judges",
           "linkHash"
         ]
       },
@@ -912,6 +951,39 @@
       }
     },
     {
+      "req_id": "REQ-CHECK",
+      "clause": "one_of_each_role",
+      "floors": [
+        {
+          "situation": "none crowded",
+          "atLeast": 50
+        },
+        {
+          "situation": "SeveralModels",
+          "atLeast": 50
+        },
+        {
+          "situation": "SeveralSpecs",
+          "atLeast": 50
+        },
+        {
+          "situation": "SeveralPins",
+          "atLeast": 50
+        }
+      ],
+      "model": {
+        "import": "TraceLean.Checker",
+        "function": "TraceLean.Checker.crowdedKinds",
+        "arguments": [
+          "roles"
+        ]
+      },
+      "implementation": {
+        "language": "rust",
+        "entry": "crates/core/src/trace/checker.rs::crowded_kinds"
+      }
+    },
+    {
       "req_id": "REQ-ANCHOR",
       "clause": "whitespace_normalised",
       "also_checks": [
@@ -963,18 +1035,16 @@
       "clause": "clause_addressable",
       "model": {
         "import": "TraceLean.Hash",
-        "function": "TraceLean.Hash.requirementHash",
+        "function": "TraceLean.Hash.clauseHash",
         "arguments": [
-          "clauses",
-          "bodyText"
+          "key",
+          "text",
+          "narrowings"
         ]
       },
       "implementation": {
         "language": "rust",
-        "entry": "crates/core/src/trace/hash.rs::requirement_of",
-        "params": {
-          "bodyText": "body_text"
-        }
+        "entry": "crates/core/src/trace/hash.rs::clause_of"
       }
     },
     {
@@ -1366,12 +1436,18 @@
         {
           "situation": "a requirement claiming a complete decomposition",
           "atLeast": 10
+        },
+        {
+          "situation": "a requirement with a narrowed clause",
+          "atLeast": 20
         }
       ],
       "also_checks": [
         "clauseless_uniform",
         "decomposition_claimed",
-        "malformed_reported"
+        "malformed_reported",
+        "narrowings_nest",
+        "clause_unique"
       ],
       "model": {
         "import": "TraceLean.Requirement",

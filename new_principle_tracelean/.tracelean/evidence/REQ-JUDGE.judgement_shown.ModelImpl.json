@@ -1,0 +1,30 @@
+{
+  "key": {
+    "reqId": "REQ-JUDGE",
+    "clause": "judgement_shown",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 23,
+      "cases": 1000,
+      "op": "REQ-JUDGE.judgement_shown"
+    }
+  },
+  "linkHash": "5a6932553ada9ab3",
+  "inputs": [
+    [
+      "implementation",
+      "069e5c68c012e6a4+d771becd9cda8719"
+    ],
+    [
+      "model",
+      "3f5356153d6ab83d"
+    ],
+    [
+      "requirement",
+      "fc6972b37792b312"
+    ]
+  ]
+}

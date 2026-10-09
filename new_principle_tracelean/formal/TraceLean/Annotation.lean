@@ -25,17 +25,20 @@ namespace TraceLean.Annotation
 
 open Lean (ToJson FromJson)
 
-/-- What a link claims.
+/-- What a link claims. `models` is the function computing what the clause
+talks about; `specifies` is the `Prop` saying which answers are right
+(ADR-0014).
 
 @models REQ-ANNOT.role_vocabulary -/
 inductive Role where
-  | models | implements | tests | drt | proves | pins
+  | models | specifies | implements | tests | drt | proves | pins
   deriving Repr, DecidableEq, Inhabited, ToJson, FromJson
 
 /-- Nothing outside the vocabulary parses as a role. -/
 def Role.parse (word : String) : Option Role :=
   match word with
   | "models" => some .models
+  | "specifies" => some .specifies
   | "implements" => some .implements
   | "tests" => some .tests
   | "drt" => some .drt

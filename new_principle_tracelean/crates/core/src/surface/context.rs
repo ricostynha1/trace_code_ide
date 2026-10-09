@@ -232,7 +232,13 @@ fn said(index: &Index, id: &str) -> Option<Said> {
         id: r.id.clone(),
         title: r.title.clone(),
         file: r.file.clone(),
-        clauses: r.clauses.iter().map(|(k, v)| (k.clone(), v.clone())).collect(),
+        // A clause's narrowings are part of it, so they are written with it,
+        // each on an indented line under the clause.
+        clauses: r
+            .clauses
+            .iter()
+            .map(|(k, v)| (k.clone(), r.clause_text_with_narrowings(k).unwrap_or_else(|| v.clone())))
+            .collect(),
     })
 }
 

@@ -9,7 +9,7 @@ namespace Thermo
 
 /-- `f` is `c` degrees Celsius in Fahrenheit, rounded down.
 
-@models REQ-THERMO.to_fahrenheit -/
+@specifies REQ-THERMO.to_fahrenheit -/
 def ToFahrenheit (c f : Int) : Prop :=
   5 * (f - 32) ≤ 9 * c ∧ 9 * c < 5 * (f - 32) + 5
 
@@ -18,7 +18,7 @@ def toFahrenheit (c : Int) : Int := c * 9 / 5 + 32
 
 /-- `c` is `f` degrees Fahrenheit in Celsius, rounded up.
 
-@models REQ-THERMO.to_celsius -/
+@specifies REQ-THERMO.to_celsius -/
 def ToCelsius (f c : Int) : Prop :=
   9 * c - 9 < 5 * (f - 32) ∧ 5 * (f - 32) ≤ 9 * c
 

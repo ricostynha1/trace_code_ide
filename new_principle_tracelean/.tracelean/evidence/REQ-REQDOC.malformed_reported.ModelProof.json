@@ -7,19 +7,19 @@
   "level": "L4",
   "detail": {
     "proof": {
-      "theoremName": "TraceLean.Requirement::prose_is_not_a_requirement",
+      "theoremName": "TraceLean.Requirement::an_unclosed_fence_is_reported",
       "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
     }
   },
-  "linkHash": "f3a36593d5fe9701",
+  "linkHash": "040b4c7d4679b613",
   "inputs": [
     [
       "model",
-      "5b5eb84bf1e70cf9"
+      "cad3550825a70c07"
     ],
     [
       "requirement",
-      "bad5f8d2219f99e5"
+      "2dd722c29e782e1c"
     ],
     [
       "toolchain",

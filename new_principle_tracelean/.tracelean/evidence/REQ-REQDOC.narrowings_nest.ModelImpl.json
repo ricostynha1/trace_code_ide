@@ -1,0 +1,30 @@
+{
+  "key": {
+    "reqId": "REQ-REQDOC",
+    "clause": "narrowings_nest",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 61,
+      "cases": 2000,
+      "op": "REQ-REQDOC.id_is_identity"
+    }
+  },
+  "linkHash": "6b0b03d71bc0dca0",
+  "inputs": [
+    [
+      "implementation",
+      "053735024f99f744+924f7b9e968a037e"
+    ],
+    [
+      "model",
+      "cad3550825a70c07"
+    ],
+    [
+      "requirement",
+      "f2f4bcd33cdbb247"
+    ]
+  ]
+}

@@ -141,18 +141,23 @@ fn with_link(
         inputs: vec![
             ("implementation".to_string(), implementation),
             ("model".to_string(), model),
-            ("requirement".to_string(), requirement_hash(index, req_id)?),
+            ("requirement".to_string(), requirement_hash(index, req_id, clause)?),
         ],
     })
 }
 
-/// The requirement's text, as every record that rests on it carries it: a
-/// requirement reworded re-opens the judgement of its model, and the tests
-/// and proofs made against that model too, until they are made again.
+/// The clause's text, as every record about it carries it: a clause reworded
+/// or narrowed re-opens the judgement of its model, and the tests and proofs
+/// made against that model too, until they are made again — and rewording a
+/// sibling clause re-opens none of them (`Requirement::clause_hash`).
 ///
 /// @implements REQ-STALE.requirement_reopens_all
-fn requirement_hash(index: &Index, req_id: &str) -> Result<String, Unearned> {
-    index.requirements.get(req_id).map(|r| r.content_hash.clone()).ok_or(Unearned::NoInput { name: "requirement" })
+fn requirement_hash(index: &Index, req_id: &str, clause: Option<&str>) -> Result<String, Unearned> {
+    index
+        .requirements
+        .get(req_id)
+        .and_then(|r| r.clause_hash(clause))
+        .ok_or(Unearned::NoInput { name: "requirement" })
 }
 
 /// What a kernel-checked proof established for one clause.
@@ -188,7 +193,7 @@ pub fn proof_record(
         link_hash: link,
         inputs: vec![
             ("model".to_string(), model),
-            ("requirement".to_string(), requirement_hash(index, req_id)?),
+            ("requirement".to_string(), requirement_hash(index, req_id, clause)?),
             ("toolchain".to_string(), toolchain.to_string()),
         ],
     })
@@ -276,11 +281,9 @@ fn current_inputs(index: &Index, record: &Evidence) -> Vec<(String, String)> {
                 // name resolved to nothing, and a missing input counts as
                 // changed — so every judgement went stale the instant it was
                 // written and no L2 record ever reached the lock. The hash is
-                // over the whole requirement rather than the one clause,
-                // matching what `judge::record` stored: editing a sibling
-                // clause re-opens the judgement, which is the conservative
-                // direction.
-                "requirement" => index.requirements.get(req).map(|r| r.content_hash.clone()),
+                // of the record's own clause, matching what `judge::record`
+                // stored from `material::assemble`.
+                "requirement" => index.requirements.get(req).and_then(|r| r.clause_hash(clause)),
                 // The toolchain is not in the tree; it is what it was when the
                 // record was written, and a different one writes a new record.
                 "toolchain" => Some(was.clone()),
@@ -382,12 +385,13 @@ mod tests {
         let judgement = crate::judge::Judgement {
             verdict: crate::judge::Verdict::Agrees,
             judged_by: "someone".into(),
+            delegated_by: None,
             note: None,
             requirement_hash: material.requirement_hash.clone(),
             model_hash: material.model_hash.clone(),
         };
         let crate::judge::Outcome::Recorded { evidence } =
-            crate::judge::record(material, judgement, at.link_hash)
+            crate::judge::record(material, judgement, None, at.link_hash)
         else {
             panic!("an `agrees` verdict recorded nothing");
         };
@@ -425,12 +429,13 @@ mod tests {
         let judgement = crate::judge::Judgement {
             verdict: crate::judge::Verdict::Agrees,
             judged_by: "someone".into(),
+            delegated_by: None,
             note: None,
             requirement_hash: material.requirement_hash.clone(),
             model_hash: material.model_hash.clone(),
         };
         let crate::judge::Outcome::Recorded { evidence } =
-            crate::judge::record(material, judgement, at.link_hash)
+            crate::judge::record(material, judgement, None, at.link_hash)
         else {
             panic!("an `agrees` verdict recorded nothing");
         };
@@ -461,6 +466,57 @@ mod tests {
         let (valid, stale) = still_standing(&build(&dir), vec![drt, proof]);
         assert!(valid.is_empty(), "a record survived its requirement being reworded");
         assert_eq!(stale.len(), 2);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// Rewording clause `a` re-opens `a`'s judgement and leaves `b`'s standing:
+    /// the hash a record rests on is its own clause's, not the requirement's.
+    ///
+    /// @tests REQ-STALE.requirement_reopens_all
+    /// @tests REQ-REQDOC.clause_addressable
+    #[test]
+    fn rewording_one_clause_reopens_its_judgement_and_no_sibling_s() {
+        let doc = "---\nid: REQ-A\nclauses:\n  a: First.\n  b: Second.\n---\nbody";
+        let (dir, index) = tree(&[
+            ("reqs/a.md", doc),
+            (
+                "src/i.rs",
+                "// @models REQ-A.a\npub fn m() {}\n\n// @models REQ-A.b\npub fn n() {}\n",
+            ),
+        ]);
+        let judged = |clause: &str| {
+            let (material, at) = crate::trace::material::assemble(
+                &index,
+                "REQ-A",
+                Some(clause),
+                "pub fn m() {}".into(),
+                None,
+            )
+            .unwrap();
+            let judgement = crate::judge::Judgement {
+                verdict: crate::judge::Verdict::Agrees,
+                judged_by: "someone".into(),
+                delegated_by: None,
+                note: None,
+                requirement_hash: material.requirement_hash.clone(),
+                model_hash: material.model_hash.clone(),
+            };
+            let crate::judge::Outcome::Recorded { evidence } =
+                crate::judge::record(material, judgement, None, at.link_hash)
+            else {
+                panic!("an `agrees` verdict recorded nothing");
+            };
+            *evidence
+        };
+        let (a, b) = (judged("a"), judged("b"));
+        let (valid, _) = still_standing(&index, vec![a.clone(), b.clone()]);
+        assert_eq!(valid.len(), 2);
+
+        std::fs::write(dir.join("reqs/a.md"), doc.replace("First.", "First, reworded.")).unwrap();
+        let (valid, stale) = still_standing(&build(&dir), vec![a, b.clone()]);
+        assert_eq!(stale.len(), 1, "rewording `a` re-opened {} judgements", stale.len());
+        assert_eq!(stale[0].key.clause.as_deref(), Some("a"));
+        assert_eq!(valid, vec![b]);
         let _ = std::fs::remove_dir_all(&dir);
     }
 

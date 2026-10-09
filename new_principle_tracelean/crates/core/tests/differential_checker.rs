@@ -24,7 +24,7 @@ fn strukt(fields: &[(&str, Schema)]) -> Schema {
 
 fn role() -> Schema {
     let mut variants: BTreeMap<String, Option<Box<Schema>>> = BTreeMap::new();
-    for name in ["models", "implements", "tests", "drt", "proves", "pins"] {
+    for name in ["models", "specifies", "implements", "tests", "drt", "proves", "pins"] {
         variants.insert(name.into(), None);
     }
     Schema::Enum { variants }
@@ -80,7 +80,8 @@ fn kind() -> Schema {
     for name in [
         "dangling", "danglingRefines", "refinesCycle", "duplicateId", "unmodeled",
         "unimplemented", "unbound", "untested", "contested", "unsoundExemption",
-        "unsoundQualifier", "malformed", "imprecise",
+        "unsoundQualifier", "malformed", "imprecise", "severalModels", "severalSpecs",
+        "severalPins",
     ] {
         variants.insert(name.into(), None);
     }
@@ -206,6 +207,7 @@ fn at_most_one_chain_finding_and_no_progress_ever_blocks() {
         Kind::Dangling, Kind::DanglingRefines, Kind::RefinesCycle, Kind::DuplicateId,
         Kind::Unmodeled, Kind::Unimplemented, Kind::Unbound, Kind::Untested, Kind::Contested,
         Kind::UnsoundExemption, Kind::UnsoundQualifier, Kind::Malformed, Kind::Imprecise,
+        Kind::SeveralModels, Kind::SeveralSpecs, Kind::SeveralPins,
     ];
     for kind in all {
         let f = facts(kind);
@@ -239,4 +241,82 @@ fn at_most_one_chain_finding_and_no_progress_ever_blocks() {
         .map(|name| (*name, seen.get(*name).copied().unwrap_or(0)))
         .collect();
     support::covered("REQ-CHECK.exactly_once", &counts);
+}
+
+fn crowded_input() -> Schema {
+    strukt(&[("roles", Schema::List { inner: Box::new(role()), max_len: Some(6) })])
+}
+
+/// @drt REQ-CHECK.one_of_each_role
+/// @tests REQ-CHECK.one_of_each_role
+#[test]
+#[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
+fn model_and_implementation_agree_on_which_roles_are_crowded() {
+    let scratch = harness::scratch("crowded");
+    let op = "REQ-CHECK.one_of_each_role";
+    let implementation = harness::rust_runner(
+        "REQ-CHECK",
+        "one_of_each_role",
+        "crates/core/src/trace/checker.rs::crowded_kinds",
+        &scratch,
+    );
+    let model = harness::lean_runner(
+        "TraceLean.Checker",
+        "TraceLean.Checker.crowdedKinds",
+        op,
+        &["roles"],
+        &scratch,
+    );
+
+    let result = run(
+        op,
+        &crowded_input(),
+        &model,
+        &implementation,
+        RunOptions { seed: 44, cases: 2_000, shrink_rounds: 100 },
+    )
+    .expect("both runners answer");
+
+    support::agreed(&result);
+
+    let _ = std::fs::remove_dir_all(&scratch);
+}
+
+/// The generated role lists reach every outcome the clause names, and the
+/// implementation reports a role exactly when it occurs twice or more.
+///
+/// @tests REQ-CHECK.one_of_each_role
+#[test]
+fn every_crowded_role_is_reached_and_counted() {
+    use tracelean_core::drt::gen;
+    use tracelean_core::trace::annotation::Role;
+    use tracelean_core::trace::checker::{crowded_kinds, Kind};
+
+    let schema = crowded_input();
+    let mut rng = gen::Rng::new(44);
+    let mut seen: BTreeMap<String, u64> = BTreeMap::new();
+    for _ in 0..2_000 {
+        let v = gen::value(&schema, &mut rng);
+        let roles: Vec<Role> = serde_json::from_value(v["roles"].clone()).unwrap();
+        let kinds = crowded_kinds(roles.clone());
+        for (role, kind) in [
+            (Role::Models, Kind::SeveralModels),
+            (Role::Specifies, Kind::SeveralSpecs),
+            (Role::Pins, Kind::SeveralPins),
+        ] {
+            let many = roles.iter().filter(|r| **r == role).count() > 1;
+            assert_eq!(kinds.contains(&kind), many, "{roles:?} -> {kinds:?}");
+        }
+        if kinds.is_empty() {
+            *seen.entry("none crowded".into()).or_default() += 1;
+        }
+        for k in kinds {
+            *seen.entry(format!("{k:?}")).or_default() += 1;
+        }
+    }
+    let counts: Vec<(&str, u64)> = ["none crowded", "SeveralModels", "SeveralSpecs", "SeveralPins"]
+        .iter()
+        .map(|name| (*name, seen.get(*name).copied().unwrap_or(0)))
+        .collect();
+    support::covered("REQ-CHECK.one_of_each_role", &counts);
 }

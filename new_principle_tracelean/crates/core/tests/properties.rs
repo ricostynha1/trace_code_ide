@@ -451,11 +451,12 @@ fn a_judging_prompt_is_text_and_a_judgement_is_a_persons_own() {
     let judgement = Judgement {
         verdict: Verdict::Agrees,
         judged_by: "ana".into(),
+        delegated_by: None,
         note: None,
         requirement_hash: "h1".into(),
         model_hash: "h2".into(),
     };
-    match record(material, judgement, "link1".into()) {
+    match record(material, judgement, None, "link1".into()) {
         Outcome::Recorded { evidence } => {
             assert_eq!(evidence.level, Level::L2);
             assert!(format!("{:?}", evidence.detail).contains("ana"), "nobody signed it");
@@ -500,7 +501,13 @@ fn an_evidence_record_cannot_omit_what_would_reproduce_it() {
     // Each backend's detail is a distinct shape, and each names what a person
     // would need to run it again.
     let details = [
-        Detail::Judge { verdict: "agrees".into(), judged_by: "ana".into(), prompt_version: "1".into() },
+        Detail::Judge {
+            verdict: "agrees".into(),
+            judged_by: "ana".into(),
+            delegated_by: None,
+            prompt_version: "1".into(),
+            note: None,
+        },
         Detail::Drt { seed: 7, cases: 2_000, op: "REQ-X.c".into() },
         Detail::Proof { theorem_name: "t".into(), toolchain: "4.12.0".into() },
     ];

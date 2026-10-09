@@ -207,6 +207,8 @@ pub struct Scan {
     /// a definition twenty lines above it.
     pub error_ranges: Vec<(usize, usize)>,
     pub precise: bool,
+    /// The grammar the file was read with, if any.
+    pub lang: Option<Lang>,
 }
 
 /// Scan a file: comments parsed, literal ranges recorded, declarations found.
@@ -232,7 +234,7 @@ pub fn scan(content: &str, lang: Option<Lang>) -> Scan {
     // after the error are not found, so annotations there would silently anchor
     // to the whole file while claiming to be precise. Saying so is the
     // difference between a capped claim and a wrong one.
-    let mut scan = Scan { precise: !tree.root_node().has_error(), ..Default::default() };
+    let mut scan = Scan { precise: !tree.root_node().has_error(), lang: Some(lang), ..Default::default() };
     collect(tree.root_node(), content, lang, &mut Vec::new(), &mut scan);
     scan.comment_ranges.sort_unstable();
     scan.literal_ranges.sort_unstable();
@@ -406,11 +408,14 @@ pub fn resolve(
     annotation: &RawAnnotation,
     comment_end: usize,
 ) -> Anchor {
-    let target = scan
+    let next = scan
         .declarations
         .iter()
         .filter(|d| d.start >= comment_end)
         .min_by_key(|d| d.start);
+    let target = enclosing(scan, comment_end)
+        .filter(|outer| next.map_or(true, |d| d.start >= outer.end))
+        .or(next);
 
     match target {
         Some(decl) => Anchor {
@@ -450,6 +455,29 @@ pub fn resolve(
             precise: scan.precise,
         },
     }
+}
+
+/// The Lean declaration a comment sits inside, innermost first: an inductive
+/// whose constructor carries the doc comment, or a structure whose field does.
+///
+/// A constructor or a field is not a declaration of its own, so the first
+/// declaration after such a comment is the *next* top-level one — and the
+/// annotation used to bind there, to something its author never pointed at.
+/// When nothing is declared between the comment and the end of the enclosing
+/// declaration, the claim is about that declaration.
+///
+/// Lean only. Rust has the same shape (a doc comment on an enum variant or a
+/// struct field), and those annotations are left where they bind today until
+/// they are sorted out, since moving them changes their links' identities.
+fn enclosing(scan: &Scan, comment_end: usize) -> Option<&Decl> {
+    if scan.lang != Some(Lang::Lean4) {
+        return None;
+    }
+    let (comment_start, _) = scan.comment_ranges.iter().find(|(_, end)| *end == comment_end)?;
+    scan.declarations
+        .iter()
+        .filter(|d| d.start < *comment_start && comment_end <= d.end)
+        .max_by_key(|d| d.start)
 }
 
 /// Ranges within `[start, end)`, rebased to that slice.
@@ -577,6 +605,28 @@ impl Holder {
             paths.iter().any(|p| p.contains("assurance")),
             "{paths:?}"
         );
+    }
+
+    /// A constructor's doc comment is inside its inductive; an annotation there
+    /// is about the inductive, not about whatever is declared next.
+    ///
+    /// @tests REQ-ANCHOR.symbol_not_line
+    #[test]
+    fn a_constructor_doc_comment_binds_to_its_inductive() {
+        let src = "namespace N\n\ninductive Origin where\n  | node (n : Nat)\n  /-- The honest answer.\n\n  @models REQ-X.c -/\n  | base\n\ninductive BackStep where\n  | moved\n\n/-- @models REQ-X.d -/\ndef after (n : Nat) : Nat := n\n\nend N\n";
+        let scanned = scan(src, Some(Lang::Lean4));
+        let bound = |needle: &str| {
+            let end = scanned
+                .comment_ranges
+                .iter()
+                .find(|(s, e)| src[*s..*e].contains(needle))
+                .map(|(_, e)| *e)
+                .unwrap();
+            resolve("f.lean", src, &scanned, &annotation(0), end).kind
+        };
+        assert_eq!(bound("REQ-X.c"), AnchorKind::Decl { symbol_path: "N::Origin".into() });
+        // An annotation before a declaration still binds to that declaration.
+        assert_eq!(bound("REQ-X.d"), AnchorKind::Decl { symbol_path: "N::after".into() });
     }
 
     /// @tests REQ-ANCHOR.imprecise_capped

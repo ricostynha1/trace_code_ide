@@ -55,6 +55,12 @@ pub enum Kind {
     /// Blocking on it would make an unsupported language construct fail a build
     /// that is otherwise fine.
     Imprecise,
+    /// A clause with more than one `@models` (ADR-0014).
+    SeveralModels,
+    /// A clause with more than one `@specifies`.
+    SeveralSpecs,
+    /// A clause with more than one `@pins`.
+    SeveralPins,
 }
 
 impl Kind {
@@ -68,7 +74,14 @@ impl Kind {
     pub fn severity(self) -> Severity {
         match self {
             Kind::Unmodeled | Kind::Unimplemented | Kind::Untested => Severity::Info,
-            Kind::Unbound | Kind::UnsoundQualifier | Kind::Imprecise => Severity::Warn,
+            // The several-of-a-role kinds warn while the clauses carrying them
+            // are sorted out (action plan §7); they become errors after.
+            Kind::Unbound
+            | Kind::UnsoundQualifier
+            | Kind::Imprecise
+            | Kind::SeveralModels
+            | Kind::SeveralSpecs
+            | Kind::SeveralPins => Severity::Warn,
             Kind::Dangling
             | Kind::DanglingRefines
             | Kind::RefinesCycle
@@ -251,6 +264,24 @@ pub fn qualifier_kinds(qualifier: Option<Qualifier>) -> Vec<Kind> {
     }
 }
 
+/// Which roles a clause carries more than one of, as the kinds that report it.
+///
+/// A clause has one model (the function computing what it talks about), at
+/// most one specification and at most one pinning theorem (ADR-0014). A second
+/// of any of them leaves which one is meant to be guessed — by position, as
+/// pinning once did — so it is named instead.
+///
+/// @implements REQ-CHECK.one_of_each_role
+/// @drt REQ-CHECK.one_of_each_role
+pub fn crowded_kinds(roles: Vec<Role>) -> Vec<Kind> {
+    let count = |role: Role| roles.iter().filter(|r| **r == role).count();
+    [(Role::Models, Kind::SeveralModels), (Role::Specifies, Kind::SeveralSpecs), (Role::Pins, Kind::SeveralPins)]
+        .into_iter()
+        .filter(|(role, _)| count(*role) > 1)
+        .map(|(_, kind)| kind)
+        .collect()
+}
+
 /// Check an index.
 ///
 /// @implements REQ-CHECK.exactly_once
@@ -342,6 +373,41 @@ pub fn check(index: &Index, policy: &Policy) -> Vec<Finding> {
         }
         if link.is_structural() {
             structural.insert(key);
+        }
+    }
+
+    // Per clause: each declaration claiming it as its model, specification or
+    // pin, once per declaration, with where it is.
+    let mut declared: BTreeMap<(String, Option<String>), BTreeMap<(Role, String), (String, u32)>> = BTreeMap::new();
+    for link in index.links.iter().filter(|l| matches!(l.role, Role::Models | Role::Specifies | Role::Pins)) {
+        declared
+            .entry((link.req_id.clone(), link.clause.clone()))
+            .or_default()
+            .entry((link.role, link.anchor.ident()))
+            .or_insert((link.anchor.file.clone(), link.line));
+    }
+    for ((id, clause), seen) in &declared {
+        let what = match clause {
+            Some(c) => format!("{id}.{c}"),
+            None => id.clone(),
+        };
+        for kind in crowded_kinds(seen.keys().map(|(role, _)| *role).collect()) {
+            let role = match kind {
+                Kind::SeveralModels => Role::Models,
+                Kind::SeveralSpecs => Role::Specifies,
+                _ => Role::Pins,
+            };
+            let mut places: Vec<&(String, u32)> =
+                seen.iter().filter(|((r, _), _)| *r == role).map(|(_, at)| at).collect();
+            places.sort();
+            let message = format!(
+                "{what} has {} @{} declarations, and may have one: {}",
+                places.len(),
+                role.as_str(),
+                places.iter().map(|(file, line)| format!("{file}:{line}")).collect::<Vec<_>>().join(", ")
+            );
+            let (file, line) = places[0];
+            findings.push(Finding::new(kind, message, file, *line, policy).about(id, clause.as_deref()));
         }
     }
 
@@ -476,6 +542,31 @@ mod tests {
         let unbound: Vec<_> = findings.iter().filter(|f| f.kind == Kind::Unbound).collect();
         assert_eq!(unbound.len(), 1, "{findings:#?}");
         assert_eq!(unbound[0].clause.as_deref(), Some("one"));
+    }
+
+    /// Two models of one clause are named, each by where it is, and do not
+    /// block while the clauses carrying them are sorted out.
+    ///
+    /// @tests REQ-CHECK.one_of_each_role
+    #[test]
+    fn a_second_model_spec_or_pin_is_named_with_every_declaration() {
+        let (_d, index) = tree(&[
+            ("reqs/a.md", REQ),
+            (
+                "src/m.lean",
+                "/-- @models REQ-A.one -/\ndef f (n : Nat) : Nat := n\n\n/-- @models REQ-A.one -/\ndef g (n : Nat) : Nat := n\n\n\
+                 /-- @specifies REQ-A.one -/\ndef P (n y : Nat) : Prop := y = n\n\n/-- @pins REQ-A.one -/\ntheorem t : True := trivial\n",
+            ),
+        ]);
+        let findings = check(&index, &Policy::default());
+        let several: Vec<_> = findings.iter().filter(|f| f.kind == Kind::SeveralModels).collect();
+        assert_eq!(several.len(), 1, "{findings:#?}");
+        assert!(several[0].message.contains("src/m.lean:1") && several[0].message.contains("src/m.lean:4"), "{}", several[0].message);
+        assert_eq!(several[0].severity, Severity::Warn);
+        assert!(!several[0].blocking);
+        assert!(!findings.iter().any(|f| matches!(f.kind, Kind::SeveralSpecs | Kind::SeveralPins)));
+        assert_eq!(crowded_kinds(vec![Role::Specifies, Role::Pins, Role::Pins]), vec![Kind::SeveralPins]);
+        assert_eq!(crowded_kinds(vec![Role::Models, Role::Tests, Role::Tests]), vec![]);
     }
 
     /// @tests REQ-CHECK.progress_not_fault

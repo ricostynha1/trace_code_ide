@@ -27,9 +27,7 @@ inductive Origin where
   /-- The command that wrote the text at that position. -/
   | node (node : Nat)
   /-- The text arrived with the file rather than being written by a recorded
-  command. The honest answer rather than a plausible wrong one.
-
-  @models REQ-PROV.base_is_honest -/
+  command. The honest answer rather than a plausible wrong one. -/
   | base
   deriving Repr, DecidableEq, Inhabited, ToJson, FromJson
 
@@ -111,9 +109,11 @@ private def originStep (t : Tree) (acc : Sum (String × Nat) Origin) (nodeId : N
       | .renamed previous => .inl (previous, current)
 
 /--
-Which recorded edit wrote the text at `position` in `file`, as of node `at`.
+Which recorded edit wrote the text at `position` in `file`, as of node `at`;
+`base` when none did.
 
 @models REQ-PROV.position_question
+@models REQ-PROV.base_is_honest
 -/
 def origin (t : Tree) (atNode : Nat) (file : String) (position : Nat) : Origin :=
   match (t.ancestry atNode).reverse.foldl (originStep t) (Sum.inl (file, position)) with

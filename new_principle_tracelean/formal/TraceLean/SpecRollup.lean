@@ -34,8 +34,8 @@ With no children there is nothing to take a minimum of, and no evidence is the
 lowest level (`REQ-EVID.absent_is_lowest`); the top of the ladder is the last
 thing an absence should report.
 
-@models REQ-ROLLUP.min_not_mean
-@models ARCH-HONEST.weakest_link
+@specifies REQ-ROLLUP.min_not_mean
+@specifies ARCH-HONEST.weakest_link
 -/
 def MinimumOf (levels : List Level) (y : Level) : Prop :=
   (levels = [] → y = Level.L1) ∧

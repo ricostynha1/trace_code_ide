@@ -87,22 +87,50 @@ pub fn body(source: &str, removed: &[(usize, usize)], protected: &[(usize, usize
     digest(normalize(source, removed, protected).as_bytes())
 }
 
-/// Hash of a requirement's semantic content: its clauses and its prose.
-///
-/// Keyed by clause name so that renaming a clause changes the hash — a
-/// judgement was about the pair, and a renamed clause is a different pair.
-///
-/// @implements REQ-REQDOC.clause_addressable
-pub fn requirement(clauses: &BTreeMap<String, String>, body_text: &str) -> String {
+/// Keyed text, `key ␁ text ␂` per entry in key order.
+fn keyed(entries: &BTreeMap<String, String>) -> String {
     let mut buffer = String::new();
-    for (key, text) in clauses {
+    for (key, text) in entries {
         buffer.push_str(key);
         buffer.push('\u{1}');
         buffer.push_str(text.trim());
         buffer.push('\u{2}');
     }
+    buffer
+}
+
+/// Hash of keyed text and a normalised body: a whole requirement document
+/// (what a document describing it is reviewed against), or any other set of
+/// named parts, such as a link's identity.
+pub fn requirement(clauses: &BTreeMap<String, String>, body_text: &str) -> String {
+    let mut buffer = keyed(clauses);
     buffer.push_str(normalize(body_text, &[], &[]).as_str());
     digest(buffer.as_bytes())
+}
+
+/// Hash of one clause: what evidence about it rests on.
+///
+/// Its key, its text and its narrowings, and nothing else — so rewording a
+/// sibling clause, or the prose, leaves the clause's evidence standing, and a
+/// narrowing added re-opens it. Keyed by name, so a renamed clause is a
+/// different clause. Without a key it is a requirement's one implicit clause,
+/// whose text is the body, hashed as the body always was.
+///
+/// @implements REQ-REQDOC.clause_addressable
+/// @implements REQ-STALE.requirement_reopens_all
+pub fn clause(key: Option<&str>, text: &str, narrowings: &BTreeMap<String, String>) -> String {
+    match key {
+        None => digest(normalize(text, &[], &[]).as_bytes()),
+        Some(key) => {
+            let mut buffer = String::from(key);
+            buffer.push('\u{1}');
+            buffer.push_str(text.trim());
+            buffer.push('\u{2}');
+            buffer.push('\u{3}');
+            buffer.push_str(&keyed(narrowings));
+            digest(buffer.as_bytes())
+        }
+    }
 }
 
 /// `body`, in the shape the conformance protocol exchanges.
@@ -132,12 +160,13 @@ pub fn normalize_of(
     normalize(&source, &removed, &protected)
 }
 
-/// `requirement`, in the same shape.
+/// `clause`, in the same shape. A narrowing given twice: the later wins, as
+/// the parser keeps it.
 ///
 /// @implements REQ-REQDOC.clause_addressable
 /// @drt REQ-REQDOC.clause_addressable
-pub fn requirement_of(clauses: Vec<(String, String)>, body_text: String) -> String {
-    requirement(&clauses.into_iter().collect(), &body_text)
+pub fn clause_of(key: Option<String>, text: String, narrowings: Vec<(String, String)>) -> String {
+    clause(key.as_deref(), &text, &narrowings.into_iter().collect())
 }
 
 #[cfg(test)]
@@ -193,11 +222,14 @@ mod tests {
 
     /// @tests REQ-REQDOC.clause_addressable
     #[test]
-    fn renaming_a_clause_changes_the_requirement_hash() {
-        let mut a = BTreeMap::new();
-        a.insert("ladder".to_string(), "Levels are ordered.".to_string());
-        let mut b = BTreeMap::new();
-        b.insert("order".to_string(), "Levels are ordered.".to_string());
-        assert_ne!(requirement(&a, ""), requirement(&b, ""));
+    fn renaming_or_narrowing_a_clause_changes_its_hash() {
+        let none = BTreeMap::new();
+        let text = "Levels are ordered.";
+        assert_ne!(clause(Some("ladder"), text, &none), clause(Some("order"), text, &none));
+        let mut narrowed = BTreeMap::new();
+        narrowed.insert("empty".to_string(), "No levels: L1.".to_string());
+        assert_ne!(clause(Some("ladder"), text, &none), clause(Some("ladder"), text, &narrowed));
+        // The implicit clause hashes its body as the whole document did.
+        assert_eq!(clause(None, "body  text", &none), requirement(&none, "body text"));
     }
 }

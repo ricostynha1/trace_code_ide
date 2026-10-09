@@ -244,7 +244,7 @@ end Level
 and no higher than any of them. That is a minimum, and it is never an average,
 since an average need be none of the levels it was taken over.
 
-@models REQ-EVID.weakest_link -/
+@specifies REQ-EVID.weakest_link -/
 def WeakestLink (records : List Record) (y : Level) : Prop :=
   (∃ b, y = bondLevel records b) ∧ (∀ b, y ≤ bondLevel records b)
 

@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-REQDOC",
+    "clause": "clause_addressable",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Hash::a_narrowing_moves_its_clause_hash",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "44659ef252913876",
+  "inputs": [
+    [
+      "model",
+      "5a549cc79c8f08e0"
+    ],
+    [
+      "requirement",
+      "a9b9aaf25979fc06"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

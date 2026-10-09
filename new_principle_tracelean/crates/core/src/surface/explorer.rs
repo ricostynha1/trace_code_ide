@@ -131,8 +131,14 @@ pub fn tree_buffer(
         if let Some(kinds) = claimed.get(&row.path).filter(|_| !row.folder) {
             line.push(' ');
             end += 1;
+            // A model and a specification share a letter; it is shown once.
+            let mut marked: Vec<char> = Vec::new();
             for kind in kinds {
                 let Some(letter) = crate::surface::chips::letter(*kind) else { continue };
+                if marked.contains(&letter) {
+                    continue;
+                }
+                marked.push(letter);
                 line.push(' ');
                 line.push(letter);
                 spans.push(Span { start: at + end + 1, stop: at + end + 2, role: Role::Claim { role: *kind }, actions: Vec::new() });
@@ -155,6 +161,9 @@ pub fn tree_buffer(
         rows.iter().filter(|r| !r.folder).filter_map(|r| claimed.get(&r.path)).flatten().copied().collect();
     for kind in shown {
         if let Some(letter) = crate::surface::chips::letter(kind) {
+            if legend.iter().any(|(said, _, _)| said.starts_with(letter)) {
+                continue;
+            }
             legend.push((letter.to_string(), Role::Claim { role: kind }, kind.as_str()));
         }
     }

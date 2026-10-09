@@ -13,6 +13,7 @@ clauses:
   derived_from_evidence: A finding about drift or divergence shall be derived from an evidence record and shall not be asserted independently.
   qualifier_soundness: An exemption without a reason and an approver, or past its expiry, shall itself be reported.
   structural_is_not_exempt: A clause marked structural shall require a test but not a model, shall remain in the coverage denominator, and shall not reach the level differential testing establishes.
+  one_of_each_role: A clause claimed by more than one models, more than one specifies, or more than one pins declaration shall be reported under a kind naming that role, and the finding shall name every declaration involved.
 ---
 
 # Findings
@@ -27,3 +28,7 @@ the work is, and a tool reporting them as failures gets disabled in week one.
 implementation with nothing comparing them is the exact shape of a project that
 believes it is verified and is not. It is invisible without this check, because
 every individual artefact looks healthy.
+
+`one_of_each_role` (ADR-0014): a second model leaves which one is meant to be
+guessed. Its kinds warn, not block, until the clauses carrying several are
+sorted out.

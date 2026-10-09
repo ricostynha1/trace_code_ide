@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-JUDGE",
+    "clause": "drift_recorded",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Judge::drift_is_recorded_at_L1",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "dc443fc091962210",
+  "inputs": [
+    [
+      "model",
+      "3402adaacf045c92"
+    ],
+    [
+      "requirement",
+      "afcf0a707f2f5e72"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

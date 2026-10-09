@@ -6,7 +6,7 @@ status: approved
 decomposition: complete
 clauses:
   comments_only: An annotation shall be recognised only inside a comment of the host language.
-  role_vocabulary: The roles shall be models, implements, tests, drt, proves and pins, and nothing else shall parse as a role.
+  role_vocabulary: The roles shall be models, specifies, implements, tests, drt, proves and pins, and nothing else shall parse as a role.
   qualifiers: The qualifiers shall be partial, exempt, nondeterministic and structural, each attaching to the nearest preceding annotation or carrying its own identifier.
   totality: Every candidate annotation shall yield either a parsed annotation or a named problem, and shall never be silently dropped.
   unknown_role_named: A role-shaped token that is not a known role shall be reported as an unknown role.
@@ -24,6 +24,9 @@ somebody wrote one.
 That makes `totality` load-bearing. A scanner that can silently drop a link
 reports less coverage than the project has — or reports a clause as unlinked when
 somebody did the work. Every candidate either parses or is named as a problem.
+
+`models` names the one function computing what a clause talks about;
+`specifies` names the `Prop` saying which answers are right (ADR-0014).
 
 `literals_protected` is the same concern inverted: an annotation-shaped string in
 a test fixture is not a claim about the code.

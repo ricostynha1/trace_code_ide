@@ -557,7 +557,7 @@ theorem colliding_result (f : List String × List String → String → List Str
 /-- The ops that more than one binding of a project names: each such op once,
 in ascending order. An op named once is unique, and is not among them.
 
-@models REQ-DRT-PROTO.op_dispatch -/
+@specifies REQ-DRT-PROTO.op_dispatch -/
 def CollidingOps (ops : List String) (y : List String) : Prop :=
   Ascending y ∧ ∀ op, List.Mem op y ↔ 1 < ops.count op
 
@@ -590,7 +590,7 @@ theorem op_dispatch_pinned :
 lie in the span, how many of those ran at all, and the tests that ran any of
 them, each named once, in ascending order.
 
-@models REQ-LINECOV.clause_summary -/
+@specifies REQ-LINECOV.clause_summary -/
 def ClauseSummary (lines : List LineHits) (start stop : Nat) (r : Reach) : Prop :=
   r.all = lines.countP (fun l => decide (start ≤ l.line ∧ l.line ≤ stop)) ∧
   r.run = lines.countP (fun l => decide (start ≤ l.line ∧ l.line ≤ stop ∧ 0 < l.hits)) ∧
@@ -891,7 +891,7 @@ theorem any_false_iff (g : Graph) (q : String) :
 /-- The refinements that name an identifier no requirement declares, as
 (requirement, missing parent) pairs: each such pair once, in ascending order.
 
-@models REQ-REQDOC.refines_resolves -/
+@specifies REQ-REQDOC.refines_resolves -/
 def UnresolvedRefines (g : Graph) (y : List (String × String)) : Prop :=
   List.Pairwise PairLt y ∧
   ∀ child parent, List.Mem (child, parent) y ↔
