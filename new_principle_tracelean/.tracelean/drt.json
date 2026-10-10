@@ -681,15 +681,28 @@
     },
     {
       "req_id": "REQ-STALE",
-      "clause": "current_not_rerun",
+      "clause": "agreed_not_rerun",
       "model": {
-        "import": "TraceLean.Hash",
-        "function": "TraceLean.Hash.sourcesHash",
-        "arguments": ["files"]
+        "import": "TraceLean.Staleness",
+        "function": "TraceLean.Staleness.rerun",
+        "arguments": ["held", "op", "live", "again"]
       },
       "implementation": {
         "language": "rust",
-        "entry": "crates/core/src/trace/lines.rs::sources_hash_owned"
+        "entry": "crates/core/src/drt/rerun.rs::rerun"
+      }
+    },
+    {
+      "req_id": "REQ-STALE",
+      "clause": "measured_not_retaken",
+      "model": {
+        "import": "TraceLean.Hash",
+        "function": "TraceLean.Hash.retake",
+        "arguments": ["measured", "held", "files", "again"]
+      },
+      "implementation": {
+        "language": "rust",
+        "entry": "crates/core/src/trace/lines.rs::retake_owned"
       }
     },
     {

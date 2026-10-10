@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-STALE",
+    "clause": "measured_not_retaken",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "retaken when asked, when nothing is held, or when the held sources hash differs from the Rust sources now; otherwise not. Decided under autonomy given 2026-10-10 evening"
+    }
+  },
+  "linkHash": "08ec11a0ce545b9f",
+  "inputs": [
+    [
+      "requirement",
+      "f97d3602cede5b59"
+    ],
+    [
+      "model",
+      "9f579e9f30cd89b2"
+    ]
+  ]
+}

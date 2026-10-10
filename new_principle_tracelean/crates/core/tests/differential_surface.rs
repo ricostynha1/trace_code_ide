@@ -229,6 +229,38 @@ fn model_and_implementation_agree_on_staleness() {
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
+/// Whether `--drt` runs a clause again: held runs of this op or another,
+/// agreed or not, still valid or stale, and asked again or not.
+///
+/// @drt REQ-STALE.agreed_not_rerun
+/// @tests REQ-STALE.agreed_not_rerun
+#[test]
+#[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
+fn model_and_implementation_agree_on_running_a_clause_again() {
+    let scratch = harness::scratch("rerun");
+    let op = "REQ-STALE.agreed_not_rerun";
+    let implementation =
+        harness::rust_runner("REQ-STALE", "agreed_not_rerun", "crates/core/src/drt/rerun.rs::rerun", &scratch);
+    let model = harness::lean_runner("TraceLean.Staleness", "TraceLean.Staleness.rerun", op, &["held", "op", "live", "again"], &scratch);
+    let Schema::Struct { fields: parts } = staleness_input() else { unreachable!() };
+    let run_held = strukt(&[
+        ("op", names(&["REQ-A.x", "REQ-A.y"])),
+        ("agreed", Schema::Bool),
+        ("record", parts["record"].clone()),
+        ("current", parts["current"].clone()),
+    ]);
+    let schema = strukt(&[
+        ("held", Schema::List { inner: Box::new(run_held), max_len: Some(2) }),
+        ("op", names(&["REQ-A.x"])),
+        ("live", parts["liveLinkHashes"].clone()),
+        ("again", Schema::Bool),
+    ]);
+    let result = run(op, &schema, &model, &implementation, RunOptions { seed: 31, cases: 3_000, shrink_rounds: 100 })
+        .expect("both runners answer");
+    support::agreed(&result);
+    let _ = std::fs::remove_dir_all(&scratch);
+}
+
 /// Both reasons for staleness, and the valid case, must all be reached.
 ///
 /// @tests REQ-DRT-COVER.law_coverage

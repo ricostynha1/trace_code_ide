@@ -1,0 +1,30 @@
+{
+  "key": {
+    "reqId": "REQ-STALE",
+    "clause": "measured_not_retaken",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 334,
+      "cases": 3000,
+      "op": "REQ-STALE.measured_not_retaken"
+    }
+  },
+  "linkHash": "888e8b207c223d4b",
+  "inputs": [
+    [
+      "implementation",
+      "e19332b8261fde03"
+    ],
+    [
+      "model",
+      "9f579e9f30cd89b2"
+    ],
+    [
+      "requirement",
+      "f97d3602cede5b59"
+    ]
+  ]
+}

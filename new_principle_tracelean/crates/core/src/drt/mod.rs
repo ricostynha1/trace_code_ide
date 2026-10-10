@@ -10,6 +10,7 @@ pub mod lean_runner;
 pub mod lines_run;
 pub mod pins;
 pub mod protocol;
+pub mod rerun;
 pub mod rust_runner;
 pub mod run;
 pub mod schema;

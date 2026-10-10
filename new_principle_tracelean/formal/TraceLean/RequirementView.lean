@@ -106,6 +106,12 @@ def namesLine (out : Lines) (word : String) (names : List String) : Lines :=
         [(pair.2, Role.requirement, ["trace.requirement"])]
     line out ((word, Role.plain, []) :: pieces)
 
+/-- Whether Lean said the clause's specification pins its model. -/
+def isPinned (c : ClauseShown) : Bool :=
+  match c.pins with
+  | some p => p.1 == "pinned"
+  | none => false
+
 /-- How many clauses each kind of claim reaches, in the claims' colours. -/
 def evidenceLine (out : Lines) (clauses : List ClauseShown) : Lines :=
   let kinds : List TraceLean.Annotation.Role := [.implements, .tests, .models, .proves, .drt]
@@ -113,6 +119,9 @@ def evidenceLine (out : Lines) (clauses : List ClauseShown) : Lines :=
     let reached := (clauses.filter fun c =>
       c.claims.any (·.role == roleWord kind) || (kind == .drt && c.tested)).length
     (kind, roleWord kind ++ " " ++ toString reached ++ "/" ++ toString clauses.length)
+  -- And how many clauses Lean has said their specification pins.
+  let pinned := (clauses.filter isPinned).length
+  let counted := counted ++ [(.pins, "pins " ++ toString pinned ++ "/" ++ toString clauses.length)]
   let pieces := counted.enum.bind fun (pair : Nat × (TraceLean.Annotation.Role × String)) =>
     (if pair.1 > 0 then [(" ", Role.plain, ([] : List String))] else []) ++
       [(pair.2.2, Role.claim pair.2.1, [])]
@@ -137,10 +146,18 @@ def coveredText (c : Covered) : String :=
   toString c.run ++ "/" ++ toString c.all ++ " lines run (" ++ toString percent ++ "%), by " ++
     toString c.tests ++ " test" ++ (if c.tests == 1 then "" else "s")
 
+/-- What a coverage line says when code claims the clause and no measurement
+of that code as it is now exists. -/
+def notMeasured : String := "not measured: run `tracelean-trace . --coverage`"
+
+/-- Whether code claims the clause. -/
+def implemented (c : ClauseShown) : Bool := c.claims.any (·.role == "implements")
+
 /-- The requirement or clause, which opens the lines behind the count, then
-the count: whole in green, short in red. -/
-def coveredLine (lead name : String) (out : Lines) : Option Covered → Lines
-  | none => out
+the count: whole in green, short in red. Nothing measured says so when code
+claims it (`claimed`), so an absent count is not read as nothing to count. -/
+def coveredLine (lead name : String) (claimed : Bool) (out : Lines) : Option Covered → Lines
+  | none => if claimed then line out [(lead, Role.plain, []), (notMeasured, Role.removed, [])] else out
   | some c =>
     let role := if c.run == c.all then Role.added else Role.removed
     line out [(lead, Role.plain, []), (name, Role.requirement, ["trace.coverage"]), ("  ", Role.plain, []),
@@ -178,7 +195,7 @@ def clauseLines (id : String) (out : Lines) (clause : ClauseShown) : Lines :=
     match clause.key with
     | some k => id ++ "." ++ k
     | none => id
-  let out := pinsLines (coveredLine "  covered     " name out clause.lines) clause.pins
+  let out := pinsLines (coveredLine "  covered     " name (implemented clause) out clause.lines) clause.pins
   let out :=
     if clause.claims.any (·.role == "models") then
       line out [("  judge       ", Role.plain, []), (name, Role.requirement, ["trace.judge"])]
@@ -200,7 +217,7 @@ def requirementView (view : Shown) : Buffer :=
   let out := namesLine (namesLine out "refines    " view.refines) "refined by " view.refinedBy
   let out := line out [("for agent  ", Role.plain, []), (view.id, Role.requirement, ["trace.context"]),
                        ("  context to copy", Role.plain, [])]
-  let out := coveredLine "covered    " view.id (evidenceLine out view.clauses) view.lines
+  let out := coveredLine "covered    " view.id (view.clauses.any implemented) (evidenceLine out view.clauses) view.lines
   finish (view.clauses.foldl (clauseLines view.id) out) ("requirement " ++ view.id)
 
 end TraceLean.RequirementView

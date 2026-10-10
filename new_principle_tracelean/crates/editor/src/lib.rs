@@ -3022,6 +3022,7 @@ impl Editor {
                     level: reached,
                     implemented,
                     clauses: clauses.len(),
+                    covered: self.clause_lines(&index, id, None).map(|(run, all, _)| (run, all)),
                 }
             })
             .collect()

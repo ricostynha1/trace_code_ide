@@ -34,6 +34,12 @@ fn node() -> Schema {
     // Counts past each other too, so a bar more than full is drawn as full.
     fields.insert("implemented".to_string(), Schema::Nat { max: Some(3), edges: vec![0, 7] });
     fields.insert("clauses".to_string(), Schema::Nat { max: Some(3), edges: vec![0, 4] });
+    // Measured or not; every line run, some, none, or none to run.
+    let count = || Schema::Nat { max: Some(3), edges: vec![0, 120] };
+    fields.insert(
+        "covered".to_string(),
+        Schema::Option { inner: Box::new(Schema::Tuple { items: vec![count(), count()] }) },
+    );
     Schema::Struct { fields }
 }
 

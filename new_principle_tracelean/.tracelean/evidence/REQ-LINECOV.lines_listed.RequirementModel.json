@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-LINECOV",
+    "clause": "lines_listed",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "per item: tests with summed counts in name order, each unrun line a file.open link with its source; opening it is trace.coverage in the requirement view and dispatch. Decided under autonomy given 2026-10-10 evening"
+    }
+  },
+  "linkHash": "35b84d40f7dc8837",
+  "inputs": [
+    [
+      "requirement",
+      "30fc64a7334d0dce"
+    ],
+    [
+      "model",
+      "4345d0eb87051f5b"
+    ]
+  ]
+}

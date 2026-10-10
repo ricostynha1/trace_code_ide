@@ -117,26 +117,37 @@ fn model_and_implementation_agree_on_a_requirements_lines() {
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
-/// Whether a measurement is current: Rust files and manifests count, other
-/// files do not, and a path given twice is read at its later text.
+/// Whether coverage is measured again: asked or not, held or not, and held
+/// sources that hash as the files do now — Rust files and manifests count,
+/// other files do not, a path given twice is read at its later text — or not.
 ///
-/// @drt REQ-STALE.current_not_rerun
-/// @tests REQ-STALE.current_not_rerun
+/// @drt REQ-STALE.measured_not_retaken
+/// @tests REQ-STALE.measured_not_retaken
 #[test]
 #[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
-fn model_and_implementation_agree_on_the_hash_of_the_rust_sources() {
-    let op = "REQ-STALE.current_not_rerun";
-    let scratch = harness::scratch("lines-current_not_rerun");
+fn model_and_implementation_agree_on_when_coverage_is_measured_again() {
+    use tracelean_core::trace::lines::sources_hash;
+    let op = "REQ-STALE.measured_not_retaken";
+    let scratch = harness::scratch("lines-measured_not_retaken");
     let implementation =
-        harness::rust_runner("REQ-STALE", "current_not_rerun", "crates/core/src/trace/lines.rs::sources_hash_owned", &scratch);
-    let model = harness::lean_runner("TraceLean.Hash", "TraceLean.Hash.sourcesHash", op, &["files"], &scratch);
-    let file = Schema::Tuple {
-        items: vec![
-            small(&["src/a.rs", "Cargo.toml", "Cargo.lock", "README.md", "b.rs", "notes.rs.md"]),
-            small(&["", "fn a() {}", "é"]),
-        ],
+        harness::rust_runner("REQ-STALE", "measured_not_retaken", "crates/core/src/trace/lines.rs::retake_owned", &scratch);
+    let model = harness::lean_runner("TraceLean.Hash", "TraceLean.Hash.retake", op, &["measured", "held", "files", "again"], &scratch);
+    let paths = ["src/a.rs", "Cargo.toml", "Cargo.lock", "README.md", "notes.rs.md"];
+    let file = Schema::Tuple { items: vec![small(&paths), small(&["", "é"])] };
+    // What was held is often what the files hash to now, so both answers come.
+    let held: Vec<String> = [vec![], vec![("src/a.rs", "")], vec![("src/a.rs", "é")], vec![("Cargo.toml", "")]]
+        .iter()
+        .map(|set| sources_hash(&set.iter().map(|(p, t)| (p.to_string(), t.to_string())).collect()))
+        .collect();
+    let held: Vec<&str> = held.iter().map(String::as_str).collect();
+    let schema = Schema::Struct {
+        fields: fields(vec![
+            ("measured", Schema::Bool),
+            ("held", small(&held)),
+            ("files", Schema::List { inner: Box::new(file), max_len: Some(2) }),
+            ("again", Schema::Bool),
+        ]),
     };
-    let schema = Schema::Struct { fields: fields(vec![("files", Schema::List { inner: Box::new(file), max_len: Some(4) })]) };
     let result = run(op, &schema, &model, &implementation, RunOptions { seed: 334, cases: 3_000, shrink_rounds: 100 })
         .expect("both runners answer");
     support::agreed(&result);

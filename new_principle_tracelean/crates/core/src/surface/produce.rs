@@ -372,6 +372,15 @@ pub struct Node {
     /// How many of its clauses something implements, of how many.
     pub implemented: usize,
     pub clauses: usize,
+    /// Lines of its implementing code tests run, of how many — when that code
+    /// was measured as it is now.
+    #[serde(default)]
+    pub covered: Option<(u64, u64)>,
+}
+
+/// What a row says of its measured lines: `lines 57%`, nothing unmeasured.
+fn covered_of(node: &Node) -> Option<String> {
+    node.covered.map(|(run, all)| format!("lines {}%", if all == 0 { 100 } else { run * 100 / all }))
 }
 
 /// A node at a depth in the refinement graph.
@@ -427,24 +436,32 @@ fn bar_of(node: &Node) -> String {
 
 fn index_line(node: &Node) -> String {
     format!(
-        "{}  {}  {} {}/{}  {}",
+        "{}  {}  {} {}/{}  {}{}",
         grade_text(node.level),
         node.id,
         bar_of(node),
         node.implemented,
         node.clauses,
+        covered_of(node).map(|said| format!("{said}  ")).unwrap_or_default(),
         node.title
     )
 }
 
-/// The bar's filled cells, in the colour of what fills them.
+/// The bar's filled cells, in the colour of what fills them, and the measured
+/// lines: green when every one ran, red when one did not.
 fn bar_spans(at: usize, node: &Node) -> Vec<Span> {
     let start = at + 4 + node.id.chars().count() + 2;
     let role = Role::Claim { role: crate::trace::annotation::Role::Implements };
-    match filled_of(node) {
+    let mut out = match filled_of(node) {
         0 => Vec::new(),
         filled => vec![Span { start, stop: start + filled, role, actions: actions_for(role) }],
+    };
+    if let (Some(said), Some((run, all))) = (covered_of(node), node.covered) {
+        let from = start + 5 + 1 + format!("{}/{}", node.implemented, node.clauses).chars().count() + 2;
+        let role = if run == all { Role::Added } else { Role::Removed };
+        out.push(Span { start: from, stop: from + said.chars().count(), role, actions: actions_for(role) });
     }
+    out
 }
 
 /// The requirement set as a buffer: one row a requirement, carrying what its
@@ -596,12 +613,19 @@ mod tests {
             level: crate::evidence::Level::L1,
             implemented: 3,
             clauses: 4,
+            covered: None,
         };
-        let shown = requirements_buffer(vec![node]);
+        let shown = requirements_buffer(vec![node.clone()]);
         assert_eq!(plain_text(shown.clone()), vec!["L1  REQ-A  ████░ 3/4  A thing"]);
         let bar = shown.spans.iter().find(|s| matches!(s.role, Role::Claim { .. })).expect("a bar span");
         assert_eq!((bar.start, bar.stop), (11, 15));
         assert!(faults(shown).is_empty());
+        // Measured, the row says how much of its code ran, in red when not all.
+        let measured = requirements_buffer(vec![Node { covered: Some((4, 7)), ..node }]);
+        assert_eq!(plain_text(measured.clone()), vec!["L1  REQ-A  ████░ 3/4  lines 57%  A thing"]);
+        let lines = measured.spans.iter().find(|s| s.role == Role::Removed).expect("a coverage span");
+        let said: String = measured.text.chars().skip(lines.start).take(lines.stop - lines.start).collect();
+        assert_eq!(said, "lines 57%");
     }
 
     fn mark(start: usize, stop: usize, role: Role) -> Mark {

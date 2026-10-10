@@ -123,9 +123,7 @@ def rustInput (path : String) : Bool :=
 
 /-- One hash of every file a Rust test run depends on, by path and text, in
 path order, a path given twice at its later text — so a coverage measurement
-is known current without running anything.
-
-@models REQ-STALE.current_not_rerun -/
+is known current without running anything. -/
 def sourcesHash (files : List (String × String)) : String :=
   let nul := String.mk [Char.ofNat 0]
   let kept := (files.foldl
@@ -134,6 +132,13 @@ def sourcesHash (files : List (String × String)) : String :=
       else acc ++ [kv]) []).mergeSort (fun a b => decide (a.1 ≤ b.1))
   digest ((kept.filter (fun kv => rustInput kv.1)).foldl
     (fun acc kv => acc ++ kv.1 ++ nul ++ digest kv.2 ++ nul) "")
+
+/-- Whether coverage is measured again: when asked, when nothing is held, or
+when what is held was taken against sources that hash otherwise now.
+
+@models REQ-STALE.measured_not_retaken -/
+def retake (measured : Bool) (held : String) (files : List (String × String)) (again : Bool) : Bool :=
+  again || !measured || held != sourcesHash files
 
 /-- Hash of one clause: what evidence about it rests on.
 

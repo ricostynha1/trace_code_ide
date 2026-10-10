@@ -147,6 +147,15 @@ pub fn covered_text(run: u64, all: u64, tests: u64) -> String {
     format!("{run}/{all} lines run ({percent}%), by {tests} test{}", if tests == 1 { "" } else { "s" })
 }
 
+/// What a coverage line says when code claims the clause and no measurement
+/// of that code as it is now exists.
+pub const NOT_MEASURED: &str = "not measured: run `tracelean-trace . --coverage`";
+
+/// Whether code claims the clause.
+fn implemented(clause: &ClauseShown) -> bool {
+    clause.claims.iter().any(|c| c.role == "implements")
+}
+
 /// A coverage line: the requirement or clause, which opens the lines behind
 /// the count, then the count — whole in green, short in red.
 fn covered_line(out: &mut Lines, lead: &str, name: &str, (run, all, tests): (u64, u64, u64)) {
@@ -213,6 +222,11 @@ pub fn requirement_view(view: RequirementShown) -> Buffer {
             .count();
         (role, format!("{} {reached}/{total}", role.as_str()))
     })
+    // And how many clauses Lean has said their specification pins.
+    .chain(std::iter::once({
+        let pinned = view.clauses.iter().filter(|c| c.pins.as_ref().is_some_and(|(state, _)| state == "pinned")).count();
+        (crate::trace::annotation::Role::Pins, format!("pins {pinned}/{total}"))
+    }))
     .collect();
     // What an agent needs to change it: the name opens its context.
     out.line(&[("for agent  ", Role::Plain, &[]), (&view.id, Role::Requirement, &["trace.context"]), ("  context to copy", Role::Plain, &[])]);
@@ -224,8 +238,15 @@ pub fn requirement_view(view: RequirementShown) -> Buffer {
         pieces.push((said.as_str(), Role::Claim { role: *role }, &[]));
     }
     out.line(&pieces);
-    if let Some(lines) = view.lines {
-        covered_line(&mut out, "covered    ", &view.id, lines);
+    match view.lines {
+        Some(lines) => covered_line(&mut out, "covered    ", &view.id, lines),
+        // Code claims it and nothing measured the code as it is: said, so an
+        // absent count is not read as nothing to count.
+        None if view.clauses.iter().any(implemented) => out.line(&[
+            ("covered    ", Role::Plain, &[]),
+            (NOT_MEASURED, Role::Removed, &[]),
+        ]),
+        None => {}
     }
     for clause in &view.clauses {
         out.blank();
@@ -252,12 +273,16 @@ pub fn requirement_view(view: RequirementShown) -> Buffer {
             out.line(&[("  nothing claims it yet", Role::Removed, &[])]);
         }
         // How much of the code that implements it the tests run.
-        if let Some(lines) = clause.lines {
-            let name = match &clause.key {
-                Some(key) => format!("{}.{key}", view.id),
-                None => view.id.clone(),
-            };
-            covered_line(&mut out, "  covered     ", &name, lines);
+        match clause.lines {
+            Some(lines) => {
+                let name = match &clause.key {
+                    Some(key) => format!("{}.{key}", view.id),
+                    None => view.id.clone(),
+                };
+                covered_line(&mut out, "  covered     ", &name, lines);
+            }
+            None if implemented(clause) => out.line(&[("  covered     ", Role::Plain, &[]), (NOT_MEASURED, Role::Removed, &[])]),
+            None => {}
         }
         // Whether the specification leaves one answer per input, as Lean said.
         if let Some((state, said)) = &clause.pins {
@@ -404,6 +429,14 @@ mod tests {
         assert!(shown.text.contains("nothing claims it yet"));
         assert!(shown.text.contains("  pinned\n    X.holds_pinned"), "{}", shown.text);
         assert!(shown.text.contains("drt 1/2"), "a derived test counts: {}", shown.text);
+        assert!(shown.text.contains("drt 1/2 pins 1/2"), "a pinned clause counts: {}", shown.text);
+        // Unmeasured, the count says so rather than vanishing.
+        let mut unmeasured = view();
+        unmeasured.lines = None;
+        unmeasured.clauses[0].lines = None;
+        let said = requirement_view(unmeasured).text;
+        assert!(said.contains(&format!("covered    {NOT_MEASURED}")), "{said}");
+        assert!(said.contains(&format!("  covered     {NOT_MEASURED}")), "{said}");
         assert!(shown.text.contains("covered     REQ-X.holds  3/4 lines run (75%), by 2 tests"), "{}", shown.text);
         // The requirement's own count, over all of it; each opens its lines.
         assert!(shown.text.contains("covered    REQ-X  3/8 lines run (37%), by 2 tests"), "{}", shown.text);

@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-LINECOV",
+    "clause": "requirement_summary",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "run, all and tests over every item, a (path, line) once; the share is rendered from these counts by coveredText. Decided under autonomy given 2026-10-10 evening"
+    }
+  },
+  "linkHash": "41854feeb4352143",
+  "inputs": [
+    [
+      "requirement",
+      "9c57e907a4d9588a"
+    ],
+    [
+      "model",
+      "50c520a93cbf4d64"
+    ]
+  ]
+}

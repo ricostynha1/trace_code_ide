@@ -19,6 +19,7 @@ use super::classes;
 use super::coverage::{level, verdict, Floor, Observed, Verdict};
 use super::derive::{self, Derived};
 use super::lean_runner::{self, LeanEntry};
+use super::rerun::{rerun, HeldRun};
 use super::run::{run, RunOptions, RunnerSpec};
 use super::rust_runner::{self, Entry};
 use crate::trace::anchor::AnchorKind;
@@ -60,21 +61,22 @@ pub enum Outcome {
     Cached,
 }
 
-/// Whether `held` records this candidate as agreed at L3 against inputs that
-/// hash as they do now — so running it again could only say the same.
-///
-/// @implements REQ-STALE.current_not_rerun
-fn still_agreed(index: &Index, held: &[crate::trace::record::Evidence], c: &Candidate) -> bool {
+/// The runs `held` keeps for this candidate's clause, as `rerun` reads them.
+fn held_runs(index: &Index, held: &[crate::trace::record::Evidence], c: &Candidate) -> Vec<HeldRun> {
     use crate::evidence::{Bond, Level};
-    use crate::trace::record::Detail;
-    held.iter().any(|r| {
-        r.key.req_id == c.req_id
-            && r.key.clause == c.clause
-            && r.key.bond == Bond::ModelImpl
-            && matches!(&r.detail, Detail::Drt { op, .. } if *op == c.op)
-            && r.effective_level() >= Level::L3
-            && crate::trace::earn::why_stale(index, r).is_none()
-    })
+    use crate::trace::record::{Detail, StalenessInput};
+    held.iter()
+        .filter(|r| r.key.req_id == c.req_id && r.key.clause == c.clause && r.key.bond == Bond::ModelImpl)
+        .filter_map(|r| match &r.detail {
+            Detail::Drt { op, .. } => Some(HeldRun {
+                op: op.clone(),
+                agreed: r.effective_level() >= Level::L3,
+                record: StalenessInput { link_hash: r.link_hash.clone(), inputs: r.inputs.clone() },
+                current: crate::trace::earn::current_inputs(index, r),
+            }),
+            _ => None,
+        })
+        .collect()
 }
 
 fn declaration(files: &BTreeMap<String, String>, file: &str, start: u32, end: u32) -> String {
@@ -328,23 +330,32 @@ pub fn run_all(root: &Path, index: &Index, files: &BTreeMap<String, String>, aga
         crate::trace::lockfile::read(root).map(|l| l.evidence).unwrap_or_default(),
         crate::trace::store::read_all(root),
     );
-    let cached = |c: &Candidate| !again && c.derived.is_ok() && still_agreed(index, &held, c);
+    let live: Vec<String> = index.links.iter().map(|l| l.link_hash.clone()).collect();
+    let cached = |c: &Candidate| c.derived.is_ok() && !rerun(held_runs(index, &held, c), c.op.clone(), live.clone(), again);
     let scratch = std::env::temp_dir().join(format!("tracelean-drt-{}", std::process::id()));
     let _ = std::fs::create_dir_all(&scratch);
     let ready: Vec<&Candidate> = found.iter().filter(|c| c.derived.is_ok() && !cached(c)).collect();
     let runners = if ready.is_empty() {
         Err(String::new())
     } else {
-        lean_side(root, &scratch, &ready).and_then(|m| rust_side(root, &scratch, &ready).map(|i| (m, i)))
+        // Lake and cargo build side by side; neither reads the other's output.
+        let (model, implementation) =
+            std::thread::scope(|s| {
+                let lean = s.spawn(|| lean_side(root, &scratch, &ready));
+                let rust = rust_side(root, &scratch, &ready);
+                (lean.join().unwrap_or_else(|_| Err("the Lean build panicked".into())), rust)
+            });
+        model.and_then(|m| implementation.map(|i| (m, i)))
     };
+    // Each run starts runners of its own, so clauses run side by side.
+    let outcomes = super::run::par_map(&found, |c| match (&c.derived, &runners) {
+        _ if cached(c) => Outcome::Cached,
+        (Err(problems), _) => Outcome::Mismatch(problems.clone()),
+        (Ok(_), Err(why)) => Outcome::Failed(why.clone()),
+        (Ok(_), Ok((model, implementation))) => exercise(c, model, implementation),
+    });
     let mut out = Vec::new();
-    for c in &found {
-        let outcome = match (&c.derived, &runners) {
-            _ if cached(c) => Outcome::Cached,
-            (Err(problems), _) => Outcome::Mismatch(problems.clone()),
-            (Ok(_), Err(why)) => Outcome::Failed(why.clone()),
-            (Ok(_), Ok((model, implementation))) => exercise(c, model, implementation),
-        };
+    for (c, outcome) in found.iter().zip(outcomes) {
         if let Outcome::Agreed { cases } = &outcome {
             let established = level(true, Verdict::Met);
             if let Ok(record) =

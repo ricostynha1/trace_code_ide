@@ -12,6 +12,32 @@ use super::gen::{self, Rng};
 use super::protocol::{self, Event, Reply, RunnerError};
 use super::schema::Schema;
 
+/// How many runs go at once: every core but one, so the machine stays usable;
+/// `TRACELEAN_JOBS` overrides.
+pub fn workers() -> usize {
+    let cores = std::thread::available_parallelism().map_or(2, |n| n.get());
+    std::env::var("TRACELEAN_JOBS").ok().and_then(|j| j.parse().ok()).unwrap_or(cores.saturating_sub(1)).max(1)
+}
+
+/// `f` over every item on `workers()` threads, answers in the items' order.
+pub fn par_map<T: Sync, R: Send>(items: &[T], f: impl Fn(&T) -> R + Sync) -> Vec<R> {
+    let next = std::sync::atomic::AtomicUsize::new(0);
+    let done: std::sync::Mutex<Vec<(usize, R)>> = std::sync::Mutex::new(Vec::with_capacity(items.len()));
+    std::thread::scope(|s| {
+        for _ in 0..workers().min(items.len()) {
+            s.spawn(|| loop {
+                let i = next.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                let Some(item) = items.get(i) else { break };
+                let answer = f(item);
+                done.lock().unwrap_or_else(|e| e.into_inner()).push((i, answer));
+            });
+        }
+    });
+    let mut done = done.into_inner().unwrap_or_else(|e| e.into_inner());
+    done.sort_by_key(|(i, _)| *i);
+    done.into_iter().map(|(_, r)| r).collect()
+}
+
 /// How to start one side.
 #[derive(Debug, Clone, PartialEq)]
 pub struct RunnerSpec {

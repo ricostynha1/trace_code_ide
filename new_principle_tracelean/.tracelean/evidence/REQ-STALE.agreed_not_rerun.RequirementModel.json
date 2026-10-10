@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-STALE",
+    "clause": "agreed_not_rerun",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "re-run when asked, or when no held run of this op agreed at L3 against a live link and inputs that hash as they did. Decided under autonomy given 2026-10-10 evening"
+    }
+  },
+  "linkHash": "ef1044849b272b87",
+  "inputs": [
+    [
+      "requirement",
+      "32b5bca473fbdaa3"
+    ],
+    [
+      "model",
+      "49e9d624598a993c"
+    ]
+  ]
+}

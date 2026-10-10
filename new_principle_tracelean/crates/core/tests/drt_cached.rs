@@ -33,7 +33,7 @@ fn drt(root: &Path, again: bool) -> String {
     String::from_utf8_lossy(&command.output().expect("ran").stdout).to_string()
 }
 
-/// @tests REQ-STALE.current_not_rerun
+/// @tests REQ-STALE.agreed_not_rerun
 #[test]
 #[ignore = "builds a Lean and a Rust runner; run with --ignored"]
 fn an_agreed_clause_is_run_again_only_when_what_it_ran_on_changed() {

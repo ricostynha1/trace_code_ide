@@ -324,7 +324,7 @@ fn main() {
         let files = tracelean_core::observe::workspace::snapshot(&root).files;
         let sources = tracelean_core::trace::lines::sources_hash(&files);
         let held = lines_run::read(&root);
-        if !held.files.is_empty() && held.sources == sources && !std::env::args().any(|a| a == "--again") {
+        if !tracelean_core::trace::lines::retake(&held, &files, std::env::args().any(|a| a == "--again")) {
             println!("cached: no Rust source changed since it was measured ({} files; --again re-measures)", held.files.len());
             return;
         }

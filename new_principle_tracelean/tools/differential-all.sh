@@ -25,10 +25,9 @@ set -uo pipefail
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$root"
 
-# More than eight is slower here, not faster: the total CPU time is unchanged
-# and the contention is not. A number that fits the machine rather than one that
-# saturates it.
-jobs="${1:-8}"
+# Every core but one, so the machine stays usable (TRACELEAN_JOBS, or the first
+# argument, overrides).
+jobs="${1:-${TRACELEAN_JOBS:-$(( $(nproc) > 1 ? $(nproc) - 1 : 1 ))}}"
 
 # Measured: the Rust runner is built instrumented and each op's bound entry is
 # held to every line run or waived, which a Rust-bound op needs for L3

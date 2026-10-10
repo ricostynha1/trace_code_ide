@@ -318,6 +318,9 @@ structure Node where
   /-- How many of its clauses something implements, of how many. -/
   implemented : Nat
   clauses : Nat
+  /-- Lines of its implementing code tests run, of how many, when that code
+  was measured as it is now. -/
+  covered : Option (Nat × Nat)
   deriving Repr, DecidableEq, Inhabited, ToJson, FromJson
 
 /-- A node at a depth in the refinement graph. -/
@@ -360,17 +363,38 @@ private def filledOf (node : Node) : Nat :=
 private def barOf (node : Node) : String :=
   String.mk (List.replicate (filledOf node) '█') ++ String.mk (List.replicate (5 - filledOf node) '░')
 
+/-- What a row says of its measured lines: `lines 57%`. -/
+private def percentText (c : Nat × Nat) : String :=
+  "lines " ++ toString (if c.2 == 0 then 100 else c.1 * 100 / c.2) ++ "%"
+
+/-- The measured lines and the gap after them; nothing unmeasured. -/
+private def coveredPart (node : Node) : String :=
+  match node.covered with
+  | some c => percentText c ++ "  "
+  | none => ""
+
 private def indexLine (node : Node) : String :=
   gradeText node.level ++ "  " ++ node.id ++ "  " ++ barOf node ++ " " ++
-    toString node.implemented ++ "/" ++ toString node.clauses ++ "  " ++ node.title
+    toString node.implemented ++ "/" ++ toString node.clauses ++ "  " ++ coveredPart node ++ node.title
 
-/-- The bar's filled cells, in the colour of what fills them. -/
+/-- The measured lines' span: green when every one ran, red when one did not. -/
+private def coveredSpans (from_ : Nat) (node : Node) : List Span :=
+  match node.covered with
+  | none => []
+  | some c =>
+    let role := if c.1 == c.2 then Role.added else Role.removed
+    [{ start := from_, stop := from_ + (percentText c).length, role := role, actions := actionsFor role }]
+
+/-- The bar's filled cells, in the colour of what fills them, and the
+measured lines. -/
 private def barSpans (at_ : Nat) (node : Node) : List Span :=
   let start := at_ + 4 + node.id.length + 2
-  if filledOf node = 0 then []
-  else [{ start := start, stop := start + filledOf node,
-          role := Role.claim TraceLean.Annotation.Role.implements,
-          actions := actionsFor (Role.claim TraceLean.Annotation.Role.implements) }]
+  let counts := (toString node.implemented ++ "/" ++ toString node.clauses).length
+  let lines := coveredSpans (start + 5 + 1 + counts + 2) node
+  if filledOf node = 0 then lines
+  else { start := start, stop := start + filledOf node,
+         role := Role.claim TraceLean.Annotation.Role.implements,
+         actions := actionsFor (Role.claim TraceLean.Annotation.Role.implements) } :: lines
 
 private def indexSpans (at_ : Nat) : List Node → List Span
   | [] => []

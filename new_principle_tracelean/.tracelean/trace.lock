@@ -743,17 +743,18 @@
     },
     "REQ-STALE": {
       "clauses": [
+        "agreed_not_rerun",
         "change_invalidates",
-        "current_not_rerun",
         "inputs_identified",
         "listed_for_a_script",
+        "measured_not_retaken",
         "no_silent_revalidation",
         "requirement_reopens_all",
         "retarget_invalidates",
         "scanner_never_writes",
         "stale_is_visible"
       ],
-      "content_hash": "f9aca19cde7fe384",
+      "content_hash": "fee4e2f6a490ebc1",
       "file": "reqs/trace/REQ-STALE.md",
       "refines": [
         "ARCH-HONEST",
@@ -4235,7 +4236,7 @@
       "clause": "requirement_opened",
       "file": "crates/core/src/surface/requirement_view.rs",
       "anchor": "crates/core/src/surface/requirement_view.rs::requirement_view",
-      "body_hash": "8bbfe1efd76bfe15",
+      "body_hash": "33b2ce03e8113c63",
       "link_hash": "c2afcddb379a9bf1",
       "qualifier": null
     },
@@ -4352,6 +4353,26 @@
     {
       "role": "drt",
       "req": "REQ-STALE",
+      "clause": "agreed_not_rerun",
+      "file": "crates/core/src/drt/rerun.rs",
+      "anchor": "crates/core/src/drt/rerun.rs::rerun",
+      "body_hash": "a7468ccb5e83b9ff",
+      "link_hash": "f2a1d5f211caead4",
+      "qualifier": null
+    },
+    {
+      "role": "drt",
+      "req": "REQ-STALE",
+      "clause": "agreed_not_rerun",
+      "file": "crates/core/tests/differential_surface.rs",
+      "anchor": "crates/core/tests/differential_surface.rs::model_and_implementation_agree_on_running_a_clause_again",
+      "body_hash": "2af84f5ef349a3a3",
+      "link_hash": "81a0278e2bfc7df9",
+      "qualifier": null
+    },
+    {
+      "role": "drt",
+      "req": "REQ-STALE",
       "clause": "change_invalidates",
       "file": "crates/core/src/trace/record.rs",
       "anchor": "crates/core/src/trace/record.rs::staleness_of",
@@ -4372,31 +4393,31 @@
     {
       "role": "drt",
       "req": "REQ-STALE",
-      "clause": "current_not_rerun",
-      "file": "crates/core/src/trace/lines.rs",
-      "anchor": "crates/core/src/trace/lines.rs::sources_hash_owned",
-      "body_hash": "83fe3af3eba3754a",
-      "link_hash": "2100e0dc3662b81a",
-      "qualifier": null
-    },
-    {
-      "role": "drt",
-      "req": "REQ-STALE",
-      "clause": "current_not_rerun",
-      "file": "crates/core/tests/differential_lines.rs",
-      "anchor": "crates/core/tests/differential_lines.rs::model_and_implementation_agree_on_the_hash_of_the_rust_sources",
-      "body_hash": "d99e00fc90f7c17b",
-      "link_hash": "5558a76278cd2ba8",
-      "qualifier": null
-    },
-    {
-      "role": "drt",
-      "req": "REQ-STALE",
       "clause": "inputs_identified",
       "file": "crates/core/src/trace/record.rs",
       "anchor": "crates/core/src/trace/record.rs::reproducibility",
       "body_hash": "5f97e741b1189529",
       "link_hash": "9ab5c4a14dda98b4",
+      "qualifier": null
+    },
+    {
+      "role": "drt",
+      "req": "REQ-STALE",
+      "clause": "measured_not_retaken",
+      "file": "crates/core/src/trace/lines.rs",
+      "anchor": "crates/core/src/trace/lines.rs::retake_owned",
+      "body_hash": "44e831e2c49c60f0",
+      "link_hash": "c8c491db67ff3ba8",
+      "qualifier": null
+    },
+    {
+      "role": "drt",
+      "req": "REQ-STALE",
+      "clause": "measured_not_retaken",
+      "file": "crates/core/tests/differential_lines.rs",
+      "anchor": "crates/core/tests/differential_lines.rs::model_and_implementation_agree_on_when_coverage_is_measured_again",
+      "body_hash": "f62141a599377ae5",
+      "link_hash": "888e8b207c223d4b",
       "qualifier": null
     },
     {
@@ -6265,7 +6286,7 @@
       "clause": "from_the_shell",
       "file": "crates/core/src/bin/tracelean-trace.rs",
       "anchor": "crates/core/src/bin/tracelean-trace.rs::main",
-      "body_hash": "d7d623198c9d5d0b",
+      "body_hash": "01b7594c18c88724",
       "link_hash": "cfb1dd6e6161c477",
       "qualifier": null
     },
@@ -7915,7 +7936,7 @@
       "clause": "human_decides",
       "file": "crates/core/src/bin/tracelean-trace.rs",
       "anchor": "crates/core/src/bin/tracelean-trace.rs::main",
-      "body_hash": "d7d623198c9d5d0b",
+      "body_hash": "01b7594c18c88724",
       "link_hash": "642e3a15ac658d39",
       "qualifier": null
     },
@@ -8025,7 +8046,7 @@
       "clause": "no_call",
       "file": "crates/core/src/bin/tracelean-trace.rs",
       "anchor": "crates/core/src/bin/tracelean-trace.rs::main",
-      "body_hash": "d7d623198c9d5d0b",
+      "body_hash": "01b7594c18c88724",
       "link_hash": "9832a41f49e5f574",
       "qualifier": null
     },
@@ -8055,7 +8076,7 @@
       "clause": "prompt_exported",
       "file": "crates/core/src/bin/tracelean-trace.rs",
       "anchor": "crates/core/src/bin/tracelean-trace.rs::main",
-      "body_hash": "d7d623198c9d5d0b",
+      "body_hash": "01b7594c18c88724",
       "link_hash": "375f03d31121ea8c",
       "qualifier": null
     },
@@ -8165,7 +8186,7 @@
       "clause": "requirement_summary",
       "file": "crates/core/src/surface/requirement_view.rs",
       "anchor": "crates/core/src/surface/requirement_view.rs::requirement_view",
-      "body_hash": "8bbfe1efd76bfe15",
+      "body_hash": "33b2ce03e8113c63",
       "link_hash": "0844d922ad771cb3",
       "qualifier": null
     },
@@ -10275,7 +10296,7 @@
       "clause": "requirement_opened",
       "file": "crates/core/src/surface/requirement_view.rs",
       "anchor": "crates/core/src/surface/requirement_view.rs::requirement_view",
-      "body_hash": "8bbfe1efd76bfe15",
+      "body_hash": "33b2ce03e8113c63",
       "link_hash": "23988b976a100f73",
       "qualifier": null
     },
@@ -10392,6 +10413,16 @@
     {
       "role": "implements",
       "req": "REQ-STALE",
+      "clause": "agreed_not_rerun",
+      "file": "crates/core/src/drt/rerun.rs",
+      "anchor": "crates/core/src/drt/rerun.rs::rerun",
+      "body_hash": "a7468ccb5e83b9ff",
+      "link_hash": "416035c4b1d72ef0",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-STALE",
       "clause": "change_invalidates",
       "file": "crates/core/src/trace/earn.rs",
       "anchor": "crates/core/src/trace/earn.rs::still_standing",
@@ -10427,26 +10458,6 @@
       "anchor": "crates/core/src/trace/record.rs::staleness_of",
       "body_hash": "1a76aa2d5aeea1e8",
       "link_hash": "d82393a8e569d4da",
-      "qualifier": null
-    },
-    {
-      "role": "implements",
-      "req": "REQ-STALE",
-      "clause": "current_not_rerun",
-      "file": "crates/core/src/drt/auto.rs",
-      "anchor": "crates/core/src/drt/auto.rs::still_agreed",
-      "body_hash": "8919bf38a68a14a9",
-      "link_hash": "dd7d352c11be5889",
-      "qualifier": null
-    },
-    {
-      "role": "implements",
-      "req": "REQ-STALE",
-      "clause": "current_not_rerun",
-      "file": "crates/core/src/trace/lines.rs",
-      "anchor": "crates/core/src/trace/lines.rs::sources_hash",
-      "body_hash": "ef5b73786542883c",
-      "link_hash": "aa712ab3ab7dd678",
       "qualifier": null
     },
     {
@@ -10505,8 +10516,18 @@
       "clause": "listed_for_a_script",
       "file": "crates/core/src/bin/tracelean-trace.rs",
       "anchor": "crates/core/src/bin/tracelean-trace.rs::main",
-      "body_hash": "d7d623198c9d5d0b",
+      "body_hash": "01b7594c18c88724",
       "link_hash": "24d049892b205e19",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-STALE",
+      "clause": "measured_not_retaken",
+      "file": "crates/core/src/trace/lines.rs",
+      "anchor": "crates/core/src/trace/lines.rs::retake",
+      "body_hash": "e19332b8261fde03",
+      "link_hash": "cdfc26852a6c3f66",
       "qualifier": null
     },
     {
@@ -13705,7 +13726,7 @@
       "clause": "requirement_opened",
       "file": "formal/TraceLean/RequirementView.lean",
       "anchor": "formal/TraceLean/RequirementView.lean::TraceLean.RequirementView::requirementView",
-      "body_hash": "13165a3e0f10034c",
+      "body_hash": "9fc505ffe2567ff4",
       "link_hash": "6cfca4316b773547",
       "qualifier": null
     },
@@ -13762,6 +13783,16 @@
     {
       "role": "models",
       "req": "REQ-STALE",
+      "clause": "agreed_not_rerun",
+      "file": "formal/TraceLean/Staleness.lean",
+      "anchor": "formal/TraceLean/Staleness.lean::TraceLean.Staleness::rerun",
+      "body_hash": "49e9d624598a993c",
+      "link_hash": "ef1044849b272b87",
+      "qualifier": null
+    },
+    {
+      "role": "models",
+      "req": "REQ-STALE",
       "clause": "change_invalidates",
       "file": "formal/TraceLean/Staleness.lean",
       "anchor": "formal/TraceLean/Staleness.lean::TraceLean.Staleness::staleness",
@@ -13772,21 +13803,21 @@
     {
       "role": "models",
       "req": "REQ-STALE",
-      "clause": "current_not_rerun",
-      "file": "formal/TraceLean/Hash.lean",
-      "anchor": "formal/TraceLean/Hash.lean::TraceLean.Hash::sourcesHash",
-      "body_hash": "f7901d0bfb129d0c",
-      "link_hash": "02740cd67aae218e",
-      "qualifier": null
-    },
-    {
-      "role": "models",
-      "req": "REQ-STALE",
       "clause": "inputs_identified",
       "file": "formal/TraceLean/Record.lean",
       "anchor": "formal/TraceLean/Record.lean::TraceLean.Record::missingField",
       "body_hash": "3c303b7e5462a2e6",
       "link_hash": "5e1dde18de8ae945",
+      "qualifier": null
+    },
+    {
+      "role": "models",
+      "req": "REQ-STALE",
+      "clause": "measured_not_retaken",
+      "file": "formal/TraceLean/Hash.lean",
+      "anchor": "formal/TraceLean/Hash.lean::TraceLean.Hash::retake",
+      "body_hash": "9f579e9f30cd89b2",
+      "link_hash": "08ec11a0ce545b9f",
       "qualifier": null
     },
     {
@@ -23815,7 +23846,7 @@
       "clause": "requirement_opened",
       "file": "crates/core/src/surface/requirement_view.rs",
       "anchor": "crates/core/src/surface/requirement_view.rs::tests::a_requirement_shows_its_clauses_and_links_to_what_claims_them",
-      "body_hash": "3db28e6180c2713c",
+      "body_hash": "9888600f61743ef7",
       "link_hash": "0225f80afe554648",
       "qualifier": null
     },
@@ -24012,6 +24043,26 @@
     {
       "role": "tests",
       "req": "REQ-STALE",
+      "clause": "agreed_not_rerun",
+      "file": "crates/core/tests/differential_surface.rs",
+      "anchor": "crates/core/tests/differential_surface.rs::model_and_implementation_agree_on_running_a_clause_again",
+      "body_hash": "2af84f5ef349a3a3",
+      "link_hash": "d5453d9f0d3e844c",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-STALE",
+      "clause": "agreed_not_rerun",
+      "file": "crates/core/tests/drt_cached.rs",
+      "anchor": "crates/core/tests/drt_cached.rs::an_agreed_clause_is_run_again_only_when_what_it_ran_on_changed",
+      "body_hash": "52c7077af342969d",
+      "link_hash": "9ab2d4febf1b8794",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-STALE",
       "clause": "change_invalidates",
       "file": "crates/core/src/trace/record.rs",
       "anchor": "crates/core/src/trace/record.rs::tests::a_changed_input_invalidates",
@@ -24037,36 +24088,6 @@
       "anchor": "crates/core/tests/differential_surface.rs::model_and_implementation_agree_on_staleness",
       "body_hash": "590948d39275e070",
       "link_hash": "410cf4ffc970ae3a",
-      "qualifier": null
-    },
-    {
-      "role": "tests",
-      "req": "REQ-STALE",
-      "clause": "current_not_rerun",
-      "file": "crates/core/src/trace/lines.rs",
-      "anchor": "crates/core/src/trace/lines.rs::sources_tests::the_sources_hash_moves_with_rust_files_and_manifests_only",
-      "body_hash": "69702b664dc59095",
-      "link_hash": "016179aa8ab4e72c",
-      "qualifier": null
-    },
-    {
-      "role": "tests",
-      "req": "REQ-STALE",
-      "clause": "current_not_rerun",
-      "file": "crates/core/tests/differential_lines.rs",
-      "anchor": "crates/core/tests/differential_lines.rs::model_and_implementation_agree_on_the_hash_of_the_rust_sources",
-      "body_hash": "d99e00fc90f7c17b",
-      "link_hash": "e5841f9b3ce0c5e5",
-      "qualifier": null
-    },
-    {
-      "role": "tests",
-      "req": "REQ-STALE",
-      "clause": "current_not_rerun",
-      "file": "crates/core/tests/drt_cached.rs",
-      "anchor": "crates/core/tests/drt_cached.rs::an_agreed_clause_is_run_again_only_when_what_it_ran_on_changed",
-      "body_hash": "52c7077af342969d",
-      "link_hash": "8c00f179ab9a7275",
       "qualifier": null
     },
     {
@@ -24108,6 +24129,26 @@
       "body_hash": "b75a28c2fad0aa87",
       "link_hash": "02858f1acbfb24ae",
       "qualifier": "structural"
+    },
+    {
+      "role": "tests",
+      "req": "REQ-STALE",
+      "clause": "measured_not_retaken",
+      "file": "crates/core/src/trace/lines.rs",
+      "anchor": "crates/core/src/trace/lines.rs::sources_tests::the_sources_hash_moves_with_rust_files_and_manifests_only",
+      "body_hash": "69702b664dc59095",
+      "link_hash": "7d98a872f524a289",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-STALE",
+      "clause": "measured_not_retaken",
+      "file": "crates/core/tests/differential_lines.rs",
+      "anchor": "crates/core/tests/differential_lines.rs::model_and_implementation_agree_on_when_coverage_is_measured_again",
+      "body_hash": "f62141a599377ae5",
+      "link_hash": "8ce4d34871e187f2",
+      "qualifier": null
     },
     {
       "role": "tests",
@@ -27665,7 +27706,7 @@
       "inputs": [
         [
           "implementation",
-          "560440270dd7dc8e+69b717aadb840d9c+d7d623198c9d5d0b"
+          "01b7594c18c88724+560440270dd7dc8e+69b717aadb840d9c"
         ],
         [
           "model",
@@ -31480,7 +31521,7 @@
       "inputs": [
         [
           "implementation",
-          "3e85a7d5b06f305d+448cb95e43510bf3+79e8f4b682a14a28+95cbdb4e6ad99141+d7d623198c9d5d0b"
+          "01b7594c18c88724+3e85a7d5b06f305d+448cb95e43510bf3+79e8f4b682a14a28+95cbdb4e6ad99141"
         ],
         [
           "model",
@@ -31655,7 +31696,7 @@
       "inputs": [
         [
           "implementation",
-          "0bfb42630f56bb5b+20aa6e203b9f9046+a714e521334573b4+d7d623198c9d5d0b"
+          "01b7594c18c88724+0bfb42630f56bb5b+20aa6e203b9f9046+a714e521334573b4"
         ],
         [
           "model",
@@ -31787,6 +31828,34 @@
       "key": {
         "reqId": "REQ-LINECOV",
         "clause": "lines_listed",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "per item: tests with summed counts in name order, each unrun line a file.open link with its source; opening it is trace.coverage in the requirement view and dispatch. Decided under autonomy given 2026-10-10 evening"
+        }
+      },
+      "linkHash": "35b84d40f7dc8837",
+      "inputs": [
+        [
+          "requirement",
+          "30fc64a7334d0dce"
+        ],
+        [
+          "model",
+          "4345d0eb87051f5b"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-LINECOV",
+        "clause": "lines_listed",
         "bond": "modelImpl"
       },
       "level": "L3",
@@ -31904,6 +31973,34 @@
       "key": {
         "reqId": "REQ-LINECOV",
         "clause": "requirement_summary",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "run, all and tests over every item, a (path, line) once; the share is rendered from these counts by coveredText. Decided under autonomy given 2026-10-10 evening"
+        }
+      },
+      "linkHash": "41854feeb4352143",
+      "inputs": [
+        [
+          "requirement",
+          "9c57e907a4d9588a"
+        ],
+        [
+          "model",
+          "50c520a93cbf4d64"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-LINECOV",
+        "clause": "requirement_summary",
         "bond": "modelImpl"
       },
       "level": "L3",
@@ -31918,7 +32015,7 @@
       "inputs": [
         [
           "implementation",
-          "7f6e2d0f3302538b+8bbfe1efd76bfe15"
+          "33b2ce03e8113c63+7f6e2d0f3302538b"
         ],
         [
           "model",
@@ -33645,6 +33742,34 @@
         [
           "requirement",
           "b79f4e8ae946d20d"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-OBS",
+        "clause": "only_what_the_tool_changed",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "offers only paths whose copy content differs from the start's hash; none when the start is unknown; protected paths excluded as mutationsOf excludes them. Decided under autonomy given 2026-10-10 evening"
+        }
+      },
+      "linkHash": "d2fa93c33ef1f0c2",
+      "inputs": [
+        [
+          "requirement",
+          "9d53e652aa9cb51b"
+        ],
+        [
+          "model",
+          "ed8715fea7d01908"
         ]
       ]
     },
@@ -37745,11 +37870,11 @@
       "inputs": [
         [
           "implementation",
-          "8bbfe1efd76bfe15+99ea256942475964"
+          "33b2ce03e8113c63+99ea256942475964"
         ],
         [
           "model",
-          "13165a3e0f10034c"
+          "9fc505ffe2567ff4"
         ],
         [
           "requirement",
@@ -38081,6 +38206,64 @@
     {
       "key": {
         "reqId": "REQ-STALE",
+        "clause": "agreed_not_rerun",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "re-run when asked, or when no held run of this op agreed at L3 against a live link and inputs that hash as they did. Decided under autonomy given 2026-10-10 evening"
+        }
+      },
+      "linkHash": "ef1044849b272b87",
+      "inputs": [
+        [
+          "requirement",
+          "32b5bca473fbdaa3"
+        ],
+        [
+          "model",
+          "49e9d624598a993c"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-STALE",
+        "clause": "agreed_not_rerun",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 31,
+          "cases": 3000,
+          "op": "REQ-STALE.agreed_not_rerun"
+        }
+      },
+      "linkHash": "81a0278e2bfc7df9",
+      "inputs": [
+        [
+          "implementation",
+          "a7468ccb5e83b9ff"
+        ],
+        [
+          "model",
+          "49e9d624598a993c"
+        ],
+        [
+          "requirement",
+          "32b5bca473fbdaa3"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-STALE",
         "clause": "change_invalidates",
         "bond": "requirementModel"
       },
@@ -38133,36 +38316,6 @@
         [
           "requirement",
           "57f9ed2e2c86ee7e"
-        ]
-      ]
-    },
-    {
-      "key": {
-        "reqId": "REQ-STALE",
-        "clause": "current_not_rerun",
-        "bond": "modelImpl"
-      },
-      "level": "L3",
-      "detail": {
-        "drt": {
-          "seed": 334,
-          "cases": 3000,
-          "op": "REQ-STALE.current_not_rerun"
-        }
-      },
-      "linkHash": "2100e0dc3662b81a",
-      "inputs": [
-        [
-          "implementation",
-          "8919bf38a68a14a9+ef5b73786542883c"
-        ],
-        [
-          "model",
-          "f7901d0bfb129d0c"
-        ],
-        [
-          "requirement",
-          "6c7036615f580e41"
         ]
       ]
     },
@@ -38222,6 +38375,64 @@
         [
           "toolchain",
           "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-STALE",
+        "clause": "measured_not_retaken",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "retaken when asked, when nothing is held, or when the held sources hash differs from the Rust sources now; otherwise not. Decided under autonomy given 2026-10-10 evening"
+        }
+      },
+      "linkHash": "08ec11a0ce545b9f",
+      "inputs": [
+        [
+          "requirement",
+          "f97d3602cede5b59"
+        ],
+        [
+          "model",
+          "9f579e9f30cd89b2"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-STALE",
+        "clause": "measured_not_retaken",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 334,
+          "cases": 3000,
+          "op": "REQ-STALE.measured_not_retaken"
+        }
+      },
+      "linkHash": "888e8b207c223d4b",
+      "inputs": [
+        [
+          "implementation",
+          "e19332b8261fde03"
+        ],
+        [
+          "model",
+          "9f579e9f30cd89b2"
+        ],
+        [
+          "requirement",
+          "f97d3602cede5b59"
         ]
       ]
     },

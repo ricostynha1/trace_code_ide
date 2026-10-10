@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-OBS",
+    "clause": "only_what_the_tool_changed",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "offers only paths whose copy content differs from the start's hash; none when the start is unknown; protected paths excluded as mutationsOf excludes them. Decided under autonomy given 2026-10-10 evening"
+    }
+  },
+  "linkHash": "d2fa93c33ef1f0c2",
+  "inputs": [
+    [
+      "requirement",
+      "9d53e652aa9cb51b"
+    ],
+    [
+      "model",
+      "ed8715fea7d01908"
+    ]
+  ]
+}

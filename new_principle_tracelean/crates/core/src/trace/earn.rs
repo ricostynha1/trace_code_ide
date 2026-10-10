@@ -333,7 +333,7 @@ pub fn changed_inputs(index: &Index, record: &Evidence) -> Vec<String> {
 }
 
 /// What a record's named inputs hash to now.
-fn current_inputs(index: &Index, record: &Evidence) -> Vec<(String, String)> {
+pub fn current_inputs(index: &Index, record: &Evidence) -> Vec<(String, String)> {
     let req = &record.key.req_id;
     let clause = record.key.clause.as_deref();
     record

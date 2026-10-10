@@ -132,4 +132,22 @@ theorem nothing_revives_itself (stale : List Record) :
     revalidated stale [] = [] := by
   simp [revalidated]
 
+/-! ## Not running again what is still valid -/
+
+/-- A differential run held for a clause: its op, whether it agreed at L3,
+what keeps it valid, and the hashes its inputs have now. -/
+structure HeldRun where
+  op : String
+  agreed : Bool
+  record : Record
+  current : List (String × String)
+  deriving Repr, Inhabited, ToJson, FromJson
+
+/-- Whether `op` is run again: when asked, or when no held run of it agreed
+against inputs and a link that are still what they were.
+
+@models REQ-STALE.agreed_not_rerun -/
+def rerun (held : List HeldRun) (op : String) (live : List String) (again : Bool) : Bool :=
+  again || !(held.any (fun h => h.op == op && h.agreed && (staleness h.record live h.current).isNone))
+
 end TraceLean.Staleness

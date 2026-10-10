@@ -99,8 +99,7 @@ pub fn measure(root: &Path, files: &BTreeMap<String, String>) -> Result<(Coverag
     std::fs::create_dir_all(&profiles).map_err(|e| e.to_string())?;
     let prefix = format!("{}/", root.display());
 
-    let mut runs: Vec<TestLines> = Vec::new();
-    let mut count = 0;
+    let mut tests: Vec<(PathBuf, PathBuf, String)> = Vec::new();
     for (binary, package) in test_binaries(root, &target)? {
         let listed = Command::new(&binary)
             .args(["--list", "--format", "terse"])
@@ -108,50 +107,56 @@ pub fn measure(root: &Path, files: &BTreeMap<String, String>) -> Result<(Coverag
             .current_dir(&package)
             .output()
             .map_err(|e| e.to_string())?;
-        let names: Vec<String> = String::from_utf8_lossy(&listed.stdout)
-            .lines()
-            .filter_map(|l| l.strip_suffix(": test").map(str::to_string))
-            .collect();
-        for name in names {
-            let raw = profiles.join("one.profraw");
-            let data = profiles.join("one.profdata");
-            let _ = std::fs::remove_file(&raw);
-            let ran = Command::new(&binary)
-                .args(["--exact", &name, "--test-threads", "1", "--quiet"])
-                .env("LLVM_PROFILE_FILE", &raw)
-                .current_dir(&package)
-                .output()
-                .map_err(|e| e.to_string())?;
-            // A test that did not run left nothing to read; one that failed
-            // still ran the lines it ran.
-            if !raw.is_file() || ran.stdout.windows(9).any(|w| w == b"1 ignored") {
-                continue;
-            }
-            count += 1;
-            let merged_ok = Command::new(&profdata)
-                .args(["merge", "-sparse"])
-                .arg(&raw)
-                .arg("-o")
-                .arg(&data)
-                .status()
-                .map_err(|e| e.to_string())?;
-            if !merged_ok.success() {
-                continue;
-            }
-            let exported = Command::new(&cov)
-                .args(["export", "-format=lcov"])
-                .arg(format!("-instr-profile={}", data.display()))
-                .arg(&binary)
-                .output()
-                .map_err(|e| e.to_string())?;
-            for (file, lines) in lcov(&String::from_utf8_lossy(&exported.stdout)) {
-                let Some(rel) = file.strip_prefix(&prefix) else { continue };
-                if files.contains_key(rel) {
-                    runs.push(TestLines { test: name.clone(), file: rel.to_string(), lines });
-                }
+        for l in String::from_utf8_lossy(&listed.stdout).lines() {
+            if let Some(name) = l.strip_suffix(": test") {
+                tests.push((binary.clone(), package.clone(), name.to_string()));
             }
         }
     }
+
+    // Each test alone in its own process, several processes at once, each
+    // leaving its profile under its own number.
+    let numbered: Vec<(usize, &(PathBuf, PathBuf, String))> = tests.iter().enumerate().collect();
+    let measured = super::run::par_map(&numbered, |(i, (binary, package, name))| -> Option<Vec<TestLines>> {
+        let raw = profiles.join(format!("{i}.profraw"));
+        let data = profiles.join(format!("{i}.profdata"));
+        let ran = Command::new(binary)
+            .args(["--exact", name, "--test-threads", "1", "--quiet"])
+            .env("LLVM_PROFILE_FILE", &raw)
+            .current_dir(package)
+            .output()
+            .ok()?;
+        // A test that did not run left nothing to read; one that failed
+        // still ran the lines it ran.
+        if !raw.is_file() || ran.stdout.windows(9).any(|w| w == b"1 ignored") {
+            return None;
+        }
+        let merged_ok = Command::new(&profdata).args(["merge", "-sparse"]).arg(&raw).arg("-o").arg(&data).status().ok()?;
+        let exported = merged_ok
+            .success()
+            .then(|| {
+                Command::new(&cov)
+                    .args(["export", "-format=lcov"])
+                    .arg(format!("-instr-profile={}", data.display()))
+                    .arg(binary)
+                    .output()
+                    .ok()
+            })
+            .flatten();
+        let _ = (std::fs::remove_file(&raw), std::fs::remove_file(&data));
+        let Some(exported) = exported else { return Some(Vec::new()) };
+        Some(
+            lcov(&String::from_utf8_lossy(&exported.stdout))
+                .into_iter()
+                .filter_map(|(file, lines)| {
+                    let rel = file.strip_prefix(&prefix)?;
+                    files.contains_key(rel).then(|| TestLines { test: name.clone(), file: rel.to_string(), lines })
+                })
+                .collect(),
+        )
+    });
+    let count = measured.iter().flatten().count();
+    let runs: Vec<TestLines> = measured.into_iter().flatten().flatten().collect();
 
     let mut coverage = Coverage::default();
     let mut paths: Vec<String> = runs.iter().map(|r| r.file.clone()).collect();

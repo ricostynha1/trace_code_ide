@@ -44,8 +44,6 @@ pub struct Coverage {
 /// One hash of every file a Rust test run depends on — each `.rs` file and
 /// each `Cargo.toml`/`Cargo.lock`, by path and text — so a measurement is
 /// known to be current without running anything.
-///
-/// @implements REQ-STALE.current_not_rerun
 pub fn sources_hash(files: &BTreeMap<String, String>) -> String {
     let relevant: String = files
         .iter()
@@ -53,6 +51,14 @@ pub fn sources_hash(files: &BTreeMap<String, String>) -> String {
         .map(|(path, text)| format!("{path}\0{}\0", crate::trace::hash::text(text)))
         .collect();
     crate::trace::hash::text(&relevant)
+}
+
+/// Whether coverage is measured again: when asked (`again`), when nothing is
+/// held, or when what is held was taken against sources that hash otherwise.
+///
+/// @implements REQ-STALE.measured_not_retaken
+pub fn retake(held: &Coverage, files: &BTreeMap<String, String>, again: bool) -> bool {
+    again || held.files.is_empty() || held.sources != sources_hash(files)
 }
 
 /// LCOV text as `(source file, [(line, count)])`, in the order it names them.
@@ -137,12 +143,17 @@ pub fn current<'a>(coverage: &'a Coverage, path: &str, hash: &str) -> Option<&'a
     coverage.files.get(path).filter(|(measured, _)| measured == hash).map(|(_, lines)| lines)
 }
 
-/// `sources_hash` over pairs, as the model takes them; a path given twice is
-/// read at its later text, as the map does.
+/// `retake` as the model takes it: whether anything is held and the sources
+/// hash it was taken against, the files as pairs (a path given twice read at
+/// its later text, as the map does).
 ///
-/// @drt REQ-STALE.current_not_rerun
-pub fn sources_hash_owned(files: Vec<(String, String)>) -> String {
-    sources_hash(&files.into_iter().collect())
+/// @drt REQ-STALE.measured_not_retaken
+pub fn retake_owned(measured: bool, held: String, files: Vec<(String, String)>, again: bool) -> bool {
+    let mut coverage = Coverage { sources: held, ..Coverage::default() };
+    if measured {
+        coverage.files.insert(String::new(), (String::new(), Vec::new()));
+    }
+    retake(&coverage, &files.into_iter().collect(), again)
 }
 
 #[cfg(test)]
@@ -151,7 +162,7 @@ mod sources_tests {
 
     /// Only what a Rust test run depends on moves the hash.
     ///
-    /// @tests REQ-STALE.current_not_rerun
+    /// @tests REQ-STALE.measured_not_retaken
     #[test]
     fn the_sources_hash_moves_with_rust_files_and_manifests_only() {
         let files = |extra: &[(&str, &str)]| -> BTreeMap<String, String> {
