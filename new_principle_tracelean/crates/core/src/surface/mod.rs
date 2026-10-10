@@ -6,6 +6,7 @@ pub mod cells;
 pub mod chips;
 pub mod context;
 pub mod contrast;
+pub mod coverage_view;
 pub mod definition;
 pub mod drive;
 pub mod explorer;

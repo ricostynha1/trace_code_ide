@@ -64,6 +64,7 @@ structure Shown where
   refinedBy : List String
   clauses : List ClauseShown
   width : Nat
+  lines : Option Covered
   deriving Repr, Inhabited, ToJson, FromJson
 
 def roleWord : TraceLean.Annotation.Role → String
@@ -109,13 +110,20 @@ def claimLine (out : Lines) (claim : Claim) : Lines :=
   line out ([("  ", Role.plain, []), (padRight claim.role 10, role, []), (" ", Role.plain, []),
              (claim.path ++ ":" ++ toString claim.line, Role.path, ["file.open"])] ++ symbol)
 
-def coveredLine (out : Lines) : Option Covered → Lines
+/-- `3/4 lines run (75%), by 2 tests`; all of nothing is all of it. -/
+def coveredText (c : Covered) : String :=
+  let percent := if c.all == 0 then 100 else c.run * 100 / c.all
+  toString c.run ++ "/" ++ toString c.all ++ " lines run (" ++ toString percent ++ "%), by " ++
+    toString c.tests ++ " test" ++ (if c.tests == 1 then "" else "s")
+
+/-- The requirement or clause, which opens the lines behind the count, then
+the count: whole in green, short in red. -/
+def coveredLine (lead name : String) (out : Lines) : Option Covered → Lines
   | none => out
   | some c =>
     let role := if c.run == c.all then Role.added else Role.removed
-    let said := toString c.run ++ "/" ++ toString c.all ++ " lines run, by " ++ toString c.tests ++
-      " test" ++ (if c.tests == 1 then "" else "s")
-    line out [("  covered     ", Role.plain, []), (said, role, [])]
+    line out [(lead, Role.plain, []), (name, Role.requirement, ["trace.coverage"]), ("  ", Role.plain, []),
+              (coveredText c, role, [])]
 
 def pinsLines (out : Lines) : Option (String × String) → Lines
   | none => out
@@ -145,13 +153,13 @@ def clauseLines (id : String) (out : Lines) (clause : ClauseShown) : Lines :=
     | some k => line out [("  for agent   ", Role.plain, []), (id ++ "." ++ k, Role.requirement, ["trace.context"])]
     | none => out
   let out := if clause.claims.isEmpty then line out [("  nothing claims it yet", Role.removed, [])] else out
-  let out := pinsLines (coveredLine out clause.lines) clause.pins
+  let name :=
+    match clause.key with
+    | some k => id ++ "." ++ k
+    | none => id
+  let out := pinsLines (coveredLine "  covered     " name out clause.lines) clause.pins
   let out :=
     if clause.claims.any (·.role == "models") then
-      let name :=
-        match clause.key with
-        | some k => id ++ "." ++ k
-        | none => id
       line out [("  judge       ", Role.plain, []), (name, Role.requirement, ["trace.judge"])]
     else out
   clause.claims.foldl claimLine (judgedLines out clause.judged)
@@ -171,7 +179,7 @@ def requirementView (view : Shown) : Buffer :=
   let out := namesLine (namesLine out "refines    " view.refines) "refined by " view.refinedBy
   let out := line out [("for agent  ", Role.plain, []), (view.id, Role.requirement, ["trace.context"]),
                        ("  context to copy", Role.plain, [])]
-  let out := evidenceLine out view.clauses
+  let out := coveredLine "covered    " view.id (evidenceLine out view.clauses) view.lines
   finish (view.clauses.foldl (clauseLines view.id) out) ("requirement " ++ view.id)
 
 end TraceLean.RequirementView

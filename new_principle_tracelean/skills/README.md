@@ -49,6 +49,7 @@ tracelean-view . requirements                 # each requirement, its level, cla
 tracelean-view . design                       # the same along `refines`: what depends on what
 tracelean-view . requirement REQ-X            # its clauses: level, claims, coverage, judgement
 tracelean-view . trace src/file.rs            # what a file claims, and what else claims it
+tracelean-view . coverage REQ-X               # lines its code runs, by which tests, and which none run
 tracelean-view . findings                     # every finding (Unmodeled, Unbound, …), one a line
 tracelean-view . evidence                     # each clause's evidence chain
 tracelean-view                                # the full list

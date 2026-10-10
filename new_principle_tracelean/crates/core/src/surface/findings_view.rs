@@ -5,8 +5,6 @@
 //! `path:line` link (`file.open`, which the shell opens at that line) and every
 //! requirement named in the message opens that requirement. The text is the
 //! same `kind: path:line message` a report has always read.
-//!
-//! @implements REQ-SHOW.findings_lead_somewhere
 
 use crate::surface::highlight::names;
 use crate::surface::produce::tidy;
@@ -24,6 +22,8 @@ pub struct Found {
 }
 
 /// The findings as a record titled `title`, one row a finding.
+///
+/// @implements REQ-SHOW.findings_lead_somewhere
 pub fn findings_view(title: &str, found: &[Found]) -> Buffer {
     let mut text = String::new();
     let mut spans = Vec::new();
@@ -45,7 +45,9 @@ pub fn findings_view(title: &str, found: &[Found]) -> Buffer {
                         actions: vec!["trace.requirement".to_string()],
                     });
                 }
-            } else if *role != Role::Plain {
+            } else {
+                // Every piece but the message has a role of its own; the
+                // message is last and read for names above.
                 spans.push(Span {
                     start: at,
                     stop: at + length,

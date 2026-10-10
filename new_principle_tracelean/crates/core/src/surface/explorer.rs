@@ -9,8 +9,6 @@
 //! Every row carries `file.open`. On a folder, opening it opens or closes it:
 //! that is the shell's to do, since which folders are open is the session's
 //! state, not the workspace's.
-//!
-//! @implements REQ-SHOW.listing_is_a_tree
 
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -37,6 +35,8 @@ pub struct Row {
 ///
 /// Folders come before files at every level, each group in name order, and
 /// what is inside a closed folder is not shown.
+///
+/// @implements REQ-SHOW.listing_is_a_tree
 pub fn rows(files: &[String], open: &BTreeSet<String>) -> Vec<Row> {
     let mut out = Vec::new();
     level(files, "", 0, open, &mut out);

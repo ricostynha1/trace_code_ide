@@ -252,34 +252,54 @@ impl Editor {
         markers(lines.clone(), top, height).into_iter().map(|m| (m.line, m.hits, m.said)).collect()
     }
 
-    /// How much of a clause's implementing items tests run: executable lines
-    /// run, executable lines, and how many tests — over every item measured
-    /// against the text it has now. None when none was.
-    ///
-    /// @implements REQ-LINECOV.clause_summary
-    fn clause_lines(&self, index: &tracelean_core::trace::index::Index, id: &str, clause: &Option<String>) -> Option<(u64, u64, u64)> {
-        use tracelean_core::trace::lines::{current, span_coverage};
+    /// Every item implementing `id` — one clause of it, or with `clause` None
+    /// all of them — that was measured against the text it has now: where it
+    /// is, its name, the clause, and its executable lines. Each item once.
+    fn implementing_lines(
+        &self,
+        index: &tracelean_core::trace::index::Index,
+        id: &str,
+        clause: Option<&Option<String>>,
+    ) -> Vec<tracelean_core::surface::coverage_view::Item> {
+        use tracelean_core::trace::lines::current;
         let mut held = self.coverage_held.borrow_mut();
         if let Some(newer) = tracelean_core::drt::lines_run::read_if_newer(&self.root, held.0) {
             *held = (Some(newer.0), newer.1);
         }
         let files = &self.workspace().files;
-        let (mut run, mut all, mut tests) = (0, 0, Vec::new());
-        let mut measured = false;
+        let mut items: Vec<tracelean_core::surface::coverage_view::Item> = Vec::new();
         for link in index.links.iter().filter(|l| {
-            l.role == tracelean_core::trace::annotation::Role::Implements && l.req_id == id && l.clause == *clause
+            l.role == tracelean_core::trace::annotation::Role::Implements
+                && l.req_id == id
+                && clause.map_or(true, |c| l.clause == *c)
         }) {
             let Some(text) = files.get(&link.anchor.file) else { continue };
             let Some(lines) = current(&held.1, &link.anchor.file, &tracelean_core::trace::hash::text(text)) else { continue };
-            let reach = span_coverage(lines.clone(), link.anchor.start_line + 1, link.anchor.end_line + 1);
-            measured = true;
-            run += reach.run;
-            all += reach.all;
-            tests.extend(reach.tests);
+            let (start, end) = (link.anchor.start_line + 1, link.anchor.end_line + 1);
+            if items.iter().any(|i| i.path == link.anchor.file && i.start == start) {
+                continue;
+            }
+            items.push(tracelean_core::surface::coverage_view::Item {
+                path: link.anchor.file.clone(),
+                start,
+                symbol: symbol_of(&link.anchor),
+                clause: link.clause.clone(),
+                lines: lines.iter().filter(|l| l.line >= start && l.line <= end).cloned().collect(),
+                text: text.lines().map(str::to_string).skip(start as usize - 1).take((end - start + 1) as usize).collect(),
+            });
         }
-        tests.sort();
-        tests.dedup();
-        measured.then_some((run, all, tests.len() as u64))
+        items
+    }
+
+    /// How much of a clause's implementing items tests run — or, with
+    /// `clause` None, of every item implementing the requirement, each line
+    /// once: executable lines run, executable lines, and how many tests. None
+    /// when nothing was measured against the text it has now.
+    ///
+    /// @implements REQ-LINECOV.clause_summary
+    fn clause_lines(&self, index: &tracelean_core::trace::index::Index, id: &str, clause: Option<&Option<String>>) -> Option<(u64, u64, u64)> {
+        let items = self.implementing_lines(index, id, clause);
+        (!items.is_empty()).then(|| tracelean_core::surface::coverage_view::total(&items))
     }
 
     /// The claims to mark beside a window of a file buffer (`surface::chips`),
@@ -2699,6 +2719,9 @@ impl Editor {
             BufferKind::Record { title } if title.starts_with("requirement ") => {
                 self.requirement(&title["requirement ".len()..])
             }
+            BufferKind::Record { title } if title.starts_with("coverage ") => {
+                self.coverage(&title["coverage ".len()..])
+            }
             BufferKind::Record { title } if title == "keys" => make::record_buffer(title, self.keys()),
             BufferKind::Record { title } => {
                 let events = self.report(&title);
@@ -2859,7 +2882,7 @@ impl Editor {
                             && r.key.bond == tracelean_core::evidence::Bond::ModelImpl
                             && r.effective_level() >= Level::L3
                     }),
-                    lines: self.clause_lines(&index, id, &clause),
+                    lines: self.clause_lines(&index, id, Some(&clause)),
                     judged: tracelean_core::surface::requirement_view::judged_of(&records, id, clause.as_deref()),
                     key: clause,
                     claims,
@@ -2881,7 +2904,27 @@ impl Editor {
                 .collect(),
             clauses,
             width: self.pane_width(tracelean_core::surface::screen::DOCUMENT),
+            lines: self.clause_lines(&index, id, None),
         })
+    }
+
+    /// Which lines of the code implementing a requirement or one clause tests
+    /// run, item by item: by which tests, and every line none ran, each a link.
+    ///
+    /// @implements REQ-LINECOV.lines_listed
+    fn coverage(&self, named: &str) -> Buffer {
+        let (id, clause) = match named.split_once('.') {
+            Some((id, clause)) => (id, Some(clause.to_string())),
+            None => (named, None),
+        };
+        let index = self.index();
+        let scope = if clause.is_some() || index.requirements.get(id).is_some_and(|r| r.clauses.is_empty()) {
+            Some(clause.clone())
+        } else {
+            None
+        };
+        let items = self.implementing_lines(&index, id, scope.as_ref());
+        tracelean_core::surface::coverage_view::coverage_view(named, &items, self.pane_width(tracelean_core::surface::screen::DOCUMENT))
     }
 
     /// The prompt for judging a clause against its model, to copy and carry to

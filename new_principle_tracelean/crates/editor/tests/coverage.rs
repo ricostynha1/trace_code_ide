@@ -45,6 +45,8 @@ fn coverage_of(editor: &Editor) -> Vec<(usize, u64, String)> {
 /// @tests REQ-LINECOV.per_test
 /// @tests REQ-LINECOV.uncovered_shown
 /// @tests REQ-LINECOV.stale_hidden
+/// @tests REQ-LINECOV.requirement_summary
+/// @tests REQ-LINECOV.lines_listed
 #[test]
 #[ignore = "builds and runs the demo's tests under coverage; run with --ignored"]
 fn uncovered_lines_and_the_tests_behind_each_line_are_shown() {
@@ -68,10 +70,21 @@ fn uncovered_lines_and_the_tests_behind_each_line_are_shown() {
 
     // The requirement says how much of what implements each clause is run.
     editor.choose(DOCUMENT, 0, "trace.requirement", Some("REQ-TABLE".into()), None);
-    let placed = editor.laid_out(editor.region);
-    let found = placed.iter().find(|p| p.pane == DOCUMENT).unwrap();
-    let requirement = tracelean_core::surface::view::plain_text(found.buffer.clone()).join("\n");
-    assert!(requirement.contains("covered     4/7 lines run, by 1 test"), "{requirement}");
+    let document = |editor: &Editor| {
+        let placed = editor.laid_out(editor.region);
+        let found = placed.iter().find(|p| p.pane == DOCUMENT).unwrap();
+        tracelean_core::surface::view::plain_text(found.buffer.clone()).join("\n")
+    };
+    let requirement = document(&editor);
+    assert!(requirement.contains("covered     REQ-TABLE.every_sample  4/7 lines run (57%), by 1 test"), "{requirement}");
+    // And over the whole requirement, which a click opens line by line: the
+    // tests behind each item, and each line none ran as a link to it.
+    assert!(requirement.contains("covered    REQ-TABLE  "), "{requirement}");
+    editor.choose(DOCUMENT, 0, "trace.coverage", Some("REQ-TABLE".into()), None);
+    let lines = document(&editor);
+    assert!(lines.starts_with("Coverage of REQ-TABLE"), "{lines}");
+    assert!(lines.contains("ran by  below_zero_is_ice"), "{lines}");
+    assert!(lines.contains(&format!("src/celsius.rs:{}  \"steam\"", line_of("\"steam\"") + 1)), "{lines}");
 
     // Typed into, the file is no longer the text that was measured.
     editor.choose(DOCUMENT, 0, "file.open", Some("src/celsius.rs".into()), None);

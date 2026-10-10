@@ -9,6 +9,8 @@ clauses:
   uncovered_shown: An executable line no test ran shall be marked beside it in the editor, and pointing at any measured line shall say which tests ran it and how often.
   stale_hidden: Coverage measured against other text of a file shall not be shown for it.
   clause_summary: A clause shall show how many executable lines of its implementing items some test ran, and by how many tests.
+  requirement_summary: A requirement shall show the same over every item implementing any of its clauses, each line counted once, with the share of lines run.
+  lines_listed: Each such count shall open, item by item, the tests that ran its lines with how often, and every executable line no test ran as a link to that line.
 ---
 
 # Line coverage, test by test

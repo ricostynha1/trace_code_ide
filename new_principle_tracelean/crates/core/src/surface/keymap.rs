@@ -169,6 +169,7 @@ pub const ACTIONS: &[&str] = &[
     "trace.approve",
     "trace.check",
     "trace.context",
+    "trace.coverage",
     "trace.evidence",
     "trace.findings",
     "trace.judge",

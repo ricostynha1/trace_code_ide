@@ -308,6 +308,7 @@ fn model_and_implementation_agree_on_an_opened_requirement() {
         ("refinedBy", list(text(&["REQ-D"]), 2)),
         ("clauses", list(clause, 2)),
         ("width", Schema::Nat { max: Some(40), edges: vec![0, 30, 100] }),
+        ("lines", option(Schema::Tuple { items: vec![count(), count(), count()] })),
     ]);
     check(
         "REQ-SHOW",

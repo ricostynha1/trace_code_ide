@@ -327,6 +327,11 @@ pub fn dispatch(action: String, focus: Focus, w: Workspace, waiting: Vec<Command
             None => needs("trace.context", "a requirement"),
             Some(id) => report(&format!("context {id}")),
         },
+        // Which lines of the requirement's or clause's code here tests run.
+        "trace.coverage" => match &focus.under {
+            None => needs("trace.coverage", "a requirement"),
+            Some(id) => report(&format!("coverage {id}")),
+        },
         "context.toggle" => match focus.under.clone().and_then(crate::surface::context::part_named) {
             None => needs("context.toggle", "a part of the context"),
             Some(part) => Intent::Observe { watch: Watch::ContextToggle { part } },

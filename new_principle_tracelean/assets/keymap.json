@@ -77,6 +77,7 @@
         "bindings": [
           ["a", { "dispatch": { "action": "trace.approve", "description": "approve this draft requirement" } }],
           ["c", { "dispatch": { "action": "trace.check", "description": "check the tree" } }],
+          ["v", { "dispatch": { "action": "trace.coverage", "description": "which lines of this requirement's code tests run" } }],
           ["e", { "dispatch": { "action": "trace.evidence", "description": "evidence for this anchor" } }],
           ["f", { "dispatch": { "action": "trace.findings", "description": "list findings" } }],
           ["j", { "dispatch": { "action": "trace.judge", "description": "the judge's prompt for this clause" } }],

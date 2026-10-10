@@ -5,8 +5,6 @@
 //! at the line. This is that view as a buffer. A link is a span whose text is
 //! `path:line` and whose action is `file.open`; the shell opens the file at
 //! that line, as it would for any `path:line` a person points at.
-//!
-//! @implements REQ-SHOW.requirement_opened
 
 use serde::{Deserialize, Serialize};
 
@@ -137,6 +135,24 @@ pub struct RequirementShown {
     pub clauses: Vec<ClauseShown>,
     /// The characters a line may take before it wraps.
     pub width: usize,
+    /// The same as a clause's `lines`, over every item implementing any of
+    /// its clauses, each line counted once.
+    #[serde(default)]
+    pub lines: Option<(u64, u64, u64)>,
+}
+
+/// How much ran, as a coverage line says it: `3/4 lines run (75%), by 2 tests`.
+pub fn covered_text(run: u64, all: u64, tests: u64) -> String {
+    let percent = if all == 0 { 100 } else { run * 100 / all };
+    format!("{run}/{all} lines run ({percent}%), by {tests} test{}", if tests == 1 { "" } else { "s" })
+}
+
+/// A coverage line: the requirement or clause, which opens the lines behind
+/// the count, then the count — whole in green, short in red.
+fn covered_line(out: &mut Lines, lead: &str, name: &str, (run, all, tests): (u64, u64, u64)) {
+    let role = if run == all { Role::Added } else { Role::Removed };
+    let said = covered_text(run, all, tests);
+    out.line(&[(lead, Role::Plain, &[]), (name, Role::Requirement, &["trace.coverage"]), ("  ", Role::Plain, &[]), (&said, role, &[])]);
 }
 
 /// A link as the view writes it: what a person reads and a click opens.
@@ -146,6 +162,8 @@ pub fn link_text(path: &str, line: u32) -> String {
 
 /// The requirement as a buffer, titled `requirement <id>`.
 ///
+/// @implements REQ-SHOW.requirement_opened
+/// @implements REQ-LINECOV.requirement_summary
 /// @drt REQ-SHOW.requirement_opened
 pub fn requirement_view(view: RequirementShown) -> Buffer {
     let mut out = Lines::new(view.width);
@@ -206,6 +224,9 @@ pub fn requirement_view(view: RequirementShown) -> Buffer {
         pieces.push((said.as_str(), Role::Claim { role: *role }, &[]));
     }
     out.line(&pieces);
+    if let Some(lines) = view.lines {
+        covered_line(&mut out, "covered    ", &view.id, lines);
+    }
     for clause in &view.clauses {
         out.blank();
         let grade = format!("{:?}", clause.level);
@@ -231,10 +252,12 @@ pub fn requirement_view(view: RequirementShown) -> Buffer {
             out.line(&[("  nothing claims it yet", Role::Removed, &[])]);
         }
         // How much of the code that implements it the tests run.
-        if let Some((run, all, tests)) = clause.lines {
-            let role = if run == all { Role::Added } else { Role::Removed };
-            let said = format!("{run}/{all} lines run, by {tests} test{}", if tests == 1 { "" } else { "s" });
-            out.line(&[("  covered     ", Role::Plain, &[]), (&said, role, &[])]);
+        if let Some(lines) = clause.lines {
+            let name = match &clause.key {
+                Some(key) => format!("{}.{key}", view.id),
+                None => view.id.clone(),
+            };
+            covered_line(&mut out, "  covered     ", &name, lines);
         }
         // Whether the specification leaves one answer per input, as Lean said.
         if let Some((state, said)) = &clause.pins {
@@ -358,6 +381,7 @@ mod tests {
                 },
             ],
             width: 60,
+            lines: Some((3, 8, 2)),
         }
     }
 
@@ -380,7 +404,12 @@ mod tests {
         assert!(shown.text.contains("nothing claims it yet"));
         assert!(shown.text.contains("  pinned\n    X.holds_pinned"), "{}", shown.text);
         assert!(shown.text.contains("drt 1/2"), "a derived test counts: {}", shown.text);
-        assert!(shown.text.contains("covered     3/4 lines run, by 2 tests"), "{}", shown.text);
+        assert!(shown.text.contains("covered     REQ-X.holds  3/4 lines run (75%), by 2 tests"), "{}", shown.text);
+        // The requirement's own count, over all of it; each opens its lines.
+        assert!(shown.text.contains("covered    REQ-X  3/8 lines run (37%), by 2 tests"), "{}", shown.text);
+        let opens = |needle: &str| actions_at(shown.clone(), offset_of(&shown, needle));
+        assert_eq!(opens("REQ-X.holds  3/4"), vec!["trace.coverage".to_string()]);
+        assert_eq!(opens("REQ-X  3/8"), vec!["trace.coverage".to_string()]);
         assert!(shown.text.find("holds").unwrap() < shown.text.find("unclaimed").unwrap());
     }
 

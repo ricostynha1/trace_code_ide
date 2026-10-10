@@ -354,8 +354,8 @@ pub fn workbench(listing: Buffer, document: Buffer, side: Buffer) -> Screen {
 /// The pane a buffer of this kind belongs in.
 /// Records read like a file — an opened requirement, a judge's prompt, lists
 /// of places with their lines — named by how their titles start.
-pub const DOCUMENT_RECORDS: [&str; 7] =
-    ["requirement ", "judge ", "context ", "definitions of ", "uses of ", "search ", "keys"];
+pub const DOCUMENT_RECORDS: [&str; 8] =
+    ["requirement ", "judge ", "context ", "coverage ", "definitions of ", "uses of ", "search ", "keys"];
 
 pub fn home_of(kind: &BufferKind) -> &'static str {
     match kind {

@@ -326,6 +326,10 @@ def dispatchNamed (action : String) (focus : Focus) (w : Workspace) (waiting : L
     match focus.under with
     | none => Intent.refuse (Blocked.needsTarget "trace.context" "a requirement")
     | some id => report ("context " ++ id)
+  | "trace.coverage" =>
+    match focus.under with
+    | none => Intent.refuse (Blocked.needsTarget "trace.coverage" "a requirement")
+    | some id => report ("coverage " ++ id)
   | "context.toggle" =>
     match focus.under.bind TraceLean.Context.partNamed with
     | none => Intent.refuse (Blocked.needsTarget "context.toggle" "a part of the context")
