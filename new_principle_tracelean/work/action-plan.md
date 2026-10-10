@@ -7,8 +7,7 @@ the two harder problems explained: [structural clauses and model choice](../inve
 **Status (2026-10-10):** implemented and green: §1, §2, §4, §5, the roll-up
 reachable set (§3, Rust, Lean, DRT), coverage verdicts with waivers (§10 code), 26 pins.
 §7 several-models cleanup (0 left); §6 mostly (below).
-Open: §6 remainder, §7 unmodeled clauses (23), §8 grammar, a `SharedRefinement` finding, the Rust
-annotation binding fix, and re-earning stale evidence (`--stale`).
+Open: §6 remainder, §7 unmodeled clauses (20; CONTEXT done), §8 grammar, and re-earning stale evidence (`--stale`).
 
 ## 1. Agent judgements count when a person delegated them — decided
 
@@ -54,15 +53,17 @@ in Lean (`Rollup.lean`):
 
 **Catching replication** — so it cannot come back silently:
 
-- a checker finding `SharedRefinement`: a requirement reachable from one
-  ancestor by two paths. Warning by default; promote to an error if the project
-  decides refinement must be a tree;
+- a checker finding `SharedRefinement` (a requirement reachable from one
+  ancestor by two paths) is **not added**: diamonds are everywhere in this
+  project's own graph (`REQ-ACT` reaches `ARCH-CORE-SHELL` through both
+  `REQ-MYTH` and `REQ-VIEW`), the roll-up now counts each once, so it would be
+  noise. Revisit only if the project decides refinement must be a tree;
 - the same for the other places one thing can be claimed twice: two `@pins` for
   one clause, two specs, two function models (see §7), a clause key declared
   twice in one document (`id_unique` covers ids, not keys).
 
 Open question for us: should a requirement be allowed to refine two parents at
-all? If not, `SharedRefinement` is an error and the walk can assume a tree.
+all? Today yes, and the roll-up does not assume a tree.
 
 ## 4. Strengthening weak requirements — discuss
 
