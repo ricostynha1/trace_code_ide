@@ -8,20 +8,20 @@
   "detail": {
     "judge": {
       "verdict": "agrees",
-      "judgedBy": "claude-review",
-      "delegatedBy": "ricostynha",
-      "promptVersion": "1"
+      "judgedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "approved in review 2026-10-10"
     }
   },
-  "linkHash": "9de4f7e7c520b578",
+  "linkHash": "02ec2b7ecd235ac2",
   "inputs": [
     [
       "requirement",
-      "27d2afb9732374e5"
+      "af5836ce4bb4d60e"
     ],
     [
       "model",
-      "5d159a3d8229033d+8f043133e986f1ae"
+      "8f043133e986f1ae"
     ]
   ]
 }

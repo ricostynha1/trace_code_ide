@@ -477,9 +477,15 @@
     },
     "REQ-LOOK": {
       "clauses": [
-        "contrast_sufficient"
+        "accessible_structure",
+        "contrast_sufficient",
+        "focus_visible",
+        "journeys_replay",
+        "regions_present",
+        "roles_drawn_in_theme_colours",
+        "row_fits"
       ],
-      "content_hash": "9c613cd905de1663",
+      "content_hash": "fde33228312d3c93",
       "file": "reqs/surface/REQ-LOOK.md",
       "refines": [
         "REQ-VIEW",
@@ -1001,6 +1007,16 @@
     {
       "role": "drt",
       "req": "REQ-ACT",
+      "clause": "one_path",
+      "file": "crates/core/src/surface/act.rs",
+      "anchor": "crates/core/src/surface/act.rs::dispatch",
+      "body_hash": "ee3e291d503d212f",
+      "link_hash": "f64e22402333a72b",
+      "qualifier": null
+    },
+    {
+      "role": "drt",
+      "req": "REQ-ACT",
       "clause": "unknown_is_refused",
       "file": "crates/core/src/surface/act.rs",
       "anchor": "crates/core/src/surface/act.rs::acts",
@@ -1493,19 +1509,9 @@
       "req": "REQ-CONTEXT",
       "clause": "neighbourhood_is_closed",
       "file": "crates/core/tests/differential_context.rs",
-      "anchor": "crates/core/tests/differential_context.rs::model_and_implementation_agree_on_what_a_requirement_refines",
-      "body_hash": "ecf4dcf2e1d1333d",
-      "link_hash": "e35ec6e695305bdc",
-      "qualifier": null
-    },
-    {
-      "role": "drt",
-      "req": "REQ-CONTEXT",
-      "clause": "neighbourhood_is_closed",
-      "file": "crates/core/tests/differential_context.rs",
-      "anchor": "crates/core/tests/differential_context.rs::model_and_implementation_agree_on_what_refines_a_requirement",
-      "body_hash": "6ee9b192b4a99400",
-      "link_hash": "133a7410b482942c",
+      "anchor": "crates/core/tests/differential_context.rs::model_and_implementation_agree_on_a_requirements_neighbourhood",
+      "body_hash": "1d4e6f8f91a23188",
+      "link_hash": "f1051702f5362347",
       "qualifier": null
     },
     {
@@ -2650,6 +2656,46 @@
     },
     {
       "role": "drt",
+      "req": "REQ-LOOK",
+      "clause": "roles_drawn_in_theme_colours",
+      "file": "crates/core/src/surface/cells.rs",
+      "anchor": "crates/core/src/surface/cells.rs::drawn_wrong",
+      "body_hash": "732d1d682c84ddaa",
+      "link_hash": "bb591a094d55c2fd",
+      "qualifier": null
+    },
+    {
+      "role": "drt",
+      "req": "REQ-LOOK",
+      "clause": "roles_drawn_in_theme_colours",
+      "file": "crates/core/tests/differential_cells.rs",
+      "anchor": "crates/core/tests/differential_cells.rs::model_and_implementation_agree_on_what_is_drawn_in_the_wrong_look",
+      "body_hash": "3ca2cdd94a6a1573",
+      "link_hash": "8e63b8f7836345ae",
+      "qualifier": null
+    },
+    {
+      "role": "drt",
+      "req": "REQ-LOOK",
+      "clause": "row_fits",
+      "file": "crates/core/src/surface/produce.rs",
+      "anchor": "crates/core/src/surface/produce.rs::menu_row",
+      "body_hash": "8cab2dd8616ea425",
+      "link_hash": "36b6f87bf56a8d33",
+      "qualifier": null
+    },
+    {
+      "role": "drt",
+      "req": "REQ-LOOK",
+      "clause": "row_fits",
+      "file": "crates/core/tests/differential_produce.rs",
+      "anchor": "crates/core/tests/differential_produce.rs::model_and_implementation_agree_on_a_menu_row",
+      "body_hash": "8d123a10349b4c41",
+      "link_hash": "ed937ef2989c7f82",
+      "qualifier": null
+    },
+    {
+      "role": "drt",
       "req": "REQ-LSP",
       "clause": "absent_server_named",
       "file": "crates/core/src/surface/lsp.rs",
@@ -2814,7 +2860,7 @@
       "clause": "binary_handled",
       "file": "crates/core/tests/differential_mirror.rs",
       "anchor": "crates/core/tests/differential_mirror.rs::model_and_implementation_agree_on_what_happens_to_an_opaque_file",
-      "body_hash": "ae887e6e57096d81",
+      "body_hash": "6fc2c4e6d7b6f9d9",
       "link_hash": "ba0f8d796c702c5b",
       "qualifier": null
     },
@@ -3874,7 +3920,7 @@
       "clause": "core_produces",
       "file": "crates/core/tests/differential_produce.rs",
       "anchor": "crates/core/tests/differential_produce.rs::model_and_implementation_agree_on_what_a_role_affords",
-      "body_hash": "4685694b4a7350a4",
+      "body_hash": "5f8b093605e5c2d1",
       "link_hash": "fade2084c1ee06e7",
       "qualifier": null
     },
@@ -4866,6 +4912,26 @@
       "anchor": "crates/core/tests/differential_view.rs::model_and_implementation_agree_on_the_reference_rendering",
       "body_hash": "48161a9241dbcabb",
       "link_hash": "de63b96bbbf13ef4",
+      "qualifier": null
+    },
+    {
+      "role": "drt",
+      "req": "REQ-VIEW",
+      "clause": "screen_is_readable",
+      "file": "crates/core/src/surface/view.rs",
+      "anchor": "crates/core/src/surface/view.rs::presented_conformance",
+      "body_hash": "a931091c2c8f9b58",
+      "link_hash": "f5c55ed6312afe99",
+      "qualifier": null
+    },
+    {
+      "role": "drt",
+      "req": "REQ-VIEW",
+      "clause": "screen_is_readable",
+      "file": "crates/core/tests/differential_view.rs",
+      "anchor": "crates/core/tests/differential_view.rs::model_and_implementation_agree_on_whether_a_painted_screen_reads_as_the_buffer",
+      "body_hash": "b1f5f5f10d809eda",
+      "link_hash": "5d54cd203626f9ee",
       "qualifier": null
     },
     {
@@ -6464,7 +6530,7 @@
       "clause": "case_count_stated",
       "file": "crates/core/src/drt/run.rs",
       "anchor": "crates/core/src/drt/run.rs::run",
-      "body_hash": "7d78853121ca1ab7",
+      "body_hash": "6fa54f8005f571a5",
       "link_hash": "7516880174e9c080",
       "qualifier": null
     },
@@ -6474,7 +6540,7 @@
       "clause": "divergence_reported",
       "file": "crates/core/src/drt/run.rs",
       "anchor": "crates/core/src/drt/run.rs::run",
-      "body_hash": "7d78853121ca1ab7",
+      "body_hash": "6fa54f8005f571a5",
       "link_hash": "be16d2929a35b20e",
       "qualifier": null
     },
@@ -6544,7 +6610,7 @@
       "clause": "falsification_only",
       "file": "crates/core/tests/support/mod.rs",
       "anchor": "crates/core/tests/support/mod.rs::agreed",
-      "body_hash": "dbdd837fdb2887d7",
+      "body_hash": "1695e8fc329edde2",
       "link_hash": "9c6324dbc3a11705",
       "qualifier": null
     },
@@ -6554,7 +6620,7 @@
       "clause": "same_question",
       "file": "crates/core/src/drt/run.rs",
       "anchor": "crates/core/src/drt/run.rs::run",
-      "body_hash": "7d78853121ca1ab7",
+      "body_hash": "6fa54f8005f571a5",
       "link_hash": "7157a496555e385f",
       "qualifier": null
     },
@@ -6594,7 +6660,7 @@
       "clause": "binding_is_the_bond",
       "file": "crates/core/tests/support/mod.rs",
       "anchor": "crates/core/tests/support/mod.rs::compose",
-      "body_hash": "671849e54e122cbd",
+      "body_hash": "5fa768286519c00c",
       "link_hash": "813edb15a256c920",
       "qualifier": null
     },
@@ -6684,7 +6750,7 @@
       "clause": "classes_reached",
       "file": "crates/core/tests/support/mod.rs",
       "anchor": "crates/core/tests/support/mod.rs::every_class_reached",
-      "body_hash": "21bc1a10c74eb8fb",
+      "body_hash": "33472b7ed0842bf1",
       "link_hash": "dd0cbe7e3130afc0",
       "qualifier": null
     },
@@ -6724,7 +6790,7 @@
       "clause": "floor_stated",
       "file": "crates/core/tests/support/mod.rs",
       "anchor": "crates/core/tests/support/mod.rs::covered",
-      "body_hash": "55299108a8e16b13",
+      "body_hash": "0e6459ec4fed463a",
       "link_hash": "70a5add2311e4fa2",
       "qualifier": null
     },
@@ -6744,7 +6810,7 @@
       "clause": "floor_unmet_is_not_pass",
       "file": "crates/core/tests/support/mod.rs",
       "anchor": "crates/core/tests/support/mod.rs::compose",
-      "body_hash": "671849e54e122cbd",
+      "body_hash": "5fa768286519c00c",
       "link_hash": "680035ddc9e66a57",
       "qualifier": null
     },
@@ -6764,7 +6830,7 @@
       "clause": "law_coverage",
       "file": "crates/core/tests/support/mod.rs",
       "anchor": "crates/core/tests/support/mod.rs::covered",
-      "body_hash": "55299108a8e16b13",
+      "body_hash": "0e6459ec4fed463a",
       "link_hash": "accc7cad53985c1f",
       "qualifier": null
     },
@@ -6794,7 +6860,7 @@
       "clause": "vacuous_named",
       "file": "crates/core/tests/support/mod.rs",
       "anchor": "crates/core/tests/support/mod.rs::covered",
-      "body_hash": "55299108a8e16b13",
+      "body_hash": "0e6459ec4fed463a",
       "link_hash": "07b97c2fbed09914",
       "qualifier": null
     },
@@ -6844,7 +6910,7 @@
       "clause": "waiver_unused_reported",
       "file": "crates/core/tests/support/mod.rs",
       "anchor": "crates/core/tests/support/mod.rs::every_class_reached",
-      "body_hash": "21bc1a10c74eb8fb",
+      "body_hash": "33472b7ed0842bf1",
       "link_hash": "f49768e7e0d6f706",
       "qualifier": null
     },
@@ -7584,7 +7650,7 @@
       "clause": "ladder",
       "file": "crates/core/tests/support/mod.rs",
       "anchor": "crates/core/tests/support/mod.rs::compose",
-      "body_hash": "671849e54e122cbd",
+      "body_hash": "5fa768286519c00c",
       "link_hash": "6bb823193c4d1af4",
       "qualifier": null
     },
@@ -8166,6 +8232,36 @@
       "anchor": "crates/core/src/surface/contrast.rs::findings",
       "body_hash": "af2ca98e7c8537dc",
       "link_hash": "7b10be0493aba14d",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-LOOK",
+      "clause": "roles_drawn_in_theme_colours",
+      "file": "crates/core/src/surface/cells.rs",
+      "anchor": "crates/core/src/surface/cells.rs::Cell",
+      "body_hash": "738457d588ba2d70",
+      "link_hash": "5c2dcfecf6e84267",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-LOOK",
+      "clause": "roles_drawn_in_theme_colours",
+      "file": "crates/core/src/surface/cells.rs",
+      "anchor": "crates/core/src/surface/cells.rs::drawn_wrong",
+      "body_hash": "732d1d682c84ddaa",
+      "link_hash": "a2d65419be45b35f",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-LOOK",
+      "clause": "row_fits",
+      "file": "crates/core/src/surface/produce.rs",
+      "anchor": "crates/core/src/surface/produce.rs::menu_row",
+      "body_hash": "8cab2dd8616ea425",
+      "link_hash": "7f7fd6afc5b9c3e5",
       "qualifier": null
     },
     {
@@ -11174,7 +11270,7 @@
       "clause": "rendering_is_total",
       "file": "crates/core/src/drt/frontend.rs",
       "anchor": "crates/core/src/drt/frontend.rs::capture",
-      "body_hash": "5c285ce7e09ab6a0",
+      "body_hash": "c6be0cb2eaf66657",
       "link_hash": "61ed8d76e38572bd",
       "qualifier": null
     },
@@ -11224,7 +11320,7 @@
       "clause": "screen_is_readable",
       "file": "crates/core/src/drt/frontend.rs",
       "anchor": "crates/core/src/drt/frontend.rs::capture",
-      "body_hash": "5c285ce7e09ab6a0",
+      "body_hash": "c6be0cb2eaf66657",
       "link_hash": "0ad1cd462b583bd3",
       "qualifier": null
     },
@@ -11394,7 +11490,7 @@
       "clause": "action_to_intent",
       "file": "formal/TraceLean/Act.lean",
       "anchor": "formal/TraceLean/Act.lean::TraceLean.Act::dispatch",
-      "body_hash": "71f2e2d445bdb099",
+      "body_hash": "43418699da34631e",
       "link_hash": "f0c8c617e35cdf82",
       "qualifier": null
     },
@@ -11404,7 +11500,7 @@
       "clause": "dispatch_is_pure",
       "file": "formal/TraceLean/Act.lean",
       "anchor": "formal/TraceLean/Act.lean::TraceLean.Act::dispatch",
-      "body_hash": "71f2e2d445bdb099",
+      "body_hash": "43418699da34631e",
       "link_hash": "d061790901f7115f",
       "qualifier": null
     },
@@ -11414,7 +11510,7 @@
       "clause": "edits_are_commands",
       "file": "formal/TraceLean/Act.lean",
       "anchor": "formal/TraceLean/Act.lean::TraceLean.Act::dispatch",
-      "body_hash": "71f2e2d445bdb099",
+      "body_hash": "43418699da34631e",
       "link_hash": "c88ca6a671c883d4",
       "qualifier": null
     },
@@ -11434,7 +11530,7 @@
       "clause": "focus_is_carried",
       "file": "formal/TraceLean/Act.lean",
       "anchor": "formal/TraceLean/Act.lean::TraceLean.Act::dispatch",
-      "body_hash": "71f2e2d445bdb099",
+      "body_hash": "43418699da34631e",
       "link_hash": "2f179fc174b5a9b5",
       "qualifier": null
     },
@@ -11444,7 +11540,7 @@
       "clause": "missing_target_is_refused",
       "file": "formal/TraceLean/Act.lean",
       "anchor": "formal/TraceLean/Act.lean::TraceLean.Act::dispatch",
-      "body_hash": "71f2e2d445bdb099",
+      "body_hash": "43418699da34631e",
       "link_hash": "204482bd23b412c3",
       "qualifier": null
     },
@@ -11454,7 +11550,7 @@
       "clause": "one_path",
       "file": "formal/TraceLean/Act.lean",
       "anchor": "formal/TraceLean/Act.lean::TraceLean.Act::dispatch",
-      "body_hash": "71f2e2d445bdb099",
+      "body_hash": "43418699da34631e",
       "link_hash": "aa613845d496f85f",
       "qualifier": null
     },
@@ -11464,7 +11560,7 @@
       "clause": "unknown_is_refused",
       "file": "formal/TraceLean/Act.lean",
       "anchor": "formal/TraceLean/Act.lean::TraceLean.Act::dispatch",
-      "body_hash": "71f2e2d445bdb099",
+      "body_hash": "43418699da34631e",
       "link_hash": "783852e2479edbcd",
       "qualifier": null
     },
@@ -11753,9 +11849,9 @@
       "req": "REQ-CONTEXT",
       "clause": "neighbourhood_is_closed",
       "file": "formal/TraceLean/Context.lean",
-      "anchor": "formal/TraceLean/Context.lean::TraceLean.Context::ancestors",
-      "body_hash": "7435c03d233292a6",
-      "link_hash": "e66f6f88d5a4a555",
+      "anchor": "formal/TraceLean/Context.lean::TraceLean.Context::neighbourhood",
+      "body_hash": "fee04d72f15c3cb8",
+      "link_hash": "a6faa66fec1ef712",
       "qualifier": null
     },
     {
@@ -12426,6 +12522,26 @@
       "anchor": "formal/TraceLean/Contrast.lean::TraceLean.Contrast::findings",
       "body_hash": "8b614feb3e36a144",
       "link_hash": "bdb54f60d54dbd39",
+      "qualifier": null
+    },
+    {
+      "role": "models",
+      "req": "REQ-LOOK",
+      "clause": "roles_drawn_in_theme_colours",
+      "file": "formal/TraceLean/Cells.lean",
+      "anchor": "formal/TraceLean/Cells.lean::TraceLean.Cells::drawnWrong",
+      "body_hash": "be1b38068a75470e",
+      "link_hash": "4650723e5de73c83",
+      "qualifier": null
+    },
+    {
+      "role": "models",
+      "req": "REQ-LOOK",
+      "clause": "row_fits",
+      "file": "formal/TraceLean/Produce.lean",
+      "anchor": "formal/TraceLean/Produce.lean::TraceLean.Produce::menuRow",
+      "body_hash": "bd0db8ae98423fc2",
+      "link_hash": "6362b8188a55c09e",
       "qualifier": null
     },
     {
@@ -17353,19 +17469,9 @@
       "req": "REQ-CONTEXT",
       "clause": "neighbourhood_is_closed",
       "file": "crates/core/tests/differential_context.rs",
-      "anchor": "crates/core/tests/differential_context.rs::model_and_implementation_agree_on_what_a_requirement_refines",
-      "body_hash": "ecf4dcf2e1d1333d",
-      "link_hash": "dd8caf6e453b8c21",
-      "qualifier": null
-    },
-    {
-      "role": "tests",
-      "req": "REQ-CONTEXT",
-      "clause": "neighbourhood_is_closed",
-      "file": "crates/core/tests/differential_context.rs",
-      "anchor": "crates/core/tests/differential_context.rs::model_and_implementation_agree_on_what_refines_a_requirement",
-      "body_hash": "6ee9b192b4a99400",
-      "link_hash": "d40d3e128a3005b1",
+      "anchor": "crates/core/tests/differential_context.rs::model_and_implementation_agree_on_a_requirements_neighbourhood",
+      "body_hash": "1d4e6f8f91a23188",
+      "link_hash": "16af30971a7efbe6",
       "qualifier": null
     },
     {
@@ -17944,7 +18050,7 @@
       "clause": "case_count_stated",
       "file": "crates/core/tests/properties.rs",
       "anchor": "crates/core/tests/properties.rs::a_result_carries_the_seed_and_the_case_count_it_actually_reached",
-      "body_hash": "13332c296aa2b431",
+      "body_hash": "f94cf39acbddcdce",
       "link_hash": "618ee707271b8a49",
       "qualifier": "structural"
     },
@@ -18004,7 +18110,7 @@
       "clause": "falsification_only",
       "file": "crates/core/tests/properties.rs",
       "anchor": "crates/core/tests/properties.rs::a_result_carries_the_seed_and_the_case_count_it_actually_reached",
-      "body_hash": "13332c296aa2b431",
+      "body_hash": "f94cf39acbddcdce",
       "link_hash": "286b931d7086fffe",
       "qualifier": null
     },
@@ -18034,7 +18140,7 @@
       "clause": "binding_is_the_bond",
       "file": "crates/core/tests/runners_are_generated.rs",
       "anchor": "crates/core/tests/runners_are_generated.rs::a_binding_describes_a_call_and_nothing_more",
-      "body_hash": "732c8c2c82b126db",
+      "body_hash": "d761f6ffc2210a25",
       "link_hash": "3f8ce7dab8a94b1e",
       "qualifier": "structural"
     },
@@ -18054,7 +18160,7 @@
       "clause": "call_only",
       "file": "crates/core/tests/runners_are_generated.rs",
       "anchor": "crates/core/tests/runners_are_generated.rs::a_binding_describes_a_call_and_nothing_more",
-      "body_hash": "732c8c2c82b126db",
+      "body_hash": "d761f6ffc2210a25",
       "link_hash": "4db951004e4b5661",
       "qualifier": "structural"
     },
@@ -18074,7 +18180,7 @@
       "clause": "no_adapter",
       "file": "crates/core/tests/runners_are_generated.rs",
       "anchor": "crates/core/tests/runners_are_generated.rs::a_binding_describes_a_call_and_nothing_more",
-      "body_hash": "732c8c2c82b126db",
+      "body_hash": "d761f6ffc2210a25",
       "link_hash": "4293323875b51df9",
       "qualifier": "structural"
     },
@@ -18104,7 +18210,7 @@
       "clause": "rename_only",
       "file": "crates/core/tests/runners_are_generated.rs",
       "anchor": "crates/core/tests/runners_are_generated.rs::a_binding_describes_a_call_and_nothing_more",
-      "body_hash": "732c8c2c82b126db",
+      "body_hash": "d761f6ffc2210a25",
       "link_hash": "cfd77d3cd50fbf27",
       "qualifier": "structural"
     },
@@ -18272,6 +18378,16 @@
       "role": "tests",
       "req": "REQ-DRT-COVER",
       "clause": "law_coverage",
+      "file": "crates/core/tests/differential_context.rs",
+      "anchor": "crates/core/tests/differential_context.rs::generation_reaches_shell_lists_shared_items_and_unclaimed_uses",
+      "body_hash": "4e7c8f5238bfacc1",
+      "link_hash": "384592f26f071ee5",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-DRT-COVER",
+      "clause": "law_coverage",
       "file": "crates/core/tests/differential_coverage.rs",
       "anchor": "crates/core/tests/differential_coverage.rs::generation_reaches_every_coverage_verdict",
       "body_hash": "0ec4a1055711ceeb",
@@ -18354,7 +18470,7 @@
       "clause": "law_coverage",
       "file": "crates/core/tests/differential_effects.rs",
       "anchor": "crates/core/tests/differential_effects.rs::generation_reaches_every_violation",
-      "body_hash": "2c3f2024e6633a44",
+      "body_hash": "a144e6b226ea6669",
       "link_hash": "7aef8300fad1f29a",
       "qualifier": null
     },
@@ -18484,7 +18600,7 @@
       "clause": "law_coverage",
       "file": "crates/core/tests/differential_lines.rs",
       "anchor": "crates/core/tests/differential_lines.rs::generation_reaches_shared_unrun_and_partial_lines",
-      "body_hash": "57a9cf4a406f8aea",
+      "body_hash": "9591fa4d555cbe19",
       "link_hash": "098c01cf92173ca6",
       "qualifier": null
     },
@@ -18574,7 +18690,7 @@
       "clause": "law_coverage",
       "file": "crates/core/tests/differential_produce.rs",
       "anchor": "crates/core/tests/differential_produce.rs::generation_reaches_every_role_and_the_one_that_affords_nothing",
-      "body_hash": "d36409ddb8870a2c",
+      "body_hash": "7ed6232b48bfb996",
       "link_hash": "f5dc38408a4d6136",
       "qualifier": null
     },
@@ -20761,6 +20877,16 @@
     {
       "role": "tests",
       "req": "REQ-LOOK",
+      "clause": "accessible_structure",
+      "file": "crates/editor/tests/pointer.rs",
+      "anchor": "crates/editor/tests/pointer.rs::the_page_in_a_browser_passes_its_checks",
+      "body_hash": "4a3b8c19be59eb57",
+      "link_hash": "f1e85346d5ee24a4",
+      "qualifier": "structural"
+    },
+    {
+      "role": "tests",
+      "req": "REQ-LOOK",
       "clause": "contrast_sufficient",
       "file": "crates/core/src/surface/contrast.rs",
       "anchor": "crates/core/src/surface/contrast.rs::tests::an_unreadable_pair_an_unknown_colour_and_a_stale_waiver_are_found",
@@ -20786,6 +20912,116 @@
       "anchor": "crates/core/tests/differential_contrast.rs::model_and_implementation_agree_on_what_contrast_finds",
       "body_hash": "930d5be9a9bf0188",
       "link_hash": "f516093c9b94d1b9",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-LOOK",
+      "clause": "focus_visible",
+      "file": "crates/editor/tests/pointer.rs",
+      "anchor": "crates/editor/tests/pointer.rs::the_page_in_a_browser_passes_its_checks",
+      "body_hash": "4a3b8c19be59eb57",
+      "link_hash": "aeb697c3b938e109",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-LOOK",
+      "clause": "focus_visible",
+      "file": "crates/tui/tests/driving.rs",
+      "anchor": "crates/tui/tests/driving.rs::the_focused_pane_is_marked_on_the_screen",
+      "body_hash": "d63b1b5d7c995309",
+      "link_hash": "9b363bca1a52127a",
+      "qualifier": "structural"
+    },
+    {
+      "role": "tests",
+      "req": "REQ-LOOK",
+      "clause": "journeys_replay",
+      "file": "crates/editor/tests/pointer.rs",
+      "anchor": "crates/editor/tests/pointer.rs::the_page_in_a_browser_passes_its_checks",
+      "body_hash": "4a3b8c19be59eb57",
+      "link_hash": "cd97dcd8bfb3c849",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-LOOK",
+      "clause": "journeys_replay",
+      "file": "crates/tui/tests/driving.rs",
+      "anchor": "crates/tui/tests/driving.rs::every_journey_replays_in_the_terminal",
+      "body_hash": "cabda2de164d40c8",
+      "link_hash": "4e18f0a1479b79b7",
+      "qualifier": "structural"
+    },
+    {
+      "role": "tests",
+      "req": "REQ-LOOK",
+      "clause": "regions_present",
+      "file": "crates/editor/tests/pointer.rs",
+      "anchor": "crates/editor/tests/pointer.rs::the_page_in_a_browser_passes_its_checks",
+      "body_hash": "4a3b8c19be59eb57",
+      "link_hash": "88594d140acf6dbd",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-LOOK",
+      "clause": "regions_present",
+      "file": "crates/tui/tests/driving.rs",
+      "anchor": "crates/tui/tests/driving.rs::the_screen_shows_each_place_where_the_layout_puts_it",
+      "body_hash": "99bbf6398f66f724",
+      "link_hash": "6c23bf656c8e215e",
+      "qualifier": "structural"
+    },
+    {
+      "role": "tests",
+      "req": "REQ-LOOK",
+      "clause": "roles_drawn_in_theme_colours",
+      "file": "crates/core/src/surface/cells.rs",
+      "anchor": "crates/core/src/surface/cells.rs::tests::a_character_out_of_its_look_is_reported",
+      "body_hash": "b647c955f280198d",
+      "link_hash": "9ded6481842a5c4d",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-LOOK",
+      "clause": "roles_drawn_in_theme_colours",
+      "file": "crates/core/src/surface/cells.rs",
+      "anchor": "crates/core/src/surface/cells.rs::tests::escapes_become_styles_and_positions",
+      "body_hash": "563a91a2b86befb7",
+      "link_hash": "de821d028b2bb783",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-LOOK",
+      "clause": "roles_drawn_in_theme_colours",
+      "file": "crates/core/tests/differential_cells.rs",
+      "anchor": "crates/core/tests/differential_cells.rs::model_and_implementation_agree_on_what_is_drawn_in_the_wrong_look",
+      "body_hash": "3ca2cdd94a6a1573",
+      "link_hash": "0aa1c45b685bb5bf",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-LOOK",
+      "clause": "roles_drawn_in_theme_colours",
+      "file": "crates/tui/tests/conformance.rs",
+      "anchor": "crates/tui/tests/conformance.rs::the_terminal_frontend_paints_each_role_in_the_themes_colour",
+      "body_hash": "ed3bf1d4dfb77af0",
+      "link_hash": "410aa4b9a8ca7f64",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-LOOK",
+      "clause": "row_fits",
+      "file": "crates/core/tests/differential_produce.rs",
+      "anchor": "crates/core/tests/differential_produce.rs::model_and_implementation_agree_on_a_menu_row",
+      "body_hash": "8d123a10349b4c41",
+      "link_hash": "1a0fafdac43cdadb",
       "qualifier": null
     },
     {
@@ -21004,7 +21240,7 @@
       "clause": "binary_handled",
       "file": "crates/core/tests/differential_mirror.rs",
       "anchor": "crates/core/tests/differential_mirror.rs::model_and_implementation_agree_on_what_happens_to_an_opaque_file",
-      "body_hash": "ae887e6e57096d81",
+      "body_hash": "6fc2c4e6d7b6f9d9",
       "link_hash": "af59300ae017e102",
       "qualifier": null
     },
@@ -22914,7 +23150,7 @@
       "clause": "core_produces",
       "file": "crates/core/tests/differential_produce.rs",
       "anchor": "crates/core/tests/differential_produce.rs::generation_reaches_every_role_and_the_one_that_affords_nothing",
-      "body_hash": "d36409ddb8870a2c",
+      "body_hash": "7ed6232b48bfb996",
       "link_hash": "cce2c0f5707adc37",
       "qualifier": null
     },
@@ -22924,7 +23160,7 @@
       "clause": "core_produces",
       "file": "crates/core/tests/differential_produce.rs",
       "anchor": "crates/core/tests/differential_produce.rs::model_and_implementation_agree_on_what_a_role_affords",
-      "body_hash": "4685694b4a7350a4",
+      "body_hash": "5f8b093605e5c2d1",
       "link_hash": "9cca3ddba5576286",
       "qualifier": null
     },
@@ -24612,6 +24848,16 @@
       "role": "tests",
       "req": "REQ-VIEW",
       "clause": "screen_is_readable",
+      "file": "crates/core/tests/differential_view.rs",
+      "anchor": "crates/core/tests/differential_view.rs::model_and_implementation_agree_on_whether_a_painted_screen_reads_as_the_buffer",
+      "body_hash": "b1f5f5f10d809eda",
+      "link_hash": "3113506b39102fff",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-VIEW",
+      "clause": "screen_is_readable",
       "file": "crates/core/tests/frontend_conformance.rs",
       "anchor": "crates/core/tests/frontend_conformance.rs::a_frontend_that_reports_one_thing_and_paints_another_is_caught_only_on_screen",
       "body_hash": "0a1bc4f936ea6935",
@@ -24794,6 +25040,33 @@
       "key": {
         "reqId": "ARCH-DETERMINISM",
         "clause": "replay_exact",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "approved in review 2026-10-10"
+        }
+      },
+      "linkHash": "b7136a0cad2af6d0",
+      "inputs": [
+        [
+          "requirement",
+          "d93ac3e8b138f885"
+        ],
+        [
+          "model",
+          "28d6b9470ce598fd"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "ARCH-DETERMINISM",
+        "clause": "replay_exact",
         "bond": "modelImpl"
       },
       "level": "L3",
@@ -24845,6 +25118,66 @@
         [
           "model",
           "9ef66c65431edf29"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "ARCH-DETERMINISM",
+        "clause": "seeded_generation",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 3,
+          "cases": 2000,
+          "op": "REQ-DRT-GEN.fixed_stream"
+        }
+      },
+      "linkHash": "397ebf4f9c468bd3",
+      "inputs": [
+        [
+          "implementation",
+          "3370af9d15abc0a1+ba9be9e1ff4796c9"
+        ],
+        [
+          "model",
+          "9ef66c65431edf29"
+        ],
+        [
+          "requirement",
+          "c406abe63455efc3"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "ARCH-DETERMINISM",
+        "clause": "stable_ordering",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 12,
+          "cases": 2000,
+          "op": "REQ-LOCK.deterministic_bytes"
+        }
+      },
+      "linkHash": "5f65bbc2094725ce",
+      "inputs": [
+        [
+          "implementation",
+          "14266a3f399a6f46+35fbd7fd6dec384d+4729e32663cd848d+6a54a220f2f21645+6dbb5825145b9a7f+714e3ce08cb8a39a+7f96c42ff8e2c3ef+e8af451290160611"
+        ],
+        [
+          "model",
+          "a105d7f65b4db0a6"
+        ],
+        [
+          "requirement",
+          "9a2a6e477c8d773d"
         ]
       ]
     },
@@ -24998,6 +25331,183 @@
     {
       "key": {
         "reqId": "REQ-ACT",
+        "clause": "action_to_intent",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "approved in review 2026-10-10"
+        }
+      },
+      "linkHash": "f0c8c617e35cdf82",
+      "inputs": [
+        [
+          "requirement",
+          "aab0062c5c79bfc2"
+        ],
+        [
+          "model",
+          "43418699da34631e"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-ACT",
+        "clause": "action_to_intent",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 83,
+          "cases": 8000,
+          "op": "REQ-ACT.action_to_intent"
+        }
+      },
+      "linkHash": "5999d375102f7ca3",
+      "inputs": [
+        [
+          "implementation",
+          "08f6b323f2b1b27d+d58ed6a8bf877a2b+ee3e291d503d212f+f5c10804e0a2cea6"
+        ],
+        [
+          "model",
+          "43418699da34631e"
+        ],
+        [
+          "requirement",
+          "aab0062c5c79bfc2"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-ACT",
+        "clause": "dispatch_is_pure",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 83,
+          "cases": 8000,
+          "op": "REQ-ACT.action_to_intent"
+        }
+      },
+      "linkHash": "993f8b829c3cf11f",
+      "inputs": [
+        [
+          "implementation",
+          "ee3e291d503d212f"
+        ],
+        [
+          "model",
+          "43418699da34631e"
+        ],
+        [
+          "requirement",
+          "8b0ce678846ca140"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-ACT",
+        "clause": "edits_are_commands",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 83,
+          "cases": 8000,
+          "op": "REQ-ACT.action_to_intent"
+        }
+      },
+      "linkHash": "a1da268e8d4508a2",
+      "inputs": [
+        [
+          "implementation",
+          "452a3d8cf7029039+5eb0c3e8abe417bd+9833bc65d26a76b6+c52f7146bb505c39+ee3e291d503d212f+f0bb0530e1d1994f+fd7e8532f0f2fcbc"
+        ],
+        [
+          "model",
+          "43418699da34631e"
+        ],
+        [
+          "requirement",
+          "f483d1bec841e49f"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-ACT",
+        "clause": "everything_is_offered",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 402,
+          "cases": 1500,
+          "op": "REQ-ACT.everything_is_offered"
+        }
+      },
+      "linkHash": "8f8c8224c76c617c",
+      "inputs": [
+        [
+          "implementation",
+          "4d8e4659c7a764b8+8bef1d3af783a496+c19fbb227a2aa364"
+        ],
+        [
+          "model",
+          "70d16419e5937174"
+        ],
+        [
+          "requirement",
+          "d5bb8b17730a8f9b"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-ACT",
+        "clause": "focus_is_carried",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 83,
+          "cases": 8000,
+          "op": "REQ-ACT.action_to_intent"
+        }
+      },
+      "linkHash": "67d080eb318b03a5",
+      "inputs": [
+        [
+          "implementation",
+          "2c31155911d38353+ee3e291d503d212f"
+        ],
+        [
+          "model",
+          "43418699da34631e"
+        ],
+        [
+          "requirement",
+          "ede60588e15e9208"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-ACT",
         "clause": "focus_is_carried",
         "bond": "modelProof"
       },
@@ -25012,7 +25522,7 @@
       "inputs": [
         [
           "model",
-          "71f2e2d445bdb099"
+          "43418699da34631e"
         ],
         [
           "requirement",
@@ -25021,6 +25531,36 @@
         [
           "toolchain",
           "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-ACT",
+        "clause": "missing_target_is_refused",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 83,
+          "cases": 8000,
+          "op": "REQ-ACT.action_to_intent"
+        }
+      },
+      "linkHash": "aed4f39f65aae04b",
+      "inputs": [
+        [
+          "implementation",
+          "ee3e291d503d212f"
+        ],
+        [
+          "model",
+          "43418699da34631e"
+        ],
+        [
+          "requirement",
+          "1e8be2e211d3d529"
         ]
       ]
     },
@@ -25041,7 +25581,7 @@
       "inputs": [
         [
           "model",
-          "71f2e2d445bdb099"
+          "43418699da34631e"
         ],
         [
           "requirement",
@@ -25050,6 +25590,93 @@
         [
           "toolchain",
           "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-ACT",
+        "clause": "one_path",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 83,
+          "cases": 8000,
+          "op": "REQ-ACT.action_to_intent"
+        }
+      },
+      "linkHash": "f64e22402333a72b",
+      "inputs": [
+        [
+          "implementation",
+          "085e49548b450f02+4b9dc77791161952+c2cb17af9d99065f+ee3e291d503d212f"
+        ],
+        [
+          "model",
+          "43418699da34631e"
+        ],
+        [
+          "requirement",
+          "78ca4adb9622fddd"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-ACT",
+        "clause": "unknown_is_refused",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "approved in review 2026-10-10"
+        }
+      },
+      "linkHash": "783852e2479edbcd",
+      "inputs": [
+        [
+          "requirement",
+          "4271d72c41e96d27"
+        ],
+        [
+          "model",
+          "43418699da34631e"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-ACT",
+        "clause": "unknown_is_refused",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 89,
+          "cases": 8000,
+          "op": "REQ-ACT.unknown_is_refused"
+        }
+      },
+      "linkHash": "521865500fb480da",
+      "inputs": [
+        [
+          "implementation",
+          "0408c11f8f2edb60+e97d177bdd02cd31+ee3e291d503d212f"
+        ],
+        [
+          "model",
+          "43418699da34631e"
+        ],
+        [
+          "requirement",
+          "4271d72c41e96d27"
         ]
       ]
     },
@@ -25070,7 +25697,7 @@
       "inputs": [
         [
           "model",
-          "71f2e2d445bdb099"
+          "43418699da34631e"
         ],
         [
           "requirement",
@@ -25107,6 +25734,36 @@
         [
           "model",
           "d9fa7adb61ff1e6c"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-ANCHOR",
+        "clause": "comments_excluded",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 55,
+          "cases": 3000,
+          "op": "REQ-ANCHOR.whitespace_normalised"
+        }
+      },
+      "linkHash": "ff7eb6f96e17fac9",
+      "inputs": [
+        [
+          "implementation",
+          "81c1bfeac2776bbd+ac711c6018da2167"
+        ],
+        [
+          "model",
+          "d9fa7adb61ff1e6c"
+        ],
+        [
+          "requirement",
+          "7eaa5aea7cebad3f"
         ]
       ]
     },
@@ -25403,6 +26060,66 @@
     },
     {
       "key": {
+        "reqId": "REQ-ANCHOR",
+        "clause": "whitespace_normalised",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 55,
+          "cases": 3000,
+          "op": "REQ-ANCHOR.whitespace_normalised"
+        }
+      },
+      "linkHash": "6d29b336618024e4",
+      "inputs": [
+        [
+          "implementation",
+          "81c1bfeac2776bbd+ac711c6018da2167"
+        ],
+        [
+          "model",
+          "d9fa7adb61ff1e6c"
+        ],
+        [
+          "requirement",
+          "92f73fa83bbf3105"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-ANNOT",
+        "clause": "qualifiers",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 44,
+          "cases": 3000,
+          "op": "REQ-ANNOT.totality"
+        }
+      },
+      "linkHash": "9d6895619c2b8506",
+      "inputs": [
+        [
+          "implementation",
+          "1c93881bf4d5aada+95edbb02bda5dc3c"
+        ],
+        [
+          "model",
+          "c3ada71c9c444a58"
+        ],
+        [
+          "requirement",
+          "62ca00da5ea277ed"
+        ]
+      ]
+    },
+    {
+      "key": {
         "reqId": "REQ-ANNOT",
         "clause": "region_balanced",
         "bond": "requirementModel"
@@ -25433,6 +26150,36 @@
       "key": {
         "reqId": "REQ-ANNOT",
         "clause": "region_balanced",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 107,
+          "cases": 2000,
+          "op": "REQ-ANNOT.region_balanced"
+        }
+      },
+      "linkHash": "6d723ce3d40e1823",
+      "inputs": [
+        [
+          "implementation",
+          "944a03c94155e62d+e0909017a3d40d12"
+        ],
+        [
+          "model",
+          "4340cbd92854e997"
+        ],
+        [
+          "requirement",
+          "14c355905d867969"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-ANNOT",
+        "clause": "region_balanced",
         "bond": "modelProof"
       },
       "level": "L4",
@@ -25455,6 +26202,93 @@
         [
           "toolchain",
           "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-ANNOT",
+        "clause": "role_vocabulary",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "approved in review 2026-10-10"
+        }
+      },
+      "linkHash": "4c47ca8c30975a90",
+      "inputs": [
+        [
+          "requirement",
+          "1a41816762f47d62"
+        ],
+        [
+          "model",
+          "c3ada71c9c444a58"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-ANNOT",
+        "clause": "role_vocabulary",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 44,
+          "cases": 3000,
+          "op": "REQ-ANNOT.totality"
+        }
+      },
+      "linkHash": "3ddb1c168442af92",
+      "inputs": [
+        [
+          "implementation",
+          "1762366bf6c3d5de"
+        ],
+        [
+          "model",
+          "c3ada71c9c444a58"
+        ],
+        [
+          "requirement",
+          "1a41816762f47d62"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-ANNOT",
+        "clause": "totality",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 44,
+          "cases": 3000,
+          "op": "REQ-ANNOT.totality"
+        }
+      },
+      "linkHash": "125b0b4b7d2394c8",
+      "inputs": [
+        [
+          "implementation",
+          "24f9377584978d6c+f1dd0b38f925a379"
+        ],
+        [
+          "model",
+          "c3ada71c9c444a58"
+        ],
+        [
+          "requirement",
+          "e714daa4037e5f05"
         ]
       ]
     },
@@ -25512,6 +26346,36 @@
         [
           "model",
           "c3ada71c9c444a58"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-ANNOT",
+        "clause": "unknown_role_named",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 44,
+          "cases": 3000,
+          "op": "REQ-ANNOT.totality"
+        }
+      },
+      "linkHash": "296d47cd9c86dcea",
+      "inputs": [
+        [
+          "implementation",
+          "24f9377584978d6c"
+        ],
+        [
+          "model",
+          "c3ada71c9c444a58"
+        ],
+        [
+          "requirement",
+          "66a0f9e812ee651d"
         ]
       ]
     },
@@ -25634,6 +26498,36 @@
     {
       "key": {
         "reqId": "REQ-CHECK",
+        "clause": "named_kinds",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 42,
+          "cases": 1000,
+          "op": "REQ-CHECK.named_kinds"
+        }
+      },
+      "linkHash": "3be519ccba8e15cc",
+      "inputs": [
+        [
+          "implementation",
+          "1f753ffc5371c0d8+577b441cd26d2359"
+        ],
+        [
+          "model",
+          "877ede27519bdf01"
+        ],
+        [
+          "requirement",
+          "825b30a7a6617da1"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-CHECK",
         "clause": "one_of_each_role",
         "bond": "modelImpl"
       },
@@ -25694,6 +26588,63 @@
       "key": {
         "reqId": "REQ-CHECK",
         "clause": "progress_not_fault",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "approved in review 2026-10-10"
+        }
+      },
+      "linkHash": "601b760900a967c8",
+      "inputs": [
+        [
+          "requirement",
+          "71101ceede15c097"
+        ],
+        [
+          "model",
+          "877ede27519bdf01"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-CHECK",
+        "clause": "progress_not_fault",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 42,
+          "cases": 1000,
+          "op": "REQ-CHECK.named_kinds"
+        }
+      },
+      "linkHash": "9cce4f06faf931ab",
+      "inputs": [
+        [
+          "implementation",
+          "577b441cd26d2359+61787eba02f2474f"
+        ],
+        [
+          "model",
+          "877ede27519bdf01"
+        ],
+        [
+          "requirement",
+          "71101ceede15c097"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-CHECK",
+        "clause": "progress_not_fault",
         "bond": "modelProof"
       },
       "level": "L4",
@@ -25716,6 +26667,66 @@
         [
           "toolchain",
           "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-CHECK",
+        "clause": "qualifier_soundness",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 43,
+          "cases": 1000,
+          "op": "REQ-CHECK.qualifier_soundness"
+        }
+      },
+      "linkHash": "b2023d18076f8f73",
+      "inputs": [
+        [
+          "implementation",
+          "7434c356a6f15daf"
+        ],
+        [
+          "model",
+          "3f4f7a352fb0dd9a"
+        ],
+        [
+          "requirement",
+          "26bda6df7eef35f9"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-CHECK",
+        "clause": "severity_policy",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 42,
+          "cases": 1000,
+          "op": "REQ-CHECK.named_kinds"
+        }
+      },
+      "linkHash": "63bb227fd96225d3",
+      "inputs": [
+        [
+          "implementation",
+          "577b441cd26d2359+cda4f19cc85b6c85"
+        ],
+        [
+          "model",
+          "877ede27519bdf01"
+        ],
+        [
+          "requirement",
+          "418591974254a6d7"
         ]
       ]
     },
@@ -25840,6 +26851,33 @@
       "key": {
         "reqId": "REQ-CMD",
         "clause": "batch_reverses",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "approved in review 2026-10-10"
+        }
+      },
+      "linkHash": "ae3e0f9d8be08b51",
+      "inputs": [
+        [
+          "requirement",
+          "7646f19732d5013f"
+        ],
+        [
+          "model",
+          "cae5fdf85c845a1b"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-CMD",
+        "clause": "batch_reverses",
         "bond": "modelImpl"
       },
       "level": "L3",
@@ -25899,6 +26937,33 @@
       "key": {
         "reqId": "REQ-CMD",
         "clause": "inverse_exists",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "approved in review 2026-10-10"
+        }
+      },
+      "linkHash": "09ed6d96a153ff60",
+      "inputs": [
+        [
+          "requirement",
+          "d36fbd93c9551280"
+        ],
+        [
+          "model",
+          "cae5fdf85c845a1b"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-CMD",
+        "clause": "inverse_exists",
         "bond": "modelImpl"
       },
       "level": "L3",
@@ -25951,6 +27016,33 @@
         [
           "toolchain",
           "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-CMD",
+        "clause": "round_trip",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "approved in review 2026-10-10"
+        }
+      },
+      "linkHash": "5761d36ea6f24e90",
+      "inputs": [
+        [
+          "requirement",
+          "8b7aad0d88dac8d9"
+        ],
+        [
+          "model",
+          "03fee9805742243c"
         ]
       ]
     },
@@ -26133,6 +27225,96 @@
     {
       "key": {
         "reqId": "REQ-CONTEXT",
+        "clause": "affected_tests",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 103,
+          "cases": 2000,
+          "op": "REQ-CONTEXT.affected_tests"
+        }
+      },
+      "linkHash": "24488edd03336687",
+      "inputs": [
+        [
+          "implementation",
+          "2167c2cffc94210d+abf759fa91532a23"
+        ],
+        [
+          "model",
+          "a0cda730f6d991d9"
+        ],
+        [
+          "requirement",
+          "d407e1046f7459c0"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-CONTEXT",
+        "clause": "claims_with_source",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 102,
+          "cases": 2000,
+          "op": "REQ-CONTEXT.claims_with_source"
+        }
+      },
+      "linkHash": "9440918c72e9c652",
+      "inputs": [
+        [
+          "implementation",
+          "2167c2cffc94210d+31ee6e8afa3f5ab4"
+        ],
+        [
+          "model",
+          "7dad820b122f3e63"
+        ],
+        [
+          "requirement",
+          "0cdb8d5aac5ccffb"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-CONTEXT",
+        "clause": "from_the_shell",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 101,
+          "cases": 2000,
+          "op": "REQ-CONTEXT.from_the_shell"
+        }
+      },
+      "linkHash": "893c091bfa2f8b5d",
+      "inputs": [
+        [
+          "implementation",
+          "475698ae0b8565df+560440270dd7dc8e+69b717aadb840d9c"
+        ],
+        [
+          "model",
+          "a5290587d3e6e387"
+        ],
+        [
+          "requirement",
+          "a72a6476ac9d0fc4"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-CONTEXT",
         "clause": "neighbourhood_is_closed",
         "bond": "requirementModel"
       },
@@ -26140,13 +27322,12 @@
       "detail": {
         "judge": {
           "verdict": "agrees",
-          "judgedBy": "claude-review",
-          "delegatedBy": "ricostynha",
+          "judgedBy": "ricostynha",
           "promptVersion": "1",
-          "note": "re-recorded: clause text identical to the text judged, model declaration byte-identical; only hashes moved"
+          "note": "approved in review 2026-10-10"
         }
       },
-      "linkHash": "e66f6f88d5a4a555",
+      "linkHash": "a6faa66fec1ef712",
       "inputs": [
         [
           "requirement",
@@ -26154,7 +27335,7 @@
         ],
         [
           "model",
-          "7435c03d233292a6"
+          "fee04d72f15c3cb8"
         ]
       ]
     },
@@ -26172,7 +27353,7 @@
           "op": "REQ-CONTEXT.neighbourhood_is_closed"
         }
       },
-      "linkHash": "133a7410b482942c",
+      "linkHash": "29409b1233b4b5c9",
       "inputs": [
         [
           "implementation",
@@ -26180,7 +27361,7 @@
         ],
         [
           "model",
-          "7435c03d233292a6"
+          "fee04d72f15c3cb8"
         ],
         [
           "requirement",
@@ -26569,6 +27750,33 @@
       "key": {
         "reqId": "REQ-COST",
         "clause": "price_is_per_model",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "approved in review 2026-10-10"
+        }
+      },
+      "linkHash": "2c056509cca426cd",
+      "inputs": [
+        [
+          "requirement",
+          "f97895b71cf31b03"
+        ],
+        [
+          "model",
+          "c936fc28db5def24"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-COST",
+        "clause": "price_is_per_model",
         "bond": "modelImpl"
       },
       "level": "L3",
@@ -26744,6 +27952,36 @@
       "key": {
         "reqId": "REQ-DOCLINK",
         "clause": "decisions_exempt",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 43,
+          "cases": 2000,
+          "op": "REQ-DOCLINK.declares_target"
+        }
+      },
+      "linkHash": "4bc0869b9854ad52",
+      "inputs": [
+        [
+          "implementation",
+          "8a1f2d92bba654e0"
+        ],
+        [
+          "model",
+          "35e6357949d421ab"
+        ],
+        [
+          "requirement",
+          "cc62e88e3c03eff0"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-DOCLINK",
+        "clause": "decisions_exempt",
         "bond": "modelProof"
       },
       "level": "L4",
@@ -26794,6 +28032,36 @@
         [
           "model",
           "35e6357949d421ab"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-DOCLINK",
+        "clause": "declares_target",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 43,
+          "cases": 2000,
+          "op": "REQ-DOCLINK.declares_target"
+        }
+      },
+      "linkHash": "2bc17a251d8d41b0",
+      "inputs": [
+        [
+          "implementation",
+          "10049a37e617e870+4b66eb1e2e956561+8a1f2d92bba654e0"
+        ],
+        [
+          "model",
+          "35e6357949d421ab"
+        ],
+        [
+          "requirement",
+          "ec5786c131735979"
         ]
       ]
     },
@@ -26909,6 +28177,36 @@
         [
           "model",
           "35e6357949d421ab"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-DOCLINK",
+        "clause": "records_hash",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 43,
+          "cases": 2000,
+          "op": "REQ-DOCLINK.declares_target"
+        }
+      },
+      "linkHash": "0f453cc31fb1d64e",
+      "inputs": [
+        [
+          "implementation",
+          "4b66eb1e2e956561+8a1f2d92bba654e0"
+        ],
+        [
+          "model",
+          "35e6357949d421ab"
+        ],
+        [
+          "requirement",
+          "bae0e29608820e42"
         ]
       ]
     },
@@ -27292,6 +28590,36 @@
       "key": {
         "reqId": "REQ-DRT",
         "clause": "error_is_an_answer",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 83,
+          "cases": 2000,
+          "op": "REQ-DRT.error_is_an_answer"
+        }
+      },
+      "linkHash": "203b59e9315af0f2",
+      "inputs": [
+        [
+          "implementation",
+          "0d3bdd2024dde50e+47bbe6a7d9f8478d+b2a862f4fe5fdd31"
+        ],
+        [
+          "model",
+          "0bb14760b8406bd0"
+        ],
+        [
+          "requirement",
+          "f831e15726a38ec2"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-DRT",
+        "clause": "error_is_an_answer",
         "bond": "modelProof"
       },
       "level": "L4",
@@ -27349,6 +28677,36 @@
       "key": {
         "reqId": "REQ-DRT",
         "clause": "falsification_only",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 89,
+          "cases": 200,
+          "op": "REQ-DRT.falsification_only"
+        }
+      },
+      "linkHash": "066bd36ae9d4f984",
+      "inputs": [
+        [
+          "implementation",
+          "1695e8fc329edde2+280ef7392484e944+52cc6a97eaf32483+fe8b39b5433b1ee4"
+        ],
+        [
+          "model",
+          "e4fc3c21dd99ab63"
+        ],
+        [
+          "requirement",
+          "6a52f4f684e8bff3"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-DRT",
+        "clause": "falsification_only",
         "bond": "modelProof"
       },
       "level": "L4",
@@ -27371,6 +28729,36 @@
         [
           "toolchain",
           "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-DRT-COVER",
+        "clause": "classes_reached",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 139,
+          "cases": 1000,
+          "op": "REQ-DRT-COVER.classes_reached"
+        }
+      },
+      "linkHash": "23521544b8998ff8",
+      "inputs": [
+        [
+          "implementation",
+          "33472b7ed0842bf1+6869720694526c59"
+        ],
+        [
+          "model",
+          "5ba8c1a7c839c6b8"
+        ],
+        [
+          "requirement",
+          "886cf55c14fe0bcb"
         ]
       ]
     },
@@ -27407,6 +28795,33 @@
       "key": {
         "reqId": "REQ-DRT-COVER",
         "clause": "floor_stated",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "approved in review 2026-10-10"
+        }
+      },
+      "linkHash": "2a7ec8be421d323c",
+      "inputs": [
+        [
+          "requirement",
+          "eee2a9e4b65df76f"
+        ],
+        [
+          "model",
+          "0d35122a8c37465e"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-DRT-COVER",
+        "clause": "floor_stated",
         "bond": "modelImpl"
       },
       "level": "L3",
@@ -27421,7 +28836,7 @@
       "inputs": [
         [
           "implementation",
-          "19b5537beed725f1+55299108a8e16b13+5dcad822373e0370+fdb467a14ea0e0e3"
+          "0e6459ec4fed463a+19b5537beed725f1+5dcad822373e0370+fdb467a14ea0e0e3"
         ],
         [
           "model",
@@ -27494,6 +28909,36 @@
       "key": {
         "reqId": "REQ-DRT-COVER",
         "clause": "floor_unmet_is_not_pass",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 101,
+          "cases": 1000,
+          "op": "REQ-DRT-COVER.floor_unmet_is_not_pass"
+        }
+      },
+      "linkHash": "6dd46226dcac9a23",
+      "inputs": [
+        [
+          "implementation",
+          "5fa768286519c00c+fe8b39b5433b1ee4"
+        ],
+        [
+          "model",
+          "12892e68f2e37ef1"
+        ],
+        [
+          "requirement",
+          "58fbe986e664591c"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-DRT-COVER",
+        "clause": "floor_unmet_is_not_pass",
         "bond": "modelProof"
       },
       "level": "L4",
@@ -27537,7 +28982,7 @@
       "inputs": [
         [
           "implementation",
-          "55299108a8e16b13+fdb467a14ea0e0e3"
+          "0e6459ec4fed463a+fdb467a14ea0e0e3"
         ],
         [
           "model",
@@ -27546,6 +28991,36 @@
         [
           "requirement",
           "1780113b1ef2519f"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-DRT-COVER",
+        "clause": "lines_run",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 137,
+          "cases": 2000,
+          "op": "REQ-DRT-COVER.lines_run"
+        }
+      },
+      "linkHash": "0196e10e06ff78bf",
+      "inputs": [
+        [
+          "implementation",
+          "2c186fae1af50d09"
+        ],
+        [
+          "model",
+          "7664682e5574b60a"
+        ],
+        [
+          "requirement",
+          "455457b332078c78"
         ]
       ]
     },
@@ -27596,7 +29071,7 @@
       "inputs": [
         [
           "implementation",
-          "55299108a8e16b13+fdb467a14ea0e0e3"
+          "0e6459ec4fed463a+fdb467a14ea0e0e3"
         ],
         [
           "model",
@@ -27700,6 +29175,36 @@
       "key": {
         "reqId": "REQ-DRT-COVER",
         "clause": "waiver_unused_reported",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 131,
+          "cases": 2000,
+          "op": "REQ-DRT-COVER.waiver_unused_reported"
+        }
+      },
+      "linkHash": "9f1cb9798881a1d4",
+      "inputs": [
+        [
+          "implementation",
+          "00c81d1ac826720b+33472b7ed0842bf1"
+        ],
+        [
+          "model",
+          "9fe6cc24587bea2b"
+        ],
+        [
+          "requirement",
+          "242b0fc43375c93b"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-DRT-COVER",
+        "clause": "waiver_unused_reported",
         "bond": "modelProof"
       },
       "level": "L4",
@@ -27756,6 +29261,36 @@
     {
       "key": {
         "reqId": "REQ-DRT-GEN",
+        "clause": "edges_sampled",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 4,
+          "cases": 2000,
+          "op": "REQ-DRT-GEN.edges_sampled"
+        }
+      },
+      "linkHash": "b19cb78df5891ee5",
+      "inputs": [
+        [
+          "implementation",
+          "7a589e5a21ea60ab+d3f75418360fdbe7"
+        ],
+        [
+          "model",
+          "f9e5075bb9a3064a"
+        ],
+        [
+          "requirement",
+          "eb63a6d441170a5d"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-DRT-GEN",
         "clause": "fixed_stream",
         "bond": "requirementModel"
       },
@@ -27785,6 +29320,36 @@
       "key": {
         "reqId": "REQ-DRT-GEN",
         "clause": "fixed_stream",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 3,
+          "cases": 2000,
+          "op": "REQ-DRT-GEN.fixed_stream"
+        }
+      },
+      "linkHash": "09e38955547bb852",
+      "inputs": [
+        [
+          "implementation",
+          "3370af9d15abc0a1+ba9be9e1ff4796c9"
+        ],
+        [
+          "model",
+          "9ef66c65431edf29"
+        ],
+        [
+          "requirement",
+          "71cfc1f12eb65e05"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-DRT-GEN",
+        "clause": "fixed_stream",
         "bond": "modelProof"
       },
       "level": "L4",
@@ -27807,6 +29372,36 @@
         [
           "toolchain",
           "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-DRT-GEN",
+        "clause": "seed_reproduces",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 8,
+          "cases": 2000,
+          "op": "REQ-DRT-GEN.seed_reproduces"
+        }
+      },
+      "linkHash": "9cf6efb95b9c0b0d",
+      "inputs": [
+        [
+          "implementation",
+          "e5b05b0e7c48abf2+fa8674a50929d289"
+        ],
+        [
+          "model",
+          "a7f2b48c39838c47"
+        ],
+        [
+          "requirement",
+          "b2c957054aa98ebd"
         ]
       ]
     },
@@ -28335,6 +29930,33 @@
         [
           "toolchain",
           "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-DRT-RUST",
+        "clause": "params_from_source",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "approved in review 2026-10-10"
+        }
+      },
+      "linkHash": "8f5f1bf1273ce723",
+      "inputs": [
+        [
+          "requirement",
+          "59ca574852c9e6b4"
+        ],
+        [
+          "model",
+          "76463bde45524054"
         ]
       ]
     },
@@ -28911,7 +30533,7 @@
       "inputs": [
         [
           "implementation",
-          "671849e54e122cbd+700f7a164db50e69"
+          "5fa768286519c00c+700f7a164db50e69"
         ],
         [
           "model",
@@ -29247,6 +30869,33 @@
       "key": {
         "reqId": "REQ-JUDGE",
         "clause": "caps_at_judgement",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "approved in review 2026-10-10"
+        }
+      },
+      "linkHash": "5169dce24f696b5e",
+      "inputs": [
+        [
+          "requirement",
+          "e654592a09987b85"
+        ],
+        [
+          "model",
+          "3402adaacf045c92"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-JUDGE",
+        "clause": "caps_at_judgement",
         "bond": "modelImpl"
       },
       "level": "L3",
@@ -29538,6 +31187,36 @@
     {
       "key": {
         "reqId": "REQ-JUDGE",
+        "clause": "invalidated_by_change",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 18,
+          "cases": 2000,
+          "op": "REQ-JUDGE.invalidated_by_change"
+        }
+      },
+      "linkHash": "0e0c1273024bc945",
+      "inputs": [
+        [
+          "implementation",
+          "009dff9e5116abd1+98495eb42417ab87+d4607f3b208da938"
+        ],
+        [
+          "model",
+          "36d0c4958d818941"
+        ],
+        [
+          "requirement",
+          "c8b5caed7667e6f3"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-JUDGE",
         "clause": "judgement_shown",
         "bond": "modelImpl"
       },
@@ -29620,6 +31299,33 @@
         [
           "requirement",
           "0024ea3474237050"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-JUDGE",
+        "clause": "proposal_not_mutation",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "approved in review 2026-10-10"
+        }
+      },
+      "linkHash": "853c919e48df8e19",
+      "inputs": [
+        [
+          "requirement",
+          "ff57ac813eeb36a4"
+        ],
+        [
+          "model",
+          "3402adaacf045c92"
         ]
       ]
     },
@@ -29801,6 +31507,66 @@
     },
     {
       "key": {
+        "reqId": "REQ-LINECOV",
+        "clause": "stale_hidden",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 333,
+          "cases": 3000,
+          "op": "REQ-LINECOV.stale_hidden"
+        }
+      },
+      "linkHash": "d3b2fda37d785990",
+      "inputs": [
+        [
+          "implementation",
+          "1fd863ef196cad49+69982aa59d447ba5"
+        ],
+        [
+          "model",
+          "e409b509c5aaff77"
+        ],
+        [
+          "requirement",
+          "88941d844a9dde94"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-LINECOV",
+        "clause": "uncovered_shown",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 334,
+          "cases": 3000,
+          "op": "REQ-LINECOV.uncovered_shown"
+        }
+      },
+      "linkHash": "488cc7b3c776a39e",
+      "inputs": [
+        [
+          "implementation",
+          "69982aa59d447ba5+fb6cf0219671bfe9"
+        ],
+        [
+          "model",
+          "559e98535359b235"
+        ],
+        [
+          "requirement",
+          "940934161ac5c334"
+        ]
+      ]
+    },
+    {
+      "key": {
         "reqId": "REQ-LOCK",
         "clause": "deterministic_bytes",
         "bond": "modelImpl"
@@ -29948,6 +31714,36 @@
       "key": {
         "reqId": "REQ-LOCK",
         "clause": "version_stamped",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 11,
+          "cases": 2000,
+          "op": "REQ-LOCK.version_stamped"
+        }
+      },
+      "linkHash": "4d5be1626f5e3ab0",
+      "inputs": [
+        [
+          "implementation",
+          "115866a592be108a+3bc13a9519aaf3ff+ebf559b8c2af92bf"
+        ],
+        [
+          "model",
+          "d8c49421dbdd21ef"
+        ],
+        [
+          "requirement",
+          "454bfc5f42af7e73"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-LOCK",
+        "clause": "version_stamped",
         "bond": "modelProof"
       },
       "level": "L4",
@@ -29970,6 +31766,96 @@
         [
           "toolchain",
           "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-LOOK",
+        "clause": "contrast_sufficient",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 409,
+          "cases": 3000,
+          "op": "REQ-LOOK.contrast_sufficient"
+        }
+      },
+      "linkHash": "e7631c7d3bf592fb",
+      "inputs": [
+        [
+          "implementation",
+          "50e5de27f0e74ef6+af2ca98e7c8537dc"
+        ],
+        [
+          "model",
+          "8b614feb3e36a144"
+        ],
+        [
+          "requirement",
+          "91e58479cc6a0fc3"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-LOOK",
+        "clause": "roles_drawn_in_theme_colours",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 410,
+          "cases": 3000,
+          "op": "REQ-LOOK.roles_drawn_in_theme_colours"
+        }
+      },
+      "linkHash": "8e63b8f7836345ae",
+      "inputs": [
+        [
+          "implementation",
+          "732d1d682c84ddaa+738457d588ba2d70"
+        ],
+        [
+          "model",
+          "be1b38068a75470e"
+        ],
+        [
+          "requirement",
+          "5468d0c637731224"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-LOOK",
+        "clause": "row_fits",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 75,
+          "cases": 2000,
+          "op": "REQ-LOOK.row_fits"
+        }
+      },
+      "linkHash": "36b6f87bf56a8d33",
+      "inputs": [
+        [
+          "implementation",
+          "8cab2dd8616ea425"
+        ],
+        [
+          "model",
+          "bd0db8ae98423fc2"
+        ],
+        [
+          "requirement",
+          "844469489f3a4c0f"
         ]
       ]
     },
@@ -29998,6 +31884,36 @@
         [
           "model",
           "c21060bc1d6040f4"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-LSP",
+        "clause": "absent_server_named",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 67,
+          "cases": 2000,
+          "op": "REQ-LSP.absent_server_named"
+        }
+      },
+      "linkHash": "0541dcf8b3d9b80a",
+      "inputs": [
+        [
+          "implementation",
+          "1452242868ae1afa+397923620b6a2a3c+7adef53b8f58b746+f3155494859b6355"
+        ],
+        [
+          "model",
+          "c21060bc1d6040f4"
+        ],
+        [
+          "requirement",
+          "df98476a260fb19d"
         ]
       ]
     },
@@ -30530,6 +32446,36 @@
       "key": {
         "reqId": "REQ-MIRROR",
         "clause": "binary_handled",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 131,
+          "cases": 2000,
+          "op": "REQ-MIRROR.binary_handled"
+        }
+      },
+      "linkHash": "b285e01e930aa0d0",
+      "inputs": [
+        [
+          "implementation",
+          "6a1f2d73bdec5c52+d24637c22d82b4f8+eab7e05d07fe945d+f06c8e0078658342"
+        ],
+        [
+          "model",
+          "39f3f791673f1494"
+        ],
+        [
+          "requirement",
+          "e91dac2c393d6e6d"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-MIRROR",
+        "clause": "binary_handled",
         "bond": "modelProof"
       },
       "level": "L4",
@@ -30552,6 +32498,177 @@
         [
           "toolchain",
           "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-MIRROR",
+        "clause": "diff_is_pure",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "approved in review 2026-10-10"
+        }
+      },
+      "linkHash": "f0c0890cfdddf5ec",
+      "inputs": [
+        [
+          "requirement",
+          "572d51b3b8c640e6"
+        ],
+        [
+          "model",
+          "33dad4e741f81e93"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-MIRROR",
+        "clause": "diff_is_pure",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 64,
+          "cases": 2000,
+          "op": "REQ-MIRROR.diff_is_pure"
+        }
+      },
+      "linkHash": "b6d15e5c0a9c4d45",
+      "inputs": [
+        [
+          "implementation",
+          "f5487bb6a3d14d98"
+        ],
+        [
+          "model",
+          "33dad4e741f81e93"
+        ],
+        [
+          "requirement",
+          "572d51b3b8c640e6"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-MIRROR",
+        "clause": "minimal",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "approved in review 2026-10-10"
+        }
+      },
+      "linkHash": "332565f7dc9c8d16",
+      "inputs": [
+        [
+          "requirement",
+          "e76b8b29511354a2"
+        ],
+        [
+          "model",
+          "33dad4e741f81e93"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-MIRROR",
+        "clause": "minimal",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 64,
+          "cases": 2000,
+          "op": "REQ-MIRROR.diff_is_pure"
+        }
+      },
+      "linkHash": "1f9df7e352d91d05",
+      "inputs": [
+        [
+          "implementation",
+          "f5487bb6a3d14d98"
+        ],
+        [
+          "model",
+          "33dad4e741f81e93"
+        ],
+        [
+          "requirement",
+          "e76b8b29511354a2"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-MIRROR",
+        "clause": "ordering_defined",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "approved in review 2026-10-10"
+        }
+      },
+      "linkHash": "6552695b17409bc5",
+      "inputs": [
+        [
+          "requirement",
+          "9b87579730b59a14"
+        ],
+        [
+          "model",
+          "33dad4e741f81e93"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-MIRROR",
+        "clause": "ordering_defined",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 64,
+          "cases": 2000,
+          "op": "REQ-MIRROR.diff_is_pure"
+        }
+      },
+      "linkHash": "e518838a08c18f4a",
+      "inputs": [
+        [
+          "implementation",
+          "f5487bb6a3d14d98"
+        ],
+        [
+          "model",
+          "33dad4e741f81e93"
+        ],
+        [
+          "requirement",
+          "9b87579730b59a14"
         ]
       ]
     },
@@ -30585,6 +32702,63 @@
     },
     {
       "key": {
+        "reqId": "REQ-MIRROR",
+        "clause": "protected_excluded",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 64,
+          "cases": 2000,
+          "op": "REQ-MIRROR.diff_is_pure"
+        }
+      },
+      "linkHash": "c8766448bb7cb8ff",
+      "inputs": [
+        [
+          "implementation",
+          "afc99f6b9d119089+f5487bb6a3d14d98+fcd688136dbe9591"
+        ],
+        [
+          "model",
+          "33dad4e741f81e93"
+        ],
+        [
+          "requirement",
+          "611c8c5d462139cf"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-MYTH",
+        "clause": "actions_defined",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "approved in review 2026-10-10"
+        }
+      },
+      "linkHash": "5845862d3feaf9da",
+      "inputs": [
+        [
+          "requirement",
+          "b3723ab9a2821cf0"
+        ],
+        [
+          "model",
+          "4596c45eb436aa93"
+        ]
+      ]
+    },
+    {
+      "key": {
         "reqId": "REQ-MYTH",
         "clause": "actions_defined",
         "bond": "modelImpl"
@@ -30610,6 +32784,33 @@
         [
           "requirement",
           "b3723ab9a2821cf0"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-MYTH",
+        "clause": "actions_reachable",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "approved in review 2026-10-10"
+        }
+      },
+      "linkHash": "b7467e20d38ffad8",
+      "inputs": [
+        [
+          "requirement",
+          "8eef2f1dd3a245de"
+        ],
+        [
+          "model",
+          "4596c45eb436aa93"
         ]
       ]
     },
@@ -30729,6 +32930,33 @@
         [
           "toolchain",
           "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-MYTH",
+        "clause": "keymap_is_data",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "approved in review 2026-10-10"
+        }
+      },
+      "linkHash": "5c8f86a14062dbfe",
+      "inputs": [
+        [
+          "requirement",
+          "a7d5dd5e61ace4f2"
+        ],
+        [
+          "model",
+          "4596c45eb436aa93"
         ]
       ]
     },
@@ -30999,6 +33227,36 @@
       "key": {
         "reqId": "REQ-OBS",
         "clause": "workspace_is_a_copy",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 53,
+          "cases": 2000,
+          "op": "REQ-OBS.workspace_is_a_copy"
+        }
+      },
+      "linkHash": "5e07cf5c1b7fc708",
+      "inputs": [
+        [
+          "implementation",
+          "115206a4728888aa+28d8b7adc3780922+44c3fd964d2f3be8+ae68f582cfb99e95+c098d328e9037df7+e3683121244bcfd6+eab7e05d07fe945d"
+        ],
+        [
+          "model",
+          "eb2e8236a31592d3"
+        ],
+        [
+          "requirement",
+          "27e2158f18bbd5a4"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-OBS",
+        "clause": "workspace_is_a_copy",
         "bond": "modelProof"
       },
       "level": "L4",
@@ -31051,6 +33309,33 @@
         [
           "requirement",
           "cdd5ea752334f1c3"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-PERSIST",
+        "clause": "checkpoint_equivalent",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "approved in review 2026-10-10"
+        }
+      },
+      "linkHash": "d55f9a4b8178e7b7",
+      "inputs": [
+        [
+          "requirement",
+          "29c73efb5a570d74"
+        ],
+        [
+          "model",
+          "28d6b9470ce598fd"
         ]
       ]
     },
@@ -31117,6 +33402,33 @@
       "key": {
         "reqId": "REQ-PERSIST",
         "clause": "replay_exact",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "approved in review 2026-10-10"
+        }
+      },
+      "linkHash": "581f9a532215d5a1",
+      "inputs": [
+        [
+          "requirement",
+          "6f643e188747b2cd"
+        ],
+        [
+          "model",
+          "28d6b9470ce598fd"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-PERSIST",
+        "clause": "replay_exact",
         "bond": "modelImpl"
       },
       "level": "L3",
@@ -31140,6 +33452,33 @@
         [
           "requirement",
           "6f643e188747b2cd"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-PERSIST",
+        "clause": "truncated_is_reported",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "approved in review 2026-10-10"
+        }
+      },
+      "linkHash": "3a52c2debec81937",
+      "inputs": [
+        [
+          "requirement",
+          "1b55ac09ed1d968a"
+        ],
+        [
+          "model",
+          "28d6b9470ce598fd"
         ]
       ]
     },
@@ -31526,6 +33865,36 @@
       "key": {
         "reqId": "REQ-REQDOC",
         "clause": "clause_addressable",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 57,
+          "cases": 2000,
+          "op": "REQ-REQDOC.clause_addressable"
+        }
+      },
+      "linkHash": "95b2a13fe5080ef6",
+      "inputs": [
+        [
+          "implementation",
+          "65591b5b4730dea1+a77b3e4f2b79f845+ad905dbecf7bc306"
+        ],
+        [
+          "model",
+          "5a549cc79c8f08e0"
+        ],
+        [
+          "requirement",
+          "a9b9aaf25979fc06"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-REQDOC",
+        "clause": "clause_addressable",
         "bond": "modelProof"
       },
       "level": "L4",
@@ -31607,6 +33976,33 @@
         [
           "toolchain",
           "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-REQDOC",
+        "clause": "clauseless_uniform",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "approved in review 2026-10-10"
+        }
+      },
+      "linkHash": "2ee010cf6736da20",
+      "inputs": [
+        [
+          "requirement",
+          "420bdf1ef8f1023c"
+        ],
+        [
+          "model",
+          "cad3550825a70c07"
         ]
       ]
     },
@@ -31732,6 +34128,33 @@
       "key": {
         "reqId": "REQ-REQDOC",
         "clause": "id_is_identity",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "approved in review 2026-10-10"
+        }
+      },
+      "linkHash": "08509ce66b84cbbe",
+      "inputs": [
+        [
+          "requirement",
+          "e02b29e91263c1e2"
+        ],
+        [
+          "model",
+          "cad3550825a70c07"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-REQDOC",
+        "clause": "id_is_identity",
         "bond": "modelImpl"
       },
       "level": "L3",
@@ -31783,6 +34206,36 @@
         [
           "model",
           "ed7528f9e644fd0b"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-REQDOC",
+        "clause": "id_unique",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 109,
+          "cases": 2000,
+          "op": "REQ-REQDOC.id_unique"
+        }
+      },
+      "linkHash": "7feda12bdb905a57",
+      "inputs": [
+        [
+          "implementation",
+          "053735024f99f744+68a0d1042f6b4944"
+        ],
+        [
+          "model",
+          "ed7528f9e644fd0b"
+        ],
+        [
+          "requirement",
+          "05bd932f68ea23ff"
         ]
       ]
     },
@@ -31930,6 +34383,33 @@
         [
           "toolchain",
           "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-REQDOC",
+        "clause": "refines_dag",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "approved in review 2026-10-10"
+        }
+      },
+      "linkHash": "de5c949f11d548fa",
+      "inputs": [
+        [
+          "requirement",
+          "44bb4168401fccd6"
+        ],
+        [
+          "model",
+          "a2a6887eda815a9c"
         ]
       ]
     },
@@ -32524,6 +35004,36 @@
       "key": {
         "reqId": "REQ-SBX",
         "clause": "capability_reported",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 53,
+          "cases": 2000,
+          "op": "REQ-OBS.workspace_is_a_copy"
+        }
+      },
+      "linkHash": "8d913e324faf346f",
+      "inputs": [
+        [
+          "implementation",
+          "13cb3664ea5dbf3e+746bb0f6f13e75da+8e6207c74defad57"
+        ],
+        [
+          "model",
+          "72767d3112f95b11"
+        ],
+        [
+          "requirement",
+          "94b03c736989b208"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-SBX",
+        "clause": "capability_reported",
         "bond": "modelProof"
       },
       "level": "L4",
@@ -32546,6 +35056,33 @@
         [
           "toolchain",
           "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-SBX",
+        "clause": "classification_total",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "approved in review 2026-10-10"
+        }
+      },
+      "linkHash": "08d94897c02d05a5",
+      "inputs": [
+        [
+          "requirement",
+          "6280e2a39ac35925"
+        ],
+        [
+          "model",
+          "aa31253138e0844c"
         ]
       ]
     },
@@ -32700,6 +35237,33 @@
       "key": {
         "reqId": "REQ-SBX",
         "clause": "protected_never_mirrored",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "approved in review 2026-10-10"
+        }
+      },
+      "linkHash": "a313fb7edcc178f8",
+      "inputs": [
+        [
+          "requirement",
+          "4375164a635819f2"
+        ],
+        [
+          "model",
+          "aa31253138e0844c"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-SBX",
+        "clause": "protected_never_mirrored",
         "bond": "modelImpl"
       },
       "level": "L3",
@@ -32752,6 +35316,63 @@
         [
           "toolchain",
           "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-SBX",
+        "clause": "real_tree_untouched",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "approved in review 2026-10-10"
+        }
+      },
+      "linkHash": "791efe897a90fdbc",
+      "inputs": [
+        [
+          "requirement",
+          "561953de2a6bbad3"
+        ],
+        [
+          "model",
+          "4e8f955d1c1ecf6a"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-SBX",
+        "clause": "real_tree_untouched",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 53,
+          "cases": 2000,
+          "op": "REQ-OBS.workspace_is_a_copy"
+        }
+      },
+      "linkHash": "e3fed3f755a4b42a",
+      "inputs": [
+        [
+          "implementation",
+          "de954a611c587b21+e981532ccdd42bca"
+        ],
+        [
+          "model",
+          "4e8f955d1c1ecf6a"
+        ],
+        [
+          "requirement",
+          "561953de2a6bbad3"
         ]
       ]
     },
@@ -33081,6 +35702,33 @@
       "key": {
         "reqId": "REQ-SCREEN",
         "clause": "opened_outlives_shown",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "approved in review 2026-10-10"
+        }
+      },
+      "linkHash": "9e9ed886d22575d4",
+      "inputs": [
+        [
+          "requirement",
+          "7c92cf592c8fd581"
+        ],
+        [
+          "model",
+          "c06eb9b1d8f88429"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-SCREEN",
+        "clause": "opened_outlives_shown",
         "bond": "modelImpl"
       },
       "level": "L3",
@@ -33279,6 +35927,33 @@
         [
           "requirement",
           "8bfdf080909cd3c8"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-SCREEN",
+        "clause": "screen_is_a_value",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "approved in review 2026-10-10"
+        }
+      },
+      "linkHash": "02ec2b7ecd235ac2",
+      "inputs": [
+        [
+          "requirement",
+          "af5836ce4bb4d60e"
+        ],
+        [
+          "model",
+          "8f043133e986f1ae"
         ]
       ]
     },
@@ -33666,6 +36341,33 @@
       "key": {
         "reqId": "REQ-SELFWRITE",
         "clause": "content_matched",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "approved in review 2026-10-10"
+        }
+      },
+      "linkHash": "f28f344dbca6625d",
+      "inputs": [
+        [
+          "requirement",
+          "53e6310576f5e76e"
+        ],
+        [
+          "model",
+          "e203d47d41f94328"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-SELFWRITE",
+        "clause": "content_matched",
         "bond": "modelImpl"
       },
       "level": "L3",
@@ -33689,6 +36391,90 @@
         [
           "requirement",
           "53e6310576f5e76e"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-SELFWRITE",
+        "clause": "no_deadlock",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "approved in review 2026-10-10"
+        }
+      },
+      "linkHash": "9c53aeb0644269b0",
+      "inputs": [
+        [
+          "requirement",
+          "c94b6e575a75eac2"
+        ],
+        [
+          "model",
+          "cbdd35cfc0552073"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-SELFWRITE",
+        "clause": "no_deadlock",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 38,
+          "cases": 2000,
+          "op": "REQ-SELFWRITE.no_deadlock"
+        }
+      },
+      "linkHash": "718c06a69adc73be",
+      "inputs": [
+        [
+          "implementation",
+          "1b6d3c595d44e7fa+708f6e092ee4dbdd"
+        ],
+        [
+          "model",
+          "cbdd35cfc0552073"
+        ],
+        [
+          "requirement",
+          "c94b6e575a75eac2"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-SELFWRITE",
+        "clause": "own_writes_ignored",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "approved in review 2026-10-10"
+        }
+      },
+      "linkHash": "6b7030f5bb5533a5",
+      "inputs": [
+        [
+          "requirement",
+          "40ba3ed235418db1"
+        ],
+        [
+          "model",
+          "e203d47d41f94328"
         ]
       ]
     },
@@ -33785,6 +36571,33 @@
       "key": {
         "reqId": "REQ-SELFWRITE",
         "clause": "unmatched_is_external",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "approved in review 2026-10-10"
+        }
+      },
+      "linkHash": "ca538370d435c5e7",
+      "inputs": [
+        [
+          "requirement",
+          "6b935aaeac4c8131"
+        ],
+        [
+          "model",
+          "e203d47d41f94328"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-SELFWRITE",
+        "clause": "unmatched_is_external",
         "bond": "modelImpl"
       },
       "level": "L3",
@@ -33837,6 +36650,36 @@
         [
           "toolchain",
           "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-SHOW",
+        "clause": "claims_beside_code",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 404,
+          "cases": 1500,
+          "op": "REQ-SHOW.claims_beside_code"
+        }
+      },
+      "linkHash": "1ddbafd50733b028",
+      "inputs": [
+        [
+          "implementation",
+          "48b2e78909431806+696611e4d66eff5b"
+        ],
+        [
+          "model",
+          "75880f0a18b9bc63"
+        ],
+        [
+          "requirement",
+          "eda3abed10e8803b"
         ]
       ]
     },
@@ -33925,6 +36768,36 @@
         [
           "requirement",
           "220d6bdc2f392d6b"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-SHOW",
+        "clause": "findings_lead_somewhere",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 403,
+          "cases": 1500,
+          "op": "REQ-SHOW.findings_lead_somewhere"
+        }
+      },
+      "linkHash": "2c48b044c1413ee9",
+      "inputs": [
+        [
+          "implementation",
+          "4bf720568c74e91f"
+        ],
+        [
+          "model",
+          "4335363f164ddb84"
+        ],
+        [
+          "requirement",
+          "31ca6b0b4ddf8e38"
         ]
       ]
     },
@@ -34071,6 +36944,36 @@
         [
           "requirement",
           "df9e049a5b0b3ee7"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-SHOW",
+        "clause": "listing_is_a_tree",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 405,
+          "cases": 2000,
+          "op": "REQ-SHOW.listing_is_a_tree"
+        }
+      },
+      "linkHash": "00e040b6c92e35d8",
+      "inputs": [
+        [
+          "implementation",
+          "da3f43299823f44b"
+        ],
+        [
+          "model",
+          "5a1358f5e4614197"
+        ],
+        [
+          "requirement",
+          "52ea811be3e2c641"
         ]
       ]
     },
@@ -34225,6 +37128,36 @@
     {
       "key": {
         "reqId": "REQ-SHOW",
+        "clause": "recent_reopens",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 74,
+          "cases": 2000,
+          "op": "REQ-SHOW.recent_reopens"
+        }
+      },
+      "linkHash": "3148c5b52e4c8db7",
+      "inputs": [
+        [
+          "implementation",
+          "786bb535d44fb06e"
+        ],
+        [
+          "model",
+          "7e581973d12cc3b6"
+        ],
+        [
+          "requirement",
+          "6400dd54c5a95ff9"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-SHOW",
         "clause": "record_from_events",
         "bond": "requirementModel"
       },
@@ -34277,6 +37210,66 @@
         [
           "requirement",
           "0b39c2f950b9ccf5"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-SHOW",
+        "clause": "references_are_links",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 401,
+          "cases": 2000,
+          "op": "REQ-SHOW.references_are_links"
+        }
+      },
+      "linkHash": "6efb31ec16c8bab1",
+      "inputs": [
+        [
+          "implementation",
+          "07d3d227cdc46ee5+3544a08f0bf86d82"
+        ],
+        [
+          "model",
+          "4a1c00bf5fccde09"
+        ],
+        [
+          "requirement",
+          "2d7cea09b2b24247"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-SHOW",
+        "clause": "requirement_opened",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 407,
+          "cases": 2000,
+          "op": "REQ-SHOW.requirement_opened"
+        }
+      },
+      "linkHash": "6c07c32079ced441",
+      "inputs": [
+        [
+          "implementation",
+          "99ea256942475964+afa53316d22e06ee"
+        ],
+        [
+          "model",
+          "7d2de93f771107e7"
+        ],
+        [
+          "requirement",
+          "fb9969e3b2c26e70"
         ]
       ]
     },
@@ -34394,6 +37387,36 @@
         [
           "requirement",
           "0a2767abdb16ef30"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-SHOW",
+        "clause": "sandbox_session_shown",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 406,
+          "cases": 2000,
+          "op": "REQ-SHOW.sandbox_session_shown"
+        }
+      },
+      "linkHash": "1b35d1a66775f174",
+      "inputs": [
+        [
+          "implementation",
+          "fbc55b274e9687b0+fc8b2a0549abcd11"
+        ],
+        [
+          "model",
+          "cebf0149688306d8"
+        ],
+        [
+          "requirement",
+          "59a9702a9f011b7c"
         ]
       ]
     },
@@ -34692,6 +37715,36 @@
       "key": {
         "reqId": "REQ-STALE",
         "clause": "no_silent_revalidation",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 37,
+          "cases": 2000,
+          "op": "REQ-STALE.no_silent_revalidation"
+        }
+      },
+      "linkHash": "b97df4b0429bf6fe",
+      "inputs": [
+        [
+          "implementation",
+          "269aa8bb52b09ba5+6fbe524166b5a1a9+d478854f081500ff+e04c8dc3a4904487+ee293784042f9886"
+        ],
+        [
+          "model",
+          "8315ef0545f5edc0"
+        ],
+        [
+          "requirement",
+          "e40d913ef1d87a05"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-STALE",
+        "clause": "no_silent_revalidation",
         "bond": "modelProof"
       },
       "level": "L4",
@@ -34714,6 +37767,36 @@
         [
           "toolchain",
           "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-STALE",
+        "clause": "requirement_reopens_all",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 57,
+          "cases": 2000,
+          "op": "REQ-STALE.requirement_reopens_all"
+        }
+      },
+      "linkHash": "191f41080652ffe9",
+      "inputs": [
+        [
+          "implementation",
+          "49345088f0681062+65591b5b4730dea1+ad905dbecf7bc306"
+        ],
+        [
+          "model",
+          "5a549cc79c8f08e0"
+        ],
+        [
+          "requirement",
+          "b883a261cbe2868e"
         ]
       ]
     },
@@ -34835,6 +37918,36 @@
     {
       "key": {
         "reqId": "REQ-STALE",
+        "clause": "scanner_never_writes",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 31,
+          "cases": 2000,
+          "op": "REQ-STALE.scanner_never_writes"
+        }
+      },
+      "linkHash": "11c8f251248ebdab",
+      "inputs": [
+        [
+          "implementation",
+          "4057a1168eb3c619+cf1a16ed7bed3a86"
+        ],
+        [
+          "model",
+          "43f9e30e67d7bbde"
+        ],
+        [
+          "requirement",
+          "e77bf829f5e17ba7"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-STALE",
         "clause": "stale_is_visible",
         "bond": "requirementModel"
       },
@@ -34864,6 +37977,36 @@
       "key": {
         "reqId": "REQ-STALE",
         "clause": "stale_is_visible",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 31,
+          "cases": 2000,
+          "op": "REQ-STALE.scanner_never_writes"
+        }
+      },
+      "linkHash": "c3238ebe31c7cd5c",
+      "inputs": [
+        [
+          "implementation",
+          "4057a1168eb3c619+906edaab8d3cf5b3+cf1a16ed7bed3a86+f405a06383d32c11"
+        ],
+        [
+          "model",
+          "43f9e30e67d7bbde"
+        ],
+        [
+          "requirement",
+          "21a9e954230b466b"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-STALE",
+        "clause": "stale_is_visible",
         "bond": "modelProof"
       },
       "level": "L4",
@@ -34886,6 +38029,33 @@
         [
           "toolchain",
           "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-STRENGTH",
+        "clause": "attempted_distinguished",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "approved in review 2026-10-10"
+        }
+      },
+      "linkHash": "e42377348aa6c654",
+      "inputs": [
+        [
+          "requirement",
+          "917634030ababd40"
+        ],
+        [
+          "model",
+          "87d4da9d465362f8"
         ]
       ]
     },
@@ -35099,6 +38269,36 @@
       "key": {
         "reqId": "REQ-STRENGTH",
         "clause": "not_proved_by_us",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 103,
+          "cases": 2000,
+          "op": "REQ-STRENGTH.obligation_generated"
+        }
+      },
+      "linkHash": "0bad5651ba7acc82",
+      "inputs": [
+        [
+          "implementation",
+          "56f0077a1ebe9482+d021c0c38b4a8e57"
+        ],
+        [
+          "model",
+          "9772b5a355704b31"
+        ],
+        [
+          "requirement",
+          "4056b0b6f4d7c67d"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-STRENGTH",
+        "clause": "not_proved_by_us",
         "bond": "modelProof"
       },
       "level": "L4",
@@ -35121,6 +38321,63 @@
         [
           "toolchain",
           "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-STRENGTH",
+        "clause": "obligation_generated",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 103,
+          "cases": 2000,
+          "op": "REQ-STRENGTH.obligation_generated"
+        }
+      },
+      "linkHash": "13f33cd00d97421b",
+      "inputs": [
+        [
+          "implementation",
+          "56f0077a1ebe9482+d021c0c38b4a8e57"
+        ],
+        [
+          "model",
+          "9772b5a355704b31"
+        ],
+        [
+          "requirement",
+          "3fe26295b19608a6"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-STRENGTH",
+        "clause": "open_is_the_default",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "approved in review 2026-10-10"
+        }
+      },
+      "linkHash": "cb7fd4ceb0e99238",
+      "inputs": [
+        [
+          "requirement",
+          "ddd19ed3ed7044f0"
+        ],
+        [
+          "model",
+          "87d4da9d465362f8"
         ]
       ]
     },
@@ -35535,6 +38792,36 @@
     {
       "key": {
         "reqId": "REQ-TRANSCRIPT",
+        "clause": "tool_format_read",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 408,
+          "cases": 2000,
+          "op": "REQ-TRANSCRIPT.tool_format_read"
+        }
+      },
+      "linkHash": "85004511e97f8072",
+      "inputs": [
+        [
+          "implementation",
+          "76797c45abb9d074+836ce230a430615f"
+        ],
+        [
+          "model",
+          "6c6c841c76dfe8fc"
+        ],
+        [
+          "requirement",
+          "37a2242b3482b294"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-TRANSCRIPT",
         "clause": "unknown_preserved",
         "bond": "requirementModel"
       },
@@ -35652,6 +38939,63 @@
     {
       "key": {
         "reqId": "REQ-UNDO",
+        "clause": "hover_shows_change",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 304,
+          "cases": 2000,
+          "op": "REQ-UNDO.hover_shows_change"
+        }
+      },
+      "linkHash": "4072bc77b96be595",
+      "inputs": [
+        [
+          "implementation",
+          "686d9a76df2b2a89+99640425d4fc436c"
+        ],
+        [
+          "model",
+          "6b637b2e9eb085b9"
+        ],
+        [
+          "requirement",
+          "9747a710917660e5"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-UNDO",
+        "clause": "jump_equivalence",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "approved in review 2026-10-10"
+        }
+      },
+      "linkHash": "d3e34bbb80de4846",
+      "inputs": [
+        [
+          "requirement",
+          "68aaf1ddafd23973"
+        ],
+        [
+          "model",
+          "4f4d41ec41bf2c80"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-UNDO",
         "clause": "jump_equivalence",
         "bond": "modelImpl"
       },
@@ -35712,6 +39056,33 @@
       "key": {
         "reqId": "REQ-UNDO",
         "clause": "no_loss_on_branch",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "approved in review 2026-10-10"
+        }
+      },
+      "linkHash": "e0a23f3b0eddd31b",
+      "inputs": [
+        [
+          "requirement",
+          "0b9293da91b8794e"
+        ],
+        [
+          "model",
+          "4f4d41ec41bf2c80"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-UNDO",
+        "clause": "no_loss_on_branch",
         "bond": "modelImpl"
       },
       "level": "L3",
@@ -35735,6 +39106,33 @@
         [
           "requirement",
           "0b9293da91b8794e"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-UNDO",
+        "clause": "path_via_ancestor",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "approved in review 2026-10-10"
+        }
+      },
+      "linkHash": "45614e16555c79cd",
+      "inputs": [
+        [
+          "requirement",
+          "7671b7c4a1eec783"
+        ],
+        [
+          "model",
+          "4f4d41ec41bf2c80"
         ]
       ]
     },
@@ -35772,6 +39170,33 @@
       "key": {
         "reqId": "REQ-UNDO",
         "clause": "preview_is_pure",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "approved in review 2026-10-10"
+        }
+      },
+      "linkHash": "044e5d5948d55efd",
+      "inputs": [
+        [
+          "requirement",
+          "9ef31d958b332d35"
+        ],
+        [
+          "model",
+          "4f4d41ec41bf2c80"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-UNDO",
+        "clause": "preview_is_pure",
         "bond": "modelImpl"
       },
       "level": "L3",
@@ -35795,6 +39220,33 @@
         [
           "requirement",
           "9ef31d958b332d35"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-UNDO",
+        "clause": "reachable",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "approved in review 2026-10-10"
+        }
+      },
+      "linkHash": "cc01471b3aa65a36",
+      "inputs": [
+        [
+          "requirement",
+          "a9082a28c57c4530"
+        ],
+        [
+          "model",
+          "4f4d41ec41bf2c80"
         ]
       ]
     },
@@ -35883,6 +39335,36 @@
         [
           "requirement",
           "44794eb29e0a5ea6"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-UNDO",
+        "clause": "tree_is_shown",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 303,
+          "cases": 2000,
+          "op": "REQ-UNDO.tree_is_shown"
+        }
+      },
+      "linkHash": "1d6146786607c63d",
+      "inputs": [
+        [
+          "implementation",
+          "b36a00dcf307401c"
+        ],
+        [
+          "model",
+          "140ff145ef11d236"
+        ],
+        [
+          "requirement",
+          "8c27c6edfa27ff8c"
         ]
       ]
     },
@@ -36000,6 +39482,60 @@
         [
           "toolchain",
           "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-VIEW",
+        "clause": "everything_is_a_buffer",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "approved in review 2026-10-10"
+        }
+      },
+      "linkHash": "737887498cb87b1b",
+      "inputs": [
+        [
+          "requirement",
+          "6281c6c32117943f"
+        ],
+        [
+          "model",
+          "1893cd03055540ab"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-VIEW",
+        "clause": "frontend_adds_nothing",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "approved in review 2026-10-10"
+        }
+      },
+      "linkHash": "c1226446e7ef741c",
+      "inputs": [
+        [
+          "requirement",
+          "8e8366faf5b51304"
+        ],
+        [
+          "model",
+          "b9f69cf500f6df83"
         ]
       ]
     },
@@ -36183,6 +39719,33 @@
       "key": {
         "reqId": "REQ-VIEW",
         "clause": "rendering_is_total",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "approved in review 2026-10-10"
+        }
+      },
+      "linkHash": "14c022447f87a97d",
+      "inputs": [
+        [
+          "requirement",
+          "12236ebe108747b9"
+        ],
+        [
+          "model",
+          "b9f69cf500f6df83"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-VIEW",
+        "clause": "rendering_is_total",
         "bond": "modelImpl"
       },
       "level": "L3",
@@ -36197,7 +39760,7 @@
       "inputs": [
         [
           "implementation",
-          "5c285ce7e09ab6a0+c3cebfdb197803af+cbd18457dec9045d+f82ce5be11c6371f"
+          "c3cebfdb197803af+c6be0cb2eaf66657+cbd18457dec9045d+f82ce5be11c6371f"
         ],
         [
           "model",
@@ -36206,6 +39769,36 @@
         [
           "requirement",
           "12236ebe108747b9"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-VIEW",
+        "clause": "screen_is_readable",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 48,
+          "cases": 2000,
+          "op": "REQ-VIEW.screen_is_readable"
+        }
+      },
+      "linkHash": "5d54cd203626f9ee",
+      "inputs": [
+        [
+          "implementation",
+          "2eb0877a0ce2bff0+5f95f03d763162de+7bbbfa4d44db4014+a931091c2c8f9b58+c6be0cb2eaf66657+cf3e6cd9677bc49c"
+        ],
+        [
+          "model",
+          "7aca3c2e268cc9df"
+        ],
+        [
+          "requirement",
+          "f1928dcc07501fc7"
         ]
       ]
     },
@@ -36234,6 +39827,63 @@
         [
           "model",
           "2c4a79afd9285f01"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-VIEW",
+        "clause": "structure_has_one_type",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 37,
+          "cases": 2000,
+          "op": "REQ-VIEW.structure_has_one_type"
+        }
+      },
+      "linkHash": "22a1b893cfa40ca5",
+      "inputs": [
+        [
+          "implementation",
+          "1316a77ef517bbe5"
+        ],
+        [
+          "model",
+          "2c4a79afd9285f01"
+        ],
+        [
+          "requirement",
+          "d8d9d9a48443ea34"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-VIEW",
+        "clause": "structure_over_text",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "approved in review 2026-10-10"
+        }
+      },
+      "linkHash": "f780bb5041cec411",
+      "inputs": [
+        [
+          "requirement",
+          "d8340d31834a2ce2"
+        ],
+        [
+          "model",
+          "e713a595e72505b2"
         ]
       ]
     },

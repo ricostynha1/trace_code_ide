@@ -8,13 +8,12 @@
   "detail": {
     "judge": {
       "verdict": "agrees",
-      "judgedBy": "claude-review",
-      "delegatedBy": "ricostynha",
+      "judgedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "re-recorded: clause text identical to the text judged, model declaration byte-identical; only hashes moved"
+      "note": "approved in review 2026-10-10"
     }
   },
-  "linkHash": "e66f6f88d5a4a555",
+  "linkHash": "a6faa66fec1ef712",
   "inputs": [
     [
       "requirement",
@@ -22,7 +21,7 @@
     ],
     [
       "model",
-      "7435c03d233292a6"
+      "fee04d72f15c3cb8"
     ]
   ]
 }

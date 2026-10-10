@@ -2,7 +2,7 @@
 id: REQ-LOOK
 title: What is shown can be seen and used
 refines: [REQ-VIEW, REQ-SCREEN]
-status: draft
+status: approved
 decomposition: open
 clauses:
   roles_drawn_in_theme_colours: Every character of a buffer a frontend draws shall be drawn in the look the theme gives the role of the first span covering it — its foreground colour and whether it is bold — and a character in no span in the frontend's own plain colour; what is drawn shall be read back from what the frontend actually emitted, not from what it says it drew.
