@@ -77,10 +77,6 @@ def Kind.severity : Kind → Severity
   | .unbound => .warn
   | .unsoundQualifier => .warn
   | .imprecise => .warn
-  -- Warnings while the clauses carrying several are sorted out; errors after.
-  | .severalModels => .warn
-  | .severalSpecs => .warn
-  | .severalPins => .warn
   | _ => .error
 
 /-- Which kinds fail a build. Deliberately small: a requirement with no model
@@ -93,6 +89,9 @@ def Kind.blocksByDefault : Kind → Bool
   | .contested => true
   | .unsoundExemption => true
   | .malformed => true
+  | .severalModels => true
+  | .severalSpecs => true
+  | .severalPins => true
   | _ => false
 
 /-- What is known about a kind, in one place. -/

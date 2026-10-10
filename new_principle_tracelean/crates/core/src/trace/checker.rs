@@ -74,15 +74,13 @@ impl Kind {
     pub fn severity(self) -> Severity {
         match self {
             Kind::Unmodeled | Kind::Unimplemented | Kind::Untested => Severity::Info,
-            // The several-of-a-role kinds warn while the clauses carrying them
-            // are sorted out (action plan §7); they become errors after.
-            Kind::Unbound
-            | Kind::UnsoundQualifier
-            | Kind::Imprecise
-            | Kind::SeveralModels
+            Kind::Unbound | Kind::UnsoundQualifier | Kind::Imprecise => Severity::Warn,
+            // A clause has one model, one specification and one pin
+            // (ADR-0014): several is a fault, and blocks.
+            Kind::SeveralModels
             | Kind::SeveralSpecs
-            | Kind::SeveralPins => Severity::Warn,
-            Kind::Dangling
+            | Kind::SeveralPins
+            | Kind::Dangling
             | Kind::DanglingRefines
             | Kind::RefinesCycle
             | Kind::DuplicateId
@@ -113,6 +111,9 @@ impl Default for Policy {
                 Kind::Contested,
                 Kind::UnsoundExemption,
                 Kind::Malformed,
+                Kind::SeveralModels,
+                Kind::SeveralSpecs,
+                Kind::SeveralPins,
             ]
             .into_iter()
             .collect(),
@@ -562,8 +563,8 @@ mod tests {
         let several: Vec<_> = findings.iter().filter(|f| f.kind == Kind::SeveralModels).collect();
         assert_eq!(several.len(), 1, "{findings:#?}");
         assert!(several[0].message.contains("src/m.lean:1") && several[0].message.contains("src/m.lean:4"), "{}", several[0].message);
-        assert_eq!(several[0].severity, Severity::Warn);
-        assert!(!several[0].blocking);
+        assert_eq!(several[0].severity, Severity::Error);
+        assert!(several[0].blocking);
         assert!(!findings.iter().any(|f| matches!(f.kind, Kind::SeveralSpecs | Kind::SeveralPins)));
         assert_eq!(crowded_kinds(vec![Role::Specifies, Role::Pins, Role::Pins]), vec![Kind::SeveralPins]);
         assert_eq!(crowded_kinds(vec![Role::Models, Role::Tests, Role::Tests]), vec![]);

@@ -16312,7 +16312,7 @@
       "clause": "one_of_each_role",
       "file": "crates/core/src/trace/checker.rs",
       "anchor": "crates/core/src/trace/checker.rs::tests::a_second_model_spec_or_pin_is_named_with_every_declaration",
-      "body_hash": "531eea6511e438c5",
+      "body_hash": "b1ebd86b9cb1f272",
       "link_hash": "297467e1eaceff60",
       "qualifier": null
     },
