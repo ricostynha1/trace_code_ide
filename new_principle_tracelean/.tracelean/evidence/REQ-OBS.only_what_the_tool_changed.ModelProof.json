@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-OBS",
+    "clause": "only_what_the_tool_changed",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Mirror::an_untouched_copy_offers_nothing",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "ce90ba1bc0e46aa6",
+  "inputs": [
+    [
+      "model",
+      "ed8715fea7d01908"
+    ],
+    [
+      "requirement",
+      "9d53e652aa9cb51b"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

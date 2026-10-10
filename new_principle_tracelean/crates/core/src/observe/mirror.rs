@@ -113,6 +113,14 @@ pub fn changed_since(base: Option<BTreeMap<String, String>>, project: Workspace,
         .collect()
 }
 
+/// `changed_since` with the start as pairs, as the model reads it: a map does
+/// not cross as a list, and a path listed twice is read at its last entry.
+///
+/// @drt REQ-OBS.only_what_the_tool_changed
+pub fn changed_since_owned(base: Option<Vec<(String, String)>>, project: Workspace, agent: Workspace) -> Vec<Command> {
+    changed_since(base.map(|pairs| pairs.into_iter().collect()), project, agent)
+}
+
 /// The file a command acts on. `mutations` emits neither a rename nor a batch;
 /// were it to, it would be offered rather than silently dropped.
 fn command_path(command: &Command) -> String {

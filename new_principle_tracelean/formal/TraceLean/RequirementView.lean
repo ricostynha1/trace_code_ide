@@ -1,5 +1,6 @@
 import TraceLean.Layout
 import TraceLean.Judge
+import TraceLean.Lines
 
 /-!
 # One requirement, opened
@@ -41,6 +42,26 @@ instance : FromJson Covered where
 
 instance : ToJson Covered where
   toJson c := Json.arr #[ToJson.toJson c.run, ToJson.toJson c.all, ToJson.toJson c.tests]
+
+/-- Each path once, in the order first seen. -/
+def firstSeen {α : Type} [BEq α] (xs : List α) : List α :=
+  xs.foldl (fun acc x => if acc.contains x then acc else acc ++ [x]) []
+
+/-- One measured line of an item: where it is, and whether a test ran it. -/
+def ranAt (path : String) (l : TraceLean.Lines.LineHits) : (String × Nat) × Bool :=
+  ((path, l.line), l.hits > 0)
+
+/-- Lines run, executable lines and tests over items (each a path and its
+measured lines), a line of a file counted once however many items span it.
+
+@models REQ-LINECOV.requirement_summary -/
+def total (items : List (String × List TraceLean.Lines.LineHits)) : Covered :=
+  let marked := items.bind (fun (i : String × List TraceLean.Lines.LineHits) => i.2.map (ranAt i.1))
+  let keys := firstSeen (marked.map (·.1))
+  let run := (keys.filter (fun k => marked.any (fun p => p.1 == k && p.2))).length
+  let tests := firstSeen (items.bind (fun (i : String × List TraceLean.Lines.LineHits) =>
+    i.2.bind (fun l => l.tests.map (·.1))))
+  { run := run, all := keys.length, tests := tests.length }
 
 structure ClauseShown where
   key : Option String

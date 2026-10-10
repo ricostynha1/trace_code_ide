@@ -1,0 +1,30 @@
+{
+  "key": {
+    "reqId": "REQ-STALE",
+    "clause": "current_not_rerun",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 334,
+      "cases": 3000,
+      "op": "REQ-STALE.current_not_rerun"
+    }
+  },
+  "linkHash": "2100e0dc3662b81a",
+  "inputs": [
+    [
+      "implementation",
+      "8919bf38a68a14a9+ef5b73786542883c"
+    ],
+    [
+      "model",
+      "f7901d0bfb129d0c"
+    ],
+    [
+      "requirement",
+      "6c7036615f580e41"
+    ]
+  ]
+}

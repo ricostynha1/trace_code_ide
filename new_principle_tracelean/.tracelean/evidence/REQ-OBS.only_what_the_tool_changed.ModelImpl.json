@@ -1,0 +1,30 @@
+{
+  "key": {
+    "reqId": "REQ-OBS",
+    "clause": "only_what_the_tool_changed",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 211,
+      "cases": 2000,
+      "op": "REQ-OBS.only_what_the_tool_changed"
+    }
+  },
+  "linkHash": "9724b9f322850729",
+  "inputs": [
+    [
+      "implementation",
+      "3dece4fecd097037+a1f1a016fcc01791"
+    ],
+    [
+      "model",
+      "ed8715fea7d01908"
+    ],
+    [
+      "requirement",
+      "9d53e652aa9cb51b"
+    ]
+  ]
+}

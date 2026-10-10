@@ -95,6 +95,93 @@ fn model_and_implementation_agree_on_how_much_of_a_span_ran() {
     );
 }
 
+/// Over a whole requirement: items in one file or two, overlapping or not, so
+/// a line two items span is counted once.
+///
+/// @drt REQ-LINECOV.requirement_summary
+/// @tests REQ-LINECOV.requirement_summary
+#[test]
+#[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
+fn model_and_implementation_agree_on_a_requirements_lines() {
+    let op = "REQ-LINECOV.requirement_summary";
+    let scratch = harness::scratch("lines-requirement_summary");
+    let implementation =
+        harness::rust_runner("REQ-LINECOV", "requirement_summary", "crates/core/src/surface/coverage_view.rs::total_owned", &scratch);
+    let model = harness::lean_runner("TraceLean.RequirementView", "TraceLean.RequirementView.total", op, &["items"], &scratch);
+    let Some(Schema::List { inner: hits, .. }) = summary().remove("lines") else { unreachable!() };
+    let item = Schema::Tuple { items: vec![small(&["a.rs", "b.rs"]), Schema::List { inner: hits, max_len: Some(3) }] };
+    let schema = Schema::Struct { fields: fields(vec![("items", Schema::List { inner: Box::new(item), max_len: Some(3) })]) };
+    let result = run(op, &schema, &model, &implementation, RunOptions { seed: 333, cases: 3_000, shrink_rounds: 100 })
+        .expect("both runners answer");
+    support::agreed(&result);
+    let _ = std::fs::remove_dir_all(&scratch);
+}
+
+/// Whether a measurement is current: Rust files and manifests count, other
+/// files do not, and a path given twice is read at its later text.
+///
+/// @drt REQ-STALE.current_not_rerun
+/// @tests REQ-STALE.current_not_rerun
+#[test]
+#[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
+fn model_and_implementation_agree_on_the_hash_of_the_rust_sources() {
+    let op = "REQ-STALE.current_not_rerun";
+    let scratch = harness::scratch("lines-current_not_rerun");
+    let implementation =
+        harness::rust_runner("REQ-STALE", "current_not_rerun", "crates/core/src/trace/lines.rs::sources_hash_owned", &scratch);
+    let model = harness::lean_runner("TraceLean.Hash", "TraceLean.Hash.sourcesHash", op, &["files"], &scratch);
+    let file = Schema::Tuple {
+        items: vec![
+            small(&["src/a.rs", "Cargo.toml", "Cargo.lock", "README.md", "b.rs", "notes.rs.md"]),
+            small(&["", "fn a() {}", "é"]),
+        ],
+    };
+    let schema = Schema::Struct { fields: fields(vec![("files", Schema::List { inner: Box::new(file), max_len: Some(4) })]) };
+    let result = run(op, &schema, &model, &implementation, RunOptions { seed: 334, cases: 3_000, shrink_rounds: 100 })
+        .expect("both runners answer");
+    support::agreed(&result);
+    let _ = std::fs::remove_dir_all(&scratch);
+}
+
+/// The page a coverage count opens: no items or several, a symbol or none,
+/// lines run and not, and a line before the item's start, which has no source.
+///
+/// @drt REQ-LINECOV.lines_listed
+/// @tests REQ-LINECOV.lines_listed
+#[test]
+#[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
+fn model_and_implementation_agree_on_the_lines_a_count_opens() {
+    let op = "REQ-LINECOV.lines_listed";
+    let scratch = harness::scratch("lines-lines_listed");
+    let implementation =
+        harness::rust_runner("REQ-LINECOV", "lines_listed", "crates/core/src/surface/coverage_view.rs::coverage_view_owned", &scratch);
+    let model =
+        harness::lean_runner("TraceLean.CoverageView", "TraceLean.CoverageView.coverageView", op, &["named", "items", "width"], &scratch);
+    let option = |inner: Schema| Schema::Option { inner: Box::new(inner) };
+    let Some(Schema::List { inner: hits, .. }) = summary().remove("lines") else { unreachable!() };
+    let item = Schema::Struct {
+        fields: fields(vec![
+            ("path", small(&["src/a.rs", "é.rs"])),
+            ("start", line()),
+            ("symbol", option(small(&["describe"]))),
+            ("clause", option(small(&["one"]))),
+            ("lines", Schema::List { inner: hits, max_len: Some(3) }),
+            ("text", Schema::List { inner: Box::new(small(&["fn a() {", "    \"steam\"", ""])), max_len: Some(4) }),
+        ]),
+    };
+    let schema = Schema::Struct {
+        fields: fields(vec![
+            ("named", small(&["REQ-X", "REQ-X.one"])),
+            ("items", Schema::List { inner: Box::new(item), max_len: Some(2) }),
+            ("width", Schema::Nat { max: Some(40), edges: vec![0, 30, 100] }),
+        ]),
+    };
+    let result = run(op, &schema, &model, &implementation, RunOptions { seed: 335, cases: 3_000, shrink_rounds: 100 })
+        .expect("both runners answer");
+    support::agreed(&result);
+    let _ = std::fs::remove_dir_all(&scratch);
+}
+
 fn measured() -> BTreeMap<String, Schema> {
     let hits = Schema::Struct {
         fields: fields(vec![

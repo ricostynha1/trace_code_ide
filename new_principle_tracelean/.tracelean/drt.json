@@ -654,6 +654,58 @@
       }
     },
     {
+      "req_id": "REQ-LINECOV",
+      "clause": "requirement_summary",
+      "model": {
+        "import": "TraceLean.RequirementView",
+        "function": "TraceLean.RequirementView.total",
+        "arguments": ["items"]
+      },
+      "implementation": {
+        "language": "rust",
+        "entry": "crates/core/src/surface/coverage_view.rs::total_owned"
+      }
+    },
+    {
+      "req_id": "REQ-LINECOV",
+      "clause": "lines_listed",
+      "model": {
+        "import": "TraceLean.CoverageView",
+        "function": "TraceLean.CoverageView.coverageView",
+        "arguments": ["named", "items", "width"]
+      },
+      "implementation": {
+        "language": "rust",
+        "entry": "crates/core/src/surface/coverage_view.rs::coverage_view_owned"
+      }
+    },
+    {
+      "req_id": "REQ-STALE",
+      "clause": "current_not_rerun",
+      "model": {
+        "import": "TraceLean.Hash",
+        "function": "TraceLean.Hash.sourcesHash",
+        "arguments": ["files"]
+      },
+      "implementation": {
+        "language": "rust",
+        "entry": "crates/core/src/trace/lines.rs::sources_hash_owned"
+      }
+    },
+    {
+      "req_id": "REQ-OBS",
+      "clause": "only_what_the_tool_changed",
+      "model": {
+        "import": "TraceLean.Mirror",
+        "function": "TraceLean.Mirror.changedSince",
+        "arguments": ["base", "project", "agent"]
+      },
+      "implementation": {
+        "language": "rust",
+        "entry": "crates/core/src/observe/mirror.rs::changed_since_owned"
+      }
+    },
+    {
       "req_id": "REQ-MIRROR",
       "clause": "diff_is_pure",
       "also_checks": [

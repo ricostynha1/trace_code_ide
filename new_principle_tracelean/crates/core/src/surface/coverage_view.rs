@@ -29,6 +29,8 @@ pub struct Item {
 
 /// Lines run, executable lines and tests over `items`, each line of a file
 /// counted once however many items span it.
+///
+/// @implements REQ-LINECOV.requirement_summary
 pub fn total(items: &[Item]) -> (u64, u64, u64) {
     let mut lines: BTreeMap<(&str, u32), bool> = BTreeMap::new();
     let mut tests: BTreeSet<&str> = BTreeSet::new();
@@ -41,11 +43,28 @@ pub fn total(items: &[Item]) -> (u64, u64, u64) {
     (lines.values().filter(|run| **run).count() as u64, lines.len() as u64, tests.len() as u64)
 }
 
+/// `total` over items as the model takes them: a path and its measured lines.
+///
+/// @drt REQ-LINECOV.requirement_summary
+pub fn total_owned(items: Vec<(String, Vec<LineHits>)>) -> (u64, u64, u64) {
+    let items: Vec<Item> = items
+        .into_iter()
+        .map(|(path, lines)| Item { path, start: 1, symbol: None, clause: None, lines, text: Vec::new() })
+        .collect();
+    total(&items)
+}
+
+/// `coverage_view` with its arguments owned, as a differential test calls it.
+///
+/// @drt REQ-LINECOV.lines_listed
+pub fn coverage_view_owned(named: String, items: Vec<Item>, width: usize) -> Buffer {
+    coverage_view(&named, &items, width)
+}
+
 /// The coverage of `named` (`REQ-X` or `REQ-X.clause`), as a record titled
 /// `coverage <named>`.
 ///
 /// @implements REQ-LINECOV.lines_listed
-/// @implements REQ-LINECOV.requirement_summary
 pub fn coverage_view(named: &str, items: &[Item], width: usize) -> Buffer {
     let mut out = Lines::new(width);
     out.line(&[("Coverage of ", Role::Heading, &[]), (named, Role::Requirement, &["trace.requirement"])]);
@@ -92,7 +111,13 @@ pub fn coverage_view(named: &str, items: &[Item], width: usize) -> Buffer {
         }
         for line in unrun {
             let link = link_text(&item.path, line.line);
-            let source = item.text.get((line.line - item.start) as usize).map(|s| s.trim()).unwrap_or_default();
+            // A line before the item's start has no source of it to show.
+            let source = line
+                .line
+                .checked_sub(item.start)
+                .and_then(|at| item.text.get(at as usize))
+                .map(|s| s.trim())
+                .unwrap_or_default();
             let source = format!("  {source}");
             out.line(&[("    ", Role::Plain, &[]), (&link, Role::Path, &["file.open"]), (&source, Role::Plain, &[])]);
         }

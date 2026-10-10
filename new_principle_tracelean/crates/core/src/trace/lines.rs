@@ -137,6 +137,14 @@ pub fn current<'a>(coverage: &'a Coverage, path: &str, hash: &str) -> Option<&'a
     coverage.files.get(path).filter(|(measured, _)| measured == hash).map(|(_, lines)| lines)
 }
 
+/// `sources_hash` over pairs, as the model takes them; a path given twice is
+/// read at its later text, as the map does.
+///
+/// @drt REQ-STALE.current_not_rerun
+pub fn sources_hash_owned(files: Vec<(String, String)>) -> String {
+    sources_hash(&files.into_iter().collect())
+}
+
 #[cfg(test)]
 mod sources_tests {
     use super::*;

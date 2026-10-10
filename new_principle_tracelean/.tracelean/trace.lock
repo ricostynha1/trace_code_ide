@@ -2522,6 +2522,26 @@
     {
       "role": "drt",
       "req": "REQ-LINECOV",
+      "clause": "lines_listed",
+      "file": "crates/core/src/surface/coverage_view.rs",
+      "anchor": "crates/core/src/surface/coverage_view.rs::coverage_view_owned",
+      "body_hash": "deaefe1cf5b31c71",
+      "link_hash": "597cc76d941f59de",
+      "qualifier": null
+    },
+    {
+      "role": "drt",
+      "req": "REQ-LINECOV",
+      "clause": "lines_listed",
+      "file": "crates/core/tests/differential_lines.rs",
+      "anchor": "crates/core/tests/differential_lines.rs::model_and_implementation_agree_on_the_lines_a_count_opens",
+      "body_hash": "8a53ed72d25c7628",
+      "link_hash": "06c2d5f88fb87edb",
+      "qualifier": null
+    },
+    {
+      "role": "drt",
+      "req": "REQ-LINECOV",
       "clause": "per_test",
       "file": "crates/core/src/trace/lines.rs",
       "anchor": "crates/core/src/trace/lines.rs::merged",
@@ -2537,6 +2557,26 @@
       "anchor": "crates/core/tests/differential_lines.rs::model_and_implementation_agree_on_who_ran_each_line",
       "body_hash": "2856e9f5f77ba501",
       "link_hash": "ad7735b7dab39cf2",
+      "qualifier": null
+    },
+    {
+      "role": "drt",
+      "req": "REQ-LINECOV",
+      "clause": "requirement_summary",
+      "file": "crates/core/src/surface/coverage_view.rs",
+      "anchor": "crates/core/src/surface/coverage_view.rs::total_owned",
+      "body_hash": "8ec698aa847179ef",
+      "link_hash": "211a2096430a3ab3",
+      "qualifier": null
+    },
+    {
+      "role": "drt",
+      "req": "REQ-LINECOV",
+      "clause": "requirement_summary",
+      "file": "crates/core/tests/differential_lines.rs",
+      "anchor": "crates/core/tests/differential_lines.rs::model_and_implementation_agree_on_a_requirements_lines",
+      "body_hash": "4ec6898330cf52cf",
+      "link_hash": "8a91c797607e5c6f",
       "qualifier": null
     },
     {
@@ -3037,6 +3077,26 @@
       "anchor": "crates/core/tests/differential_keymap.rs::model_and_implementation_agree_on_which_keys_are_available",
       "body_hash": "2716cba3ee359784",
       "link_hash": "893eca672b041856",
+      "qualifier": null
+    },
+    {
+      "role": "drt",
+      "req": "REQ-OBS",
+      "clause": "only_what_the_tool_changed",
+      "file": "crates/core/src/observe/mirror.rs",
+      "anchor": "crates/core/src/observe/mirror.rs::changed_since_owned",
+      "body_hash": "94830c8e55f78c40",
+      "link_hash": "9724b9f322850729",
+      "qualifier": null
+    },
+    {
+      "role": "drt",
+      "req": "REQ-OBS",
+      "clause": "only_what_the_tool_changed",
+      "file": "crates/core/tests/differential_mirror.rs",
+      "anchor": "crates/core/tests/differential_mirror.rs::model_and_implementation_agree_on_what_the_agent_changed",
+      "body_hash": "d3ac66815e2ff90b",
+      "link_hash": "bad39854872d580f",
       "qualifier": null
     },
     {
@@ -4307,6 +4367,26 @@
       "anchor": "crates/core/tests/differential_surface.rs::model_and_implementation_agree_on_staleness",
       "body_hash": "590948d39275e070",
       "link_hash": "c0e97fd201a0bfb3",
+      "qualifier": null
+    },
+    {
+      "role": "drt",
+      "req": "REQ-STALE",
+      "clause": "current_not_rerun",
+      "file": "crates/core/src/trace/lines.rs",
+      "anchor": "crates/core/src/trace/lines.rs::sources_hash_owned",
+      "body_hash": "83fe3af3eba3754a",
+      "link_hash": "2100e0dc3662b81a",
+      "qualifier": null
+    },
+    {
+      "role": "drt",
+      "req": "REQ-STALE",
+      "clause": "current_not_rerun",
+      "file": "crates/core/tests/differential_lines.rs",
+      "anchor": "crates/core/tests/differential_lines.rs::model_and_implementation_agree_on_the_hash_of_the_rust_sources",
+      "body_hash": "d99e00fc90f7c17b",
+      "link_hash": "5558a76278cd2ba8",
       "qualifier": null
     },
     {
@@ -8045,7 +8125,7 @@
       "clause": "lines_listed",
       "file": "crates/core/src/surface/coverage_view.rs",
       "anchor": "crates/core/src/surface/coverage_view.rs::coverage_view",
-      "body_hash": "a322fc534f5d4590",
+      "body_hash": "f2128790af1a61d3",
       "link_hash": "2d7cc0cf213bd3c8",
       "qualifier": null
     },
@@ -8074,9 +8154,9 @@
       "req": "REQ-LINECOV",
       "clause": "requirement_summary",
       "file": "crates/core/src/surface/coverage_view.rs",
-      "anchor": "crates/core/src/surface/coverage_view.rs::coverage_view",
-      "body_hash": "a322fc534f5d4590",
-      "link_hash": "c1de090570cead37",
+      "anchor": "crates/core/src/surface/coverage_view.rs::total",
+      "body_hash": "7f6e2d0f3302538b",
+      "link_hash": "9d4cbf01f04624df",
       "qualifier": null
     },
     {
@@ -12552,11 +12632,31 @@
     {
       "role": "models",
       "req": "REQ-LINECOV",
+      "clause": "lines_listed",
+      "file": "formal/TraceLean/CoverageView.lean",
+      "anchor": "formal/TraceLean/CoverageView.lean::TraceLean.CoverageView::coverageView",
+      "body_hash": "4345d0eb87051f5b",
+      "link_hash": "35b84d40f7dc8837",
+      "qualifier": null
+    },
+    {
+      "role": "models",
+      "req": "REQ-LINECOV",
       "clause": "per_test",
       "file": "formal/TraceLean/Lines.lean",
       "anchor": "formal/TraceLean/Lines.lean::TraceLean.Lines::merged",
       "body_hash": "2d6ac278459ecaae",
       "link_hash": "4a444fcd2cf8999d",
+      "qualifier": null
+    },
+    {
+      "role": "models",
+      "req": "REQ-LINECOV",
+      "clause": "requirement_summary",
+      "file": "formal/TraceLean/RequirementView.lean",
+      "anchor": "formal/TraceLean/RequirementView.lean::TraceLean.RequirementView::total",
+      "body_hash": "50c520a93cbf4d64",
+      "link_hash": "41854feeb4352143",
       "qualifier": null
     },
     {
@@ -12867,6 +12967,16 @@
       "anchor": "formal/TraceLean/Keymap.lean::TraceLean.Keymap::whichKey",
       "body_hash": "11fc455a6126a519",
       "link_hash": "10a66b0cbba36a1b",
+      "qualifier": null
+    },
+    {
+      "role": "models",
+      "req": "REQ-OBS",
+      "clause": "only_what_the_tool_changed",
+      "file": "formal/TraceLean/Mirror.lean",
+      "anchor": "formal/TraceLean/Mirror.lean::TraceLean.Mirror::changedSince",
+      "body_hash": "ed8715fea7d01908",
+      "link_hash": "d2fa93c33ef1f0c2",
       "qualifier": null
     },
     {
@@ -13657,6 +13767,16 @@
       "anchor": "formal/TraceLean/Staleness.lean::TraceLean.Staleness::staleness",
       "body_hash": "aace6213626c3e45",
       "link_hash": "e2a929129a4533a5",
+      "qualifier": null
+    },
+    {
+      "role": "models",
+      "req": "REQ-STALE",
+      "clause": "current_not_rerun",
+      "file": "formal/TraceLean/Hash.lean",
+      "anchor": "formal/TraceLean/Hash.lean::TraceLean.Hash::sourcesHash",
+      "body_hash": "f7901d0bfb129d0c",
+      "link_hash": "02740cd67aae218e",
       "qualifier": null
     },
     {
@@ -15187,6 +15307,16 @@
       "anchor": "formal/TraceLean/Keymap.lean::TraceLean.Keymap::a_missing_root_is_reported_at_load",
       "body_hash": "38e226819006f291",
       "link_hash": "3e49cd91dfc762ba",
+      "qualifier": null
+    },
+    {
+      "role": "proves",
+      "req": "REQ-OBS",
+      "clause": "only_what_the_tool_changed",
+      "file": "formal/TraceLean/Mirror.lean",
+      "anchor": "formal/TraceLean/Mirror.lean::TraceLean.Mirror::an_untouched_copy_offers_nothing",
+      "body_hash": "e9d7739fc3f87bc1",
+      "link_hash": "ce90ba1bc0e46aa6",
       "qualifier": null
     },
     {
@@ -20783,6 +20913,16 @@
       "role": "tests",
       "req": "REQ-LINECOV",
       "clause": "lines_listed",
+      "file": "crates/core/tests/differential_lines.rs",
+      "anchor": "crates/core/tests/differential_lines.rs::model_and_implementation_agree_on_the_lines_a_count_opens",
+      "body_hash": "8a53ed72d25c7628",
+      "link_hash": "4ab5cf414cd49782",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-LINECOV",
+      "clause": "lines_listed",
       "file": "crates/editor/tests/coverage.rs",
       "anchor": "crates/editor/tests/coverage.rs::uncovered_lines_and_the_tests_behind_each_line_are_shown",
       "body_hash": "3b7b473565946d0a",
@@ -20827,6 +20967,16 @@
       "anchor": "crates/core/src/surface/coverage_view.rs::tests::a_line_is_counted_once_over_the_requirement",
       "body_hash": "8982c777937e1341",
       "link_hash": "ada0cad966cdae50",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-LINECOV",
+      "clause": "requirement_summary",
+      "file": "crates/core/tests/differential_lines.rs",
+      "anchor": "crates/core/tests/differential_lines.rs::model_and_implementation_agree_on_a_requirements_lines",
+      "body_hash": "4ec6898330cf52cf",
+      "link_hash": "53c08f8e9fa4b82e",
       "qualifier": null
     },
     {
@@ -21877,6 +22027,16 @@
       "anchor": "crates/core/src/observe/mirror.rs::tests::what_the_project_changed_since_the_copy_is_not_the_agents",
       "body_hash": "3324fd9add6307cd",
       "link_hash": "936cd95edfb65238",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-OBS",
+      "clause": "only_what_the_tool_changed",
+      "file": "crates/core/tests/differential_mirror.rs",
+      "anchor": "crates/core/tests/differential_mirror.rs::model_and_implementation_agree_on_what_the_agent_changed",
+      "body_hash": "d3ac66815e2ff90b",
+      "link_hash": "911a2f037c2cbcce",
       "qualifier": null
     },
     {
@@ -23887,6 +24047,16 @@
       "anchor": "crates/core/src/trace/lines.rs::sources_tests::the_sources_hash_moves_with_rust_files_and_manifests_only",
       "body_hash": "69702b664dc59095",
       "link_hash": "016179aa8ab4e72c",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-STALE",
+      "clause": "current_not_rerun",
+      "file": "crates/core/tests/differential_lines.rs",
+      "anchor": "crates/core/tests/differential_lines.rs::model_and_implementation_agree_on_the_hash_of_the_rust_sources",
+      "body_hash": "d99e00fc90f7c17b",
+      "link_hash": "e5841f9b3ce0c5e5",
       "qualifier": null
     },
     {
@@ -31616,6 +31786,36 @@
     {
       "key": {
         "reqId": "REQ-LINECOV",
+        "clause": "lines_listed",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 335,
+          "cases": 3000,
+          "op": "REQ-LINECOV.lines_listed"
+        }
+      },
+      "linkHash": "06c2d5f88fb87edb",
+      "inputs": [
+        [
+          "implementation",
+          "8380eb64aa0d829b+f2128790af1a61d3"
+        ],
+        [
+          "model",
+          "4345d0eb87051f5b"
+        ],
+        [
+          "requirement",
+          "30fc64a7334d0dce"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-LINECOV",
         "clause": "per_test",
         "bond": "requirementModel"
       },
@@ -31697,6 +31897,36 @@
         [
           "toolchain",
           "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-LINECOV",
+        "clause": "requirement_summary",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 333,
+          "cases": 3000,
+          "op": "REQ-LINECOV.requirement_summary"
+        }
+      },
+      "linkHash": "211a2096430a3ab3",
+      "inputs": [
+        [
+          "implementation",
+          "7f6e2d0f3302538b+8bbfe1efd76bfe15"
+        ],
+        [
+          "model",
+          "50c520a93cbf4d64"
+        ],
+        [
+          "requirement",
+          "9c57e907a4d9588a"
         ]
       ]
     },
@@ -33415,6 +33645,65 @@
         [
           "requirement",
           "b79f4e8ae946d20d"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-OBS",
+        "clause": "only_what_the_tool_changed",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 211,
+          "cases": 2000,
+          "op": "REQ-OBS.only_what_the_tool_changed"
+        }
+      },
+      "linkHash": "9724b9f322850729",
+      "inputs": [
+        [
+          "implementation",
+          "3dece4fecd097037+a1f1a016fcc01791"
+        ],
+        [
+          "model",
+          "ed8715fea7d01908"
+        ],
+        [
+          "requirement",
+          "9d53e652aa9cb51b"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-OBS",
+        "clause": "only_what_the_tool_changed",
+        "bond": "modelProof"
+      },
+      "level": "L4",
+      "detail": {
+        "proof": {
+          "theoremName": "TraceLean.Mirror::an_untouched_copy_offers_nothing",
+          "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        }
+      },
+      "linkHash": "ce90ba1bc0e46aa6",
+      "inputs": [
+        [
+          "model",
+          "ed8715fea7d01908"
+        ],
+        [
+          "requirement",
+          "9d53e652aa9cb51b"
+        ],
+        [
+          "toolchain",
+          "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
         ]
       ]
     },
@@ -37844,6 +38133,36 @@
         [
           "requirement",
           "57f9ed2e2c86ee7e"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-STALE",
+        "clause": "current_not_rerun",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 334,
+          "cases": 3000,
+          "op": "REQ-STALE.current_not_rerun"
+        }
+      },
+      "linkHash": "2100e0dc3662b81a",
+      "inputs": [
+        [
+          "implementation",
+          "8919bf38a68a14a9+ef5b73786542883c"
+        ],
+        [
+          "model",
+          "f7901d0bfb129d0c"
+        ],
+        [
+          "requirement",
+          "6c7036615f580e41"
         ]
       ]
     },

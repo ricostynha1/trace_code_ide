@@ -1,5 +1,6 @@
 import TraceLean.Command
 import TraceLean.Policy
+import TraceLean.Hash
 import Lean
 
 /-!
@@ -263,6 +264,49 @@ it was not: two opaque snapshots were the same snapshot.
 theorem a_changed_binary_is_reported :
     (changeAt "logo.png" (.opaque "1") (.opaque "2")).length = 1 ∧
     (changeAt "logo.png" (.opaque "1") (.opaque "1")).length = 0 := by
+  native_decide
+
+/-! ## What the agent changed
+
+`REQ-OBS.only_what_the_tool_changed`. The copy is not the project: a project
+edited after its copy was made differs from the copy wherever it was edited,
+and `mutations` alone would offer those edits, reversed, as the agent's work.
+-/
+
+/-- The file a command acts on; none for a rename or a batch, which
+`mutations` never makes. -/
+def commandPath : Command → String
+  | .insert file _ _ => file
+  | .delete file _ _ => file
+  | .createFile path => path
+  | .deleteFile path _ => path
+  | .renameFile _ _ => ""
+  | .batch _ => ""
+
+/-- Whether the agent changed `path`: its content in the copy, as a hash or
+absent, is not what the copy started with. A path the start lists twice is
+read at its last entry, as a map built from the list would. -/
+def touchedByAgent (base : List (String × String)) (agent : Workspace) (path : String) : Bool :=
+  (agent.get path).map TraceLean.Hash.digest != (base.reverse.find? (·.1 == path)).map (·.2)
+
+/-- What carrying the project to the copy changes, kept to the paths the agent
+changed since the copy started (`base`, each path's hash); nothing when the
+start is unknown.
+
+@models REQ-OBS.only_what_the_tool_changed -/
+def changedSince (base : Option (List (String × String))) (project agent : Workspace) : List Command :=
+  match base with
+  | none => []
+  | some b => (mutationsOf project agent).filter
+      (fun c => commandPath c == "" || touchedByAgent b agent.canon (commandPath c))
+
+/-- A copy the agent never touched offers nothing, however far the project
+moved on since it was made.
+
+@proves REQ-OBS.only_what_the_tool_changed -/
+theorem an_untouched_copy_offers_nothing :
+    changedSince (some [("a.rs", TraceLean.Hash.digest "one")])
+      ⟨[("a.rs", "one, since edited"), ("new.md", "x")]⟩ ⟨[("a.rs", "one")]⟩ |>.isEmpty := by
   native_decide
 
 end TraceLean.Mirror

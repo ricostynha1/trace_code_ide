@@ -1,0 +1,30 @@
+{
+  "key": {
+    "reqId": "REQ-LINECOV",
+    "clause": "lines_listed",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 335,
+      "cases": 3000,
+      "op": "REQ-LINECOV.lines_listed"
+    }
+  },
+  "linkHash": "06c2d5f88fb87edb",
+  "inputs": [
+    [
+      "implementation",
+      "8380eb64aa0d829b+f2128790af1a61d3"
+    ],
+    [
+      "model",
+      "4345d0eb87051f5b"
+    ],
+    [
+      "requirement",
+      "30fc64a7334d0dce"
+    ]
+  ]
+}

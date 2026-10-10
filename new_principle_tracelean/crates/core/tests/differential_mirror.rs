@@ -264,3 +264,49 @@ fn model_and_implementation_agree_on_what_happens_to_an_opaque_file() {
 
     let _ = std::fs::remove_dir_all(&scratch);
 }
+
+/// What a sandbox offers as the agent's: a start known or not, paths the agent
+/// left as they started (their hash in the start) or changed, and a project
+/// that moved on meanwhile.
+///
+/// @drt REQ-OBS.only_what_the_tool_changed
+/// @tests REQ-OBS.only_what_the_tool_changed
+#[test]
+#[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
+fn model_and_implementation_agree_on_what_the_agent_changed() {
+    let op = "REQ-OBS.only_what_the_tool_changed";
+    let scratch = harness::scratch("mirror-changed-since");
+    let implementation = harness::rust_runner(
+        "REQ-OBS",
+        "only_what_the_tool_changed",
+        "crates/core/src/observe/mirror.rs::changed_since_owned",
+        &scratch,
+    );
+    let model = harness::lean_runner("TraceLean.Mirror", "TraceLean.Mirror.changedSince", op, &["base", "project", "agent"], &scratch);
+    // A start lists hashes of the same few texts the trees hold, so a path
+    // the agent left alone matches it and one it changed does not.
+    let hashes = ["", "hi"].iter().map(|t| tracelean_core::trace::hash::text(t)).chain(["0".to_string()]).collect();
+    let base = Schema::Option {
+        inner: Box::new(Schema::List {
+            inner: Box::new(Schema::Tuple { items: vec![path_name(), Schema::Str { max_len: Some(0), examples: hashes }] }),
+            max_len: Some(4),
+        }),
+    };
+    let schema = Schema::Struct {
+        fields: [("base".to_string(), base), ("project".to_string(), workspace()), ("agent".to_string(), workspace())]
+            .into_iter()
+            .collect(),
+    };
+    let result = run(
+        op,
+        &schema,
+        &model,
+        &implementation,
+        RunOptions { seed: 211, cases: 2_000, shrink_rounds: 100 },
+    )
+    .expect("both runners answer");
+
+    support::agreed(&result);
+
+    let _ = std::fs::remove_dir_all(&scratch);
+}

@@ -117,6 +117,24 @@ def keyedBuffer (entries : List (String × String)) : String :=
     (fun acc kv =>
       acc ++ kv.1 ++ String.mk [Char.ofNat 1] ++ kv.2.trim ++ String.mk [Char.ofNat 2]) ""
 
+/-- Whether a Rust test run depends on a file: Rust source or a manifest. -/
+def rustInput (path : String) : Bool :=
+  path.endsWith ".rs" || path.endsWith "Cargo.toml" || path.endsWith "Cargo.lock"
+
+/-- One hash of every file a Rust test run depends on, by path and text, in
+path order, a path given twice at its later text — so a coverage measurement
+is known current without running anything.
+
+@models REQ-STALE.current_not_rerun -/
+def sourcesHash (files : List (String × String)) : String :=
+  let nul := String.mk [Char.ofNat 0]
+  let kept := (files.foldl
+    (fun acc kv =>
+      if acc.any (·.1 == kv.1) then acc.map (fun p => if p.1 == kv.1 then kv else p)
+      else acc ++ [kv]) []).mergeSort (fun a b => decide (a.1 ≤ b.1))
+  digest ((kept.filter (fun kv => rustInput kv.1)).foldl
+    (fun acc kv => acc ++ kv.1 ++ nul ++ digest kv.2 ++ nul) "")
+
 /-- Hash of one clause: what evidence about it rests on.
 
 Its key, its text and its narrowings, and nothing else -- so rewording a
