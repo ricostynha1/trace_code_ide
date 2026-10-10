@@ -178,7 +178,23 @@ fn nothing_here_reads_a_clock_or_an_unseeded_source_of_randomness() {
 /// from them carries the name.
 #[test]
 fn the_only_varying_names_are_scratch_directories() {
-    for (file, text) in sources() {
+    let found = varying_names_outside_scratch(&sources());
+    assert!(found.is_empty(), "a varying name outside a scratch directory:\n{found:#?}");
+}
+
+/// @tests REQ-CHECK.structural_rejects
+#[test]
+fn the_scratch_name_check_rejects_a_tree_that_breaks_it() {
+    let bad = tree(&[("core/src/trace/x.rs", "fn a() {}\nlet n = std::process::id();\n")]);
+    assert_eq!(varying_names_outside_scratch(&bad).len(), 1);
+    assert!(varying_names_outside_scratch(&tree(&[("core/src/drt/x.rs", "let n = std::process::id();\n")])).is_empty());
+    let fixture = tree(&[("core/src/trace/x.rs", "fn a() {}\n#[cfg(test)]\nmod t {\nlet n = std::process::id();\n}\n")]);
+    assert!(varying_names_outside_scratch(&fixture).is_empty());
+}
+
+fn varying_names_outside_scratch(files: &[(String, String)]) -> Vec<String> {
+    let mut found = Vec::new();
+    for (file, text) in files {
         // Everything from `#[cfg(test)]` onwards builds fixtures, not
         // artefacts, and a fixture directory has to be unique per process to
         // let tests run in parallel.
@@ -195,9 +211,12 @@ fn the_only_varying_names_are_scratch_directories() {
             let allowed = line_no > fixtures_begin
                 || file.contains("/drt/")
                 || file.contains("/tests/");
-            assert!(allowed, "a varying name outside a scratch directory: {file}:{line_no}");
+            if !allowed {
+                found.push(format!("{file}:{line_no}"));
+            }
         }
     }
+    found
 }
 
 /// Filesystem access is confined to the modules that declare themselves a
