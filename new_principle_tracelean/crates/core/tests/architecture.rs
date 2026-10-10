@@ -660,41 +660,59 @@ fn every_unsure_answer_carries_a_field_saying_so() {
 /// @structural ARCH-EFFECT-LAW.exempt_last reason="a claim about how many exemptions exist in this repository, which is a count over the tree rather than a value"
 #[test]
 fn exemptions_are_rare_and_every_one_is_signed() {
-    use tracelean_core::trace::annotation::Qualifier;
     use tracelean_core::trace::index::build;
 
     let index = build(&project_root());
-    let exemptions: Vec<&tracelean_core::trace::index::Link> = index
-        .links
-        .iter()
-        .filter(|link| matches!(link.qualifier, Some(Qualifier::Exempt { .. })))
-        .collect();
+    let claims: Vec<(String, Option<Qualifier>)> =
+        index.links.iter().map(|l| (l.anchor.file.clone(), l.qualifier.clone())).collect();
+    let problems = escape_hatch_problems(&claims);
+    assert!(problems.is_empty(), "{problems:#?}");
+}
 
-    assert!(
-        exemptions.len() <= 5,
-        "{} exemptions; `exempt_last` means this number stays small enough to read",
-        exemptions.len()
-    );
-    for link in &exemptions {
-        let Some(Qualifier::Exempt { reason, judged_by, .. }) = &link.qualifier else { continue };
-        assert!(
-            reason.is_some() && judged_by.is_some(),
-            "an exemption in {} names no reason or no approver",
-            link.anchor.file
-        );
+use tracelean_core::trace::annotation::Qualifier;
+
+/// What is wrong with a tree's exemptions and structural claims: more than five
+/// exemptions, one without a reason and an approver, or a structural claim that
+/// does not say why there is no law to state.
+fn escape_hatch_problems(claims: &[(String, Option<Qualifier>)]) -> Vec<String> {
+    let mut problems = Vec::new();
+    let exemptions: Vec<_> =
+        claims.iter().filter(|(_, q)| matches!(q, Some(Qualifier::Exempt { .. }))).collect();
+    if exemptions.len() > 5 {
+        problems.push(format!(
+            "{} exemptions; `exempt_last` means this number stays small enough to read",
+            exemptions.len()
+        ));
     }
-
-    // Structural claims are the other escape hatch, and they are held to the
-    // same standard: every one says why there is no law to state.
-    for link in &index.links {
-        if let Some(Qualifier::Structural { reason }) = &link.qualifier {
-            assert!(
-                reason.as_ref().is_some_and(|r| r.len() > 20),
-                "a structural claim in {} does not say why there is no law",
-                link.anchor.file
-            );
+    for (file, qualifier) in &exemptions {
+        let Some(Qualifier::Exempt { reason, judged_by, .. }) = qualifier else { continue };
+        if reason.is_none() || judged_by.is_none() {
+            problems.push(format!("an exemption in {file} names no reason or no approver"));
         }
     }
+    // Structural claims are the other escape hatch, and they are held to the
+    // same standard: every one says why there is no law to state.
+    for (file, qualifier) in claims {
+        if let Some(Qualifier::Structural { reason }) = qualifier {
+            if !reason.as_ref().is_some_and(|r| r.len() > 20) {
+                problems.push(format!("a structural claim in {file} does not say why there is no law"));
+            }
+        }
+    }
+    problems
+}
+
+/// @tests REQ-CHECK.structural_rejects
+#[test]
+fn the_escape_hatch_check_rejects_unsigned_and_unexplained_claims() {
+    let signed = Qualifier::Exempt { reason: Some("r".into()), judged_by: Some("p".into()), expires: None };
+    let unsigned = Qualifier::Exempt { reason: Some("r".into()), judged_by: None, expires: None };
+    let why = Some("an absence that no function can express".to_string());
+    assert!(escape_hatch_problems(&[("a.rs".into(), Some(signed.clone()))]).is_empty());
+    assert_eq!(escape_hatch_problems(&[("a.rs".into(), Some(unsigned))]).len(), 1);
+    assert_eq!(escape_hatch_problems(&vec![("a.rs".to_string(), Some(signed)); 6]).len(), 1);
+    assert!(escape_hatch_problems(&[("a.rs".into(), Some(Qualifier::Structural { reason: why }))]).is_empty());
+    assert_eq!(escape_hatch_problems(&[("a.rs".into(), Some(Qualifier::Structural { reason: Some("short".into()) }))]).len(), 1);
 }
 
 /// A bound entry point takes its inputs as arguments and reads nothing else.
