@@ -713,29 +713,43 @@ fn nothing_a_binding_names_reads_anything_it_was_not_given() {
     let text = std::fs::read_to_string(root.join(".tracelean/drt.json")).expect("drt.json");
     let config: serde_json::Value = serde_json::from_str(&text).expect("readable JSON");
 
-    let mut checked = 0;
+    let mut bound = Vec::new();
     for binding in config["bindings"].as_array().expect("bindings") {
         let entry = binding["implementation"]["entry"].as_str().unwrap_or_default();
-        let (file, symbol) = entry.split_once("::").expect("file::symbol");
+        let (file, _symbol) = entry.split_once("::").expect("file::symbol");
         let source = std::fs::read_to_string(root.join(file)).expect("a bound file exists");
-        // Everything from `#[cfg(test)]` onward builds fixtures, which may name
-        // a scratch directory; the library half is what a runner compiles.
+        bound.push((file.to_string(), source));
+    }
+    assert!(bound.len() > 30, "only {} bindings checked; the walk is wrong", bound.len());
+    let found = ambient_in_bound_files(&bound);
+    assert!(found.is_empty(), "{found:#?}");
+}
+
+/// Bound files that mention something ambient. Which part of a file a symbol
+/// is in is not tracked, so this asks the cruder question: does the module
+/// holding a bound function reach for anything ambient at all? Everything from
+/// `#[cfg(test)]` onward builds fixtures and is not read.
+fn ambient_in_bound_files(bound: &[(String, String)]) -> Vec<String> {
+    let mut found = Vec::new();
+    for (file, source) in bound {
         let library = match source.find("#[cfg(test)]") {
             Some(at) => &source[..at],
             None => &source[..],
         };
-
-        // Which part of the file the symbol is in is not tracked, so this asks
-        // the cruder question: does the module holding a bound function reach
-        // for anything ambient at all?
-        let _ = symbol;
         for needle in ["std::env::", "SystemTime::", "Instant::", "thread_rng", "static mut"] {
-            assert!(
-                !library.contains(needle),
-                "{file} holds a bound entry point and mentions `{needle}`"
-            );
+            if library.contains(needle) {
+                found.push(format!("{file} holds a bound entry point and mentions `{needle}`"));
+            }
         }
-        checked += 1;
     }
-    assert!(checked > 30, "only {checked} bindings checked; the walk is wrong");
+    found
+}
+
+/// @tests REQ-CHECK.structural_rejects
+#[test]
+fn the_hidden_input_check_rejects_a_bound_file_that_reads_the_environment() {
+    let bad = tree(&[("core/src/x.rs", "pub fn f() { let v = std::env::var(\"A\"); }\n")]);
+    assert_eq!(ambient_in_bound_files(&bad).len(), 1);
+    let fixture_only = tree(&[("core/src/x.rs", "pub fn f() {}\n#[cfg(test)]\nmod t { fn g() { std::env::var(\"A\"); } }\n")]);
+    assert!(ambient_in_bound_files(&fixture_only).is_empty());
 }
