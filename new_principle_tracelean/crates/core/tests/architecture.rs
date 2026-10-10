@@ -237,9 +237,20 @@ fn only_declared_shells_touch_the_filesystem() {
         "editor/src/recall.rs",          // keeps what was open for next time
     ];
 
+    let unexpected = filesystem_outside_shells(&sources(), SHELLS);
+    assert!(
+        unexpected.is_empty(),
+        "a module that is not a declared shell reads or writes the filesystem:\n{unexpected:#?}"
+    );
+    let thick = thick_shells(&sources(), SHELLS);
+    assert!(thick.is_empty(), "{thick:#?}");
+}
+
+/// Files that touch the filesystem without being a declared shell.
+fn filesystem_outside_shells(files: &[(String, String)], shells: &[&str]) -> Vec<String> {
     let mut unexpected = Vec::new();
-    for (file, text) in sources() {
-        if file.contains("/tests/") || SHELLS.contains(&file.as_str()) {
+    for (file, text) in files {
+        if file.contains("/tests/") || shells.contains(&file.as_str()) {
             continue;
         }
         // Fixtures build temporary trees; that is not the shell this is about.
@@ -248,7 +259,7 @@ fn only_declared_shells_touch_the_filesystem() {
             .position(|line| line.trim() == "#[cfg(test)]")
             .map(|i| i + 1)
             .unwrap_or(usize::MAX);
-        for (line_no, line) in code_lines(&text, &file) {
+        for (line_no, line) in code_lines(text, file) {
             if line_no > fixtures_begin {
                 continue;
             }
@@ -258,28 +269,46 @@ fn only_declared_shells_touch_the_filesystem() {
             }
         }
     }
-    assert!(
-        unexpected.is_empty(),
-        "a module that is not a declared shell reads or writes the filesystem:\n{unexpected:#?}"
-    );
+    unexpected
+}
 
-    // And the shells stay thin. A decision belongs in a core module where a
-    // conformance runner can call it; the number is a ceiling on drift, not a
-    // style rule, and each of these is currently well under it.
-    for (file, text) in sources() {
-        if !SHELLS.contains(&file.as_str()) {
+/// Shells that stay thin. A decision belongs in a core module where a
+/// conformance runner can call it; the number is a ceiling on drift, not a
+/// style rule, and each shell is currently well under it.
+fn thick_shells(files: &[(String, String)], shells: &[&str]) -> Vec<String> {
+    let mut thick = Vec::new();
+    for (file, text) in files {
+        if !shells.contains(&file.as_str()) {
             continue;
         }
-        let branches = code_lines(&text, &file)
+        let branches = code_lines(text, file)
             .iter()
             .filter(|(_, line)| line.starts_with("match ") || line.starts_with("if "))
             .count();
-        assert!(
-            branches < 40,
-            "{file} has {branches} branches; a shell that decides that much has a decision \
-             function hiding in it"
-        );
+        if branches >= 40 {
+            thick.push(format!(
+                "{file} has {branches} branches; a shell that decides that much has a decision \
+                 function hiding in it"
+            ));
+        }
     }
+    thick
+}
+
+/// @tests REQ-CHECK.structural_rejects
+#[test]
+fn the_shell_checks_reject_a_tree_that_breaks_them() {
+    let shells = ["core/src/trace/store.rs"];
+    let reaches = tree(&[("core/src/surface/x.rs", "fn a() {}\nlet t = std::fs::read_to_string(p);\n")]);
+    assert_eq!(filesystem_outside_shells(&reaches, &shells).len(), 1);
+    let allowed = tree(&[("core/src/trace/store.rs", "let t = std::fs::read_to_string(p);\n")]);
+    assert!(filesystem_outside_shells(&allowed, &shells).is_empty());
+    let in_fixture = tree(&[("core/src/surface/x.rs", "fn a() {}\n#[cfg(test)]\nmod t {\nlet t = std::fs::write(p, q);\n}\n")]);
+    assert!(filesystem_outside_shells(&in_fixture, &shells).is_empty());
+
+    let many = "if x {}\n".repeat(41);
+    assert_eq!(thick_shells(&tree(&[("core/src/trace/store.rs", &many)]), &shells).len(), 1);
+    assert!(thick_shells(&tree(&[("core/src/trace/store.rs", "if x {}\n")]), &shells).is_empty());
 }
 
 /// Every axiomatised effect carries a law, and every law is a function

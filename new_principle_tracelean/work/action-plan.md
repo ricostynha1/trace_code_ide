@@ -142,9 +142,9 @@ positive and negative tests, and `REQ-CHECK.structural_rejects` states the rule.
 Known gaps the checks name: the editor's `in_cells` refit assigns the layout
 outside `arrange`, and `perform` names three prompt actions before `dispatch`.
 **Open:** the checker does not yet report a structural clause whose tests are
-positive-only; and of the 14 tests in `architecture.rs` only the three
-needle checks (model/network, process spawn, clock) have a negative case.
-The rest (`only_declared_shells…`, `axioms_live…`, `every_finding_type…`,
+positive-only; and of the 14 tests in `architecture.rs` the needle checks
+(model/network, process spawn, clock) and the shell check have a negative case.
+The rest (`axioms_live…`, `every_finding_type…`,
 `every_module_holding…`, `the_judge_exports…`, `moving_a_file…`,
 `every_unsure_answer…`, scratch directories, agent launch) still need one. In general the same rule is worth applying to
 any test whose pass is "nothing found" — a search that finds nothing must be
