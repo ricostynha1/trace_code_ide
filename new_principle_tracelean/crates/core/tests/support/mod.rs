@@ -165,12 +165,38 @@ pub fn agreed(result: &tracelean_core::drt::run::DrtResult) {
         result.divergence.as_ref().map(|d| &d.model),
         result.divergence.as_ref().map(|d| &d.implementation),
     );
+    every_class_reached(result);
     let stamp = current_stamp(&result.op);
     let mut half = read_half(&result.op);
     half.agreed.retain(|_, run| run.stamp == stamp);
     half.agreed.insert(result.seed.to_string(), Run { cases: result.cases, stamp });
     write_half(&result.op, &half);
     compose(&result.op);
+}
+
+/// Every class of the arguments was reached by some case, or is waived with a
+/// reason in the binding (action plan §10): an agreeing run that never asked a
+/// question has not answered it. A waiver that excuses nothing is reported too,
+/// so waivers cannot pile up.
+///
+/// @implements REQ-DRT-COVER.classes_reached
+/// @implements REQ-DRT-COVER.waiver_unused_reported
+fn every_class_reached(result: &tracelean_core::drt::run::DrtResult) {
+    use tracelean_core::drt::coverage::{floors_of, unused_waivers};
+    let binding = binding_for(&result.op);
+    let floors = floors_of(&result.reached);
+    let reached = verdict(floors.clone(), result.reached.clone(), binding.waive.clone());
+    if let Verdict::Unmet { gaps } = &reached {
+        let names: Vec<&str> = gaps.iter().map(|gap| gap.situation()).collect();
+        panic!(
+            "`{}` agreed, but no case reached these classes of its arguments, so the run \
+             is not L3: {names:?}. Reach them in the generator or waive them with a reason \
+             in the binding's `waive`.",
+            result.op
+        );
+    }
+    let unused = unused_waivers(floors, result.reached.clone(), binding.waive.clone());
+    assert!(unused.is_empty(), "`{}` waives what the run reached or never measured: {unused:?}", result.op);
 }
 
 /// Judge a generator against the floors the binding declared, and record if the

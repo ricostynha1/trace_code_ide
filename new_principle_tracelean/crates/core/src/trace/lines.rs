@@ -128,6 +128,30 @@ pub fn said(line: &LineHits) -> String {
     format!("run {} times by {}", line.hits, who.join(", "))
 }
 
+/// A measured line as the editor marks it: the zero-based buffer line, how
+/// often tests ran it — none is the mark of a line no test ran — and what
+/// pointing at it says.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Marker {
+    pub line: usize,
+    pub hits: u64,
+    pub said: String,
+}
+
+/// The markers of the measured lines in a window of `height` buffer lines from
+/// `top`. A line numbered 0 is no line and has none.
+///
+/// @implements REQ-LINECOV.uncovered_shown
+/// @drt REQ-LINECOV.uncovered_shown
+pub fn markers(lines: Vec<LineHits>, top: usize, height: usize) -> Vec<Marker> {
+    lines
+        .iter()
+        .filter_map(|l| Some((l.line.checked_sub(1)? as usize, l)))
+        .filter(|(at, _)| (top..top + height).contains(at))
+        .map(|(at, l)| Marker { line: at, hits: l.hits, said: said(l) })
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

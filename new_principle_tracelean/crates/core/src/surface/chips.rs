@@ -10,7 +10,7 @@ use crate::trace::index::links_of;
 
 /// One mark: the zero-based line it sits beside, its letter, and the
 /// requirement (`REQ-X.clause`, or `REQ-X`) it opens.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
 pub struct Chip {
     pub line: usize,
     pub letter: char,
@@ -75,6 +75,11 @@ pub fn clause_chips(text: &str, id: &str, claims: &[(Option<String>, Role)]) -> 
         out.extend(letters.into_iter().map(|letter| Chip { line, letter, requirement: format!("{id}.{key}") }));
     }
     out
+}
+
+/// @drt REQ-SHOW.claims_beside_code
+pub fn clause_chips_owned(text: String, id: String, claims: Vec<(Option<String>, Role)>) -> Vec<Chip> {
+    clause_chips(&text, &id, &claims)
 }
 
 /// Each clause of a requirement's document, as its zero-based line and key: an

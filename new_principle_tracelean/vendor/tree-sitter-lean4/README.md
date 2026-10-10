@@ -116,6 +116,18 @@ tree-sitter query higlights.scm Test.lean
 
 This will report any errors such as incorrect node names in the query file.
 
+## Vendored in TraceLean
+
+Extended to cover the Lean that TraceLean's models are written in. Generating `parser.c`
+takes about ten minutes and 24 GB, so it is stored as `src/parser.c.gz` with
+`src/grammar.hash`, the FNV-1a of the `grammar.js` it came from. After changing
+the grammar, build once with `TRACELEAN_GENERATE_LEAN_PARSER=1`, gzip the
+generated `parser.c` the build names into `src/parser.c.gz` and write the new
+hash; `crates/core/tests/lean_grammar.rs` fails while they disagree.
+
+Known limit: a `then` branch on lines of its own, inside a match arm followed
+by another arm, leaves the arm's layout open; write such a branch on one line.
+
 ## License
 
 Based on <https://github.com/Julian/lean.nvim>. Grammar was completely rewritten to be simpler.

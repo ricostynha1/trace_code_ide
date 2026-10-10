@@ -13,7 +13,7 @@ use crate::surface::produce::tidy;
 use crate::surface::view::{Buffer, BufferKind, Role, Span};
 
 /// One finding, as the view needs it.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct Found {
     /// What kind of finding, in lower case: `unmodeled`, `imprecise`, …
     pub kind: String,
@@ -79,6 +79,11 @@ pub fn findings_view(title: &str, found: &[Found]) -> Buffer {
         text,
         spans: tidy(size, spans),
     }
+}
+
+/// @drt REQ-SHOW.findings_lead_somewhere
+pub fn findings_view_owned(title: String, found: Vec<Found>) -> Buffer {
+    findings_view(&title, &found)
 }
 
 #[cfg(test)]

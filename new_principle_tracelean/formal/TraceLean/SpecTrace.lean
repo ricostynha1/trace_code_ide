@@ -267,8 +267,8 @@ theorem starts_iff (line pat : String) :
     exact ⟨post, hp.symm⟩
 
 /-- Whether Lean accepted a pinning check: it exited cleanly, reported no
-error, and some line of what it printed lists the axioms of exactly this
-theorem without `sorryAx` among them.
+error, and some line of what it printed lists the axioms of exactly this one
+theorem, without `sorryAx` among them.
 
 @specifies REQ-STRENGTH.kernel_decides -/
 def KernelAccepted (theoremName output : String) (exitedOk : Bool) (y : Bool) : Prop :=

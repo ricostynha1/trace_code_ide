@@ -47,6 +47,7 @@ module.exports = grammar({
     $._layout_end,              // End of layout block (indent decreased)
     $._match_body_start,        // Like _layout_start but only for match arm bodies
     $._syntax_quotation_body,   // Inner content of `` `( ... ) `` (balanced)
+    $._branch_start,            // A layout after `then`/`else`, only when the line ends there
   ],
 
   // Keyword extraction improves error detection and compile time
@@ -779,11 +780,17 @@ module.exports = grammar({
       $.tactic_show,
       $.tactic_calc,
       $.tactic_by_cases,
-      $.tactic_cases,
-      $.tactic_rcases,
       $.tactic_match,
       $.tactic_first,
+      $.tactic_combinator,
     ),
+
+    // `try t`, `all_goals t`, `any_goals t`: a tactic run on some goals, or
+    // allowed to fail.
+    tactic_combinator: $ => prec.right(seq(
+      choice('try', 'all_goals', 'any_goals'),
+      $._tactic,
+    )),
 
     // `by_cases h : p`
     tactic_by_cases: $ => prec.right(seq(
@@ -803,20 +810,6 @@ module.exports = grammar({
       optional($._layout_end),
     )),
 
-    // `cases h`, `induction xs with | nil => … | cons a r ih => …`
-    tactic_cases: $ => prec.right(PREC.app, seq(
-      choice('cases', 'induction'),
-      repeat(field('arg', $._expression)),
-      optional(seq('with', repeat1($.tactic_alt))),
-    )),
-
-    // `rcases h with _ | a`
-    tactic_rcases: $ => prec.right(PREC.app, seq(
-      'rcases',
-      $._expression,
-      optional(seq('with', $._expression, repeat(seq('|', $._expression)))),
-    )),
-
     // `match n with | 0 => tactics | k + 1 => tactics`
     tactic_match: $ => prec.right(seq(
       'match',
@@ -832,10 +825,18 @@ module.exports = grammar({
     )),
 
     // Most tactics: `intro n`, `simp [lemma]`, `apply foo`, `exact bar`, `omega`
+    // Also `induction xs with | nil => … | cons a r ih => …` and
+    // `rcases h with _ | a`: the tactic stays an identifier (so `cases h` on its
+    // own, followed by `case …`, reads as before) and `with` adds alternatives.
     tactic_apply: $ => prec.right(PREC.app, seq(
       field('tactic', $.identifier),
       repeat(field('arg', choice(
         $._expression, $.tactic_config,
+      ))),
+      optional($.tactic_location),
+      optional(seq('with', choice(
+        repeat1($.tactic_alt),
+        seq($._expression, repeat(seq('|', $._expression))),
       ))),
     )),
 
@@ -870,8 +871,11 @@ module.exports = grammar({
         $.tactic_config,
         repeat1(field('arg', $._expression)),
       ),
-      optional(seq('at', repeat1(choice($.identifier, '*')))),
+      optional($.tactic_location),
     )),
+
+    // `at h`, `at h ⊢`, `at *`: where `rw`, `simp`, `unfold` act.
+    tactic_location: $ => prec.right(seq('at', repeat1(choice($.identifier, '*', '⊢')))),
 
     // `have h : T := proof` in tactic mode
     tactic_have: $ => prec.right(seq(
@@ -916,7 +920,7 @@ module.exports = grammar({
     let: $ => prec.right(choice(
       // Identifier form: always wins for bare identifiers.
       // Subsumes function form (with binders) and simple form (without).
-      seq('let', field('name', $.identifier),
+      seq('let', optional('rec'), field('name', $.identifier),
           optional(field('parameters', $.parameters)),
           optional($._type_spec), $._binding_body),
       // Pattern form: tuple destructuring and holes only.
@@ -939,11 +943,19 @@ module.exports = grammar({
 
     // Shared `then expr [else expr]` tail for `if` and `if_let` — extracted
     // so the parser reuses states across both forms.
+    // A branch that starts on a line of its own is a layout block, so it can
+    // hold several `let`s on lines of their own. One that starts on the same
+    // line (`else if`, `else match … with` and arms further left) is not.
     _then_else: $ => prec.right(seq(
       'then',
-      field('then', $._expression),
-      optional(seq('else', field('else', $._expression))),
+      field('then', $._branch),
+      optional(seq('else', field('else', $._branch))),
     )),
+
+    _branch: $ => choice(
+      prec.right(seq($._branch_start, $._expression, optional($._layout_end))),
+      $._expression,
+    ),
 
     // If-let pattern matching: `if let some x := e then ...`
     // Parsed as do-element or standalone, uses `let` keyword after `if`

@@ -2,6 +2,32 @@
   "comment": "Every differential binding in this project. A binding describes a call and nothing more; the runners for both sides are generated and built by TraceLean.",
   "bindings": [
     {
+      "req_id": "REQ-LOOK",
+      "clause": "contrast_sufficient",
+      "model": {
+        "import": "TraceLean.Contrast",
+        "function": "TraceLean.Contrast.findings",
+        "arguments": ["pairs", "colours"]
+      },
+      "implementation": {
+        "language": "rust",
+        "entry": "crates/core/src/surface/contrast.rs::findings"
+      }
+    },
+    {
+      "req_id": "REQ-ACT",
+      "clause": "everything_is_offered",
+      "model": {
+        "import": "TraceLean.Offer",
+        "function": "TraceLean.Offer.offers",
+        "arguments": ["buffer", "offset", "keymap"]
+      },
+      "implementation": {
+        "language": "rust",
+        "entry": "crates/core/src/surface/offer.rs::offered_owned"
+      }
+    },
+    {
       "req_id": "REQ-EVID",
       "clause": "weakest_link",
       "floors": [
@@ -399,6 +425,19 @@
       "implementation": {
         "language": "rust",
         "entry": "crates/core/src/observe/mirror.rs::suppress"
+      }
+    },
+    {
+      "req_id": "REQ-TRANSCRIPT",
+      "clause": "tool_format_read",
+      "model": {
+        "import": "TraceLean.Claude",
+        "function": "TraceLean.Claude.events",
+        "arguments": ["text"]
+      },
+      "implementation": {
+        "language": "rust",
+        "entry": "crates/core/src/observe/claude.rs::events_owned"
       }
     },
     {
@@ -2876,6 +2915,97 @@
     },
     {
       "req_id": "REQ-SHOW",
+      "clause": "requirement_opened",
+      "model": {
+        "import": "TraceLean.RequirementView",
+        "function": "TraceLean.RequirementView.requirementView",
+        "arguments": ["view"]
+      },
+      "implementation": {
+        "language": "rust",
+        "entry": "crates/core/src/surface/requirement_view.rs::requirement_view"
+      }
+    },
+    {
+      "req_id": "REQ-SHOW",
+      "clause": "sandbox_session_shown",
+      "model": {
+        "import": "TraceLean.SandboxView",
+        "function": "TraceLean.SandboxView.sandboxView",
+        "arguments": ["view"]
+      },
+      "implementation": {
+        "language": "rust",
+        "entry": "crates/core/src/surface/sandbox_view.rs::sandbox_view"
+      }
+    },
+    {
+      "req_id": "REQ-SHOW",
+      "clause": "listing_is_a_tree",
+      "model": {
+        "import": "TraceLean.Explorer",
+        "function": "TraceLean.Explorer.rows",
+        "arguments": ["files", "opened"]
+      },
+      "implementation": {
+        "language": "rust",
+        "entry": "crates/core/src/surface/explorer.rs::rows_owned"
+      }
+    },
+    {
+      "req_id": "REQ-SHOW",
+      "clause": "claims_beside_code",
+      "model": {
+        "import": "TraceLean.Chips",
+        "function": "TraceLean.Chips.clauseChips",
+        "arguments": ["text", "id", "claims"]
+      },
+      "implementation": {
+        "language": "rust",
+        "entry": "crates/core/src/surface/chips.rs::clause_chips_owned"
+      }
+    },
+    {
+      "req_id": "REQ-SHOW",
+      "clause": "findings_lead_somewhere",
+      "model": {
+        "import": "TraceLean.FindingsView",
+        "function": "TraceLean.FindingsView.findingsView",
+        "arguments": ["title", "found"]
+      },
+      "implementation": {
+        "language": "rust",
+        "entry": "crates/core/src/surface/findings_view.rs::findings_view_owned"
+      }
+    },
+    {
+      "req_id": "REQ-SHOW",
+      "clause": "references_are_links",
+      "model": {
+        "import": "TraceLean.Highlight",
+        "function": "TraceLean.Highlight.requirementNames",
+        "arguments": ["text", "start", "stop"]
+      },
+      "implementation": {
+        "language": "rust",
+        "entry": "crates/core/src/surface/highlight.rs::requirement_names"
+      }
+    },
+    {
+      "req_id": "REQ-SHOW",
+      "clause": "recent_reopens",
+      "model": {
+        "import": "TraceLean.Welcome",
+        "function": "TraceLean.Welcome.welcome",
+        "arguments": ["starts", "recent"]
+      },
+      "implementation": {
+        "language": "rust",
+        "entry": "crates/core/src/surface/welcome.rs::welcome_owned"
+      }
+    },
+    {
+      "req_id": "REQ-SHOW",
       "clause": "menu_from_keymap",
       "floors": [
         {
@@ -3441,6 +3571,32 @@
     },
     {
       "req_id": "REQ-UNDO",
+      "clause": "tree_is_shown",
+      "model": {
+        "import": "TraceLean.HistoryView",
+        "function": "TraceLean.HistoryView.historyView",
+        "arguments": ["points", "filter", "file"]
+      },
+      "implementation": {
+        "language": "rust",
+        "entry": "crates/core/src/surface/history_view.rs::history_view_owned"
+      }
+    },
+    {
+      "req_id": "REQ-UNDO",
+      "clause": "hover_shows_change",
+      "model": {
+        "import": "TraceLean.HistoryView",
+        "function": "TraceLean.HistoryView.changeView",
+        "arguments": ["node", "said", "changed"]
+      },
+      "implementation": {
+        "language": "rust",
+        "entry": "crates/core/src/surface/history_view.rs::change_view_owned"
+      }
+    },
+    {
+      "req_id": "REQ-UNDO",
       "clause": "filtered_view",
       "floors": [
         { "situation": "the position hidden and an ancestor marked", "atLeast": 35 },
@@ -3603,6 +3759,19 @@
       "implementation": {
         "language": "rust",
         "entry": "crates/core/src/trace/lines.rs::merged"
+      }
+    },
+    {
+      "req_id": "REQ-LINECOV",
+      "clause": "uncovered_shown",
+      "model": {
+        "import": "TraceLean.Lines",
+        "function": "TraceLean.Lines.markers",
+        "arguments": ["lines", "top", "height"]
+      },
+      "implementation": {
+        "language": "rust",
+        "entry": "crates/core/src/trace/lines.rs::markers"
       }
     },
     {

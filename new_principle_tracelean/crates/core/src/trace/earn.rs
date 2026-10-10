@@ -319,6 +319,19 @@ pub fn why_stale(index: &Index, record: &Evidence) -> Option<crate::trace::recor
     crate::trace::record::staleness(record, &live, &current_inputs(index, record))
 }
 
+/// Every input of a record whose hash is not what it was — all of them, where
+/// `why_stale` names the first. A person deciding whether to re-approve needs
+/// to know whether only the requirement's hash moved or the model did too.
+pub fn changed_inputs(index: &Index, record: &Evidence) -> Vec<String> {
+    let now = current_inputs(index, record);
+    record
+        .inputs
+        .iter()
+        .filter(|(name, was)| now.iter().find(|(n, _)| n == name).map(|(_, h)| h) != Some(was))
+        .map(|(name, _)| name.clone())
+        .collect()
+}
+
 /// What a record's named inputs hash to now.
 fn current_inputs(index: &Index, record: &Evidence) -> Vec<(String, String)> {
     let req = &record.key.req_id;

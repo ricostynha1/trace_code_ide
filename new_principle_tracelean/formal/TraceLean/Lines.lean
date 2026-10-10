@@ -73,6 +73,29 @@ def spanCoverage (lines : List LineHits) (start stop : Nat) : Reach :=
     all := inside.length
     tests := sortedUnique (fun a b => decide (a ≤ b)) (inside.bind (fun l => l.tests.map (·.1))) }
 
+/-- What a line's marker says when pointed at. -/
+def said (line : LineHits) : String :=
+  if line.tests.isEmpty then "no test runs this line"
+  else
+    "run " ++ toString line.hits ++ " times by " ++
+      ", ".intercalate (line.tests.map fun (t : String × Nat) => t.1 ++ " ×" ++ toString t.2)
+
+/-- A measured line as the editor marks it: the zero-based buffer line, how
+often tests ran it, and what pointing at it says. -/
+structure Marker where
+  line : Nat
+  hits : Nat
+  said : String
+  deriving Repr, Inhabited, ToJson, FromJson
+
+/-- The markers of the measured lines in a window of `height` buffer lines
+from `top`; a line numbered 0 is no line and has none.
+
+@models REQ-LINECOV.uncovered_shown -/
+def markers (lines : List LineHits) (top height : Nat) : List Marker :=
+  (lines.filter fun l => l.line ≥ 1 && top ≤ l.line - 1 && l.line - 1 < top + height).map fun l =>
+    { line := l.line - 1, hits := l.hits, said := said l }
+
 /-- A line nobody ran has no tests.
 
 @proves REQ-LINECOV.per_test -/

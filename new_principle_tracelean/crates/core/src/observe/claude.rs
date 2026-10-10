@@ -126,6 +126,11 @@ pub fn events(text: &str) -> Vec<Event> {
     out
 }
 
+/// @drt REQ-TRANSCRIPT.tool_format_read
+pub fn events_owned(text: String) -> Vec<Event> {
+    events(&text)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

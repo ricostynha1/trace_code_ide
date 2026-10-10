@@ -203,6 +203,124 @@ fn model_and_implementation_agree_on_what_the_sandbox_station_shows() {
     );
 }
 
+/// The panel itself: no session or one, changes waiting or none, and a
+/// conversation long enough to wrap at the narrowest widths.
+///
+/// @drt REQ-SHOW.sandbox_session_shown
+/// @tests REQ-SHOW.sandbox_session_shown
+#[test]
+#[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
+fn model_and_implementation_agree_on_the_sandbox_panel() {
+    let text = |examples: &[&str]| Schema::Str { max_len: Some(0), examples: examples.iter().map(|s| s.to_string()).collect() };
+    let strukt = |pairs: Vec<(&str, Schema)>| Schema::Struct {
+        fields: pairs.into_iter().map(|(k, v)| (k.to_string(), v)).collect(),
+    };
+    let session = strukt(vec![
+        ("id", text(&["s1"])),
+        ("containment", text(&["contained by bubblewrap", "not contained: bubblewrap is not installed on this machine"])),
+        ("command", text(&["bwrap --ro-bind / / --bind /tmp/tracelean/sandboxes/s1 /work --chdir /work bash", "cd s1"])),
+    ]);
+    let pending = strukt(vec![
+        ("kind", text(&["created", "modified", "deleted", "renamed-long"])),
+        ("path", text(&["src/a.rs", "é/b"])),
+        ("added", Schema::Nat { max: Some(3), edges: vec![0, 120] }),
+        ("removed", Schema::Nat { max: Some(3), edges: vec![0] }),
+    ]);
+    let event = strukt(vec![
+        ("kind", text(&["you", "agent", "tool", "failed", "thinking", "result"])),
+        (
+            "text",
+            text(&[
+                "ok",
+                "a line long enough that it has to be wrapped at any width the panel is given, with spaces",
+                "averyveryverylongwordwithnospacesatallthatmustbebrokenthrough",
+                "two\nlines",
+                "",
+            ]),
+        ),
+    ]);
+    let view = strukt(vec![
+        ("session", Schema::Option { inner: Box::new(session) }),
+        ("pending", Schema::List { inner: Box::new(pending), max_len: Some(2) }),
+        ("said", Schema::List { inner: Box::new(event), max_len: Some(3) }),
+        ("spend", spend()),
+        ("width", Schema::Nat { max: Some(40), edges: vec![0, 11, 12, 13, 80] }),
+    ]);
+    check(
+        "REQ-SHOW",
+        "REQ-SHOW.sandbox_session_shown",
+        "TraceLean.SandboxView",
+        "TraceLean.SandboxView.sandboxView",
+        "crates/core/src/surface/sandbox_view.rs::sandbox_view",
+        &["view"],
+        strukt(vec![("view", view)]),
+        406,
+    );
+}
+
+/// An opened requirement: clauses with and without claims, a key or none,
+/// narrowings, coverage, pins, judgements, and claims with unknown roles.
+///
+/// @drt REQ-SHOW.requirement_opened
+/// @tests REQ-SHOW.requirement_opened
+#[test]
+#[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
+fn model_and_implementation_agree_on_an_opened_requirement() {
+    let text = |examples: &[&str]| Schema::Str { max_len: Some(0), examples: examples.iter().map(|s| s.to_string()).collect() };
+    let strukt = |pairs: Vec<(&str, Schema)>| Schema::Struct {
+        fields: pairs.into_iter().map(|(k, v)| (k.to_string(), v)).collect(),
+    };
+    let option = |inner: Schema| Schema::Option { inner: Box::new(inner) };
+    let list = |inner: Schema, n: usize| Schema::List { inner: Box::new(inner), max_len: Some(n) };
+    let level = || Schema::simple_enum(&["L1", "L2", "L3", "L4"]);
+    let claim = strukt(vec![
+        ("role", text(&["implements", "tests", "models", "drt", "unknown"])),
+        ("path", text(&["src/a.rs", "formal/é.lean"])),
+        ("line", Schema::Nat { max: Some(40), edges: vec![1] }),
+        ("symbol", option(text(&["to_celsius", "Thermo::toCelsius"]))),
+    ]);
+    let judged = strukt(vec![
+        ("verdict", text(&["agrees", "drift"])),
+        ("judgedBy", text(&["ana"])),
+        ("delegatedBy", option(text(&["ricostynha"]))),
+        ("note", option(text(&["the model drops the empty case, which the clause keeps on purpose"]))),
+        ("level", level()),
+    ]);
+    let count = || Schema::Nat { max: Some(3), edges: vec![0, 1] };
+    let clause = strukt(vec![
+        ("key", option(text(&["holds", "keeps_order"]))),
+        ("text", text(&["It holds.", "A clause long enough to be wrapped at the narrowest width a pane can have."])),
+        ("narrowings", list(Schema::Tuple { items: vec![text(&["when"]), text(&["always", ""])] }, 1)),
+        ("level", level()),
+        ("chain", text(&["L2/L1/L3"])),
+        ("claims", list(claim, 3)),
+        ("pins", option(Schema::Tuple { items: vec![text(&["pinned", "open"]), text(&["theorem t", ""])] })),
+        ("tested", Schema::Bool),
+        ("lines", option(Schema::Tuple { items: vec![count(), count(), count()] })),
+        ("judged", option(judged)),
+    ]);
+    let view = strukt(vec![
+        ("id", text(&["REQ-A"])),
+        ("title", text(&["A requirement", ""])),
+        ("file", text(&["reqs/REQ-A.md"])),
+        ("status", text(&["draft", "approved"])),
+        ("refines", list(text(&["REQ-B", "REQ-C"]), 2)),
+        ("refinedBy", list(text(&["REQ-D"]), 2)),
+        ("clauses", list(clause, 2)),
+        ("width", Schema::Nat { max: Some(40), edges: vec![0, 30, 100] }),
+    ]);
+    check(
+        "REQ-SHOW",
+        "REQ-SHOW.requirement_opened",
+        "TraceLean.RequirementView",
+        "TraceLean.RequirementView.requirementView",
+        "crates/core/src/surface/requirement_view.rs::requirement_view",
+        &["view"],
+        strukt(vec![("view", view)]),
+        407,
+    );
+}
+
 /// @drt REQ-SCREEN.station_produces_a_buffer
 /// @tests REQ-SCREEN.station_produces_a_buffer
 #[test]

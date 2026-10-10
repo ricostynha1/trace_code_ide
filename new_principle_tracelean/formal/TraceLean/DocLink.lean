@@ -60,8 +60,8 @@ def docBlocks : DocState → Bool
   | .dangling => true
   | _ => false
 
-/-- *In review* is reachable and is neither of its neighbours. Stated as a
-theorem because the requirement is precisely that the three states stay
+/-- *In review* is reachable and is neither of its neighbours. It is stated
+as a theorem because the requirement is precisely that the three states stay
 distinct.
 
 @proves REQ-DOCLINK.review_is_not_error -/

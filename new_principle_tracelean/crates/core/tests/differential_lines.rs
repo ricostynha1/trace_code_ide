@@ -125,6 +125,33 @@ fn model_and_implementation_agree_on_when_measured_lines_are_shown() {
     );
 }
 
+/// @drt REQ-LINECOV.uncovered_shown
+/// @tests REQ-LINECOV.uncovered_shown
+#[test]
+#[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
+fn model_and_implementation_agree_on_the_marks_beside_lines() {
+    let mut window = summary();
+    window.remove("start");
+    window.remove("stop");
+    let lines = window.remove("lines").expect("the summary has lines");
+    // Line 0 included: no line, so no mark.
+    let Schema::List { inner, max_len } = lines else { unreachable!() };
+    let Schema::Struct { fields: mut hit } = *inner else { unreachable!() };
+    hit.insert("line".to_string(), Schema::Nat { max: Some(6), edges: vec![0, 1] });
+    window.insert("lines".to_string(), Schema::List { inner: Box::new(Schema::Struct { fields: hit }), max_len });
+    window.insert("top".to_string(), Schema::Nat { max: Some(4), edges: vec![0] });
+    window.insert("height".to_string(), Schema::Nat { max: Some(4), edges: vec![0, 100] });
+    check(
+        "uncovered_shown",
+        "TraceLean.Lines.markers",
+        "crates/core/src/trace/lines.rs::markers",
+        &["lines", "top", "height"],
+        &[],
+        window,
+        334,
+    );
+}
+
 /// The generators reach lines run by two tests, lines run by none, spans
 /// partly run and spans with nothing executable in them.
 ///

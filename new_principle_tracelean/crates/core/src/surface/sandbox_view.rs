@@ -189,6 +189,7 @@ fn cost_lines(out: &mut Lines, estimate: &str) {
 ///
 /// @implements REQ-SHOW.sandbox_session_shown
 /// @implements REQ-SHOW.producer_is_pure
+/// @drt REQ-SHOW.sandbox_session_shown
 pub fn sandbox_view(view: SandboxView) -> Buffer {
     let mut out = Lines::new(view.width);
     let Some(session) = &view.session else {

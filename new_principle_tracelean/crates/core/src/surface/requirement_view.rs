@@ -145,6 +145,8 @@ pub fn link_text(path: &str, line: u32) -> String {
 }
 
 /// The requirement as a buffer, titled `requirement <id>`.
+///
+/// @drt REQ-SHOW.requirement_opened
 pub fn requirement_view(view: RequirementShown) -> Buffer {
     let mut out = Lines::new(view.width);
     out.line(&[(&view.id, Role::Requirement, &[])]);

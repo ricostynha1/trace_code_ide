@@ -93,6 +93,68 @@ fn model_and_implementation_agree_on_what_a_filter_keeps() {
     );
 }
 
+/// @drt REQ-UNDO.tree_is_shown
+/// @tests REQ-UNDO.tree_is_shown
+#[test]
+#[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
+fn model_and_implementation_agree_on_the_history_a_person_reads() {
+    let mut fields = filtered();
+    fields.insert(
+        "file".to_string(),
+        Schema::Option { inner: Box::new(Schema::Str { max_len: Some(0), examples: vec!["a.rs".into(), "b.rs".into()] }) },
+    );
+    check(
+        "REQ-UNDO.tree_is_shown",
+        "TraceLean.HistoryView.historyView",
+        "crates/core/src/surface/history_view.rs::history_view_owned",
+        &["points", "filter", "file"],
+        fields,
+        303,
+    );
+}
+
+/// Texts that differ at the front, the back, the middle and not at all, long
+/// enough that lines far from a change are left out.
+fn text() -> Schema {
+    Schema::Str {
+        max_len: Some(0),
+        examples: vec![
+            "".into(),
+            "a".into(),
+            "a\nb\nc\nd\ne\nf\ng".into(),
+            "a\nb\nc\nX\ne\nf\ng".into(),
+            "Y\nb\nc\nd\ne\nf\ng\nh".into(),
+            "a\nb\n\nd\né".into(),
+        ],
+    }
+}
+
+/// @drt REQ-UNDO.hover_shows_change
+/// @tests REQ-UNDO.hover_shows_change
+#[test]
+#[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
+fn model_and_implementation_agree_on_the_change_a_node_shows() {
+    let mut changed = BTreeMap::new();
+    changed.insert("path".to_string(), Schema::Str { max_len: Some(0), examples: vec!["a.rs".into(), "b.rs".into()] });
+    changed.insert("before".to_string(), text());
+    changed.insert("after".to_string(), text());
+    let mut fields = BTreeMap::new();
+    fields.insert("node".to_string(), number());
+    fields.insert("said".to_string(), Schema::Str { max_len: Some(0), examples: vec!["typed".into(), "".into()] });
+    fields.insert(
+        "changed".to_string(),
+        Schema::List { inner: Box::new(Schema::Struct { fields: changed }), max_len: Some(2) },
+    );
+    check(
+        "REQ-UNDO.hover_shows_change",
+        "TraceLean.HistoryView.changeView",
+        "crates/core/src/surface/history_view.rs::change_view_owned",
+        &["node", "said", "changed"],
+        fields,
+        304,
+    );
+}
+
 /// The generators reach what the clauses are about.
 ///
 /// @tests REQ-DRT-COVER.law_coverage

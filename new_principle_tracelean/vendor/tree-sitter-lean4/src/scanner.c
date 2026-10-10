@@ -32,6 +32,7 @@ enum TokenType {
   LAYOUT_END,
   MATCH_BODY_START,
   SYNTAX_QUOTATION_BODY,  // content inside `` `( ... ) `` up to matching `)`
+  BRANCH_START,           // layout after `then`/`else` when the line ends there
 };
 
 #define MAX_DEPTH 64
@@ -132,8 +133,31 @@ static bool starts_with_pipe(TSLexer *lexer) {
   return lexer->lookahead == '|';
 }
 
+/**
+ * Whether the input continues with the keyword `word` (and not a longer
+ * identifier). Consumes what it compares, so the caller must have marked the
+ * token's end already.
+ */
+static bool starts_with_keyword(TSLexer *lexer, const char *word) {
+  for (const char *c = word; *c; c++) {
+    if (lexer->lookahead != *c) return false;
+    lexer->advance(lexer, false);
+  }
+  int32_t next = lexer->lookahead;
+  return !(next == '_' || next == '\'' || next == '!' || next == '?' ||
+           (next >= 'a' && next <= 'z') || (next >= 'A' && next <= 'Z') ||
+           (next >= '0' && next <= '9'));
+}
+
+/**
+ * A line starting with `then` or `else` continues the `if` above it, even
+ * at the indent of the block the `if` sits in, so it is not a new item.
+ */
 static bool should_suppress_semicolon(TSLexer *lexer) {
-  return starts_with_pipe(lexer);
+  if (starts_with_pipe(lexer)) return true;
+  if (lexer->lookahead == 't') return starts_with_keyword(lexer, "then");
+  if (lexer->lookahead == 'e') return starts_with_keyword(lexer, "else");
+  return false;
 }
 
 /**
@@ -197,6 +221,21 @@ bool tree_sitter_lean_external_scanner_scan(
     return false;
   }
 
+  /* 1y. BRANCH_START — grammar just saw `then` or `else`. A branch on the
+         lines below is a layout block at their indent; one continuing on
+         the same line is an ordinary expression, so nothing is pushed. In
+         a `do` block the branch is a do-sequence, opened by LAYOUT_START. */
+  if (valid_symbols[BRANCH_START] && !valid_symbols[LAYOUT_START]) {
+    skip_spaces(lexer);
+    if (is_nl(lexer->lookahead)) {
+      uint32_t indent = measure_indent(lexer);
+      push(s, indent);
+      s->queued_indent = NO_QUEUED;
+      lexer->result_symbol = BRANCH_START;
+      return true;
+    }
+  }
+
   /* 1a. LAYOUT_START — grammar just saw `do`, `where`, `:=`, `=>`
          and wants to open a new layout block. */
   if (valid_symbols[LAYOUT_START]) {
@@ -255,6 +294,7 @@ bool tree_sitter_lean_external_scanner_scan(
         lexer->advance(lexer, true);
         skip_spaces(lexer);
       }
+      lexer->mark_end(lexer);
       if (should_suppress_semicolon(lexer)) {
         s->queued_indent = NO_QUEUED;
         return false;

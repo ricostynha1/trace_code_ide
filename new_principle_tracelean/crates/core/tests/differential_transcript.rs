@@ -83,6 +83,66 @@ fn model_and_implementation_agree_on_what_is_complete() {
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
+/// Records in Claude Code's own shape and near it: a prompt as a string, blocks
+/// of every kind, a harness's machinery, a meta record, a tool called with no
+/// argument a person recognises, a failed result, content that is neither a
+/// string nor a list, text with runs of white space and text past the cut.
+fn claude_record() -> Vec<&'static str> {
+    vec![
+        r#"{"type":"user","message":{"role":"user","content":"fix   the\tbug"}}"#,
+        r#"{"type":"user","message":{"content":"  <command-name>/clear</command-name>"}}"#,
+        r#"{"type":"user","isMeta":true,"message":{"content":"caveat"}}"#,
+        r#"{"type":"assistant","message":{"content":[{"type":"thinking","thinking":"look first"},{"type":"text","text":"Reading it."},{"type":"tool_use","name":"Read","input":{"file_path":"/p/src/a.rs"}}]}}"#,
+        r#"{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Bash","input":{"timeout":5}},{"type":"tool_use","input":{"query":"x"}},{"type":"thinking","thinking":""}]}}"#,
+        r#"{"type":"user","message":{"content":[{"type":"tool_result","content":[{"type":"text","text":"one"},{"type":"image"},{"type":"text","text":"two"}],"is_error":true}]}}"#,
+        r#"{"type":"user","message":{"content":[{"type":"tool_result","content":"fn a() {}"},{"type":"text","text":"<system-reminder>x"},{"type":"text","text":"you said"}]}}"#,
+        r#"{"type":"assistant","message":{"content":"a string from the agent"}}"#,
+        r#"{"type":"system","message":{"content":[{"type":"text","text":"not a turn"}]}}"#,
+        r#"{"type":"user","message":{"content":42}}"#,
+        r#"{"type":"user","message":null}"#,
+        r#"{"type":"user"}"#,
+        "not json",
+        "",
+    ]
+}
+
+/// @drt REQ-TRANSCRIPT.tool_format_read
+/// @tests REQ-TRANSCRIPT.tool_format_read
+#[test]
+#[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
+fn model_and_implementation_agree_on_a_claude_code_transcript() {
+    let scratch = harness::scratch("claude-transcript");
+    let op = "REQ-TRANSCRIPT.tool_format_read";
+    let implementation = harness::rust_runner(
+        "REQ-TRANSCRIPT",
+        "tool_format_read",
+        "crates/core/src/observe/claude.rs::events_owned",
+        &scratch,
+    );
+    let model = harness::lean_runner("TraceLean.Claude", "TraceLean.Claude.events", op, &["text"], &scratch);
+    // Two records joined, with or without the newline that completes the
+    // last; and one record long enough to be cut.
+    let records = claude_record();
+    let long = format!(r#"{{"type":"assistant","message":{{"content":[{{"type":"text","text":"{}"}}]}}}}"#, "word ".repeat(60));
+    let mut texts = vec![format!("{long}\n"), "\r\n".to_string()];
+    for a in &records {
+        for b in &records {
+            texts.push(format!("{a}\n{b}"));
+            texts.push(format!("{a}\r\n{b}\n"));
+        }
+    }
+    let result = run(
+        op,
+        &strukt(&[("text", Schema::Str { max_len: Some(0), examples: texts })]),
+        &model,
+        &implementation,
+        RunOptions { seed: 408, cases: 2_000, shrink_rounds: 100 },
+    )
+    .expect("both runners answer");
+    support::agreed(&result);
+    let _ = std::fs::remove_dir_all(&scratch);
+}
+
 /// Every outcome the requirement names must occur: a recognised record, an
 /// unrecognised one, and something held back.
 ///

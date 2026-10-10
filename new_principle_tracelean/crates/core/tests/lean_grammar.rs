@@ -22,7 +22,10 @@ fn lean_files() -> Vec<(String, String)> {
                 if !path.file_name().is_some_and(|n| n == ".lake" || n == "build") {
                     stack.push(path);
                 }
-            } else if path.extension().is_some_and(|e| e == "lean") {
+            } else if path.extension().is_some_and(|e| e == "lean")
+                // Lake's own DSL, not the Lean the models are written in.
+                && !path.file_name().is_some_and(|n| n == "lakefile.lean")
+            {
                 let rel = path.strip_prefix(&root).unwrap().display().to_string();
                 out.push((rel, std::fs::read_to_string(&path).unwrap()));
             }
@@ -32,16 +35,24 @@ fn lean_files() -> Vec<(String, String)> {
     out
 }
 
-/// Whether the grammar in use is the extended one (`vendor/tree-sitter-lean4`,
-/// wired in through `crates/core/Cargo.toml`). Until it is, the published 0.3
-/// grammar cannot read `by_cases`, and the checks that need the extension are
-/// skipped — loudly, so a skip is not mistaken for a pass.
-fn extended_grammar() -> bool {
-    let wired = unparsed("theorem t (p : Prop) : p ∨ ¬p := by\n  by_cases h : p\n  · exact Or.inl h\n  · exact Or.inr h\n").is_empty();
-    if !wired {
-        eprintln!("SKIPPED: the extended Lean grammar is not wired in (action plan §8)");
+/// The stored parser is the one `grammar.js` generates: the build uses a stale
+/// one with only a warning, so that an editor's background check never starts
+/// a generation, and this is where a stale one fails.
+#[test]
+fn the_stored_parser_is_generated_from_the_grammar() {
+    let vendor = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../vendor/tree-sitter-lean4");
+    let grammar = std::fs::read(vendor.join("grammar.js")).unwrap();
+    let mut hash: u64 = 0xcbf29ce484222325;
+    for byte in grammar {
+        hash ^= u64::from(byte);
+        hash = hash.wrapping_mul(0x00000100000001B3);
     }
-    wired
+    let stored = std::fs::read_to_string(vendor.join("src/grammar.hash")).unwrap();
+    assert_eq!(
+        stored.trim(),
+        format!("{hash:016x}"),
+        "src/parser.c.gz is older than grammar.js: build with TRACELEAN_GENERATE_LEAN_PARSER=1 and store it (vendor/tree-sitter-lean4/README.md)"
+    );
 }
 
 /// Where a file does not parse, as `line: text`.
@@ -64,21 +75,26 @@ fn unparsed(text: &str) -> Vec<String> {
 /// @tests REQ-ANNOT.totality
 #[test]
 fn every_file_of_formal_parses_and_loses_no_declaration() {
-    if !extended_grammar() {
-        return;
-    }
     let keywords = ["def ", "theorem ", "structure ", "inductive ", "abbrev ", "instance ", "lemma "];
+    let mut wrong = Vec::new();
     for (file, text) in lean_files() {
         let found = unparsed(&text);
-        assert!(found.is_empty(), "{file} has regions the grammar cannot parse:\n{found:#?}");
-
-        let declared = scan(&text, Some(Lang::Lean4)).declarations.len();
-        let written = text
-            .lines()
-            .filter(|l| keywords.iter().any(|k| l.starts_with(k) || l.starts_with(&format!("private {k}"))))
-            .count();
-        assert!(declared >= written, "{file}: {written} declarations start a line, the scan found {declared}");
+        if !found.is_empty() {
+            wrong.push(format!("{file} has regions the grammar cannot parse: {found:?}"));
+        }
+        let scanned = scan(&text, Some(Lang::Lean4));
+        let starts: Vec<u32> = scanned.declarations.iter().map(|d| d.start_line).collect();
+        for (n, line) in text.lines().enumerate() {
+            let declares = keywords.iter().any(|k| line.starts_with(k) || line.starts_with(&format!("private {k}")))
+                // An instance with no name has nothing to be addressed by.
+                && !line.strip_prefix("instance ").is_some_and(|rest| rest.starts_with([':', '(', '[', '{']));
+            // A declaration's start may be its doc comment above the line.
+            if declares && !scanned.declarations.iter().any(|d| d.start_line as usize <= n && n <= d.end_line as usize) {
+                wrong.push(format!("{file}:{}: no declaration found for `{line}` (starts at {starts:?})", n + 1));
+            }
+        }
     }
+    assert!(wrong.is_empty(), "{wrong:#?}");
 }
 
 /// Constructs the extension reads, each alone.
@@ -97,14 +113,15 @@ const CONSTRUCTS: &[(&str, &str)] = &[
     ("a where clause on a definition", "def f (n : Nat) : Nat := go n\nwhere\n  go (m : Nat) : Nat := m\n"),
     ("termination_by", "def f (n : Nat) : Nat := n\ntermination_by n\n"),
     ("decreasing_by", "def f (n : Nat) : Nat := n\ndecreasing_by simp_wf; omega\n"),
+    ("lets on lines of their own after else", "def f (c : Bool) : Nat :=\n  if c then 0\n  else\n    let a := 1\n    let (b, d) := (2, 3)\n    a + b + d\n"),
+    ("else at the indent of the block", "def f (c : Bool) : Nat :=\n  let g := fun (x : Nat) =>\n    if c then x\n    else x + 1\n  g 0\n"),
+    ("a location after simp", "theorem t (h : 0 = 0) : True := by\n  simp only [Nat.add_zero] at h ⊢\n  cases h\n  case refl => trivial\n"),
+    ("let rec", "def f (n : Nat) : Nat :=\n  let rec go (m : Nat) : Nat := m\n  go n\n"),
 ];
 
 /// @tests REQ-ANNOT.totality
 #[test]
 fn each_construct_the_grammar_was_extended_for_parses() {
-    if !extended_grammar() {
-        return;
-    }
     for (name, text) in CONSTRUCTS {
         let found = unparsed(text);
         assert!(found.is_empty(), "{name} does not parse: {found:#?}");

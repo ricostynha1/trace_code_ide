@@ -17,7 +17,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use crate::surface::view::{Buffer, BufferKind, Role, Span};
 
 /// One row of the tree.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
 pub struct Row {
     /// How many folders it is inside.
     pub depth: usize,
@@ -27,7 +27,9 @@ pub struct Row {
     pub path: String,
     /// Whether it is a folder rather than a file.
     pub folder: bool,
-    /// Whether, being a folder, it is open.
+    /// Whether, being a folder, it is open. Named as the model names it, which
+    /// cannot spell `open` without escaping it.
+    #[serde(rename = "isOpen")]
     pub open: bool,
 }
 
@@ -39,6 +41,11 @@ pub fn rows(files: &[String], open: &BTreeSet<String>) -> Vec<Row> {
     let mut out = Vec::new();
     level(files, "", 0, open, &mut out);
     out
+}
+
+/// @drt REQ-SHOW.listing_is_a_tree
+pub fn rows_owned(files: Vec<String>, opened: Vec<String>) -> Vec<Row> {
+    rows(&files, &opened.into_iter().collect())
 }
 
 fn level(files: &[String], prefix: &str, depth: usize, open: &BTreeSet<String>, out: &mut Vec<Row>) {

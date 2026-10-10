@@ -262,9 +262,15 @@ fn main() {
                 Some(clause) => format!("{}.{clause}", record.key.req_id),
                 None => record.key.req_id.clone(),
             };
+            let changed = trace::earn::changed_inputs(&index, &record);
             let why = match why {
-                Staleness::InputChanged { name } => format!("the {name} changed"),
-                Staleness::LinkRetargeted => "its annotation now points elsewhere".to_string(),
+                Staleness::InputChanged { .. } => format!("changed: {}", changed.join(", ")),
+                Staleness::LinkRetargeted if changed.is_empty() => {
+                    "its annotation now points elsewhere".to_string()
+                }
+                Staleness::LinkRetargeted => {
+                    format!("its annotation now points elsewhere; changed: {}", changed.join(", "))
+                }
             };
             let (what, redo) = match record.key.bond {
                 tracelean_core::evidence::Bond::RequirementModel => {

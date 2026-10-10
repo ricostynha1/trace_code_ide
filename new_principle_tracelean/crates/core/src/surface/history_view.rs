@@ -244,6 +244,26 @@ pub fn history_view(points: &[Point], filter: Filter, file: Option<&str>) -> Buf
     }
 }
 
+/// @drt REQ-UNDO.tree_is_shown
+pub fn history_view_owned(points: Vec<Point>, filter: Filter, file: Option<String>) -> Buffer {
+    history_view(&points, filter, file.as_deref())
+}
+
+/// A file a change touched, as the model takes it: its path, its text before
+/// and after.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Changed {
+    pub path: String,
+    pub before: String,
+    pub after: String,
+}
+
+/// @drt REQ-UNDO.hover_shows_change
+pub fn change_view_owned(node: u64, said: String, changed: Vec<Changed>) -> Buffer {
+    let changed: Vec<(String, String, String)> = changed.into_iter().map(|c| (c.path, c.before, c.after)).collect();
+    change_view(node, &said, &changed)
+}
+
 /// The change a node made, as a record a pointer resting on the node shows:
 /// what it did, then for each file it touched the lines it added and removed
 /// with two lines either side. `changed` is each file's path, text before and

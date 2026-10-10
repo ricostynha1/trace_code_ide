@@ -4,6 +4,7 @@
 pub mod act;
 pub mod chips;
 pub mod context;
+pub mod contrast;
 pub mod definition;
 pub mod drive;
 pub mod explorer;

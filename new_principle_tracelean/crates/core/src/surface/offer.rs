@@ -303,6 +303,25 @@ pub fn offers(buffer: &Buffer, offset: usize, keymap: &Keymap) -> Vec<Offer> {
     out
 }
 
+/// An offer as far as `REQ-ACT.everything_is_offered` is about it: its part of
+/// the menu, what it does, what it is about and the keys that reach it. The
+/// wording is left out, as the model leaves it out.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct Offered {
+    pub group: String,
+    pub action: String,
+    pub target: Option<String>,
+    pub keys: Option<String>,
+}
+
+/// @drt REQ-ACT.everything_is_offered
+pub fn offered_owned(buffer: Buffer, offset: usize, keymap: Keymap) -> Vec<Offered> {
+    offers(&buffer, offset, &keymap)
+        .into_iter()
+        .map(|o| Offered { group: o.group, action: o.action, target: o.target, keys: o.keys })
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

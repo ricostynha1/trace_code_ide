@@ -4,10 +4,6 @@
 use crate::surface::produce::{menu_buffer, tidy, MenuEntry};
 use crate::surface::view::{Buffer, Role, Span};
 
-/// The starts as a menu, and under a `Recent` heading each folder in
-/// `recent` as a path that opens it.
-///
-/// @implements REQ-SHOW.recent_reopens
 /// What the page says before its starts: what this editor is, and where to
 /// look first.
 pub const INTRO: &[&str] = &[
@@ -25,6 +21,10 @@ pub const INTRO: &[&str] = &[
     "Start here",
 ];
 
+/// The starts as a menu, and under a `Recent` heading each folder in
+/// `recent` as a path that opens it.
+///
+/// @implements REQ-SHOW.recent_reopens
 pub fn welcome(starts: Vec<MenuEntry>, recent: &[String]) -> Buffer {
     let menu = menu_buffer("welcome".into(), starts);
     // The introduction first, the starts' spans moved down past it.
@@ -63,6 +63,14 @@ pub fn welcome(starts: Vec<MenuEntry>, recent: &[String]) -> Buffer {
     buffer.text = text;
     buffer.spans = tidy(size, spans);
     buffer
+}
+
+/// `welcome`, taking what it reads by value, as a generated runner calls it
+/// (ADR-0010).
+///
+/// @drt REQ-SHOW.recent_reopens
+pub fn welcome_owned(starts: Vec<MenuEntry>, recent: Vec<String>) -> Buffer {
+    welcome(starts, &recent)
 }
 
 #[cfg(test)]

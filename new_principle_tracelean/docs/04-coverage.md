@@ -1,8 +1,8 @@
 ---
 describes: [REQ-DRT-COVER, ARCH-HONEST]
 described_hash:
-  REQ-DRT-COVER: 867ec22aa630d0f9
-  ARCH-HONEST: 8760068412007801
+  REQ-DRT-COVER: 05e3ddef88851419
+  ARCH-HONEST: fb288c153afd69f8
 ---
 
 # Coverage
@@ -35,6 +35,21 @@ meeting a floor of zero — and the two that matter:
 
 They are separate because they call for different work, and a single "coverage
 failed" would hide which.
+
+## Classes, lines and waivers
+
+Named situations are added on top of what the types already say. Every run
+counts how many of its cases reached each **class** of its arguments
+(`drt::classes`: zero or positive, empty or not, each `Option` and enum case,
+inside every field), and `support::agreed` refuses L3 to an agreeing run that
+left a class unreached. Lines are the other half: `coverage::line_reach` names
+each executable line of an implementing item by its text, for a run measured
+under coverage.
+
+The target is all of them. A binding's `waive` lists classes or lines that
+cannot be reached, each with a `reason`; a waiver without one excuses nothing,
+and one that excuses nothing the run missed is reported (`unused_waivers`), so
+waivers cannot pile up.
 
 ## What it is worth
 

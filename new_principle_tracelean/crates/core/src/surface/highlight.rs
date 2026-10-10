@@ -229,6 +229,18 @@ fn inline(chars: &[char], at: usize, stop: usize) -> Option<(usize, TokenKind)> 
     }
 }
 
+/// Every requirement name in characters `start` to `stop` of `text`, as
+/// character ranges: `names` taking what it reads by value, as a generated
+/// runner calls it (ADR-0010). A range past the end is cut at the end.
+///
+/// @implements REQ-SHOW.references_are_links
+/// @drt REQ-SHOW.references_are_links
+pub fn requirement_names(text: String, start: usize, stop: usize) -> Vec<(usize, usize)> {
+    let chars: Vec<char> = text.chars().collect();
+    let stop = stop.min(chars.len());
+    names(&chars, start.min(stop), stop)
+}
+
 /// Every requirement name between `start` and `stop`, as character ranges.
 pub(crate) fn names(text: &[char], start: usize, stop: usize) -> Vec<(usize, usize)> {
     let mut out = Vec::new();

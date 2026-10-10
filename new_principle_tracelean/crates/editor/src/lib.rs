@@ -241,7 +241,7 @@ impl Editor {
     /// @implements REQ-LINECOV.uncovered_shown
     /// @implements REQ-LINECOV.stale_hidden
     pub fn coverage_shown(&self, buffer: &Buffer, top: usize, height: usize) -> Vec<(usize, u64, String)> {
-        use tracelean_core::trace::lines::{current, said};
+        use tracelean_core::trace::lines::{current, markers};
         let BufferKind::File { path } = &buffer.kind else { return Vec::new() };
         let mut held = self.coverage_held.borrow_mut();
         if let Some(newer) = tracelean_core::drt::lines_run::read_if_newer(&self.root, held.0) {
@@ -249,12 +249,7 @@ impl Editor {
         }
         let hash = tracelean_core::trace::hash::text(&buffer.text);
         let Some(lines) = current(&held.1, path, &hash) else { return Vec::new() };
-        lines
-            .iter()
-            .map(|l| (l.line as usize - 1, l))
-            .filter(|(at, _)| (top..top + height).contains(at))
-            .map(|(at, l)| (at, l.hits, said(l)))
-            .collect()
+        markers(lines.clone(), top, height).into_iter().map(|m| (m.line, m.hits, m.said)).collect()
     }
 
     /// How much of a clause's implementing items tests run: executable lines

@@ -1,4 +1,5 @@
 import Lean
+import TraceLean.Produce
 
 /-!
 # The history, drawn as a tree
@@ -157,5 +158,109 @@ theorem shown_are_kept (points : List Point) (f : Filter) (file : String) :
   unfold shownPoints keep
   cases f
   all_goals simp [List.all_eq_true]
+
+/-! ## The view a person reads -/
+
+open TraceLean.View
+open TraceLean.Produce
+
+/-- `#0` for the tree as opened, `#n+1` for node `n`. -/
+def pointName : Option Nat → String
+  | none => "#0"
+  | some n => "#" ++ toString (n + 1)
+
+def switches : List (Filter × String) := [(.all, "All"), (.file, "File"), (.saved, "Saved")]
+
+/-- The filter switches, the chosen one marked, each switching the filter. -/
+def switchLine (filter : Filter) : String × List Span :=
+  switches.foldl (fun (acc : String × List Span) (pair : Filter × String) =>
+    let at_ := acc.1.length
+    let role := if pair.1 == filter then Role.heading else Role.entry
+    (acc.1 ++ pair.2 ++ "  ",
+     acc.2 ++ [{ start := at_, stop := at_ + pair.2.length, role := role, actions := ["history.filter"] }]))
+    ("", [])
+
+/-- One row of the tree: its cells cut or padded to the graph's width, then the
+node's name, which jumps there, and what it did. -/
+def treeRow (shown : List Point) (graph : Nat) (acc : String × List Span) (row : GraphRow) :
+    String × List Span :=
+  let text := acc.1 ++ "\n"
+  let at_ := text.length
+  let cut := row.cells.toList.take graph
+  let cells := String.mk (cut ++ List.replicate (graph - cut.length) ' ')
+  let said :=
+    match row.node with
+    | none => "the tree as it was opened"
+    | some n => ((shown.find? (·.node == n)).map (·.said)).getD ""
+  let name := pointName row.node
+  let from_ := at_ + graph + 1
+  let role := if row.cells.toList.contains '●' then Role.heading else Role.entry
+  (text ++ cells ++ " " ++ name ++ "  " ++ said,
+   acc.2 ++ [{ start := from_, stop := from_ + name.length, role := role, actions := ["history.jump"] }])
+
+/-- The history as a record: the switches, then the tree as `filter` shows it,
+every node named, the one the workspace is at marked, each a way to jump there.
+
+@models REQ-UNDO.tree_is_shown -/
+def historyView (points : List Point) (filter : Filter) (file : Option String) : Buffer :=
+  let shown := shownPoints points filter (file.getD "")
+  let drawn := historyGraph shown
+  let top := switchLine filter
+  let heading :=
+    match filter, file with
+    | .file, some f => top.1 ++ f
+    | _, _ => top.1
+  -- Each column is a glyph and a space; the last column's space is the gap
+  -- before the name.
+  let graph :=
+    match drawn with
+    | [] => 0
+    | _ => (drawn.foldl (fun m r => max m r.cells.length) 0) - 1
+  let done := drawn.foldl (treeRow shown graph) (heading, top.2)
+  { id := "record:history", kind := .record "history", text := done.1,
+    spans := tidy done.1.length done.2 }
+
+/-- Whether a line of a diff is within two lines of a change. -/
+def near (diff : List DiffLine) (i : Nat) : Bool :=
+  ((diff.drop (i - 2)).take (min (i + 3) diff.length - (i - 2))).any (fun d => d.role != Role.plain)
+
+/-- The lines near a change, each run of others shown once as `…`. -/
+def nearLines (diff : List DiffLine) : Nat → Bool → List DiffLine → List (String × Role)
+  | _, _, [] => []
+  | i, skipped, d :: rest =>
+    if near diff i then (d.text, d.role) :: nearLines diff (i + 1) false rest
+    else if !skipped then ("…", Role.plain) :: nearLines diff (i + 1) true rest
+    else nearLines diff (i + 1) true rest
+
+/-- A file a change touched: its path, its text before and after. -/
+structure Changed where
+  path : String
+  before : String
+  after : String
+  deriving Repr, DecidableEq, Inhabited, ToJson, FromJson
+
+def changedLines (c : Changed) : List (String × Role) :=
+  let diff := diffLines (c.before.splitOn "\n") (c.after.splitOn "\n")
+  (c.path, Role.path) :: nearLines diff 0 false diff
+
+def joinLines (acc : String × List Span) (line : String × Role) : String × List Span :=
+  let text := if acc.1.isEmpty then acc.1 else acc.1 ++ "\n"
+  let at_ := text.length
+  let spans :=
+    if line.2 == Role.plain then acc.2
+    else acc.2 ++ [{ start := at_, stop := at_ + line.1.length, role := line.2, actions := [] }]
+  (text ++ line.1, spans)
+
+/-- The change a node made, as a pointer resting on it shows it: what it did,
+then each file's added and removed lines with two either side. Nothing here
+moves the workspace: it is a function of the change alone.
+
+@models REQ-UNDO.hover_shows_change -/
+def changeView (node : Nat) (said : String) (changed : List Changed) : Buffer :=
+  let name := pointName (some node)
+  let lines := (name ++ "  " ++ said, Role.heading) :: changed.bind changedLines
+  let done := lines.foldl joinLines ("", [])
+  { id := "record:change " ++ name, kind := .record ("change " ++ name), text := done.1,
+    spans := tidy done.1.length done.2 }
 
 end TraceLean.HistoryView

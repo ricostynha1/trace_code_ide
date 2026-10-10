@@ -497,6 +497,39 @@ fn model_and_implementation_agree_on_a_menu() {
     );
 }
 
+/// The welcome page: the starts as a menu, then each recent folder as a path
+/// that opens it — none, one, several, and folders whose characters are not
+/// bytes, so a span offset counted in bytes would show.
+///
+/// @drt REQ-SHOW.recent_reopens
+/// @tests REQ-SHOW.recent_reopens
+#[test]
+#[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
+fn model_and_implementation_agree_on_the_welcome_page() {
+    let Schema::Struct { fields } = menu_input() else { unreachable!() };
+    let mut input = BTreeMap::new();
+    input.insert("starts".to_string(), fields["entries"].clone());
+    input.insert(
+        "recent".to_string(),
+        Schema::List {
+            inner: Box::new(Schema::Str {
+                max_len: Some(0),
+                examples: vec!["/home/u/one".into(), "/home/ü/dois".into(), "".into(), "C:\\proj".into()],
+            }),
+            max_len: Some(3),
+        },
+    );
+    check_in(
+        "TraceLean.Welcome",
+        "REQ-SHOW.recent_reopens",
+        "TraceLean.Welcome.welcome",
+        "crates/core/src/surface/welcome.rs::welcome_owned",
+        &["starts", "recent"],
+        Schema::Struct { fields: input },
+        74,
+    );
+}
+
 fn menu_input() -> Schema {
     let mut entry = BTreeMap::new();
     entry.insert(
