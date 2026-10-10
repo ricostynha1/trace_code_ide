@@ -16,3 +16,20 @@ such, and `tracelean-trace . --stale` lists nothing.
 - **REQ-LOOK:** approved as written (seven clauses). `roles_drawn_in_theme_colours`
   is checked on the terminal; the page colours some roles by place (a path in
   the explorer wears `ui.sidebarText`), which no check holds it to yet.
+
+## Open (evening of 2026-10-10)
+
+Clauses added to approved requirements in answer to your feedback, and the
+models written for them. Not judged: you have not read the clauses yet, so
+no verdict is beyond doubt (`work/feedback-2026-10-10.md`).
+
+| Clause | Model | Why left open |
+|---|---|---|
+| `REQ-OBS.only_what_the_tool_changed` | `Mirror.changedSince` | the clause is new; also "a copy whose start is unknown offers nothing" is a choice (the alternative: offer by mtime) |
+| `REQ-LINECOV.requirement_summary` | `RequirementView.total` | new clause |
+| `REQ-LINECOV.lines_listed` | `CoverageView.coverageView` | new clause; the page's layout is a choice |
+| `REQ-STALE.current_not_rerun` | `Hash.sourcesHash` | the model covers coverage only; the `--drt` half (`auto::still_agreed`) is claimed but not modelled |
+| `REQ-CONTEXT.views_from_the_shell` | none | reads the disk through the editor: no value function answers it |
+
+Also yours to decide: whether the sandbox brief (a fixed `CLAUDE.md` above the
+copy) is within `REQ-OBS.no_instruction_channel`.
