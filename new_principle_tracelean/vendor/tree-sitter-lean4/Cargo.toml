@@ -1,0 +1,18 @@
+[package]
+name = "tree-sitter-lean4"
+version = "0.3.0-tracelean"
+edition = "2021"
+build = "build.rs"
+description = "tree-sitter-lean4 0.3.0, vendored and extended for the Lean this project writes (action plan §8)"
+license = "MIT"
+publish = false
+
+[lib]
+name = "tree_sitter_lean4"
+path = "src/lib.rs"
+
+[dependencies]
+tree-sitter = "0.25"
+
+[build-dependencies]
+cc = "1.0"
