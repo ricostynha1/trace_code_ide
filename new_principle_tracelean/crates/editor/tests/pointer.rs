@@ -1274,3 +1274,26 @@ fn a_search_lists_every_line_that_holds_the_text() {
     assert_eq!(editor.line_and_column(), (9, 0));
     let _ = std::fs::remove_dir_all(&root);
 }
+
+/// The page itself, in headless Chrome: what a click, a drag or a right-click
+/// sends, and how the page is laid out and marked — each place in a region of
+/// its own, the focused pane marked — under the shipped theme.
+///
+/// @tests REQ-LOOK.regions_present
+/// @tests REQ-LOOK.focus_visible
+#[test]
+#[ignore = "builds the page and runs it in Chrome with node; run with --ignored"]
+fn the_page_in_a_browser_passes_its_checks() {
+    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..").join("..");
+    let run = |script: &str| {
+        let out = std::process::Command::new("node").arg(script).current_dir(&root).output().expect("node runs");
+        assert!(
+            out.status.success(),
+            "`node {script}` failed:\n{}{}",
+            String::from_utf8_lossy(&out.stdout),
+            String::from_utf8_lossy(&out.stderr)
+        );
+    };
+    run("web/build.mjs");
+    run("web/test/pointer.mjs");
+}

@@ -15,6 +15,56 @@
       }
     },
     {
+      "req_id": "REQ-LOOK",
+      "clause": "row_fits",
+      "floors": [
+        {
+          "situation": "fits with its descriptions",
+          "atLeast": 50
+        },
+        {
+          "situation": "only the keys fit",
+          "atLeast": 50
+        }
+      ],
+      "model": {
+        "import": "TraceLean.Produce",
+        "function": "TraceLean.Produce.menuRow",
+        "arguments": ["title", "entries", "width"]
+      },
+      "implementation": {
+        "language": "rust",
+        "entry": "crates/core/src/surface/produce.rs::menu_row"
+      }
+    },
+    {
+      "req_id": "REQ-LOOK",
+      "clause": "roles_drawn_in_theme_colours",
+      "floors": [
+        {
+          "situation": "a coloured role drawn in its look",
+          "atLeast": 30
+        },
+        {
+          "situation": "a coloured role drawn otherwise",
+          "atLeast": 100
+        },
+        {
+          "situation": "a character off the grid",
+          "atLeast": 300
+        }
+      ],
+      "model": {
+        "import": "TraceLean.Cells",
+        "function": "TraceLean.Cells.drawnWrong",
+        "arguments": ["buffer", "painted", "rows", "columns", "looks"]
+      },
+      "implementation": {
+        "language": "rust",
+        "entry": "crates/core/src/surface/cells.rs::drawn_wrong"
+      }
+    },
+    {
       "req_id": "REQ-ACT",
       "clause": "everything_is_offered",
       "model": {

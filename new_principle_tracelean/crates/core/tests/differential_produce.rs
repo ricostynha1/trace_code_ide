@@ -96,9 +96,9 @@ fn check_in(
     schema: Schema,
     seed: u64,
 ) {
-    let clause = op.split_once('.').expect("an op names a clause").1;
+    let (req, clause) = op.split_once('.').expect("an op names a clause");
     let scratch = harness::scratch(&format!("produce-{clause}"));
-    let implementation = harness::rust_runner("REQ-SHOW", clause, entry, &scratch);
+    let implementation = harness::rust_runner(req, clause, entry, &scratch);
     let model = harness::lean_runner(import, function, op, arguments, &scratch);
 
     let result = run(
@@ -495,6 +495,42 @@ fn model_and_implementation_agree_on_a_menu() {
         menu_input(),
         73,
     );
+}
+
+/// A menu on one row: widths around the menu's full length, so it fits with
+/// its descriptions, just fails to, and falls back to the keys.
+///
+/// @drt REQ-LOOK.row_fits
+/// @tests REQ-LOOK.row_fits
+#[test]
+#[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
+fn model_and_implementation_agree_on_a_menu_row() {
+    check("REQ-LOOK.row_fits", "TraceLean.Produce.menuRow", "crates/core/src/surface/produce.rs::menu_row", &["title", "entries", "width"], menu_row_input(), 75);
+
+    use tracelean_core::drt::gen;
+    use tracelean_core::surface::produce::{menu_row, MenuEntry};
+    let mut rng = gen::Rng::new(75);
+    let (mut described, mut keys) = (0u64, 0u64);
+    for _ in 0..500 {
+        let v = gen::value(&menu_row_input(), &mut rng);
+        let entries: Vec<MenuEntry> = serde_json::from_value(v["entries"].clone()).unwrap();
+        if entries.iter().all(|e| e.description.is_empty()) {
+            continue;
+        }
+        let row = menu_row("t".into(), entries.clone(), v["width"].as_u64().unwrap());
+        if entries.iter().all(|e| row.text.contains(&e.description)) {
+            described += 1;
+        } else {
+            keys += 1;
+        }
+    }
+    support::covered("REQ-LOOK.row_fits", &[("fits with its descriptions", described), ("only the keys fit", keys)]);
+}
+
+fn menu_row_input() -> Schema {
+    let Schema::Struct { mut fields } = menu_input() else { unreachable!() };
+    fields.insert("width".to_string(), Schema::Nat { max: Some(40), edges: vec![0, 7, 8, 9, 18, 19] });
+    Schema::Struct { fields }
 }
 
 /// The welcome page: the starts as a menu, then each recent folder as a path

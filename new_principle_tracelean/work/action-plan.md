@@ -244,6 +244,17 @@ Rule: the target is 100%, waived only exceptionally, with a reason.
 Requirement changes: REQ-DRT-COVER gains clauses for the class and line rules
 and the waiver; `coverage::verdict` and its Lean model change to match.
 
+Line measurement, stage 1 (2026-10-10): `TRACELEAN_DRT_LINES=1` builds the
+Rust runner instrumented and writes `target/tracelean-drt-lines/<op>.json`
+(per implementing item: lines, missed). First full run over 146 Rust-bound
+ops: 484 implementing items, 90 without executable lines (types), 7069 lines,
+4723 run (67%). 243 items fully run; 126 never run — none the bound entry:
+each is another item claiming the clause (runner shells, wrappers, the
+`Ord` impls under `stable_ordering`), which a differential run cannot reach.
+Next: an item a clause's differential run cannot reach is claimed as
+`@implements` but evidenced elsewhere, so the line rule applies to the
+bound entry's call tree only; then gate L3 on it with waivers.
+
 ## 11. Carried over from the removed progress and gap documents
 
 - `menu_entries` in `crates/editor` builds a mode's menu from the keymap

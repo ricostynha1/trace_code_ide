@@ -12,7 +12,6 @@
 //! @implements REQ-VIEW.text_is_the_content
 //! @implements REQ-VIEW.frontend_adds_nothing
 
-use tracelean_core::evidence::Level;
 use tracelean_core::surface::screen::Rect;
 use tracelean_core::surface::view::{actions_at, plain_text, Buffer, Rendering, Role};
 
@@ -49,42 +48,14 @@ fn truecolour(hex: &str, bold: bool) -> String {
 /// A level is coloured by its grade, and the four are meant to be told apart at
 /// a glance. The grade comes from the span — reading `L3` out of the text to
 /// decide would be this frontend parsing the buffer.
+///
+/// Which section and key, and which roles are bold, is the core's `look_of`:
+/// the same answer the suite that reads this frontend's cells back checks
+/// against (`REQ-LOOK.roles_drawn_in_theme_colours`).
 fn colour(role: Role) -> String {
-    // A token is coloured from the theme's `syntax` section, by the kind the
-    // core parsed it as, spelled as it is on the wire.
-    if let Role::Token { kind } = role {
-        let name = serde_json::to_value(kind).ok();
-        let key = name.as_ref().and_then(|v| v.as_str()).unwrap_or("");
-        return match tracelean_editor::theme::colour(theme(), "syntax", key) {
-            Some(hex) => truecolour(hex, false),
-            None => "\u{1b}[0m".to_string(),
-        };
-    }
-    // A claim is the colour of its gutter chip, from the `chips` section.
-    if let Role::Claim { role } = role {
-        return match tracelean_editor::theme::colour(theme(), "chips", role.as_str()) {
-            Some(hex) => truecolour(hex, true),
-            None => "\u{1b}[0m".to_string(),
-        };
-    }
-    let (key, bold) = match role {
-        Role::Token { .. } | Role::Claim { .. } => return "\u{1b}[0m".to_string(),
-        Role::Plain => return "\u{1b}[0m".to_string(),
-        Role::Path => ("path", false),
-        Role::Entry => ("entry", false),
-        Role::Heading => ("heading", true),
-        Role::Requirement => ("requirement", false),
-        Role::Level { grade } => match grade {
-            Level::L1 => ("levelL1", false),
-            Level::L2 => ("levelL2", false),
-            Level::L3 => ("levelL3", false),
-            Level::L4 => ("levelL4", true),
-        },
-        Role::Added => ("added", false),
-        Role::Removed => ("removed", false),
-    };
-    match tracelean_editor::theme::colour(theme(), "roles", key) {
-        Some(hex) => truecolour(hex, bold),
+    let look = tracelean_core::surface::cells::look_of(theme(), role);
+    match look.fg {
+        Some(hex) => truecolour(&hex, look.bold),
         None => "\u{1b}[0m".to_string(),
     }
 }
@@ -99,20 +70,30 @@ pub fn lines(buffer: &Buffer) -> Vec<String> {
 /// Every escape inserted is one a terminal acts on rather than prints, so the
 /// visible text is unchanged — which is what the capture harness checks.
 pub fn painted(buffer: &Buffer) -> Vec<String> {
-    let mut out = String::new();
+    painted_with(buffer, "")
+}
+
+/// The same, with `also` — a rendition such as reverse video — put back after
+/// every escape. Each colour begins with a reset, so a rendition written once
+/// in front of the line was undone by the first span, and the status line it
+/// was meant to set apart was never drawn in reverse (`REQ-LOOK.regions_present`).
+pub fn painted_with(buffer: &Buffer, also: &str) -> Vec<String> {
+    let mut out = String::from(also);
     for (offset, character) in buffer.text.chars().enumerate() {
         for span in &buffer.spans {
             if span.start == offset && span.start < span.stop {
                 out.push_str(&colour(span.role));
+                out.push_str(also);
             }
             if span.stop == offset {
                 out.push_str("\u{1b}[0m");
+                out.push_str(also);
             }
         }
         out.push(character);
     }
     out.push_str("\u{1b}[0m");
-    out.split('\n').map(str::to_string).collect()
+    out.split('\n').map(|line| if line.starts_with(also) { line.to_string() } else { format!("{also}{line}") }).collect()
 }
 
 /// Where this frontend offers actions: one position per span, which is where
@@ -227,6 +208,28 @@ pub fn compose(region: Rect, panes: &[(Rect, Buffer, bool)]) -> Vec<Vec<Cell>> {
             for column in 0..at.width as usize {
                 if row < height && left + column < width {
                     grid[row][left + column] = ('─', edge);
+                }
+            }
+        }
+    }
+    // A pane's own dividers are on its right and below, so a pane with none —
+    // the last one across, the last one down — would be focused with nothing on
+    // the screen saying so. The dividers its neighbours draw against it are
+    // its edges too, and are marked the same (`REQ-LOOK.focus_visible`).
+    for (at, _, _) in panes.iter().filter(|p| p.2) {
+        let left = at.left.saturating_sub(region.left) as usize;
+        let top = at.top.saturating_sub(region.top) as usize;
+        if left > 0 {
+            for row in top..(top + at.height as usize).min(height) {
+                if grid[row][left - 1].0 == '│' {
+                    grid[row][left - 1].1 = Role::Heading;
+                }
+            }
+        }
+        if top > 0 {
+            for column in left..(left + at.width as usize).min(width) {
+                if grid[top - 1][column].0 == '─' {
+                    grid[top - 1][column].1 = Role::Heading;
                 }
             }
         }

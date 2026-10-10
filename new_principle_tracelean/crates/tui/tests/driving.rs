@@ -618,6 +618,124 @@ fn closing_a_pane_gives_its_region_back() {
     );
 }
 
+/// Each place is on the screen where it belongs, in rows of its own: the
+/// stations, the strip, the panes at the rectangles the core's layout gives
+/// them, the status line and the bar of what can be done.
+///
+/// The rectangles are the core's (`screen::place` over the workbench layout),
+/// not this suite's idea of them; the dividers read back from the cells must
+/// fall exactly on their edges.
+///
+/// @tests REQ-LOOK.regions_present
+/// @structural REQ-LOOK.regions_present reason="a claim about where a running frontend drew each place, read off the cells it painted; no value either side computes"
+#[test]
+fn the_screen_shows_each_place_where_the_layout_puts_it() {
+    use tracelean_core::surface::produce::menu_buffer;
+    use tracelean_core::surface::screen::{place, workbench, Rect};
+
+    let (rows, columns) = (30u64, 100u64);
+    let terminal = open();
+    let cells = tracelean_core::surface::cells::grid(terminal.painted(), rows, columns);
+    let text = |row: usize| cells[row].iter().map(|c| c.text.as_str()).collect::<String>();
+    let layout = workbench(menu_buffer("a".into(), vec![]), menu_buffer("b".into(), vec![]), menu_buffer("c".into(), vec![]))
+        .layout;
+    // The two bars above, and the status line, a blank row and the bar below.
+    let region = Rect { left: 0, top: 0, width: columns, height: rows - 6 };
+    let above = 2usize;
+    let placed = place(region, layout);
+    assert_eq!(placed.len(), 3, "the workbench is not three panes: {placed:?}");
+
+    // Every station on the first row, inside the terminal's width; the strip
+    // under them.
+    for station in ["project", "trace", "sandbox", "requirements", "design", "history"] {
+        assert!(text(0).contains(station), "`{station}` is not on the stations row: {}", text(0));
+    }
+    assert!(text(1).trim_start().starts_with("1  "), "no strip row: {}", text(1));
+
+    // Each pane's right edge, where it has a neighbour, is a divider down its
+    // whole height and nowhere else.
+    let mut edges = Vec::new();
+    for (pane, at) in &placed {
+        if at.left + at.width < region.width {
+            edges.push((pane.clone(), (at.left + at.width - 1) as usize, at.top as usize + above, (at.top + at.height) as usize + above));
+        }
+    }
+    for row in above..above + region.height as usize {
+        let drawn: Vec<usize> = (0..columns as usize).filter(|x| cells[row][*x].text == "│").collect();
+        let expected: Vec<usize> =
+            edges.iter().filter(|(_, _, from, to)| (*from..*to).contains(&row)).map(|(_, x, _, _)| *x).collect();
+        assert_eq!(drawn, expected, "row {row}'s dividers are not the layout's edges: {}", text(row));
+    }
+    for row in (above + region.height as usize)..rows as usize {
+        assert!(!text(row).contains('│'), "a divider below the panes, row {row}: {}", text(row));
+    }
+    // The explorer shows the listing, inside its own rectangle.
+    let (_, explorer) = placed.iter().find(|(pane, _)| pane == "explorer").expect("an explorer");
+    let inside = (above..above + explorer.height as usize)
+        .map(|row| cells[row][..explorer.width as usize].iter().map(|c| c.text.as_str()).collect::<String>())
+        .collect::<Vec<_>>()
+        .join("\n");
+    assert!(inside.contains("celsius.rs"), "the listing is not in the explorer's rectangle:\n{inside}");
+
+    // Below, after a blank row: the status line in reverse video, then the bar
+    // of what can be done — empty here, where the cursor starts on nothing.
+    let status = above + region.height as usize + 1;
+    assert!(text(status - 1).trim().is_empty(), "no blank row above the status: {}", text(status - 1));
+    assert!(cells[status].iter().all(|c| c.reverse || c.text == " "), "the status line is not in reverse: {}", text(status));
+    assert!(cells[status].iter().any(|c| c.reverse), "no status line on row {status}: {}", text(status));
+    assert!(!cells[status + 1].iter().any(|c| c.reverse), "the status runs into the bar: {}", text(status + 1));
+}
+
+/// Which pane a key goes to can be read off the screen: every divider the
+/// focused pane shares with a neighbour is drawn in a style no other divider
+/// has, and that holds for the last pane across, which has no divider of its
+/// own.
+///
+/// Read from the cells the terminal received (`surface::cells::grid`), styles
+/// and all — the text alone is the same whichever pane is focused.
+///
+/// @tests REQ-LOOK.focus_visible
+/// @structural REQ-LOOK.focus_visible reason="a claim about how a running frontend's screen looks, read off the cells it painted; no value either side computes"
+#[test]
+fn the_focused_pane_is_marked_on_the_screen() {
+    let mut terminal = open();
+    // The workbench's three panes, focused left to right: the explorer, the
+    // document, the side panel.
+    for focused in 0..3 {
+        let cells = tracelean_core::surface::cells::grid(terminal.painted(), 30, 100);
+        // Each divider column, and the looks its cells are drawn in.
+        let mut columns: std::collections::BTreeMap<usize, std::collections::BTreeSet<(Option<String>, bool)>> =
+            Default::default();
+        for row in &cells {
+            for (x, cell) in row.iter().enumerate() {
+                if cell.text == "│" {
+                    columns.entry(x).or_default().insert((cell.fg.clone(), cell.bold));
+                }
+            }
+        }
+        let edges: Vec<usize> = columns.keys().copied().collect();
+        assert_eq!(edges.len(), 2, "not three panes side by side: {edges:?}");
+        // The focused pane's edges: the divider on its left and the one on its right.
+        let mine: Vec<usize> = edges
+            .iter()
+            .enumerate()
+            .filter(|(at, _)| *at + 1 == focused || *at == focused)
+            .map(|(_, x)| *x)
+            .collect();
+        let marks: std::collections::BTreeSet<_> = mine.iter().flat_map(|x| columns[x].iter().cloned()).collect();
+        let others: std::collections::BTreeSet<_> =
+            edges.iter().filter(|x| !mine.contains(x)).flat_map(|x| columns[x].iter().cloned()).collect();
+        assert_eq!(marks.len(), 1, "pane {focused}'s edges are drawn unevenly: {marks:?}");
+        assert!(
+            marks.is_disjoint(&others),
+            "pane {focused} is focused and its edges look like the others: {marks:?} against {others:?}"
+        );
+        terminal.press(" ");
+        terminal.press("w");
+        terminal.press("l");
+    }
+}
+
 /// `.` lists what can be done where the cursor is — the terminal's
 /// right-click — on the screen, and a key picks from it.
 ///

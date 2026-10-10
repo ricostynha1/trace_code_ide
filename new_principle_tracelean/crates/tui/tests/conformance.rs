@@ -7,7 +7,7 @@
 //! The buffers are the ones the core produces, not hand-built ones — a frontend
 //! that only ever sees tidy buffers is a frontend nobody has tested.
 
-use tracelean_core::drt::frontend::{capture, check, Screen, Verdict};
+use tracelean_core::drt::frontend::{capture, check, painted_screens, Screen, Verdict};
 use tracelean_core::drt::run::RunnerSpec;
 use tracelean_core::observe::transcript::Event;
 use tracelean_core::surface::keymap;
@@ -95,6 +95,48 @@ fn what_the_terminal_frontend_paints_is_the_buffer() {
         "the terminal frontend painted the wrong screen: {:#?}",
         report.first_failure()
     );
+}
+
+/// And each character is painted in the look the theme gives its role, read
+/// back from the escapes it sent rather than from what it says it drew.
+///
+/// @tests REQ-LOOK.roles_drawn_in_theme_colours
+#[test]
+fn the_terminal_frontend_paints_each_role_in_the_themes_colour() {
+    use tracelean_core::evidence::Level;
+    use tracelean_core::surface::cells::{drawn_wrong, look_of};
+    use tracelean_core::surface::view::TokenKind;
+    use tracelean_core::trace::annotation::Role as Claimed;
+
+    let theme: serde_json::Value = serde_json::from_str(include_str!("../../../assets/theme.json")).unwrap();
+    let mut shown = buffers();
+    // Every kind of role the theme colours, side by side and nested.
+    shown.push(file_buffer(
+        "b.rs".into(),
+        "L4 L1 +x -y fn tests\nplain".into(),
+        vec![
+            Mark { start: 0, stop: 2, role: Role::Level { grade: Level::L4 } },
+            Mark { start: 3, stop: 5, role: Role::Level { grade: Level::L1 } },
+            Mark { start: 6, stop: 8, role: Role::Added },
+            Mark { start: 9, stop: 11, role: Role::Removed },
+            Mark { start: 12, stop: 14, role: Role::Token { kind: TokenKind::Keyword } },
+            Mark { start: 15, stop: 20, role: Role::Claim { role: Claimed::Tests } },
+            Mark { start: 0, stop: 20, role: Role::Heading },
+        ],
+    ));
+    let screens = painted_screens(&frontend(&["--paint"]), &Screen::default(), shown.clone()).expect("it paints");
+    let mut reached = std::collections::BTreeSet::new();
+    for (buffer, painted) in shown.into_iter().zip(screens) {
+        let looks = buffer.spans.iter().map(|s| look_of(&theme, s.role)).collect::<Vec<_>>();
+        reached.extend(looks.iter().filter(|l| l.fg.is_some()).map(|l| format!("{:?}", l.role)));
+        // Every painted line ends in a line feed, and one on the last row
+        // would scroll the first away: a row to spare.
+        let rows = buffer.text.matches('\n').count() as u64 + 2;
+        let columns = buffer.text.lines().map(|l| l.chars().count()).max().unwrap_or(0) as u64 + 1;
+        let wrong = drawn_wrong(buffer.clone(), painted, rows, columns, looks);
+        assert!(wrong.is_empty(), "{:?} painted out of its look: {:#?}", buffer.kind, &wrong[..wrong.len().min(3)]);
+    }
+    assert!(reached.len() >= 8, "only {} coloured roles were painted: {reached:?}", reached.len());
 }
 
 /// Every action this frontend can offer is one the keymap dispatches.

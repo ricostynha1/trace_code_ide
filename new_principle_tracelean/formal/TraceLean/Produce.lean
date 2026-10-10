@@ -219,6 +219,28 @@ def menuBuffer (title : String) (entries : List MenuEntry) : Buffer :=
     text := text,
     spans := tidy text.length (menuSpans 0 entries) }
 
+private def pieceSpans (at_ : Nat) : List (MenuEntry × String) → List Span
+  | [] => []
+  | (entry, piece) :: rest =>
+    ({ start := at_, stop := at_ + piece.length, role := Role.entry,
+       actions := entry.action.toList } : Span) :: pieceSpans (at_ + piece.length + 2) rest
+
+/--
+A menu laid out on one row of `width` characters, two spaces between entries:
+each entry's key and description when they all fit, only the keys when they do
+not. Each entry still carries what it reaches.
+
+@models REQ-LOOK.row_fits
+-/
+def menuRow (title : String) (entries : List MenuEntry) (width : Nat) : Buffer :=
+  let full := entries.map menuLine
+  let pieces := if (String.intercalate "  " full).length ≤ width then full else entries.map (·.key)
+  let text := String.intercalate "  " pieces
+  { id := "row:" ++ title,
+    kind := BufferKind.menu title,
+    text := text,
+    spans := tidy text.length (pieceSpans 0 (entries.zip pieces)) }
+
 /-! ## A record -/
 
 private def eventLine (event : Event) : String :=

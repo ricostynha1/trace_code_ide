@@ -87,11 +87,18 @@ looking at the window would notice. That is the blind spot.
 
 ## Order of work
 
-1. `contrast` over `theme.json` (pure; Lean model + DRT) and the clause text.
-2. TUI cell grid with styles from the pseudo-terminal; `colours` and
-   `regions` checks with negative cases.
+1. Done: `contrast` over `theme.json` (pure; Lean model + DRT).
+2. Done: `surface/cells.rs` reads a terminal's bytes into styled cells (Lean
+   model + DRT); `roles_drawn_in_theme_colours` checked on every buffer the
+   TUI paints; `focus_visible` and `regions_present` over the pty. The grid
+   models wrapping and scrolling as a terminal does, which is what found
+   four things the text-only suites could not: the side panel focused with
+   nothing marking it; the stations row wrapping at 100 columns and scrolling
+   the screen a row; the last three stations off the edge (now
+   `produce::menu_row`, `REQ-LOOK.row_fits`); the status line's reverse video
+   undone by its first colour (`draw::painted_with`).
 3. Page description over DevTools; the same checks; `axe` scan.
-4. `focus_visible`, `operable_both_ways`.
+4. `focus_visible` on the page, `operable_both_ways`.
 5. Journeys shared by both frontends.
 
 ## Sources consulted

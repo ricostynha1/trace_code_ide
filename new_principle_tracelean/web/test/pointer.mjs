@@ -22,6 +22,10 @@ import { fileURLToPath } from "node:url";
 
 const dist = join(dirname(fileURLToPath(import.meta.url)), "..", "dist");
 
+// The shipped theme, so the page is checked in the colours a person sees: a
+// stand-in theme without the focus colour drew the focused pane unmarked.
+const THEME = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "..", "..", "assets", "theme.json"), "utf8");
+
 // The stand-in editor: canned answers, and a record of every call.
 const BRIDGE = `
 <script>
@@ -41,7 +45,7 @@ const BRIDGE = `
   window.__TAURI__ = { core: { invoke: async (command, args) => {
     window.__calls.push([command, args]);
     switch (command) {
-      case "theme": return { ui: { document: "#282c34", documentText: "#abb2bf" }, syntax: { keyword: "#c678dd" } };
+      case "theme": return ${THEME};
       case "shown": return [
         { pane: "explorer", at: { left: 0, top: 0, width: 30, height: 10 }, buffer: buffers.explorer, focused: false },
         { pane: "document", at: { left: 30, top: 0, width: 60, height: 10 }, buffer: buffers.document, focused: true,
@@ -218,8 +222,7 @@ try {
 
   // A click into the document's text places the cursor where it was pressed.
   await reset();
-  const w = await charAt(1, 6);
-  await mouse(w.x - 2, w.y);
+  const w = await charAt(1, 6);  await mouse(w.x - 2, w.y);
   const placed = await last("place");
   check("clicking into text places the cursor at that character",
     placed && placed.pane === "document" && placed.offset === 6, JSON.stringify(await calls()));
@@ -494,6 +497,39 @@ try {
   const keyword = await evaluate(`(() => { const k = document.querySelector(".pane.kind-file .token-keyword");
     return k ? getComputedStyle(k).color : null; })()`);
   check("syntax is coloured from the theme in the window", keyword === "rgb(198, 120, 221)", JSON.stringify(keyword));
+
+  // Each place in a region of its own (`REQ-LOOK.regions_present`): the
+  // stations down the left, the strip above the panes, the panes side by side
+  // in the order and proportion the layout gives them (30 and 60 columns), the
+  // menu and status below, nothing overlapping.
+  const regions = await evaluate(`(() => {
+    const box = (e) => { const r = e.getBoundingClientRect(); return { name: e.id || e.dataset.pane, left: r.left, top: r.top, right: r.right, bottom: r.bottom }; };
+    return { bars: ["stations", "strip"].map((id) => box(document.getElementById(id))),
+      panes: [...document.querySelectorAll(".pane")].map(box),
+      below: ["menu", "status"].map((id) => box(document.getElementById(id))),
+      width: window.innerWidth, height: window.innerHeight }; })()`);
+  const overlap = (a, b) => a.left < b.right - 0.5 && b.left < a.right - 0.5 && a.top < b.bottom - 0.5 && b.top < a.bottom - 0.5;
+  const all = [...regions.bars, ...regions.panes, ...regions.below];
+  const crossing = all.flatMap((a, i) => all.slice(i + 1).filter((b) => overlap(a, b)).map((b) => `${a.name}/${b.name}`));
+  const [explorer, documentPane] = regions.panes;
+  const top = Math.min(...regions.panes.map((p) => p.top));
+  const bottom = Math.max(...regions.panes.map((p) => p.bottom));
+  const ratio = (documentPane.right - documentPane.left) / (explorer.right - explorer.left);
+  check("each place is a region of its own, the panes where the layout puts them",
+    crossing.length === 0 && regions.panes.length === 2 && explorer.right <= documentPane.left + 0.5
+      && regions.bars[0].right <= explorer.left + 0.5 && regions.bars[1].bottom <= top + 0.5
+      && regions.below.every((b) => b.top >= bottom - 0.5)
+      && ratio > 1.8 && ratio < 2.2 && all.every((r) => r.left >= 0 && r.right <= regions.width + 0.5),
+    JSON.stringify({ crossing, ratio, regions }));
+
+  // Which pane has the focus shows (`REQ-LOOK.focus_visible`): the focused
+  // pane is drawn with a mark the other is not.
+  const marks = await evaluate(`[...document.querySelectorAll(".pane")].map((p) => {
+    const s = getComputedStyle(p); return { focused: p.classList.contains("focused"), mark: s.boxShadow + "|" + s.outlineStyle + "|" + s.borderTopColor }; })`);
+  const focusedMark = marks.filter((m) => m.focused).map((m) => m.mark);
+  check("the focused pane is marked and the other is not",
+    focusedMark.length === 1 && marks.filter((m) => !m.focused).every((m) => m.mark !== focusedMark[0]),
+    JSON.stringify(marks));
 
   // A wheel over the document scrolls it.
   await reset();

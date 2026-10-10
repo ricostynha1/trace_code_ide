@@ -1,0 +1,30 @@
+{
+  "key": {
+    "reqId": "REQ-LOOK",
+    "clause": "roles_drawn_in_theme_colours",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 410,
+      "cases": 3000,
+      "op": "REQ-LOOK.roles_drawn_in_theme_colours"
+    }
+  },
+  "linkHash": "8e63b8f7836345ae",
+  "inputs": [
+    [
+      "implementation",
+      "732d1d682c84ddaa+738457d588ba2d70"
+    ],
+    [
+      "model",
+      "be1b38068a75470e"
+    ],
+    [
+      "requirement",
+      "5468d0c637731224"
+    ]
+  ]
+}

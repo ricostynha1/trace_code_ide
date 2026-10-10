@@ -75,6 +75,20 @@ waived there for now: `syntax.comment` and `ui.gutterText` 2.32,
 `syntax.heading` 4.38. Decision for a person: lighten them (e.g. comment
 `#9097a3` reaches 4.76) or keep the palette and its waivers.
 
+## REQ-LOOK clauses — draft, to approve
+
+`roles_drawn_in_theme_colours`, `row_fits`, `regions_present` and
+`focus_visible` were added with the visual checks (2026-10-10). The checks
+found and fixed: the side panel focused with nothing marking it; the TUI's
+stations row wrapping at 100 columns and scrolling the screen; three stations
+off the edge; the status line's reverse video never shown; a click on the
+cursor's own character sending the cursor to the line's end (page).
+
+Decision for a person: `roles_drawn_in_theme_colours` holds for the terminal.
+The page recolours some roles by place on purpose (a path in the explorer wears
+`ui.sidebarText`, not `roles.path`). Either the clause names the place-specific
+looks (and `look_of` takes the pane's kind), or it stays terminal-only.
+
 ## Machine evidence — done
 
 Pinnings re-earned (`--pins`); `REQ-SHOW.producer_is_pure` given the

@@ -493,6 +493,9 @@ body.dragging * {
   height: 17px;
   background: var(--ui-caret);
   animation: blink 1.1s step-end infinite;
+  /* Drawn over the character it stands before, so a click there must reach
+   * the text: caught here, it placed the cursor at the line's end. */
+  pointer-events: none;
 }
 
 @keyframes blink {

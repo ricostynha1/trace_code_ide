@@ -152,11 +152,24 @@ fn paint(editor: &editor::Editor, region: Rect, asking: Option<&str>) -> String 
         })
         .collect();
 
-    let mut out = String::from("\u{1b}[2J\u{1b}[H");
+    // Wrapping off before anything is drawn: a bar wider than the terminal is
+    // cut at its edge, where wrapping it would push every row below down one and
+    // scroll the top of the screen away (`REQ-LOOK.regions_present`). After the
+    // clear, because the screen is read from the last clear on.
+    let mut out = String::from("\u{1b}[2J\u{1b}[?7l\u{1b}[H");
     // The two bars, above the panes. Buffers the core produced, drawn by the
     // one function that draws a buffer — the stations first because they are
     // always there, the opened set under them because it changes.
-    out.push_str(&format!("\u{1b}[2m{}\u{1b}[0m\r\n", bar(&editor.stations())));
+    // The stations laid out by the core to the row's width, so every one of
+    // them is on the screen however narrow it is (`REQ-LOOK.row_fits`).
+    let stations = tracelean_core::surface::produce::menu_row(
+        "stations".into(),
+        tracelean_core::surface::screen::station_entries(),
+        region.width,
+    );
+    // Not dimmed: each entry's colour begins with a reset, which undid a dim
+    // put in front of the row, so a dim there never showed.
+    out.push_str(&format!("{}\u{1b}[0m\r\n", bar(&stations)));
     out.push_str(&format!("{}\r\n", bar(&editor.strip())));
     // The editor's selection, as the cells of the focused pane it covers.
     let mut selected = std::collections::BTreeSet::new();
@@ -179,9 +192,8 @@ fn paint(editor: &editor::Editor, region: Rect, asking: Option<&str>) -> String 
         out.push_str("\r\n");
     }
     out.push_str("\r\n");
-    let status = draw::painted(&editor.status);
+    let status = draw::painted_with(&editor.status, "\u{1b}[7m");
     for line in &status {
-        out.push_str("\u{1b}[7m");
         out.push_str(line);
         out.push_str("\u{1b}[0m\r\n");
     }
@@ -418,6 +430,7 @@ fn interactive(root: std::path::PathBuf, fresh: bool) {
     }
 
     editor.remember();
-    let _ = execute!(stdout, terminal::LeaveAlternateScreen);
+    // Wrapping back on, as the terminal was before `paint` turned it off.
+    let _ = execute!(stdout, terminal::EnableLineWrap, terminal::LeaveAlternateScreen);
     let _ = terminal::disable_raw_mode();
 }

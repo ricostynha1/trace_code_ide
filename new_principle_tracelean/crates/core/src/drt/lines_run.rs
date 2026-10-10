@@ -55,6 +55,39 @@ fn test_binaries(root: &Path, target: &Path) -> Result<Vec<(PathBuf, PathBuf)>, 
     Ok(out)
 }
 
+/// The line counts an instrumented `binary` left in `profiles` (every
+/// `.profraw` there, merged), per file of the project at `root`, by path
+/// relative to it.
+pub fn profiled_lines(root: &Path, binary: &Path, profiles: &Path) -> Result<Vec<(String, Vec<(u32, u64)>)>, String> {
+    let (profdata, cov) = (llvm_tool("llvm-profdata")?, llvm_tool("llvm-cov")?);
+    let raws: Vec<PathBuf> = std::fs::read_dir(profiles)
+        .map_err(|e| e.to_string())?
+        .flatten()
+        .map(|e| e.path())
+        .filter(|p| p.extension().is_some_and(|e| e == "profraw"))
+        .collect();
+    if raws.is_empty() {
+        return Err(format!("no profile in {}: was the runner built instrumented?", profiles.display()));
+    }
+    let data = profiles.join("merged.profdata");
+    let merged_ok =
+        Command::new(&profdata).args(["merge", "-sparse"]).args(&raws).arg("-o").arg(&data).status().map_err(|e| e.to_string())?;
+    if !merged_ok.success() {
+        return Err("llvm-profdata could not merge the profiles".into());
+    }
+    let exported = Command::new(&cov)
+        .args(["export", "-format=lcov"])
+        .arg(format!("-instr-profile={}", data.display()))
+        .arg(binary)
+        .output()
+        .map_err(|e| e.to_string())?;
+    let prefix = format!("{}/", root.display());
+    Ok(lcov(&String::from_utf8_lossy(&exported.stdout))
+        .into_iter()
+        .filter_map(|(file, lines)| file.strip_prefix(&prefix).map(|rel| (rel.to_string(), lines)))
+        .collect())
+}
+
 /// Measure every test of the project at `root`, and the coverage of each of
 /// its files that a test reached or could have.
 pub fn measure(root: &Path, files: &BTreeMap<String, String>) -> Result<(Coverage, usize), String> {

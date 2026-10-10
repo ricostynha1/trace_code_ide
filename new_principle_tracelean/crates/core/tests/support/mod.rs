@@ -179,6 +179,64 @@ pub fn agreed(result: &tracelean_core::drt::run::DrtResult) {
     }
     write_half(&result.op, &half);
     compose(&result.op);
+    if std::env::var_os("TRACELEAN_DRT_LINES").is_some() {
+        report_lines(&result.op);
+    }
+}
+
+/// Which executable lines of each implementing item the op's cases ran, from
+/// the profile its instrumented runner left (`TRACELEAN_DRT_LINES=1`), written
+/// beside the profiles as `<op>.json`. The line half of action plan §10,
+/// measured; not yet a condition of L3.
+fn report_lines(op: &str) {
+    use tracelean_core::drt::coverage::{floors_of, line_reach, verdict, Verdict};
+    let root = root();
+    let base = root.join("target").join("tracelean-drt-lines");
+    let binary = tracelean_core::drt::rust_runner::package_dir(&root.join("target").join("tracelean-drt-rust-lines"))
+        .join("target/release/tracelean-drt-runner");
+    let profiled = match tracelean_core::drt::lines_run::profiled_lines(&root, &binary, &base.join(op)) {
+        Ok(profiled) => profiled,
+        Err(why) => {
+            eprintln!("  lines of {op} not measured: {why}");
+            return;
+        }
+    };
+    let binding = binding_for(op);
+    let index = tracelean_core::trace::index::build(&root);
+    let mut items = Vec::new();
+    for qualified in binding.clauses() {
+        let (req_id, clause) = match qualified.split_once('.') {
+            Some((req, clause)) => (req.to_string(), Some(clause.to_string())),
+            None => (qualified.clone(), None),
+        };
+        for link in index.links.iter().filter(|l| {
+            l.role == tracelean_core::trace::annotation::Role::Implements && l.req_id == req_id && l.clause == clause
+        }) {
+            let anchor = &link.anchor;
+            let Some((_, hits)) = profiled.iter().find(|(file, _)| *file == anchor.file) else { continue };
+            let Ok(text) = std::fs::read_to_string(root.join(&anchor.file)) else { continue };
+            let item: Vec<(u32, String)> = text
+                .lines()
+                .enumerate()
+                .map(|(n, line)| (n as u32 + 1, line.to_string()))
+                .filter(|(n, _)| *n > anchor.start_line && *n <= anchor.end_line + 1)
+                .collect();
+            let observed = line_reach(hits.clone(), item);
+            let missed: Vec<String> = match verdict(floors_of(&observed), observed.clone(), binding.waive.clone()) {
+                Verdict::Unmet { gaps } => gaps.iter().map(|g| g.situation().to_string()).collect(),
+                _ => Vec::new(),
+            };
+            items.push(serde_json::json!({
+                "clause": qualified,
+                "file": anchor.file,
+                "from": anchor.start_line + 1,
+                "lines": observed.len(),
+                "missed": missed,
+            }));
+        }
+    }
+    let report = serde_json::json!({ "op": op, "items": items });
+    let _ = std::fs::write(base.join(format!("{op}.json")), serde_json::to_string_pretty(&report).unwrap_or_default());
 }
 
 /// Every class of the arguments was reached by some case, or is waived with a

@@ -261,6 +261,33 @@ pub fn menu_buffer(title: String, entries: Vec<MenuEntry>) -> Buffer {
     }
 }
 
+/// A menu laid out on one row of `width` characters, two spaces between
+/// entries: each entry's key and description when they all fit, and only the
+/// keys when they do not, so a description never takes the room of a later
+/// entry. Each entry still carries what it reaches.
+///
+/// For a frontend with one row to spare for a list, as a terminal has for the
+/// stations: joining the menu's rows itself, it cut the last three stations
+/// off at 100 columns.
+///
+/// @implements REQ-LOOK.row_fits
+/// @drt REQ-LOOK.row_fits
+pub fn menu_row(title: String, entries: Vec<MenuEntry>, width: u64) -> Buffer {
+    let full: Vec<String> = entries.iter().map(menu_line).collect();
+    let fits = full.join("  ").chars().count() as u64 <= width;
+    let pieces: Vec<String> = if fits { full } else { entries.iter().map(|e| e.key.clone()).collect() };
+    let mut spans = Vec::new();
+    let mut at = 0usize;
+    for (entry, piece) in entries.iter().zip(&pieces) {
+        let length = piece.chars().count();
+        spans.push(Span { start: at, stop: at + length, role: Role::Entry, actions: entry.action.clone().into_iter().collect() });
+        at += length + 2;
+    }
+    let text = pieces.join("  ");
+    let size = text.chars().count();
+    Buffer { id: format!("row:{title}"), kind: BufferKind::Menu { title }, text, spans: tidy(size, spans) }
+}
+
 fn event_line(event: &Event) -> String {
     format!("{}: {}", event.kind, event.text)
 }

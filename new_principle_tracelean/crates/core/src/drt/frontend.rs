@@ -199,6 +199,32 @@ pub fn capture(
     screen: &Screen,
     buffers: Vec<Buffer>,
 ) -> Result<Report, RunnerError> {
+    let screens = painted_screens(spec, screen, buffers.clone())?;
+    let mut checked = Vec::new();
+    for (index, (buffer, text)) in buffers.into_iter().zip(screens).enumerate() {
+        let verdict = match visible(&text) {
+            None => Verdict::Refused { message: "painted nothing".to_string() },
+            Some(lines) => {
+                let rendering = Rendering { lines, offered: Vec::new() };
+                match conformance(buffer.clone(), rendering)
+                    .into_iter()
+                    .filter(|b| !matches!(b, Breach::ActionDropped { .. }))
+                    .collect::<Vec<_>>()
+                {
+                    breaches if breaches.is_empty() => Verdict::Conformant,
+                    breaches => Verdict::Breached { breaches },
+                }
+            }
+        };
+        checked.push(Checked { case: index as u64, buffer, verdict });
+    }
+    Ok(Report { checked })
+}
+
+/// Show a frontend every buffer in turn and keep the bytes it painted for
+/// each, escapes and all: how each was drawn, not only what it says
+/// (`REQ-LOOK`).
+pub fn painted_screens(spec: &RunnerSpec, screen: &Screen, buffers: Vec<Buffer>) -> Result<Vec<String>, RunnerError> {
     use std::io::{BufRead, Write};
 
     let (program, args) = spec
@@ -218,7 +244,7 @@ pub fn capture(
     let mut stdin = child.stdin.take().expect("piped");
     let mut stdout = std::io::BufReader::new(child.stdout.take().expect("piped"));
 
-    let mut checked = Vec::new();
+    let mut screens = Vec::new();
     for (index, buffer) in buffers.into_iter().enumerate() {
         let case = index as u64;
         let asked = serde_json::json!({
@@ -236,25 +262,10 @@ pub fn capture(
             Ok(_) => {}
             Err(e) => return Err(RunnerError::Died(e.to_string())),
         }
-        let text = String::from_utf8_lossy(&painted).replace(&screen.separator, "");
-        let verdict = match visible(&text) {
-            None => Verdict::Refused { message: "painted nothing".to_string() },
-            Some(lines) => {
-                let rendering = Rendering { lines, offered: Vec::new() };
-                match conformance(buffer.clone(), rendering)
-                    .into_iter()
-                    .filter(|b| !matches!(b, Breach::ActionDropped { .. }))
-                    .collect::<Vec<_>>()
-                {
-                    breaches if breaches.is_empty() => Verdict::Conformant,
-                    breaches => Verdict::Breached { breaches },
-                }
-            }
-        };
-        checked.push(Checked { case, buffer, verdict });
+        screens.push(String::from_utf8_lossy(&painted).replace(&screen.separator, ""));
     }
     let _ = child.kill();
-    Ok(Report { checked })
+    Ok(screens)
 }
 
 #[cfg(test)]

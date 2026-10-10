@@ -2,6 +2,7 @@
 //! layer.
 
 pub mod act;
+pub mod cells;
 pub mod chips;
 pub mod context;
 pub mod contrast;

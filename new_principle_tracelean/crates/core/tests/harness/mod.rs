@@ -165,6 +165,25 @@ fn binding_for(req: &str, clause: &str, implementation: CallSpec) -> Binding {
     }
 }
 
+/// Whether the differential runs measure the lines their implementations run
+/// (`TRACELEAN_DRT_LINES=1`): the shared Rust runner is then built with
+/// `-C instrument-coverage`, elsewhere, and each op's runner leaves its profile
+/// in a directory of its own (`lines_dir`).
+pub fn lines_wanted() -> bool {
+    std::env::var_os("TRACELEAN_DRT_LINES").is_some()
+}
+
+/// Where the instrumented runner for `op` leaves its profiles.
+pub fn lines_dir(op: &str) -> std::path::PathBuf {
+    project_root().join("target").join("tracelean-drt-lines").join(op)
+}
+
+/// The instrumented shared runner's executable.
+pub fn lines_binary() -> std::path::PathBuf {
+    rust_runner::package_dir(&project_root().join("target").join("tracelean-drt-rust-lines"))
+        .join("target/release/tracelean-drt-runner")
+}
+
 /// Generate and build a Rust runner carrying the given bindings.
 fn build_rust_runner(bindings: &[Binding], at: &Path) -> RunnerSpec {
     let root = project_root();
@@ -181,11 +200,12 @@ fn build_rust_runner(bindings: &[Binding], at: &Path) -> RunnerSpec {
     rust_runner::materialize(at, &entries, &deps).expect("generated");
 
     let dir = rust_runner::package_dir(at);
-    let built = Command::new("cargo")
-        .args(["build", "--release", "--quiet"])
-        .current_dir(&dir)
-        .output()
-        .expect("cargo runs");
+    let mut build = Command::new("cargo");
+    build.args(["build", "--release", "--quiet"]).current_dir(&dir);
+    if lines_wanted() {
+        build.env("RUSTFLAGS", "-C instrument-coverage");
+    }
+    let built = build.output().expect("cargo runs");
     assert!(
         built.status.success(),
         "the generated Rust runner did not compile:\n{}",
@@ -230,11 +250,24 @@ fn shared_rust_runner(req: &str, clause: &str, wanted: &CallSpec) -> Option<Runn
     static BUILT: OnceLock<std::sync::Mutex<Option<RunnerSpec>>> = OnceLock::new();
     let cache = BUILT.get_or_init(|| std::sync::Mutex::new(None));
     let mut cache = cache.lock().expect("the runner cache is not poisoned");
+    // Measuring lines, each op's runner runs in a directory of its own, where
+    // the instrumented process leaves its profile on exit.
+    let placed = |spec: &RunnerSpec| {
+        if !lines_wanted() {
+            return spec.clone();
+        }
+        let dir = lines_dir(&op);
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).expect("the profile directory can be made");
+        RunnerSpec { cmd: spec.cmd.clone(), cwd: Some(dir) }
+    };
     if let Some(spec) = cache.as_ref() {
-        return Some(spec.clone());
+        return Some(placed(spec));
     }
 
-    let shared = project_root().join("target").join("tracelean-drt-rust");
+    let shared = project_root()
+        .join("target")
+        .join(if lines_wanted() { "tracelean-drt-rust-lines" } else { "tracelean-drt-rust" });
     // Which ops the one Rust process carries is `shared_runners`' decision, not
     // a filter written here: one process per language, every op of it once.
     use tracelean_core::drt::protocol::{shared_runners, Placed};
@@ -270,7 +303,7 @@ fn shared_rust_runner(req: &str, clause: &str, wanted: &CallSpec) -> Option<Runn
         }
     };
     *cache = Some(spec.clone());
-    Some(spec)
+    Some(placed(&spec))
 }
 
 /// Generate the TypeScript side for one binding.

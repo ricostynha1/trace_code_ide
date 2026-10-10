@@ -1,0 +1,30 @@
+{
+  "key": {
+    "reqId": "REQ-LOOK",
+    "clause": "row_fits",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 75,
+      "cases": 2000,
+      "op": "REQ-LOOK.row_fits"
+    }
+  },
+  "linkHash": "36b6f87bf56a8d33",
+  "inputs": [
+    [
+      "implementation",
+      "8cab2dd8616ea425"
+    ],
+    [
+      "model",
+      "bd0db8ae98423fc2"
+    ],
+    [
+      "requirement",
+      "844469489f3a4c0f"
+    ]
+  ]
+}

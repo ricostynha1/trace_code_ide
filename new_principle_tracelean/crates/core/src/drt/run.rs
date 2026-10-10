@@ -32,7 +32,8 @@ pub const REPLY_TIMEOUT: Duration = Duration::from_secs(120);
 /// forever on a runner that never answers.
 pub struct Runner {
     child: Child,
-    stdin: ChildStdin,
+    /// Taken when the runner is let go, so that its input ends.
+    stdin: Option<ChildStdin>,
     lines: Receiver<std::io::Result<String>>,
 }
 
@@ -72,7 +73,7 @@ impl Runner {
                 }
             }
         });
-        Ok(Runner { child, stdin, lines })
+        Ok(Runner { child, stdin: Some(stdin), lines })
     }
 
     /// Ask one case and read one reply.
@@ -82,7 +83,10 @@ impl Runner {
     /// here is the IO and turning that conclusion into this function's result.
     pub fn ask(&mut self, case: u64, op: &str, input: &Value) -> Result<Reply, RunnerError> {
         let line = protocol::case_line(case, op.to_string(), input.clone());
-        let written = writeln!(self.stdin, "{line}").and_then(|()| self.stdin.flush());
+        let written = match self.stdin.as_mut() {
+            Some(stdin) => writeln!(stdin, "{line}").and_then(|()| stdin.flush()),
+            None => Err(std::io::Error::new(std::io::ErrorKind::BrokenPipe, "the runner was let go")),
+        };
         let (event, reply) = match written {
             Err(e) => (Event::PipeBroke { reason: e.to_string() }, String::new()),
             Ok(()) => match self.lines.recv_timeout(REPLY_TIMEOUT) {
@@ -97,7 +101,18 @@ impl Runner {
 }
 
 impl Drop for Runner {
+    /// Its input is closed first, so a runner that reads to the end exits on
+    /// its own — an instrumented one writes its profile only then — and is
+    /// killed only if it has not after two hundred short waits: a count, not a
+    /// clock, so nothing here reads the time (`ARCH-DETERMINISM`).
     fn drop(&mut self) {
+        drop(self.stdin.take());
+        for _ in 0..200 {
+            if let Ok(Some(_)) = self.child.try_wait() {
+                return;
+            }
+            std::thread::sleep(Duration::from_millis(10));
+        }
         let _ = self.child.kill();
         let _ = self.child.wait();
     }
