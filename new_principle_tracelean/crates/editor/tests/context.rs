@@ -102,6 +102,7 @@ fn here(editor: &mut Editor, action: &str, target: Option<&str>) {
 /// @tests REQ-CONTEXT.affected_tests
 /// @tests REQ-CONTEXT.person_chooses
 /// @tests REQ-CONTEXT.copied_not_sent
+/// @structural REQ-CONTEXT.copied_not_sent reason="an absence: the context goes to the clipboard and nowhere else, which no function from data to data can express and the architecture checks read off the tree"
 #[test]
 fn a_context_is_chosen_part_by_part_and_copied() {
     let root = project(TREE);

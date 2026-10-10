@@ -26,6 +26,7 @@ fn stale(dir: &PathBuf) -> (i32, String) {
 /// zero.
 ///
 /// @tests REQ-STALE.listed_for_a_script
+/// @structural REQ-STALE.listed_for_a_script reason="a claim about a command's process exit status, which is an effect of the shell rather than a value any function computes"
 #[test]
 fn the_exit_status_says_whether_anything_must_be_redone() {
     let dir = project("one");
