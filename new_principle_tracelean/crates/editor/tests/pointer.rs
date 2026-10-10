@@ -1277,10 +1277,15 @@ fn a_search_lists_every_line_that_holds_the_text() {
 
 /// The page itself, in headless Chrome: what a click, a drag or a right-click
 /// sends, and how the page is laid out and marked — each place in a region of
-/// its own, the focused pane marked — under the shipped theme.
+/// its own, the focused pane marked, every region and control named for a
+/// screen reader — under the shipped theme; then every journey of
+/// `tests/journeys.json` against a real editor, as the terminal replays them.
 ///
+/// @tests REQ-LOOK.journeys_replay
 /// @tests REQ-LOOK.regions_present
 /// @tests REQ-LOOK.focus_visible
+/// @tests REQ-LOOK.accessible_structure
+/// @structural REQ-LOOK.accessible_structure reason="a claim about the accessibility tree a browser builds from the page; no value either side computes"
 #[test]
 #[ignore = "builds the page and runs it in Chrome with node; run with --ignored"]
 fn the_page_in_a_browser_passes_its_checks() {
@@ -1296,4 +1301,5 @@ fn the_page_in_a_browser_passes_its_checks() {
     };
     run("web/build.mjs");
     run("web/test/pointer.mjs");
+    run("web/test/journeys.mjs");
 }

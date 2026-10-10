@@ -277,7 +277,48 @@ fn bytes_for(key: &str) -> String {
         "Enter" => "\r".to_string(),
         "Tab" => "\t".to_string(),
         "Backspace" => "\u{7f}".to_string(),
+        // Ctrl and a letter: the letter's place in the alphabet, as a
+        // terminal sends it.
+        held if held.len() == 3 && held.starts_with("C-") => {
+            let letter = held.as_bytes()[2].to_ascii_lowercase();
+            ((letter - b'a' + 1) as char).to_string()
+        }
         other => other.to_string(),
+    }
+}
+
+/// Every journey a person's task is written as, replayed here as keys into a
+/// real terminal; the page replays the same file (`web/test/journeys.mjs`).
+/// A journey that passes in one frontend and fails in the other is the
+/// finding.
+///
+/// @tests REQ-LOOK.journeys_replay
+/// @structural REQ-LOOK.journeys_replay reason="a claim that two running frontends answer the same keys alike, read off their screens; no value either side computes"
+#[test]
+fn every_journey_replays_in_the_terminal() {
+    let written: serde_json::Value =
+        serde_json::from_str(&std::fs::read_to_string(project_root().join("tests/journeys.json")).unwrap()).unwrap();
+    let journeys = written["journeys"].as_array().expect("a list of journeys");
+    assert!(journeys.len() >= 3, "too few journeys to say much");
+    for journey in journeys {
+        let name = journey["name"].as_str().unwrap_or("?");
+        let mut terminal = open();
+        let mut screen = terminal.screen();
+        for (at, step) in journey["steps"].as_array().unwrap().iter().enumerate() {
+            if let Some(keys) = step["keys"].as_array() {
+                for key in keys {
+                    screen = terminal.press(&bytes_for(key.as_str().unwrap()));
+                }
+            } else if let Some(text) = step["type"].as_str() {
+                screen = terminal.press(text);
+            } else if let Some(text) = step["see"].as_str() {
+                assert!(shown(&screen).contains(text), "`{name}`, step {at}: `{text}` is not on the screen:\n{}", shown(&screen));
+            } else if let Some(text) = step["not"].as_str() {
+                assert!(!shown(&screen).contains(text), "`{name}`, step {at}: `{text}` is on the screen:\n{}", shown(&screen));
+            } else {
+                panic!("`{name}`, step {at}: a step this suite cannot take: {step}");
+            }
+        }
     }
 }
 

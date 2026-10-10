@@ -97,9 +97,15 @@ looking at the window would notice. That is the blind spot.
    the screen a row; the last three stations off the edge (now
    `produce::menu_row`, `REQ-LOOK.row_fits`); the status line's reverse video
    undone by its first colour (`draw::painted_with`).
-3. Page description over DevTools; the same checks; `axe` scan.
-4. `focus_visible` on the page, `operable_both_ways`.
-5. Journeys shared by both frontends.
+3. Done: the page over DevTools (`pointer.mjs`, run from cargo): regions,
+   focus, and `accessible_structure` from Chrome's own accessibility tree
+   instead of `axe` (no dependency). Using the shipped theme found the caret
+   catching clicks. Open: role colours on the page (see review points).
+4. `operable_both_ways`: already the model-level pair `REQ-MYTH.actions_reachable`
+   (keys) and `REQ-ACT.everything_is_offered` (pointer, with keys); left there.
+5. Done: `tests/journeys.json` (four tasks), replayed in the terminal
+   (`driving.rs`) and in the page against a real editor (`journeys.mjs`, run
+   from cargo); all pass in both. Add a journey with each new task.
 
 ## Sources consulted
 

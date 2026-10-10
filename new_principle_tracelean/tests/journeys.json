@@ -1,0 +1,39 @@
+{
+  "comment": "A person's tasks, written once and replayed on the demo tree by every frontend (REQ-LOOK.journeys_replay): crates/tui/tests/driving.rs and web/test/journeys.mjs. A step is keys (names as the keymap spells them, C- for Ctrl), text typed, or what must (see) or must not (not) be visible after it.",
+  "journeys": [
+    {
+      "name": "the leader menu opens and Escape closes it",
+      "steps": [
+        { "keys": ["Space"] },
+        { "see": "panes and stations" },
+        { "keys": ["Escape"] },
+        { "not": "panes and stations" }
+      ]
+    },
+    {
+      "name": "a file opens from a few letters of its name",
+      "steps": [
+        { "not": "to_fahrenheit" },
+        { "keys": ["C-p"] },
+        { "type": "cels" },
+        { "keys": ["Enter"] },
+        { "see": "to_fahrenheit" }
+      ]
+    },
+    {
+      "name": "the requirements station lists the demo's requirements",
+      "steps": [
+        { "keys": ["Space", "w", "t", "r"] },
+        { "see": "REQ-THERMO" }
+      ]
+    },
+    {
+      "name": "the sandbox station calls its figure an estimate",
+      "steps": [
+        { "keys": ["Space", "w", "t", "s"] },
+        { "see": "estimated" },
+        { "not": "billed" }
+      ]
+    }
+  ]
+}

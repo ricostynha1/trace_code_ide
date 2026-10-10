@@ -531,6 +531,21 @@ try {
     focusedMark.length === 1 && marks.filter((m) => !m.focused).every((m) => m.mark !== focusedMark[0]),
     JSON.stringify(marks));
 
+  // What a screen reader is given (`REQ-LOOK.accessible_structure`), from
+  // Chrome's own accessibility tree: every region a named landmark, every
+  // control named. No scanner to install; the browser already computes this.
+  await cdp.send("Accessibility.enable");
+  const { nodes } = await cdp.send("Accessibility.getFullAXTree");
+  const hasName = (n) => (n.name?.value ?? "").trim().length > 0;
+  const role = (n) => n.role?.value;
+  const landmarks = nodes.filter((n) => ["navigation", "main", "contentinfo"].includes(role(n)) && !n.ignored);
+  const unnamedLandmarks = landmarks.filter((n) => role(n) !== "contentinfo" && !hasName(n)).map(role);
+  const controls = nodes.filter((n) => ["button", "link", "textbox", "checkbox", "menuitem", "tab"].includes(role(n)) && !n.ignored);
+  const unnamedControls = controls.filter((n) => !hasName(n)).map((n) => `${role(n)}#${n.backendDOMNodeId}`);
+  check("every region is a named landmark and every control has a name",
+    landmarks.length >= 4 && unnamedLandmarks.length === 0 && controls.length > 0 && unnamedControls.length === 0,
+    JSON.stringify({ landmarks: landmarks.map((n) => [role(n), n.name?.value]), unnamedLandmarks, unnamedControls }));
+
   // A wheel over the document scrolls it.
   await reset();
   await cdp.send("Input.dispatchMouseEvent", { type: "mouseWheel", x: w.x, y: w.y, deltaX: 0, deltaY: 120 });
