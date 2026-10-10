@@ -1,0 +1,30 @@
+{
+  "key": {
+    "reqId": "REQ-MIRROR",
+    "clause": "binary_handled",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 131,
+      "cases": 2000,
+      "op": "REQ-MIRROR.binary_handled"
+    }
+  },
+  "linkHash": "b285e01e930aa0d0",
+  "inputs": [
+    [
+      "implementation",
+      "6a1f2d73bdec5c52+d24637c22d82b4f8+eab7e05d07fe945d+f06c8e0078658342"
+    ],
+    [
+      "model",
+      "39f3f791673f1494"
+    ],
+    [
+      "requirement",
+      "e91dac2c393d6e6d"
+    ]
+  ]
+}

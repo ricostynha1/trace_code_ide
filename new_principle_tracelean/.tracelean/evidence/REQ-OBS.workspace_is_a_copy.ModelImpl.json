@@ -1,0 +1,30 @@
+{
+  "key": {
+    "reqId": "REQ-OBS",
+    "clause": "workspace_is_a_copy",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 53,
+      "cases": 2000,
+      "op": "REQ-OBS.workspace_is_a_copy"
+    }
+  },
+  "linkHash": "5e07cf5c1b7fc708",
+  "inputs": [
+    [
+      "implementation",
+      "115206a4728888aa+28d8b7adc3780922+44c3fd964d2f3be8+ae68f582cfb99e95+c098d328e9037df7+e3683121244bcfd6+eab7e05d07fe945d"
+    ],
+    [
+      "model",
+      "eb2e8236a31592d3"
+    ],
+    [
+      "requirement",
+      "27e2158f18bbd5a4"
+    ]
+  ]
+}

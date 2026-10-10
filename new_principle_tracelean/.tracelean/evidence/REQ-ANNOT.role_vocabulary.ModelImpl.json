@@ -1,0 +1,30 @@
+{
+  "key": {
+    "reqId": "REQ-ANNOT",
+    "clause": "role_vocabulary",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 44,
+      "cases": 3000,
+      "op": "REQ-ANNOT.totality"
+    }
+  },
+  "linkHash": "3ddb1c168442af92",
+  "inputs": [
+    [
+      "implementation",
+      "1762366bf6c3d5de"
+    ],
+    [
+      "model",
+      "c3ada71c9c444a58"
+    ],
+    [
+      "requirement",
+      "1a41816762f47d62"
+    ]
+  ]
+}

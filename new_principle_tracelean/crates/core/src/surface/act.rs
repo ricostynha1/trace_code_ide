@@ -230,6 +230,7 @@ fn name_at(focus: &Focus, w: &Workspace) -> Option<String> {
 /// @implements REQ-ACT.edits_are_commands
 /// @implements REQ-ACT.dispatch_is_pure
 /// @drt REQ-ACT.action_to_intent
+/// @drt REQ-ACT.one_path
 /// @drt REQ-ACT.focus_is_carried
 /// @drt REQ-ACT.missing_target_is_refused
 /// @drt REQ-ACT.edits_are_commands

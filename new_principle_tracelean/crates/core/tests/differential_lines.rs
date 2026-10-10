@@ -187,4 +187,21 @@ fn generation_reaches_shared_unrun_and_partial_lines() {
         }
     }
     support::covered("REQ-LINECOV.clause_summary", &[("some lines run and some not", partial), ("no executable line inside", empty)]);
+
+    let mut rng = gen::Rng::new(333);
+    let (mut same, mut other) = (0u64, 0u64);
+    for _ in 0..3_000 {
+        let v = gen::value(&Schema::Struct { fields: measured() }, &mut rng);
+        if let Some(at) = v["measured"].as_array() {
+            if at[0] == v["hash"] {
+                same += 1;
+            } else {
+                other += 1;
+            }
+        }
+    }
+    support::covered(
+        "REQ-LINECOV.stale_hidden",
+        &[("measured against the file's text", same), ("measured against other text", other)],
+    );
 }

@@ -1,0 +1,30 @@
+{
+  "key": {
+    "reqId": "REQ-REQDOC",
+    "clause": "clause_addressable",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 57,
+      "cases": 2000,
+      "op": "REQ-REQDOC.clause_addressable"
+    }
+  },
+  "linkHash": "95b2a13fe5080ef6",
+  "inputs": [
+    [
+      "implementation",
+      "65591b5b4730dea1+a77b3e4f2b79f845+ad905dbecf7bc306"
+    ],
+    [
+      "model",
+      "5a549cc79c8f08e0"
+    ],
+    [
+      "requirement",
+      "a9b9aaf25979fc06"
+    ]
+  ]
+}

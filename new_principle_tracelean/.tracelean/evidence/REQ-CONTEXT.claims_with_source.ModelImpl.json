@@ -1,0 +1,30 @@
+{
+  "key": {
+    "reqId": "REQ-CONTEXT",
+    "clause": "claims_with_source",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 102,
+      "cases": 2000,
+      "op": "REQ-CONTEXT.claims_with_source"
+    }
+  },
+  "linkHash": "9440918c72e9c652",
+  "inputs": [
+    [
+      "implementation",
+      "2167c2cffc94210d+31ee6e8afa3f5ab4"
+    ],
+    [
+      "model",
+      "7dad820b122f3e63"
+    ],
+    [
+      "requirement",
+      "0cdb8d5aac5ccffb"
+    ]
+  ]
+}

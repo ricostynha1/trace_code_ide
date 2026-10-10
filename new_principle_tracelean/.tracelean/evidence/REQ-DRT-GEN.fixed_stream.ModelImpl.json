@@ -1,0 +1,30 @@
+{
+  "key": {
+    "reqId": "REQ-DRT-GEN",
+    "clause": "fixed_stream",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 3,
+      "cases": 2000,
+      "op": "REQ-DRT-GEN.fixed_stream"
+    }
+  },
+  "linkHash": "09e38955547bb852",
+  "inputs": [
+    [
+      "implementation",
+      "3370af9d15abc0a1+ba9be9e1ff4796c9"
+    ],
+    [
+      "model",
+      "9ef66c65431edf29"
+    ],
+    [
+      "requirement",
+      "71cfc1f12eb65e05"
+    ]
+  ]
+}

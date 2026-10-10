@@ -203,13 +203,22 @@ fn claims_in() -> BTreeMap<String, Schema> {
     fields
 }
 
+/// Claims weighted towards implementing and testing, the two roles the tests
+/// a change may break are about, so an implementing item with a symbol and a
+/// test file nobody claimed meet often.
 fn affected_in() -> BTreeMap<String, Schema> {
     let mut fields = claims_in();
+    let Schema::Struct { fields: mut one } = claim() else { unreachable!() };
+    one.insert("role".to_string(), words(&["implements", "implements", "implements", "tests", "tests", "models"]));
+    one.insert("req".to_string(), words(&["REQ-A", "REQ-A", "REQ-B"]));
+    one.insert("symbol".to_string(), Schema::Option { inner: Box::new(words(&["f", "m::f", "a::b::h"])) });
+    fields.insert("claims".to_string(), Schema::List { inner: Box::new(Schema::Struct { fields: one }), max_len: Some(6) });
+    fields.insert("id".to_string(), words(&["REQ-A", "REQ-A", "REQ-A", "REQ-C"]));
     fields.insert("down".to_string(), Schema::List { inner: Box::new(words(&["REQ-A", "REQ-B"])), max_len: Some(2) });
     let file = Schema::Tuple {
         items: vec![
-            words(&["tests/t.rs", "src/a.rs", "tests/u.rs", "src/test_x.rs"]),
-            words(&["f()", "x\r\nf\n", "fn g() { h(); }\nf\n\n", "", "fg\nf f\n", "// f\r\n"]),
+            words(&["tests/t.rs", "src/a.rs", "tests/u.rs", "tests/v.rs", "src/test_x.rs"]),
+            words(&["f()", "x\r\nf\n", "fn g() { h(); }\nf\n\n", "", "fg\nf f\n", "// f\r\n", "h(1)\n"]),
         ],
     };
     fields.insert("files".to_string(), Schema::List { inner: Box::new(file), max_len: Some(3) });
@@ -328,5 +337,81 @@ fn generation_reaches_chains_cycles_and_every_kind_of_choice() {
     support::covered(
         "REQ-CONTEXT.part_named",
         &[("a label that names a part", named), ("a name that is no part", unnamed)],
+    );
+}
+
+/// The shell's choices, the claims on a target and the tests a change may
+/// break reach what their floors name.
+///
+/// @tests REQ-DRT-COVER.law_coverage
+#[test]
+fn generation_reaches_shell_lists_shared_items_and_unclaimed_uses() {
+    use tracelean_core::surface::context::{affected, claims_on, shell_parts, Claim, ShellParts};
+
+    let mut rng = gen::Rng::new(101);
+    let (mut nothing, mut list, mut unknown) = (0u64, 0u64, 0u64);
+    for _ in 0..2_000 {
+        let value = gen::value(&Schema::Struct { fields: shell_choice() }, &mut rng);
+        let parts = value["parts"].as_str().map(str::to_string);
+        if parts.is_none() {
+            nothing += 1;
+        }
+        match shell_parts(parts.clone()) {
+            ShellParts::Unknown { .. } => unknown += 1,
+            ShellParts::Chosen { .. } if parts.is_some() => list += 1,
+            ShellParts::Chosen { .. } => {}
+        }
+    }
+    support::covered(
+        "REQ-CONTEXT.from_the_shell",
+        &[("nothing asked for", nothing), ("a list of labels", list), ("a name that is no part", unknown)],
+    );
+
+    let mut rng = gen::Rng::new(102);
+    let (mut asked, mut shared) = (0u64, 0u64);
+    for _ in 0..2_000 {
+        let value = gen::value(&Schema::Struct { fields: claims_in() }, &mut rng);
+        let claims: Vec<Claim> = serde_json::from_value(value["claims"].clone()).expect("claims");
+        let id = value["id"].as_str().expect("an id").to_string();
+        let clause = value["clause"].as_str().map(str::to_string);
+        if clause.is_some() {
+            asked += 1;
+        }
+        let on: Vec<&Claim> =
+            claims.iter().filter(|c| c.req == id && (clause.is_none() || c.clause == clause)).collect();
+        if on.iter().enumerate().any(|(n, c)| on[..n].iter().any(|d| d.ident == c.ident)) {
+            shared += 1;
+        }
+        let _ = claims_on(claims, id, clause);
+    }
+    support::covered(
+        "REQ-CONTEXT.claims_with_source",
+        &[("a clause asked for", asked), ("two claims on one item", shared)],
+    );
+
+    let mut rng = gen::Rng::new(103);
+    let (mut named, mut used) = (0u64, 0u64);
+    for _ in 0..2_000 {
+        let value = gen::value(&Schema::Struct { fields: affected_in() }, &mut rng);
+        let claims: Vec<Claim> = serde_json::from_value(value["claims"].clone()).expect("claims");
+        let down: Vec<String> = serde_json::from_value(value["down"].clone()).expect("down");
+        let files: Vec<(String, String)> = serde_json::from_value(value["files"].clone()).expect("files");
+        let items = affected(
+            claims,
+            value["id"].as_str().expect("an id").to_string(),
+            value["clause"].as_str().map(str::to_string),
+            down,
+            files,
+        );
+        if items.iter().any(|i| i.role == "tests") {
+            named += 1;
+        }
+        if items.iter().any(|i| i.role == "uses") {
+            used += 1;
+        }
+    }
+    support::covered(
+        "REQ-CONTEXT.affected_tests",
+        &[("a test that names an implementing item", named), ("a line of an unclaimed test file", used)],
     );
 }

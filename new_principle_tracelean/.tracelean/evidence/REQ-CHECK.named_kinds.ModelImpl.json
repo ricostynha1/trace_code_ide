@@ -1,0 +1,30 @@
+{
+  "key": {
+    "reqId": "REQ-CHECK",
+    "clause": "named_kinds",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 42,
+      "cases": 1000,
+      "op": "REQ-CHECK.named_kinds"
+    }
+  },
+  "linkHash": "3be519ccba8e15cc",
+  "inputs": [
+    [
+      "implementation",
+      "1f753ffc5371c0d8+577b441cd26d2359"
+    ],
+    [
+      "model",
+      "877ede27519bdf01"
+    ],
+    [
+      "requirement",
+      "825b30a7a6617da1"
+    ]
+  ]
+}

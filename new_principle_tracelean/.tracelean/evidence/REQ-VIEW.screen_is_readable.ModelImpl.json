@@ -1,0 +1,30 @@
+{
+  "key": {
+    "reqId": "REQ-VIEW",
+    "clause": "screen_is_readable",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 48,
+      "cases": 2000,
+      "op": "REQ-VIEW.screen_is_readable"
+    }
+  },
+  "linkHash": "5d54cd203626f9ee",
+  "inputs": [
+    [
+      "implementation",
+      "2eb0877a0ce2bff0+5c285ce7e09ab6a0+5f95f03d763162de+7bbbfa4d44db4014+a931091c2c8f9b58+cf3e6cd9677bc49c"
+    ],
+    [
+      "model",
+      "7aca3c2e268cc9df"
+    ],
+    [
+      "requirement",
+      "f1928dcc07501fc7"
+    ]
+  ]
+}

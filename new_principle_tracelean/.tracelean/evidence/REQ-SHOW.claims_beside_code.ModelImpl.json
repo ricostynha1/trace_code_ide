@@ -1,0 +1,30 @@
+{
+  "key": {
+    "reqId": "REQ-SHOW",
+    "clause": "claims_beside_code",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 404,
+      "cases": 1500,
+      "op": "REQ-SHOW.claims_beside_code"
+    }
+  },
+  "linkHash": "1ddbafd50733b028",
+  "inputs": [
+    [
+      "implementation",
+      "48b2e78909431806+696611e4d66eff5b"
+    ],
+    [
+      "model",
+      "75880f0a18b9bc63"
+    ],
+    [
+      "requirement",
+      "eda3abed10e8803b"
+    ]
+  ]
+}

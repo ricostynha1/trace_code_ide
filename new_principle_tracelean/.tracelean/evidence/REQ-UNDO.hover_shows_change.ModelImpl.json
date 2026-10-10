@@ -1,0 +1,30 @@
+{
+  "key": {
+    "reqId": "REQ-UNDO",
+    "clause": "hover_shows_change",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 304,
+      "cases": 2000,
+      "op": "REQ-UNDO.hover_shows_change"
+    }
+  },
+  "linkHash": "4072bc77b96be595",
+  "inputs": [
+    [
+      "implementation",
+      "686d9a76df2b2a89+99640425d4fc436c"
+    ],
+    [
+      "model",
+      "6b637b2e9eb085b9"
+    ],
+    [
+      "requirement",
+      "9747a710917660e5"
+    ]
+  ]
+}

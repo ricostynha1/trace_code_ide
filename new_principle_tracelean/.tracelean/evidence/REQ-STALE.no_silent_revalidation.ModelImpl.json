@@ -1,0 +1,30 @@
+{
+  "key": {
+    "reqId": "REQ-STALE",
+    "clause": "no_silent_revalidation",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 37,
+      "cases": 2000,
+      "op": "REQ-STALE.no_silent_revalidation"
+    }
+  },
+  "linkHash": "b97df4b0429bf6fe",
+  "inputs": [
+    [
+      "implementation",
+      "269aa8bb52b09ba5+6fbe524166b5a1a9+d478854f081500ff+e04c8dc3a4904487+ee293784042f9886"
+    ],
+    [
+      "model",
+      "8315ef0545f5edc0"
+    ],
+    [
+      "requirement",
+      "e40d913ef1d87a05"
+    ]
+  ]
+}

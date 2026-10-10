@@ -1,0 +1,30 @@
+{
+  "key": {
+    "reqId": "REQ-CHECK",
+    "clause": "qualifier_soundness",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 43,
+      "cases": 1000,
+      "op": "REQ-CHECK.qualifier_soundness"
+    }
+  },
+  "linkHash": "b2023d18076f8f73",
+  "inputs": [
+    [
+      "implementation",
+      "7434c356a6f15daf"
+    ],
+    [
+      "model",
+      "3f4f7a352fb0dd9a"
+    ],
+    [
+      "requirement",
+      "26bda6df7eef35f9"
+    ]
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "key": {
+    "reqId": "REQ-DRT-COVER",
+    "clause": "waiver_unused_reported",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 131,
+      "cases": 2000,
+      "op": "REQ-DRT-COVER.waiver_unused_reported"
+    }
+  },
+  "linkHash": "9f1cb9798881a1d4",
+  "inputs": [
+    [
+      "implementation",
+      "00c81d1ac826720b+21bc1a10c74eb8fb"
+    ],
+    [
+      "model",
+      "9fe6cc24587bea2b"
+    ],
+    [
+      "requirement",
+      "242b0fc43375c93b"
+    ]
+  ]
+}

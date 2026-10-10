@@ -1,0 +1,30 @@
+{
+  "key": {
+    "reqId": "REQ-STALE",
+    "clause": "scanner_never_writes",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 31,
+      "cases": 2000,
+      "op": "REQ-STALE.scanner_never_writes"
+    }
+  },
+  "linkHash": "11c8f251248ebdab",
+  "inputs": [
+    [
+      "implementation",
+      "4057a1168eb3c619+cf1a16ed7bed3a86"
+    ],
+    [
+      "model",
+      "43f9e30e67d7bbde"
+    ],
+    [
+      "requirement",
+      "e77bf829f5e17ba7"
+    ]
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "key": {
+    "reqId": "REQ-SELFWRITE",
+    "clause": "no_deadlock",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 38,
+      "cases": 2000,
+      "op": "REQ-SELFWRITE.no_deadlock"
+    }
+  },
+  "linkHash": "718c06a69adc73be",
+  "inputs": [
+    [
+      "implementation",
+      "1b6d3c595d44e7fa+708f6e092ee4dbdd"
+    ],
+    [
+      "model",
+      "cbdd35cfc0552073"
+    ],
+    [
+      "requirement",
+      "c94b6e575a75eac2"
+    ]
+  ]
+}

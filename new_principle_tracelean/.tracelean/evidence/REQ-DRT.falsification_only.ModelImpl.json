@@ -1,0 +1,30 @@
+{
+  "key": {
+    "reqId": "REQ-DRT",
+    "clause": "falsification_only",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 89,
+      "cases": 200,
+      "op": "REQ-DRT.falsification_only"
+    }
+  },
+  "linkHash": "066bd36ae9d4f984",
+  "inputs": [
+    [
+      "implementation",
+      "280ef7392484e944+52cc6a97eaf32483+743f5329d73dc304+fe8b39b5433b1ee4"
+    ],
+    [
+      "model",
+      "e4fc3c21dd99ab63"
+    ],
+    [
+      "requirement",
+      "6a52f4f684e8bff3"
+    ]
+  ]
+}

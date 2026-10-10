@@ -1,0 +1,30 @@
+{
+  "key": {
+    "reqId": "REQ-LINECOV",
+    "clause": "stale_hidden",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 333,
+      "cases": 3000,
+      "op": "REQ-LINECOV.stale_hidden"
+    }
+  },
+  "linkHash": "d3b2fda37d785990",
+  "inputs": [
+    [
+      "implementation",
+      "1fd863ef196cad49+69982aa59d447ba5"
+    ],
+    [
+      "model",
+      "e409b509c5aaff77"
+    ],
+    [
+      "requirement",
+      "88941d844a9dde94"
+    ]
+  ]
+}

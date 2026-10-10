@@ -1,0 +1,30 @@
+{
+  "key": {
+    "reqId": "REQ-ANNOT",
+    "clause": "totality",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 44,
+      "cases": 3000,
+      "op": "REQ-ANNOT.totality"
+    }
+  },
+  "linkHash": "125b0b4b7d2394c8",
+  "inputs": [
+    [
+      "implementation",
+      "24f9377584978d6c+f1dd0b38f925a379"
+    ],
+    [
+      "model",
+      "c3ada71c9c444a58"
+    ],
+    [
+      "requirement",
+      "e714daa4037e5f05"
+    ]
+  ]
+}

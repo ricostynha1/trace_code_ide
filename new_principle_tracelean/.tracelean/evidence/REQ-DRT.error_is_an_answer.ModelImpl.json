@@ -1,0 +1,30 @@
+{
+  "key": {
+    "reqId": "REQ-DRT",
+    "clause": "error_is_an_answer",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 83,
+      "cases": 2000,
+      "op": "REQ-DRT.error_is_an_answer"
+    }
+  },
+  "linkHash": "203b59e9315af0f2",
+  "inputs": [
+    [
+      "implementation",
+      "0d3bdd2024dde50e+47bbe6a7d9f8478d+b2a862f4fe5fdd31"
+    ],
+    [
+      "model",
+      "0bb14760b8406bd0"
+    ],
+    [
+      "requirement",
+      "f831e15726a38ec2"
+    ]
+  ]
+}

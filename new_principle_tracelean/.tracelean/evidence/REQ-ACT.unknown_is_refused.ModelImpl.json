@@ -1,0 +1,30 @@
+{
+  "key": {
+    "reqId": "REQ-ACT",
+    "clause": "unknown_is_refused",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 89,
+      "cases": 2000,
+      "op": "REQ-ACT.unknown_is_refused"
+    }
+  },
+  "linkHash": "521865500fb480da",
+  "inputs": [
+    [
+      "implementation",
+      "0408c11f8f2edb60+e97d177bdd02cd31+ee3e291d503d212f"
+    ],
+    [
+      "model",
+      "71f2e2d445bdb099"
+    ],
+    [
+      "requirement",
+      "4271d72c41e96d27"
+    ]
+  ]
+}

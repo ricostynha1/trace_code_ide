@@ -1,0 +1,30 @@
+{
+  "key": {
+    "reqId": "REQ-REQDOC",
+    "clause": "id_unique",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 109,
+      "cases": 2000,
+      "op": "REQ-REQDOC.id_unique"
+    }
+  },
+  "linkHash": "7feda12bdb905a57",
+  "inputs": [
+    [
+      "implementation",
+      "053735024f99f744+68a0d1042f6b4944"
+    ],
+    [
+      "model",
+      "ed7528f9e644fd0b"
+    ],
+    [
+      "requirement",
+      "05bd932f68ea23ff"
+    ]
+  ]
+}

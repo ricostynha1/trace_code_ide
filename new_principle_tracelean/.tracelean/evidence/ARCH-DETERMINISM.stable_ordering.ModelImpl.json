@@ -1,0 +1,30 @@
+{
+  "key": {
+    "reqId": "ARCH-DETERMINISM",
+    "clause": "stable_ordering",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 12,
+      "cases": 2000,
+      "op": "REQ-LOCK.deterministic_bytes"
+    }
+  },
+  "linkHash": "5f65bbc2094725ce",
+  "inputs": [
+    [
+      "implementation",
+      "14266a3f399a6f46+35fbd7fd6dec384d+4729e32663cd848d+6a54a220f2f21645+6dbb5825145b9a7f+714e3ce08cb8a39a+7f96c42ff8e2c3ef+e8af451290160611"
+    ],
+    [
+      "model",
+      "a105d7f65b4db0a6"
+    ],
+    [
+      "requirement",
+      "9a2a6e477c8d773d"
+    ]
+  ]
+}

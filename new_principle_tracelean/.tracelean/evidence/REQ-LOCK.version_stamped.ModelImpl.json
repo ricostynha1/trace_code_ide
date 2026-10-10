@@ -1,0 +1,30 @@
+{
+  "key": {
+    "reqId": "REQ-LOCK",
+    "clause": "version_stamped",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 11,
+      "cases": 2000,
+      "op": "REQ-LOCK.version_stamped"
+    }
+  },
+  "linkHash": "4d5be1626f5e3ab0",
+  "inputs": [
+    [
+      "implementation",
+      "115866a592be108a+3bc13a9519aaf3ff+ebf559b8c2af92bf"
+    ],
+    [
+      "model",
+      "d8c49421dbdd21ef"
+    ],
+    [
+      "requirement",
+      "454bfc5f42af7e73"
+    ]
+  ]
+}

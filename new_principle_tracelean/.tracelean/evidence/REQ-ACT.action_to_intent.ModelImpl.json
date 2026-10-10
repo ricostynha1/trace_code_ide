@@ -1,0 +1,30 @@
+{
+  "key": {
+    "reqId": "REQ-ACT",
+    "clause": "action_to_intent",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 83,
+      "cases": 2000,
+      "op": "REQ-ACT.action_to_intent"
+    }
+  },
+  "linkHash": "5999d375102f7ca3",
+  "inputs": [
+    [
+      "implementation",
+      "08f6b323f2b1b27d+d58ed6a8bf877a2b+ee3e291d503d212f+f5c10804e0a2cea6"
+    ],
+    [
+      "model",
+      "71f2e2d445bdb099"
+    ],
+    [
+      "requirement",
+      "aab0062c5c79bfc2"
+    ]
+  ]
+}

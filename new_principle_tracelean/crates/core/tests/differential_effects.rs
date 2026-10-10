@@ -143,7 +143,6 @@ fn model_and_implementation_agree_on_what_a_run_got_wrong() {
 /// @tests REQ-DRT-COVER.law_coverage
 #[test]
 fn generation_reaches_every_violation() {
-    use tracelean_core::drt::coverage::{level, verdict, Floor, Observed, Verdict};
     use tracelean_core::drt::gen;
     use tracelean_core::observe::effects::{run_violations, RunWitness, Violation};
 
@@ -175,40 +174,25 @@ fn generation_reaches_every_violation() {
         }
     }
 
-    // Judged by the coverage module rather than by a row of assertions, so that
-    // this suite's floors are the same kind of thing every other suite's are
-    // and the vacuous case is named rather than described.
+    // The floors are the binding's (`.tracelean/drt.json`), so the coverage
+    // half of the op's evidence is recorded and the run can reach L3.
     //
     // `copy differs` and a wholly clean run both need a coincidence between two
     // independently generated snapshots, so they are rarer than the rest by the
     // shape of the generator rather than by the shape of the law. The floors
     // are what this seed honestly reaches; raising them would mean narrowing
     // the alphabet until the other five stopped occurring.
-    let floors = vec![
-        Floor { situation: "missing from copy".into(), at_least: 20 },
-        Floor { situation: "copy differs".into(), at_least: 10 },
-        Floor { situation: "extra in copy".into(), at_least: 20 },
-        Floor { situation: "protected root unseen".into(), at_least: 20 },
-        Floor { situation: "real tree changed".into(), at_least: 20 },
-        Floor { situation: "escaped".into(), at_least: 20 },
-        Floor { situation: "containment unreported".into(), at_least: 20 },
-        Floor { situation: "no violation at all".into(), at_least: 10 },
-    ];
-    let observed = vec![
-        Observed { situation: "missing from copy".into(), reached: missing },
-        Observed { situation: "copy differs".into(), reached: differs },
-        Observed { situation: "extra in copy".into(), reached: extra },
-        Observed { situation: "protected root unseen".into(), reached: protected_missing },
-        Observed { situation: "real tree changed".into(), reached: changed },
-        Observed { situation: "escaped".into(), reached: escaped },
-        Observed { situation: "containment unreported".into(), reached: unreported },
-        Observed { situation: "no violation at all".into(), reached: clean },
-    ];
-    let reached = verdict(floors, observed, Vec::new());
-    assert_eq!(reached, Verdict::Met, "the run did not reach its declared floor");
-    assert_eq!(
-        level(true, reached),
-        tracelean_core::evidence::Level::L3,
-        "a covered agreement is what L3 means"
+    support::covered(
+        "REQ-OBS.workspace_is_a_copy",
+        &[
+            ("missing from copy", missing),
+            ("copy differs", differs),
+            ("extra in copy", extra),
+            ("protected root unseen", protected_missing),
+            ("real tree changed", changed),
+            ("escaped", escaped),
+            ("containment unreported", unreported),
+            ("no violation at all", clean),
+        ],
     );
 }

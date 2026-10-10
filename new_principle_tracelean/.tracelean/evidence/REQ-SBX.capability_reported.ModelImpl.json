@@ -1,0 +1,30 @@
+{
+  "key": {
+    "reqId": "REQ-SBX",
+    "clause": "capability_reported",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 53,
+      "cases": 2000,
+      "op": "REQ-OBS.workspace_is_a_copy"
+    }
+  },
+  "linkHash": "8d913e324faf346f",
+  "inputs": [
+    [
+      "implementation",
+      "13cb3664ea5dbf3e+746bb0f6f13e75da+8e6207c74defad57"
+    ],
+    [
+      "model",
+      "72767d3112f95b11"
+    ],
+    [
+      "requirement",
+      "94b03c736989b208"
+    ]
+  ]
+}

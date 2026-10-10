@@ -1,0 +1,30 @@
+{
+  "key": {
+    "reqId": "REQ-ANNOT",
+    "clause": "unknown_role_named",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 44,
+      "cases": 3000,
+      "op": "REQ-ANNOT.totality"
+    }
+  },
+  "linkHash": "296d47cd9c86dcea",
+  "inputs": [
+    [
+      "implementation",
+      "24f9377584978d6c"
+    ],
+    [
+      "model",
+      "c3ada71c9c444a58"
+    ],
+    [
+      "requirement",
+      "66a0f9e812ee651d"
+    ]
+  ]
+}

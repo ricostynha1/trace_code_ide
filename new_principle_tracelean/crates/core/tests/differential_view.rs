@@ -381,6 +381,39 @@ fn model_and_implementation_agree_on_what_a_presented_row_reads_as() {
     );
 }
 
+/// A frontend that painted symbolically, checked against the buffer it was
+/// given: its rows read by their names, then compared as any rendering is.
+///
+/// @drt REQ-VIEW.screen_is_readable
+/// @tests REQ-VIEW.screen_is_readable
+#[test]
+#[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
+fn model_and_implementation_agree_on_whether_a_painted_screen_reads_as_the_buffer() {
+    let mut fields = BTreeMap::new();
+    fields.insert("buffer".to_string(), buffer());
+    fields.insert("rows".to_string(), Schema::List { inner: Box::new(presented_row()), max_len: Some(3) });
+    fields.insert(
+        "offered".to_string(),
+        Schema::List {
+            inner: Box::new(Schema::Tuple {
+                items: vec![
+                    Schema::Nat { max: Some(10), edges: vec![0, 1] },
+                    Schema::Str { max_len: None, examples: vec!["file.open".into(), "history.undo".into()] },
+                ],
+            }),
+            max_len: Some(3),
+        },
+    );
+    check(
+        "REQ-VIEW.screen_is_readable",
+        "TraceLean.View.presentedConformance",
+        "crates/core/src/surface/view.rs::presented_conformance",
+        &["buffer", "rows", "offered"],
+        Schema::Struct { fields },
+        48,
+    );
+}
+
 /// The symbolic case has to be reached, or the clause is answered by rows that
 /// were never painted as anything.
 ///

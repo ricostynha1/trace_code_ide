@@ -1,0 +1,30 @@
+{
+  "key": {
+    "reqId": "REQ-STALE",
+    "clause": "requirement_reopens_all",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 57,
+      "cases": 2000,
+      "op": "REQ-STALE.requirement_reopens_all"
+    }
+  },
+  "linkHash": "191f41080652ffe9",
+  "inputs": [
+    [
+      "implementation",
+      "49345088f0681062+65591b5b4730dea1+ad905dbecf7bc306"
+    ],
+    [
+      "model",
+      "5a549cc79c8f08e0"
+    ],
+    [
+      "requirement",
+      "b883a261cbe2868e"
+    ]
+  ]
+}

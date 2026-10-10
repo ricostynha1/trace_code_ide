@@ -1,0 +1,30 @@
+{
+  "key": {
+    "reqId": "REQ-LOOK",
+    "clause": "contrast_sufficient",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 409,
+      "cases": 3000,
+      "op": "REQ-LOOK.contrast_sufficient"
+    }
+  },
+  "linkHash": "e7631c7d3bf592fb",
+  "inputs": [
+    [
+      "implementation",
+      "50e5de27f0e74ef6+af2ca98e7c8537dc"
+    ],
+    [
+      "model",
+      "8b614feb3e36a144"
+    ],
+    [
+      "requirement",
+      "91e58479cc6a0fc3"
+    ]
+  ]
+}

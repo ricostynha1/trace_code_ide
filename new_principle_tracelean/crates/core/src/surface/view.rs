@@ -434,13 +434,13 @@ pub fn symbolic(row: Vec<Presented>) -> Vec<Presented> {
 /// rendering is: there is no second notion of conformance, only a second way of
 /// arriving at the lines.
 ///
-/// Not itself differentially bound: it is `conformance` with its lines read out
-/// of names, and `conformance` is the bound one. What is claimed here beyond
-/// that — that the painting is not consulted — is a theorem
-/// (`a_symbol_is_read_as_its_name`), which is a stronger answer than a run.
+/// It is `conformance` with its lines read out of names. That the painting is
+/// not consulted is a theorem (`a_symbol_is_read_as_its_name`); the run checks
+/// the composition against the model as well.
 ///
 /// @implements REQ-VIEW.presentation_may_be_symbolic
 /// @implements REQ-VIEW.screen_is_readable
+/// @drt REQ-VIEW.screen_is_readable
 pub fn presented_conformance(
     buffer: Buffer,
     rows: Vec<Vec<Presented>>,

@@ -1,0 +1,30 @@
+{
+  "key": {
+    "reqId": "REQ-DRT-COVER",
+    "clause": "classes_reached",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 139,
+      "cases": 1000,
+      "op": "REQ-DRT-COVER.classes_reached"
+    }
+  },
+  "linkHash": "23521544b8998ff8",
+  "inputs": [
+    [
+      "implementation",
+      "21bc1a10c74eb8fb+6869720694526c59"
+    ],
+    [
+      "model",
+      "5ba8c1a7c839c6b8"
+    ],
+    [
+      "requirement",
+      "886cf55c14fe0bcb"
+    ]
+  ]
+}

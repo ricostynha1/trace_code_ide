@@ -1,0 +1,30 @@
+{
+  "key": {
+    "reqId": "REQ-CHECK",
+    "clause": "severity_policy",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 42,
+      "cases": 1000,
+      "op": "REQ-CHECK.named_kinds"
+    }
+  },
+  "linkHash": "63bb227fd96225d3",
+  "inputs": [
+    [
+      "implementation",
+      "577b441cd26d2359+cda4f19cc85b6c85"
+    ],
+    [
+      "model",
+      "877ede27519bdf01"
+    ],
+    [
+      "requirement",
+      "418591974254a6d7"
+    ]
+  ]
+}

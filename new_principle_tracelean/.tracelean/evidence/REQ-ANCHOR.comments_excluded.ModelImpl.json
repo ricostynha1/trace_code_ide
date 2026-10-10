@@ -1,0 +1,30 @@
+{
+  "key": {
+    "reqId": "REQ-ANCHOR",
+    "clause": "comments_excluded",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 55,
+      "cases": 3000,
+      "op": "REQ-ANCHOR.whitespace_normalised"
+    }
+  },
+  "linkHash": "ff7eb6f96e17fac9",
+  "inputs": [
+    [
+      "implementation",
+      "81c1bfeac2776bbd+ac711c6018da2167"
+    ],
+    [
+      "model",
+      "d9fa7adb61ff1e6c"
+    ],
+    [
+      "requirement",
+      "7eaa5aea7cebad3f"
+    ]
+  ]
+}

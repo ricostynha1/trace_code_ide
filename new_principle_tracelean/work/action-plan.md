@@ -221,7 +221,8 @@ and the crate already builds `parser.c` from `grammar.js` when it is absent.
 
 A differential test only counts if its random inputs reached every case that
 matters. Today a binding names *situations* and a floor for each ("deletes a
-file: at least 20 cases"); 31 of 106 bindings name none and stay at L1, and a
+file: at least 20 cases"); 31 of 106 bindings named none and stayed at L1 (now
+covered by their classes: every class reached is the default floor), and a
 list somebody wrote can always miss a case.
 
 Rule: the target is 100%, waived only exceptionally, with a reason.

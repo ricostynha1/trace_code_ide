@@ -1,0 +1,30 @@
+{
+  "key": {
+    "reqId": "REQ-MIRROR",
+    "clause": "diff_is_pure",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 64,
+      "cases": 2000,
+      "op": "REQ-MIRROR.diff_is_pure"
+    }
+  },
+  "linkHash": "b6d15e5c0a9c4d45",
+  "inputs": [
+    [
+      "implementation",
+      "f5487bb6a3d14d98"
+    ],
+    [
+      "model",
+      "33dad4e741f81e93"
+    ],
+    [
+      "requirement",
+      "572d51b3b8c640e6"
+    ]
+  ]
+}

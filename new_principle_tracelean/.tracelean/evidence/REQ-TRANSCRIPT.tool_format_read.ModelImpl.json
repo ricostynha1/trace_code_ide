@@ -1,0 +1,30 @@
+{
+  "key": {
+    "reqId": "REQ-TRANSCRIPT",
+    "clause": "tool_format_read",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 408,
+      "cases": 2000,
+      "op": "REQ-TRANSCRIPT.tool_format_read"
+    }
+  },
+  "linkHash": "85004511e97f8072",
+  "inputs": [
+    [
+      "implementation",
+      "76797c45abb9d074+836ce230a430615f"
+    ],
+    [
+      "model",
+      "6c6c841c76dfe8fc"
+    ],
+    [
+      "requirement",
+      "37a2242b3482b294"
+    ]
+  ]
+}

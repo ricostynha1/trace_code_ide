@@ -1,0 +1,30 @@
+{
+  "key": {
+    "reqId": "REQ-ACT",
+    "clause": "missing_target_is_refused",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 83,
+      "cases": 2000,
+      "op": "REQ-ACT.action_to_intent"
+    }
+  },
+  "linkHash": "aed4f39f65aae04b",
+  "inputs": [
+    [
+      "implementation",
+      "ee3e291d503d212f"
+    ],
+    [
+      "model",
+      "71f2e2d445bdb099"
+    ],
+    [
+      "requirement",
+      "1e8be2e211d3d529"
+    ]
+  ]
+}

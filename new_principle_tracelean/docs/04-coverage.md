@@ -42,7 +42,9 @@ Named situations are added on top of what the types already say. Every run
 counts how many of its cases reached each **class** of its arguments
 (`drt::classes`: zero or positive, empty or not, each `Option` and enum case,
 inside every field), and `support::agreed` refuses L3 to an agreeing run that
-left a class unreached. Lines are the other half: `coverage::line_reach` names
+left a class unreached. A binding that names no situations is covered by its
+classes alone: every class reached at least once is its stated floor. Lines
+are the other half: `coverage::line_reach` names
 each executable line of an implementing item by its text, for a run measured
 under coverage.
 

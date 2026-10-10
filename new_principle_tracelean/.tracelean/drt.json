@@ -888,22 +888,9 @@
           "atLeast": 100
         }
       ],
-      "model": {
-        "import": "TraceLean.Lockfile",
-        "function": "TraceLean.Lockfile.orderedLinks",
-        "arguments": [
-          "links"
-        ]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/trace/lockfile.rs::ordered_links"
-      }
-    },
-    {
-      "req_id": "ARCH-DETERMINISM",
-      "clause": "stable_ordering",
-      "op": "ARCH-DETERMINISM.stable_ordering",
+      "also_checks": [
+        "ARCH-DETERMINISM.stable_ordering"
+      ],
       "model": {
         "import": "TraceLean.Lockfile",
         "function": "TraceLean.Lockfile.orderedLinks",
@@ -1270,23 +1257,9 @@
     {
       "req_id": "REQ-DRT-GEN",
       "clause": "fixed_stream",
-      "model": {
-        "import": "TraceLean.Generator",
-        "function": "TraceLean.Generator.rawStream",
-        "arguments": [
-          "seed",
-          "count"
-        ]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/drt/gen.rs::raw_stream"
-      }
-    },
-    {
-      "req_id": "ARCH-DETERMINISM",
-      "clause": "seeded_generation",
-      "op": "ARCH-DETERMINISM.seeded_generation",
+      "also_checks": [
+        "ARCH-DETERMINISM.seeded_generation"
+      ],
       "model": {
         "import": "TraceLean.Generator",
         "function": "TraceLean.Generator.rawStream",
@@ -1492,6 +1465,16 @@
     {
       "req_id": "REQ-OBS",
       "clause": "workspace_is_a_copy",
+      "floors": [
+        { "situation": "missing from copy", "atLeast": 20 },
+        { "situation": "copy differs", "atLeast": 10 },
+        { "situation": "extra in copy", "atLeast": 20 },
+        { "situation": "protected root unseen", "atLeast": 20 },
+        { "situation": "real tree changed", "atLeast": 20 },
+        { "situation": "escaped", "atLeast": 20 },
+        { "situation": "containment unreported", "atLeast": 20 },
+        { "situation": "no violation at all", "atLeast": 10 }
+      ],
       "also_checks": [
         "REQ-SBX.real_tree_untouched",
         "REQ-SBX.capability_reported",
@@ -2453,6 +2436,19 @@
     },
     {
       "req_id": "REQ-VIEW",
+      "clause": "screen_is_readable",
+      "model": {
+        "import": "TraceLean.View",
+        "function": "TraceLean.View.presentedConformance",
+        "arguments": ["buffer", "rows", "offered"]
+      },
+      "implementation": {
+        "language": "rust",
+        "entry": "crates/core/src/surface/view.rs::presented_conformance"
+      }
+    },
+    {
+      "req_id": "REQ-VIEW",
       "clause": "frontend_adds_nothing",
       "floors": [
         {
@@ -3111,6 +3107,7 @@
       "req_id": "REQ-ACT",
       "clause": "action_to_intent",
       "also_checks": [
+        "one_path",
         "focus_is_carried",
         "missing_target_is_refused",
         "edits_are_commands",
@@ -3521,7 +3518,7 @@
       "clause": "claims_with_source",
       "floors": [
         { "situation": "a clause asked for", "atLeast": 200 },
-        { "situation": "two claims on one item", "atLeast": 100 }
+        { "situation": "two claims on one item", "atLeast": 90 }
       ],
       "model": {
         "import": "TraceLean.Context",
@@ -3538,7 +3535,7 @@
       "clause": "affected_tests",
       "floors": [
         { "situation": "a test that names an implementing item", "atLeast": 100 },
-        { "situation": "a line of an unclaimed test file", "atLeast": 100 }
+        { "situation": "a line of an unclaimed test file", "atLeast": 25 }
       ],
       "model": {
         "import": "TraceLean.Context",

@@ -1,0 +1,30 @@
+{
+  "key": {
+    "reqId": "REQ-ANNOT",
+    "clause": "region_balanced",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 107,
+      "cases": 2000,
+      "op": "REQ-ANNOT.region_balanced"
+    }
+  },
+  "linkHash": "6d723ce3d40e1823",
+  "inputs": [
+    [
+      "implementation",
+      "944a03c94155e62d+e0909017a3d40d12"
+    ],
+    [
+      "model",
+      "4340cbd92854e997"
+    ],
+    [
+      "requirement",
+      "14c355905d867969"
+    ]
+  ]
+}

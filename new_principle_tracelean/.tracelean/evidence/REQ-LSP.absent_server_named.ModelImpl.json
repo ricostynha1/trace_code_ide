@@ -1,0 +1,30 @@
+{
+  "key": {
+    "reqId": "REQ-LSP",
+    "clause": "absent_server_named",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 67,
+      "cases": 2000,
+      "op": "REQ-LSP.absent_server_named"
+    }
+  },
+  "linkHash": "0541dcf8b3d9b80a",
+  "inputs": [
+    [
+      "implementation",
+      "1452242868ae1afa+397923620b6a2a3c+7adef53b8f58b746+f3155494859b6355"
+    ],
+    [
+      "model",
+      "c21060bc1d6040f4"
+    ],
+    [
+      "requirement",
+      "df98476a260fb19d"
+    ]
+  ]
+}

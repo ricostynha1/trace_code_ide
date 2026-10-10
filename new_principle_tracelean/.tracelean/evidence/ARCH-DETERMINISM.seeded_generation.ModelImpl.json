@@ -1,0 +1,30 @@
+{
+  "key": {
+    "reqId": "ARCH-DETERMINISM",
+    "clause": "seeded_generation",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 3,
+      "cases": 2000,
+      "op": "REQ-DRT-GEN.fixed_stream"
+    }
+  },
+  "linkHash": "397ebf4f9c468bd3",
+  "inputs": [
+    [
+      "implementation",
+      "3370af9d15abc0a1+ba9be9e1ff4796c9"
+    ],
+    [
+      "model",
+      "9ef66c65431edf29"
+    ],
+    [
+      "requirement",
+      "c406abe63455efc3"
+    ]
+  ]
+}

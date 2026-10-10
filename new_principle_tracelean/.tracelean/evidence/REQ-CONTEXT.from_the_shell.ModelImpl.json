@@ -1,0 +1,30 @@
+{
+  "key": {
+    "reqId": "REQ-CONTEXT",
+    "clause": "from_the_shell",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 101,
+      "cases": 2000,
+      "op": "REQ-CONTEXT.from_the_shell"
+    }
+  },
+  "linkHash": "893c091bfa2f8b5d",
+  "inputs": [
+    [
+      "implementation",
+      "475698ae0b8565df+560440270dd7dc8e+69b717aadb840d9c"
+    ],
+    [
+      "model",
+      "a5290587d3e6e387"
+    ],
+    [
+      "requirement",
+      "a72a6476ac9d0fc4"
+    ]
+  ]
+}

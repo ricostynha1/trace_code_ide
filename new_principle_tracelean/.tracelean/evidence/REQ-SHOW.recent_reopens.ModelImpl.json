@@ -1,0 +1,30 @@
+{
+  "key": {
+    "reqId": "REQ-SHOW",
+    "clause": "recent_reopens",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 74,
+      "cases": 2000,
+      "op": "REQ-SHOW.recent_reopens"
+    }
+  },
+  "linkHash": "3148c5b52e4c8db7",
+  "inputs": [
+    [
+      "implementation",
+      "786bb535d44fb06e"
+    ],
+    [
+      "model",
+      "7e581973d12cc3b6"
+    ],
+    [
+      "requirement",
+      "6400dd54c5a95ff9"
+    ]
+  ]
+}

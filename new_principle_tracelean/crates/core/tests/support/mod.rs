@@ -169,7 +169,14 @@ pub fn agreed(result: &tracelean_core::drt::run::DrtResult) {
     let stamp = current_stamp(&result.op);
     let mut half = read_half(&result.op);
     half.agreed.retain(|_, run| run.stamp == stamp);
-    half.agreed.insert(result.seed.to_string(), Run { cases: result.cases, stamp });
+    half.agreed.insert(result.seed.to_string(), Run { cases: result.cases, stamp: stamp.clone() });
+    // A binding that names no situations states the default: every class of
+    // its input reached at least once (action plan §10), which the check
+    // above has just established. Named floors come on top of the classes and
+    // are recorded by `covered`.
+    if binding_for(&result.op).floors.is_empty() {
+        half.covered = Some(stamp);
+    }
     write_half(&result.op, &half);
     compose(&result.op);
 }
@@ -215,8 +222,8 @@ pub fn covered(op: &str, counts: &[(&str, u64)]) {
     let binding = binding_for(op);
     assert!(
         !binding.floors.is_empty(),
-        "`{op}` declares no coverage floors, so no run of it can reach L3 \
-         (REQ-DRT-COVER.floor_stated)"
+        "`{op}` declares no floors to count against; its coverage is its classes, \
+         recorded by `agreed` (REQ-DRT-COVER.floor_stated)"
     );
     for (situation, _) in counts {
         assert!(

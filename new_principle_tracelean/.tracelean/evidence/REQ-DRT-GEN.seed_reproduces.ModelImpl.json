@@ -1,0 +1,30 @@
+{
+  "key": {
+    "reqId": "REQ-DRT-GEN",
+    "clause": "seed_reproduces",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 8,
+      "cases": 2000,
+      "op": "REQ-DRT-GEN.seed_reproduces"
+    }
+  },
+  "linkHash": "9cf6efb95b9c0b0d",
+  "inputs": [
+    [
+      "implementation",
+      "e5b05b0e7c48abf2+fa8674a50929d289"
+    ],
+    [
+      "model",
+      "a7f2b48c39838c47"
+    ],
+    [
+      "requirement",
+      "b2c957054aa98ebd"
+    ]
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "key": {
+    "reqId": "REQ-CONTEXT",
+    "clause": "affected_tests",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 103,
+      "cases": 2000,
+      "op": "REQ-CONTEXT.affected_tests"
+    }
+  },
+  "linkHash": "24488edd03336687",
+  "inputs": [
+    [
+      "implementation",
+      "2167c2cffc94210d+abf759fa91532a23"
+    ],
+    [
+      "model",
+      "a0cda730f6d991d9"
+    ],
+    [
+      "requirement",
+      "d407e1046f7459c0"
+    ]
+  ]
+}

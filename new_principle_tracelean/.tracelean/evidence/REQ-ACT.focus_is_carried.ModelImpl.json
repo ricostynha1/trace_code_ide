@@ -1,0 +1,30 @@
+{
+  "key": {
+    "reqId": "REQ-ACT",
+    "clause": "focus_is_carried",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 83,
+      "cases": 2000,
+      "op": "REQ-ACT.action_to_intent"
+    }
+  },
+  "linkHash": "67d080eb318b03a5",
+  "inputs": [
+    [
+      "implementation",
+      "2c31155911d38353+ee3e291d503d212f"
+    ],
+    [
+      "model",
+      "71f2e2d445bdb099"
+    ],
+    [
+      "requirement",
+      "ede60588e15e9208"
+    ]
+  ]
+}
