@@ -7,7 +7,9 @@ the two harder problems explained: [structural clauses and model choice](../inve
 **Status (2026-10-10):** implemented and green: §1, §2, §4, §5, the roll-up
 reachable set (§3, Rust, Lean, DRT), coverage verdicts with waivers (§10 code), 26 pins.
 §7 several-models cleanup (0 left); §6 mostly (below).
-Open: §6 remainder, §7 unmodeled clauses (17: SHOW ×6, UNDO ×2, ACT, LINECOV.uncovered_shown, STALE.requirement_reopens_all, TRANSCRIPT, and the demo's THERMO/TABLE), §8 grammar, and re-earning stale evidence (`--stale`).
+Open: §6 remainder, §7 unmodeled clauses (17: SHOW ×6, UNDO ×2, ACT, LINECOV.uncovered_shown, STALE.requirement_reopens_all, TRANSCRIPT, and the demo's THERMO/TABLE), §8 grammar, and re-earning stale evidence. `--stale` lists 155: 143 judgements (people to re-judge,
+by design), 9 document reviews, 2 differential tests (`DRT-PROTO.line_delimited`,
+`SHOW.producer_is_pure`, now structural), 1 proof (`DRT-PROTO.op_dispatch`).
 
 ## 1. Agent judgements count when a person delegated them — decided
 
