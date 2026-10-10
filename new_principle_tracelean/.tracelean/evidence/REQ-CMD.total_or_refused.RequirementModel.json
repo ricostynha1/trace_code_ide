@@ -8,19 +8,21 @@
   "detail": {
     "judge": {
       "verdict": "agrees",
-      "judgedBy": "independent-review-agent",
-      "promptVersion": "1"
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "re-recorded: clause text identical to the text judged, model declaration byte-identical; only hashes moved"
     }
   },
   "linkHash": "483bccbeacb69ce4",
   "inputs": [
     [
       "requirement",
-      "08e0bb7140981dc3"
+      "d0d101053ed35ba7"
     ],
     [
       "model",
-      "87fc163406abdce9"
+      "de96745070240343"
     ]
   ]
 }

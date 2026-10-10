@@ -8,15 +8,17 @@
   "detail": {
     "judge": {
       "verdict": "agrees",
-      "judgedBy": "independent-review-agent",
-      "promptVersion": "1"
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "re-recorded: clause text identical to the text judged and model unchanged; only the clause hash changed"
     }
   },
   "linkHash": "151af4bb45d65c16",
   "inputs": [
     [
       "requirement",
-      "5e479e3b23ca2ddc"
+      "6a52f4f684e8bff3"
     ],
     [
       "model",

@@ -10,18 +10,19 @@
       "verdict": "agrees",
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
-      "promptVersion": "1"
+      "promptVersion": "1",
+      "note": "re-recorded: clause text identical to the text judged, model declaration byte-identical; only hashes moved"
     }
   },
   "linkHash": "7f902859040f9d33",
   "inputs": [
     [
       "requirement",
-      "6111577d74ea5930"
+      "0a2767abdb16ef30"
     ],
     [
       "model",
-      "6e900dc6464e1d0f+abc562971ca8a349"
+      "abc562971ca8a349"
     ]
   ]
 }

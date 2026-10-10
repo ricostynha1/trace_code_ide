@@ -10,10 +10,23 @@ All 143 clause texts (with their narrowings) are byte-identical to the text that
 was judged: checked against the requirement file at the commit that wrote each
 record.
 
-- **112: only the requirement's hash moved.** The hash became per clause (§5);
-  the text did not change. Where the model is unchanged as well, the earlier
-  verdict stands as it was given, and it is re-recorded (`--by claude-review
-  --delegated-by ricostynha`). Where the model also changed, it is listed below.
+- **98 re-recorded.** `--stale` now names the inputs that moved. 72 had only
+  the requirement's hash move (per clause, §5); 26 more had the model's hash
+  move with the model declaration byte-identical to the one judged (compared
+  at the commit that wrote each record). Each was `agrees`, with no note, and
+  is re-recorded as `agrees` (`--by claude-review --delegated-by ricostynha`,
+  with a note saying why).
+- **14: the model itself was rewritten** since it was judged (§7 and the
+  coverage, judge and keymap work: about 800 changed lines across
+  `Coverage`, `Judge`, `Keymap`, `Requirement`, `Policy`, `Mirror`). **Left
+  open**: whether the rewritten model still says the clause is a judgement.
+  REQ-DRT-COVER.floor_stated, REQ-JUDGE.caps_at_judgement,
+  REQ-JUDGE.proposal_not_mutation, REQ-MYTH.actions_defined,
+  REQ-MYTH.actions_reachable, REQ-MYTH.keymap_is_data,
+  REQ-REQDOC.clauseless_uniform, REQ-REQDOC.id_is_identity,
+  REQ-SBX.classification_total, REQ-SBX.protected_never_mirrored,
+  REQ-SELFWRITE.content_matched, REQ-SELFWRITE.no_deadlock,
+  REQ-SELFWRITE.own_writes_ignored, REQ-SELFWRITE.unmatched_is_external.
 - **31: the model annotation moved** (the one-model-per-clause cleanup, §7).
   The single model left is now the aggregate function a binding drives
   (`runScript`, `replayReport`, `conformance`, `facts`, …) rather than the
@@ -62,7 +75,12 @@ waived there for now: `syntax.comment` and `ui.gutterText` 2.32,
 `syntax.heading` 4.38. Decision for a person: lighten them (e.g. comment
 `#9097a3` reaches 4.76) or keep the palette and its waivers.
 
-## Machine evidence — 3
+## Machine evidence — done
 
-Two differential tests and one proof are not a person's: they are re-earned by
-running their suites (see the plan).
+Pinnings re-earned (`--pins`); `REQ-SHOW.producer_is_pure` given the
+`@models` its binding drives (`reviewBuffer`), without which its record could
+never be current; the records of `REQ-DRT-PROTO.line_delimited` and
+`op_dispatch`, clauses split into others in `31d0177`, removed.
+
+What `--stale` lists now is a person's only: 45 judgements (31 moved
+annotations, 14 rewritten models) and the three `06-editor` links.

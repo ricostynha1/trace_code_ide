@@ -172,6 +172,7 @@ private def lineText (line : DiffLine) : String := line.text
 /--
 A change between two states of a file, as a buffer a person can accept or reject.
 
+@models REQ-SHOW.producer_is_pure
 -/
 def reviewBuffer (target : String) (before after : String) : Buffer :=
   let lines := diffLines (before.splitOn "\n") (after.splitOn "\n")

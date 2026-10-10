@@ -10,14 +10,15 @@
       "verdict": "agrees",
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
-      "promptVersion": "1"
+      "promptVersion": "1",
+      "note": "re-recorded: clause text identical to the text judged and model unchanged; only the clause hash changed"
     }
   },
   "linkHash": "904cc098e8d64a4e",
   "inputs": [
     [
       "requirement",
-      "27d2afb9732374e5"
+      "6a3792b495e87301"
     ],
     [
       "model",
