@@ -193,6 +193,34 @@ fn the_history_previews_a_change_and_filters_to_the_saved_points() {
     let _ = std::fs::remove_dir_all(&root);
 }
 
+/// The history opens on the file being read, and follows the document:
+/// opening another file shows that file's changes, not the last one's.
+///
+/// @tests REQ-UNDO.filtered_view
+#[test]
+fn the_history_of_this_file_follows_the_file_opened() {
+    let (root, mut editor) = opened();
+    for (file, typed) in [("src/i.rs", "A"), ("src/long.rs", "B")] {
+        let at = row_of(&mut editor, file);
+        editor.choose(EXPLORER, at, "file.open", None, None);
+        editor.place(DOCUMENT, 0);
+        editor.key(typed);
+    }
+    editor.perform(tracelean_core::surface::act::Intent::Display { what: BufferKind::Record { title: "history".into() } });
+    let history = |editor: &Editor| {
+        let shown = editor.laid_out(editor.region).into_iter().find(|p| p.buffer.id == "record:history").expect("shown");
+        (shown.pane.clone(), plain_text(shown.buffer).join("\n"))
+    };
+    let (_, text) = history(&editor);
+    assert!(text.contains("src/long.rs") && text.contains("\"B\"") && !text.contains("\"A\""), "{text}");
+
+    let at = row_of(&mut editor, "src/i.rs");
+    editor.choose(EXPLORER, at, "file.open", None, None);
+    let (_, text) = history(&editor);
+    assert!(text.contains("\"A\"") && !text.contains("\"B\""), "the history stayed on the last file:\n{text}");
+    let _ = std::fs::remove_dir_all(&root);
+}
+
 /// Clicking `#0` goes back to the tree as it was opened, and from there a
 /// click on a node goes forward again.
 ///

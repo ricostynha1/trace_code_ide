@@ -11,6 +11,7 @@ clauses:
   scanner_never_writes: The scanner shall mark a record stale and shall never rewrite, regenerate or delete one.
   stale_is_visible: A stale record shall be reported as stale rather than omitted.
   no_silent_revalidation: A record shall not become valid again except by the backend that owns it producing a new one.
+  current_not_rerun: A differential run whose record is valid, and a coverage measurement taken against Rust sources that hash as they do now, shall not be run again unless asked; one whose inputs changed shall be.
   requirement_reopens_all: Every record about a clause — judgement, differential test, proof — shall carry the hash of that clause's text and narrowings (of the body, for a requirement without clauses), so rewording or narrowing the clause re-opens all of them and rewording another clause re-opens none.
   listed_for_a_script: Everything that must be approved, tested or proved again shall be listable by one command whose exit status says whether anything is.
 ---

@@ -35,6 +35,24 @@ pub struct LineHits {
 #[serde(rename_all = "camelCase")]
 pub struct Coverage {
     pub files: BTreeMap<String, (String, Vec<LineHits>)>,
+    /// What every Rust source and manifest hashed to when this was measured
+    /// (`sources_hash`): equal now, and measuring again would say the same.
+    #[serde(default)]
+    pub sources: String,
+}
+
+/// One hash of every file a Rust test run depends on — each `.rs` file and
+/// each `Cargo.toml`/`Cargo.lock`, by path and text — so a measurement is
+/// known to be current without running anything.
+///
+/// @implements REQ-STALE.current_not_rerun
+pub fn sources_hash(files: &BTreeMap<String, String>) -> String {
+    let relevant: String = files
+        .iter()
+        .filter(|(path, _)| path.ends_with(".rs") || path.ends_with("Cargo.toml") || path.ends_with("Cargo.lock"))
+        .map(|(path, text)| format!("{path}\0{}\0", crate::trace::hash::text(text)))
+        .collect();
+    crate::trace::hash::text(&relevant)
 }
 
 /// LCOV text as `(source file, [(line, count)])`, in the order it names them.
@@ -117,6 +135,29 @@ pub fn visible(measured: Option<(String, Vec<LineHits>)>, hash: String) -> Optio
 /// has now: `visible` without the copy.
 pub fn current<'a>(coverage: &'a Coverage, path: &str, hash: &str) -> Option<&'a Vec<LineHits>> {
     coverage.files.get(path).filter(|(measured, _)| measured == hash).map(|(_, lines)| lines)
+}
+
+#[cfg(test)]
+mod sources_tests {
+    use super::*;
+
+    /// Only what a Rust test run depends on moves the hash.
+    ///
+    /// @tests REQ-STALE.current_not_rerun
+    #[test]
+    fn the_sources_hash_moves_with_rust_files_and_manifests_only() {
+        let files = |extra: &[(&str, &str)]| -> BTreeMap<String, String> {
+            [("src/a.rs", "fn a() {}"), ("Cargo.toml", "[package]"), ("README.md", "hi")]
+                .iter()
+                .chain(extra)
+                .map(|(p, t)| (p.to_string(), t.to_string()))
+                .collect()
+        };
+        let base = sources_hash(&files(&[]));
+        assert_eq!(base, sources_hash(&files(&[("docs/x.md", "prose")])));
+        assert_ne!(base, sources_hash(&files(&[("tests/t.rs", "#[test] fn t() {}")])));
+        assert_ne!(base, sources_hash(&files(&[("Cargo.lock", "v")])));
+    }
 }
 
 /// What a line's marker says when pointed at.

@@ -10,12 +10,13 @@ it: a host fix outlives your session, and a workaround of yours does not.
 ## Check in one go
 
 ```bash
-command -v tracelean-trace lean lake cargo node; echo "skills: $TRACELEAN_SKILLS"
+command -v tracelean-trace tracelean-view lean lake cargo node; echo "skills: $TRACELEAN_SKILLS"
 ```
 
 | Tool | Needed for | Check |
 |---|---|---|
 | `tracelean-trace` | everything | `tracelean-trace . \| tail -1` |
+| `tracelean-view` | the editor's views, as text | `tracelean-view . requirements` |
 | `lean`, `lake` (elan) | building models, `--drt`, `--pins` | `lean --version` |
 | `cargo`, `rustc` | `--drt` on Rust code, the project's tests | `cargo --version` |
 | `llvm-tools` (rustup) | `--coverage`, the line rule (`TRACELEAN_DRT_LINES=1`) | `ls $(rustc --print sysroot)/lib/rustlib/*/bin/llvm-cov` |
@@ -26,6 +27,7 @@ command -v tracelean-trace lean lake cargo node; echo "skills: $TRACELEAN_SKILLS
 | You see | Cause | Fix |
 |---|---|---|
 | `tracelean-trace: command not found` | not on `PATH` | In the TraceLean tree: `cargo run -q -p tracelean-core --bin tracelean-trace -- .`. Elsewhere: report it; outside a sandbox, `cargo install --path <tracelean>/crates/core --bin tracelean-trace`. |
+| `tracelean-view: command not found` | built with the editor, not the checker | in the TraceLean tree: `cargo run -q -p tracelean-editor --bin tracelean-view -- . <view>`; elsewhere report it |
 | `$TRACELEAN_SKILLS` empty | not started from a sandbox | the skills are `skills/` in the TraceLean source tree |
 | ``no `lean` on PATH. Install elan`` | Lean missing | outside a sandbox, install elan; the toolchain comes from the nearest `lean-toolchain` (TraceLean's own: `formal/lean-toolchain`) |
 | `the Lean runner did not build` | the model does not compile | `lake build` in the model's package (or `lean <file>`) and fix the first error |

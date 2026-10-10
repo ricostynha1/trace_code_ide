@@ -55,6 +55,26 @@ pub enum Outcome {
     Mismatch(Vec<String>),
     /// A runner did not build or did not answer.
     Failed(String),
+    /// Agreed before, and the model, implementation and requirement it ran
+    /// against hash as they did: nothing was run.
+    Cached,
+}
+
+/// Whether `held` records this candidate as agreed at L3 against inputs that
+/// hash as they do now — so running it again could only say the same.
+///
+/// @implements REQ-STALE.current_not_rerun
+fn still_agreed(index: &Index, held: &[crate::trace::record::Evidence], c: &Candidate) -> bool {
+    use crate::evidence::{Bond, Level};
+    use crate::trace::record::Detail;
+    held.iter().any(|r| {
+        r.key.req_id == c.req_id
+            && r.key.clause == c.clause
+            && r.key.bond == Bond::ModelImpl
+            && matches!(&r.detail, Detail::Drt { op, .. } if *op == c.op)
+            && r.effective_level() >= Level::L3
+            && crate::trace::earn::why_stale(index, r).is_none()
+    })
 }
 
 fn declaration(files: &BTreeMap<String, String>, file: &str, start: u32, end: u32) -> String {
@@ -298,11 +318,20 @@ fn exercise(c: &Candidate, model: &RunnerSpec, implementation: &RunnerSpec) -> O
 }
 
 /// Test every candidate; record L3 where it was earned; say what happened.
-pub fn run_all(root: &Path, index: &Index, files: &BTreeMap<String, String>) -> Vec<(Candidate, Outcome)> {
+///
+/// A candidate already agreed against inputs that hash as they do now is not
+/// run again (`Cached`), and no runner is built when none is left; `again`
+/// runs every one regardless.
+pub fn run_all(root: &Path, index: &Index, files: &BTreeMap<String, String>, again: bool) -> Vec<(Candidate, Outcome)> {
     let found = candidates(root, index, files);
+    let held = crate::trace::earn::merge(
+        crate::trace::lockfile::read(root).map(|l| l.evidence).unwrap_or_default(),
+        crate::trace::store::read_all(root),
+    );
+    let cached = |c: &Candidate| !again && c.derived.is_ok() && still_agreed(index, &held, c);
     let scratch = std::env::temp_dir().join(format!("tracelean-drt-{}", std::process::id()));
     let _ = std::fs::create_dir_all(&scratch);
-    let ready: Vec<&Candidate> = found.iter().filter(|c| c.derived.is_ok()).collect();
+    let ready: Vec<&Candidate> = found.iter().filter(|c| c.derived.is_ok() && !cached(c)).collect();
     let runners = if ready.is_empty() {
         Err(String::new())
     } else {
@@ -311,6 +340,7 @@ pub fn run_all(root: &Path, index: &Index, files: &BTreeMap<String, String>) -> 
     let mut out = Vec::new();
     for c in &found {
         let outcome = match (&c.derived, &runners) {
+            _ if cached(c) => Outcome::Cached,
             (Err(problems), _) => Outcome::Mismatch(problems.clone()),
             (Ok(_), Err(why)) => Outcome::Failed(why.clone()),
             (Ok(_), Ok((model, implementation))) => exercise(c, model, implementation),

@@ -39,7 +39,24 @@ In a TraceLean sandbox all of it is on hand: `tracelean-trace` is on `PATH`,
 project sends its agent here with a `CLAUDE.md` like `demo/CLAUDE.md`. If a
 command fails, [08](08-setup-in-case-of-error.md).
 
-## Every flag
+## What the person sees in the editor: `tracelean-view`
+
+Every station and report of the editor, printed as the text it shows there,
+so you and the person read the same thing. Nothing is written.
+
+```bash
+tracelean-view . requirements                 # each requirement, its level, clauses claimed
+tracelean-view . design                       # the same along `refines`: what depends on what
+tracelean-view . requirement REQ-X            # its clauses: level, claims, coverage, judgement
+tracelean-view . trace src/file.rs            # what a file claims, and what else claims it
+tracelean-view . findings                     # every finding (Unmodeled, Unbound, …), one a line
+tracelean-view . evidence                     # each clause's evidence chain
+tracelean-view                                # the full list
+```
+
+Add `--json` for the buffer itself: text, and spans with their roles and links.
+
+## Every flag of `tracelean-trace`
 
 All take the project root first (`.`). "Writes" is under `.tracelean/`.
 
@@ -49,14 +66,14 @@ All take the project root first (`.`). "Writes" is under `.tracelean/`.
 | `--show <Kind>` | lists one kind in full (`Unbound`, `Dangling`, …: [07](07-findings.md)) | — |
 | `--context X [--parts …]` | a clause's or requirement's context, as Markdown | — |
 | `--stale` | what to redo, with the command for each; exit 1 if any | — |
-| `--drt` | compares every clause with a Lean `def` modelling it and a Rust `fn` implementing it, no binding needed; records L3 where earned | evidence, lock |
+| `--drt [--again]` | compares every clause with a Lean `def` modelling it and a Rust `fn` implementing it, no binding needed; records L3 where earned. One that agreed against model, code and clause that hash as they do now is `cached`, not re-run | evidence, lock |
 | `--lock` | folds evidence into `trace.lock`, naming what went stale | lock |
 | `--judge X` | prints the judging prompt for a person | — |
 | `--judge X --verdict agrees\|drift\|unmodelable --by <who> [--delegated-by <who>] [--note …]` | records **a person's** verdict ([05](05-evidence.md)) | evidence, lock |
 | `--hashes` | what each requirement hashes to now, for a document's `described_hash` ([03](03-requirements.md)) | — |
 | `--pins` | asks Lean whether each `@pins` theorem pins its clause | pins |
 | `--strength [symbol]` | what each model owes toward L4, and the statement to prove | — |
-| `--coverage` | runs each Rust test alone under coverage: which tests ran which lines | coverage |
+| `--coverage [--again]` | runs each Rust test alone under coverage: which tests ran which lines; `cached` while no `.rs` or `Cargo` file changed | coverage |
 | `--unparsed <file>` | where the grammar stopped reading a file | — |
 
 ## The rules you will break first

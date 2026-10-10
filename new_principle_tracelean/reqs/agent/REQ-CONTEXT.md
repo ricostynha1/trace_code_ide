@@ -12,6 +12,7 @@ clauses:
   part_named: A part shall be named by the label the view shows for it, and a label that names no part shall be refused.
   copied_not_sent: The context shall be put on the clipboard for the person to carry to an agent, and nothing shall be called.
   from_the_shell: The project's checker shall print the same context for a requirement or clause named on its command line, with parts chosen by label, and shall refuse a requirement or part that does not exist, so an agent can gather the context itself.
+  views_from_the_shell: Each station and report a person reads in the editor, except one that writes, shall be printable from the shell as the text the editor produces for it, without changing what the person has open.
 ---
 
 # What an agent needs to see to change a requirement

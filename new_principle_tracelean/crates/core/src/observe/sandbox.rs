@@ -196,6 +196,9 @@ pub fn brief(host: &Host) -> String {
          \x20 is traced yet.\n\
          - The method is in `$TRACELEAN_SKILLS` ({skills}). Read its `README.md`\n\
          \x20 before changing anything; `08-setup-in-case-of-error.md` if a command fails.\n\
+         - `tracelean-view . <view>` prints what the person sees in the editor:\n\
+         \x20 `requirements`, `design`, `requirement REQ-X`, `trace FILE`, `findings`, …\n\
+         \x20 (`tracelean-view` alone lists them).\n\
          - Before changing what a requirement covers: `tracelean-trace . --context REQ-X.clause`.\n\
          - Before reporting: `tracelean-trace .` must end `blocking: false`, and\n\
          \x20 `tracelean-trace . --stale` must list only what is a person's.\n\

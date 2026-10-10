@@ -385,7 +385,9 @@ impl Editor {
             clipboard: None,
             open_folders: BTreeSet::new(),
             context_parts: tracelean_core::surface::context::default_parts(),
-            history_filter: tracelean_core::surface::history_view::Filter::All,
+            // The file's own history first: the undo tree of what is being
+            // read is what a person opening it is looking for. `All` is a click.
+            history_filter: tracelean_core::surface::history_view::Filter::File,
             typed: Vec::new(),
             saved_at: BTreeSet::new(),
             last_find: None,
@@ -2605,6 +2607,15 @@ impl Editor {
         let placed: Vec<String> =
             panes(&self.screen.layout).into_iter().map(|(pane, _)| pane).collect();
         self.parked.retain(|pane, _| placed.contains(pane));
+    }
+
+    /// The buffer a kind names, as a pane would show it, shown nowhere: what
+    /// `tracelean-view` prints, so an agent in a shell reads the same views a
+    /// person reads in a window.
+    ///
+    /// @implements REQ-CONTEXT.views_from_the_shell
+    pub fn view(&mut self, what: BufferKind) -> Buffer {
+        self.produce(what)
     }
 
     /// Ask the core for the buffer a kind names. Nothing is built here.

@@ -3,10 +3,12 @@
 Before changing anything:
 
 1. **Run the checker** (`tracelean-trace .`, or what the README says). Read the
-   tail — counts, blocking or not — then the findings.
-2. **Read the requirement index** (often `reqs/README.md`): group headings and
-   titles only, then the two or three documents your task touches. A
-   document's body says *why* its clauses exist.
+   tail — counts, blocking or not — then the findings
+   (`tracelean-view . findings`).
+2. **Read the requirement index**: `tracelean-view . requirements` (levels,
+   claims) and `tracelean-view . design` (what refines what), then the two or
+   three documents your task touches. A document's body says *why* its
+   clauses exist.
 3. **Read the decisions** (`docs/decisions/` or similar). A change against an
    accepted decision gets reverted.
 4. **Find the toolchains and suites**: implementation and model (`formal/`,
@@ -24,5 +26,5 @@ Before changing anything:
    source, the tests likely to break, and what the clause still lacks. A
    plain `grep -rn "REQ-THING.the_clause" .` finds the same annotations.
 
-Every editor capability is reachable from a command-line binary; prefer the
-shell.
+Every view of the editor is reachable from the shell (`tracelean-view`, see
+the [README](README.md)); prefer it to asking the person what they see.

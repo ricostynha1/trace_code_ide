@@ -209,7 +209,8 @@ fn main() {
     if std::env::args().any(|a| a == "--drt") {
         use tracelean_core::drt::auto::{run_all, Outcome};
         let files = tracelean_core::observe::workspace::snapshot(&root).files;
-        let outcomes = run_all(&root, &index, &files);
+        let again = std::env::args().any(|a| a == "--again");
+        let outcomes = run_all(&root, &index, &files, again);
         if outcomes.is_empty() {
             println!("nothing to test: no clause has both a Lean `def` modelling it and a Rust `fn` implementing it, unbound");
         }
@@ -217,6 +218,7 @@ fn main() {
             let op = &candidate.op;
             match outcome {
                 Outcome::Agreed { cases } => println!("agreed     {op}  {cases} cases, every class reached: L3"),
+                Outcome::Cached => println!("cached     {op}  agreed before, and nothing it ran on changed (--again re-runs)"),
                 Outcome::Uncovered { missing } => println!("uncovered  {op}  never generated: {}", missing.join(", ")),
                 Outcome::Diverged { input, model, implementation } => {
                     println!("DIVERGED   {op}\n    input {input}\n    model {model}\n    code  {implementation}")
@@ -316,11 +318,19 @@ fn main() {
 
     // `--coverage` runs each Rust test alone under coverage and keeps, per
     // file, which tests ran each line and how often.
+    // Not again while every Rust source hashes as it did (`--again` does).
     if std::env::args().any(|a| a == "--coverage") {
         use tracelean_core::drt::lines_run;
         let files = tracelean_core::observe::workspace::snapshot(&root).files;
+        let sources = tracelean_core::trace::lines::sources_hash(&files);
+        let held = lines_run::read(&root);
+        if !held.files.is_empty() && held.sources == sources && !std::env::args().any(|a| a == "--again") {
+            println!("cached: no Rust source changed since it was measured ({} files; --again re-measures)", held.files.len());
+            return;
+        }
         match lines_run::measure(&root, &files) {
-            Ok((coverage, tests)) => {
+            Ok((mut coverage, tests)) => {
+                coverage.sources = sources;
                 for (path, (_, lines)) in &coverage.files {
                     let reached = lines.iter().filter(|l| l.hits > 0).count();
                     println!("{reached:>5}/{:<5} {path}", lines.len());
