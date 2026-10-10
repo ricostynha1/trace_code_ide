@@ -22739,6 +22739,16 @@
     {
       "role": "tests",
       "req": "REQ-STALE",
+      "clause": "listed_for_a_script",
+      "file": "crates/core/tests/stale_listing.rs",
+      "anchor": "crates/core/tests/stale_listing.rs::the_exit_status_says_whether_anything_must_be_redone",
+      "body_hash": "b75a28c2fad0aa87",
+      "link_hash": "02858f1acbfb24ae",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-STALE",
       "clause": "no_silent_revalidation",
       "file": "crates/core/src/trace/earn.rs",
       "anchor": "crates/core/src/trace/earn.rs::tests::halves_stamped_against_other_inputs_do_not_compose",
