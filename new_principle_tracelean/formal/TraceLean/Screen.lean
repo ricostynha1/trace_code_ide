@@ -188,6 +188,8 @@ private def hasDuplicate : List String → Bool
 
 /--
 No two panes share an identity.
+
+@models REQ-SCREEN.panes_are_distinct
 -/
 def distinctPanes (layout : Layout) : Bool :=
   !hasDuplicate (paneIds layout)
@@ -202,7 +204,6 @@ two and ship the third.
 
 @models REQ-SCREEN.every_pane_is_opened
 @models REQ-SCREEN.focus_is_placed
-@models REQ-SCREEN.panes_are_distinct
 -/
 def coherent (screen : Screen) : Bool :=
   let openedIds := screen.opened.map (fun buffer => buffer.id)

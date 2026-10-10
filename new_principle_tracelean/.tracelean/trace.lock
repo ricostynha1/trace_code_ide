@@ -12360,9 +12360,9 @@
       "req": "REQ-REQDOC",
       "clause": "refines_resolves",
       "file": "formal/TraceLean/Refinement.lean",
-      "anchor": "formal/TraceLean/Refinement.lean::TraceLean.Refinement::graphReport",
-      "body_hash": "a2a6887eda815a9c",
-      "link_hash": "286ca7b560e8b885",
+      "anchor": "formal/TraceLean/Refinement.lean::TraceLean.Refinement::danglingIn",
+      "body_hash": "9ea64c735fbb374d",
+      "link_hash": "a207c532c2a864d0",
       "qualifier": null
     },
     {
@@ -12590,9 +12590,9 @@
       "req": "REQ-SCREEN",
       "clause": "panes_are_distinct",
       "file": "formal/TraceLean/Screen.lean",
-      "anchor": "formal/TraceLean/Screen.lean::TraceLean.Screen::coherent",
-      "body_hash": "039ea0dd4a02df36",
-      "link_hash": "545e47b43b9862ac",
+      "anchor": "formal/TraceLean/Screen.lean::TraceLean.Screen::distinctPanes",
+      "body_hash": "f1ecad4716a4db3c",
+      "link_hash": "1f11884a0c876c99",
       "qualifier": null
     },
     {
@@ -29119,7 +29119,7 @@
         ],
         [
           "model",
-          "a2a6887eda815a9c"
+          "9ea64c735fbb374d"
         ],
         [
           "requirement",
@@ -29144,7 +29144,7 @@
       "inputs": [
         [
           "model",
-          "a2a6887eda815a9c"
+          "9ea64c735fbb374d"
         ],
         [
           "requirement",
@@ -30039,7 +30039,7 @@
         ],
         [
           "model",
-          "039ea0dd4a02df36"
+          "f1ecad4716a4db3c"
         ],
         [
           "requirement",

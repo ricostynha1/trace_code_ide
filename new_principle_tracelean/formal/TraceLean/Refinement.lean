@@ -113,7 +113,9 @@ def cycleIn (g : Graph) : Option (List String) :=
   searchFrom g budget (roots g) []
 
 /-- Identifiers named by `refines:` that no document declares, sorted and
-without repeats. -/
+without repeats.
+
+@models REQ-REQDOC.refines_resolves -/
 def danglingIn (g : Graph) : List (String × String) :=
   let pairs := g.foldl
     (fun acc e => acc ++ (e.2.filter (fun p => !hasNode g p)).map (fun p => (e.1, p))) []
@@ -126,8 +128,7 @@ structure GraphReport where
   dangling : List (String × String)
   deriving Repr, DecidableEq, Inhabited, ToJson, FromJson
 
-/-- @models REQ-REQDOC.refines_dag
-@models REQ-REQDOC.refines_resolves -/
+/-- @models REQ-REQDOC.refines_dag -/
 def graphReport (edges : Graph) : GraphReport :=
   let g := canonGraph edges
   { cycle := cycleIn g, dangling := danglingIn g }
