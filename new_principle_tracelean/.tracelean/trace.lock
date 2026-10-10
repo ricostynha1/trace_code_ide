@@ -1389,6 +1389,66 @@
     {
       "role": "drt",
       "req": "REQ-CONTEXT",
+      "clause": "affected_tests",
+      "file": "crates/core/src/surface/context.rs",
+      "anchor": "crates/core/src/surface/context.rs::affected",
+      "body_hash": "abf759fa91532a23",
+      "link_hash": "24488edd03336687",
+      "qualifier": null
+    },
+    {
+      "role": "drt",
+      "req": "REQ-CONTEXT",
+      "clause": "affected_tests",
+      "file": "crates/core/tests/differential_context.rs",
+      "anchor": "crates/core/tests/differential_context.rs::model_and_implementation_agree_on_the_tests_a_change_may_break",
+      "body_hash": "c854f245529a3db3",
+      "link_hash": "5d6ba284b9d2b95c",
+      "qualifier": null
+    },
+    {
+      "role": "drt",
+      "req": "REQ-CONTEXT",
+      "clause": "claims_with_source",
+      "file": "crates/core/src/surface/context.rs",
+      "anchor": "crates/core/src/surface/context.rs::claims_on",
+      "body_hash": "31ee6e8afa3f5ab4",
+      "link_hash": "9440918c72e9c652",
+      "qualifier": null
+    },
+    {
+      "role": "drt",
+      "req": "REQ-CONTEXT",
+      "clause": "claims_with_source",
+      "file": "crates/core/tests/differential_context.rs",
+      "anchor": "crates/core/tests/differential_context.rs::model_and_implementation_agree_on_what_claims_a_target",
+      "body_hash": "2cecd8f6e5545c77",
+      "link_hash": "a1ecd55c5208bfde",
+      "qualifier": null
+    },
+    {
+      "role": "drt",
+      "req": "REQ-CONTEXT",
+      "clause": "from_the_shell",
+      "file": "crates/core/src/surface/context.rs",
+      "anchor": "crates/core/src/surface/context.rs::shell_parts",
+      "body_hash": "69b717aadb840d9c",
+      "link_hash": "a7380c68a28b63d9",
+      "qualifier": null
+    },
+    {
+      "role": "drt",
+      "req": "REQ-CONTEXT",
+      "clause": "from_the_shell",
+      "file": "crates/core/tests/differential_context.rs",
+      "anchor": "crates/core/tests/differential_context.rs::model_and_implementation_agree_on_the_parts_a_shell_asks_for",
+      "body_hash": "910418523e6ddb09",
+      "link_hash": "893c091bfa2f8b5d",
+      "qualifier": null
+    },
+    {
+      "role": "drt",
+      "req": "REQ-CONTEXT",
       "clause": "neighbourhood_is_closed",
       "file": "crates/core/src/surface/context.rs",
       "anchor": "crates/core/src/surface/context.rs::neighbourhood",
@@ -11279,6 +11339,36 @@
     {
       "role": "models",
       "req": "REQ-CONTEXT",
+      "clause": "affected_tests",
+      "file": "formal/TraceLean/Context.lean",
+      "anchor": "formal/TraceLean/Context.lean::TraceLean.Context::affected",
+      "body_hash": "a0cda730f6d991d9",
+      "link_hash": "61fbed40032883bc",
+      "qualifier": null
+    },
+    {
+      "role": "models",
+      "req": "REQ-CONTEXT",
+      "clause": "claims_with_source",
+      "file": "formal/TraceLean/Context.lean",
+      "anchor": "formal/TraceLean/Context.lean::TraceLean.Context::claimsOn",
+      "body_hash": "7dad820b122f3e63",
+      "link_hash": "b8208f00f9e535b8",
+      "qualifier": null
+    },
+    {
+      "role": "models",
+      "req": "REQ-CONTEXT",
+      "clause": "from_the_shell",
+      "file": "formal/TraceLean/Context.lean",
+      "anchor": "formal/TraceLean/Context.lean::TraceLean.Context::shellParts",
+      "body_hash": "a5290587d3e6e387",
+      "link_hash": "dd4269c4a22a3689",
+      "qualifier": null
+    },
+    {
+      "role": "models",
+      "req": "REQ-CONTEXT",
       "clause": "neighbourhood_is_closed",
       "file": "formal/TraceLean/Context.lean",
       "anchor": "formal/TraceLean/Context.lean::TraceLean.Context::ancestors",
@@ -13722,7 +13812,7 @@
       "clause": "person_chooses",
       "file": "formal/TraceLean/Context.lean",
       "anchor": "formal/TraceLean/Context.lean::TraceLean.Context::shown_were_included",
-      "body_hash": "0661a2223356b61f",
+      "body_hash": "9fa1e97c43efc6c4",
       "link_hash": "c1820a0ac8eafbf1",
       "qualifier": null
     },
@@ -16530,10 +16620,30 @@
       "role": "tests",
       "req": "REQ-CONTEXT",
       "clause": "affected_tests",
+      "file": "crates/core/tests/differential_context.rs",
+      "anchor": "crates/core/tests/differential_context.rs::model_and_implementation_agree_on_the_tests_a_change_may_break",
+      "body_hash": "c854f245529a3db3",
+      "link_hash": "51565f82d72505a1",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-CONTEXT",
+      "clause": "affected_tests",
       "file": "crates/editor/tests/context.rs",
       "anchor": "crates/editor/tests/context.rs::a_context_is_chosen_part_by_part_and_copied",
       "body_hash": "c7b4ba7108b35f40",
       "link_hash": "2d0a968a718abd15",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-CONTEXT",
+      "clause": "claims_with_source",
+      "file": "crates/core/tests/differential_context.rs",
+      "anchor": "crates/core/tests/differential_context.rs::model_and_implementation_agree_on_what_claims_a_target",
+      "body_hash": "2cecd8f6e5545c77",
+      "link_hash": "99bc168d485a52af",
       "qualifier": null
     },
     {
@@ -16554,6 +16664,16 @@
       "anchor": "crates/editor/tests/context.rs::a_context_is_chosen_part_by_part_and_copied",
       "body_hash": "c7b4ba7108b35f40",
       "link_hash": "49cab8be04dff89e",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-CONTEXT",
+      "clause": "from_the_shell",
+      "file": "crates/core/tests/differential_context.rs",
+      "anchor": "crates/core/tests/differential_context.rs::model_and_implementation_agree_on_the_parts_a_shell_asks_for",
+      "body_hash": "910418523e6ddb09",
+      "link_hash": "ea01160cb9ed4ff8",
       "qualifier": null
     },
     {

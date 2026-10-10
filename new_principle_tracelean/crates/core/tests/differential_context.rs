@@ -131,6 +131,123 @@ fn model_and_implementation_agree_on_what_a_label_names() {
     );
 }
 
+/// What a shell may type for `--parts`: nothing, `all`, or a list of labels
+/// with dashes, stray blanks, repeats, and names that are no part.
+fn shell_choice() -> BTreeMap<String, Schema> {
+    let mut examples: Vec<String> = ALL_PARTS.iter().map(|p| p.label().replace(' ', "-")).collect();
+    examples.extend(
+        ["all", " code ", "tests,", "code,tests", "tests,code,code", "refined-by,nope", "affected tests", "", "Code"]
+            .map(String::from),
+    );
+    let mut fields = BTreeMap::new();
+    fields.insert(
+        "parts".to_string(),
+        Schema::Option { inner: Box::new(Schema::Str { max_len: Some(0), examples }) },
+    );
+    fields
+}
+
+/// @drt REQ-CONTEXT.from_the_shell
+/// @tests REQ-CONTEXT.from_the_shell
+#[test]
+#[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
+fn model_and_implementation_agree_on_the_parts_a_shell_asks_for() {
+    check(
+        "REQ-CONTEXT",
+        "REQ-CONTEXT.from_the_shell",
+        "TraceLean.Context.shellParts",
+        "crates/core/src/surface/context.rs::shell_parts",
+        &["parts"],
+        shell_choice(),
+        101,
+    );
+}
+
+fn words(examples: &[&str]) -> Schema {
+    Schema::Str { max_len: Some(0), examples: examples.iter().map(|s| s.to_string()).collect() }
+}
+
+/// A claim over two requirements, two clauses, a few anchors (so one item can
+/// carry several claims), test and non-test paths, and sources that name a
+/// symbol on its own, inside a longer word, or not at all.
+fn claim() -> Schema {
+    let mut fields = BTreeMap::new();
+    fields.insert(
+        "role".to_string(),
+        words(&["implements", "tests", "models", "proves", "drt", "pins", "specifies"]),
+    );
+    fields.insert("req".to_string(), words(&["REQ-A", "REQ-B"]));
+    fields.insert("clause".to_string(), Schema::Option { inner: Box::new(words(&["x", "y"])) });
+    fields.insert("ident".to_string(), words(&["i1", "i2", "i3"]));
+    fields.insert(
+        "path".to_string(),
+        words(&["src/a.rs", "tests/t.rs", "src/test_x.rs", "b/tests/c.rs", "src/b.rs"]),
+    );
+    fields.insert("line".to_string(), Schema::Nat { max: Some(30), edges: vec![] });
+    fields.insert(
+        "symbol".to_string(),
+        Schema::Option { inner: Box::new(words(&["f", "m::f", "m::g", "a::b::h"])) },
+    );
+    fields.insert(
+        "source".to_string(),
+        words(&["f()", "let x = fg();", "g f", "// h", "", "see h_1", "(h)"]),
+    );
+    Schema::Struct { fields }
+}
+
+fn claims_in() -> BTreeMap<String, Schema> {
+    let mut fields = BTreeMap::new();
+    fields.insert("claims".to_string(), Schema::List { inner: Box::new(claim()), max_len: Some(6) });
+    fields.insert("id".to_string(), words(&["REQ-A", "REQ-B", "REQ-C"]));
+    fields.insert("clause".to_string(), Schema::Option { inner: Box::new(words(&["x", "y"])) });
+    fields
+}
+
+fn affected_in() -> BTreeMap<String, Schema> {
+    let mut fields = claims_in();
+    fields.insert("down".to_string(), Schema::List { inner: Box::new(words(&["REQ-A", "REQ-B"])), max_len: Some(2) });
+    let file = Schema::Tuple {
+        items: vec![
+            words(&["tests/t.rs", "src/a.rs", "tests/u.rs", "src/test_x.rs"]),
+            words(&["f()", "x\r\nf\n", "fn g() { h(); }\nf\n\n", "", "fg\nf f\n", "// f\r\n"]),
+        ],
+    };
+    fields.insert("files".to_string(), Schema::List { inner: Box::new(file), max_len: Some(3) });
+    fields
+}
+
+/// @drt REQ-CONTEXT.claims_with_source
+/// @tests REQ-CONTEXT.claims_with_source
+#[test]
+#[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
+fn model_and_implementation_agree_on_what_claims_a_target() {
+    check(
+        "REQ-CONTEXT",
+        "REQ-CONTEXT.claims_with_source",
+        "TraceLean.Context.claimsOn",
+        "crates/core/src/surface/context.rs::claims_on",
+        &["claims", "id", "clause"],
+        claims_in(),
+        102,
+    );
+}
+
+/// @drt REQ-CONTEXT.affected_tests
+/// @tests REQ-CONTEXT.affected_tests
+#[test]
+#[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
+fn model_and_implementation_agree_on_the_tests_a_change_may_break() {
+    check(
+        "REQ-CONTEXT",
+        "REQ-CONTEXT.affected_tests",
+        "TraceLean.Context.affected",
+        "crates/core/src/surface/context.rs::affected",
+        &["claims", "id", "clause", "down", "files"],
+        affected_in(),
+        103,
+    );
+}
+
 /// The generators reach what the clauses are about.
 ///
 /// @tests REQ-DRT-COVER.law_coverage

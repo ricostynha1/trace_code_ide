@@ -3352,6 +3352,58 @@
       }
     },
     {
+      "req_id": "REQ-CONTEXT",
+      "clause": "from_the_shell",
+      "floors": [
+        { "situation": "nothing asked for", "atLeast": 100 },
+        { "situation": "a list of labels", "atLeast": 400 },
+        { "situation": "a name that is no part", "atLeast": 400 }
+      ],
+      "model": {
+        "import": "TraceLean.Context",
+        "function": "TraceLean.Context.shellParts",
+        "arguments": ["parts"]
+      },
+      "implementation": {
+        "language": "rust",
+        "entry": "crates/core/src/surface/context.rs::shell_parts"
+      }
+    },
+    {
+      "req_id": "REQ-CONTEXT",
+      "clause": "claims_with_source",
+      "floors": [
+        { "situation": "a clause asked for", "atLeast": 200 },
+        { "situation": "two claims on one item", "atLeast": 100 }
+      ],
+      "model": {
+        "import": "TraceLean.Context",
+        "function": "TraceLean.Context.claimsOn",
+        "arguments": ["claims", "id", "clause"]
+      },
+      "implementation": {
+        "language": "rust",
+        "entry": "crates/core/src/surface/context.rs::claims_on"
+      }
+    },
+    {
+      "req_id": "REQ-CONTEXT",
+      "clause": "affected_tests",
+      "floors": [
+        { "situation": "a test that names an implementing item", "atLeast": 100 },
+        { "situation": "a line of an unclaimed test file", "atLeast": 100 }
+      ],
+      "model": {
+        "import": "TraceLean.Context",
+        "function": "TraceLean.Context.affected",
+        "arguments": ["claims", "id", "clause", "down", "files"]
+      },
+      "implementation": {
+        "language": "rust",
+        "entry": "crates/core/src/surface/context.rs::affected"
+      }
+    },
+    {
       "req_id": "REQ-UNDO",
       "clause": "tree_is_drawn",
       "floors": [

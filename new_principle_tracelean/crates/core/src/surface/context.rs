@@ -135,6 +135,7 @@ fn blank(c: char) -> bool {
 /// The first label that names no part is refused.
 ///
 /// @implements REQ-CONTEXT.from_the_shell
+/// @drt REQ-CONTEXT.from_the_shell
 pub fn shell_parts(parts: Option<String>) -> ShellParts {
     let chosen: BTreeSet<Part> = match parts.as_deref() {
         None => default_parts(),
@@ -357,6 +358,7 @@ pub struct Claimed {
 /// place and source: implementations, tests, and models with their proofs.
 ///
 /// @implements REQ-CONTEXT.claims_with_source
+/// @drt REQ-CONTEXT.claims_with_source
 pub fn claims_on(claims: Vec<Claim>, id: String, clause: Option<String>) -> Claimed {
     Claimed {
         code: of_roles(&claims, &id, &clause, &["implements"]),
@@ -424,6 +426,7 @@ const MOST_USES: usize = 20;
 /// that name one, at most `MOST_USES` of them. An item is placed once.
 ///
 /// @implements REQ-CONTEXT.affected_tests
+/// @drt REQ-CONTEXT.affected_tests
 pub fn affected(
     claims: Vec<Claim>,
     id: String,
