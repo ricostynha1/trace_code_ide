@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-LINECOV",
+    "clause": "clause_summary",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.SpecSorted::span_coverage_summarises",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "15f4b08c76158a31",
+  "inputs": [
+    [
+      "model",
+      "040100a3765d6c7e"
+    ],
+    [
+      "requirement",
+      "7cb612aa95e37391"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

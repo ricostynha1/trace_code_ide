@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-ROLLUP",
+    "clause": "partial_capped",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Rollup::a_partial_clause_is_capped_at_L2",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "b74f607d022f0854",
+  "inputs": [
+    [
+      "model",
+      "f96f84510583693b"
+    ],
+    [
+      "requirement",
+      "a17c049127179bae"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

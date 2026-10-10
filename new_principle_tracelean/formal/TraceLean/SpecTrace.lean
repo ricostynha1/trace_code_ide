@@ -509,4 +509,12 @@ theorem doc_standing_pinned :
       · intro he
         exact (a1.2 he).trans (a2.2 he).symm
 
+/-- A document link to nothing that exists is dangling, and one to something
+that does is current or in review by whether its recorded hash still matches.
+
+@proves REQ-DOCLINK.dangling_reported -/
+theorem a_link_to_nothing_is_dangling (link : DocLink) (current : List (String × String)) :
+    DocStanding link current (docState link current) :=
+  doc_standing_pinned.1 link current
+
 end TraceLean.SpecTrace

@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-CHECK",
+    "clause": "named_kinds",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Checker::every_kind_has_its_own_name",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "372c624b4193d26c",
+  "inputs": [
+    [
+      "model",
+      "877ede27519bdf01"
+    ],
+    [
+      "requirement",
+      "825b30a7a6617da1"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

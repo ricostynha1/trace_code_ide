@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-ROLLUP",
+    "clause": "exempt_leaves_denominator",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Rollup::an_exempt_clause_is_not_counted",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "653db7ba46015120",
+  "inputs": [
+    [
+      "model",
+      "f96f84510583693b"
+    ],
+    [
+      "requirement",
+      "8d3bda74a5062f4f"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

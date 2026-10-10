@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-ANCHOR",
+    "clause": "whitespace_normalised",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Hash::whitespace_collapses_outside_literals_only",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "ce00a485a61d9f93",
+  "inputs": [
+    [
+      "model",
+      "d9fa7adb61ff1e6c"
+    ],
+    [
+      "requirement",
+      "92f73fa83bbf3105"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

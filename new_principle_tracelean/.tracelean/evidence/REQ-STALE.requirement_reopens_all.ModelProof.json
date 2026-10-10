@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-STALE",
+    "clause": "requirement_reopens_all",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Hash::rewording_a_clause_moves_its_hash",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "ebdd86d95ca289ed",
+  "inputs": [
+    [
+      "model",
+      "5a549cc79c8f08e0"
+    ],
+    [
+      "requirement",
+      "b883a261cbe2868e"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-CHECK",
+    "clause": "unbound_reported",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Checker::model_and_code_unbound_is_reported",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "b5be1398aa3bf81d",
+  "inputs": [
+    [
+      "model",
+      "3bacc87678b4070e"
+    ],
+    [
+      "requirement",
+      "83d68191a050f586"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

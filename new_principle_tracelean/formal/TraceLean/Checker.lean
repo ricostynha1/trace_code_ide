@@ -226,4 +226,62 @@ theorem progress_never_blocks (kind : Kind) (h : kind.progress = true) :
     kind.blocksByDefault = false := by
   cases kind <;> simp_all [Kind.progress, Kind.blocksByDefault]
 
+/-- Every kind of finding there is, once each. -/
+def allKinds : List Kind :=
+  [.dangling, .danglingRefines, .refinesCycle, .duplicateId, .unmodeled, .unimplemented,
+   .unbound, .untested, .contested, .unsoundExemption, .unsoundQualifier, .malformed,
+   .imprecise, .severalModels, .severalSpecs, .severalPins]
+
+/-- Every finding is reported under a kind of its own name: each kind is
+written as a distinct name, and has its severity, progress and gate.
+
+@proves REQ-CHECK.named_kinds -/
+theorem every_kind_has_its_own_name :
+    (allKinds.map (fun k => (Lean.toJson k).compress)).eraseDups.length = allKinds.length ∧
+    allKinds.all (fun k => facts k == { severity := k.severity, progress := k.progress,
+                                        blocksByDefault := k.blocksByDefault }) = true := by
+  native_decide
+
+/-- A clause with a model and an implementation and nothing binding them is
+reported as unbound.
+
+@proves REQ-CHECK.unbound_reported -/
+theorem model_and_code_unbound_is_reported (roles : List Role)
+    (modeled : roles.contains Role.models = true) (implemented : roles.contains Role.implements = true)
+    (unbound : roles.contains Role.drt = false) :
+    (coverageKinds roles false false).contains Kind.unbound = true := by
+  unfold coverageKinds
+  simp only [modeled, implemented, unbound]
+  simp
+
+/-- A structural clause is asked for a test and for nothing else: never
+unmodelled, unimplemented or unbound, and untested exactly when no test claims
+it -- so it stays counted, and nothing it has reaches what a differential test
+establishes.
+
+@proves REQ-CHECK.structural_is_not_exempt -/
+theorem structural_asks_only_for_a_test (roles : List Role) :
+    coverageKinds roles false true = (if roles.contains Role.tests then [] else [Kind.untested]) := by
+  unfold coverageKinds
+  cases roles.contains Role.tests <;> simp
+
+/-- An exemption is reported without a reason or an approver, and past its
+`until` when the check is given a later date; given no date, none is expired.
+
+@proves REQ-CHECK.qualifier_soundness -/
+theorem an_exemption_is_signed_and_in_date (reason judge due today : String) (expires : Option String)
+    (date : Option String) :
+    qualifierKinds (some (.exempt none (some judge) expires)) date = [Kind.unsoundExemption] ∧
+    qualifierKinds (some (.exempt (some reason) none expires)) date = [Kind.unsoundExemption] ∧
+    qualifierKinds (some (.exempt (some reason) (some judge) expires)) none = [] ∧
+    (due < today →
+      qualifierKinds (some (.exempt (some reason) (some judge) (some due))) (some today)
+        = [Kind.unsoundExemption]) := by
+  refine ⟨?_, ?_, ?_, ?_⟩
+  · simp [qualifierKinds]
+  · simp [qualifierKinds]
+  · simp [qualifierKinds, expired]
+  · intro late
+    simp [qualifierKinds, expired, late]
+
 end TraceLean.Checker

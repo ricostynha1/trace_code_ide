@@ -121,4 +121,41 @@ theorem an_estimate_says_so :
         (fun spend => (estimateLine spend).startsWith "estimated ") = true := by
   native_decide
 
+/-- Each kind of token is priced at its own rate: usage of one kind alone costs
+that kind's rate and no other's.
+
+@proves REQ-COST.cache_priced_apart -/
+theorem each_kind_at_its_own_rate (price : Price) (model : String) (n : Nat) :
+    amountOf price { model := model, input := n, cached := 0, cacheWrite := 0, output := 0 }
+      = n * price.input / 1000000 ∧
+    amountOf price { model := model, input := 0, cached := n, cacheWrite := 0, output := 0 }
+      = n * price.cached / 1000000 ∧
+    amountOf price { model := model, input := 0, cached := 0, cacheWrite := n, output := 0 }
+      = n * price.cacheWrite / 1000000 := by
+  simp [amountOf]
+
+/-- Usage naming a model the table prices costs that model's price; usage
+naming one it does not is named as unpriced and adds nothing.
+
+@proves REQ-COST.price_is_per_model -/
+theorem priced_by_its_model_or_named (table : List Price) (usage : Usage) :
+    (∀ price, priceOf table usage.model = some price →
+      spendOf table [usage] = { amount := amountOf price usage, unpriced := [] }) ∧
+    (priceOf table usage.model = none →
+      spendOf table [usage] = { amount := 0, unpriced := [usage.model] }) := by
+  constructor
+  · intro price h
+    simp [spendOf, accumulate, h]
+  · intro h
+    simp [spendOf, accumulate, h, noting]
+
+/-- The estimate is built from the usage records alone, one at a time in the
+order the transcript gives them: one more record changes it by that record and
+the table, and by nothing else.
+
+@proves REQ-COST.cost_from_usage -/
+theorem built_record_by_record (table : List Price) (usage : List Usage) (last : Usage) :
+    spendOf table (usage ++ [last]) = accumulate table (spendOf table usage) last := by
+  simp [spendOf, List.foldl_append]
+
 end TraceLean.Cost

@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-CHECK",
+    "clause": "structural_is_not_exempt",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Checker::structural_asks_only_for_a_test",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "dc6cf04e87e5dc1a",
+  "inputs": [
+    [
+      "model",
+      "3bacc87678b4070e"
+    ],
+    [
+      "requirement",
+      "f5f60cf344eb2bee"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

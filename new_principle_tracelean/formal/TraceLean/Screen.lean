@@ -974,4 +974,11 @@ theorem panes_distinct_pinned :
     all_goals cases y2
     all_goals simp_all
 
+/-- Whether a layout's panes are distinct is answered as its specification
+says, for every layout.
+
+@proves REQ-SCREEN.panes_are_distinct -/
+theorem distinct_panes_answers (layout : Layout) : PanesDistinct layout (distinctPanes layout) :=
+  panes_distinct_pinned.1 layout
+
 end TraceLean.Screen

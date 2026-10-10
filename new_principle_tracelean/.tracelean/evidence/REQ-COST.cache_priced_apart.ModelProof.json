@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-COST",
+    "clause": "cache_priced_apart",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Cost::each_kind_at_its_own_rate",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "492e366235bbf727",
+  "inputs": [
+    [
+      "model",
+      "060c20077467402d"
+    ],
+    [
+      "requirement",
+      "c8f6a651a181c95d"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

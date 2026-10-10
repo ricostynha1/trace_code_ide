@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-CHECK",
+    "clause": "qualifier_soundness",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Checker::an_exemption_is_signed_and_in_date",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "37379620271150f9",
+  "inputs": [
+    [
+      "model",
+      "67ce981828613b57"
+    ],
+    [
+      "requirement",
+      "e327e2ecff8fb70a"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

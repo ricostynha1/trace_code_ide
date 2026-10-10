@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-ROLLUP",
+    "clause": "open_is_lower_bound",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Rollup::an_open_roll_up_is_provisional",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "b9b1f7112ba1fca2",
+  "inputs": [
+    [
+      "model",
+      "f96f84510583693b"
+    ],
+    [
+      "requirement",
+      "801ea2dcceebf30e"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-JUDGE",
+    "clause": "judgement_shown",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Judge::a_judgement_says_who_and_why",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "797761368432fdfa",
+  "inputs": [
+    [
+      "model",
+      "3f5356153d6ab83d"
+    ],
+    [
+      "requirement",
+      "fc6972b37792b312"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

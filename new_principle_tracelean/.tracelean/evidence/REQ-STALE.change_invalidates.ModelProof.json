@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-STALE",
+    "clause": "change_invalidates",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Staleness::a_changed_input_invalidates",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "ac35590f5a2f8082",
+  "inputs": [
+    [
+      "model",
+      "aace6213626c3e45"
+    ],
+    [
+      "requirement",
+      "57f9ed2e2c86ee7e"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

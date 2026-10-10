@@ -150,4 +150,71 @@ against inputs and a link that are still what they were.
 def rerun (held : List HeldRun) (op : String) (live : List String) (again : Bool) : Bool :=
   again || !(held.any (fun h => h.op == op && h.agreed && (staleness h.record live h.current).isNone))
 
-end TraceLean.Staleness
+/-- Any input whose hash is not what the record holds makes the record stale,
+however small the change; a missing input counts as changed.
+
+@proves REQ-STALE.change_invalidates -/
+theorem a_changed_input_invalidates (record : Record) (live : List String)
+    (current : List (String × String)) (name hash : String)
+    (held : List.Mem (name, hash) record.inputs) (moved : lookup current name ≠ some hash) :
+    staleness record live current ≠ none := by
+  unfold staleness
+  split
+  · simp
+  · split
+    · simp
+    · rename_i nothing
+      have kept := List.find?_eq_none.1 nothing (name, hash) held
+      simp at kept
+      exact absurd kept moved
+
+/-- The scanner only sorts: every record it reports, valid or stale, is one it
+was given, unchanged.
+
+@proves REQ-STALE.scanner_never_writes -/
+theorem a_sweep_returns_only_what_it_was_given (live : List String)
+    (current : List (String × String)) :
+    ∀ records : List Record,
+      (∀ r, List.Mem r (sweep records live current).valid → List.Mem r records) ∧
+      (∀ p, List.Mem p (sweep records live current).stale → List.Mem p.1 records) := by
+  intro records
+  induction records
+  case nil =>
+    constructor
+    · intro r hr
+      nomatch hr
+    · intro p hp
+      nomatch hp
+  case cons record rest ih =>
+    simp only [sweep]
+    split
+    · constructor
+      · intro r hr
+        cases hr
+        · exact List.Mem.head _
+        · rename_i h
+          exact List.Mem.tail _ (ih.1 r h)
+      · intro p hp
+        exact List.Mem.tail _ (ih.2 p hp)
+    · constructor
+      · intro r hr
+        exact List.Mem.tail _ (ih.1 r hr)
+      · intro p hp
+        cases hp
+        · exact List.Mem.head _
+        · rename_i h
+          exact List.Mem.tail _ (ih.2 p h)
+
+/-- A clause is not run again exactly when a run of it agreed and is still
+valid; asked, it is run whatever is held.
+
+@proves REQ-STALE.agreed_not_rerun -/
+theorem run_again_only_when_nothing_valid_agreed (held : List HeldRun) (op : String)
+    (live : List String) :
+    rerun held op live true = true ∧
+    (rerun held op live false = false ↔
+      ∃ h, List.Mem h held ∧ h.op = op ∧ h.agreed = true ∧ staleness h.record live h.current = none) := by
+  constructor
+  · simp [rerun]
+  · simp [rerun, List.any_eq_true, and_assoc]
+    exact Iff.rfl

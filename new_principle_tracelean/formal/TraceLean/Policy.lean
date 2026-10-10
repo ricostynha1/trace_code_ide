@@ -95,4 +95,31 @@ theorem protected_is_not_mirrored (path : String) :
   intro h
   simp [isMirrored, h]
 
+/-- Every path receives one of the four answers -- and only one, since
+`classify` is a function and the four are distinct constructors.
+
+@proves REQ-SBX.classification_total -/
+theorem every_path_has_one_of_four_classes (path : String) :
+    classify path = Class.«protected» ∨ classify path = Class.mirrored ∨
+      classify path = Class.passThrough ∨ classify path = Class.outside := by
+  cases classify path
+  all_goals simp
+
+/-- Regenerable output is never replayed: a pass-through path is not mirrored;
+a directory only tools write is pass-through at any depth, and a name a person
+also gives a source directory only at the root.
+
+@proves REQ-SBX.passthrough_not_mirrored -/
+theorem regenerable_is_not_mirrored (path : String) :
+    (classify path = .passThrough → isMirrored path = false) ∧
+    ([("target/debug/a", Class.passThrough), ("crates/core/target/a", .passThrough),
+      ("web/node_modules/x.js", .passThrough), ("formal/.lake/build/a.olean", .passThrough),
+      ("build/out.o", .passThrough), ("dist/a.js", .passThrough),
+      ("src/build/mod.rs", .mirrored), ("src/dist.rs", .mirrored)] : List (String × Class)).all
+      (fun pair => classify pair.1 == pair.2) = true := by
+  constructor
+  · intro h
+    simp [isMirrored, h]
+  · native_decide
+
 end TraceLean.Policy

@@ -103,4 +103,29 @@ theorem a_line_no_test_ran_has_nobody :
     merged [⟨"t", "a.rs", [(4, 0)]⟩] "a.rs" = [⟨4, 0, []⟩] := by
   native_decide
 
+/-- Coverage measured against the text a file has now is shown; coverage
+measured against any other text, or none, is not.
+
+@proves REQ-LINECOV.stale_hidden -/
+theorem only_coverage_of_this_text_is_shown (hash other : String) (lines : List LineHits) :
+    visible (some (hash, lines)) hash = some lines ∧
+    (other ≠ hash → visible (some (other, lines)) hash = none) ∧
+    visible none hash = none := by
+  refine ⟨?_, ?_, ?_⟩
+  · simp [visible]
+  · intro moved
+    simp [visible, moved]
+  · simp [visible]
+
+/-- Every measured line in the window has its marker, on its own buffer line,
+with how often it ran; a line no test ran says so when pointed at, and one that
+ran names its tests.
+
+@proves REQ-LINECOV.uncovered_shown -/
+theorem each_measured_line_in_view_is_marked :
+    (markers [⟨3, 0, []⟩, ⟨5, 2, [("t", 2)]⟩, ⟨40, 1, [("u", 1)]⟩] 0 10).map
+        (fun m => (m.line, m.hits, m.said)) =
+      [(2, 0, "no test runs this line"), (4, 2, "run 2 times by t ×2")] := by
+  native_decide
+
 end TraceLean.Lines

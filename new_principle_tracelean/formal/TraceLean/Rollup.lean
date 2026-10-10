@@ -444,4 +444,41 @@ theorem an_unclaimed_file_is_counted :
     fileCoverage ["a.rs", "b.rs"] ["a.rs"] = { met := 1, total := 2, exact := true } := by
   native_decide
 
+/-- An exempt clause contributes nothing -- neither a level nor a place in the
+denominator -- while its sibling is still counted.
+
+@proves REQ-ROLLUP.exempt_leaves_denominator -/
+theorem an_exempt_clause_is_not_counted (levels : List ((String × Option String) × Level)) :
+    ownLevels levels { id := "R", complete := true, clauses := [some "a", some "b"],
+                       exempt := [some "b"], partialClauses := [], refines := [] }
+      = [(levelAt levels ("R", some "a")).getD Level.L1] := by
+  simp [ownLevels]
+
+/-- A partial clause stays counted, at whatever it reached but never above L2,
+so it never meets a floor of L3.
+
+@proves REQ-ROLLUP.partial_capped -/
+theorem a_partial_clause_is_capped_at_L2 (reached : Level) :
+    ownLevels [(("R", some "a"), reached)]
+        { id := "R", complete := true, clauses := [some "a"], exempt := [],
+          partialClauses := [some "a"], refines := [] }
+      = [Level.min reached Level.L2] ∧
+    (Level.min reached Level.L2).toNat ≤ Level.L2.toNat := by
+  constructor
+  · simp [ownLevels, levelAt]
+  · cases reached <;> simp [Level.min, Level.toNat]
+
+/-- A roll-up over a decomposition nobody claimed complete is not exact, so it
+renders marked provisional, as a figure that can only fall.
+
+@proves REQ-ROLLUP.open_is_lower_bound -/
+theorem an_open_roll_up_is_provisional :
+    (rollUp [{ id := "R", complete := false, clauses := [some "a"], exempt := [],
+               partialClauses := [], refines := [] }]
+            [(("R", some "a"), Level.L4)] "R" Level.L3).covered.exact = false ∧
+    (rollUp [{ id := "R", complete := true, clauses := [some "a"], exempt := [],
+               partialClauses := [], refines := [] }]
+            [(("R", some "a"), Level.L4)] "R" Level.L3).covered.exact = true := by
+  native_decide
+
 end TraceLean.Rollup

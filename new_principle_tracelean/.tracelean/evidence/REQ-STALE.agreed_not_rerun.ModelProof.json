@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-STALE",
+    "clause": "agreed_not_rerun",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Staleness::run_again_only_when_nothing_valid_agreed",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "a903d3811a600788",
+  "inputs": [
+    [
+      "model",
+      "49e9d624598a993c"
+    ],
+    [
+      "requirement",
+      "32b5bca473fbdaa3"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

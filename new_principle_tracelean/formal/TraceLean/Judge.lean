@@ -400,4 +400,41 @@ theorem the_prompt_carries_the_divergence_and_says_it_is_advice :
                    divergence := none }).splitOn "This is advice").length = 2) := by
   native_decide
 
+/-- A judgement's ceiling is the second level, below what a differential test
+and a proof can establish, so no judgement promotes a link to tested or proved.
+
+@proves REQ-EVID.judgement_caps -/
+theorem a_judgement_caps_at_the_second_level (verdict judgedBy promptVersion : String)
+    (delegatedBy note : Option String) (seed cases : Nat) (op theoremName toolchain : String) :
+    (Detail.judge verdict judgedBy delegatedBy promptVersion note).ceiling = Level.L2 ∧
+    (Detail.drt seed cases op).ceiling = Level.L3 ∧
+    (Detail.proof theoremName toolchain).ceiling = Level.L4 := by
+  simp [Detail.ceiling]
+
+/-- An agreement names its judge and level; any other verdict names itself and
+its note; a delegated one names who delegated it.
+
+@proves REQ-JUDGE.judgement_shown -/
+theorem a_judgement_says_who_and_why :
+    judgedText { verdict := "agrees", judgedBy := "ana", delegatedBy := none, note := none,
+                 level := .L2 } = "agrees by ana — L2" ∧
+    judgedText { verdict := "drift", judgedBy := "ana", delegatedBy := none,
+                 note := some "off by one", level := .L1 } = "judged: drift — off by one  by ana" ∧
+    judgedText { verdict := "agrees", judgedBy := "claude-review", delegatedBy := some "ana",
+                 note := none, level := .L2 } = "agrees by claude-review — L2 (delegated by ana)" := by
+  native_decide
+
+/-- The exported prompt names the clause, carries its text and the model's
+source, and asks for one of the three verdicts.
+
+@proves REQ-JUDGE.prompt_exported -/
+theorem the_prompt_carries_clause_and_model :
+    let p := prompt { reqId := "REQ-X", clause := some "one", clauseText := "A thing shall be.",
+                      modelSource := "def thing := 1", requirementHash := "rh", modelHash := "mh",
+                      divergence := none }
+    (p.splitOn "Requirement REQ-X.one:").length = 2 ∧ (p.splitOn "A thing shall be.").length = 2 ∧
+      (p.splitOn "def thing := 1").length = 2 ∧
+      (p.splitOn "agrees, drift, unmodelable").length = 2 := by
+  native_decide
+
 end TraceLean.Judge

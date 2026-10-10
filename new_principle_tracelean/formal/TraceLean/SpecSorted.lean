@@ -626,6 +626,15 @@ theorem clause_summary_pinned :
     simp only [Reach.mk.injEq]
     exact ⟨e2, e1, e3⟩
 
+/-- A clause's coverage counts the lines in its span, those of them that ran,
+and the tests that ran any, each once and in order: the summary the clause asks
+for, of whatever lines were measured.
+
+@proves REQ-LINECOV.clause_summary -/
+theorem span_coverage_summarises (lines : List LineHits) (start stop : Nat) :
+    ClauseSummary lines start stop (spanCoverage lines start stop) :=
+  clause_summary_pinned.1 lines start stop
+
 /-! ## Refinements naming nothing -/
 
 /-- `a` comes strictly before `b`: by the first member, then by the second. -/

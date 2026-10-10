@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-SBX",
+    "clause": "classification_total",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Policy::every_path_has_one_of_four_classes",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "54221df573546fbf",
+  "inputs": [
+    [
+      "model",
+      "aa31253138e0844c"
+    ],
+    [
+      "requirement",
+      "6280e2a39ac35925"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

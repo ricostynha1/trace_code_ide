@@ -36,4 +36,12 @@ theorem invalidated_by_change_pinned :
     all_goals cases y2
     all_goals simp_all [StillStands]
 
+/-- A judgement still stands exactly when neither the requirement nor the model
+it judged changed.
+
+@proves REQ-JUDGE.invalidated_by_change -/
+theorem a_judgement_stands_until_either_changes (judgement : Judgement) (material : Material) :
+    StillStands judgement material (stillApplies judgement material) :=
+  invalidated_by_change_pinned.1 judgement material
+
 end TraceLean.SpecJudge

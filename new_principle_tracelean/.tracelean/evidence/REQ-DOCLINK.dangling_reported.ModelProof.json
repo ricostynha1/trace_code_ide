@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-DOCLINK",
+    "clause": "dangling_reported",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.SpecTrace::a_link_to_nothing_is_dangling",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "c9756d9942d11634",
+  "inputs": [
+    [
+      "model",
+      "cddf7f4f1b5b07e7"
+    ],
+    [
+      "requirement",
+      "3ea708b7807b579a"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

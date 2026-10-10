@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-STALE",
+    "clause": "measured_not_retaken",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Hash::measured_again_only_when_its_sources_moved",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "49e5287f398c01f7",
+  "inputs": [
+    [
+      "model",
+      "9f579e9f30cd89b2"
+    ],
+    [
+      "requirement",
+      "f97d3602cede5b59"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

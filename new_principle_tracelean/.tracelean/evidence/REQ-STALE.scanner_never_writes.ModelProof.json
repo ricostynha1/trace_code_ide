@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-STALE",
+    "clause": "scanner_never_writes",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Staleness::a_sweep_returns_only_what_it_was_given",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "ba73b4c9f492999d",
+  "inputs": [
+    [
+      "model",
+      "43f9e30e67d7bbde"
+    ],
+    [
+      "requirement",
+      "e77bf829f5e17ba7"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}
