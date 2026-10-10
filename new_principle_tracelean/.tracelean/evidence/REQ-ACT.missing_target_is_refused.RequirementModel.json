@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-ACT",
+    "clause": "missing_target_is_refused",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+    }
+  },
+  "linkHash": "204482bd23b412c3",
+  "inputs": [
+    [
+      "requirement",
+      "1e8be2e211d3d529"
+    ],
+    [
+      "model",
+      "43418699da34631e"
+    ]
+  ]
+}

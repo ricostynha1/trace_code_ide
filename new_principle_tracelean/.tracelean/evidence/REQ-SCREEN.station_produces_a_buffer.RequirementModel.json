@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-SCREEN",
+    "clause": "station_produces_a_buffer",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+    }
+  },
+  "linkHash": "41b41ef0c2e83404",
+  "inputs": [
+    [
+      "requirement",
+      "8e70358f44206d98"
+    ],
+    [
+      "model",
+      "8a0556c0e7289548"
+    ]
+  ]
+}

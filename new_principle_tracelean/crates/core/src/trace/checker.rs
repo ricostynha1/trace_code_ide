@@ -98,6 +98,10 @@ impl Kind {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Policy {
     pub block_on: BTreeSet<Kind>,
+    /// The date exemptions are judged expired against, as `YYYY-MM-DD`; none
+    /// judges none expired (`REQ-CHECK.qualifier_soundness`).
+    #[serde(default)]
+    pub today: Option<String>,
 }
 
 impl Default for Policy {
@@ -117,6 +121,7 @@ impl Default for Policy {
             ]
             .into_iter()
             .collect(),
+            today: None,
         }
     }
 }
@@ -245,14 +250,18 @@ pub fn coverage_kinds(roles: Vec<Role>, exempt: bool, structural: bool) -> Vec<K
 /// An exemption removes a clause from the denominator, so an exemption without
 /// a reason and an approver is a hole nobody signed for. A partial or
 /// nondeterministic qualifier that says nothing is the same failure, one
-/// severity down.
+/// severity down. An exemption past its `until` is one nobody renewed — but
+/// only against a date the check was given (`today`, an ISO date), since a
+/// check that read a clock would answer differently for the same tree.
 ///
 /// @implements REQ-CHECK.qualifier_soundness
 /// @drt REQ-CHECK.qualifier_soundness
-pub fn qualifier_kinds(qualifier: Option<Qualifier>) -> Vec<Kind> {
+pub fn qualifier_kinds(qualifier: Option<Qualifier>, today: Option<String>) -> Vec<Kind> {
     match qualifier {
-        Some(Qualifier::Exempt { reason, judged_by, .. })
-            if reason.is_none() || judged_by.is_none() =>
+        Some(Qualifier::Exempt { reason, judged_by, expires })
+            if reason.is_none()
+                || judged_by.is_none()
+                || expires.as_deref().zip(today.as_deref()).is_some_and(|(until, today)| until < today) =>
         {
             vec![Kind::UnsoundExemption]
         }
@@ -350,9 +359,9 @@ pub fn check(index: &Index, policy: &Policy) -> Vec<Finding> {
             );
         }
 
-        for kind in qualifier_kinds(link.qualifier.clone()) {
+        for kind in qualifier_kinds(link.qualifier.clone(), policy.today.clone()) {
             let message = match kind {
-                Kind::UnsoundExemption => "an exemption must carry a reason and an approver",
+                Kind::UnsoundExemption => "an exemption must carry a reason and an approver, and not be past its `until`",
                 _ => "a qualifier must say why",
             };
             findings.push(
@@ -530,6 +539,26 @@ mod tests {
     }
 
     const REQ: &str = "---\nid: REQ-A\ndecomposition: complete\nclauses:\n  one: First.\n---\nbody";
+
+    /// An exemption past its `until` is reported against the date the check is
+    /// given, and against no date is not: the check reads no clock.
+    ///
+    /// @tests REQ-CHECK.qualifier_soundness
+    #[test]
+    fn an_exemption_past_the_date_given_is_reported_and_without_one_is_not() {
+        let exempt = |until: &str| {
+            Some(Qualifier::Exempt {
+                reason: Some("platform".into()),
+                judged_by: Some("ana".into()),
+                expires: Some(until.into()),
+            })
+        };
+        let on = |date: &str| Some(date.to_string());
+        assert_eq!(qualifier_kinds(exempt("2026-01-01"), on("2026-10-11")), vec![Kind::UnsoundExemption]);
+        assert!(qualifier_kinds(exempt("2027-01-01"), on("2026-10-11")).is_empty());
+        assert!(qualifier_kinds(exempt("2026-10-11"), on("2026-10-11")).is_empty(), "the last day is still inside");
+        assert!(qualifier_kinds(exempt("2026-01-01"), None).is_empty());
+    }
 
     /// @tests REQ-CHECK.unbound_reported
     #[test]

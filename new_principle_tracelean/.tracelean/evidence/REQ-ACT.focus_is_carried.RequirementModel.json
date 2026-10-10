@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-ACT",
+    "clause": "focus_is_carried",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+    }
+  },
+  "linkHash": "2f179fc174b5a9b5",
+  "inputs": [
+    [
+      "requirement",
+      "ede60588e15e9208"
+    ],
+    [
+      "model",
+      "43418699da34631e"
+    ]
+  ]
+}

@@ -32,8 +32,8 @@ pub struct Mark {
 /// thing. A producer that knows more than the role — a menu row, which
 /// dispatches one particular action — gives its spans actions directly instead.
 ///
-/// @implements REQ-SHOW.core_produces
-/// @drt REQ-SHOW.core_produces
+/// @implements REQ-SHOW.actions_by_role
+/// @drt REQ-SHOW.actions_by_role
 pub fn actions_for(role: Role) -> Vec<String> {
     let names: &[&str] = match role {
         Role::Plain => &[],

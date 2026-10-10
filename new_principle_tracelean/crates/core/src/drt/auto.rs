@@ -67,22 +67,31 @@ fn held_runs(index: &Index, held: &[crate::trace::record::Evidence], c: &Candida
 }
 
 /// Each file holding a `@drt` claim — a differential suite — with the clauses
-/// it claims that no current agreed run holds: a suite with none due need not
-/// run (`tools/differential-all.sh`). The op is the one the held record names,
-/// since a binding that also checks a clause records it under its own.
+/// it establishes that no current agreed run holds: a suite with none due need
+/// not run (`tools/differential-all.sh`). A claim on a binding's op establishes
+/// every clause the binding also checks, so those count too; and the op is the
+/// one the held record names, since such a clause is recorded under it.
 pub fn suites_due(root: &Path, index: &Index) -> BTreeMap<String, Vec<String>> {
     let held = crate::trace::earn::merge(
         crate::trace::lockfile::read(root).map(|l| l.evidence).unwrap_or_default(),
         crate::trace::store::read_all(root),
     );
+    let bindings = super::config::read(root).unwrap_or_default();
     let live: Vec<String> = index.links.iter().map(|l| l.link_hash.clone()).collect();
     let mut out: BTreeMap<String, Vec<String>> = BTreeMap::new();
     for link in index.links.iter().filter(|l| l.role == Role::Drt) {
-        let runs = held_for(index, &held, &link.req_id, &link.clause);
-        let current = runs.iter().any(|h| !rerun(vec![h.clone()], h.op.clone(), live.clone(), false));
+        let op = super::qualified_op(&link.req_id, link.clause.as_deref());
+        let clauses = bindings.iter().find(|b| b.op() == op).map(|b| b.clauses()).unwrap_or_else(|| vec![op.clone()]);
         let due = out.entry(link.anchor.file.clone()).or_default();
-        if !current {
-            due.push(super::qualified_op(&link.req_id, link.clause.as_deref()));
+        for qualified in clauses {
+            let (req_id, clause) = match qualified.split_once('.') {
+                Some((req, clause)) => (req.to_string(), Some(clause.to_string())),
+                None => (qualified.clone(), None),
+            };
+            let runs = held_for(index, &held, &req_id, &clause);
+            if !runs.iter().any(|h| !rerun(vec![h.clone()], h.op.clone(), live.clone(), false)) {
+                due.push(qualified);
+            }
         }
     }
     for due in out.values_mut() {

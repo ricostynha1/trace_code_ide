@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-JUDGE",
+    "clause": "advice_is_not_evidence",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "the prompt says it is advice and that the decision is the asker's; record refuses a judgement naming no person; decided under autonomy, night of 2026-10-10"
+    }
+  },
+  "linkHash": "147ccb74d7671163",
+  "inputs": [
+    [
+      "requirement",
+      "87a2476be237a570"
+    ],
+    [
+      "model",
+      "0b366673facbb2e3"
+    ]
+  ]
+}

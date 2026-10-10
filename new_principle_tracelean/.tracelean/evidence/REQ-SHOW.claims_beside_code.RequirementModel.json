@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-SHOW",
+    "clause": "claims_beside_code",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "models the requirement-document half; which declaration a code claim sits on is the annotation grammar's model; decided under autonomy, night of 2026-10-10"
+    }
+  },
+  "linkHash": "f77d8e656acb592c",
+  "inputs": [
+    [
+      "requirement",
+      "eda3abed10e8803b"
+    ],
+    [
+      "model",
+      "75880f0a18b9bc63"
+    ]
+  ]
+}

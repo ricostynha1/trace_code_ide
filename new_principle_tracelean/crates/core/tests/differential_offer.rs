@@ -36,8 +36,19 @@ fn kind() -> Schema {
 
 /// Actions a span may declare: ones the menu words specially, one carrying a
 /// target, and a diff, which brings an accept and a reject for its file.
+/// Actions a span may declare, with one no dispatcher knows — which is not
+/// offered — and one carrying its own target.
 fn declared() -> Schema {
-    name(&["file.open", "observe.diff", "observe.accept_file", "screen.show file:a.rs", "trace.check", "file.save"])
+    name(&[
+        "file.open",
+        "observe.diff",
+        "observe.accept_file",
+        "screen.show file:a.rs",
+        "trace.check",
+        "file.save",
+        "file.explode",
+        "design.toggle REQ-A",
+    ])
 }
 
 fn buffer() -> Schema {

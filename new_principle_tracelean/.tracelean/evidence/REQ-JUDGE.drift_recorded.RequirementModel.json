@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-JUDGE",
+    "clause": "drift_recorded",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+    }
+  },
+  "linkHash": "3ab69d9ebf830f19",
+  "inputs": [
+    [
+      "requirement",
+      "afcf0a707f2f5e72"
+    ],
+    [
+      "model",
+      "3402adaacf045c92"
+    ]
+  ]
+}

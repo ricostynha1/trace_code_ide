@@ -1,12 +1,14 @@
 import TraceLean.View
 import TraceLean.Keymap
+import TraceLean.Act
 
 /-!
 # What a pointer is offered
 
 Models `REQ-ACT.everything_is_offered`: the context menu at a position is every
 action a span declares there, the actions of the buffer it is in and the places
-always reachable, each with the keys that reach it from the root mode. What an
+always reachable, each with the keys that reach it from the root mode, less any
+the dispatcher does not know. What an
 entry reads as is wording and not modelled; what it does, what it is about and
 how to reach it by keys are.
 -/
@@ -119,11 +121,20 @@ def places : List String :=
   ["screen.station.project", "screen.station.trace", "screen.station.design", "screen.station.sandbox", "observe.start", "trace.check",
    "trace.findings", "history.tree"]
 
+/-- Whether the dispatcher knows `action`: asked with nothing focused, it does
+not refuse it as unknown -- wanting a target is still knowing it. -/
+def known (action : String) : Bool :=
+  match TraceLean.Act.dispatch action { kind := BufferKind.menu "", offset := 0, under := none } {} [] with
+  | .refuse (.unknownAction _) => false
+  | _ => true
+
 /-- Everything offered at `offset` in `buffer`: what was pointed at, a listing
 row's file operations, the buffer's own actions, the panes, and the places.
 
 @models REQ-ACT.everything_is_offered -/
 def offers (buffer : Buffer) (offset : Nat) (keymap : Keymap) : List Offered :=
+  -- A span may declare anything; what the dispatcher would refuse as unknown
+  -- is a button that does nothing, so it is not offered.
   let here := under buffer offset
   let declared := actionsAt buffer offset
   let row :=
@@ -132,8 +143,8 @@ def offers (buffer : Buffer) (offset : Nat) (keymap : Keymap) : List Offered :=
       (if declared.contains "file.open" then ["file.rename", "file.delete", "file.copy_path"] else []).map
         (fun a => entry keymap "here" a (some path))
     | _, _ => []
-  pointedAt keymap here declared ++ row ++ ofBuffer keymap buffer.kind ++
+  (pointedAt keymap here declared ++ row ++ ofBuffer keymap buffer.kind ++
     ["screen.split.across", "screen.split.down", "screen.close"].map (fun a => entry keymap "panes" a none) ++
-    places.map (fun a => entry keymap "go" a none)
+    places.map (fun a => entry keymap "go" a none)).filter (fun o => known o.action)
 
 end TraceLean.Offer

@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "ARCH-DETERMINISM",
+    "clause": "stable_ordering",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "lockLinkLe compares every field of a lock link, so the order is total; the lock is the collection modelled; decided under autonomy, night of 2026-10-10"
+    }
+  },
+  "linkHash": "d7cf3e43900b6374",
+  "inputs": [
+    [
+      "requirement",
+      "9a2a6e477c8d773d"
+    ],
+    [
+      "model",
+      "a105d7f65b4db0a6"
+    ]
+  ]
+}

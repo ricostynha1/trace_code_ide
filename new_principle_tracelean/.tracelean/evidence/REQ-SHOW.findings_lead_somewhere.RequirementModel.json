@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-SHOW",
+    "clause": "findings_lead_somewhere",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+    }
+  },
+  "linkHash": "62043f55cc47f020",
+  "inputs": [
+    [
+      "requirement",
+      "31ca6b0b4ddf8e38"
+    ],
+    [
+      "model",
+      "4335363f164ddb84"
+    ]
+  ]
+}

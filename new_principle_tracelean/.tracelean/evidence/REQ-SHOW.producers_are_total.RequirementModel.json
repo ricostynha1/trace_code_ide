@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-SHOW",
+    "clause": "producers_are_total",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "tidy makes every produced buffer well formed whatever it was given; decided under autonomy, night of 2026-10-10"
+    }
+  },
+  "linkHash": "d422f4df5cf2b6fb",
+  "inputs": [
+    [
+      "requirement",
+      "33620c953421d0ab"
+    ],
+    [
+      "model",
+      "33b4dcb380ce6097"
+    ]
+  ]
+}

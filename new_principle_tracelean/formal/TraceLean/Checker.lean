@@ -154,13 +154,21 @@ def coverageKinds (roles : List Role) (exempt : Bool) (structural : Bool) : List
         else []
       chain ++ (if implemented && !tested then [Kind.untested] else [])
 
-/-- What a qualifier on a link implies about the link itself.
+/-- Whether an exemption's `until` is before the date the check was given;
+never, when it was given none. -/
+def expired (expires today : Option String) : Bool :=
+  match expires, today with
+  | some e, some t => decide (e < t)
+  | _, _ => false
+
+/-- What a qualifier on a link implies about the link itself. An exemption past
+its `until` counts only against a date the check was given (`today`).
 
 @models REQ-CHECK.qualifier_soundness -/
-def qualifierKinds (qualifier : Option Qualifier) : List Kind :=
+def qualifierKinds (qualifier : Option Qualifier) (today : Option String) : List Kind :=
   match qualifier with
-  | some (.exempt reason judgedBy _) =>
-    if reason.isNone || judgedBy.isNone then [Kind.unsoundExemption] else []
+  | some (.exempt reason judgedBy expires) =>
+    if reason.isNone || judgedBy.isNone || expired expires today then [Kind.unsoundExemption] else []
   | some (.partial none) => [Kind.unsoundQualifier]
   | some (.nondeterministic none) => [Kind.unsoundQualifier]
   -- A structural clause that does not say why there is no law to state is

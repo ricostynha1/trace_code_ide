@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-LOOK",
+    "clause": "row_fits",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+    }
+  },
+  "linkHash": "6362b8188a55c09e",
+  "inputs": [
+    [
+      "requirement",
+      "844469489f3a4c0f"
+    ],
+    [
+      "model",
+      "bd0db8ae98423fc2"
+    ]
+  ]
+}

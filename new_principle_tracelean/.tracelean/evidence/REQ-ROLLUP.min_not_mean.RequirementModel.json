@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-ROLLUP",
+    "clause": "min_not_mean",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+    }
+  },
+  "linkHash": "0207c3ceca79b1f0",
+  "inputs": [
+    [
+      "requirement",
+      "dc86e49bc935989a"
+    ],
+    [
+      "model",
+      "30f0a5ab73add768"
+    ]
+  ]
+}

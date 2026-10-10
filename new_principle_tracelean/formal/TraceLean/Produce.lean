@@ -52,7 +52,7 @@ One place, so a path in a listing and a path in a message offer the same thing.
 A producer that knows more than the role -- a menu row, which dispatches one
 particular action -- gives its spans actions directly instead.
 
-@models REQ-SHOW.core_produces
+@models REQ-SHOW.actions_by_role
 -/
 def actionsFor : Role → List String
   | Role.plain => []

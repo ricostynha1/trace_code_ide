@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-CHECK",
+    "clause": "named_kinds",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "every finding is a Kind, and each Kind has the facts named here; decided under autonomy, night of 2026-10-10"
+    }
+  },
+  "linkHash": "b915689031951b87",
+  "inputs": [
+    [
+      "requirement",
+      "825b30a7a6617da1"
+    ],
+    [
+      "model",
+      "877ede27519bdf01"
+    ]
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-SHOW",
+    "clause": "actions_by_role",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "actionsFor is the one role-to-actions table; core_produces stays structural; decided under autonomy, night of 2026-10-10"
+    }
+  },
+  "linkHash": "73e5d1c89edb65d4",
+  "inputs": [
+    [
+      "requirement",
+      "45e94cee1fcb5d78"
+    ],
+    [
+      "model",
+      "148951689474b0de"
+    ]
+  ]
+}

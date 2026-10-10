@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-DRT-TS",
+    "clause": "params_from_source",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+    }
+  },
+  "linkHash": "61fcd6a3127f3613",
+  "inputs": [
+    [
+      "requirement",
+      "f3a19935acf61c9e"
+    ],
+    [
+      "model",
+      "1858205b7022e979"
+    ]
+  ]
+}

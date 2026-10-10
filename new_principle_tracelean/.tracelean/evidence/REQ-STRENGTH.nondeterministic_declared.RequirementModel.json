@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-STRENGTH",
+    "clause": "nondeterministic_declared",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+    }
+  },
+  "linkHash": "4cfd8dbf007b4579",
+  "inputs": [
+    [
+      "requirement",
+      "1c6d08bdd2758a2c"
+    ],
+    [
+      "model",
+      "87d4da9d465362f8"
+    ]
+  ]
+}

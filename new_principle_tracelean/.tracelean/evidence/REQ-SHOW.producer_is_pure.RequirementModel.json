@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-SHOW",
+    "clause": "producer_is_pure",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "one producer as the pure function every producer is; agreement on generated states is the check; decided under autonomy, night of 2026-10-10"
+    }
+  },
+  "linkHash": "b244fd8ebbe5483c",
+  "inputs": [
+    [
+      "requirement",
+      "75246ab3e956294c"
+    ],
+    [
+      "model",
+      "78c5c7a3ec8c2c7a"
+    ]
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-UNDO",
+    "clause": "filtered_view",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+    }
+  },
+  "linkHash": "8a99ad106bc5efb6",
+  "inputs": [
+    [
+      "requirement",
+      "37cc69569648532d"
+    ],
+    [
+      "model",
+      "ba47590b8d774998"
+    ]
+  ]
+}

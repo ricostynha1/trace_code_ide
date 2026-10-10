@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "ARCH-HONEST",
+    "clause": "lower_bound_marked",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "an inexact figure renders as \"≤ n% (provisional)\", which says it can only fall; decided under autonomy, night of 2026-10-10"
+    }
+  },
+  "linkHash": "631c88bd25c89407",
+  "inputs": [
+    [
+      "requirement",
+      "0c39d3c85032dd96"
+    ],
+    [
+      "model",
+      "ffcc9c4258d7e4e1"
+    ]
+  ]
+}

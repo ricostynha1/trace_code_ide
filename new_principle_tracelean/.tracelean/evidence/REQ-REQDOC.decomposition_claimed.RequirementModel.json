@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-REQDOC",
+    "clause": "decomposition_claimed",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "parseLines defaults decomposition to unclaimed; the lower-bound rendering is ARCH-HONEST.lower_bound_marked; decided under autonomy, night of 2026-10-10"
+    }
+  },
+  "linkHash": "415f3c875863fc6e",
+  "inputs": [
+    [
+      "requirement",
+      "074e36e10a7a6619"
+    ],
+    [
+      "model",
+      "cad3550825a70c07"
+    ]
+  ]
+}

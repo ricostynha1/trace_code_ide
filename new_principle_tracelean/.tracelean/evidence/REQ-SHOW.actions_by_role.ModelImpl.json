@@ -1,7 +1,7 @@
 {
   "key": {
     "reqId": "REQ-SHOW",
-    "clause": "core_produces",
+    "clause": "actions_by_role",
     "bond": "modelImpl"
   },
   "level": "L3",
@@ -9,14 +9,14 @@
     "drt": {
       "seed": 59,
       "cases": 2000,
-      "op": "REQ-SHOW.core_produces"
+      "op": "REQ-SHOW.actions_by_role"
     }
   },
-  "linkHash": "0a680636762fc686",
+  "linkHash": "f33c68af29dfd9fb",
   "inputs": [
     [
       "implementation",
-      "4b6db735a69eb00f+4b9dc77791161952+a03ca3e19f6eec8a"
+      "a03ca3e19f6eec8a"
     ],
     [
       "model",
@@ -24,7 +24,7 @@
     ],
     [
       "requirement",
-      "1adb5f0ac7fbd640"
+      "45e94cee1fcb5d78"
     ]
   ]
 }

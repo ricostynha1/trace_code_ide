@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-DRT-COVER",
+    "clause": "waiver_unused_reported",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+    }
+  },
+  "linkHash": "df1cf4e31d7bbeb5",
+  "inputs": [
+    [
+      "requirement",
+      "242b0fc43375c93b"
+    ],
+    [
+      "model",
+      "9fe6cc24587bea2b"
+    ]
+  ]
+}

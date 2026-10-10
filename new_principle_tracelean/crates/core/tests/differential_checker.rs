@@ -144,7 +144,10 @@ fn qualifier() -> Schema {
             (
                 "expires",
                 Schema::Option {
-                    inner: Box::new(Schema::Str { max_len: Some(0), examples: vec!["2027".into()] }),
+                    inner: Box::new(Schema::Str {
+                        max_len: Some(0),
+                        examples: vec!["2027".into(), "2027-01-01".into()],
+                    }),
                 },
             ),
         ]))),
@@ -173,13 +176,20 @@ fn model_and_implementation_agree_on_unsound_qualifiers() {
         "TraceLean.Checker",
         "TraceLean.Checker.qualifierKinds",
         op,
-        &["qualifier"],
+        &["qualifier", "today"],
         &scratch,
     );
+    // A date before, on and after the `until`s the qualifiers carry, and none.
+    let today = Schema::Option {
+        inner: Box::new(Schema::Str {
+            max_len: Some(0),
+            examples: vec!["2026-10-11".into(), "2027-01-01".into(), "2028".into()],
+        }),
+    };
 
     let result = run(
         op,
-        &strukt(&[("qualifier", Schema::Option { inner: Box::new(qualifier()) })]),
+        &strukt(&[("qualifier", Schema::Option { inner: Box::new(qualifier()) }), ("today", today)]),
         &model,
         &implementation,
         RunOptions { seed: 43, cases: 1_000, shrink_rounds: 100 },

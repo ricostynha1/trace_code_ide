@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-ANNOT",
+    "clause": "qualifiers",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "the four qualifiers are read by parseLine, within the comment parser modelled here; decided under autonomy, night of 2026-10-10"
+    }
+  },
+  "linkHash": "70565e51b6a2c534",
+  "inputs": [
+    [
+      "requirement",
+      "62ca00da5ea277ed"
+    ],
+    [
+      "model",
+      "c3ada71c9c444a58"
+    ]
+  ]
+}

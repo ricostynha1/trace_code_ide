@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-REQDOC",
+    "clause": "clause_unique",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+    }
+  },
+  "linkHash": "b4b15a9f47566b9e",
+  "inputs": [
+    [
+      "requirement",
+      "9321b8d470678fe5"
+    ],
+    [
+      "model",
+      "cad3550825a70c07"
+    ]
+  ]
+}

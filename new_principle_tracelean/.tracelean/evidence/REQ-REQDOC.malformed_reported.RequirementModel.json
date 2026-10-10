@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-REQDOC",
+    "clause": "malformed_reported",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+    }
+  },
+  "linkHash": "7ab9ad19cfdab652",
+  "inputs": [
+    [
+      "requirement",
+      "2dd722c29e782e1c"
+    ],
+    [
+      "model",
+      "cad3550825a70c07"
+    ]
+  ]
+}

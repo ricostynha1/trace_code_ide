@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-CHECK",
+    "clause": "qualifier_soundness",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "expiry judged against the date given, none when none, as the today narrowing says; decided under autonomy, night of 2026-10-10"
+    }
+  },
+  "linkHash": "f125b0ccd563642d",
+  "inputs": [
+    [
+      "requirement",
+      "e327e2ecff8fb70a"
+    ],
+    [
+      "model",
+      "67ce981828613b57"
+    ]
+  ]
+}

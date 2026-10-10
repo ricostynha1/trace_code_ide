@@ -308,7 +308,21 @@ pub fn offers(buffer: &Buffer, offset: usize, keymap: &Keymap) -> Vec<Offer> {
     ] {
         out.push(offer(keymap, "go", label.into(), action, None, None));
     }
+    // A span may declare anything; what the dispatcher would refuse as unknown
+    // is a button that does nothing, so it is not offered.
+    out.retain(|o| known(&o.action));
     out
+}
+
+/// Whether the dispatcher knows `action`: asked, with nothing focused, it does
+/// not refuse it as unknown — wanting a target is still knowing it.
+pub fn known(action: &str) -> bool {
+    use crate::surface::act::{dispatch, Blocked, Focus, Intent};
+    let nowhere = Focus { kind: BufferKind::Menu { title: String::new() }, offset: 0, under: None };
+    !matches!(
+        dispatch(action.to_string(), nowhere, Default::default(), Vec::new()),
+        Intent::Refuse { why: Blocked::UnknownAction { .. } }
+    )
 }
 
 /// An offer as far as `REQ-ACT.everything_is_offered` is about it: its part of

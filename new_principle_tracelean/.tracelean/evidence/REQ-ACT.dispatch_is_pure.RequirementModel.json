@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-ACT",
+    "clause": "dispatch_is_pure",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "clause reworded to what dispatch reads: action, focus, workspace and waiting changes; decided under autonomy, night of 2026-10-10"
+    }
+  },
+  "linkHash": "d061790901f7115f",
+  "inputs": [
+    [
+      "requirement",
+      "159c72b18a9d8c8f"
+    ],
+    [
+      "model",
+      "43418699da34631e"
+    ]
+  ]
+}

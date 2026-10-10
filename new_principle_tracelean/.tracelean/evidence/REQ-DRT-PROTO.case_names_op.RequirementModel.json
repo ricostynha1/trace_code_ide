@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-DRT-PROTO",
+    "clause": "case_names_op",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+    }
+  },
+  "linkHash": "bd2175879105fd5d",
+  "inputs": [
+    [
+      "requirement",
+      "e3d53543703ec9a1"
+    ],
+    [
+      "model",
+      "fec732bf5fa6209d"
+    ]
+  ]
+}

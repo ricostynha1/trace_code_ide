@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-DRT-COVER",
+    "clause": "waiver_reasoned",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+    }
+  },
+  "linkHash": "f1e259486e054b4e",
+  "inputs": [
+    [
+      "requirement",
+      "ccb9a407b9d66b52"
+    ],
+    [
+      "model",
+      "0d35122a8c37465e"
+    ]
+  ]
+}

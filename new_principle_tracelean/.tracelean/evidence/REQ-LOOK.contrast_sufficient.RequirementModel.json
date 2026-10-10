@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-LOOK",
+    "clause": "contrast_sufficient",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+    }
+  },
+  "linkHash": "bdb54f60d54dbd39",
+  "inputs": [
+    [
+      "requirement",
+      "91e58479cc6a0fc3"
+    ],
+    [
+      "model",
+      "8b614feb3e36a144"
+    ]
+  ]
+}

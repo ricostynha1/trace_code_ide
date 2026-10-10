@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-SCREEN",
+    "clause": "buffer_goes_home",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+    }
+  },
+  "linkHash": "97e8bca14c50b940",
+  "inputs": [
+    [
+      "requirement",
+      "6bd9701c3bb19a9a"
+    ],
+    [
+      "model",
+      "624f1eeb642f5110"
+    ]
+  ]
+}

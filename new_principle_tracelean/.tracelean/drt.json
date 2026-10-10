@@ -1137,7 +1137,8 @@
         "import": "TraceLean.Checker",
         "function": "TraceLean.Checker.qualifierKinds",
         "arguments": [
-          "qualifier"
+          "qualifier",
+          "today"
         ]
       },
       "implementation": {
@@ -2923,7 +2924,7 @@
     },
     {
       "req_id": "REQ-SHOW",
-      "clause": "core_produces",
+      "clause": "actions_by_role",
       "floors": [
         {
           "situation": "a role that affords something",

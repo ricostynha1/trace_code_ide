@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-MIRROR",
+    "clause": "binary_handled",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+    }
+  },
+  "linkHash": "8ad9363826619073",
+  "inputs": [
+    [
+      "requirement",
+      "e91dac2c393d6e6d"
+    ],
+    [
+      "model",
+      "39f3f791673f1494"
+    ]
+  ]
+}

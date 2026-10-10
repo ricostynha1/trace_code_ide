@@ -6,6 +6,7 @@ status: approved
 decomposition: complete
 clauses:
   core_produces: Every buffer shall be produced by the core; a frontend shall construct none.
+  actions_by_role: A region whose role is all its producer knows of it shall offer the actions of that role, the same in every buffer it is drawn in.
   file_from_text: A file shall become a buffer whose text is the file's text and whose spans come from parsing it.
   listing_from_entries: A directory shall become a buffer whose text is one entry a line and whose spans mark each entry.
   listing_is_a_tree: The project's files shall be listed as a tree whose folders open and close, each row showing a name and standing for its whole path.

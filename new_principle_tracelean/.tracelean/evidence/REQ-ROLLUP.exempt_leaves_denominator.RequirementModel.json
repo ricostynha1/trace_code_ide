@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-ROLLUP",
+    "clause": "exempt_leaves_denominator",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+    }
+  },
+  "linkHash": "774073328127a482",
+  "inputs": [
+    [
+      "requirement",
+      "8d3bda74a5062f4f"
+    ],
+    [
+      "model",
+      "f96f84510583693b"
+    ]
+  ]
+}

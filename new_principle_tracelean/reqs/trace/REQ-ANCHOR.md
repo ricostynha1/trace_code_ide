@@ -6,7 +6,9 @@ status: approved
 decomposition: complete
 clauses:
   symbol_not_line: An anchor shall address a symbol path or an explicit region, never a line number.
-  stable_under_move: An anchor's identity shall be unchanged by edits that do not change the anchored body.
+  stable_under_move:
+    text: An anchor's identity shall be unchanged by edits that do not change the anchored body.
+    regions: A declaration or a whole file shall be identified by its file and its name alone; an explicit region, which has no name, shall be identified by its file and the lines between its markers, so an edit above a region changes its identity.
   hash_tracks_body: The body hash shall change if and only if the normalised body changes.
   comments_excluded: Comment text shall be excluded from the body hash, so editing an annotation cannot invalidate its own evidence.
   whitespace_normalised: Whitespace outside literals shall be normalised before hashing, and whitespace inside literals shall not be.
@@ -17,7 +19,8 @@ clauses:
 
 Line numbers rot on the first edit above them.
 `crates/core/src/evidence.rs::assurance` survives reordering, reindentation and
-moving a function within its file.
+moving a function within its file. A region has no name to survive by; its
+identity is its lines, which is why claims prefer a declaration.
 
 `hash_tracks_body` is a biconditional because both directions are soundness
 properties and fail differently. A hash that does not move when the body does

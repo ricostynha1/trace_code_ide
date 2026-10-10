@@ -1,8 +1,8 @@
 ---
 describes: [REQ-SHOW, REQ-ACT, REQ-LOCK, REQ-ROLLUP]
 described_hash:
-  REQ-SHOW: 3c6602709177dbc4
-  REQ-ACT: 773e2570c90705aa
+  REQ-SHOW: ef7db576d47e74de
+  REQ-ACT: 79e056ad0341b89d
   REQ-LOCK: bac341f63b8d1e71
   REQ-ROLLUP: 44424fd9e2e5f00a
 ---
@@ -50,8 +50,9 @@ A span dropped is not a span moved. Moving one hides which producer was wrong.
 
 ## Dispatch (`REQ-ACT`)
 
-`dispatch(action, focus, workspace) -> Intent`, where the focus is the buffer,
-the offset, and the text of the span under the cursor.
+`dispatch(action, focus, workspace, waiting) -> Intent`, where the focus is the
+buffer, the offset, and the text of the span under the cursor, and `waiting` is
+an agent's changes not yet taken in (accepting one file finds its commands).
 
 ```
 Display kind   produce that buffer and show it
@@ -64,7 +65,9 @@ Refuse why     unknown action, or a target that was not supplied
 
 Total: every name the keymap dispatches has an answer and every name it does not
 has a refusal, because a key that appears to do nothing is the failure nobody
-reports.
+reports. For the same reason the pointer's menu offers nothing the dispatcher
+would refuse as unknown, and a role's actions come from one table
+(`actions_for`), so a path offers the same things wherever it is drawn.
 
 The workspace is an argument because deleting carries the content it removed —
 the witness is part of the command, which is what gives it an inverse.

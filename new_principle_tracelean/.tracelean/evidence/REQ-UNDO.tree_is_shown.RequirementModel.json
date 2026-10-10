@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-UNDO",
+    "clause": "tree_is_shown",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+    }
+  },
+  "linkHash": "84b61d4f08809565",
+  "inputs": [
+    [
+      "requirement",
+      "8c27c6edfa27ff8c"
+    ],
+    [
+      "model",
+      "140ff145ef11d236"
+    ]
+  ]
+}

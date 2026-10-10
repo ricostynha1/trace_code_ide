@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-STRENGTH",
+    "clause": "inputs_counted",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+    }
+  },
+  "linkHash": "925ed29d14689935",
+  "inputs": [
+    [
+      "requirement",
+      "2102500c7e68f518"
+    ],
+    [
+      "model",
+      "e371ebfa8a19952f"
+    ]
+  ]
+}

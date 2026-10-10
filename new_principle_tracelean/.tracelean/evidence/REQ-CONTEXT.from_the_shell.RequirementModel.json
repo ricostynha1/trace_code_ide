@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-CONTEXT",
+    "clause": "from_the_shell",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "models choosing parts by label and refusing an unknown one; refusing an unknown requirement is the shell's, tested; decided under autonomy, night of 2026-10-10"
+    }
+  },
+  "linkHash": "dd4269c4a22a3689",
+  "inputs": [
+    [
+      "requirement",
+      "a72a6476ac9d0fc4"
+    ],
+    [
+      "model",
+      "a5290587d3e6e387"
+    ]
+  ]
+}

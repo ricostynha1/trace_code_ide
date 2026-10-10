@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-SCREEN",
+    "clause": "close_collapses_the_pane",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+    }
+  },
+  "linkHash": "e929b9dd131ff8a5",
+  "inputs": [
+    [
+      "requirement",
+      "f0deaf2d4c25e196"
+    ],
+    [
+      "model",
+      "20bdfd43fa664359"
+    ]
+  ]
+}

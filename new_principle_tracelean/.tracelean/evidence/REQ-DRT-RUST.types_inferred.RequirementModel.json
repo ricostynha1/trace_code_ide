@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-DRT-RUST",
+    "clause": "types_inferred",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+    }
+  },
+  "linkHash": "ec4f73c2866d5706",
+  "inputs": [
+    [
+      "requirement",
+      "d40604b7f460dc6f"
+    ],
+    [
+      "model",
+      "e220b1c1a1d939a6"
+    ]
+  ]
+}

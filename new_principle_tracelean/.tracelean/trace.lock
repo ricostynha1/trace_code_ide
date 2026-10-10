@@ -90,7 +90,7 @@
         "one_path",
         "unknown_is_refused"
       ],
-      "content_hash": "773e2570c90705aa",
+      "content_hash": "79e056ad0341b89d",
       "file": "reqs/surface/REQ-ACT.md",
       "refines": [
         "REQ-MYTH",
@@ -108,7 +108,7 @@
         "symbol_not_line",
         "whitespace_normalised"
       ],
-      "content_hash": "44406cdf4636390d",
+      "content_hash": "26fec110f76c666b",
       "file": "reqs/trace/REQ-ANCHOR.md",
       "refines": [
         "ARCH-SELFHOST",
@@ -149,7 +149,7 @@
         "structural_rejects",
         "unbound_reported"
       ],
-      "content_hash": "d386552e7dcb664f",
+      "content_hash": "56b80e5e840f9f8d",
       "file": "reqs/trace/REQ-CHECK.md",
       "refines": [
         "ARCH-HONEST"
@@ -711,6 +711,7 @@
     },
     "REQ-SHOW": {
       "clauses": [
+        "actions_by_role",
         "claims_beside_code",
         "core_produces",
         "file_from_text",
@@ -732,7 +733,7 @@
         "well_formed_by_construction",
         "window_is_a_buffer"
       ],
-      "content_hash": "3c6602709177dbc4",
+      "content_hash": "ef7db576d47e74de",
       "file": "reqs/surface/REQ-SHOW.md",
       "refines": [
         "REQ-VIEW",
@@ -1286,7 +1287,7 @@
       "clause": "qualifier_soundness",
       "file": "crates/core/src/trace/checker.rs",
       "anchor": "crates/core/src/trace/checker.rs::qualifier_kinds",
-      "body_hash": "7434c356a6f15daf",
+      "body_hash": "8e771c5d7a1e53be",
       "link_hash": "b2023d18076f8f73",
       "qualifier": null
     },
@@ -1296,7 +1297,7 @@
       "clause": "qualifier_soundness",
       "file": "crates/core/tests/differential_checker.rs",
       "anchor": "crates/core/tests/differential_checker.rs::model_and_implementation_agree_on_unsound_qualifiers",
-      "body_hash": "b9041a22862d748b",
+      "body_hash": "2fe0c47432926f41",
       "link_hash": "c245fa03b075c294",
       "qualifier": null
     },
@@ -3953,6 +3954,26 @@
     {
       "role": "drt",
       "req": "REQ-SHOW",
+      "clause": "actions_by_role",
+      "file": "crates/core/src/surface/produce.rs",
+      "anchor": "crates/core/src/surface/produce.rs::actions_for",
+      "body_hash": "a03ca3e19f6eec8a",
+      "link_hash": "f33c68af29dfd9fb",
+      "qualifier": null
+    },
+    {
+      "role": "drt",
+      "req": "REQ-SHOW",
+      "clause": "actions_by_role",
+      "file": "crates/core/tests/differential_produce.rs",
+      "anchor": "crates/core/tests/differential_produce.rs::model_and_implementation_agree_on_what_a_role_affords",
+      "body_hash": "282f3c467b55162a",
+      "link_hash": "ff61566d386e2646",
+      "qualifier": null
+    },
+    {
+      "role": "drt",
+      "req": "REQ-SHOW",
       "clause": "claims_beside_code",
       "file": "crates/core/src/surface/chips.rs",
       "anchor": "crates/core/src/surface/chips.rs::clause_chips_owned",
@@ -3968,26 +3989,6 @@
       "anchor": "crates/core/tests/differential_chips.rs::model_and_implementation_agree_on_the_marks_beside_clauses",
       "body_hash": "b7c6e841b5a5f828",
       "link_hash": "1f0838654da998f8",
-      "qualifier": null
-    },
-    {
-      "role": "drt",
-      "req": "REQ-SHOW",
-      "clause": "core_produces",
-      "file": "crates/core/src/surface/produce.rs",
-      "anchor": "crates/core/src/surface/produce.rs::actions_for",
-      "body_hash": "a03ca3e19f6eec8a",
-      "link_hash": "0a680636762fc686",
-      "qualifier": null
-    },
-    {
-      "role": "drt",
-      "req": "REQ-SHOW",
-      "clause": "core_produces",
-      "file": "crates/core/tests/differential_produce.rs",
-      "anchor": "crates/core/tests/differential_produce.rs::model_and_implementation_agree_on_what_a_role_affords",
-      "body_hash": "5f8b093605e5c2d1",
-      "link_hash": "fade2084c1ee06e7",
       "qualifier": null
     },
     {
@@ -5236,7 +5237,7 @@
       "clause": "stable_ordering",
       "file": "crates/core/src/trace/checker.rs",
       "anchor": "crates/core/src/trace/checker.rs::check",
-      "body_hash": "714e3ce08cb8a39a",
+      "body_hash": "dd324a2307099a70",
       "link_hash": "cb238495d41ec81f",
       "qualifier": null
     },
@@ -5656,7 +5657,7 @@
       "clause": "everything_is_offered",
       "file": "crates/core/src/surface/offer.rs",
       "anchor": "crates/core/src/surface/offer.rs::offers",
-      "body_hash": "7aacd0ee649e3854",
+      "body_hash": "bbe6c13c02d9d4d1",
       "link_hash": "b68a5fd339626536",
       "qualifier": null
     },
@@ -6006,7 +6007,7 @@
       "clause": "exactly_once",
       "file": "crates/core/src/trace/checker.rs",
       "anchor": "crates/core/src/trace/checker.rs::check",
-      "body_hash": "714e3ce08cb8a39a",
+      "body_hash": "dd324a2307099a70",
       "link_hash": "8f9c96f102483dc2",
       "qualifier": null
     },
@@ -6076,7 +6077,7 @@
       "clause": "qualifier_soundness",
       "file": "crates/core/src/trace/checker.rs",
       "anchor": "crates/core/src/trace/checker.rs::qualifier_kinds",
-      "body_hash": "7434c356a6f15daf",
+      "body_hash": "8e771c5d7a1e53be",
       "link_hash": "f8d633c5984a8c25",
       "qualifier": null
     },
@@ -6086,7 +6087,7 @@
       "clause": "severity_policy",
       "file": "crates/core/src/trace/checker.rs",
       "anchor": "crates/core/src/trace/checker.rs::Policy",
-      "body_hash": "cda4f19cc85b6c85",
+      "body_hash": "57944cd87cfe1dd5",
       "link_hash": "da426257d8a9d6e6",
       "qualifier": null
     },
@@ -6286,7 +6287,7 @@
       "clause": "from_the_shell",
       "file": "crates/core/src/bin/tracelean-trace.rs",
       "anchor": "crates/core/src/bin/tracelean-trace.rs::main",
-      "body_hash": "a4e11193027c0e35",
+      "body_hash": "8fa1aec4d9084014",
       "link_hash": "cfb1dd6e6161c477",
       "qualifier": null
     },
@@ -7936,7 +7937,7 @@
       "clause": "human_decides",
       "file": "crates/core/src/bin/tracelean-trace.rs",
       "anchor": "crates/core/src/bin/tracelean-trace.rs::main",
-      "body_hash": "a4e11193027c0e35",
+      "body_hash": "8fa1aec4d9084014",
       "link_hash": "642e3a15ac658d39",
       "qualifier": null
     },
@@ -8046,7 +8047,7 @@
       "clause": "no_call",
       "file": "crates/core/src/bin/tracelean-trace.rs",
       "anchor": "crates/core/src/bin/tracelean-trace.rs::main",
-      "body_hash": "a4e11193027c0e35",
+      "body_hash": "8fa1aec4d9084014",
       "link_hash": "9832a41f49e5f574",
       "qualifier": null
     },
@@ -8076,7 +8077,7 @@
       "clause": "prompt_exported",
       "file": "crates/core/src/bin/tracelean-trace.rs",
       "anchor": "crates/core/src/bin/tracelean-trace.rs::main",
-      "body_hash": "a4e11193027c0e35",
+      "body_hash": "8fa1aec4d9084014",
       "link_hash": "375f03d31121ea8c",
       "qualifier": null
     },
@@ -9993,6 +9994,16 @@
     {
       "role": "implements",
       "req": "REQ-SHOW",
+      "clause": "actions_by_role",
+      "file": "crates/core/src/surface/produce.rs",
+      "anchor": "crates/core/src/surface/produce.rs::actions_for",
+      "body_hash": "a03ca3e19f6eec8a",
+      "link_hash": "064b6074ce545e4d",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-SHOW",
       "clause": "claims_beside_code",
       "file": "crates/core/src/surface/chips.rs",
       "anchor": "crates/core/src/surface/chips.rs::chips",
@@ -10018,16 +10029,6 @@
       "anchor": "crates/core/src/surface/produce.rs::Mark",
       "body_hash": "4b6db735a69eb00f",
       "link_hash": "7ffda6942e3d8544",
-      "qualifier": null
-    },
-    {
-      "role": "implements",
-      "req": "REQ-SHOW",
-      "clause": "core_produces",
-      "file": "crates/core/src/surface/produce.rs",
-      "anchor": "crates/core/src/surface/produce.rs::actions_for",
-      "body_hash": "a03ca3e19f6eec8a",
-      "link_hash": "621a51901d195522",
       "qualifier": null
     },
     {
@@ -10516,7 +10517,7 @@
       "clause": "listed_for_a_script",
       "file": "crates/core/src/bin/tracelean-trace.rs",
       "anchor": "crates/core/src/bin/tracelean-trace.rs::main",
-      "body_hash": "a4e11193027c0e35",
+      "body_hash": "8fa1aec4d9084014",
       "link_hash": "24d049892b205e19",
       "qualifier": null
     },
@@ -11716,7 +11717,7 @@
       "clause": "everything_is_offered",
       "file": "formal/TraceLean/Offer.lean",
       "anchor": "formal/TraceLean/Offer.lean::TraceLean.Offer::offers",
-      "body_hash": "70d16419e5937174",
+      "body_hash": "e582bb091cef893d",
       "link_hash": "457408566c8871a6",
       "qualifier": null
     },
@@ -11916,7 +11917,7 @@
       "clause": "qualifier_soundness",
       "file": "formal/TraceLean/Checker.lean",
       "anchor": "formal/TraceLean/Checker.lean::TraceLean.Checker::qualifierKinds",
-      "body_hash": "3f4f7a352fb0dd9a",
+      "body_hash": "67ce981828613b57",
       "link_hash": "f125b0ccd563642d",
       "qualifier": null
     },
@@ -13583,21 +13584,21 @@
     {
       "role": "models",
       "req": "REQ-SHOW",
-      "clause": "claims_beside_code",
-      "file": "formal/TraceLean/Chips.lean",
-      "anchor": "formal/TraceLean/Chips.lean::TraceLean.Chips::clauseChips",
-      "body_hash": "75880f0a18b9bc63",
-      "link_hash": "f77d8e656acb592c",
+      "clause": "actions_by_role",
+      "file": "formal/TraceLean/Produce.lean",
+      "anchor": "formal/TraceLean/Produce.lean::TraceLean.Produce::actionsFor",
+      "body_hash": "148951689474b0de",
+      "link_hash": "73e5d1c89edb65d4",
       "qualifier": null
     },
     {
       "role": "models",
       "req": "REQ-SHOW",
-      "clause": "core_produces",
-      "file": "formal/TraceLean/Produce.lean",
-      "anchor": "formal/TraceLean/Produce.lean::TraceLean.Produce::actionsFor",
-      "body_hash": "148951689474b0de",
-      "link_hash": "79b631e73fbaa9cf",
+      "clause": "claims_beside_code",
+      "file": "formal/TraceLean/Chips.lean",
+      "anchor": "formal/TraceLean/Chips.lean::TraceLean.Chips::clauseChips",
+      "body_hash": "75880f0a18b9bc63",
+      "link_hash": "f77d8e656acb592c",
       "qualifier": null
     },
     {
@@ -17304,9 +17305,19 @@
       "role": "tests",
       "req": "REQ-CHECK",
       "clause": "qualifier_soundness",
+      "file": "crates/core/src/trace/checker.rs",
+      "anchor": "crates/core/src/trace/checker.rs::tests::an_exemption_past_the_date_given_is_reported_and_without_one_is_not",
+      "body_hash": "e7e78028e8cb08ac",
+      "link_hash": "83a898403a0f2cd4",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-CHECK",
+      "clause": "qualifier_soundness",
       "file": "crates/core/tests/differential_checker.rs",
       "anchor": "crates/core/tests/differential_checker.rs::model_and_implementation_agree_on_unsound_qualifiers",
-      "body_hash": "b9041a22862d748b",
+      "body_hash": "2fe0c47432926f41",
       "link_hash": "bcdc86da0e052979",
       "qualifier": null
     },
@@ -18956,7 +18967,7 @@
       "clause": "law_coverage",
       "file": "crates/core/tests/differential_produce.rs",
       "anchor": "crates/core/tests/differential_produce.rs::generation_reaches_every_role_and_the_one_that_affords_nothing",
-      "body_hash": "7ed6232b48bfb996",
+      "body_hash": "f54c85d24b954c19",
       "link_hash": "f5dc38408a4d6136",
       "qualifier": null
     },
@@ -23473,6 +23484,26 @@
     {
       "role": "tests",
       "req": "REQ-SHOW",
+      "clause": "actions_by_role",
+      "file": "crates/core/tests/differential_produce.rs",
+      "anchor": "crates/core/tests/differential_produce.rs::generation_reaches_every_role_and_the_one_that_affords_nothing",
+      "body_hash": "f54c85d24b954c19",
+      "link_hash": "a0d8ef8bf3e3d542",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-SHOW",
+      "clause": "actions_by_role",
+      "file": "crates/core/tests/differential_produce.rs",
+      "anchor": "crates/core/tests/differential_produce.rs::model_and_implementation_agree_on_what_a_role_affords",
+      "body_hash": "282f3c467b55162a",
+      "link_hash": "3c2a62bf57a73c17",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-SHOW",
       "clause": "claims_beside_code",
       "file": "crates/core/src/surface/chips.rs",
       "anchor": "crates/core/src/surface/chips.rs::tests::a_claim_is_marked_on_the_declaration_it_claims",
@@ -23498,26 +23529,6 @@
       "anchor": "crates/core/tests/differential_chips.rs::model_and_implementation_agree_on_the_marks_beside_clauses",
       "body_hash": "b7c6e841b5a5f828",
       "link_hash": "303d8d2f06cfc875",
-      "qualifier": null
-    },
-    {
-      "role": "tests",
-      "req": "REQ-SHOW",
-      "clause": "core_produces",
-      "file": "crates/core/tests/differential_produce.rs",
-      "anchor": "crates/core/tests/differential_produce.rs::generation_reaches_every_role_and_the_one_that_affords_nothing",
-      "body_hash": "7ed6232b48bfb996",
-      "link_hash": "cce2c0f5707adc37",
-      "qualifier": null
-    },
-    {
-      "role": "tests",
-      "req": "REQ-SHOW",
-      "clause": "core_produces",
-      "file": "crates/core/tests/differential_produce.rs",
-      "anchor": "crates/core/tests/differential_produce.rs::model_and_implementation_agree_on_what_a_role_affords",
-      "body_hash": "5f8b093605e5c2d1",
-      "link_hash": "9cca3ddba5576286",
       "qualifier": null
     },
     {
@@ -25571,6 +25582,34 @@
       "key": {
         "reqId": "ARCH-DETERMINISM",
         "clause": "stable_ordering",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "lockLinkLe compares every field of a lock link, so the order is total; the lock is the collection modelled; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "d7cf3e43900b6374",
+      "inputs": [
+        [
+          "requirement",
+          "9a2a6e477c8d773d"
+        ],
+        [
+          "model",
+          "a105d7f65b4db0a6"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "ARCH-DETERMINISM",
+        "clause": "stable_ordering",
         "bond": "modelImpl"
       },
       "level": "L3",
@@ -25585,7 +25624,7 @@
       "inputs": [
         [
           "implementation",
-          "14266a3f399a6f46+35fbd7fd6dec384d+4729e32663cd848d+6a54a220f2f21645+6dbb5825145b9a7f+714e3ce08cb8a39a+7f96c42ff8e2c3ef+e8af451290160611"
+          "14266a3f399a6f46+35fbd7fd6dec384d+4729e32663cd848d+6a54a220f2f21645+6dbb5825145b9a7f+7f96c42ff8e2c3ef+dd324a2307099a70+e8af451290160611"
         ],
         [
           "model",
@@ -25623,6 +25662,34 @@
         [
           "toolchain",
           "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "ARCH-HONEST",
+        "clause": "lower_bound_marked",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "an inexact figure renders as \"≤ n% (provisional)\", which says it can only fall; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "631c88bd25c89407",
+      "inputs": [
+        [
+          "requirement",
+          "0c39d3c85032dd96"
+        ],
+        [
+          "model",
+          "ffcc9c4258d7e4e1"
         ]
       ]
     },
@@ -25682,6 +25749,34 @@
         [
           "toolchain",
           "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "ARCH-HONEST",
+        "clause": "weakest_link",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "673b93f13a696d06",
+      "inputs": [
+        [
+          "requirement",
+          "883a5bf07791b64f"
+        ],
+        [
+          "model",
+          "30f0a5ab73add768"
         ]
       ]
     },
@@ -25805,6 +25900,34 @@
       "key": {
         "reqId": "REQ-ACT",
         "clause": "dispatch_is_pure",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "clause reworded to what dispatch reads: action, focus, workspace and waiting changes; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "d061790901f7115f",
+      "inputs": [
+        [
+          "requirement",
+          "159c72b18a9d8c8f"
+        ],
+        [
+          "model",
+          "43418699da34631e"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-ACT",
+        "clause": "dispatch_is_pure",
         "bond": "modelImpl"
       },
       "level": "L3",
@@ -25827,7 +25950,35 @@
         ],
         [
           "requirement",
-          "8b0ce678846ca140"
+          "159c72b18a9d8c8f"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-ACT",
+        "clause": "edits_are_commands",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "c88ca6a671c883d4",
+      "inputs": [
+        [
+          "requirement",
+          "f483d1bec841e49f"
+        ],
+        [
+          "model",
+          "43418699da34631e"
         ]
       ]
     },
@@ -25865,6 +26016,34 @@
       "key": {
         "reqId": "REQ-ACT",
         "clause": "everything_is_offered",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "offers now drops any action the dispatcher refuses as unknown; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "457408566c8871a6",
+      "inputs": [
+        [
+          "requirement",
+          "d5bb8b17730a8f9b"
+        ],
+        [
+          "model",
+          "e582bb091cef893d"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-ACT",
+        "clause": "everything_is_offered",
         "bond": "modelImpl"
       },
       "level": "L3",
@@ -25879,15 +26058,43 @@
       "inputs": [
         [
           "implementation",
-          "7aacd0ee649e3854+8bef1d3af783a496+c19fbb227a2aa364"
+          "8bef1d3af783a496+bbe6c13c02d9d4d1+c19fbb227a2aa364"
         ],
         [
           "model",
-          "70d16419e5937174"
+          "e582bb091cef893d"
         ],
         [
           "requirement",
           "d5bb8b17730a8f9b"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-ACT",
+        "clause": "focus_is_carried",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "2f179fc174b5a9b5",
+      "inputs": [
+        [
+          "requirement",
+          "ede60588e15e9208"
+        ],
+        [
+          "model",
+          "43418699da34631e"
         ]
       ]
     },
@@ -25954,6 +26161,34 @@
       "key": {
         "reqId": "REQ-ACT",
         "clause": "missing_target_is_refused",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "204482bd23b412c3",
+      "inputs": [
+        [
+          "requirement",
+          "1e8be2e211d3d529"
+        ],
+        [
+          "model",
+          "43418699da34631e"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-ACT",
+        "clause": "missing_target_is_refused",
         "bond": "modelImpl"
       },
       "level": "L3",
@@ -26006,6 +26241,34 @@
         [
           "toolchain",
           "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-ACT",
+        "clause": "one_path",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "aa613845d496f85f",
+      "inputs": [
+        [
+          "requirement",
+          "78ca4adb9622fddd"
+        ],
+        [
+          "model",
+          "43418699da34631e"
         ]
       ]
     },
@@ -26274,6 +26537,34 @@
       "key": {
         "reqId": "REQ-ANCHOR",
         "clause": "imprecise_capped",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "models the cap at L1; anchoring to the whole file is the .file anchor kind; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "3102f119883a3dc5",
+      "inputs": [
+        [
+          "requirement",
+          "e8d4a37c7fd40593"
+        ],
+        [
+          "model",
+          "c4de5182e39bc735"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-ANCHOR",
+        "clause": "imprecise_capped",
         "bond": "modelImpl"
       },
       "level": "L3",
@@ -26333,6 +26624,34 @@
       "key": {
         "reqId": "REQ-ANCHOR",
         "clause": "stable_under_move",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "a declaration is file::symbol; the regions narrowing states a region is its lines; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "aed2ce7d58773d31",
+      "inputs": [
+        [
+          "requirement",
+          "3e2f04e3dba39323"
+        ],
+        [
+          "model",
+          "d1b5933586cf1c6d"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-ANCHOR",
+        "clause": "stable_under_move",
         "bond": "modelImpl"
       },
       "level": "L3",
@@ -26355,7 +26674,7 @@
         ],
         [
           "requirement",
-          "838b113eac562219"
+          "3e2f04e3dba39323"
         ]
       ]
     },
@@ -26501,6 +26820,34 @@
         [
           "requirement",
           "92f73fa83bbf3105"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-ANNOT",
+        "clause": "qualifiers",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "the four qualifiers are read by parseLine, within the comment parser modelled here; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "70565e51b6a2c534",
+      "inputs": [
+        [
+          "requirement",
+          "62ca00da5ea277ed"
+        ],
+        [
+          "model",
+          "c3ada71c9c444a58"
         ]
       ]
     },
@@ -26675,6 +27022,34 @@
         [
           "requirement",
           "1a41816762f47d62"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-ANNOT",
+        "clause": "totality",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "c4d09d9ff18b87a5",
+      "inputs": [
+        [
+          "requirement",
+          "e714daa4037e5f05"
+        ],
+        [
+          "model",
+          "c3ada71c9c444a58"
         ]
       ]
     },
@@ -26870,7 +27245,7 @@
       "inputs": [
         [
           "implementation",
-          "714e3ce08cb8a39a+7219e19ead9b2154"
+          "7219e19ead9b2154+dd324a2307099a70"
         ],
         [
           "model",
@@ -26915,6 +27290,34 @@
       "key": {
         "reqId": "REQ-CHECK",
         "clause": "named_kinds",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "every finding is a Kind, and each Kind has the facts named here; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "b915689031951b87",
+      "inputs": [
+        [
+          "requirement",
+          "825b30a7a6617da1"
+        ],
+        [
+          "model",
+          "877ede27519bdf01"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-CHECK",
+        "clause": "named_kinds",
         "bond": "modelImpl"
       },
       "level": "L3",
@@ -26938,6 +27341,34 @@
         [
           "requirement",
           "825b30a7a6617da1"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-CHECK",
+        "clause": "one_of_each_role",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "models which roles crowd a clause; naming every declaration is the finding's, held by its test; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "76bb6f0e4935a419",
+      "inputs": [
+        [
+          "requirement",
+          "30adeb5154ba69b4"
+        ],
+        [
+          "model",
+          "9dc960882470908a"
         ]
       ]
     },
@@ -27090,6 +27521,34 @@
       "key": {
         "reqId": "REQ-CHECK",
         "clause": "qualifier_soundness",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "expiry judged against the date given, none when none, as the today narrowing says; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "f125b0ccd563642d",
+      "inputs": [
+        [
+          "requirement",
+          "e327e2ecff8fb70a"
+        ],
+        [
+          "model",
+          "67ce981828613b57"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-CHECK",
+        "clause": "qualifier_soundness",
         "bond": "modelImpl"
       },
       "level": "L3",
@@ -27104,15 +27563,43 @@
       "inputs": [
         [
           "implementation",
-          "7434c356a6f15daf"
+          "8e771c5d7a1e53be"
         ],
         [
           "model",
-          "3f4f7a352fb0dd9a"
+          "67ce981828613b57"
         ],
         [
           "requirement",
-          "26bda6df7eef35f9"
+          "e327e2ecff8fb70a"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-CHECK",
+        "clause": "severity_policy",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "5f4e17a543ea029a",
+      "inputs": [
+        [
+          "requirement",
+          "418591974254a6d7"
+        ],
+        [
+          "model",
+          "877ede27519bdf01"
         ]
       ]
     },
@@ -27134,7 +27621,7 @@
       "inputs": [
         [
           "implementation",
-          "577b441cd26d2359+cda4f19cc85b6c85"
+          "577b441cd26d2359+57944cd87cfe1dd5"
         ],
         [
           "model",
@@ -27172,6 +27659,34 @@
         [
           "toolchain",
           "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-CHECK",
+        "clause": "structural_is_not_exempt",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "a structural clause requires a test and no model; its denominator and level are the roll-up's and the ladder's; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "d55d3fe1117a3cd0",
+      "inputs": [
+        [
+          "requirement",
+          "f5f60cf344eb2bee"
+        ],
+        [
+          "model",
+          "3bacc87678b4070e"
         ]
       ]
     },
@@ -27496,6 +28011,34 @@
       "key": {
         "reqId": "REQ-CMD",
         "clause": "single_path",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "1765845a8787e705",
+      "inputs": [
+        [
+          "requirement",
+          "f7bb3c68b813cb8c"
+        ],
+        [
+          "model",
+          "de96745070240343"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-CMD",
+        "clause": "single_path",
         "bond": "modelImpl"
       },
       "level": "L3",
@@ -27642,6 +28185,34 @@
       "key": {
         "reqId": "REQ-CONTEXT",
         "clause": "affected_tests",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "61fbed40032883bc",
+      "inputs": [
+        [
+          "requirement",
+          "d407e1046f7459c0"
+        ],
+        [
+          "model",
+          "a0cda730f6d991d9"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-CONTEXT",
+        "clause": "affected_tests",
         "bond": "modelImpl"
       },
       "level": "L3",
@@ -27665,6 +28236,34 @@
         [
           "requirement",
           "d407e1046f7459c0"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-CONTEXT",
+        "clause": "claims_with_source",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "b8208f00f9e535b8",
+      "inputs": [
+        [
+          "requirement",
+          "0cdb8d5aac5ccffb"
+        ],
+        [
+          "model",
+          "7dad820b122f3e63"
         ]
       ]
     },
@@ -27702,6 +28301,34 @@
       "key": {
         "reqId": "REQ-CONTEXT",
         "clause": "from_the_shell",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "models choosing parts by label and refusing an unknown one; refusing an unknown requirement is the shell's, tested; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "dd4269c4a22a3689",
+      "inputs": [
+        [
+          "requirement",
+          "a72a6476ac9d0fc4"
+        ],
+        [
+          "model",
+          "a5290587d3e6e387"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-CONTEXT",
+        "clause": "from_the_shell",
         "bond": "modelImpl"
       },
       "level": "L3",
@@ -27716,7 +28343,7 @@
       "inputs": [
         [
           "implementation",
-          "560440270dd7dc8e+69b717aadb840d9c+a4e11193027c0e35"
+          "560440270dd7dc8e+69b717aadb840d9c+8fa1aec4d9084014"
         ],
         [
           "model",
@@ -28361,6 +28988,34 @@
         [
           "requirement",
           "3ea708b7807b579a"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-DOCLINK",
+        "clause": "decisions_exempt",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "a target declared without a hash reads with an empty hash, which is how a decision declares what it affects; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "3b5431c545419147",
+      "inputs": [
+        [
+          "requirement",
+          "cc62e88e3c03eff0"
+        ],
+        [
+          "model",
+          "35e6357949d421ab"
         ]
       ]
     },
@@ -29152,6 +29807,34 @@
       "key": {
         "reqId": "REQ-DRT-COVER",
         "clause": "classes_reached",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "94df3e762f1669f1",
+      "inputs": [
+        [
+          "requirement",
+          "886cf55c14fe0bcb"
+        ],
+        [
+          "model",
+          "5ba8c1a7c839c6b8"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-DRT-COVER",
+        "clause": "classes_reached",
         "bond": "modelImpl"
       },
       "level": "L3",
@@ -29384,6 +30067,34 @@
       "key": {
         "reqId": "REQ-DRT-COVER",
         "clause": "law_coverage",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "7f5c1db6c11eba4d",
+      "inputs": [
+        [
+          "requirement",
+          "1780113b1ef2519f"
+        ],
+        [
+          "model",
+          "0d35122a8c37465e"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-DRT-COVER",
+        "clause": "law_coverage",
         "bond": "modelImpl"
       },
       "level": "L3",
@@ -29407,6 +30118,34 @@
         [
           "requirement",
           "1780113b1ef2519f"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-DRT-COVER",
+        "clause": "lines_run",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "291a43248b71f3c3",
+      "inputs": [
+        [
+          "requirement",
+          "455457b332078c78"
+        ],
+        [
+          "model",
+          "7664682e5574b60a"
         ]
       ]
     },
@@ -29473,6 +30212,34 @@
       "key": {
         "reqId": "REQ-DRT-COVER",
         "clause": "vacuous_named",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "a floor no case reached is an unmet gap, never met; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "c0b4ff224982f5b2",
+      "inputs": [
+        [
+          "requirement",
+          "3065f0f22a70c6af"
+        ],
+        [
+          "model",
+          "0d35122a8c37465e"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-DRT-COVER",
+        "clause": "vacuous_named",
         "bond": "modelImpl"
       },
       "level": "L3",
@@ -29532,6 +30299,34 @@
       "key": {
         "reqId": "REQ-DRT-COVER",
         "clause": "waiver_reasoned",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "f1e259486e054b4e",
+      "inputs": [
+        [
+          "requirement",
+          "ccb9a407b9d66b52"
+        ],
+        [
+          "model",
+          "0d35122a8c37465e"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-DRT-COVER",
+        "clause": "waiver_reasoned",
         "bond": "modelImpl"
       },
       "level": "L3",
@@ -29584,6 +30379,34 @@
         [
           "toolchain",
           "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-DRT-COVER",
+        "clause": "waiver_unused_reported",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "df1cf4e31d7bbeb5",
+      "inputs": [
+        [
+          "requirement",
+          "242b0fc43375c93b"
+        ],
+        [
+          "model",
+          "9fe6cc24587bea2b"
         ]
       ]
     },
@@ -29795,6 +30618,34 @@
       "key": {
         "reqId": "REQ-DRT-GEN",
         "clause": "seed_reproduces",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "72ac462374cb3a8f",
+      "inputs": [
+        [
+          "requirement",
+          "b2c957054aa98ebd"
+        ],
+        [
+          "model",
+          "a7f2b48c39838c47"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-DRT-GEN",
+        "clause": "seed_reproduces",
         "bond": "modelImpl"
       },
       "level": "L3",
@@ -29941,6 +30792,34 @@
       "key": {
         "reqId": "REQ-DRT-PROTO",
         "clause": "case_names_op",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "bd2175879105fd5d",
+      "inputs": [
+        [
+          "requirement",
+          "e3d53543703ec9a1"
+        ],
+        [
+          "model",
+          "fec732bf5fa6209d"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-DRT-PROTO",
+        "clause": "case_names_op",
         "bond": "modelImpl"
       },
       "level": "L3",
@@ -29964,6 +30843,34 @@
         [
           "requirement",
           "e3d53543703ec9a1"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-DRT-PROTO",
+        "clause": "case_one_line",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "9c1e4788468f2bda",
+      "inputs": [
+        [
+          "requirement",
+          "c7a15a671459f411"
+        ],
+        [
+          "model",
+          "fec732bf5fa6209d"
         ]
       ]
     },
@@ -30030,6 +30937,34 @@
       "key": {
         "reqId": "REQ-DRT-PROTO",
         "clause": "failure_named",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "7d6233e394bda672",
+      "inputs": [
+        [
+          "requirement",
+          "0ed775ae2148a7e7"
+        ],
+        [
+          "model",
+          "d59e4611436ca6dc"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-DRT-PROTO",
+        "clause": "failure_named",
         "bond": "modelImpl"
       },
       "level": "L3",
@@ -30082,6 +31017,34 @@
         [
           "toolchain",
           "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-DRT-PROTO",
+        "clause": "ops_unique",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "0b60f0a7a79d2999",
+      "inputs": [
+        [
+          "requirement",
+          "7423db5056a673ee"
+        ],
+        [
+          "model",
+          "9b2ae0dec8de59b8"
         ]
       ]
     },
@@ -30235,6 +31198,34 @@
       "key": {
         "reqId": "REQ-DRT-PROTO",
         "clause": "reply_one_line",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "056316219d50b5d0",
+      "inputs": [
+        [
+          "requirement",
+          "a939d57dee627c29"
+        ],
+        [
+          "model",
+          "fc56830a116db684"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-DRT-PROTO",
+        "clause": "reply_one_line",
         "bond": "modelImpl"
       },
       "level": "L3",
@@ -30287,6 +31278,34 @@
         [
           "toolchain",
           "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-DRT-PROTO",
+        "clause": "runner_shared",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "c01deddb5db2ccb4",
+      "inputs": [
+        [
+          "requirement",
+          "e5346fcb81fb2829"
+        ],
+        [
+          "model",
+          "19ba9a69554ca2c8"
         ]
       ]
     },
@@ -30439,6 +31458,34 @@
       "key": {
         "reqId": "REQ-DRT-RUST",
         "clause": "types_inferred",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "ec4f73c2866d5706",
+      "inputs": [
+        [
+          "requirement",
+          "d40604b7f460dc6f"
+        ],
+        [
+          "model",
+          "e220b1c1a1d939a6"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-DRT-RUST",
+        "clause": "types_inferred",
         "bond": "modelImpl"
       },
       "level": "L3",
@@ -30491,6 +31538,34 @@
         [
           "toolchain",
           "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-DRT-SCHEMA",
+        "clause": "derived_from_both",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "1c59688f7e185820",
+      "inputs": [
+        [
+          "requirement",
+          "0b1d02972efdbef8"
+        ],
+        [
+          "model",
+          "4b07cf3e01b89cb3"
         ]
       ]
     },
@@ -30557,6 +31632,34 @@
       "key": {
         "reqId": "REQ-DRT-SCHEMA",
         "clause": "outside_is_error",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "3328967bdc5145cc",
+      "inputs": [
+        [
+          "requirement",
+          "a903c5850f2b8040"
+        ],
+        [
+          "model",
+          "6b2ff6ff8b8e5376"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-DRT-SCHEMA",
+        "clause": "outside_is_error",
         "bond": "modelImpl"
       },
       "level": "L3",
@@ -30609,6 +31712,34 @@
         [
           "toolchain",
           "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-DRT-TS",
+        "clause": "params_from_source",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "61fcd6a3127f3613",
+      "inputs": [
+        [
+          "requirement",
+          "f3a19935acf61c9e"
+        ],
+        [
+          "model",
+          "1858205b7022e979"
         ]
       ]
     },
@@ -31226,6 +32357,34 @@
       "key": {
         "reqId": "REQ-JUDGE",
         "clause": "advice_is_not_evidence",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "the prompt says it is advice and that the decision is the asker's; record refuses a judgement naming no person; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "147ccb74d7671163",
+      "inputs": [
+        [
+          "requirement",
+          "87a2476be237a570"
+        ],
+        [
+          "model",
+          "0b366673facbb2e3"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-JUDGE",
+        "clause": "advice_is_not_evidence",
         "bond": "modelImpl"
       },
       "level": "L3",
@@ -31458,6 +32617,34 @@
       "key": {
         "reqId": "REQ-JUDGE",
         "clause": "drift_recorded",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "3ab69d9ebf830f19",
+      "inputs": [
+        [
+          "requirement",
+          "afcf0a707f2f5e72"
+        ],
+        [
+          "model",
+          "3402adaacf045c92"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-JUDGE",
+        "clause": "drift_recorded",
         "bond": "modelImpl"
       },
       "level": "L3",
@@ -31517,6 +32704,34 @@
       "key": {
         "reqId": "REQ-JUDGE",
         "clause": "human_decides",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "4040d1ebe17eb926",
+      "inputs": [
+        [
+          "requirement",
+          "f388136d96f2448b"
+        ],
+        [
+          "model",
+          "3402adaacf045c92"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-JUDGE",
+        "clause": "human_decides",
         "bond": "modelImpl"
       },
       "level": "L3",
@@ -31531,7 +32746,7 @@
       "inputs": [
         [
           "implementation",
-          "3e85a7d5b06f305d+448cb95e43510bf3+79e8f4b682a14a28+95cbdb4e6ad99141+a4e11193027c0e35"
+          "3e85a7d5b06f305d+448cb95e43510bf3+79e8f4b682a14a28+8fa1aec4d9084014+95cbdb4e6ad99141"
         ],
         [
           "model",
@@ -31634,6 +32849,34 @@
       "key": {
         "reqId": "REQ-JUDGE",
         "clause": "judgement_shown",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "da91a13dc3529d8b",
+      "inputs": [
+        [
+          "requirement",
+          "fc6972b37792b312"
+        ],
+        [
+          "model",
+          "3f5356153d6ab83d"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-JUDGE",
+        "clause": "judgement_shown",
         "bond": "modelImpl"
       },
       "level": "L3",
@@ -31706,7 +32949,7 @@
       "inputs": [
         [
           "implementation",
-          "0bfb42630f56bb5b+20aa6e203b9f9046+a4e11193027c0e35+a714e521334573b4"
+          "0bfb42630f56bb5b+20aa6e203b9f9046+8fa1aec4d9084014+a714e521334573b4"
         ],
         [
           "model",
@@ -31801,6 +33044,34 @@
         [
           "toolchain",
           "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-LINECOV",
+        "clause": "clause_summary",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "e5d2635ef989071d",
+      "inputs": [
+        [
+          "requirement",
+          "7cb612aa95e37391"
+        ],
+        [
+          "model",
+          "040100a3765d6c7e"
         ]
       ]
     },
@@ -32041,6 +33312,34 @@
       "key": {
         "reqId": "REQ-LINECOV",
         "clause": "stale_hidden",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "6b01926bb6353f61",
+      "inputs": [
+        [
+          "requirement",
+          "88941d844a9dde94"
+        ],
+        [
+          "model",
+          "e409b509c5aaff77"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-LINECOV",
+        "clause": "stale_hidden",
         "bond": "modelImpl"
       },
       "level": "L3",
@@ -32071,6 +33370,34 @@
       "key": {
         "reqId": "REQ-LINECOV",
         "clause": "uncovered_shown",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "fc9867eb8baaed2d",
+      "inputs": [
+        [
+          "requirement",
+          "940934161ac5c334"
+        ],
+        [
+          "model",
+          "559e98535359b235"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-LINECOV",
+        "clause": "uncovered_shown",
         "bond": "modelImpl"
       },
       "level": "L3",
@@ -32094,6 +33421,34 @@
         [
           "requirement",
           "940934161ac5c334"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-LOCK",
+        "clause": "deterministic_bytes",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "bed7be8bc56f86b2",
+      "inputs": [
+        [
+          "requirement",
+          "5c2b7461aad7195f"
+        ],
+        [
+          "model",
+          "a105d7f65b4db0a6"
         ]
       ]
     },
@@ -32305,6 +33660,34 @@
       "key": {
         "reqId": "REQ-LOOK",
         "clause": "contrast_sufficient",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "bdb54f60d54dbd39",
+      "inputs": [
+        [
+          "requirement",
+          "91e58479cc6a0fc3"
+        ],
+        [
+          "model",
+          "8b614feb3e36a144"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-LOOK",
+        "clause": "contrast_sufficient",
         "bond": "modelImpl"
       },
       "level": "L3",
@@ -32335,6 +33718,34 @@
       "key": {
         "reqId": "REQ-LOOK",
         "clause": "roles_drawn_in_theme_colours",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "4650723e5de73c83",
+      "inputs": [
+        [
+          "requirement",
+          "5468d0c637731224"
+        ],
+        [
+          "model",
+          "be1b38068a75470e"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-LOOK",
+        "clause": "roles_drawn_in_theme_colours",
         "bond": "modelImpl"
       },
       "level": "L3",
@@ -32358,6 +33769,34 @@
         [
           "requirement",
           "5468d0c637731224"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-LOOK",
+        "clause": "row_fits",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "6362b8188a55c09e",
+      "inputs": [
+        [
+          "requirement",
+          "844469489f3a4c0f"
+        ],
+        [
+          "model",
+          "bd0db8ae98423fc2"
         ]
       ]
     },
@@ -32475,6 +33914,34 @@
         [
           "toolchain",
           "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-LSP",
+        "clause": "column_to_offset",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "dd6be28f1535f376",
+      "inputs": [
+        [
+          "requirement",
+          "d80751441c2e153d"
+        ],
+        [
+          "model",
+          "0485acc62d0ea74a"
         ]
       ]
     },
@@ -32773,6 +34240,34 @@
       "key": {
         "reqId": "REQ-LSP",
         "clause": "offset_to_column",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "be41a19a5c878912",
+      "inputs": [
+        [
+          "requirement",
+          "0ddd98ae4cf39586"
+        ],
+        [
+          "model",
+          "1c8f72d08e1bb34e"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-LSP",
+        "clause": "offset_to_column",
         "bond": "modelImpl"
       },
       "level": "L3",
@@ -32948,6 +34443,34 @@
       "key": {
         "reqId": "REQ-MIRROR",
         "clause": "apply_reproduces",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "5300d58ea9941469",
+      "inputs": [
+        [
+          "requirement",
+          "12824ab11567ca06"
+        ],
+        [
+          "model",
+          "498c5ec9ac5515d5"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-MIRROR",
+        "clause": "apply_reproduces",
         "bond": "modelImpl"
       },
       "level": "L3",
@@ -32971,6 +34494,34 @@
         [
           "requirement",
           "12824ab11567ca06"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-MIRROR",
+        "clause": "binary_handled",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "8ad9363826619073",
+      "inputs": [
+        [
+          "requirement",
+          "e91dac2c393d6e6d"
+        ],
+        [
+          "model",
+          "39f3f791673f1494"
         ]
       ]
     },
@@ -33380,6 +34931,34 @@
       "key": {
         "reqId": "REQ-MYTH",
         "clause": "escape_pops_one",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "a509f59855ebf1b0",
+      "inputs": [
+        [
+          "requirement",
+          "04c58920becc7633"
+        ],
+        [
+          "model",
+          "b2d0950b816b6710"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-MYTH",
+        "clause": "escape_pops_one",
         "bond": "modelImpl"
       },
       "level": "L3",
@@ -33403,6 +34982,34 @@
         [
           "requirement",
           "04c58920becc7633"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-MYTH",
+        "clause": "escape_terminates",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "47c67fca5e3046df",
+      "inputs": [
+        [
+          "requirement",
+          "fd4ad805378cc730"
+        ],
+        [
+          "model",
+          "4596c45eb436aa93"
         ]
       ]
     },
@@ -33548,6 +35155,34 @@
         [
           "toolchain",
           "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-MYTH",
+        "clause": "modes_defined",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "e41d007ef5118885",
+      "inputs": [
+        [
+          "requirement",
+          "284cbf65cb8736e6"
+        ],
+        [
+          "model",
+          "4596c45eb436aa93"
         ]
       ]
     },
@@ -33846,6 +35481,34 @@
       "key": {
         "reqId": "REQ-OBS",
         "clause": "workspace_is_a_copy",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "models the copy being faithful; the real tree untouched is the sandbox's, held by its tests; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "0e0f97b1f49f957c",
+      "inputs": [
+        [
+          "requirement",
+          "27e2158f18bbd5a4"
+        ],
+        [
+          "model",
+          "eb2e8236a31592d3"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-OBS",
+        "clause": "workspace_is_a_copy",
         "bond": "modelImpl"
       },
       "level": "L3",
@@ -33898,6 +35561,34 @@
         [
           "toolchain",
           "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-PERSIST",
+        "clause": "append_only",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "models reading an appended log, stopping at a torn tail; that nothing rewrites it is the structural test; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "2bb7027d65bbe10d",
+      "inputs": [
+        [
+          "requirement",
+          "cdd5ea752334f1c3"
+        ],
+        [
+          "model",
+          "a4f38c1a37bb81c7"
         ]
       ]
     },
@@ -34128,6 +35819,34 @@
         [
           "requirement",
           "1b55ac09ed1d968a"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-PROV",
+        "clause": "base_is_honest",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "7cda6cc9fdbb95c0",
+      "inputs": [
+        [
+          "requirement",
+          "f37ab484e4bf769d"
+        ],
+        [
+          "model",
+          "8df56585372e9725"
         ]
       ]
     },
@@ -34484,6 +36203,34 @@
       "key": {
         "reqId": "REQ-REQDOC",
         "clause": "clause_addressable",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "e3afffa9df867544",
+      "inputs": [
+        [
+          "requirement",
+          "a9b9aaf25979fc06"
+        ],
+        [
+          "model",
+          "5a549cc79c8f08e0"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-REQDOC",
+        "clause": "clause_addressable",
         "bond": "modelImpl"
       },
       "level": "L3",
@@ -34536,6 +36283,34 @@
         [
           "toolchain",
           "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-REQDOC",
+        "clause": "clause_unique",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "b4b15a9f47566b9e",
+      "inputs": [
+        [
+          "requirement",
+          "9321b8d470678fe5"
+        ],
+        [
+          "model",
+          "cad3550825a70c07"
         ]
       ]
     },
@@ -34681,6 +36456,34 @@
         [
           "toolchain",
           "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-REQDOC",
+        "clause": "decomposition_claimed",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "parseLines defaults decomposition to unclaimed; the lower-bound rendering is ARCH-HONEST.lower_bound_marked; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "415f3c875863fc6e",
+      "inputs": [
+        [
+          "requirement",
+          "074e36e10a7a6619"
+        ],
+        [
+          "model",
+          "cad3550825a70c07"
         ]
       ]
     },
@@ -34891,6 +36694,34 @@
       "key": {
         "reqId": "REQ-REQDOC",
         "clause": "malformed_reported",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "7ab9ad19cfdab652",
+      "inputs": [
+        [
+          "requirement",
+          "2dd722c29e782e1c"
+        ],
+        [
+          "model",
+          "cad3550825a70c07"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-REQDOC",
+        "clause": "malformed_reported",
         "bond": "modelImpl"
       },
       "level": "L3",
@@ -34943,6 +36774,34 @@
         [
           "toolchain",
           "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-REQDOC",
+        "clause": "narrowings_nest",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "1e09095c86731ad6",
+      "inputs": [
+        [
+          "requirement",
+          "f2f4bcd33cdbb247"
+        ],
+        [
+          "model",
+          "cad3550825a70c07"
         ]
       ]
     },
@@ -35182,6 +37041,34 @@
       "key": {
         "reqId": "REQ-ROLLUP",
         "clause": "counted_once",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "243da6456bc4c003",
+      "inputs": [
+        [
+          "requirement",
+          "012f642ed7aceab2"
+        ],
+        [
+          "model",
+          "f96f84510583693b"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-ROLLUP",
+        "clause": "counted_once",
         "bond": "modelImpl"
       },
       "level": "L3",
@@ -35234,6 +37121,34 @@
         [
           "toolchain",
           "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-ROLLUP",
+        "clause": "deterministic_order",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "3e73cf8d75d44110",
+      "inputs": [
+        [
+          "requirement",
+          "04cbf462882c495c"
+        ],
+        [
+          "model",
+          "f96f84510583693b"
         ]
       ]
     },
@@ -35300,6 +37215,34 @@
       "key": {
         "reqId": "REQ-ROLLUP",
         "clause": "exempt_leaves_denominator",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "774073328127a482",
+      "inputs": [
+        [
+          "requirement",
+          "8d3bda74a5062f4f"
+        ],
+        [
+          "model",
+          "f96f84510583693b"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-ROLLUP",
+        "clause": "exempt_leaves_denominator",
         "bond": "modelImpl"
       },
       "level": "L3",
@@ -35323,6 +37266,34 @@
         [
           "requirement",
           "8d3bda74a5062f4f"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-ROLLUP",
+        "clause": "min_not_mean",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "0207c3ceca79b1f0",
+      "inputs": [
+        [
+          "requirement",
+          "dc86e49bc935989a"
+        ],
+        [
+          "model",
+          "30f0a5ab73add768"
         ]
       ]
     },
@@ -35476,6 +37447,34 @@
       "key": {
         "reqId": "REQ-ROLLUP",
         "clause": "open_is_lower_bound",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "3dc4621e6caa0b25",
+      "inputs": [
+        [
+          "requirement",
+          "801ea2dcceebf30e"
+        ],
+        [
+          "model",
+          "f96f84510583693b"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-ROLLUP",
+        "clause": "open_is_lower_bound",
         "bond": "modelImpl"
       },
       "level": "L3",
@@ -35506,6 +37505,34 @@
       "key": {
         "reqId": "REQ-ROLLUP",
         "clause": "partial_capped",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "33b0a6396e693602",
+      "inputs": [
+        [
+          "requirement",
+          "a17c049127179bae"
+        ],
+        [
+          "model",
+          "f96f84510583693b"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-ROLLUP",
+        "clause": "partial_capped",
         "bond": "modelImpl"
       },
       "level": "L3",
@@ -35529,6 +37556,34 @@
         [
           "requirement",
           "a17c049127179bae"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-ROLLUP",
+        "clause": "untraced_counted",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "44a8ca5d2d56e412",
+      "inputs": [
+        [
+          "requirement",
+          "35fcc6c16d2878f6"
+        ],
+        [
+          "model",
+          "425ac11f8d9aaaad"
         ]
       ]
     },
@@ -35826,6 +37881,34 @@
       "key": {
         "reqId": "REQ-SBX",
         "clause": "passthrough_not_mirrored",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "d3c2ddb7fe3983c7",
+      "inputs": [
+        [
+          "requirement",
+          "ae06bac288d3dc81"
+        ],
+        [
+          "model",
+          "aa31253138e0844c"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-SBX",
+        "clause": "passthrough_not_mirrored",
         "bond": "modelImpl"
       },
       "level": "L3",
@@ -35999,6 +38082,34 @@
       "key": {
         "reqId": "REQ-SCREEN",
         "clause": "buffer_goes_home",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "97e8bca14c50b940",
+      "inputs": [
+        [
+          "requirement",
+          "6bd9701c3bb19a9a"
+        ],
+        [
+          "model",
+          "624f1eeb642f5110"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-SCREEN",
+        "clause": "buffer_goes_home",
         "bond": "modelImpl"
       },
       "level": "L3",
@@ -36022,6 +38133,34 @@
         [
           "requirement",
           "6bd9701c3bb19a9a"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-SCREEN",
+        "clause": "close_collapses_the_pane",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "e929b9dd131ff8a5",
+      "inputs": [
+        [
+          "requirement",
+          "f0deaf2d4c25e196"
+        ],
+        [
+          "model",
+          "20bdfd43fa664359"
         ]
       ]
     },
@@ -36291,6 +38430,34 @@
       "key": {
         "reqId": "REQ-SCREEN",
         "clause": "one_arrangement_path",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "891884622e11154e",
+      "inputs": [
+        [
+          "requirement",
+          "51bd2b4ab2f30637"
+        ],
+        [
+          "model",
+          "f33bd6ef77cd82b4"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-SCREEN",
+        "clause": "one_arrangement_path",
         "bond": "modelImpl"
       },
       "level": "L3",
@@ -36458,6 +38625,34 @@
         [
           "requirement",
           "62329bf2720af23e"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-SCREEN",
+        "clause": "resize_has_a_floor",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "ccc91926a081002b",
+      "inputs": [
+        [
+          "requirement",
+          "3d7bf6d2597d6617"
+        ],
+        [
+          "model",
+          "38567ed311d04ebe"
         ]
       ]
     },
@@ -36726,6 +38921,34 @@
       "key": {
         "reqId": "REQ-SCREEN",
         "clause": "station_produces_a_buffer",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "41b41ef0c2e83404",
+      "inputs": [
+        [
+          "requirement",
+          "8e70358f44206d98"
+        ],
+        [
+          "model",
+          "8a0556c0e7289548"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-SCREEN",
+        "clause": "station_produces_a_buffer",
         "bond": "modelImpl"
       },
       "level": "L3",
@@ -36865,6 +39088,34 @@
         [
           "toolchain",
           "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-SCREEN",
+        "clause": "strip_is_the_opened_set",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "57e61d8c528ec4b1",
+      "inputs": [
+        [
+          "requirement",
+          "fb3df61a693e6618"
+        ],
+        [
+          "model",
+          "996d30a83cfdbb17"
         ]
       ]
     },
@@ -37131,6 +39382,34 @@
       "key": {
         "reqId": "REQ-SELFWRITE",
         "clause": "suppression_is_consumed",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "b1a41e635af3ebd2",
+      "inputs": [
+        [
+          "requirement",
+          "88b1d15d370024b5"
+        ],
+        [
+          "model",
+          "e203d47d41f94328"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-SELFWRITE",
+        "clause": "suppression_is_consumed",
         "bond": "modelImpl"
       },
       "level": "L3",
@@ -37275,6 +39554,92 @@
     {
       "key": {
         "reqId": "REQ-SHOW",
+        "clause": "actions_by_role",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "actionsFor is the one role-to-actions table; core_produces stays structural; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "73e5d1c89edb65d4",
+      "inputs": [
+        [
+          "requirement",
+          "45e94cee1fcb5d78"
+        ],
+        [
+          "model",
+          "148951689474b0de"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-SHOW",
+        "clause": "actions_by_role",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 59,
+          "cases": 2000,
+          "op": "REQ-SHOW.actions_by_role"
+        }
+      },
+      "linkHash": "f33c68af29dfd9fb",
+      "inputs": [
+        [
+          "implementation",
+          "a03ca3e19f6eec8a"
+        ],
+        [
+          "model",
+          "148951689474b0de"
+        ],
+        [
+          "requirement",
+          "45e94cee1fcb5d78"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-SHOW",
+        "clause": "claims_beside_code",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "models the requirement-document half; which declaration a code claim sits on is the annotation grammar's model; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "f77d8e656acb592c",
+      "inputs": [
+        [
+          "requirement",
+          "eda3abed10e8803b"
+        ],
+        [
+          "model",
+          "75880f0a18b9bc63"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-SHOW",
         "clause": "claims_beside_code",
         "bond": "modelImpl"
       },
@@ -37299,36 +39664,6 @@
         [
           "requirement",
           "eda3abed10e8803b"
-        ]
-      ]
-    },
-    {
-      "key": {
-        "reqId": "REQ-SHOW",
-        "clause": "core_produces",
-        "bond": "modelImpl"
-      },
-      "level": "L3",
-      "detail": {
-        "drt": {
-          "seed": 59,
-          "cases": 2000,
-          "op": "REQ-SHOW.core_produces"
-        }
-      },
-      "linkHash": "0a680636762fc686",
-      "inputs": [
-        [
-          "implementation",
-          "4b6db735a69eb00f+4b9dc77791161952+a03ca3e19f6eec8a"
-        ],
-        [
-          "model",
-          "148951689474b0de"
-        ],
-        [
-          "requirement",
-          "1adb5f0ac7fbd640"
         ]
       ]
     },
@@ -37394,6 +39729,34 @@
       "key": {
         "reqId": "REQ-SHOW",
         "clause": "findings_lead_somewhere",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "62043f55cc47f020",
+      "inputs": [
+        [
+          "requirement",
+          "31ca6b0b4ddf8e38"
+        ],
+        [
+          "model",
+          "4335363f164ddb84"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-SHOW",
+        "clause": "findings_lead_somewhere",
         "bond": "modelImpl"
       },
       "level": "L3",
@@ -37417,6 +39780,34 @@
         [
           "requirement",
           "31ca6b0b4ddf8e38"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-SHOW",
+        "clause": "graph_from_refinement",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "8ebda0c63b4f254b",
+      "inputs": [
+        [
+          "requirement",
+          "cb3258c2ae39c310"
+        ],
+        [
+          "model",
+          "7c9de2b1d4c73107"
         ]
       ]
     },
@@ -37570,6 +39961,34 @@
       "key": {
         "reqId": "REQ-SHOW",
         "clause": "listing_is_a_tree",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "66db579db2b78e85",
+      "inputs": [
+        [
+          "requirement",
+          "52ea811be3e2c641"
+        ],
+        [
+          "model",
+          "5a1358f5e4614197"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-SHOW",
+        "clause": "listing_is_a_tree",
         "bond": "modelImpl"
       },
       "level": "L3",
@@ -37593,6 +40012,34 @@
         [
           "requirement",
           "52ea811be3e2c641"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-SHOW",
+        "clause": "menu_from_keymap",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "9e6db49d35c536ef",
+      "inputs": [
+        [
+          "requirement",
+          "71f40cb5586b65f9"
+        ],
+        [
+          "model",
+          "dd1183891445ce98"
         ]
       ]
     },
@@ -37659,6 +40106,34 @@
       "key": {
         "reqId": "REQ-SHOW",
         "clause": "producer_is_pure",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "one producer as the pure function every producer is; agreement on generated states is the check; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "b244fd8ebbe5483c",
+      "inputs": [
+        [
+          "requirement",
+          "75246ab3e956294c"
+        ],
+        [
+          "model",
+          "78c5c7a3ec8c2c7a"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-SHOW",
+        "clause": "producer_is_pure",
         "bond": "modelImpl"
       },
       "level": "L3",
@@ -37682,6 +40157,34 @@
         [
           "requirement",
           "75246ab3e956294c"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-SHOW",
+        "clause": "producers_are_total",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "tidy makes every produced buffer well formed whatever it was given; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "d422f4df5cf2b6fb",
+      "inputs": [
+        [
+          "requirement",
+          "33620c953421d0ab"
+        ],
+        [
+          "model",
+          "33b4dcb380ce6097"
         ]
       ]
     },
@@ -37741,6 +40244,34 @@
         [
           "toolchain",
           "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-SHOW",
+        "clause": "recent_reopens",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "a3a7eea9b11f9fd6",
+      "inputs": [
+        [
+          "requirement",
+          "6400dd54c5a95ff9"
+        ],
+        [
+          "model",
+          "7e581973d12cc3b6"
         ]
       ]
     },
@@ -37836,6 +40367,34 @@
       "key": {
         "reqId": "REQ-SHOW",
         "clause": "references_are_links",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "f064b1cfa5d290b8",
+      "inputs": [
+        [
+          "requirement",
+          "2d7cea09b2b24247"
+        ],
+        [
+          "model",
+          "4a1c00bf5fccde09"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-SHOW",
+        "clause": "references_are_links",
         "bond": "modelImpl"
       },
       "level": "L3",
@@ -37866,6 +40425,34 @@
       "key": {
         "reqId": "REQ-SHOW",
         "clause": "requirement_opened",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "6cfca4316b773547",
+      "inputs": [
+        [
+          "requirement",
+          "fb9969e3b2c26e70"
+        ],
+        [
+          "model",
+          "9fc505ffe2567ff4"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-SHOW",
+        "clause": "requirement_opened",
         "bond": "modelImpl"
       },
       "level": "L3",
@@ -37889,6 +40476,34 @@
         [
           "requirement",
           "fb9969e3b2c26e70"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-SHOW",
+        "clause": "review_from_change",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "7257aefc14322bbc",
+      "inputs": [
+        [
+          "requirement",
+          "cc8bc27e9db4b0ce"
+        ],
+        [
+          "model",
+          "886dd32e573ce1bd"
         ]
       ]
     },
@@ -38006,6 +40621,34 @@
         [
           "requirement",
           "0a2767abdb16ef30"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-SHOW",
+        "clause": "sandbox_session_shown",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "e43b90e599086a10",
+      "inputs": [
+        [
+          "requirement",
+          "59a9702a9f011b7c"
+        ],
+        [
+          "model",
+          "cebf0149688306d8"
         ]
       ]
     },
@@ -38333,6 +40976,34 @@
       "key": {
         "reqId": "REQ-STALE",
         "clause": "inputs_identified",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "a record missing an input field is named; the inputs list itself is earn's; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "5e1dde18de8ae945",
+      "inputs": [
+        [
+          "requirement",
+          "64c6aaf1b6ed8af9"
+        ],
+        [
+          "model",
+          "3c303b7e5462a2e6"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-STALE",
+        "clause": "inputs_identified",
         "bond": "modelImpl"
       },
       "level": "L3",
@@ -38450,6 +41121,34 @@
       "key": {
         "reqId": "REQ-STALE",
         "clause": "no_silent_revalidation",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "921e5420c41fb097",
+      "inputs": [
+        [
+          "requirement",
+          "e40d913ef1d87a05"
+        ],
+        [
+          "model",
+          "8315ef0545f5edc0"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-STALE",
+        "clause": "no_silent_revalidation",
         "bond": "modelImpl"
       },
       "level": "L3",
@@ -38502,6 +41201,34 @@
         [
           "toolchain",
           "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-STALE",
+        "clause": "requirement_reopens_all",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "cec0f4581b48be05",
+      "inputs": [
+        [
+          "requirement",
+          "b883a261cbe2868e"
+        ],
+        [
+          "model",
+          "5a549cc79c8f08e0"
         ]
       ]
     },
@@ -38828,6 +41555,34 @@
       "key": {
         "reqId": "REQ-STRENGTH",
         "clause": "inputs_counted",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "925ed29d14689935",
+      "inputs": [
+        [
+          "requirement",
+          "2102500c7e68f518"
+        ],
+        [
+          "model",
+          "e371ebfa8a19952f"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-STRENGTH",
+        "clause": "inputs_counted",
         "bond": "modelImpl"
       },
       "level": "L3",
@@ -38887,6 +41642,34 @@
       "key": {
         "reqId": "REQ-STRENGTH",
         "clause": "kernel_decides",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "0ee9c543a55b1b26",
+      "inputs": [
+        [
+          "requirement",
+          "b9efdcef08fcfda7"
+        ],
+        [
+          "model",
+          "768c8e4c6e1ceeca"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-STRENGTH",
+        "clause": "kernel_decides",
         "bond": "modelImpl"
       },
       "level": "L3",
@@ -38939,6 +41722,34 @@
         [
           "toolchain",
           "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-STRENGTH",
+        "clause": "nondeterministic_declared",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "4cfd8dbf007b4579",
+      "inputs": [
+        [
+          "requirement",
+          "1c6d08bdd2758a2c"
+        ],
+        [
+          "model",
+          "87d4da9d465362f8"
         ]
       ]
     },
@@ -39056,6 +41867,34 @@
         [
           "toolchain",
           "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-STRENGTH",
+        "clause": "obligation_generated",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "4443ca811974a39b",
+      "inputs": [
+        [
+          "requirement",
+          "3fe26295b19608a6"
+        ],
+        [
+          "model",
+          "9772b5a355704b31"
         ]
       ]
     },
@@ -39382,6 +42221,34 @@
       "key": {
         "reqId": "REQ-TRANSCRIPT",
         "clause": "absent_is_fine",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "an empty transcript reads as no events and no error; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "59baf1642d7f782e",
+      "inputs": [
+        [
+          "requirement",
+          "2d6bcc37292e9148"
+        ],
+        [
+          "model",
+          "bcd8789899d37482"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-TRANSCRIPT",
+        "clause": "absent_is_fine",
         "bond": "modelImpl"
       },
       "level": "L3",
@@ -39528,6 +42395,34 @@
       "key": {
         "reqId": "REQ-TRANSCRIPT",
         "clause": "tool_format_read",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "79b104f944101ba3",
+      "inputs": [
+        [
+          "requirement",
+          "37a2242b3482b294"
+        ],
+        [
+          "model",
+          "6c6c841c76dfe8fc"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-TRANSCRIPT",
+        "clause": "tool_format_read",
         "bond": "modelImpl"
       },
       "level": "L3",
@@ -39616,6 +42511,34 @@
       "key": {
         "reqId": "REQ-UNDO",
         "clause": "filtered_view",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "8a99ad106bc5efb6",
+      "inputs": [
+        [
+          "requirement",
+          "37cc69569648532d"
+        ],
+        [
+          "model",
+          "ba47590b8d774998"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-UNDO",
+        "clause": "filtered_view",
         "bond": "modelImpl"
       },
       "level": "L3",
@@ -39668,6 +42591,34 @@
         [
           "toolchain",
           "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-UNDO",
+        "clause": "hover_shows_change",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "baa124e274a3a514",
+      "inputs": [
+        [
+          "requirement",
+          "9747a710917660e5"
+        ],
+        [
+          "model",
+          "6b637b2e9eb085b9"
         ]
       ]
     },
@@ -40077,6 +43028,34 @@
       "key": {
         "reqId": "REQ-UNDO",
         "clause": "tree_is_shown",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "84b61d4f08809565",
+      "inputs": [
+        [
+          "requirement",
+          "8c27c6edfa27ff8c"
+        ],
+        [
+          "model",
+          "140ff145ef11d236"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-UNDO",
+        "clause": "tree_is_shown",
         "bond": "modelImpl"
       },
       "level": "L3",
@@ -40100,6 +43079,34 @@
         [
           "requirement",
           "8c27c6edfa27ff8c"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-VIEW",
+        "clause": "affordances_named",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "7352037f31a3f826",
+      "inputs": [
+        [
+          "requirement",
+          "e2cddf76fd5724c2"
+        ],
+        [
+          "model",
+          "91324f0af65e3f3a"
         ]
       ]
     },
@@ -40395,6 +43402,34 @@
       "key": {
         "reqId": "REQ-VIEW",
         "clause": "presentation_may_be_symbolic",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "db5862b22892677d",
+      "inputs": [
+        [
+          "requirement",
+          "99bf32df86776f0f"
+        ],
+        [
+          "model",
+          "da75aeb5093b18ea"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-VIEW",
+        "clause": "presentation_may_be_symbolic",
         "bond": "modelImpl"
       },
       "level": "L3",
@@ -40504,6 +43539,34 @@
         [
           "requirement",
           "12236ebe108747b9"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-VIEW",
+        "clause": "screen_is_readable",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "52a26c6f9101f0bd",
+      "inputs": [
+        [
+          "requirement",
+          "f1928dcc07501fc7"
+        ],
+        [
+          "model",
+          "7aca3c2e268cc9df"
         ]
       ]
     },
@@ -40649,6 +43712,34 @@
         [
           "requirement",
           "d8340d31834a2ce2"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-VIEW",
+        "clause": "text_is_the_content",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+        }
+      },
+      "linkHash": "07891737ac591a1d",
+      "inputs": [
+        [
+          "requirement",
+          "2c4f27645b43d37b"
+        ],
+        [
+          "model",
+          "e713a595e72505b2"
         ]
       ]
     },

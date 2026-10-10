@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-STALE",
+    "clause": "no_silent_revalidation",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+    }
+  },
+  "linkHash": "921e5420c41fb097",
+  "inputs": [
+    [
+      "requirement",
+      "e40d913ef1d87a05"
+    ],
+    [
+      "model",
+      "8315ef0545f5edc0"
+    ]
+  ]
+}

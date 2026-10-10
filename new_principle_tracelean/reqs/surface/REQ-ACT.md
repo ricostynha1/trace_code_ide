@@ -11,7 +11,7 @@ clauses:
   unknown_is_refused: An action no keymap names shall resolve to a refusal rather than to nothing.
   missing_target_is_refused: An action needing a target the focus does not supply shall resolve to a refusal naming what was missing.
   edits_are_commands: An intent that changes the workspace shall carry a command, so that every change goes through the one path that has an inverse.
-  dispatch_is_pure: Resolution shall be a function of the action and the focus and shall read nothing else.
+  dispatch_is_pure: Resolution shall be a function of the action, the focus, the workspace it would change and the changes waiting to be taken in, and shall read nothing else.
   everything_is_offered: Pointing at a position shall offer every action that applies there — each action a span declares at it, the actions of the buffer it is in, and the places always reachable — each with the keys that reach it, and shall offer no action the dispatcher does not know.
 ---
 

@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-JUDGE",
+    "clause": "human_decides",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+    }
+  },
+  "linkHash": "4040d1ebe17eb926",
+  "inputs": [
+    [
+      "requirement",
+      "f388136d96f2448b"
+    ],
+    [
+      "model",
+      "3402adaacf045c92"
+    ]
+  ]
+}

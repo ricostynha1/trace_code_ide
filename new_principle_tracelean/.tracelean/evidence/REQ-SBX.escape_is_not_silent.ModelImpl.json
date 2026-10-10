@@ -7,9 +7,9 @@
   "level": "L3",
   "detail": {
     "drt": {
-      "seed": 53,
+      "seed": 13,
       "cases": 2000,
-      "op": "REQ-OBS.workspace_is_a_copy"
+      "op": "REQ-SBX.classification_total"
     }
   },
   "linkHash": "cd95fe45786ad4d7",

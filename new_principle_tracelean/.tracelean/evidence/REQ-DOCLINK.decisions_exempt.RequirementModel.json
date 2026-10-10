@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-DOCLINK",
+    "clause": "decisions_exempt",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "a target declared without a hash reads with an empty hash, which is how a decision declares what it affects; decided under autonomy, night of 2026-10-10"
+    }
+  },
+  "linkHash": "3b5431c545419147",
+  "inputs": [
+    [
+      "requirement",
+      "cc62e88e3c03eff0"
+    ],
+    [
+      "model",
+      "35e6357949d421ab"
+    ]
+  ]
+}

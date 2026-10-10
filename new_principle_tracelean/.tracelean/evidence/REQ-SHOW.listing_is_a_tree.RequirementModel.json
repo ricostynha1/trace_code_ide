@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-SHOW",
+    "clause": "listing_is_a_tree",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+    }
+  },
+  "linkHash": "66db579db2b78e85",
+  "inputs": [
+    [
+      "requirement",
+      "52ea811be3e2c641"
+    ],
+    [
+      "model",
+      "5a1358f5e4614197"
+    ]
+  ]
+}

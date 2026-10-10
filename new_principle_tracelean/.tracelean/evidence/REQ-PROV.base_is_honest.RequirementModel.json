@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-PROV",
+    "clause": "base_is_honest",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+    }
+  },
+  "linkHash": "7cda6cc9fdbb95c0",
+  "inputs": [
+    [
+      "requirement",
+      "f37ab484e4bf769d"
+    ],
+    [
+      "model",
+      "8df56585372e9725"
+    ]
+  ]
+}

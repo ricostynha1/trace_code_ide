@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-VIEW",
+    "clause": "text_is_the_content",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+    }
+  },
+  "linkHash": "07891737ac591a1d",
+  "inputs": [
+    [
+      "requirement",
+      "2c4f27645b43d37b"
+    ],
+    [
+      "model",
+      "e713a595e72505b2"
+    ]
+  ]
+}

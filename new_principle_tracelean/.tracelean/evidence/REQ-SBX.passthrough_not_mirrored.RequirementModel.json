@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-SBX",
+    "clause": "passthrough_not_mirrored",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+    }
+  },
+  "linkHash": "d3c2ddb7fe3983c7",
+  "inputs": [
+    [
+      "requirement",
+      "ae06bac288d3dc81"
+    ],
+    [
+      "model",
+      "aa31253138e0844c"
+    ]
+  ]
+}

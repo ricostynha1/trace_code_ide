@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-DRT-PROTO",
+    "clause": "ops_unique",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+    }
+  },
+  "linkHash": "0b60f0a7a79d2999",
+  "inputs": [
+    [
+      "requirement",
+      "7423db5056a673ee"
+    ],
+    [
+      "model",
+      "9b2ae0dec8de59b8"
+    ]
+  ]
+}

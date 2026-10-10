@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-SCREEN",
+    "clause": "strip_is_the_opened_set",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+    }
+  },
+  "linkHash": "57e61d8c528ec4b1",
+  "inputs": [
+    [
+      "requirement",
+      "fb3df61a693e6618"
+    ],
+    [
+      "model",
+      "996d30a83cfdbb17"
+    ]
+  ]
+}

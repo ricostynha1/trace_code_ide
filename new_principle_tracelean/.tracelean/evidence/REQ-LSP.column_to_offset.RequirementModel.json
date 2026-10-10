@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-LSP",
+    "clause": "column_to_offset",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+    }
+  },
+  "linkHash": "dd6be28f1535f376",
+  "inputs": [
+    [
+      "requirement",
+      "d80751441c2e153d"
+    ],
+    [
+      "model",
+      "0485acc62d0ea74a"
+    ]
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-LINECOV",
+    "clause": "clause_summary",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+    }
+  },
+  "linkHash": "e5d2635ef989071d",
+  "inputs": [
+    [
+      "requirement",
+      "7cb612aa95e37391"
+    ],
+    [
+      "model",
+      "040100a3765d6c7e"
+    ]
+  ]
+}

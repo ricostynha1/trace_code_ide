@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-VIEW",
+    "clause": "affordances_named",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+    }
+  },
+  "linkHash": "7352037f31a3f826",
+  "inputs": [
+    [
+      "requirement",
+      "e2cddf76fd5724c2"
+    ],
+    [
+      "model",
+      "91324f0af65e3f3a"
+    ]
+  ]
+}

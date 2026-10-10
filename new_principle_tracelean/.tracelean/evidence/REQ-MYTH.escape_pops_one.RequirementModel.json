@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-MYTH",
+    "clause": "escape_pops_one",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+    }
+  },
+  "linkHash": "a509f59855ebf1b0",
+  "inputs": [
+    [
+      "requirement",
+      "04c58920becc7633"
+    ],
+    [
+      "model",
+      "b2d0950b816b6710"
+    ]
+  ]
+}

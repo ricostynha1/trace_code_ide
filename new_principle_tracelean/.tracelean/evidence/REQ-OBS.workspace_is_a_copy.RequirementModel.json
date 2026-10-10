@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-OBS",
+    "clause": "workspace_is_a_copy",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "models the copy being faithful; the real tree untouched is the sandbox's, held by its tests; decided under autonomy, night of 2026-10-10"
+    }
+  },
+  "linkHash": "0e0f97b1f49f957c",
+  "inputs": [
+    [
+      "requirement",
+      "27e2158f18bbd5a4"
+    ],
+    [
+      "model",
+      "eb2e8236a31592d3"
+    ]
+  ]
+}

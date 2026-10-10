@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-ANCHOR",
+    "clause": "stable_under_move",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "a declaration is file::symbol; the regions narrowing states a region is its lines; decided under autonomy, night of 2026-10-10"
+    }
+  },
+  "linkHash": "aed2ce7d58773d31",
+  "inputs": [
+    [
+      "requirement",
+      "3e2f04e3dba39323"
+    ],
+    [
+      "model",
+      "d1b5933586cf1c6d"
+    ]
+  ]
+}

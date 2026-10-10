@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-ACT",
+    "clause": "everything_is_offered",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "offers now drops any action the dispatcher refuses as unknown; decided under autonomy, night of 2026-10-10"
+    }
+  },
+  "linkHash": "457408566c8871a6",
+  "inputs": [
+    [
+      "requirement",
+      "d5bb8b17730a8f9b"
+    ],
+    [
+      "model",
+      "e582bb091cef893d"
+    ]
+  ]
+}

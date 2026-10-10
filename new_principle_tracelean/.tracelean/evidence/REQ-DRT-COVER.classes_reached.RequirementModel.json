@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-DRT-COVER",
+    "clause": "classes_reached",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+    }
+  },
+  "linkHash": "94df3e762f1669f1",
+  "inputs": [
+    [
+      "requirement",
+      "886cf55c14fe0bcb"
+    ],
+    [
+      "model",
+      "5ba8c1a7c839c6b8"
+    ]
+  ]
+}

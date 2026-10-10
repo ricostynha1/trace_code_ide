@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-REQDOC",
+    "clause": "narrowings_nest",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+    }
+  },
+  "linkHash": "1e09095c86731ad6",
+  "inputs": [
+    [
+      "requirement",
+      "f2f4bcd33cdbb247"
+    ],
+    [
+      "model",
+      "cad3550825a70c07"
+    ]
+  ]
+}

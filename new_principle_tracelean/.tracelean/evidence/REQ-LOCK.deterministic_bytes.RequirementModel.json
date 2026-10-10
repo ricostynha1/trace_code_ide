@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-LOCK",
+    "clause": "deterministic_bytes",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+    }
+  },
+  "linkHash": "bed7be8bc56f86b2",
+  "inputs": [
+    [
+      "requirement",
+      "5c2b7461aad7195f"
+    ],
+    [
+      "model",
+      "a105d7f65b4db0a6"
+    ]
+  ]
+}

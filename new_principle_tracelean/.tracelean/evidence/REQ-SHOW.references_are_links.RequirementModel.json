@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-SHOW",
+    "clause": "references_are_links",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+    }
+  },
+  "linkHash": "f064b1cfa5d290b8",
+  "inputs": [
+    [
+      "requirement",
+      "2d7cea09b2b24247"
+    ],
+    [
+      "model",
+      "4a1c00bf5fccde09"
+    ]
+  ]
+}

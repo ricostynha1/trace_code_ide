@@ -11,7 +11,9 @@ clauses:
   exactly_once: A condition shall produce exactly one finding, and the same condition shall not be reported under two kinds.
   severity_policy: Which kinds block shall be policy, and the default blocking set shall be small.
   derived_from_evidence: A finding about drift or divergence shall be derived from an evidence record and shall not be asserted independently.
-  qualifier_soundness: An exemption without a reason and an approver, or past its expiry, shall itself be reported.
+  qualifier_soundness:
+    text: An exemption without a reason and an approver, or past its expiry, shall itself be reported.
+    today: Expiry shall be judged against a date the check is given, never a clock it reads, and a check given none shall judge no exemption expired.
   structural_is_not_exempt: A clause marked structural shall require a test but not a model, shall remain in the coverage denominator, and shall not reach the level differential testing establishes.
   structural_rejects: A structural check shall be shown to reject a tree that violates it, as well as to accept the project's own tree.
   one_of_each_role: A clause claimed by more than one models, more than one specifies, or more than one pins declaration shall be reported under a kind naming that role, and the finding shall name every declaration involved.

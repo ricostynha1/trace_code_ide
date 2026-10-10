@@ -39,7 +39,7 @@ fn main() {
     let mut positional = Vec::new();
     let mut rest = std::env::args().skip(1);
     while let Some(arg) = rest.next() {
-        if matches!(arg.as_str(), "--show" | "--context" | "--parts") {
+        if matches!(arg.as_str(), "--show" | "--context" | "--parts" | "--today") {
             let _ = rest.next();
         } else if !arg.starts_with("--") {
             positional.push(arg);
@@ -540,7 +540,10 @@ fn main() {
         println!("  {file} -> {target}: {}", state_name(state));
     }
 
-    let findings = trace::checker::check(&index, &trace::checker::Policy::default());
+    // Exemptions are judged expired only against a date given here (`--today
+    // 2026-10-11`, as a CI job would pass it): the check reads no clock.
+    let policy = trace::checker::Policy { today: value_after(&args, "--today"), ..Default::default() };
+    let findings = trace::checker::check(&index, &policy);
     let mut by_kind: std::collections::BTreeMap<String, usize> = Default::default();
     for f in &findings {
         *by_kind.entry(format!("{:?}", f.kind)).or_default() += 1;

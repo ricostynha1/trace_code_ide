@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-STALE",
+    "clause": "requirement_reopens_all",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+    }
+  },
+  "linkHash": "cec0f4581b48be05",
+  "inputs": [
+    [
+      "requirement",
+      "b883a261cbe2868e"
+    ],
+    [
+      "model",
+      "5a549cc79c8f08e0"
+    ]
+  ]
+}

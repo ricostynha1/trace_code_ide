@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-SCREEN",
+    "clause": "resize_has_a_floor",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+    }
+  },
+  "linkHash": "ccc91926a081002b",
+  "inputs": [
+    [
+      "requirement",
+      "3d7bf6d2597d6617"
+    ],
+    [
+      "model",
+      "38567ed311d04ebe"
+    ]
+  ]
+}

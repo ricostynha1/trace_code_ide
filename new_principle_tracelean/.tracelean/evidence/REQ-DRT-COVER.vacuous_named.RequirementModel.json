@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-DRT-COVER",
+    "clause": "vacuous_named",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "a floor no case reached is an unmet gap, never met; decided under autonomy, night of 2026-10-10"
+    }
+  },
+  "linkHash": "c0b4ff224982f5b2",
+  "inputs": [
+    [
+      "requirement",
+      "3065f0f22a70c6af"
+    ],
+    [
+      "model",
+      "0d35122a8c37465e"
+    ]
+  ]
+}

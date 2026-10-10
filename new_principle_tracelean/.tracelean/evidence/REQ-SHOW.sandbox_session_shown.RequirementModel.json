@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-SHOW",
+    "clause": "sandbox_session_shown",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+    }
+  },
+  "linkHash": "e43b90e599086a10",
+  "inputs": [
+    [
+      "requirement",
+      "59a9702a9f011b7c"
+    ],
+    [
+      "model",
+      "cebf0149688306d8"
+    ]
+  ]
+}

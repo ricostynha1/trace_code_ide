@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-TRANSCRIPT",
+    "clause": "tool_format_read",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+    }
+  },
+  "linkHash": "79b104f944101ba3",
+  "inputs": [
+    [
+      "requirement",
+      "37a2242b3482b294"
+    ],
+    [
+      "model",
+      "6c6c841c76dfe8fc"
+    ]
+  ]
+}

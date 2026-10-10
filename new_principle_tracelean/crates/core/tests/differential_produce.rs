@@ -149,15 +149,15 @@ fn model_and_implementation_agree_on_tidying_spans() {
 
 /// The role-to-affordance policy, which both sides must read the same way.
 ///
-/// @drt REQ-SHOW.core_produces
-/// @tests REQ-SHOW.core_produces
+/// @drt REQ-SHOW.actions_by_role
+/// @tests REQ-SHOW.actions_by_role
 #[test]
 #[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
 fn model_and_implementation_agree_on_what_a_role_affords() {
     let mut fields = BTreeMap::new();
     fields.insert("role".to_string(), any_role());
     check(
-        "REQ-SHOW.core_produces",
+        "REQ-SHOW.actions_by_role",
         "TraceLean.Produce.actionsFor",
         "crates/core/src/surface/produce.rs::actions_for",
         &["role"],
@@ -170,7 +170,7 @@ fn model_and_implementation_agree_on_what_a_role_affords() {
 /// asked — a role the run never generated is a row of the table nobody checked,
 /// and the one role that affords *nothing* is the arm most easily written wrong.
 ///
-/// @tests REQ-SHOW.core_produces
+/// @tests REQ-SHOW.actions_by_role
 /// @tests REQ-DRT-COVER.law_coverage
 #[test]
 fn generation_reaches_every_role_and_the_one_that_affords_nothing() {
@@ -210,7 +210,7 @@ fn generation_reaches_every_role_and_the_one_that_affords_nothing() {
     // the same.
     assert_eq!(roles.len(), 19, "only {roles:?} of the nineteen roles were generated");
     support::covered(
-        "REQ-SHOW.core_produces",
+        "REQ-SHOW.actions_by_role",
         &[
             ("a role that affords something", affords),
             ("a role that affords nothing", nothing),

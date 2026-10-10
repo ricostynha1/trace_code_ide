@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-STALE",
+    "clause": "inputs_identified",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "a record missing an input field is named; the inputs list itself is earn's; decided under autonomy, night of 2026-10-10"
+    }
+  },
+  "linkHash": "5e1dde18de8ae945",
+  "inputs": [
+    [
+      "requirement",
+      "64c6aaf1b6ed8af9"
+    ],
+    [
+      "model",
+      "3c303b7e5462a2e6"
+    ]
+  ]
+}

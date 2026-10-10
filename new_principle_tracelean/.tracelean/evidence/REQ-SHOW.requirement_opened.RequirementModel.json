@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-SHOW",
+    "clause": "requirement_opened",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+    }
+  },
+  "linkHash": "6cfca4316b773547",
+  "inputs": [
+    [
+      "requirement",
+      "fb9969e3b2c26e70"
+    ],
+    [
+      "model",
+      "9fc505ffe2567ff4"
+    ]
+  ]
+}
