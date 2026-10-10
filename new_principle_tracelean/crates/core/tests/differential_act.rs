@@ -208,7 +208,6 @@ fn model_and_implementation_agree_on_whether_anything_happens() {
 /// there being one call, which no pair of values expresses.
 ///
 /// @tests REQ-ACT.one_path
-/// @structural REQ-ACT.one_path reason="a claim that two callers reach one function, which is a property of the code rather than of any value it computes"
 #[test]
 fn a_key_and_a_button_reach_the_same_dispatch() {
     use tracelean_core::history::command::Workspace;

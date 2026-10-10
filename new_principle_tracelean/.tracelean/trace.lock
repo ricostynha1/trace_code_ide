@@ -146,9 +146,10 @@
         "qualifier_soundness",
         "severity_policy",
         "structural_is_not_exempt",
+        "structural_rejects",
         "unbound_reported"
       ],
-      "content_hash": "bf3aa3ab5f487e4b",
+      "content_hash": "d386552e7dcb664f",
       "file": "reqs/trace/REQ-CHECK.md",
       "refines": [
         "ARCH-HONEST"
@@ -15251,7 +15252,7 @@
       "clause": "no_ambient_time",
       "file": "crates/core/tests/architecture.rs",
       "anchor": "crates/core/tests/architecture.rs::nothing_here_reads_a_clock_or_an_unseeded_source_of_randomness",
-      "body_hash": "1456d5d670788a36",
+      "body_hash": "db7dcdeb5d93ea29",
       "link_hash": "d1cb950e9518d1b7",
       "qualifier": "structural"
     },
@@ -15281,7 +15282,7 @@
       "clause": "seeded_generation",
       "file": "crates/core/tests/architecture.rs",
       "anchor": "crates/core/tests/architecture.rs::nothing_here_reads_a_clock_or_an_unseeded_source_of_randomness",
-      "body_hash": "1456d5d670788a36",
+      "body_hash": "db7dcdeb5d93ea29",
       "link_hash": "ad9155cd6a357eb6",
       "qualifier": null
     },
@@ -15501,7 +15502,7 @@
       "clause": "no_launch",
       "file": "crates/core/tests/architecture.rs",
       "anchor": "crates/core/tests/architecture.rs::nothing_here_calls_a_model_or_reaches_the_network",
-      "body_hash": "98e31d1d436a9ad9",
+      "body_hash": "c5b1fedc3bbe403c",
       "link_hash": "730f70e0560173b1",
       "qualifier": "structural"
     },
@@ -15511,7 +15512,7 @@
       "clause": "no_launch",
       "file": "crates/core/tests/architecture.rs",
       "anchor": "crates/core/tests/architecture.rs::nothing_here_launches_a_coding_agent",
-      "body_hash": "6b33fdc7de40b6fa",
+      "body_hash": "ac1a404c3a1e74c3",
       "link_hash": "ca989c5c09b20e2f",
       "qualifier": null
     },
@@ -15521,7 +15522,7 @@
       "clause": "no_model_call",
       "file": "crates/core/tests/architecture.rs",
       "anchor": "crates/core/tests/architecture.rs::nothing_here_calls_a_model_or_reaches_the_network",
-      "body_hash": "98e31d1d436a9ad9",
+      "body_hash": "c5b1fedc3bbe403c",
       "link_hash": "f1f07f1ca112ff5c",
       "qualifier": "structural"
     },
@@ -15531,7 +15532,7 @@
       "clause": "observation_only",
       "file": "crates/core/tests/architecture.rs",
       "anchor": "crates/core/tests/architecture.rs::nothing_here_launches_a_coding_agent",
-      "body_hash": "6b33fdc7de40b6fa",
+      "body_hash": "ac1a404c3a1e74c3",
       "link_hash": "0469bfd3aef8e007",
       "qualifier": "structural"
     },
@@ -15541,7 +15542,7 @@
       "clause": "user_runs_it",
       "file": "crates/core/tests/architecture.rs",
       "anchor": "crates/core/tests/architecture.rs::nothing_here_launches_a_coding_agent",
-      "body_hash": "6b33fdc7de40b6fa",
+      "body_hash": "ac1a404c3a1e74c3",
       "link_hash": "899e1f0090785230",
       "qualifier": "structural"
     },
@@ -15743,6 +15744,16 @@
       "anchor": "crates/core/tests/differential_act.rs::a_key_and_a_button_reach_the_same_dispatch",
       "body_hash": "4832de3b3b6ddc7f",
       "link_hash": "a8a6abdcdd902307",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-ACT",
+      "clause": "one_path",
+      "file": "crates/core/tests/structural.rs",
+      "anchor": "crates/core/tests/structural.rs::an_action_is_resolved_to_an_intent_in_one_place",
+      "body_hash": "c05086d7f6784777",
+      "link_hash": "796de5da6cdd07da",
       "qualifier": "structural"
     },
     {
@@ -16298,6 +16309,76 @@
     {
       "role": "tests",
       "req": "REQ-CHECK",
+      "clause": "structural_rejects",
+      "file": "crates/core/tests/architecture.rs",
+      "anchor": "crates/core/tests/architecture.rs::the_needle_checks_reject_a_tree_that_breaks_them",
+      "body_hash": "b6771a3f750e3b05",
+      "link_hash": "9e5d44e471a7c688",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-CHECK",
+      "clause": "structural_rejects",
+      "file": "crates/core/tests/structural.rs",
+      "anchor": "crates/core/tests/structural.rs::a_frontend_building_a_buffer_is_rejected",
+      "body_hash": "a7258e7683760681",
+      "link_hash": "d2b7fd9afb95f59a",
+      "qualifier": "structural"
+    },
+    {
+      "role": "tests",
+      "req": "REQ-CHECK",
+      "clause": "structural_rejects",
+      "file": "crates/core/tests/structural.rs",
+      "anchor": "crates/core/tests/structural.rs::a_producer_that_reads_a_file_is_rejected",
+      "body_hash": "e2c06e5051dd1143",
+      "link_hash": "2ee703ba3f3c25a1",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-CHECK",
+      "clause": "structural_rejects",
+      "file": "crates/core/tests/structural.rs",
+      "anchor": "crates/core/tests/structural.rs::editing_workspace_files_directly_is_rejected",
+      "body_hash": "ce7b8be75b7cb1f6",
+      "link_hash": "8fce2b2da885927f",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-CHECK",
+      "clause": "structural_rejects",
+      "file": "crates/core/tests/structural.rs",
+      "anchor": "crates/core/tests/structural.rs::history_code_that_truncates_the_log_is_rejected",
+      "body_hash": "945eec60e3430167",
+      "link_hash": "4eb515d66a411e9f",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-CHECK",
+      "clause": "structural_rejects",
+      "file": "crates/core/tests/structural.rs",
+      "anchor": "crates/core/tests/structural.rs::rearranging_a_screen_by_hand_is_rejected",
+      "body_hash": "26f368ad33bd3f93",
+      "link_hash": "aace64c7e175b26b",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-CHECK",
+      "clause": "structural_rejects",
+      "file": "crates/core/tests/structural.rs",
+      "anchor": "crates/core/tests/structural.rs::resolving_an_action_name_in_a_frontend_is_rejected",
+      "body_hash": "c065eff388c428ef",
+      "link_hash": "d64346fd2c470b99",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-CHECK",
       "clause": "unbound_reported",
       "file": "crates/core/src/trace/checker.rs",
       "anchor": "crates/core/src/trace/checker.rs::tests::a_model_and_an_implementation_with_nothing_between_them_is_reported",
@@ -16394,6 +16475,16 @@
       "body_hash": "fe8c3148ba078931",
       "link_hash": "ceb140efbb1afb1b",
       "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-CMD",
+      "clause": "single_path",
+      "file": "crates/core/tests/structural.rs",
+      "anchor": "crates/core/tests/structural.rs::a_workspace_changes_only_by_a_command",
+      "body_hash": "f9ed6ff5471a1178",
+      "link_hash": "cc725d3a4a2436a8",
+      "qualifier": "structural"
     },
     {
       "role": "tests",
@@ -19591,7 +19682,7 @@
       "clause": "no_call",
       "file": "crates/core/tests/architecture.rs",
       "anchor": "crates/core/tests/architecture.rs::nothing_here_calls_a_model_or_reaches_the_network",
-      "body_hash": "98e31d1d436a9ad9",
+      "body_hash": "c5b1fedc3bbe403c",
       "link_hash": "27c0bd8df6e4776e",
       "qualifier": "structural"
     },
@@ -20678,6 +20769,16 @@
     {
       "role": "tests",
       "req": "REQ-PERSIST",
+      "clause": "append_only",
+      "file": "crates/core/tests/structural.rs",
+      "anchor": "crates/core/tests/structural.rs::nothing_rewrites_the_history",
+      "body_hash": "53f669144a59770c",
+      "link_hash": "5cdfc9a1a8f1e889",
+      "qualifier": "structural"
+    },
+    {
+      "role": "tests",
+      "req": "REQ-PERSIST",
       "clause": "checkpoint_equivalent",
       "file": "crates/core/src/history/persistence.rs",
       "anchor": "crates/core/src/history/persistence.rs::tests::a_checkpoint_cannot_change_an_answer",
@@ -21639,6 +21740,16 @@
       "role": "tests",
       "req": "REQ-SCREEN",
       "clause": "one_arrangement_path",
+      "file": "crates/core/tests/structural.rs",
+      "anchor": "crates/core/tests/structural.rs::the_arrangement_changes_only_through_arrange",
+      "body_hash": "49a0588b5e16749b",
+      "link_hash": "884715ca6753bb73",
+      "qualifier": "structural"
+    },
+    {
+      "role": "tests",
+      "req": "REQ-SCREEN",
+      "clause": "one_arrangement_path",
       "file": "crates/tui/tests/driving.rs",
       "anchor": "crates/tui/tests/driving.rs::splitting_the_screen_draws_two_panes",
       "body_hash": "e5f7522c1702acb7",
@@ -21993,6 +22104,16 @@
       "anchor": "crates/core/tests/one_representation.rs::no_frontend_builds_a_buffer_of_its_own",
       "body_hash": "d1f816df925cccee",
       "link_hash": "945d437040310102",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-SHOW",
+      "clause": "core_produces",
+      "file": "crates/core/tests/structural.rs",
+      "anchor": "crates/core/tests/structural.rs::no_frontend_builds_a_buffer",
+      "body_hash": "7b2f1025b2dbdc43",
+      "link_hash": "71a2a8d02dca60f3",
       "qualifier": "structural"
     },
     {
@@ -22154,6 +22275,16 @@
       "body_hash": "5e233fc96c4450f5",
       "link_hash": "a147ab22fc775620",
       "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-SHOW",
+      "clause": "producer_is_pure",
+      "file": "crates/core/tests/structural.rs",
+      "anchor": "crates/core/tests/structural.rs::producers_read_nothing_but_their_arguments",
+      "body_hash": "9f2f4b3b85a80e06",
+      "link_hash": "5cea6391c95bc15b",
+      "qualifier": "structural"
     },
     {
       "role": "tests",

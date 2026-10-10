@@ -100,7 +100,6 @@ fn a_file_a_listing_a_review_a_menu_and_a_record_are_all_buffers() {
 /// one means naming the type.
 ///
 /// @tests REQ-SHOW.core_produces
-/// @structural REQ-SHOW.core_produces reason="a claim about which layer constructs a value, which is a property of the code rather than of any value it computes"
 #[test]
 fn no_frontend_builds_a_buffer_of_its_own() {
     let root = project_root();

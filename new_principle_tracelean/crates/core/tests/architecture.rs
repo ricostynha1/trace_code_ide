@@ -57,8 +57,13 @@ fn code_lines(text: &str, file: &str) -> Vec<(usize, String)> {
 }
 
 fn offenders(needles: &[&str]) -> Vec<String> {
+    offenders_in(&sources(), needles)
+}
+
+/// The same check over any tree, so a tree built to violate it can be tried.
+fn offenders_in(files: &[(String, String)], needles: &[&str]) -> Vec<String> {
     let mut found = Vec::new();
-    for (file, text) in sources() {
+    for (file, text) in files {
         for (line_no, line) in code_lines(&text, &file) {
             for needle in needles {
                 if line.contains(needle) {
@@ -68,6 +73,58 @@ fn offenders(needles: &[&str]) -> Vec<String> {
         }
     }
     found
+}
+
+const NETWORK: &[&str] = &[
+    "reqwest", "hyper::", "TcpStream", "UdpSocket", "TcpListener",
+    "api.anthropic.com", "api.openai.com", "bedrock", "ANTHROPIC_API_KEY",
+    "OPENAI_API_KEY", "openai", "anthropic",
+];
+
+const AMBIENT: &[&str] = &[
+    "SystemTime::now", "Instant::now", "Utc::now", "Local::now", "chrono::",
+    "rand::", "thread_rng", "random()", "uuid::", "Uuid::new_v4",
+    "hostname", "std::env::var(\"USER\")",
+];
+
+/// Process spawns outside the differential-testing toolchain.
+fn launches_in(files: &[(String, String)]) -> Vec<String> {
+    let mut found = Vec::new();
+    for (file, text) in files {
+        // Building a runner is this project's own toolchain use, and it is
+        // what `drt` exists to do; driving an agent is not.
+        if file.contains("/src/drt/") || file.contains("/tests/") {
+            continue;
+        }
+        for (line_no, line) in code_lines(text, file) {
+            if line.contains("Command::new") || line.contains("process::Command") {
+                found.push(format!("{file}:{line_no}: {line}"));
+            }
+        }
+    }
+    found
+}
+
+fn tree(files: &[(&str, &str)]) -> Vec<(String, String)> {
+    files.iter().map(|(p, t)| (p.to_string(), t.to_string())).collect()
+}
+
+/// Each check above rejects a tree that breaks it, and accepts one that does not.
+///
+/// @tests REQ-CHECK.structural_rejects
+#[test]
+fn the_needle_checks_reject_a_tree_that_breaks_them() {
+    let calls_a_model = tree(&[("core/src/x.rs", "fn a() {}\nlet c = reqwest::get(u);\n")]);
+    assert_eq!(offenders_in(&calls_a_model, NETWORK).len(), 1);
+    assert!(offenders_in(&tree(&[("core/src/x.rs", "fn a() {}\n")]), NETWORK).is_empty());
+
+    let reads_a_clock = tree(&[("core/src/x.rs", "let t = SystemTime::now();\n")]);
+    assert_eq!(offenders_in(&reads_a_clock, AMBIENT).len(), 1);
+    assert!(offenders_in(&tree(&[("core/src/x.rs", "// SystemTime::now is banned\n")]), AMBIENT).is_empty());
+
+    let spawns = tree(&[("core/src/x.rs", "let c = Command::new(\"claude\");\n")]);
+    assert_eq!(launches_in(&spawns).len(), 1);
+    assert!(launches_in(&tree(&[("core/src/drt/x.rs", "let c = Command::new(\"lake\");\n")])).is_empty());
 }
 
 /// No call to a language model, and nothing that would account for one.
@@ -80,11 +137,7 @@ fn offenders(needles: &[&str]) -> Vec<String> {
 /// @structural ARCH-NO-DRIVING.no_launch reason="the same absence, for process spawning"
 #[test]
 fn nothing_here_calls_a_model_or_reaches_the_network() {
-    let found = offenders(&[
-        "reqwest", "hyper::", "TcpStream", "UdpSocket", "TcpListener",
-        "api.anthropic.com", "api.openai.com", "bedrock", "ANTHROPIC_API_KEY",
-        "OPENAI_API_KEY", "openai", "anthropic",
-    ]);
+    let found = offenders(NETWORK);
     assert!(found.is_empty(), "this project must make no model or network call:\n{found:#?}");
 }
 
@@ -97,19 +150,7 @@ fn nothing_here_calls_a_model_or_reaches_the_network() {
 /// @structural ARCH-NO-DRIVING.observation_only reason="a claim about which direction information flows through the tree, not about any one function"
 #[test]
 fn nothing_here_launches_a_coding_agent() {
-    let mut found = Vec::new();
-    for (file, text) in sources() {
-        // Building a runner is this project's own toolchain use, and it is
-        // what `drt` exists to do; driving an agent is not.
-        if file.contains("/src/drt/") || file.contains("/tests/") {
-            continue;
-        }
-        for (line_no, line) in code_lines(&text, &file) {
-            if line.contains("Command::new") || line.contains("process::Command") {
-                found.push(format!("{file}:{line_no}: {line}"));
-            }
-        }
-    }
+    let found = launches_in(&sources());
     assert!(
         found.is_empty(),
         "only the differential-testing toolchain may spawn a process:\n{found:#?}"
@@ -124,11 +165,7 @@ fn nothing_here_launches_a_coding_agent() {
 /// @structural ARCH-DETERMINISM.no_ambient_time reason="a constraint on what the source may mention; a function that read a clock would satisfy any model of itself"
 #[test]
 fn nothing_here_reads_a_clock_or_an_unseeded_source_of_randomness() {
-    let found = offenders(&[
-        "SystemTime::now", "Instant::now", "Utc::now", "Local::now", "chrono::",
-        "rand::", "thread_rng", "random()", "uuid::", "Uuid::new_v4",
-        "hostname", "std::env::var(\"USER\")",
-    ]);
+    let found = offenders(AMBIENT);
     assert!(
         found.is_empty(),
         "a derived artefact must be a function of its input alone:\n{found:#?}"

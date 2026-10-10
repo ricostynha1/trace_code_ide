@@ -6,8 +6,8 @@ the two harder problems explained: [structural clauses and model choice](../inve
 
 **Status (2026-10-10):** implemented and green: §1, §2, §4, §5, the roll-up
 reachable set (§3, Rust, Lean, DRT), coverage verdicts with waivers (§10 code), 26 pins.
-Open: §6 structural clauses with negative tests, §7 cleanup of clauses with several
-models and unmodeled clauses, §8 grammar, a `SharedRefinement` finding, the Rust
+§7 several-models cleanup (0 left); §6 mostly (below).
+Open: §6 remainder, §7 unmodeled clauses (23), §8 grammar, a `SharedRefinement` finding, the Rust
 annotation binding fix, and re-earning stale evidence (`--stale`).
 
 ## 1. Agent judgements count when a person delegated them — decided
@@ -136,9 +136,16 @@ looks for the wrong thing. So:
   show its check rejects a violating tree, and the checker reports a
   structural clause whose tests are positive-only.
 
-The 13 existing tests in `crates/core/tests/architecture.rs` are all
-positive-only (each scans the real tree through `sources()`); they get the same
-split and a negative case each. In general the same rule is worth applying to
+**Done:** `crates/core/tests/structural.rs` holds the six clauses' checks with
+positive and negative tests, and `REQ-CHECK.structural_rejects` states the rule.
+Known gaps the checks name: the editor's `in_cells` refit assigns the layout
+outside `arrange`, and `perform` names three prompt actions before `dispatch`.
+**Open:** the checker does not yet report a structural clause whose tests are
+positive-only; and of the 14 tests in `architecture.rs` only the three
+needle checks (model/network, process spawn, clock) have a negative case.
+The rest (`only_declared_shells…`, `axioms_live…`, `every_finding_type…`,
+`every_module_holding…`, `the_judge_exports…`, `moving_a_file…`,
+`every_unsure_answer…`, scratch directories, agent launch) still need one. In general the same rule is worth applying to
 any test whose pass is "nothing found" — a search that finds nothing must be
 shown able to find something — but structural checks come first.
 

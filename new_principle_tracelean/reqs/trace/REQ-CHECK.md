@@ -13,6 +13,7 @@ clauses:
   derived_from_evidence: A finding about drift or divergence shall be derived from an evidence record and shall not be asserted independently.
   qualifier_soundness: An exemption without a reason and an approver, or past its expiry, shall itself be reported.
   structural_is_not_exempt: A clause marked structural shall require a test but not a model, shall remain in the coverage denominator, and shall not reach the level differential testing establishes.
+  structural_rejects: A structural check shall be shown to reject a tree that violates it, as well as to accept the project's own tree.
   one_of_each_role: A clause claimed by more than one models, more than one specifies, or more than one pins declaration shall be reported under a kind naming that role, and the finding shall name every declaration involved.
 ---
 
