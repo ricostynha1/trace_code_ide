@@ -528,6 +528,29 @@ fn the_judge_exports_a_prompt_and_nothing_carries_it() {
 /// target, a file included, so that evidence earned for a function in one file
 /// is not inherited by the same text in another (`REQ-STALE.retarget_invalidates`).
 ///
+/// The comparison below can tell two trees apart: the same layout with a
+/// different body moves the claim's hash, so equal claims after a move mean
+/// something. (A convention-keyed tool cannot be built to fail it here; what
+/// can be shown is that the check is not blind.)
+///
+/// @tests REQ-CHECK.structural_rejects
+#[test]
+fn the_no_convention_comparison_is_sensitive_to_what_is_claimed() {
+    use tracelean_core::trace::index::build;
+
+    let base = std::env::temp_dir().join(format!("tracelean-no-convention-neg-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&base);
+    let requirement = "---\nid: REQ-M\nclauses:\n  one: A thing shall happen.\n---\n\n# M\n";
+    for (dir, body) in [("one", "pub fn f() {}\n"), ("two", "pub fn f() { 1; }\n")] {
+        std::fs::create_dir_all(base.join(dir)).unwrap();
+        std::fs::write(base.join(dir).join("REQ-M.md"), requirement).unwrap();
+        std::fs::write(base.join(dir).join("impl.rs"), format!("/// @implements REQ-M.one\n{body}")).unwrap();
+    }
+    let hash = |dir: &str| build(&base.join(dir)).links[0].anchor.body_hash.clone();
+    assert_ne!(hash("one"), hash("two"));
+    let _ = std::fs::remove_dir_all(&base);
+}
+
 /// @tests ARCH-SELFHOST.no_convention
 /// @structural ARCH-SELFHOST.no_convention reason="the claim is that no code keys off a path, which is an absence in the source rather than a value any function returns"
 #[test]
