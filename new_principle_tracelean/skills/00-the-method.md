@@ -32,7 +32,7 @@ Never averaged: a strong bond must not hide a missing one.
 |---|---|
 | `L1` | annotation resolves; nothing checked |
 | `L2` | a person judged it (also the cap for `@structural`) |
-| `L3` | differential testing agreed **and** met the declared coverage floors |
+| `L3` | differential testing agreed **and** reached its floor: every class of the arguments, any named situations, and for Rust every line of the bound function |
 | `L4` | a theorem discharges it |
 
 A level is **earned** by a run that records what it depended on; change any

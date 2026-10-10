@@ -22,11 +22,34 @@ naming the one you looked at. Two models of one concept drift apart silently.
 def drive (keymap : Keymap) (mode : String) : List String → List Step
 ```
 
-Build it (`lake build`) before anything else. `Imprecise` on a new file: ask the
-checker where parsing stopped (`--unparsed <file>`) and write that declaration
-more plainly.
+Build it (`lake build`, or `lean <file>` with no lakefile) before anything
+else, for the Lean version the project pins (`lean-toolchain`). `Imprecise` on
+a new file: ask the checker where parsing stopped (`--unparsed <file>`) and
+write that declaration more plainly ([08](08-setup-in-case-of-error.md#lean-the-checker-cannot-read)).
 
-## Binding (`.tracelean/drt.json`)
+## Comparing it with the code: `--drt` first
+
+```bash
+tracelean-trace . --drt
+```
+
+For every clause with a Lean `def` annotated `@models` and a Rust `fn`
+annotated `@implements`, and no binding, this derives the inputs from the two
+signatures, generates cases, runs both, and records L3 for each that agreed and
+reached every class of its arguments. It refreshes the lock itself.
+
+| It prints | Means | Do |
+|---|---|---|
+| `agreed` | L3 earned | nothing |
+| `uncovered … never generated: …` | agreed, but those classes were never reached | widen the types' values, or bind it by hand with a waiver |
+| `DIVERGED` + input | they disagree on that input | decide which is wrong (below) |
+| `mismatch` | the signatures do not line up | align names and types |
+| `failed` | a runner did not build | [08](08-setup-in-case-of-error.md) |
+
+Bind by hand only when `--drt` cannot: arguments that need a generator, a
+named situation to reach, a second implementation, or a waiver.
+
+## Binding by hand (`.tracelean/drt.json`)
 
 ```json
 { "req_id": "REQ-DRIVE", "clause": "session_is_a_value",
@@ -42,15 +65,33 @@ more plainly.
 - Keep generated inputs small with varied *shapes*; seed examples with values
   that were wrong before.
 
-## Floors
+## Floors and waivers
 
 Agreement alone is not evidence (a do-nothing implementation agrees with
-trivial cases). Declare situations to reach — each outcome branch, the empty
-case, past bugs — and how often. No floors: stays at L1.
+trivial cases). The floor is, all at once:
+
+- **every class** of the arguments (zero/positive, empty/not, each enum case
+  and `Option`, inside every field), reached at least once — no declaration
+  needed;
+- any **named situations** in `floors`, as often as declared;
+- for Rust, **every line of the bound function**, in a measured run.
+
+What truly cannot be reached is waived, with a reason; a waiver without one
+excuses nothing, and one that excuses nothing is itself a failure:
+
+```json
+"waive": [{ "situations": ["line: Err(_) => out.refused.push(command),"],
+            "reason": "why no input can reach it" }]
+```
+
+A class is waived by its name, a line by `line: <its text>`, and a run whose
+implementation could not read a case fails unless `unreadable input` is waived.
 
 ## Running and disagreeing
 
-Slow, behind a flag (`cargo test --workspace -- --ignored`). Run your binding
+Bindings run in the project's slow suite (`cargo test --workspace -- --ignored`;
+in the TraceLean tree `tools/differential-all.sh`, which also measures lines).
+Lines count only in a measured run: `TRACELEAN_DRT_LINES=1`. Run your binding
 first. On a divergence, read the shrunk case: the code may be wrong, or the
 model may say something the clause does not. Never change the model just to
 agree with the code.

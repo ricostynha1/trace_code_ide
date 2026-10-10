@@ -8,10 +8,11 @@
 //! editor being closed and reopened, and one session per project is live: the
 //! newest.
 
+use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
 use crate::history::command::Workspace;
-use crate::observe::sandbox::{launcher, launcher_path, Host, Session, HOME_READABLE, HOME_WRITABLE};
+use crate::observe::sandbox::{brief, brief_path, launcher, launcher_path, Host, Session, HOME_READABLE, HOME_WRITABLE};
 use crate::observe::workspace::{snapshot, write_into};
 
 /// Where a project's sessions are kept.
@@ -45,12 +46,37 @@ pub fn create(root: &Path, holds: &Workspace) -> std::io::Result<Session> {
     let work = sessions_dir(&root).join(&id).join("work");
     std::fs::create_dir_all(&work)?;
     write_into(holds, &work)?;
+    write_base(&sessions_dir(&root).join(&id), holds)?;
     copy_state(&root.join(".tracelean"), &work.join(".tracelean"))?;
     Ok(Session {
         id,
         root: root.to_string_lossy().to_string(),
         work: work.to_string_lossy().to_string(),
     })
+}
+
+/// Where a session keeps what its copy started with: beside the copy, where
+/// the agent cannot rewrite it.
+fn base_path(session_dir: &Path) -> PathBuf {
+    session_dir.join("base.json")
+}
+
+/// Record each file the copy started with, by the hash of its text, so what
+/// the agent changed can be told from what the project changed since.
+///
+/// @implements REQ-OBS.only_what_the_tool_changed
+fn write_base(session_dir: &Path, holds: &Workspace) -> std::io::Result<()> {
+    let hashes: BTreeMap<&String, String> =
+        holds.files.iter().map(|(path, text)| (path, crate::trace::hash::text(text))).collect();
+    let text = serde_json::to_string_pretty(&hashes).map_err(std::io::Error::other)?;
+    std::fs::write(base_path(session_dir), text)
+}
+
+/// What a session's copy started with; `None` for a session made before
+/// this was kept, whose changes cannot be told from the project's.
+pub fn base(session: &Session) -> Option<BTreeMap<String, String>> {
+    let dir = Path::new(&session.work).parent()?;
+    serde_json::from_str(&std::fs::read_to_string(base_path(dir)).ok()?).ok()
 }
 
 /// What `.tracelean` holds that is one person's, not the project's: the
@@ -96,6 +122,7 @@ fn copy_tree(from: &Path, to: &Path) -> std::io::Result<()> {
 /// Write the session's launcher, so the command a person copies is short.
 /// Written again each time, because what the host has can change.
 pub fn write_launcher(session: &Session, host: &Host) -> std::io::Result<()> {
+    std::fs::write(brief_path(session), brief(host))?;
     std::fs::write(launcher_path(session), launcher(session, host))
 }
 
@@ -183,16 +210,28 @@ pub fn host(root: &Path) -> Host {
         git: absolute(root).join(".git").exists(),
         runtime_dir: std::env::var("XDG_RUNTIME_DIR").ok().filter(|d| Path::new(d).is_dir()),
         shell: std::env::var("SHELL").unwrap_or_else(|_| "/bin/sh".to_string()),
-        // The checker beside the running editor, when it was built.
+        // The checker beside the running editor (or one directory up, for an
+        // example's binary), else the one on the host's `PATH`.
         tools: std::env::current_exe()
             .ok()
             .and_then(|exe| exe.parent().map(Path::to_path_buf))
-            .filter(|dir| dir.join("tracelean-trace").is_file())
+            .into_iter()
+            .flat_map(|dir| [dir.clone(), dir.parent().map(Path::to_path_buf).unwrap_or(dir)])
+            .chain(std::env::split_paths(&std::env::var_os("PATH").unwrap_or_default()))
+            .find(|dir| dir.join("tracelean-trace").is_file())
+            .and_then(|dir| dir.canonicalize().ok())
             .map(|dir| (dir.display().to_string(), std::env::var("PATH").unwrap_or_default())),
         // The skills shipped with this TraceLean, where it was built from.
         skills: Some(Path::new(env!("CARGO_MANIFEST_DIR")).join("../../skills"))
             .filter(|dir| dir.join("README.md").is_file())
             .and_then(|dir| dir.canonicalize().ok())
+            .map(|dir| dir.display().to_string()),
+        // `CLAUDE_CONFIG_DIR` reaches the sandbox with the rest of the
+        // environment; what it names has to reach it too.
+        claude_config: std::env::var("CLAUDE_CONFIG_DIR")
+            .ok()
+            .filter(|dir| Path::new(dir).is_dir())
+            .and_then(|dir| Path::new(&dir).canonicalize().ok())
             .map(|dir| dir.display().to_string()),
     }
 }

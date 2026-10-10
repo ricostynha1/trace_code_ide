@@ -6,7 +6,7 @@
 //! effectful is therefore a direct differential test.
 
 use serde::{Deserialize, Serialize};
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
 use crate::history::command::{apply, Command, Workspace};
 
@@ -87,6 +87,40 @@ pub fn mutations(before: Workspace, after: Workspace) -> Vec<Command> {
     out.extend(created);
     out.extend(changed);
     out
+}
+
+/// The commands that carry the project to the agent's copy, on the paths the
+/// agent changed: those whose content in the copy (its hash, or absence) is
+/// not what `base` says the copy started with.
+///
+/// The copy is not the project. A project edited after its copy was made
+/// differs from the copy on every path it touched, and a plain `mutations`
+/// would offer each as the agent's work: accepting a weeks-old copy unwrote
+/// the project. With no base, nothing can be told apart, so nothing is offered.
+///
+/// @implements REQ-OBS.only_what_the_tool_changed
+pub fn changed_since(base: Option<BTreeMap<String, String>>, project: Workspace, agent: Workspace) -> Vec<Command> {
+    let Some(base) = base else { return Vec::new() };
+    let touched = |path: &String| {
+        agent.files.get(path).map(|text| crate::trace::hash::text(text)).as_ref() != base.get(path)
+    };
+    mutations(project, agent.clone())
+        .into_iter()
+        .filter(|command| {
+            let path = command_path(command);
+            path.is_empty() || touched(&path)
+        })
+        .collect()
+}
+
+/// The file a command acts on. `mutations` emits neither a rename nor a batch;
+/// were it to, it would be offered rather than silently dropped.
+fn command_path(command: &Command) -> String {
+    match command {
+        Command::CreateFile { path } | Command::DeleteFile { path, .. } => path.clone(),
+        Command::Insert { file, .. } | Command::Delete { file, .. } => file.clone(),
+        Command::RenameFile { .. } | Command::Batch { .. } => String::new(),
+    }
 }
 
 /// What mirroring reached, and every derived command refused on the way.
@@ -284,6 +318,37 @@ mod tests {
 
     fn ws(files: &[(&str, &str)]) -> Workspace {
         Workspace::with(files)
+    }
+
+    fn base(files: &[(&str, &str)]) -> Option<BTreeMap<String, String>> {
+        Some(files.iter().map(|(p, t)| (p.to_string(), crate::trace::hash::text(t))).collect())
+    }
+
+    /// The bug it is for: a copy made before the project grew a file and
+    /// changed another offered to delete the one and unwrite the other.
+    ///
+    /// @tests REQ-OBS.only_what_the_tool_changed
+    #[test]
+    fn what_the_project_changed_since_the_copy_is_not_the_agents() {
+        let copied = &[("a.rs", "one"), ("b.rs", "two")];
+        let project = ws(&[("a.rs", "one, since edited"), ("b.rs", "two"), ("CLAUDE.md", "new")]);
+        let agent = ws(&[("a.rs", "one"), ("b.rs", "TWO"), ("c.rs", "made")]);
+        let offered = changed_since(base(copied), project, agent);
+        let paths: Vec<String> = offered.iter().map(command_path).collect();
+        assert!(paths.iter().all(|p| p == "b.rs" || p == "c.rs"), "{offered:?}");
+        assert!(paths.contains(&"b.rs".to_string()) && paths.contains(&"c.rs".to_string()), "{offered:?}");
+    }
+
+    /// A file the agent deleted is offered; without a base, nothing is.
+    ///
+    /// @tests REQ-OBS.only_what_the_tool_changed
+    #[test]
+    fn a_deletion_is_the_agents_and_an_unknown_start_offers_nothing() {
+        let project = ws(&[("a.rs", "one"), ("b.rs", "two")]);
+        let agent = ws(&[("a.rs", "one")]);
+        let offered = changed_since(base(&[("a.rs", "one"), ("b.rs", "two")]), project.clone(), agent.clone());
+        assert_eq!(offered, vec![Command::DeleteFile { path: "b.rs".into(), content: "two".into() }]);
+        assert!(changed_since(None, project, agent).is_empty());
     }
 
     /// The law.

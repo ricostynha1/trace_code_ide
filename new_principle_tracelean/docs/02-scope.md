@@ -2,7 +2,7 @@
 describes: [ARCH-NO-DRIVING, REQ-OBS, REQ-MYTH]
 described_hash:
   ARCH-NO-DRIVING: 5edd72e90d4b4ed1
-  REQ-OBS: 0a64c35590a5b3d3
+  REQ-OBS: ddbaa15e6f6a11ec
   REQ-MYTH: 0120c37ad5d78c7b
 ---
 
@@ -28,8 +28,11 @@ subsystem in the old tree.
 
 `core/src/sandbox/`. The user runs an external tool themselves, in a plain shell,
 inside a bubblewrap namespace bound to a reflink copy of the project. TraceLean
-watches that copy, diffs it against the real tree, and mirrors what it finds into
-buffers, file tree and undo tree. It never launches, prompts or drives the tool.
+watches that copy and mirrors into buffers, file tree and undo tree the paths
+whose content differs from what the copy started with (`sessions/<id>/base.json`)
+— not every difference from the real tree, which also holds what the project
+changed since. It never launches, prompts or drives the tool; it briefs it, with
+a `CLAUDE.md` above the copy pointing at the skills.
 
 The editor stops needing to know what a model is, what a token costs, how a tool
 schema is shaped or how to keep a cache warm. An agent becomes a process that

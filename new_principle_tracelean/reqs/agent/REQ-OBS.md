@@ -10,6 +10,7 @@ clauses:
   undoable: Every mirrored change shall be undoable by the same mechanism as a change made by hand.
   no_instruction_channel: There shall be no channel by which the editor sends the tool anything.
   visible_while_running: What the tool has changed shall be observable before the user decides to accept it.
+  only_what_the_tool_changed: What is offered as the tool's changes shall be only the paths whose content in the copy differs from what the copy held when it was made; a path the project changed since, and the tool did not, shall not be offered, and a copy whose starting content is unknown shall offer nothing.
 ---
 
 # Observing an external agent

@@ -3116,7 +3116,10 @@ impl Editor {
         }
         let Some(live) = self.session.clone() else { return recounted };
         let agent = tracelean_core::observe::workspace::snapshot(std::path::Path::new(&live.work));
-        let pending = tracelean_core::observe::mirror::mutations(self.workspace(), agent.clone());
+        // Against what the copy started with, not the project now: a project
+        // edited since its copy was made is not the agent's work.
+        let base = tracelean_core::observe::workcopy::base(&live);
+        let pending = tracelean_core::observe::mirror::changed_since(base, self.workspace(), agent.clone());
         let moved = pending != self.pending;
         self.pending = pending;
         self.agent_tree = Some(agent);
@@ -3914,7 +3917,10 @@ impl Editor {
         if self.session.is_some() {
             self.tick();
             let seen = self.pending.len();
-            if seen == 0 {
+            let known = self.session.as_ref().and_then(tracelean_core::observe::workcopy::base).is_some();
+            if !known {
+                self.say("unknown start", "this sandbox predates what TraceLean keeps of a copy's start, so its changes cannot be told from the project's; open a new sandbox");
+            } else if seen == 0 {
                 self.say("nothing yet", "the agent has not changed anything in the sandbox");
             } else {
                 self.say("observed", &format!("{seen} changes in the sandbox; accept or reject them"));

@@ -53,3 +53,21 @@ Why these clauses; the failure each prevents; what is not claimed.
 
 Before any of these, `tracelean-trace . --context REQ-X --parts all` shows
 what the change touches.
+
+## Documents that describe requirements
+
+A prose document declares what it describes, and the hash it was last checked
+against:
+
+```yaml
+---
+describes: [REQ-CONVERT]
+described_hash:
+  REQ-CONVERT: 05e3ddef88851419
+---
+```
+
+When the requirement changes, the document is `in-review` and `--stale` lists
+it. Re-read it against the requirement, fix what is now wrong, and only then
+copy the new hash from `tracelean-trace . --hashes`. Copying the hash without
+reading is marking pinned what you did not pin.

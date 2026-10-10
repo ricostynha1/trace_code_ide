@@ -26,7 +26,11 @@ test that would have caught it → see it fail → check → test → lock → d
    misspelt clause; new `Unbound` = a missing binding.
 6. **Run the suites**: fast always; slow (differential) when you touched a
    model, a bound implementation or a schema.
-7. **Earn and lock** ([05](05-evidence.md)).
-8. **Update documents** that describe what changed, and the progress document
-   with what is left.
-9. **Report honestly**: failures shown, skipped steps named.
+7. **Earn and lock** ([05](05-evidence.md)): `tracelean-trace . --drt`, then
+   `tracelean-trace . --lock`.
+8. **Update documents** that describe what changed ([03](03-requirements.md#documents-that-describe-requirements)),
+   and the progress document with what is left.
+9. **Before reporting**: `tracelean-trace .` ends `blocking: false`, and
+   `tracelean-trace . --stale` lists only what is a person's (judgements).
+10. **Report honestly**: failures shown, skipped steps named, what is left for a
+    person listed.

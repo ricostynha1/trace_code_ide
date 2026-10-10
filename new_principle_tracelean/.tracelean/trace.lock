@@ -555,11 +555,12 @@
       "clauses": [
         "effects_become_commands",
         "no_instruction_channel",
+        "only_what_the_tool_changed",
         "undoable",
         "visible_while_running",
         "workspace_is_a_copy"
       ],
-      "content_hash": "0a64c35590a5b3d3",
+      "content_hash": "ddbaa15e6f6a11ec",
       "file": "reqs/agent/REQ-OBS.md",
       "refines": [
         "ARCH-NO-DRIVING",
@@ -5370,7 +5371,7 @@
       "clause": "no_model_call",
       "file": "crates/editor/src/lib.rs",
       "anchor": "crates/editor/src/lib.rs::Editor::observe",
-      "body_hash": "fcd688136dbe9591",
+      "body_hash": "ec2157565a5ddd4f",
       "link_hash": "eb91ef25118fb014",
       "qualifier": null
     },
@@ -8510,7 +8511,7 @@
       "clause": "protected_excluded",
       "file": "crates/editor/src/lib.rs",
       "anchor": "crates/editor/src/lib.rs::Editor::observe",
-      "body_hash": "fcd688136dbe9591",
+      "body_hash": "ec2157565a5ddd4f",
       "link_hash": "095a0dbb97ffbfeb",
       "qualifier": null
     },
@@ -8747,6 +8748,26 @@
     {
       "role": "implements",
       "req": "REQ-OBS",
+      "clause": "only_what_the_tool_changed",
+      "file": "crates/core/src/observe/mirror.rs",
+      "anchor": "crates/core/src/observe/mirror.rs::changed_since",
+      "body_hash": "a1f1a016fcc01791",
+      "link_hash": "307d7202787e1979",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-OBS",
+      "clause": "only_what_the_tool_changed",
+      "file": "crates/core/src/observe/workcopy.rs",
+      "anchor": "crates/core/src/observe/workcopy.rs::write_base",
+      "body_hash": "3dece4fecd097037",
+      "link_hash": "3e8eac2fa15490f2",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-OBS",
       "clause": "workspace_is_a_copy",
       "file": "crates/core/src/observe/effects.rs",
       "anchor": "crates/core/src/observe/effects.rs::copy_check",
@@ -8780,7 +8801,7 @@
       "clause": "workspace_is_a_copy",
       "file": "crates/core/src/observe/workcopy.rs",
       "anchor": "crates/core/src/observe/workcopy.rs::create",
-      "body_hash": "28d8b7adc3780922",
+      "body_hash": "e60a600f64029a16",
       "link_hash": "99d145b4abd9b9a4",
       "qualifier": null
     },
@@ -9460,7 +9481,7 @@
       "clause": "real_tree_untouched",
       "file": "crates/core/src/observe/sandbox.rs",
       "anchor": "crates/core/src/observe/sandbox.rs::launch_args",
-      "body_hash": "e981532ccdd42bca",
+      "body_hash": "a3e34f515da74a63",
       "link_hash": "28c87f55d0faab86",
       "qualifier": null
     },
@@ -21717,6 +21738,26 @@
     {
       "role": "tests",
       "req": "REQ-OBS",
+      "clause": "only_what_the_tool_changed",
+      "file": "crates/core/src/observe/mirror.rs",
+      "anchor": "crates/core/src/observe/mirror.rs::tests::a_deletion_is_the_agents_and_an_unknown_start_offers_nothing",
+      "body_hash": "045b3b42b38533b0",
+      "link_hash": "7238fcc5fcade99e",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-OBS",
+      "clause": "only_what_the_tool_changed",
+      "file": "crates/core/src/observe/mirror.rs",
+      "anchor": "crates/core/src/observe/mirror.rs::tests::what_the_project_changed_since_the_copy_is_not_the_agents",
+      "body_hash": "3324fd9add6307cd",
+      "link_hash": "936cd95edfb65238",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-OBS",
       "clause": "undoable",
       "file": "crates/core/tests/observation_is_one_way.rs",
       "anchor": "crates/core/tests/observation_is_one_way.rs::what_a_tool_did_arrives_as_ordinary_commands",
@@ -32718,7 +32759,7 @@
       "inputs": [
         [
           "implementation",
-          "afc99f6b9d119089+f5487bb6a3d14d98+fcd688136dbe9591"
+          "afc99f6b9d119089+ec2157565a5ddd4f+f5487bb6a3d14d98"
         ],
         [
           "model",
@@ -33241,7 +33282,7 @@
       "inputs": [
         [
           "implementation",
-          "115206a4728888aa+28d8b7adc3780922+44c3fd964d2f3be8+ae68f582cfb99e95+c098d328e9037df7+e3683121244bcfd6+eab7e05d07fe945d"
+          "115206a4728888aa+44c3fd964d2f3be8+ae68f582cfb99e95+c098d328e9037df7+e3683121244bcfd6+e60a600f64029a16+eab7e05d07fe945d"
         ],
         [
           "model",
@@ -35153,9 +35194,9 @@
       "level": "L3",
       "detail": {
         "drt": {
-          "seed": 13,
+          "seed": 53,
           "cases": 2000,
-          "op": "REQ-SBX.classification_total"
+          "op": "REQ-OBS.workspace_is_a_copy"
         }
       },
       "linkHash": "cd95fe45786ad4d7",
@@ -35364,7 +35405,7 @@
       "inputs": [
         [
           "implementation",
-          "de954a611c587b21+e981532ccdd42bca"
+          "a3e34f515da74a63+de954a611c587b21"
         ],
         [
           "model",

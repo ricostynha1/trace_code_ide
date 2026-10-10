@@ -2,6 +2,9 @@
 target/
 formal/.lake/
 
+# Raw profiles an instrumented process writes where it ran (measured runs).
+*.profraw
+
 # One builder of the shared Lean package at a time, across test processes.
 formal/.tracelean-build.lock
 

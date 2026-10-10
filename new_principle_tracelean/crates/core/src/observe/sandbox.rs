@@ -43,6 +43,10 @@ pub struct Host {
     /// Where the agent skills are, as `TRACELEAN_SKILLS` in the sandbox: the
     /// project's `CLAUDE.md` (or its agent's equivalent) sends it there.
     pub skills: Option<String>,
+    /// Claude Code's own directory when `CLAUDE_CONFIG_DIR` moves it from
+    /// `~/.claude`: put back writable, or the agent finds no login there.
+    #[serde(default)]
+    pub claude_config: Option<String>,
 }
 
 /// What, under the home directory, an agent's shell needs writable.
@@ -99,6 +103,28 @@ pub fn launch_args(session: &Session, host: &Host) -> Vec<String> {
             push("--ro-bind", &path, &path);
         }
     }
+    // The host's login, wherever its Claude Code keeps it.
+    if let Some(config) = &host.claude_config {
+        push("--bind", config, config);
+    }
+    // What `PATH` and `TRACELEAN_SKILLS` name, read-only: usually under the
+    // home just emptied. Before the copy, so a project that holds them (the
+    // TraceLean tree itself) shows its own copy instead.
+    if let Some((tools, _)) = &host.tools {
+        push("--ro-bind", tools, tools);
+    }
+    if let Some(skills) = &host.skills {
+        push("--ro-bind", skills, skills);
+    }
+    // The agent's brief, as a `CLAUDE.md` one directory above the project —
+    // read by Claude Code for any project, traced or not — when that directory
+    // is on the emptied home, so nothing real is covered or written.
+    if let (Some(home), Some(parent)) = (&host.home, std::path::Path::new(&session.root).parent()) {
+        if parent.starts_with(home) {
+            let at = parent.join("CLAUDE.md").display().to_string();
+            push("--ro-bind", &brief_path(session), &at);
+        }
+    }
     push("--tmpfs", "/tmp", "");
     push("--bind", &session.work, &session.root);
     for name in bound(host) {
@@ -144,6 +170,38 @@ pub fn launcher_path(session: &Session) -> String {
         Some(dir) => format!("{dir}/enter.sh"),
         None => format!("{}.enter.sh", session.work),
     }
+}
+
+/// Where a session's brief is kept: beside its launcher.
+pub fn brief_path(session: &Session) -> String {
+    match session.work.strip_suffix("/work") {
+        Some(dir) => format!("{dir}/CLAUDE.md"),
+        None => format!("{}.CLAUDE.md", session.work),
+    }
+}
+
+/// What an agent started in the sandbox is told before anything else: that
+/// the project is TraceLean's to check, and where the method and the tools
+/// are — so a tree with no `CLAUDE.md` of its own still says how to work in it.
+pub fn brief(host: &Host) -> String {
+    let skills = host.skills.as_deref().unwrap_or("(not found: `skills/` in the TraceLean source tree)");
+    format!(
+        "# You are in a TraceLean sandbox\n\
+         \n\
+         The project below is a copy; a person reviews what you change before it\n\
+         reaches the real tree. Everything you need is installed — install nothing.\n\
+         \n\
+         - `tracelean-trace` is on `PATH`. Start with `tracelean-trace .`: it says what\n\
+         \x20 the project's requirements claim and what is missing, even when nothing\n\
+         \x20 is traced yet.\n\
+         - The method is in `$TRACELEAN_SKILLS` ({skills}). Read its `README.md`\n\
+         \x20 before changing anything; `08-setup-in-case-of-error.md` if a command fails.\n\
+         - Before changing what a requirement covers: `tracelean-trace . --context REQ-X.clause`.\n\
+         - Before reporting: `tracelean-trace .` must end `blocking: false`, and\n\
+         \x20 `tracelean-trace . --stale` must list only what is a person's.\n\
+         \n\
+         A `CLAUDE.md` in the project itself, if there is one, says more and wins.\n"
+    )
 }
 
 /// The launcher: the whole command, kept in a file so that what a person
@@ -195,7 +253,39 @@ mod tests {
             shell: "/bin/bash".into(),
             tools: None,
             skills: None,
+            claude_config: None,
         }
+    }
+
+    /// An agent in any project, traced or not, is told where the method and
+    /// the tools are: a brief one directory above the project, on the emptied
+    /// home — and none when that directory is not on it.
+    #[test]
+    fn the_agent_is_briefed_above_the_project_on_the_emptied_home() {
+        let args = launch_args(&session(), &host());
+        let joined = args.join(" ");
+        assert!(joined.contains("--ro-bind /home/u/proj/.tracelean/sessions/s1/CLAUDE.md /home/u/CLAUDE.md"), "{joined}");
+        let mut deep = session();
+        deep.root = "/home/u/code/proj".into();
+        assert!(launch_args(&deep, &host()).join(" ").contains(" /home/u/code/CLAUDE.md"));
+        let mut outside = session();
+        outside.root = "/srv/proj".into();
+        assert!(!launch_args(&outside, &host()).join(" ").contains("CLAUDE.md"));
+        assert!(brief(&host()).contains("tracelean-trace ."));
+    }
+
+    /// A Claude Code configured elsewhere than `~/.claude` keeps its login
+    /// there; the agent is logged in only if that directory is put back.
+    #[test]
+    fn a_moved_claude_config_keeps_the_hosts_login() {
+        let mut with = host();
+        with.claude_config = Some("/home/u/.claude-work".into());
+        let args = launch_args(&session(), &with);
+        let joined = args.join(" ");
+        assert!(joined.contains("--bind /home/u/.claude-work /home/u/.claude-work"), "{joined}");
+        let emptied = args.iter().position(|a| a == "/home/u").unwrap();
+        let config = args.iter().position(|a| a == "/home/u/.claude-work").unwrap();
+        assert!(emptied < config);
     }
 
     /// The agent's shell finds TraceLean's own command and its skills, so it
@@ -209,6 +299,24 @@ mod tests {
         assert!(joined.contains("--setenv PATH /opt/tl/bin:/usr/bin"), "{joined}");
         assert!(joined.contains("--setenv TRACELEAN_SKILLS /opt/tl/skills"), "{joined}");
         assert!(!launch_args(&session(), &host()).join(" ").contains("--setenv"));
+    }
+
+    /// Named is not reachable: home is emptied, and the checker and skills
+    /// usually live under it, so both are put back, read-only — before the
+    /// copy, which wins when the project holds them.
+    #[test]
+    fn what_the_agent_is_pointed_at_survives_the_emptied_home() {
+        let mut with = host();
+        with.tools = Some(("/home/u/tl/target/debug".into(), "/usr/bin".into()));
+        with.skills = Some("/home/u/tl/skills".into());
+        let args = launch_args(&session(), &with);
+        let joined = args.join(" ");
+        assert!(joined.contains("--ro-bind /home/u/tl/target/debug /home/u/tl/target/debug"), "{joined}");
+        assert!(joined.contains("--ro-bind /home/u/tl/skills /home/u/tl/skills"), "{joined}");
+        let emptied = args.iter().position(|a| a == "/home/u").unwrap();
+        let skills = args.iter().position(|a| a == "/home/u/tl/skills").unwrap();
+        let copy = args.iter().position(|a| a == "/home/u/proj/.tracelean/sessions/s1/work").unwrap();
+        assert!(emptied < skills && skills < copy, "{joined}");
     }
 
     /// The copy is where the project was, and the project is nowhere writable.

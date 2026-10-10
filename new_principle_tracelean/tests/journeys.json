@@ -34,6 +34,17 @@
         { "see": "estimated" },
         { "not": "billed" }
       ]
+    },
+    {
+      "name": "the trace station shows what the open file claims",
+      "steps": [
+        { "keys": ["C-p"] },
+        { "type": "cels" },
+        { "keys": ["Enter"] },
+        { "keys": ["Space", "w", "t", "l"] },
+        { "see": "4 claims on 4 clauses" },
+        { "see": "REQ-THERMO.to_celsius" }
+      ]
     }
   ]
 }
