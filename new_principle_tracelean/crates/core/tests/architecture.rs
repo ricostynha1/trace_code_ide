@@ -464,12 +464,24 @@ fn every_finding_type_is_a_closed_named_vocabulary() {
 fn every_module_holding_a_decision_is_public() {
     let text = std::fs::read_to_string(project_root().join("crates/core/src/lib.rs"))
         .expect("the crate root");
-    for module in ["drt", "trace", "history", "observe", "surface", "evidence", "judge"] {
-        assert!(
-            text.contains(&format!("pub mod {module}")),
-            "`{module}` is not public, so a generated runner cannot call into it"
-        );
-    }
+    let hidden = private_modules(&text);
+    assert!(hidden.is_empty(), "not public, so a generated runner cannot call into them: {hidden:?}");
+}
+
+/// The decision modules a crate root does not declare `pub mod`.
+fn private_modules(root_text: &str) -> Vec<&'static str> {
+    ["drt", "trace", "history", "observe", "surface", "evidence", "judge"]
+        .into_iter()
+        .filter(|module| !root_text.contains(&format!("pub mod {module}")))
+        .collect()
+}
+
+/// @tests REQ-CHECK.structural_rejects
+#[test]
+fn the_visibility_check_rejects_a_private_decision_module() {
+    let all = "pub mod drt;\npub mod trace;\npub mod history;\npub mod observe;\npub mod surface;\npub mod evidence;\npub mod judge;\n";
+    assert!(private_modules(all).is_empty());
+    assert_eq!(private_modules(&all.replace("pub mod trace;", "mod trace;")), vec!["trace"]);
 }
 
 /// Where a model's opinion would be useful, a prompt is exported for a person
