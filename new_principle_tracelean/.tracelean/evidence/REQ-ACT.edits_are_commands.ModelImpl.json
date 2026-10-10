@@ -8,7 +8,7 @@
   "detail": {
     "drt": {
       "seed": 83,
-      "cases": 2000,
+      "cases": 8000,
       "op": "REQ-ACT.action_to_intent"
     }
   },
@@ -20,7 +20,7 @@
     ],
     [
       "model",
-      "71f2e2d445bdb099"
+      "43418699da34631e"
     ],
     [
       "requirement",

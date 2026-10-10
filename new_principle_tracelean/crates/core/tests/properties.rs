@@ -303,6 +303,7 @@ fn a_result_carries_the_seed_and_the_case_count_it_actually_reached() {
         divergence: None,
         schema: tracelean_core::drt::schema::Schema::Bool,
         reached: Vec::new(),
+        unreadable: 0,
     };
     assert!(clean.agreed());
     assert_eq!((clean.seed, clean.cases), (7, 2_000));

@@ -199,7 +199,21 @@ fn model_and_implementation_agree_on_what_happens_to_an_opaque_file() {
     let mut state: std::collections::BTreeMap<String, Option<Box<Schema>>> =
         std::collections::BTreeMap::new();
     state.insert("absent".into(), None);
-    state.insert("opaque".into(), None);
+    // With the hash its bytes are known by, two of them, so an unchanged
+    // binary and a changed one both occur. It was once drawn without one,
+    // which neither side could read — and two sides failing alike agree, so
+    // no opaque file was ever compared (found by measuring lines).
+    state.insert(
+        "opaque".into(),
+        Some(Box::new(Schema::Struct {
+            fields: [(
+                "hash".to_string(),
+                Schema::Str { max_len: Some(0), examples: vec!["h1".into(), "h2".into()] },
+            )]
+            .into_iter()
+            .collect(),
+        })),
+    );
     state.insert(
         "text".into(),
         Some(Box::new(Schema::Struct {

@@ -46,7 +46,12 @@ left a class unreached. A binding that names no situations is covered by its
 classes alone: every class reached at least once is its stated floor. Lines
 are the other half: `coverage::line_reach` names
 each executable line of an implementing item by its text, for a run measured
-under coverage.
+under coverage: `TRACELEAN_DRT_LINES=1` builds the Rust runner instrumented
+and writes `target/tracelean-drt-lines/<op>.json`, and fails the op when the
+bound entry has a line no case ran and no waiver names. Other items claiming
+the clause are reported only. Any run fails when the implementation could not
+read one of its cases (two sides failing to read agree, and ask nothing),
+unless the binding waives `unreadable input`.
 
 The target is all of them. A binding's `waive` lists classes or lines that
 cannot be reached, each with a `reason`; a waiver without one excuses nothing,

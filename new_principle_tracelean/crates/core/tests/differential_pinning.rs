@@ -103,6 +103,8 @@ const DECLARATIONS: &[&str] = &[
     "def walk (g : List Nat) (fuel : Nat) : String → List String → Nat × List String\n  | _, _ => (0, [])",
     "abbrev Levels := List Nat",
     "def x := 5",
+    // Brackets inside a binder, which stay part of its type.
+    "def nested (xs : List (Option Nat)) {m : Array [Nat]} (p : Nat × (Nat → Prop)) : Prop := True",
     "theorem t : 1 = 1 := rfl",
     "instance : Inhabited Nat := ⟨0⟩",
 ];

@@ -139,6 +139,16 @@ pub struct DrtResult {
     /// (`classes::reached`): the coverage the run reached, beside its count
     /// and its seed.
     pub reached: Vec<super::coverage::Observed>,
+    /// How many cases the implementation could not even read. Two sides that
+    /// both fail to read an input agree, so a generator drawing a shape the
+    /// types no longer have runs a clause's cases without asking it anything.
+    pub unreadable: u64,
+}
+
+/// Whether a reply is the implementation failing to read its arguments — the
+/// Rust runner's `argument …` answer — rather than an answer about them.
+fn unreadable(reply: &Reply) -> bool {
+    reply.error.as_deref().is_some_and(|e| e.starts_with("argument `"))
 }
 
 impl DrtResult {
@@ -193,11 +203,15 @@ pub fn run(
     let mut model_runner = Runner::start(model)?;
     let mut impl_runner = Runner::start(implementation)?;
     let mut rng = Rng::new(options.seed);
+    let mut unread = 0;
 
     for case in 1..=options.cases {
         let input = gen::value(schema, &mut rng);
         let a = model_runner.ask(case, op, &input)?;
         let b = impl_runner.ask(case, op, &input)?;
+        if unreadable(&b) {
+            unread += 1;
+        }
         if !agree(&a, &b) {
             let reduced = shrink_divergence(
                 op,
@@ -214,6 +228,7 @@ pub fn run(
                 divergence: Some(reduced),
                 schema: schema.clone(),
                 reached: super::classes::reached(schema.clone(), options.seed, case),
+                unreadable: unread,
             });
         }
     }
@@ -225,6 +240,7 @@ pub fn run(
         divergence: None,
         schema: schema.clone(),
         reached: super::classes::reached(schema.clone(), options.seed, options.cases),
+        unreadable: unread,
     })
 }
 

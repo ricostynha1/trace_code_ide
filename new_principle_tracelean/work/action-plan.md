@@ -251,9 +251,14 @@ ops: 484 implementing items, 90 without executable lines (types), 7069 lines,
 4723 run (67%). 243 items fully run; 126 never run — none the bound entry:
 each is another item claiming the clause (runner shells, wrappers, the
 `Ord` impls under `stable_ordering`), which a differential run cannot reach.
-Next: an item a clause's differential run cannot reach is claimed as
-`@implements` but evidenced elsewhere, so the line rule applies to the
-bound entry's call tree only; then gate L3 on it with waivers.
+Stage 2 (2026-10-10), done: in a measured run every line of the *bound
+entry* is run or waived (`line: <text>` in the binding's `waive`, with a
+reason; an unused one fails), and any case the implementation cannot read
+fails the run (`DrtResult.unreadable`). Widening generators to meet it found
+a model gap (`Act.dispatch` ignored a target carried in the action) and a
+vacuous suite (`binary_handled` drew opaque files neither side could read).
+Four waivers, each a branch no input reaches. Open: measured runs are a
+separate pass (`TRACELEAN_DRT_LINES=1`), not yet part of the evidence level.
 
 ## 11. Carried over from the removed progress and gap documents
 

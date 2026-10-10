@@ -18,6 +18,16 @@ fn role() -> Schema {
     support::role()
 }
 
+/// Every role, tokens too: the affordance table has a row for them that the
+/// shared roles never asked about (found by measuring lines).
+fn any_role() -> Schema {
+    let Schema::Enum { mut variants } = support::role() else { unreachable!() };
+    let mut kind = BTreeMap::new();
+    kind.insert("kind".to_string(), Schema::simple_enum(&["keyword", "comment"]));
+    variants.insert("token".to_string(), Some(Box::new(Schema::Struct { fields: kind })));
+    Schema::Enum { variants }
+}
+
 /// Deliberately generous: offsets past any plausible text, so the clamping in
 /// `tidy` is exercised rather than assumed.
 fn offset() -> Schema {
@@ -145,7 +155,7 @@ fn model_and_implementation_agree_on_tidying_spans() {
 #[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
 fn model_and_implementation_agree_on_what_a_role_affords() {
     let mut fields = BTreeMap::new();
-    fields.insert("role".to_string(), role());
+    fields.insert("role".to_string(), any_role());
     check(
         "REQ-SHOW.core_produces",
         "TraceLean.Produce.actionsFor",
@@ -169,7 +179,7 @@ fn generation_reaches_every_role_and_the_one_that_affords_nothing() {
     use tracelean_core::surface::view::Role;
 
     let mut fields = BTreeMap::new();
-    fields.insert("role".to_string(), role());
+    fields.insert("role".to_string(), any_role());
     let schema = Schema::Struct { fields };
 
     let mut rng = gen::Rng::new(59);
@@ -194,10 +204,11 @@ fn generation_reaches_every_role_and_the_one_that_affords_nothing() {
             }
         }
     }
-    // Seventeen and not eight: `level` carries a grade, so there are four of
-    // it, and `claim` its kind, six; a run that reached only one of them would
-    // say nothing about a frontend that colours L1 and L4 the same.
-    assert_eq!(roles.len(), 17, "only {roles:?} of the seventeen roles were generated");
+    // Nineteen and not eight: `level` carries a grade, so there are four of
+    // it, `claim` its kind, six, and `token` two kinds; a run that reached only
+    // one of them would say nothing about a frontend that colours L1 and L4
+    // the same.
+    assert_eq!(roles.len(), 19, "only {roles:?} of the nineteen roles were generated");
     support::covered(
         "REQ-SHOW.core_produces",
         &[

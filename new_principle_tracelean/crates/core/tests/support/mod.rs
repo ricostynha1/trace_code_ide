@@ -166,6 +166,18 @@ pub fn agreed(result: &tracelean_core::drt::run::DrtResult) {
         result.divergence.as_ref().map(|d| &d.implementation),
     );
     every_class_reached(result);
+    // A case the implementation could not read asked it nothing, and the
+    // model failing alike made it look like agreement. Only a binding that
+    // says why may draw such input.
+    let waived = binding_for(&result.op).waive.iter().any(|w| w.situations.iter().any(|s| s == "unreadable input"));
+    assert!(
+        result.unreadable == 0 || waived,
+        "{} of {} cases of `{}` were input the implementation could not read: the generator draws a shape the \
+         types do not have",
+        result.unreadable,
+        result.cases,
+        result.op
+    );
     let stamp = current_stamp(&result.op);
     let mut half = read_half(&result.op);
     half.agreed.retain(|_, run| run.stamp == stamp);
@@ -189,7 +201,7 @@ pub fn agreed(result: &tracelean_core::drt::run::DrtResult) {
 /// beside the profiles as `<op>.json`. The line half of action plan §10,
 /// measured; not yet a condition of L3.
 fn report_lines(op: &str) {
-    use tracelean_core::drt::coverage::{floors_of, line_reach, verdict, Verdict};
+    use tracelean_core::drt::coverage::{floors_of, line_reach, unused_waivers, verdict, Verdict};
     let root = root();
     let base = root.join("target").join("tracelean-drt-lines");
     let binary = tracelean_core::drt::rust_runner::package_dir(&root.join("target").join("tracelean-drt-rust-lines"))
@@ -221,11 +233,43 @@ fn report_lines(op: &str) {
                 .map(|(n, line)| (n as u32 + 1, line.to_string()))
                 .filter(|(n, _)| *n > anchor.start_line && *n <= anchor.end_line + 1)
                 .collect();
+            let first = item.first().map(|(_, line)| line.clone()).unwrap_or_default();
             let observed = line_reach(hits.clone(), item);
             let missed: Vec<String> = match verdict(floors_of(&observed), observed.clone(), binding.waive.clone()) {
                 Verdict::Unmet { gaps } => gaps.iter().map(|g| g.situation().to_string()).collect(),
                 _ => Vec::new(),
             };
+            // The function the binding calls is what its cases can reach, so
+            // every line of it is run or waived (§10). Other items claiming
+            // the clause are reported, not held to it: a shell or a wrapper
+            // is evidenced elsewhere.
+            let (entry_file, entry_name) =
+                binding.implementation.entry.split_once("::").unwrap_or((binding.implementation.entry.as_str(), ""));
+            let bound = anchor.file == entry_file && first.contains(&format!("fn {entry_name}"));
+            assert!(
+                !bound || missed.is_empty(),
+                "`{op}`: lines of `{}` its cases never run, and no waiver says why: {missed:#?}",
+                binding.implementation.entry
+            );
+            // And a line waiver that excuses a line the cases now run is
+            // reported, so waivers do not outlive their cause.
+            if bound {
+                let line_waivers: Vec<_> = binding
+                    .waive
+                    .iter()
+                    .cloned()
+                    .filter_map(|mut w| {
+                        w.situations.retain(|s| s.starts_with("line: "));
+                        (!w.situations.is_empty()).then_some(w)
+                    })
+                    .collect();
+                let unused = unused_waivers(floors_of(&observed), observed.clone(), line_waivers);
+                assert!(
+                    unused.is_empty(),
+                    "`{op}` waives lines of `{}` its cases run, or that are not in it: {unused:?}",
+                    binding.implementation.entry
+                );
+            }
             items.push(serde_json::json!({
                 "clause": qualified,
                 "file": anchor.file,
@@ -249,8 +293,19 @@ fn report_lines(op: &str) {
 fn every_class_reached(result: &tracelean_core::drt::run::DrtResult) {
     use tracelean_core::drt::coverage::{floors_of, unused_waivers};
     let binding = binding_for(&result.op);
+    // Waivers of classes only: lines are the measured run's to judge
+    // (`report_lines`), and unreadable input is judged by `agreed`.
+    let waive: Vec<_> = binding
+        .waive
+        .iter()
+        .cloned()
+        .filter_map(|mut w| {
+            w.situations.retain(|s| !s.starts_with("line: ") && s != "unreadable input");
+            (!w.situations.is_empty()).then_some(w)
+        })
+        .collect();
     let floors = floors_of(&result.reached);
-    let reached = verdict(floors.clone(), result.reached.clone(), binding.waive.clone());
+    let reached = verdict(floors.clone(), result.reached.clone(), waive.clone());
     if let Verdict::Unmet { gaps } = &reached {
         let names: Vec<&str> = gaps.iter().map(|gap| gap.situation()).collect();
         panic!(
@@ -260,7 +315,7 @@ fn every_class_reached(result: &tracelean_core::drt::run::DrtResult) {
             result.op
         );
     }
-    let unused = unused_waivers(floors, result.reached.clone(), binding.waive.clone());
+    let unused = unused_waivers(floors, result.reached.clone(), waive);
     assert!(unused.is_empty(), "`{}` waives what the run reached or never measured: {unused:?}", result.op);
 }
 

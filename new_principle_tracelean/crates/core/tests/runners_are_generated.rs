@@ -230,7 +230,11 @@ fn a_binding_describes_a_call_and_nothing_more() {
         // whether a generated case reached a situation stays in the suite,
         // where it can be read — this file only says how often it must.
         "floors",
+        // Waivers likewise: names of classes or lines a run is excused from
+        // reaching, each with the reason a person can argue with. Never code.
+        "waive",
     ];
+    const WAIVER_KEYS: &[&str] = &["situations", "reason"];
     const MODEL_KEYS: &[&str] = &["import", "function", "arguments"];
     const IMPL_KEYS: &[&str] = &["language", "entry", "params"];
     const FLOOR_KEYS: &[&str] = &["situation", "atLeast"];
@@ -244,6 +248,16 @@ fn a_binding_describes_a_call_and_nothing_more() {
             assert!(
                 BINDING_KEYS.contains(&key.as_str()),
                 "a binding carries `{key}`, which is not part of describing a call"
+            );
+        }
+        for waiver in binding["waive"].as_array().unwrap_or(&Vec::new()) {
+            let waiver = waiver.as_object().expect("a waiver is an object");
+            for key in waiver.keys() {
+                assert!(WAIVER_KEYS.contains(&key.as_str()), "a waiver carries `{key}`");
+            }
+            assert!(
+                waiver.get("reason").and_then(|r| r.as_str()).is_some_and(|r| !r.trim().is_empty()),
+                "a waiver without a reason excuses nothing"
             );
         }
         for key in binding["model"].as_object().expect("a model").keys() {

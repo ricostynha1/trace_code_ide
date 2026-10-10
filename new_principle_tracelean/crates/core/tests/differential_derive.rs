@@ -55,9 +55,10 @@ fn structs(lean: bool) -> Schema {
     simple.insert("int".into(), Some(Box::new(Schema::Struct { fields: [("bits".to_string(), bits(lean))].into_iter().collect() })));
     simple.insert("bool".into(), None);
     let field = Schema::Tuple { items: vec![small(&["x"]), Schema::Enum { variants: simple }] };
-    // Fixed lengths: one structure of one field. An empty list would make most
-    // lookups fail before the fields are compared at all.
-    let one = Schema::Tuple { items: vec![small(&["P"]), Schema::Tuple { items: vec![field] }] };
+    // One structure, of up to two fields, so the two sides' structures also
+    // differ in how many fields they have (a branch one field each never
+    // reached). An empty one fails its lookup before the fields are compared.
+    let one = Schema::Tuple { items: vec![small(&["P"]), Schema::List { inner: Box::new(field), max_len: Some(2) }] };
     Schema::Tuple { items: vec![one] }
 }
 

@@ -67,6 +67,26 @@ fn action() -> Schema {
     examples.push("file.explode".into());
     examples.push("".into());
     examples.push("trace".into());
+    // Weighted towards the branches one name in seventy would leave unrun
+    // (measured with `TRACELEAN_DRT_LINES`): an action carrying its target,
+    // the history's base, a filter by name, a station that does not exist,
+    // and a rename reached with nothing to rename to.
+    for _ in 0..2 {
+        for weighted in [
+            "file.rename",
+            "history.jump #0",
+            "history.jump #3",
+            "history.filter Saved",
+            "observe.accept_file a.rs",
+            "screen.show file:a.rs",
+            "screen.station.nowhere",
+            "context.toggle code",
+            "file.delete",
+            "observe.reject_file",
+        ] {
+            examples.push(weighted.into());
+        }
+    }
     Schema::Str { max_len: None, examples }
 }
 
@@ -128,7 +148,7 @@ fn check(op: &str, function: &str, entry: &str, arguments: &[&str], schema: Sche
         &schema,
         &model,
         &implementation,
-        RunOptions { seed, cases: 2_000, shrink_rounds: 100 },
+        RunOptions { seed, cases: 8_000, shrink_rounds: 100 },
     )
     .expect("both runners answer");
 

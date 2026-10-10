@@ -204,6 +204,12 @@
     {
       "req_id": "REQ-MIRROR",
       "clause": "apply_reproduces",
+      "waive": [
+        {
+          "situations": ["line: Err(_) => out.refused.push(command),"],
+          "reason": "a refusal here is a mutation of `before` that does not apply to `before`, which is the divergence this clause's run looks for; the branch exists so one such bug does not hide the rest"
+        }
+      ],
       "floors": [
         {
           "situation": "the two trees differed",
@@ -821,6 +827,16 @@
     {
       "req_id": "REQ-UNDO",
       "clause": "jump_equivalence",
+      "waive": [
+        {
+          "situations": [
+            "line: Err(refusal) => {",
+            "line: let kind = refusal.kind().to_string();",
+            "line: (Outcome::Refused { kind: kind.clone() }, Outcome::Refused { kind })"
+          ],
+          "reason": "a node is recorded only after its command applied (`push_from`), so previewing a node of the tree re-applies a command that applied there; no script reaches a refusal"
+        }
+      ],
       "floors": [
         {
           "situation": "a history with more than one node",
@@ -1344,6 +1360,12 @@
     {
       "req_id": "REQ-DRT-GEN",
       "clause": "seed_reproduces",
+      "waive": [
+        {
+          "situations": ["line: None => Vec::new(),"],
+          "reason": "`shape_at` answers None only for an empty `SHAPES`, which is a constant with ten shapes; no input reaches it"
+        }
+      ],
       "model": {
         "import": "TraceLean.Generator",
         "function": "TraceLean.Generator.shapeStream",
@@ -2158,6 +2180,12 @@
     {
       "req_id": "REQ-DRT-COVER",
       "clause": "classes_reached",
+      "waive": [
+        {
+          "situations": ["line: None => Vec::new(),"],
+          "reason": "`shape_at` answers None only for an empty `SHAPES`, which is a constant with ten shapes; no input reaches it"
+        }
+      ],
       "model": {
         "import": "TraceLean.Coverage",
         "function": "TraceLean.Coverage.reachedShape",

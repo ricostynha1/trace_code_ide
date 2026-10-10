@@ -272,20 +272,13 @@ private def stationIntent (station : String) : Intent :=
   | none => Intent.refuse (Blocked.unknownAction ("screen.station." ++ station))
 
 /--
-What an action means, here, now.
+What an action's name means, here, now, once any target it carried is under
+the focus.
 
 Total: every name the keymap can dispatch has an answer, and every name it
 cannot has a refusal. Nothing falls through.
-
-@models REQ-ACT.action_to_intent
-@models REQ-ACT.focus_is_carried
-@models REQ-ACT.one_path
-@models REQ-ACT.unknown_is_refused
-@models REQ-ACT.missing_target_is_refused
-@models REQ-ACT.edits_are_commands
-@models REQ-ACT.dispatch_is_pure
 -/
-def dispatch (action : String) (focus : Focus) (w : Workspace) (waiting : List Command) : Intent :=
+def dispatchNamed (action : String) (focus : Focus) (w : Workspace) (waiting : List Command) : Intent :=
   match action with
   | "file.open" => openUnder focus
   | "file.new" => newUnder focus
@@ -393,6 +386,25 @@ def dispatch (action : String) (focus : Focus) (w : Workspace) (waiting : List C
       stationIntent (other.drop "screen.station.".length)
     else
       Intent.refuse (Blocked.unknownAction other)
+
+/--
+What an action means, here, now. An action may carry its target after its name
+(`screen.show file:a.rs`), for a span whose text does not spell what it is
+about; that target is what is under the focus, and the name is dispatched.
+
+@models REQ-ACT.action_to_intent
+@models REQ-ACT.focus_is_carried
+@models REQ-ACT.one_path
+@models REQ-ACT.unknown_is_refused
+@models REQ-ACT.missing_target_is_refused
+@models REQ-ACT.edits_are_commands
+@models REQ-ACT.dispatch_is_pure
+-/
+def dispatch (action : String) (focus : Focus) (w : Workspace) (waiting : List Command) : Intent :=
+  let focus := match actionTarget action with
+    | some target => { focus with under := some target }
+    | none => focus
+  dispatchNamed (actionName action) focus w waiting
 
 /-- Whether an intent is one the editor will act on. A refusal is an answer, not
 an action. -/

@@ -8,7 +8,7 @@
   "detail": {
     "drt": {
       "seed": 89,
-      "cases": 2000,
+      "cases": 8000,
       "op": "REQ-ACT.unknown_is_refused"
     }
   },
@@ -20,7 +20,7 @@
     ],
     [
       "model",
-      "71f2e2d445bdb099"
+      "43418699da34631e"
     ],
     [
       "requirement",
