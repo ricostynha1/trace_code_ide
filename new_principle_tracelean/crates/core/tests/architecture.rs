@@ -511,8 +511,18 @@ fn the_judge_exports_a_prompt_and_nothing_carries_it() {
     // And nothing in the tree carries it anywhere. The needles are the ones a
     // transport would need; `nothing_here_calls_a_model_or_reaches_the_network`
     // covers the provider side, this covers the general one.
-    let found = offenders(&["reqwest", "hyper::", "TcpStream", "UdpSocket", "ureq", "curl"]);
+    let found = offenders(TRANSPORT);
     assert!(found.is_empty(), "something in this tree can send:\n{found:#?}");
+}
+
+const TRANSPORT: &[&str] = &["reqwest", "hyper::", "TcpStream", "UdpSocket", "ureq", "curl"];
+
+/// @tests REQ-CHECK.structural_rejects
+#[test]
+fn the_transport_check_rejects_a_tree_that_can_send() {
+    let sends = tree(&[("core/src/judge.rs", "pub fn go(p: String) { ureq::post(url).send_string(&p); }\n")]);
+    assert_eq!(offenders_in(&sends, TRANSPORT).len(), 1);
+    assert!(offenders_in(&tree(&[("core/src/judge.rs", "pub fn prompt() -> String { String::new() }\n")]), TRANSPORT).is_empty());
 }
 
 /// A link exists only where somebody wrote one, and nothing about it is
