@@ -143,7 +143,10 @@ pub struct RequirementShown {
 
 /// How much ran, as a coverage line says it: `3/4 lines run (75%), by 2 tests`.
 pub fn covered_text(run: u64, all: u64, tests: u64) -> String {
-    let percent = if all == 0 { 100 } else { run * 100 / all };
+    if all == 0 {
+        return NO_LINES.to_string();
+    }
+    let percent = run * 100 / all;
     format!("{run}/{all} lines run ({percent}%), by {tests} test{}", if tests == 1 { "" } else { "s" })
 }
 
@@ -151,15 +154,28 @@ pub fn covered_text(run: u64, all: u64, tests: u64) -> String {
 /// of that code as it is now exists.
 pub const NOT_MEASURED: &str = "not measured: run `tracelean-trace . --coverage`";
 
+/// What it says when the measured code has no line a test could run — a type,
+/// a constant, or code no test binary builds: neither covered nor not.
+pub const NO_LINES: &str = "no line a test could run";
+
 /// Whether code claims the clause.
 fn implemented(clause: &ClauseShown) -> bool {
     clause.claims.iter().any(|c| c.role == "implements")
 }
 
+/// A count's colour: whole in green, short in red, nothing to run in neither.
+pub fn covered_role(run: u64, all: u64) -> Role {
+    match (run, all) {
+        (_, 0) => Role::Plain,
+        _ if run == all => Role::Added,
+        _ => Role::Removed,
+    }
+}
+
 /// A coverage line: the requirement or clause, which opens the lines behind
 /// the count, then the count — whole in green, short in red.
 fn covered_line(out: &mut Lines, lead: &str, name: &str, (run, all, tests): (u64, u64, u64)) {
-    let role = if run == all { Role::Added } else { Role::Removed };
+    let role = covered_role(run, all);
     let said = covered_text(run, all, tests);
     out.line(&[(lead, Role::Plain, &[]), (name, Role::Requirement, &["trace.coverage"]), ("  ", Role::Plain, &[]), (&said, role, &[])]);
 }
@@ -477,6 +493,15 @@ mod tests {
         assert!(shown.text.contains("judged: drift — the model rounds  by ana"), "{}", shown.text);
         let role = shown.spans.iter().find(|s| s.start <= drift && drift < s.stop).map(|s| s.role);
         assert_eq!(role, Some(Role::Removed), "a drift is not shown as a fault");
+    }
+
+    /// Measured code with no line a test could run says so, uncoloured,
+    /// rather than that all of it ran.
+    #[test]
+    fn nothing_to_run_is_not_all_of_it_run() {
+        assert_eq!(covered_text(0, 0, 0), NO_LINES);
+        assert_eq!(covered_role(0, 0), Role::Plain);
+        assert_eq!((covered_role(2, 2), covered_role(1, 2)), (Role::Added, Role::Removed));
     }
 
     #[test]

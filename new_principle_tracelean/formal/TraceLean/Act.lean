@@ -85,6 +85,13 @@ inductive Watch where
   | contextCopy
   /-- Show the history whole, for the open file, or at its saves. -/
   | historyFilter (filter : TraceLean.HistoryView.Filter)
+  /-- Unfold a requirement of the design one level, or fold it. -/
+  | designToggle (id : String)
+  /-- Unfold a requirement and everything under it; all of the design when
+  none is named. -/
+  | designExpand (id : Option String)
+  /-- Fold the design to its roots. -/
+  | designFold
   -- No `DecidableEq`, for the reason `Intent` has none: `Command` is recursive.
   deriving Repr, Inhabited, ToJson, FromJson
 
@@ -339,6 +346,16 @@ def dispatchNamed (action : String) (focus : Focus) (w : Workspace) (waiting : L
     match focus.under.bind TraceLean.HistoryView.filterNamed with
     | none => Intent.refuse (Blocked.needsTarget "history.filter" "a view of the history")
     | some filter => Intent.observe (Watch.historyFilter filter)
+  | "design.toggle" =>
+    match focus.under with
+    | none => Intent.refuse (Blocked.needsTarget "design.toggle" "a requirement")
+    | some id => Intent.observe (Watch.designToggle id)
+  | "design.expand_all" =>
+    match focus.under with
+    | none => Intent.refuse (Blocked.needsTarget "design.expand_all" "a requirement")
+    | some id => Intent.observe (Watch.designExpand (some id))
+  | "design.expand_everything" => Intent.observe (Watch.designExpand none)
+  | "design.fold_all" => Intent.observe Watch.designFold
   | "trace.judge" =>
     match focus.under with
     | none => Intent.refuse (Blocked.needsTarget "trace.judge" "a clause")

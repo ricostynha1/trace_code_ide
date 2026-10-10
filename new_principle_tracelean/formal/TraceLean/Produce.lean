@@ -363,9 +363,10 @@ private def filledOf (node : Node) : Nat :=
 private def barOf (node : Node) : String :=
   String.mk (List.replicate (filledOf node) '█') ++ String.mk (List.replicate (5 - filledOf node) '░')
 
-/-- What a row says of its measured lines: `lines 57%`. -/
+/-- What a row says of its measured lines: `lines 57%`, `lines none` when its
+code has no line a test could run. -/
 private def percentText (c : Nat × Nat) : String :=
-  "lines " ++ toString (if c.2 == 0 then 100 else c.1 * 100 / c.2) ++ "%"
+  if c.2 == 0 then "lines none" else "lines " ++ toString (c.1 * 100 / c.2) ++ "%"
 
 /-- The measured lines and the gap after them; nothing unmeasured. -/
 private def coveredPart (node : Node) : String :=
@@ -377,11 +378,13 @@ private def indexLine (node : Node) : String :=
   gradeText node.level ++ "  " ++ node.id ++ "  " ++ barOf node ++ " " ++
     toString node.implemented ++ "/" ++ toString node.clauses ++ "  " ++ coveredPart node ++ node.title
 
-/-- The measured lines' span: green when every one ran, red when one did not. -/
+/-- The measured lines' span: green when every one ran, red when one did not;
+none when there was no line to run, which is neither. -/
 private def coveredSpans (from_ : Nat) (node : Node) : List Span :=
   match node.covered with
   | none => []
   | some c =>
+    if c.2 == 0 then [] else
     let role := if c.1 == c.2 then Role.added else Role.removed
     [{ start := from_, stop := from_ + (percentText c).length, role := role, actions := actionsFor role }]
 
@@ -426,53 +429,75 @@ is only a view cut short. -/
 
 mutual
 
-/-- Expand one node and, under it, everything that refines it. -/
-private def expand (fuel : Nat) (nodes : List Node) (indent : Nat) (node : Node) : List Row :=
+/-- One node and, when it is open, everything that refines it. -/
+private def expand (fuel : Nat) (nodes : List Node) (opened : List String) (indent : Nat) (node : Node) : List Row :=
   match fuel with
   | 0 => [{ indent := indent, node := node }]
   | Nat.succ f =>
     { indent := indent, node := node } ::
-      expandAll f nodes (indent + 1) (childrenOf nodes node.id)
+      (if opened.contains node.id then expandAll f nodes opened (indent + 1) (childrenOf nodes node.id) else [])
 termination_by (fuel, 0)
 
-private def expandAll (fuel : Nat) (nodes : List Node) (indent : Nat) : List Node → List Row
+private def expandAll (fuel : Nat) (nodes : List Node) (opened : List String) (indent : Nat) : List Node → List Row
   | [] => []
-  | node :: rest => expand fuel nodes indent node ++ expandAll fuel nodes indent rest
+  | node :: rest => expand fuel nodes opened indent node ++ expandAll fuel nodes opened indent rest
 termination_by todo => (fuel, todo.length + 1)
 
 end
 
-/-- The refinement graph, depth first, roots first.
+/-- The refinement graph, depth first, roots first, unfolded where `opened`
+says.
 
-A root is a requirement that refines nothing -- the architecture documents. Four
-levels are drawn, which is one more than the deepest chain this project has. -/
-def designRows (nodes : List Node) : List Row :=
-  expandAll 3 nodes 0 (nodes.filter (fun node => node.refines.isEmpty))
+A root is a requirement that refines nothing -- the architecture documents.
+Folded, only they show. No chain is longer than the requirements there are, so
+that is the fuel. -/
+def designRows (nodes : List Node) (opened : List String) : List Row :=
+  expandAll nodes.length nodes opened 0 (nodes.filter (fun node => node.refines.isEmpty))
 
-/-- A row of the graph is a row of the index, indented under what it refines. -/
-private def designLine (row : Row) : String :=
-  spaces (row.indent * 2) ++ indexLine row.node
+/-- The fold mark: `▸` folded, `▾` open, `·` nothing refines it. -/
+private def foldMark (nodes : List Node) (opened : List String) (node : Node) : String :=
+  if (childrenOf nodes node.id).isEmpty then "·"
+  else if opened.contains node.id then "▾" else "▸"
 
-private def designSpans (at_ : Nat) : List Row → List Span
+/-- A row of the graph is its fold mark and a row of the index, indented under
+what it refines. -/
+private def designLine (nodes : List Node) (opened : List String) (row : Row) : String :=
+  spaces (row.indent * 2) ++ foldMark nodes opened row.node ++ " " ++ indexLine row.node
+
+/-- The buttons above the graph, which unfold all of it or fold it to its
+roots. -/
+def designHeader : String := "[ expand all ]  [ fold all ]"
+
+/-- The mark of a row with something under it: one level, or all of them. -/
+private def markSpans (nodes : List Node) (mark : Nat) (node : Node) : List Span :=
+  if (childrenOf nodes node.id).isEmpty then []
+  else [{ start := mark, stop := mark + 1, role := Role.entry,
+          actions := ["design.toggle " ++ node.id, "design.expand_all " ++ node.id] }]
+
+private def designSpans (nodes : List Node) (opened : List String) (at_ : Nat) : List Row → List Span
   | [] => []
   | row :: rest =>
-    let line := designLine row
-    rowSpans at_ row.indent row.node ++ barSpans (at_ + row.indent * 2) row.node ++
-      designSpans (at_ + line.length + 1) rest
+    let mark := at_ + row.indent * 2
+    markSpans nodes mark row.node ++ rowSpans (mark + 2) 0 row.node ++ barSpans (mark + 2) row.node ++
+      designSpans nodes opened (at_ + (designLine nodes opened row).length + 1) rest
 
 /--
-The refinement graph as a buffer: one row a requirement, indented under what it
-refines.
+The refinement graph as a buffer: the buttons, then one row a requirement,
+indented under what it refines; a folded one's mark unfolds it one level, and
+offers to unfold everything under it.
 
 @models REQ-SHOW.graph_from_refinement
 -/
-def designBuffer (nodes : List Node) : Buffer :=
-  let rows := designRows nodes
-  let text := String.intercalate "\n" (rows.map designLine)
+def designBuffer (nodes : List Node) (opened : List String) : Buffer :=
+  let rows := designRows nodes opened
+  let text := String.intercalate "\n" (designHeader :: rows.map (designLine nodes opened))
+  let buttons : List Span :=
+    [{ start := 0, stop := 14, role := Role.entry, actions := ["design.expand_everything"] },
+     { start := 16, stop := 28, role := Role.entry, actions := ["design.fold_all"] }]
   { id := "menu:design",
     kind := BufferKind.menu "design",
     text := text,
-    spans := tidy text.length (designSpans 0 rows) }
+    spans := tidy text.length (buttons ++ designSpans nodes opened (designHeader.length + 1) rows) }
 
 /-! ## Showing part of a buffer
 

@@ -879,7 +879,8 @@ pub fn title_of(buffer: &Buffer) -> String {
     }
 }
 
-/// The six stations, in the order they are always in.
+/// The five stations, in the order they are always in. The requirements are
+/// the design's: a flat list of them beside it said nothing the graph does not.
 ///
 /// Each row carries its own action rather than a shared one taking the row as a
 /// target, so that a station is reachable from a bare keyboard as well as from
@@ -889,8 +890,7 @@ pub fn station_entries() -> Vec<MenuEntry> {
         ("project", "Open a project"),
         ("trace", "What this file claims, and what else claims it"),
         ("sandbox", "Watch a sandboxed agent"),
-        ("requirements", "Requirements and clauses"),
-        ("design", "The refinement graph"),
+        ("design", "Requirements, as the refinement graph"),
         ("history", "The undo tree"),
     ]
     .into_iter()
@@ -933,7 +933,6 @@ pub fn stations(screen: Screen) -> Buffer {
 pub fn station_kind(station: String) -> Option<BufferKind> {
     match station.as_str() {
         "project" => Some(BufferKind::Directory { path: ".".to_string() }),
-        "requirements" => Some(BufferKind::Menu { title: "requirements".to_string() }),
         "design" => Some(BufferKind::Menu { title: "design".to_string() }),
         "sandbox" => Some(BufferKind::Record { title: "sandbox".to_string() }),
         "history" => Some(BufferKind::Record { title: "history".to_string() }),

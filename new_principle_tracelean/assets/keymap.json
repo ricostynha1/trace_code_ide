@@ -29,6 +29,7 @@
           ["a", { "enter": { "mode": "Agent", "description": "agent" } }],
           ["c", { "enter": { "mode": "Context", "description": "context for an agent" } }],
           ["d", { "enter": { "mode": "Drt", "description": "differential testing" } }],
+          ["g", { "enter": { "mode": "Design", "description": "the design graph" } }],
           ["f", { "enter": { "mode": "File", "description": "file" } }],
           ["h", { "enter": { "mode": "History", "description": "history" } }],
           ["t", { "enter": { "mode": "Trace", "description": "trace" } }],
@@ -65,7 +66,7 @@
           ["h", { "dispatch": { "action": "screen.station.history", "description": "the undo tree" } }],
           ["l", { "dispatch": { "action": "screen.station.trace", "description": "what this file claims, and what else claims it" } }],
           ["p", { "dispatch": { "action": "screen.station.project", "description": "open a project" } }],
-          ["r", { "dispatch": { "action": "screen.station.requirements", "description": "requirements and clauses" } }],
+          ["r", { "dispatch": { "action": "screen.station.design", "description": "the requirements, as the refinement graph" } }],
           ["s", { "dispatch": { "action": "screen.station.sandbox", "description": "watch a sandboxed agent" } }]
         ]
       }
@@ -86,6 +87,18 @@
           ["o", { "dispatch": { "action": "trace.requirement", "description": "open the requirement here" } }],
           ["r", { "dispatch": { "action": "trace.rollup", "description": "coverage rollup" } }],
           ["s", { "dispatch": { "action": "trace.stale", "description": "what went stale" } }]
+        ]
+      }
+    ],
+    [
+      "Design",
+      {
+        "parent": "Leader",
+        "bindings": [
+          ["o", { "dispatch": { "action": "design.toggle", "description": "unfold or fold the requirement here" } }],
+          ["a", { "dispatch": { "action": "design.expand_all", "description": "unfold everything under the requirement here" } }],
+          ["e", { "dispatch": { "action": "design.expand_everything", "description": "unfold all of the design" } }],
+          ["f", { "dispatch": { "action": "design.fold_all", "description": "fold the design to its roots" } }]
         ]
       }
     ],

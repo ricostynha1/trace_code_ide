@@ -26,7 +26,7 @@ fn kind() -> Schema {
         ("file", "path", &["a.rs"][..]),
         ("directory", "path", &["src"][..]),
         ("review", "target", &["a.rs"][..]),
-        ("menu", "title", &["requirements", "welcome"][..]),
+        ("menu", "title", &["requirements", "design", "welcome"][..]),
         ("record", "title", &["sandbox", "observed", "findings"][..]),
     ] {
         variants.insert(variant.to_string(), Some(Box::new(strukt(&[(field, name(examples))]))));

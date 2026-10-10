@@ -73,6 +73,13 @@ pub enum Watch {
     ContextCopy,
     /// Show the history whole, for the open file, or at its saves.
     HistoryFilter { filter: crate::surface::history_view::Filter },
+    /// Unfold a requirement of the design one level, or fold it.
+    DesignToggle { id: String },
+    /// Unfold a requirement and everything under it; all of the design when
+    /// none is named.
+    DesignExpand { id: Option<String> },
+    /// Fold the design to its roots.
+    DesignFold,
 }
 
 /// Why nothing happened.
@@ -341,6 +348,16 @@ pub fn dispatch(action: String, focus: Focus, w: Workspace, waiting: Vec<Command
             None => needs("history.filter", "a view of the history"),
             Some(filter) => Intent::Observe { watch: Watch::HistoryFilter { filter } },
         },
+        "design.toggle" => match &focus.under {
+            None => needs("design.toggle", "a requirement"),
+            Some(id) => Intent::Observe { watch: Watch::DesignToggle { id: id.clone() } },
+        },
+        "design.expand_all" => match &focus.under {
+            None => needs("design.expand_all", "a requirement"),
+            Some(id) => Intent::Observe { watch: Watch::DesignExpand { id: Some(id.clone()) } },
+        },
+        "design.expand_everything" => Intent::Observe { watch: Watch::DesignExpand { id: None } },
+        "design.fold_all" => Intent::Observe { watch: Watch::DesignFold },
         "trace.judge" => match &focus.under {
             None => needs("trace.judge", "a clause"),
             Some(clause) => report(&format!("judge {clause}")),

@@ -140,11 +140,19 @@ def claimLine (out : Lines) (claim : Claim) : Lines :=
   line out ([("  ", Role.plain, []), (padRight claim.role 10, role, []), (" ", Role.plain, []),
              (claim.path ++ ":" ++ toString claim.line, Role.path, ["file.open"])] ++ symbol)
 
-/-- `3/4 lines run (75%), by 2 tests`; all of nothing is all of it. -/
+/-- What it says when the measured code has no line a test could run: neither
+covered nor not. -/
+def noLines : String := "no line a test could run"
+
+/-- `3/4 lines run (75%), by 2 tests`; nothing to run is not all of it. -/
 def coveredText (c : Covered) : String :=
-  let percent := if c.all == 0 then 100 else c.run * 100 / c.all
-  toString c.run ++ "/" ++ toString c.all ++ " lines run (" ++ toString percent ++ "%), by " ++
+  if c.all == 0 then noLines else
+  toString c.run ++ "/" ++ toString c.all ++ " lines run (" ++ toString (c.run * 100 / c.all) ++ "%), by " ++
     toString c.tests ++ " test" ++ (if c.tests == 1 then "" else "s")
+
+/-- A count's colour: whole in green, short in red, nothing to run in neither. -/
+def coveredRole (c : Covered) : Role :=
+  if c.all == 0 then Role.plain else if c.run == c.all then Role.added else Role.removed
 
 /-- What a coverage line says when code claims the clause and no measurement
 of that code as it is now exists. -/
@@ -159,7 +167,7 @@ claims it (`claimed`), so an absent count is not read as nothing to count. -/
 def coveredLine (lead name : String) (claimed : Bool) (out : Lines) : Option Covered → Lines
   | none => if claimed then line out [(lead, Role.plain, []), (notMeasured, Role.removed, [])] else out
   | some c =>
-    let role := if c.run == c.all then Role.added else Role.removed
+    let role := coveredRole c
     line out [(lead, Role.plain, []), (name, Role.requirement, ["trace.coverage"]), ("  ", Role.plain, []),
               (coveredText c, role, [])]
 

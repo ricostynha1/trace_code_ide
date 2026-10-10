@@ -123,6 +123,9 @@ pub struct Editor {
     pub open_folders: BTreeSet<String>,
     /// Which parts of an agent's context the person has chosen to copy.
     pub context_parts: BTreeSet<tracelean_core::surface::context::Part>,
+    /// The design's unfolded requirements; folded to its roots at first, so a
+    /// project of hundreds opens as a handful.
+    pub design_open: BTreeSet<String>,
     /// The keys typed so far in a sequence — `Space`, `f` — to head its menu.
     typed: Vec<String>,
     /// Which nodes the history shows: all, the open file's, or the saved.
@@ -405,6 +408,7 @@ impl Editor {
             clipboard: None,
             open_folders: BTreeSet::new(),
             context_parts: tracelean_core::surface::context::default_parts(),
+            design_open: BTreeSet::new(),
             // The file's own history first: the undo tree of what is being
             // read is what a person opening it is looking for. `All` is a click.
             history_filter: tracelean_core::surface::history_view::Filter::File,
@@ -436,7 +440,7 @@ impl Editor {
         // what you read in the middle, what you consult on the right. Built by
         // the core, so the terminal and the window open on the same screen.
         let listing = editor.listing();
-        let side = editor.produce(BufferKind::Menu { title: "requirements".into() });
+        let side = editor.produce(BufferKind::Menu { title: "design".into() });
         let welcome = editor.welcome();
         editor.screen = workbench(listing, welcome, side);
         if recalling {
@@ -2665,16 +2669,17 @@ impl Editor {
             // makes it: a strip built here would be a second answer to what the
             // session holds, beside the one `screen.opened` already gives.
             BufferKind::Menu { title } if title == "opened" => self.strip(),
-            // Two stations' content. Menus rather than records because each row
-            // is somewhere to go, which is what a menu is here — the strip and
-            // the stations are menus for the same reason.
-            BufferKind::Menu { title } if title == "requirements" => {
+            // The design station's content, and the flat index the shell's
+            // `tracelean-view` still lists. Menus rather than records because
+            // each row is somewhere to go, which is what a menu is here — the
+            // strip and the stations are menus for the same reason.
+            BufferKind::Menu { title } if title == "requirements" || title == "design" => {
                 let nodes = self.nodes();
                 if nodes.is_empty() {
                     // An empty index is the honest answer, and a blank panel
                     // is a bad way to give it: say so, and say how to start.
                     return make::menu_buffer(
-                        "requirements".into(),
+                        title,
                         vec![
                             make::MenuEntry {
                                 key: "no requirements yet".into(),
@@ -2689,12 +2694,12 @@ impl Editor {
                         ],
                     );
                 }
-                make::requirements_buffer(nodes)
+                match title.as_str() {
+                    "design" => make::design_buffer(nodes, self.design_open.iter().cloned().collect()),
+                    _ => make::requirements_buffer(nodes),
+                }
             }
             BufferKind::Menu { title } if title == "welcome" => self.welcome(),
-            BufferKind::Menu { title } if title == "design" => {
-                make::design_buffer(self.nodes())
-            }
             BufferKind::Menu { title } => {
                 let entries = self.menu_entries(&title);
                 make::menu_buffer(title, entries)
@@ -3119,8 +3124,7 @@ impl Editor {
         tracelean_core::surface::welcome::welcome(
             vec![
                 row("sandbox.new", "Start a sandbox for an agent (Claude Code, …)"),
-                row("screen.station.requirements", "Requirements and their evidence"),
-                row("screen.station.design", "The refinement graph"),
+                row("screen.station.design", "Requirements and their evidence, as the refinement graph"),
                 row("trace.check", "Check the tree"),
                 row("trace.findings", "Findings"),
                 row("history.tree", "History"),
@@ -3850,6 +3854,34 @@ impl Editor {
                 self.history_filter = filter;
                 self.refresh_views();
             }
+            Watch::DesignToggle { id } => {
+                if !self.design_open.remove(&id) {
+                    self.design_open.insert(id);
+                }
+                self.redraw_design();
+            }
+            Watch::DesignExpand { id } => {
+                let nodes = self.nodes();
+                self.design_open.extend(make::design_unfolded(&nodes, id.as_deref()));
+                self.redraw_design();
+            }
+            Watch::DesignFold => {
+                self.design_open.clear();
+                self.redraw_design();
+            }
+        }
+    }
+
+    /// The design drawn again with what is unfolded now: in place when it is
+    /// what the cursor is in, the cursor on the row it was on — rows unfold
+    /// below it, never above — and shown when it was not.
+    fn redraw_design(&mut self) {
+        let design = BufferKind::Menu { title: "design".into() };
+        let here = self.buffer().kind == design;
+        let at = self.offset;
+        self.perform(Intent::Display { what: design });
+        if here {
+            self.offset = at.min(self.buffer().text.chars().count());
         }
     }
 

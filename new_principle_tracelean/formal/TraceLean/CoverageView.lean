@@ -14,7 +14,7 @@ open Lean (ToJson FromJson)
 open TraceLean.View
 open TraceLean.Layout
 open TraceLean.Lines (LineHits)
-open TraceLean.RequirementView (Covered coveredText total)
+open TraceLean.RequirementView (Covered coveredRole coveredText total)
 open TraceLean.Strength (sortedUnique)
 
 /-- One item implementing the requirement, measured against its current text. -/
@@ -27,9 +27,10 @@ structure Item where
   text : List String
   deriving Repr, Inhabited, ToJson, FromJson
 
-/-- A count as the page says it: whole in green, short in red. -/
+/-- A count as the page says it: whole in green, short in red, nothing to run
+in neither. -/
 def countLine (out : Lines) (lead : String) (c : Covered) : Lines :=
-  let role := if c.run == c.all then Role.added else Role.removed
+  let role := coveredRole c
   if lead == "" then line out [(coveredText c, role, [])]
   else line out [(lead, Role.plain, []), (coveredText c, role, [])]
 

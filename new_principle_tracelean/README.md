@@ -78,7 +78,8 @@ cargo run -p tracelean-desktop   # the window
 
 Both open on the first TraceLean's arrangement: the file listing on the left,
 the document in the middle, and a side panel on the right that holds whatever a
-station opens — requirements, the design graph, the sandbox
+station opens — the requirements as a design graph (folded to its roots; **▸**
+unfolds a level, `Space g a` everything under it), the sandbox
 ([REQ-SCREEN](reqs/surface/REQ-SCREEN.md) `workbench_has_three_places`,
 `buffer_goes_home`).
 

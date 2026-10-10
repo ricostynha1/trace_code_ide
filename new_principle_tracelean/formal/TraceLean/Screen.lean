@@ -834,7 +834,8 @@ def strip (screen : Screen) : Buffer :=
   let rows := menuBuffer "opened" (stripEntries screen.opened 1 screen.opened)
   { rows with spans := markFocused (focusedBuffer screen) screen.opened rows.spans }
 
-/-- The six stations, in the order they are always in.
+/-- The five stations, in the order they are always in. The requirements are
+the design's: a flat list of them beside it said nothing the graph does not.
 
 Each row carries its own action rather than a shared one taking the row as a
 target, so that a station is reachable from a bare keyboard as well as from a
@@ -846,9 +847,7 @@ def stationEntries : List MenuEntry :=
      action := some "screen.station.trace" },
    { key := "sandbox", description := "Watch a sandboxed agent",
      action := some "screen.station.sandbox" },
-   { key := "requirements", description := "Requirements and clauses",
-     action := some "screen.station.requirements" },
-   { key := "design", description := "The refinement graph",
+   { key := "design", description := "Requirements, as the refinement graph",
      action := some "screen.station.design" },
    { key := "history", description := "The undo tree",
      action := some "screen.station.history" }]
@@ -884,7 +883,6 @@ claim below falsifiable rather than true by construction.
 -/
 def stationKind (station : String) : Option BufferKind :=
   if station == "project" then some (BufferKind.directory ".")
-  else if station == "requirements" then some (BufferKind.menu "requirements")
   else if station == "design" then some (BufferKind.menu "design")
   else if station == "sandbox" then some (BufferKind.record "sandbox")
   else if station == "history" then some (BufferKind.record "history")

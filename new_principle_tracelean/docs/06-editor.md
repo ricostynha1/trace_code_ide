@@ -1,7 +1,7 @@
 ---
 describes: [REQ-SHOW, REQ-ACT, REQ-LOCK, REQ-ROLLUP]
 described_hash:
-  REQ-SHOW: 6111577d74ea5930
+  REQ-SHOW: 3c6602709177dbc4
   REQ-ACT: 773e2570c90705aa
   REQ-LOCK: bac341f63b8d1e71
   REQ-ROLLUP: 44424fd9e2e5f00a
@@ -28,11 +28,11 @@ One function per kind, in `surface::produce`:
 | `review` | two texts, diffed by common prefix and suffix |
 | `menu` | a keymap mode's rows |
 | `record` | observed events |
-| `menu:requirements` | the requirement set, each row carrying the level it reached |
-| `menu:design` | the same set, drawn indented along `refines` |
+| `menu:requirements` | the requirement set, each row carrying the level it reached (`tracelean-view` only) |
+| `menu:design` | the same set, drawn indented along `refines`, folded to its roots except where unfolded |
 | `record:sandbox` | what an agent changed, said, and is estimated to have spent |
 
-The last three are the stations' content, and they are producers for the same
+The last two are stations' content, and all three are producers for the same
 reason the rest are: a window that knew what a requirement index looks like and
 a terminal that did not would be two editors. Both of the first two carry the
 evidence level in a span (`Role::Level(grade)`) rather than leaving it in the

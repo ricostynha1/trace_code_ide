@@ -378,9 +378,13 @@ pub struct Node {
     pub covered: Option<(u64, u64)>,
 }
 
-/// What a row says of its measured lines: `lines 57%`, nothing unmeasured.
+/// What a row says of its measured lines: `lines 57%`, `lines none` when its
+/// code has no line a test could run, nothing unmeasured.
 fn covered_of(node: &Node) -> Option<String> {
-    node.covered.map(|(run, all)| format!("lines {}%", if all == 0 { 100 } else { run * 100 / all }))
+    node.covered.map(|(run, all)| match all {
+        0 => "lines none".to_string(),
+        _ => format!("lines {}%", run * 100 / all),
+    })
 }
 
 /// A node at a depth in the refinement graph.
@@ -456,7 +460,8 @@ fn bar_spans(at: usize, node: &Node) -> Vec<Span> {
         0 => Vec::new(),
         filled => vec![Span { start, stop: start + filled, role, actions: actions_for(role) }],
     };
-    if let (Some(said), Some((run, all))) = (covered_of(node), node.covered) {
+    // No line to run is neither whole nor short: left uncoloured.
+    if let (Some(said), Some((run, all))) = (covered_of(node), node.covered.filter(|(_, all)| *all > 0)) {
         let from = start + 5 + 1 + format!("{}/{}", node.implemented, node.clauses).chars().count() + 2;
         let role = if run == all { Role::Added } else { Role::Removed };
         out.push(Span { start: from, stop: from + said.chars().count(), role, actions: actions_for(role) });
@@ -493,58 +498,88 @@ fn children_of<'a>(nodes: &'a [Node], parent: &str) -> Vec<&'a Node> {
     nodes.iter().filter(|node| node.refines.iter().any(|name| name == parent)).collect()
 }
 
-/// Expand one node and, under it, everything that refines it.
+/// One node and, when it is open, everything that refines it.
 ///
 /// `fuel` bounds the depth, and it has to: `refines` is data, so a cycle in it
 /// is representable and a graph walk without a bound would not be a function. A
 /// node reached at the bound is drawn without its children rather than dropped
 /// — a row missing is a lie about what exists, a row without its children only
 /// a view cut short.
-fn expand(fuel: usize, nodes: &[Node], indent: usize, node: &Node) -> Vec<Row> {
-    let here = Row { indent, node: node.clone() };
-    if fuel == 0 {
-        return vec![here];
+fn expand(fuel: usize, nodes: &[Node], open: &[String], indent: usize, node: &Node) -> Vec<Row> {
+    let mut out = vec![Row { indent, node: node.clone() }];
+    if fuel > 0 && open.contains(&node.id) {
+        out.extend(expand_all(fuel - 1, nodes, open, indent + 1, &children_of(nodes, &node.id)));
     }
-    let mut out = vec![here];
-    out.extend(expand_all(fuel - 1, nodes, indent + 1, &children_of(nodes, &node.id)));
     out
 }
 
-fn expand_all(fuel: usize, nodes: &[Node], indent: usize, todo: &[&Node]) -> Vec<Row> {
-    todo.iter().flat_map(|node| expand(fuel, nodes, indent, node)).collect()
+fn expand_all(fuel: usize, nodes: &[Node], open: &[String], indent: usize, todo: &[&Node]) -> Vec<Row> {
+    todo.iter().flat_map(|node| expand(fuel, nodes, open, indent, node)).collect()
 }
 
-/// The refinement graph, depth first, roots first.
+/// The refinement graph, depth first, roots first, unfolded where `open` says.
 ///
 /// A root is a requirement that refines nothing — the architecture documents.
-/// Four levels are drawn, one more than the deepest chain this project has.
-pub fn design_rows(nodes: Vec<Node>) -> Vec<Row> {
+/// Folded, only they show, so hundreds of requirements open as a handful. No
+/// chain is longer than the requirements there are, so that is the fuel.
+pub fn design_rows(nodes: Vec<Node>, open: Vec<String>) -> Vec<Row> {
     let roots: Vec<&Node> = nodes.iter().filter(|node| node.refines.is_empty()).collect();
-    expand_all(3, &nodes, 0, &roots)
+    expand_all(nodes.len(), &nodes, &open, 0, &roots)
 }
 
-/// A row of the graph is a row of the index, indented under what it refines.
-fn design_line(row: &Row) -> String {
-    " ".repeat(row.indent * 2) + &index_line(&row.node)
+/// The fold mark: `▸` folded, `▾` open, `·` nothing refines it.
+fn fold_mark(nodes: &[Node], open: &[String], node: &Node) -> char {
+    match (children_of(nodes, &node.id).is_empty(), open.contains(&node.id)) {
+        (true, _) => '·',
+        (false, true) => '▾',
+        (false, false) => '▸',
+    }
 }
 
-/// The refinement graph as a buffer: one row a requirement, indented under what
-/// it refines.
+/// A row of the graph is its fold mark and a row of the index, indented under
+/// what it refines.
+fn design_line(nodes: &[Node], open: &[String], row: &Row) -> String {
+    format!("{}{} {}", " ".repeat(row.indent * 2), fold_mark(nodes, open, &row.node), index_line(&row.node))
+}
+
+/// The buttons above the graph, which unfold all of it or fold it to its roots.
+pub const DESIGN_HEADER: &str = "[ expand all ]  [ fold all ]";
+
+/// The refinement graph as a buffer: the buttons, then one row a requirement,
+/// indented under what it refines; a folded one's mark unfolds it one level,
+/// and offers to unfold everything under it.
 ///
 /// @implements REQ-SHOW.graph_from_refinement
 /// @implements REQ-SHOW.producer_is_pure
 /// @implements REQ-SHOW.well_formed_by_construction
 /// @drt REQ-SHOW.graph_from_refinement
-pub fn design_buffer(nodes: Vec<Node>) -> Buffer {
-    let rows = design_rows(nodes);
-    let mut spans = Vec::new();
-    let mut at = 0usize;
+pub fn design_buffer(nodes: Vec<Node>, opened: Vec<String>) -> Buffer {
+    let open = opened;
+    let rows = design_rows(nodes.clone(), open.clone());
+    let button = |start: usize, stop: usize, action: &str| Span {
+        start,
+        stop,
+        role: Role::Entry,
+        actions: vec![action.to_string()],
+    };
+    let mut spans = vec![button(0, 14, "design.expand_everything"), button(16, 28, "design.fold_all")];
+    let mut at = DESIGN_HEADER.chars().count() + 1;
     for row in &rows {
-        spans.extend(row_spans(at, row.indent, &row.node));
-        spans.extend(bar_spans(at + row.indent * 2, &row.node));
-        at += design_line(row).chars().count() + 1;
+        let mark = at + row.indent * 2;
+        if !children_of(&nodes, &row.node.id).is_empty() {
+            spans.push(Span {
+                start: mark,
+                stop: mark + 1,
+                role: Role::Entry,
+                actions: vec![format!("design.toggle {}", row.node.id), format!("design.expand_all {}", row.node.id)],
+            });
+        }
+        spans.extend(row_spans(mark + 2, 0, &row.node));
+        spans.extend(bar_spans(mark + 2, &row.node));
+        at += design_line(&nodes, &open, row).chars().count() + 1;
     }
-    let text: String = rows.iter().map(design_line).collect::<Vec<_>>().join("\n");
+    let lines: Vec<String> = rows.iter().map(|row| design_line(&nodes, &open, row)).collect();
+    let text = std::iter::once(DESIGN_HEADER.to_string()).chain(lines).collect::<Vec<_>>().join("\n");
     let size = text.chars().count();
     Buffer {
         id: "menu:design".to_string(),
@@ -552,6 +587,27 @@ pub fn design_buffer(nodes: Vec<Node>) -> Buffer {
         text,
         spans: tidy(size, spans),
     }
+}
+
+/// `id` and everything under it, for unfolding all of it at once; every node
+/// with something under it when `id` is `None`. Visited once each, so a cycle
+/// in `refines` ends.
+pub fn design_unfolded(nodes: &[Node], id: Option<&str>) -> Vec<String> {
+    let mut todo: Vec<String> = match id {
+        Some(id) => vec![id.to_string()],
+        None => nodes.iter().map(|n| n.id.clone()).collect(),
+    };
+    let mut out: Vec<String> = Vec::new();
+    while let Some(next) = todo.pop() {
+        if out.contains(&next) {
+            continue;
+        }
+        todo.extend(children_of(nodes, &next).into_iter().map(|n| n.id.clone()));
+        out.push(next);
+    }
+    out.retain(|id| !children_of(nodes, id).is_empty());
+    out.sort();
+    out
 }
 
 /// The character offset the line at `from` starts at.
@@ -621,11 +677,46 @@ mod tests {
         assert_eq!((bar.start, bar.stop), (11, 15));
         assert!(faults(shown).is_empty());
         // Measured, the row says how much of its code ran, in red when not all.
-        let measured = requirements_buffer(vec![Node { covered: Some((4, 7)), ..node }]);
+        let measured = requirements_buffer(vec![Node { covered: Some((4, 7)), ..node.clone() }]);
         assert_eq!(plain_text(measured.clone()), vec!["L1  REQ-A  ████░ 3/4  lines 57%  A thing"]);
         let lines = measured.spans.iter().find(|s| s.role == Role::Removed).expect("a coverage span");
         let said: String = measured.text.chars().skip(lines.start).take(lines.stop - lines.start).collect();
         assert_eq!(said, "lines 57%");
+        // Code with no line a test could run is not all covered.
+        let nothing = requirements_buffer(vec![Node { covered: Some((0, 0)), ..node }]);
+        assert_eq!(plain_text(nothing.clone()), vec!["L1  REQ-A  ████░ 3/4  lines none  A thing"]);
+        assert!(!nothing.spans.iter().any(|s| matches!(s.role, Role::Added | Role::Removed)));
+    }
+
+    /// The design opens on its roots; a mark unfolds one level, unfolding all
+    /// under a node reaches its grandchildren, and a leaf has no mark to press.
+    #[test]
+    fn the_design_unfolds_a_level_at_a_time_or_all_at_once() {
+        let node = |id: &str, refines: &[&str]| Node {
+            id: id.into(),
+            title: "t".into(),
+            refines: refines.iter().map(|s| s.to_string()).collect(),
+            level: crate::evidence::Level::L1,
+            implemented: 0,
+            clauses: 1,
+            covered: None,
+        };
+        let graph = vec![node("ARCH", &[]), node("REQ-A", &["ARCH"]), node("REQ-B", &["REQ-A"])];
+        let folded = design_buffer(graph.clone(), vec![]);
+        assert_eq!(plain_text(folded.clone()), vec![DESIGN_HEADER, "▸ L1  ARCH  ░░░░░ 0/1  t"]);
+        let toggle = folded.spans.iter().find(|s| s.actions.first().is_some_and(|a| a == "design.toggle ARCH"));
+        assert_eq!(toggle.map(|s| (s.start, s.stop)), Some((29, 30)));
+        assert!(faults(folded).is_empty());
+
+        let one = design_buffer(graph.clone(), vec!["ARCH".into()]);
+        assert_eq!(plain_text(one)[1..], ["▾ L1  ARCH  ░░░░░ 0/1  t", "  ▸ L1  REQ-A  ░░░░░ 0/1  t"]);
+
+        let all = design_buffer(graph.clone(), design_unfolded(&graph, Some("ARCH")));
+        assert_eq!(plain_text(all.clone()).len(), 4);
+        assert_eq!(plain_text(all.clone())[3], "    · L1  REQ-B  ░░░░░ 0/1  t");
+        assert!(!all.spans.iter().any(|s| s.actions.iter().any(|a| a == "design.toggle REQ-B")));
+        assert!(faults(all).is_empty());
+        assert_eq!(design_unfolded(&graph, None), vec!["ARCH".to_string(), "REQ-A".to_string()]);
     }
 
     fn mark(start: usize, stop: usize, role: Role) -> Mark {

@@ -527,14 +527,15 @@ fn splitting_the_screen_draws_two_panes() {
 fn a_station_is_on_the_screen_and_opens_from_the_keyboard() {
     let mut terminal = open();
     let opening = shown(&terminal.screen());
-    for station in ["project", "trace", "sandbox", "requirements", "design", "history"] {
+    for station in ["project", "trace", "sandbox", "design", "history"] {
         assert!(
             opening.contains(station),
             "`{station}` is not on the opening screen, so it is not reachable:\n{opening}"
         );
     }
 
-    // `Space w t r` — the leader, the screen menu, the stations, requirements.
+    // `Space w t r` — the leader, the screen menu, the stations, requirements,
+    // which are the design's.
     //
     // What this checks is that the station opened *its own* buffer — the
     // demo's requirements — rather than handing back the one that was already
@@ -546,8 +547,8 @@ fn a_station_is_on_the_screen_and_opens_from_the_keyboard() {
     let screen = terminal.press("r");
     let seen = shown(&screen);
     assert!(
-        strip_of(&screen).contains("  requirements"),
-        "the requirements station did not open the requirement index:\n{seen}"
+        strip_of(&screen).contains("  design"),
+        "the requirements key did not open the design:\n{seen}"
     );
     // A station's buffer goes to the side panel, so that is where the whole
     // tree must not be.
@@ -688,7 +689,7 @@ fn the_screen_shows_each_place_where_the_layout_puts_it() {
 
     // Every station on the first row, inside the terminal's width; the strip
     // under them.
-    for station in ["project", "trace", "sandbox", "requirements", "design", "history"] {
+    for station in ["project", "trace", "sandbox", "design", "history"] {
         assert!(text(0).contains(station), "`{station}` is not on the stations row: {}", text(0));
     }
     assert!(text(1).trim_start().starts_with("1  "), "no strip row: {}", text(1));

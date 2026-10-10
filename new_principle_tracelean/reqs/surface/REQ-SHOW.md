@@ -13,7 +13,7 @@ clauses:
   menu_from_keymap: A keymap mode shall become a buffer whose text is the keys available in it, and whose spans carry the action a key dispatches where it dispatches one.
   record_from_events: Observed events shall become a buffer whose text is those events and whose spans mark each one.
   index_from_requirements: The requirement set shall become a buffer whose text is one row a requirement and whose spans mark each requirement's identifier and the level its evidence reached.
-  graph_from_refinement: The refinement relation shall become a buffer whose text is that relation drawn as an indented graph, and a requirement that refines something shall appear under it.
+  graph_from_refinement: The refinement relation shall become a buffer whose text is that relation drawn as an indented graph, folded to the requirements that refine nothing except where unfolded, and a requirement that refines an unfolded one shall appear under it.
   sandbox_from_observation: What a sandboxed agent changed, what it said, and what its usage is estimated to have cost shall become the rows of one buffer, in that order.
   sandbox_session_shown: The sandbox station shall show whether a session exists, the command that enters it, each change waiting with a way to review it, ways to accept and reject them, and the agent's conversation newest first, wrapped to the width it is shown in.
   requirement_opened: A requirement shall open as a buffer showing each of its clauses with the level its evidence reached and every annotation that claims it, each claim a link that opens the claiming file at its line.
@@ -74,7 +74,9 @@ that is actually true, and the buffer is read top to bottom.
 `graph_from_refinement` is bounded on purpose. `refines` is data, so a cycle in
 it is representable, and a walk without a bound would not be a function. A node
 reached at the bound is drawn without its children: a missing row is a lie about
-what exists, a childless row only a view cut short.
+what exists, a childless row only a view cut short. It opens folded because a
+project of hundreds of requirements is read a level at a time; each folded row's
+mark unfolds one level, or everything under it.
 
 `window_is_a_buffer` is what lets a frontend scroll without lying. A terminal
 showing forty lines of a two-thousand-line file draws a fraction of it, and

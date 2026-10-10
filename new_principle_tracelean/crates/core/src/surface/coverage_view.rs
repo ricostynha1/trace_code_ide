@@ -7,7 +7,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use serde::{Deserialize, Serialize};
 
-use crate::surface::requirement_view::{covered_text, link_text};
+use crate::surface::requirement_view::{covered_role, covered_text, link_text};
 use crate::surface::sandbox_view::Lines;
 use crate::surface::view::{Buffer, Role, TokenKind};
 use crate::trace::lines::LineHits;
@@ -78,7 +78,7 @@ pub fn coverage_view(named: &str, items: &[Item], width: usize) -> Buffer {
         return out.finish(&format!("coverage {named}"));
     }
     let shown = |(run, all, tests): (u64, u64, u64)| {
-        (covered_text(run, all, tests), if run == all { Role::Added } else { Role::Removed })
+        (covered_text(run, all, tests), covered_role(run, all))
     };
     let (said, role) = shown(total(items));
     out.line(&[(&said, role, &[])]);

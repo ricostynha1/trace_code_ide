@@ -118,6 +118,10 @@ pub fn typed(character: char) -> String {
 pub const ACTIONS: &[&str] = &[
     "context.copy",
     "context.toggle",
+    "design.expand_all",
+    "design.expand_everything",
+    "design.fold_all",
+    "design.toggle",
     "drt.bindings",
     "drt.coverage",
     "drt.judge",
@@ -162,7 +166,6 @@ pub const ACTIONS: &[&str] = &[
     "screen.station.design",
     "screen.station.history",
     "screen.station.project",
-    "screen.station.requirements",
     "screen.station.sandbox",
     "screen.station.trace",
     "screen.strip",

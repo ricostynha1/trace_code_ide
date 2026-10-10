@@ -84,6 +84,11 @@ fn main() {
     if let ("trace", Some(file)) = (view, argument) {
         editor.perform(Intent::Display { what: BufferKind::File { path: file.to_string() } });
     }
+    // Printed, the design is read whole: there is no mark to press.
+    if view == "design" {
+        use tracelean_core::surface::act::Watch;
+        editor.perform(Intent::Observe { watch: Watch::DesignExpand { id: None } });
+    }
     let buffer = editor.view(what);
     if json {
         println!("{}", serde_json::to_string_pretty(&buffer).unwrap_or_default());

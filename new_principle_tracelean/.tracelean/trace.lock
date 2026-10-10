@@ -732,7 +732,7 @@
         "well_formed_by_construction",
         "window_is_a_buffer"
       ],
-      "content_hash": "6111577d74ea5930",
+      "content_hash": "3c6602709177dbc4",
       "file": "reqs/surface/REQ-SHOW.md",
       "refines": [
         "REQ-VIEW",
@@ -936,7 +936,7 @@
       "clause": "action_to_intent",
       "file": "crates/core/src/surface/act.rs",
       "anchor": "crates/core/src/surface/act.rs::dispatch",
-      "body_hash": "a06760d3f64fd0ec",
+      "body_hash": "fea6f39824d424c8",
       "link_hash": "a44e238bdd253940",
       "qualifier": null
     },
@@ -956,7 +956,7 @@
       "clause": "dispatch_is_pure",
       "file": "crates/core/src/surface/act.rs",
       "anchor": "crates/core/src/surface/act.rs::dispatch",
-      "body_hash": "a06760d3f64fd0ec",
+      "body_hash": "fea6f39824d424c8",
       "link_hash": "993f8b829c3cf11f",
       "qualifier": null
     },
@@ -966,7 +966,7 @@
       "clause": "edits_are_commands",
       "file": "crates/core/src/surface/act.rs",
       "anchor": "crates/core/src/surface/act.rs::dispatch",
-      "body_hash": "a06760d3f64fd0ec",
+      "body_hash": "fea6f39824d424c8",
       "link_hash": "a1da268e8d4508a2",
       "qualifier": null
     },
@@ -996,7 +996,7 @@
       "clause": "focus_is_carried",
       "file": "crates/core/src/surface/act.rs",
       "anchor": "crates/core/src/surface/act.rs::dispatch",
-      "body_hash": "a06760d3f64fd0ec",
+      "body_hash": "fea6f39824d424c8",
       "link_hash": "67d080eb318b03a5",
       "qualifier": null
     },
@@ -1006,7 +1006,7 @@
       "clause": "missing_target_is_refused",
       "file": "crates/core/src/surface/act.rs",
       "anchor": "crates/core/src/surface/act.rs::dispatch",
-      "body_hash": "a06760d3f64fd0ec",
+      "body_hash": "fea6f39824d424c8",
       "link_hash": "aed4f39f65aae04b",
       "qualifier": null
     },
@@ -1016,7 +1016,7 @@
       "clause": "one_path",
       "file": "crates/core/src/surface/act.rs",
       "anchor": "crates/core/src/surface/act.rs::dispatch",
-      "body_hash": "a06760d3f64fd0ec",
+      "body_hash": "fea6f39824d424c8",
       "link_hash": "f64e22402333a72b",
       "qualifier": null
     },
@@ -3816,7 +3816,7 @@
       "clause": "station_produces_a_buffer",
       "file": "crates/core/src/surface/screen.rs",
       "anchor": "crates/core/src/surface/screen.rs::station_kind",
-      "body_hash": "afb212f260f281bb",
+      "body_hash": "f2f924da7cbd74a4",
       "link_hash": "7736100dc45ba88b",
       "qualifier": null
     },
@@ -4036,7 +4036,7 @@
       "clause": "graph_from_refinement",
       "file": "crates/core/src/surface/produce.rs",
       "anchor": "crates/core/src/surface/produce.rs::design_buffer",
-      "body_hash": "eceda53b15c639bd",
+      "body_hash": "fabcbc944003568f",
       "link_hash": "9e6522faf90c8346",
       "qualifier": null
     },
@@ -4046,7 +4046,7 @@
       "clause": "graph_from_refinement",
       "file": "crates/core/tests/differential_station.rs",
       "anchor": "crates/core/tests/differential_station.rs::model_and_implementation_agree_on_the_refinement_graph",
-      "body_hash": "4364ceff30852ef4",
+      "body_hash": "6494abcfa374546c",
       "link_hash": "9285b6aedff845f2",
       "qualifier": null
     },
@@ -5466,7 +5466,7 @@
       "clause": "no_model_call",
       "file": "crates/editor/src/lib.rs",
       "anchor": "crates/editor/src/lib.rs::Editor",
-      "body_hash": "5f09fd8aefbd216c",
+      "body_hash": "e531c24b13ef43bf",
       "link_hash": "5ac20c184925b114",
       "qualifier": null
     },
@@ -5546,7 +5546,7 @@
       "clause": "action_to_intent",
       "file": "crates/core/src/surface/act.rs",
       "anchor": "crates/core/src/surface/act.rs::dispatch",
-      "body_hash": "a06760d3f64fd0ec",
+      "body_hash": "fea6f39824d424c8",
       "link_hash": "307b3f1e79bb86cc",
       "qualifier": null
     },
@@ -5566,7 +5566,7 @@
       "clause": "dispatch_is_pure",
       "file": "crates/core/src/surface/act.rs",
       "anchor": "crates/core/src/surface/act.rs::dispatch",
-      "body_hash": "a06760d3f64fd0ec",
+      "body_hash": "fea6f39824d424c8",
       "link_hash": "848f6d01fa47c7a1",
       "qualifier": null
     },
@@ -5576,7 +5576,7 @@
       "clause": "edits_are_commands",
       "file": "crates/core/src/surface/act.rs",
       "anchor": "crates/core/src/surface/act.rs::dispatch",
-      "body_hash": "a06760d3f64fd0ec",
+      "body_hash": "fea6f39824d424c8",
       "link_hash": "2b349208a48219be",
       "qualifier": null
     },
@@ -5656,7 +5656,7 @@
       "clause": "everything_is_offered",
       "file": "crates/core/src/surface/offer.rs",
       "anchor": "crates/core/src/surface/offer.rs::offers",
-      "body_hash": "4d8e4659c7a764b8",
+      "body_hash": "7aacd0ee649e3854",
       "link_hash": "b68a5fd339626536",
       "qualifier": null
     },
@@ -5676,7 +5676,7 @@
       "clause": "focus_is_carried",
       "file": "crates/core/src/surface/act.rs",
       "anchor": "crates/core/src/surface/act.rs::dispatch",
-      "body_hash": "a06760d3f64fd0ec",
+      "body_hash": "fea6f39824d424c8",
       "link_hash": "bd006af3ee2e2367",
       "qualifier": null
     },
@@ -5696,7 +5696,7 @@
       "clause": "missing_target_is_refused",
       "file": "crates/core/src/surface/act.rs",
       "anchor": "crates/core/src/surface/act.rs::dispatch",
-      "body_hash": "a06760d3f64fd0ec",
+      "body_hash": "fea6f39824d424c8",
       "link_hash": "023a773ff31b87dd",
       "qualifier": null
     },
@@ -5706,7 +5706,7 @@
       "clause": "one_path",
       "file": "crates/core/src/surface/act.rs",
       "anchor": "crates/core/src/surface/act.rs::dispatch",
-      "body_hash": "a06760d3f64fd0ec",
+      "body_hash": "fea6f39824d424c8",
       "link_hash": "0253b342bd52813d",
       "qualifier": null
     },
@@ -5766,7 +5766,7 @@
       "clause": "unknown_is_refused",
       "file": "crates/core/src/surface/act.rs",
       "anchor": "crates/core/src/surface/act.rs::dispatch",
-      "body_hash": "a06760d3f64fd0ec",
+      "body_hash": "fea6f39824d424c8",
       "link_hash": "025891c70740734f",
       "qualifier": null
     },
@@ -8146,7 +8146,7 @@
       "clause": "lines_listed",
       "file": "crates/core/src/surface/coverage_view.rs",
       "anchor": "crates/core/src/surface/coverage_view.rs::coverage_view",
-      "body_hash": "f2128790af1a61d3",
+      "body_hash": "1caaccd61bccc421",
       "link_hash": "2d7cc0cf213bd3c8",
       "qualifier": null
     },
@@ -8676,7 +8676,7 @@
       "clause": "actions_defined",
       "file": "crates/core/src/surface/keymap.rs",
       "anchor": "crates/core/src/surface/keymap.rs::ACTIONS",
-      "body_hash": "e369519ad0d6b1d3",
+      "body_hash": "bf8985e9bd095d26",
       "link_hash": "66bc084cf5b91b88",
       "qualifier": null
     },
@@ -9846,7 +9846,7 @@
       "clause": "screen_is_a_value",
       "file": "crates/editor/src/lib.rs",
       "anchor": "crates/editor/src/lib.rs::Editor",
-      "body_hash": "5f09fd8aefbd216c",
+      "body_hash": "e531c24b13ef43bf",
       "link_hash": "db3d01c8f8161b40",
       "qualifier": null
     },
@@ -9876,7 +9876,7 @@
       "clause": "station_produces_a_buffer",
       "file": "crates/core/src/surface/screen.rs",
       "anchor": "crates/core/src/surface/screen.rs::station_kind",
-      "body_hash": "afb212f260f281bb",
+      "body_hash": "f2f924da7cbd74a4",
       "link_hash": "1e4b9f11a9b8631d",
       "qualifier": null
     },
@@ -10076,7 +10076,7 @@
       "clause": "graph_from_refinement",
       "file": "crates/core/src/surface/produce.rs",
       "anchor": "crates/core/src/surface/produce.rs::design_buffer",
-      "body_hash": "eceda53b15c639bd",
+      "body_hash": "fabcbc944003568f",
       "link_hash": "808e937f3efe0ee2",
       "qualifier": null
     },
@@ -10136,7 +10136,7 @@
       "clause": "menu_from_keymap",
       "file": "crates/editor/src/lib.rs",
       "anchor": "crates/editor/src/lib.rs::Editor",
-      "body_hash": "5f09fd8aefbd216c",
+      "body_hash": "e531c24b13ef43bf",
       "link_hash": "de0b79b73c58d1c6",
       "qualifier": null
     },
@@ -10146,7 +10146,7 @@
       "clause": "producer_is_pure",
       "file": "crates/core/src/surface/produce.rs",
       "anchor": "crates/core/src/surface/produce.rs::design_buffer",
-      "body_hash": "eceda53b15c639bd",
+      "body_hash": "fabcbc944003568f",
       "link_hash": "25f4251234d49589",
       "qualifier": null
     },
@@ -10366,7 +10366,7 @@
       "clause": "well_formed_by_construction",
       "file": "crates/core/src/surface/produce.rs",
       "anchor": "crates/core/src/surface/produce.rs::design_buffer",
-      "body_hash": "eceda53b15c639bd",
+      "body_hash": "fabcbc944003568f",
       "link_hash": "f242bdde10e39ca3",
       "qualifier": null
     },
@@ -13496,7 +13496,7 @@
       "clause": "station_produces_a_buffer",
       "file": "formal/TraceLean/Screen.lean",
       "anchor": "formal/TraceLean/Screen.lean::TraceLean.Screen::stationKind",
-      "body_hash": "e1b3510e27e47715",
+      "body_hash": "8a0556c0e7289548",
       "link_hash": "41b41ef0c2e83404",
       "qualifier": null
     },
@@ -13626,7 +13626,7 @@
       "clause": "graph_from_refinement",
       "file": "formal/TraceLean/Produce.lean",
       "anchor": "formal/TraceLean/Produce.lean::TraceLean.Produce::designBuffer",
-      "body_hash": "8062961bcf85f698",
+      "body_hash": "7c9de2b1d4c73107",
       "link_hash": "8ebda0c63b4f254b",
       "qualifier": null
     },
@@ -18206,7 +18206,7 @@
       "clause": "screen_answers_for_the_frontend",
       "file": "crates/tui/tests/driving.rs",
       "anchor": "crates/tui/tests/driving.rs::a_station_is_on_the_screen_and_opens_from_the_keyboard",
-      "body_hash": "d2badd7bca9d49df",
+      "body_hash": "2ae599b3412e96c9",
       "link_hash": "2972149ec36e7a6b",
       "qualifier": null
     },
@@ -19236,7 +19236,7 @@
       "clause": "law_coverage",
       "file": "crates/core/tests/differential_station.rs",
       "anchor": "crates/core/tests/differential_station.rs::generation_reaches_every_station_and_a_name_that_is_none",
-      "body_hash": "86172db8a2417fb8",
+      "body_hash": "29f1882dabcc9a3a",
       "link_hash": "db4c0c029062409f",
       "qualifier": null
     },
@@ -19246,7 +19246,7 @@
       "clause": "law_coverage",
       "file": "crates/core/tests/differential_station.rs",
       "anchor": "crates/core/tests/differential_station.rs::generation_reaches_the_graphs_that_are_hard_to_draw",
-      "body_hash": "157a6d64ab2d682e",
+      "body_hash": "61166b2538c03fbc",
       "link_hash": "e1432fa6bc71131e",
       "qualifier": null
     },
@@ -21296,7 +21296,7 @@
       "clause": "regions_present",
       "file": "crates/tui/tests/driving.rs",
       "anchor": "crates/tui/tests/driving.rs::the_screen_shows_each_place_where_the_layout_puts_it",
-      "body_hash": "99bbf6398f66f724",
+      "body_hash": "68e2efea4fa67d6c",
       "link_hash": "6c23bf656c8e215e",
       "qualifier": "structural"
     },
@@ -23286,7 +23286,7 @@
       "clause": "station_produces_a_buffer",
       "file": "crates/core/tests/differential_station.rs",
       "anchor": "crates/core/tests/differential_station.rs::generation_reaches_every_station_and_a_name_that_is_none",
-      "body_hash": "86172db8a2417fb8",
+      "body_hash": "29f1882dabcc9a3a",
       "link_hash": "33d832c4fdee2691",
       "qualifier": null
     },
@@ -23316,7 +23316,7 @@
       "clause": "stations_are_constant",
       "file": "crates/tui/tests/driving.rs",
       "anchor": "crates/tui/tests/driving.rs::a_station_is_on_the_screen_and_opens_from_the_keyboard",
-      "body_hash": "d2badd7bca9d49df",
+      "body_hash": "2ae599b3412e96c9",
       "link_hash": "21d5fce1987f3c79",
       "qualifier": null
     },
@@ -23586,7 +23586,7 @@
       "clause": "graph_from_refinement",
       "file": "crates/core/tests/differential_station.rs",
       "anchor": "crates/core/tests/differential_station.rs::generation_reaches_the_graphs_that_are_hard_to_draw",
-      "body_hash": "157a6d64ab2d682e",
+      "body_hash": "61166b2538c03fbc",
       "link_hash": "f1b36a5d7a6c3eb1",
       "qualifier": null
     },
@@ -23596,8 +23596,18 @@
       "clause": "graph_from_refinement",
       "file": "crates/core/tests/differential_station.rs",
       "anchor": "crates/core/tests/differential_station.rs::model_and_implementation_agree_on_the_refinement_graph",
-      "body_hash": "4364ceff30852ef4",
+      "body_hash": "6494abcfa374546c",
       "link_hash": "31c4ecdddfd4c00b",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-SHOW",
+      "clause": "graph_from_refinement",
+      "file": "crates/editor/tests/design.rs",
+      "anchor": "crates/editor/tests/design.rs::the_design_opens_on_its_roots_and_unfolds_on_request",
+      "body_hash": "b40d827c270bb658",
+      "link_hash": "715aa7cd6fed33e0",
       "qualifier": null
     },
     {
@@ -23606,7 +23616,7 @@
       "clause": "index_from_requirements",
       "file": "crates/core/tests/differential_station.rs",
       "anchor": "crates/core/tests/differential_station.rs::generation_reaches_the_graphs_that_are_hard_to_draw",
-      "body_hash": "157a6d64ab2d682e",
+      "body_hash": "61166b2538c03fbc",
       "link_hash": "0b33f9a215445212",
       "qualifier": null
     },
@@ -25779,7 +25789,7 @@
       "inputs": [
         [
           "implementation",
-          "08f6b323f2b1b27d+a06760d3f64fd0ec+d58ed6a8bf877a2b+f5c10804e0a2cea6"
+          "08f6b323f2b1b27d+d58ed6a8bf877a2b+f5c10804e0a2cea6+fea6f39824d424c8"
         ],
         [
           "model",
@@ -25809,7 +25819,7 @@
       "inputs": [
         [
           "implementation",
-          "a06760d3f64fd0ec"
+          "fea6f39824d424c8"
         ],
         [
           "model",
@@ -25839,7 +25849,7 @@
       "inputs": [
         [
           "implementation",
-          "452a3d8cf7029039+5eb0c3e8abe417bd+9833bc65d26a76b6+a06760d3f64fd0ec+c52f7146bb505c39+f0bb0530e1d1994f+fd7e8532f0f2fcbc"
+          "452a3d8cf7029039+5eb0c3e8abe417bd+9833bc65d26a76b6+c52f7146bb505c39+f0bb0530e1d1994f+fd7e8532f0f2fcbc+fea6f39824d424c8"
         ],
         [
           "model",
@@ -25869,7 +25879,7 @@
       "inputs": [
         [
           "implementation",
-          "4d8e4659c7a764b8+8bef1d3af783a496+c19fbb227a2aa364"
+          "7aacd0ee649e3854+8bef1d3af783a496+c19fbb227a2aa364"
         ],
         [
           "model",
@@ -25899,7 +25909,7 @@
       "inputs": [
         [
           "implementation",
-          "2c31155911d38353+a06760d3f64fd0ec"
+          "2c31155911d38353+fea6f39824d424c8"
         ],
         [
           "model",
@@ -25958,7 +25968,7 @@
       "inputs": [
         [
           "implementation",
-          "a06760d3f64fd0ec"
+          "fea6f39824d424c8"
         ],
         [
           "model",
@@ -26017,7 +26027,7 @@
       "inputs": [
         [
           "implementation",
-          "085e49548b450f02+4b9dc77791161952+a06760d3f64fd0ec+c2cb17af9d99065f"
+          "085e49548b450f02+4b9dc77791161952+c2cb17af9d99065f+fea6f39824d424c8"
         ],
         [
           "model",
@@ -26074,7 +26084,7 @@
       "inputs": [
         [
           "implementation",
-          "0408c11f8f2edb60+a06760d3f64fd0ec+e97d177bdd02cd31"
+          "0408c11f8f2edb60+e97d177bdd02cd31+fea6f39824d424c8"
         ],
         [
           "model",
@@ -31870,7 +31880,7 @@
       "inputs": [
         [
           "implementation",
-          "8380eb64aa0d829b+f2128790af1a61d3"
+          "1caaccd61bccc421+8380eb64aa0d829b"
         ],
         [
           "model",
@@ -33297,7 +33307,7 @@
       "inputs": [
         [
           "implementation",
-          "2bf6d6b7b990cea5+3f40b5440f1ddcd2+e369519ad0d6b1d3"
+          "2bf6d6b7b990cea5+3f40b5440f1ddcd2+bf8985e9bd095d26"
         ],
         [
           "model",
@@ -35762,9 +35772,9 @@
       "level": "L3",
       "detail": {
         "drt": {
-          "seed": 13,
+          "seed": 53,
           "cases": 2000,
-          "op": "REQ-SBX.classification_total"
+          "op": "REQ-OBS.workspace_is_a_copy"
         }
       },
       "linkHash": "cd95fe45786ad4d7",
@@ -36584,7 +36594,7 @@
       "inputs": [
         [
           "implementation",
-          "1ca96acd04f1c6d8+5f09fd8aefbd216c+d04b064eff46abd8+f6b045588164b437"
+          "1ca96acd04f1c6d8+d04b064eff46abd8+e531c24b13ef43bf+f6b045588164b437"
         ],
         [
           "model",
@@ -36730,11 +36740,11 @@
       "inputs": [
         [
           "implementation",
-          "afb212f260f281bb"
+          "f2f924da7cbd74a4"
         ],
         [
           "model",
-          "e1b3510e27e47715"
+          "8a0556c0e7289548"
         ],
         [
           "requirement",
@@ -36759,7 +36769,7 @@
       "inputs": [
         [
           "model",
-          "e1b3510e27e47715"
+          "8a0556c0e7289548"
         ],
         [
           "requirement",
@@ -37428,15 +37438,15 @@
       "inputs": [
         [
           "implementation",
-          "eceda53b15c639bd"
+          "fabcbc944003568f"
         ],
         [
           "model",
-          "8062961bcf85f698"
+          "7c9de2b1d4c73107"
         ],
         [
           "requirement",
-          "972870958ffd1328"
+          "cb3258c2ae39c310"
         ]
       ]
     },
@@ -37604,7 +37614,7 @@
       "inputs": [
         [
           "implementation",
-          "3ee59ad610e968c9+5f09fd8aefbd216c"
+          "3ee59ad610e968c9+e531c24b13ef43bf"
         ],
         [
           "model",
@@ -37663,7 +37673,7 @@
       "inputs": [
         [
           "implementation",
-          "14b231e70c2eb262+1e348090f50356c4+3ee59ad610e968c9+bf67249e2b36ef7e+d2a332a9dd7d677a+e6e898adf246d972+eceda53b15c639bd+fbc55b274e9687b0"
+          "14b231e70c2eb262+1e348090f50356c4+3ee59ad610e968c9+bf67249e2b36ef7e+d2a332a9dd7d677a+e6e898adf246d972+fabcbc944003568f+fbc55b274e9687b0"
         ],
         [
           "model",
@@ -38075,7 +38085,7 @@
       "inputs": [
         [
           "implementation",
-          "6790242e5c2d7d58+bf67249e2b36ef7e+eceda53b15c639bd"
+          "6790242e5c2d7d58+bf67249e2b36ef7e+fabcbc944003568f"
         ],
         [
           "model",

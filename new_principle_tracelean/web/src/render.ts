@@ -146,7 +146,6 @@ const EMBLEMS: Record<string, string> = {
   "screen.station.project": "📁",
   "screen.station.trace": "🔗",
   "screen.station.sandbox": "🧪",
-  "screen.station.requirements": "📋",
   "screen.station.design": "🕸",
   "screen.station.history": "🌳",
 };

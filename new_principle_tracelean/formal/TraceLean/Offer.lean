@@ -110,12 +110,13 @@ def ofBuffer (keymap : Keymap) (kind : BufferKind) : List Offered :=
     (if title == "sandbox" then [e "sandbox.new" none, e "sandbox.copy" none, e "observe.start" none] else []) ++
     (if title == "observed" || title == "sandbox" then [e "observe.accept" none, e "observe.reject" none] else []) ++
     (if title == "sandbox" then [e "sandbox.end" none] else [])
-  | .menu title => if title == "requirements" then [e "trace.new_requirement" none] else []
+  | .menu title =>
+    (if title == "design" then [e "design.expand_everything" none, e "design.fold_all" none] else []) ++
+    (if title == "requirements" || title == "design" then [e "trace.new_requirement" none] else [])
 
 /-- The places always reachable, in the order the menu lists them. -/
 def places : List String :=
-  ["screen.station.project", "screen.station.trace", "screen.station.requirements",
-   "screen.station.design", "screen.station.sandbox", "observe.start", "trace.check",
+  ["screen.station.project", "screen.station.trace", "screen.station.design", "screen.station.sandbox", "observe.start", "trace.check",
    "trace.findings", "history.tree"]
 
 /-- Everything offered at `offset` in `buffer`: what was pointed at, a listing

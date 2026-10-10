@@ -53,6 +53,15 @@ fn one_node_list() -> Schema {
     Schema::Struct { fields }
 }
 
+/// A graph and which of its requirements are unfolded: none, some, a name
+/// that is not there, or all of them.
+fn folded_graph() -> Schema {
+    let Schema::Struct { mut fields } = one_node_list() else { unreachable!() };
+    let name = Schema::Str { max_len: Some(0), examples: vec!["A".into(), "B".into(), "C".into(), "Z".into()] };
+    fields.insert("opened".to_string(), Schema::List { inner: Box::new(name), max_len: Some(4) });
+    Schema::Struct { fields }
+}
+
 /// A token count. The edges are a round million and nothing, so a run holds
 /// both totals that survive the division and totals that truncate away.
 fn tokens() -> Schema {
@@ -161,8 +170,8 @@ fn model_and_implementation_agree_on_the_refinement_graph() {
         "TraceLean.Produce",
         "TraceLean.Produce.designBuffer",
         "crates/core/src/surface/produce.rs::design_buffer",
-        &["nodes"],
-        one_node_list(),
+        &["nodes", "opened"],
+        folded_graph(),
         67,
     );
 }
@@ -477,7 +486,8 @@ fn generation_reaches_the_graphs_that_are_hard_to_draw() {
             highest += 1;
         }
 
-        let rows = design_rows(set.clone());
+        // Unfolded everywhere, the walk meets every shape the graph has.
+        let rows = design_rows(set.clone(), set.iter().map(|node| node.id.clone()).collect());
         if rows.is_empty() {
             nothing += 1;
         }
@@ -754,7 +764,7 @@ fn generation_reaches_every_station_and_a_name_that_is_none() {
         &[
             ("a station that exists", real),
             ("a name that is no station", absent),
-            ("each of the six stations", reached.len() as u64),
+            ("each of the five stations", reached.len() as u64),
         ],
     );
 }

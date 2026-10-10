@@ -151,8 +151,13 @@ pub fn offers(buffer: &Buffer, offset: usize, keymap: &Keymap) -> Vec<Offer> {
 
     // What was pointed at.
     for action in actions_at(buffer.clone(), offset) {
-        let name = here.clone().unwrap_or_default();
-        let label = match action.as_str() {
+        // An action that names its target is about that, not the text under it.
+        let name = crate::surface::view::action_target(&action).map(str::to_string).or(here.clone()).unwrap_or_default();
+        let label = match crate::surface::view::action_name(&action) {
+            "design.toggle" => format!("Unfold or fold {name}"),
+            "design.expand_all" => format!("Unfold everything under {name}"),
+            "design.expand_everything" => "Unfold all of the design".into(),
+            "design.fold_all" => "Fold the design to its roots".into(),
             "file.open" => format!("Open {name}"),
             "screen.show" => format!("Show {name}"),
             "observe.diff" => format!("Review the change to {name}"),
@@ -268,7 +273,11 @@ pub fn offers(buffer: &Buffer, offset: usize, keymap: &Keymap) -> Vec<Offer> {
                 out.push(offer(keymap, "file", "End the sandbox".into(), "sandbox.end", None, None));
             }
         }
-        BufferKind::Menu { title } if title == "requirements" => {
+        BufferKind::Menu { title } if title == "requirements" || title == "design" => {
+            if title == "design" {
+                out.push(offer(keymap, "file", "Unfold all of the design".into(), "design.expand_everything", None, None));
+                out.push(offer(keymap, "file", "Fold the design to its roots".into(), "design.fold_all", None, None));
+            }
             out.push(offer(
                 keymap,
                 "file",
@@ -290,8 +299,7 @@ pub fn offers(buffer: &Buffer, offset: usize, keymap: &Keymap) -> Vec<Offer> {
     for (action, label) in [
         ("screen.station.project", "Project files"),
         ("screen.station.trace", "What this file claims"),
-        ("screen.station.requirements", "Requirements"),
-        ("screen.station.design", "Refinement graph"),
+        ("screen.station.design", "Requirements, as the refinement graph"),
         ("screen.station.sandbox", "Sandbox"),
         ("observe.start", "Look for an agent's changes"),
         ("trace.check", "Check the tree"),
