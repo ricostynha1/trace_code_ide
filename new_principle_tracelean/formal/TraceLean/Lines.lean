@@ -54,6 +54,16 @@ def merged (runs : List TestLines) (file : String) : List LineHits :=
       { r with lines := r.lines.filter (fun p => p.2 > 0) })) t line))
     { line := line, hits := sum (tests.map (·.2)), tests := tests })
 
+/-- What is shown of a file's measured lines: them when they were measured
+against the text the file has now, nothing when against other text.
+
+@models REQ-LINECOV.stale_hidden -/
+def visible (measured : Option (String × List LineHits)) (hash : String)
+    : Option (List LineHits) :=
+  match measured with
+  | none => none
+  | some m => if m.1 == hash then some m.2 else none
+
 /-- How much of lines `start` to `stop` ran.
 
 @models REQ-LINECOV.clause_summary -/

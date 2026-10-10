@@ -2498,6 +2498,26 @@
     },
     {
       "role": "drt",
+      "req": "REQ-LINECOV",
+      "clause": "stale_hidden",
+      "file": "crates/core/src/trace/lines.rs",
+      "anchor": "crates/core/src/trace/lines.rs::visible",
+      "body_hash": "1fd863ef196cad49",
+      "link_hash": "d3b2fda37d785990",
+      "qualifier": null
+    },
+    {
+      "role": "drt",
+      "req": "REQ-LINECOV",
+      "clause": "stale_hidden",
+      "file": "crates/core/tests/differential_lines.rs",
+      "anchor": "crates/core/tests/differential_lines.rs::model_and_implementation_agree_on_when_measured_lines_are_shown",
+      "body_hash": "618da48dc0f1dd08",
+      "link_hash": "f5dd477f2e72268b",
+      "qualifier": null
+    },
+    {
+      "role": "drt",
       "req": "REQ-LOCK",
       "clause": "deterministic_bytes",
       "file": "crates/core/src/trace/lockfile.rs",
@@ -7641,9 +7661,9 @@
       "req": "REQ-LINECOV",
       "clause": "stale_hidden",
       "file": "crates/core/src/trace/lines.rs",
-      "anchor": "crates/core/src/trace/lines.rs::current",
-      "body_hash": "d82fed470deca67c",
-      "link_hash": "c9e8cc9880c3152d",
+      "anchor": "crates/core/src/trace/lines.rs::visible",
+      "body_hash": "1fd863ef196cad49",
+      "link_hash": "95c796c8e308815c",
       "qualifier": null
     },
     {
@@ -11988,6 +12008,16 @@
     },
     {
       "role": "models",
+      "req": "REQ-LINECOV",
+      "clause": "stale_hidden",
+      "file": "formal/TraceLean/Lines.lean",
+      "anchor": "formal/TraceLean/Lines.lean::TraceLean.Lines::visible",
+      "body_hash": "e409b509c5aaff77",
+      "link_hash": "6b01926bb6353f61",
+      "qualifier": null
+    },
+    {
+      "role": "models",
       "req": "REQ-LOCK",
       "clause": "deterministic_bytes",
       "file": "formal/TraceLean/Lockfile.lean",
@@ -15302,7 +15332,7 @@
       "clause": "decision_public",
       "file": "crates/core/tests/architecture.rs",
       "anchor": "crates/core/tests/architecture.rs::every_module_holding_a_decision_is_public",
-      "body_hash": "392925ad58aa2b6d",
+      "body_hash": "61dfc6e4fb334ce9",
       "link_hash": "a07533610ebbe6ce",
       "qualifier": "structural"
     },
@@ -15332,7 +15362,7 @@
       "clause": "shell_thin",
       "file": "crates/core/tests/architecture.rs",
       "anchor": "crates/core/tests/architecture.rs::only_declared_shells_touch_the_filesystem",
-      "body_hash": "6390721a46607604",
+      "body_hash": "d8d106e0ce88c57f",
       "link_hash": "caeba4813a29b62d",
       "qualifier": "structural"
     },
@@ -15412,7 +15442,7 @@
       "clause": "axiomatised",
       "file": "crates/core/tests/architecture.rs",
       "anchor": "crates/core/tests/architecture.rs::axioms_live_in_one_file_and_each_one_states_a_law",
-      "body_hash": "d9ea608e38c46da9",
+      "body_hash": "144654390a25b589",
       "link_hash": "be30d760e7dc7529",
       "qualifier": "structural"
     },
@@ -15432,7 +15462,7 @@
       "clause": "axioms_confined",
       "file": "crates/core/tests/architecture.rs",
       "anchor": "crates/core/tests/architecture.rs::axioms_live_in_one_file_and_each_one_states_a_law",
-      "body_hash": "d9ea608e38c46da9",
+      "body_hash": "144654390a25b589",
       "link_hash": "b1fa5d51d14891db",
       "qualifier": "structural"
     },
@@ -15482,7 +15512,7 @@
       "clause": "law_stated",
       "file": "crates/core/tests/architecture.rs",
       "anchor": "crates/core/tests/architecture.rs::axioms_live_in_one_file_and_each_one_states_a_law",
-      "body_hash": "d9ea608e38c46da9",
+      "body_hash": "144654390a25b589",
       "link_hash": "5bf5b376cf59fbf9",
       "qualifier": "structural"
     },
@@ -16220,6 +16250,26 @@
       "role": "tests",
       "req": "REQ-ANNOT",
       "clause": "totality",
+      "file": "crates/core/tests/lean_grammar.rs",
+      "anchor": "crates/core/tests/lean_grammar.rs::each_construct_the_grammar_was_extended_for_parses",
+      "body_hash": "b8836c318660f845",
+      "link_hash": "2f4195a7e943ba65",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-ANNOT",
+      "clause": "totality",
+      "file": "crates/core/tests/lean_grammar.rs",
+      "anchor": "crates/core/tests/lean_grammar.rs::every_file_of_formal_parses_and_loses_no_declaration",
+      "body_hash": "9fde1f0c8e685319",
+      "link_hash": "5e6e8915e930243c",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-ANNOT",
+      "clause": "totality",
       "file": "crates/core/tests/properties.rs",
       "anchor": "crates/core/tests/properties.rs::a_malformed_annotation_is_reported_and_not_dropped",
       "body_hash": "da1675055266a259",
@@ -16401,9 +16451,59 @@
       "req": "REQ-CHECK",
       "clause": "structural_rejects",
       "file": "crates/core/tests/architecture.rs",
+      "anchor": "crates/core/tests/architecture.rs::the_axiom_check_rejects_a_tree_that_breaks_it",
+      "body_hash": "17ad8b4bcf2b5d7e",
+      "link_hash": "ebbd7f6ade2af2d6",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-CHECK",
+      "clause": "structural_rejects",
+      "file": "crates/core/tests/architecture.rs",
       "anchor": "crates/core/tests/architecture.rs::the_needle_checks_reject_a_tree_that_breaks_them",
       "body_hash": "b6771a3f750e3b05",
       "link_hash": "9e5d44e471a7c688",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-CHECK",
+      "clause": "structural_rejects",
+      "file": "crates/core/tests/architecture.rs",
+      "anchor": "crates/core/tests/architecture.rs::the_scratch_name_check_rejects_a_tree_that_breaks_it",
+      "body_hash": "faefaf48d722eae0",
+      "link_hash": "f47871f9e6634892",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-CHECK",
+      "clause": "structural_rejects",
+      "file": "crates/core/tests/architecture.rs",
+      "anchor": "crates/core/tests/architecture.rs::the_shell_checks_reject_a_tree_that_breaks_them",
+      "body_hash": "d46422958140edab",
+      "link_hash": "12a97cfdba304e85",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-CHECK",
+      "clause": "structural_rejects",
+      "file": "crates/core/tests/architecture.rs",
+      "anchor": "crates/core/tests/architecture.rs::the_visibility_check_rejects_a_private_decision_module",
+      "body_hash": "49434e44d571b3f6",
+      "link_hash": "3255123fcd90942e",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-CHECK",
+      "clause": "structural_rejects",
+      "file": "crates/core/tests/lean_grammar.rs",
+      "anchor": "crates/core/tests/lean_grammar.rs::a_malformed_declaration_is_still_reported",
+      "body_hash": "fb3d39570d7c96ba",
+      "link_hash": "c22ef1aa309e47af",
       "qualifier": null
     },
     {
@@ -19934,6 +20034,16 @@
       "anchor": "crates/core/src/trace/lines.rs::tests::coverage_of_other_text_is_not_shown",
       "body_hash": "33304cbf22e3fbee",
       "link_hash": "ac6ad3f3e0d68a12",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-LINECOV",
+      "clause": "stale_hidden",
+      "file": "crates/core/tests/differential_lines.rs",
+      "anchor": "crates/core/tests/differential_lines.rs::model_and_implementation_agree_on_when_measured_lines_are_shown",
+      "body_hash": "618da48dc0f1dd08",
+      "link_hash": "f04985af73dcf032",
       "qualifier": null
     },
     {

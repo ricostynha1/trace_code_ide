@@ -95,6 +95,36 @@ fn model_and_implementation_agree_on_how_much_of_a_span_ran() {
     );
 }
 
+fn measured() -> BTreeMap<String, Schema> {
+    let hits = Schema::Struct {
+        fields: fields(vec![
+            ("line", line()),
+            ("hits", count()),
+            ("tests", Schema::List { inner: Box::new(Schema::Tuple { items: vec![small(&["t1", "t2"]), count()] }), max_len: Some(2) }),
+        ]),
+    };
+    let at = Schema::Tuple {
+        items: vec![small(&["h1", "h2"]), Schema::List { inner: Box::new(hits), max_len: Some(3) }],
+    };
+    fields(vec![("measured", Schema::Option { inner: Box::new(at) }), ("hash", small(&["h1", "h2", "h3"]))])
+}
+
+/// @drt REQ-LINECOV.stale_hidden
+/// @tests REQ-LINECOV.stale_hidden
+#[test]
+#[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
+fn model_and_implementation_agree_on_when_measured_lines_are_shown() {
+    check(
+        "stale_hidden",
+        "TraceLean.Lines.visible",
+        "crates/core/src/trace/lines.rs::visible",
+        &["measured", "hash"],
+        &[],
+        measured(),
+        333,
+    );
+}
+
 /// The generators reach lines run by two tests, lines run by none, spans
 /// partly run and spans with nothing executable in them.
 ///

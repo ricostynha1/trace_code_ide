@@ -3590,6 +3590,23 @@
     },
     {
       "req_id": "REQ-LINECOV",
+      "clause": "stale_hidden",
+      "floors": [
+        { "situation": "measured against the file's text", "atLeast": 200 },
+        { "situation": "measured against other text", "atLeast": 200 }
+      ],
+      "model": {
+        "import": "TraceLean.Lines",
+        "function": "TraceLean.Lines.visible",
+        "arguments": ["measured", "hash"]
+      },
+      "implementation": {
+        "language": "rust",
+        "entry": "crates/core/src/trace/lines.rs::visible"
+      }
+    },
+    {
+      "req_id": "REQ-LINECOV",
       "clause": "clause_summary",
       "floors": [
         { "situation": "some lines run and some not", "atLeast": 200 },

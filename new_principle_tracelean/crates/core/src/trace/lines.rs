@@ -104,9 +104,17 @@ pub fn span_coverage(lines: Vec<LineHits>, start: u32, end: u32) -> Reach {
     Reach { run: inside.iter().filter(|l| l.hits > 0).count() as u64, all: inside.len() as u64, tests }
 }
 
-/// A file's lines, when they were measured against the text it has now.
+/// What is shown of a file's measured lines: them when they were measured
+/// against the text the file has now (`hash`), nothing when against other text.
 ///
 /// @implements REQ-LINECOV.stale_hidden
+/// @drt REQ-LINECOV.stale_hidden
+pub fn visible(measured: Option<(String, Vec<LineHits>)>, hash: String) -> Option<Vec<LineHits>> {
+    measured.filter(|(at, _)| *at == hash).map(|(_, lines)| lines)
+}
+
+/// A file's lines, by reference, when they were measured against the text it
+/// has now: `visible` without the copy.
 pub fn current<'a>(coverage: &'a Coverage, path: &str, hash: &str) -> Option<&'a Vec<LineHits>> {
     coverage.files.get(path).filter(|(measured, _)| measured == hash).map(|(_, lines)| lines)
 }
