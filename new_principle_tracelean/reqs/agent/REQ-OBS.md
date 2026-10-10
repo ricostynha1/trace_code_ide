@@ -8,7 +8,9 @@ clauses:
   workspace_is_a_copy: An external tool shall act on a copy of the project, and the real tree shall be unmodified while it runs.
   effects_become_commands: What the tool did shall reach the editor as commands, through the same path as any other edit.
   undoable: Every mirrored change shall be undoable by the same mechanism as a change made by hand.
-  no_instruction_channel: There shall be no channel by which the editor sends the tool anything.
+  no_instruction_channel:
+    text: There shall be no channel by which the editor sends the tool anything.
+    environment: What a sandbox is made with — the copy, the tools and skills it may read, and one brief naming where they are, the same for every task and written before the tool starts — is not a channel, and nothing typed into the editor or decided while the tool runs shall reach the tool through it.
   visible_while_running: What the tool has changed shall be observable before the user decides to accept it.
   only_what_the_tool_changed: What is offered as the tool's changes shall be only the paths whose content in the copy differs from what the copy held when it was made; a path the project changed since, and the tool did not, shall not be offered, and a copy whose starting content is unknown shall offer nothing.
 ---

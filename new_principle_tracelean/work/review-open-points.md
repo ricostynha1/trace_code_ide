@@ -17,19 +17,30 @@ such, and `tracelean-trace . --stale` lists nothing.
   is checked on the terminal; the page colours some roles by place (a path in
   the explorer wears `ui.sidebarText`), which no check holds it to yet.
 
-## Open (evening of 2026-10-10)
+## Decided under autonomy (night of 2026-10-10)
 
-Clauses added to approved requirements in answer to your feedback, and the
-models written for them. Not judged: you have not read the clauses yet, so
-no verdict is beyond doubt (`work/feedback-2026-10-10.md`).
+Given by ricostynha ("I give you autonomy to decide"); judgements recorded by
+`claude-review`, delegated by ricostynha.
 
-| Clause | Model | Why left open |
-|---|---|---|
-| `REQ-OBS.only_what_the_tool_changed` | `Mirror.changedSince` | the clause is new; also "a copy whose start is unknown offers nothing" is a choice (the alternative: offer by mtime) |
-| `REQ-LINECOV.requirement_summary` | `RequirementView.total` | new clause |
-| `REQ-LINECOV.lines_listed` | `CoverageView.coverageView` | new clause; the page's layout is a choice |
-| `REQ-STALE.current_not_rerun` | `Hash.sourcesHash` | the model covers coverage only; the `--drt` half (`auto::still_agreed`) is claimed but not modelled |
-| `REQ-CONTEXT.views_from_the_shell` | none | reads the disk through the editor: no value function answers it |
-
-Also yours to decide: whether the sandbox brief (a fixed `CLAUDE.md` above the
-copy) is within `REQ-OBS.no_instruction_channel`.
+- **Five new clauses:** `only_what_the_tool_changed`, `requirement_summary`,
+  `lines_listed` judged `agrees`. `REQ-STALE.current_not_rerun` split into
+  `agreed_not_rerun` (`Staleness.rerun`) and `measured_not_retaken`
+  (`Hash.retake`), both modelled, bound and judged. `views_from_the_shell`
+  stays Unmodeled: it reads the disk.
+- **Sandbox brief:** within `REQ-OBS.no_instruction_channel`, now said by its
+  `environment` narrowing: a fixed text naming tools and skills, from the host
+  alone, written before the tool starts.
+- **Design station:** folds to its roots; marks unfold one level or all under
+  a node; the Requirements station is dropped (the user's call).
+- **Suite caching:** done after all, in `tools/differential-all.sh` rather than
+  in each test: a suite whose every `@drt` clause has a current agreed run is
+  skipped (`--drt-due`; `--again` runs all). 2m29 → 32s with nothing changed.
+- **Early stop for differential cases:** declined. Measured, 2000 cases cost
+  ~1.3s of a ~4s test; knowing "every path covered" per case needs a profile
+  export per case, dearer than the case; and an L3 record names a seed and a
+  case count that the floors are calibrated to.
+- **Module-comment anchoring:** kept; a claim in `//!`/`/-!` anchors to the
+  first item. Re-anchoring to the file re-targets ten Lean `@models`; claims
+  move onto functions when their file is next touched.
+- **Trace station** ("same every time"): closed, not reproduced — it follows
+  the file the document shows (`crates/editor/tests/trace_station.rs`).

@@ -2,7 +2,7 @@
 describes: [ARCH-NO-DRIVING, REQ-OBS, REQ-MYTH]
 described_hash:
   ARCH-NO-DRIVING: 5edd72e90d4b4ed1
-  REQ-OBS: ddbaa15e6f6a11ec
+  REQ-OBS: eca97dd76925c485
   REQ-MYTH: 0120c37ad5d78c7b
 ---
 
@@ -31,8 +31,10 @@ inside a bubblewrap namespace bound to a reflink copy of the project. TraceLean
 watches that copy and mirrors into buffers, file tree and undo tree the paths
 whose content differs from what the copy started with (`sessions/<id>/base.json`)
 — not every difference from the real tree, which also holds what the project
-changed since. It never launches, prompts or drives the tool; it briefs it, with
-a `CLAUDE.md` above the copy pointing at the skills.
+changed since. It never launches, prompts or drives the tool. The sandbox comes
+with a `CLAUDE.md` above the copy pointing at the skills — fixed, the same for
+every task, written before the tool starts, and so not a channel
+(`no_instruction_channel`'s `environment`).
 
 The editor stops needing to know what a model is, what a token costs, how a tool
 schema is shaped or how to keep a cache warm. An agent becomes a process that

@@ -63,10 +63,40 @@ pub enum Outcome {
 
 /// The runs `held` keeps for this candidate's clause, as `rerun` reads them.
 fn held_runs(index: &Index, held: &[crate::trace::record::Evidence], c: &Candidate) -> Vec<HeldRun> {
+    held_for(index, held, &c.req_id, &c.clause)
+}
+
+/// Each file holding a `@drt` claim — a differential suite — with the clauses
+/// it claims that no current agreed run holds: a suite with none due need not
+/// run (`tools/differential-all.sh`). The op is the one the held record names,
+/// since a binding that also checks a clause records it under its own.
+pub fn suites_due(root: &Path, index: &Index) -> BTreeMap<String, Vec<String>> {
+    let held = crate::trace::earn::merge(
+        crate::trace::lockfile::read(root).map(|l| l.evidence).unwrap_or_default(),
+        crate::trace::store::read_all(root),
+    );
+    let live: Vec<String> = index.links.iter().map(|l| l.link_hash.clone()).collect();
+    let mut out: BTreeMap<String, Vec<String>> = BTreeMap::new();
+    for link in index.links.iter().filter(|l| l.role == Role::Drt) {
+        let runs = held_for(index, &held, &link.req_id, &link.clause);
+        let current = runs.iter().any(|h| !rerun(vec![h.clone()], h.op.clone(), live.clone(), false));
+        let due = out.entry(link.anchor.file.clone()).or_default();
+        if !current {
+            due.push(super::qualified_op(&link.req_id, link.clause.as_deref()));
+        }
+    }
+    for due in out.values_mut() {
+        due.sort();
+        due.dedup();
+    }
+    out
+}
+
+fn held_for(index: &Index, held: &[crate::trace::record::Evidence], req_id: &str, clause: &Option<String>) -> Vec<HeldRun> {
     use crate::evidence::{Bond, Level};
     use crate::trace::record::{Detail, StalenessInput};
     held.iter()
-        .filter(|r| r.key.req_id == c.req_id && r.key.clause == c.clause && r.key.bond == Bond::ModelImpl)
+        .filter(|r| r.key.req_id == req_id && &r.key.clause == clause && r.key.bond == Bond::ModelImpl)
         .filter_map(|r| match &r.detail {
             Detail::Drt { op, .. } => Some(HeldRun {
                 op: op.clone(),

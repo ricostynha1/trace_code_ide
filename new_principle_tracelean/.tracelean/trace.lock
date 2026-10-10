@@ -563,7 +563,7 @@
         "visible_while_running",
         "workspace_is_a_copy"
       ],
-      "content_hash": "ddbaa15e6f6a11ec",
+      "content_hash": "eca97dd76925c485",
       "file": "reqs/agent/REQ-OBS.md",
       "refines": [
         "ARCH-NO-DRIVING",
@@ -6286,7 +6286,7 @@
       "clause": "from_the_shell",
       "file": "crates/core/src/bin/tracelean-trace.rs",
       "anchor": "crates/core/src/bin/tracelean-trace.rs::main",
-      "body_hash": "01b7594c18c88724",
+      "body_hash": "a4e11193027c0e35",
       "link_hash": "cfb1dd6e6161c477",
       "qualifier": null
     },
@@ -7936,7 +7936,7 @@
       "clause": "human_decides",
       "file": "crates/core/src/bin/tracelean-trace.rs",
       "anchor": "crates/core/src/bin/tracelean-trace.rs::main",
-      "body_hash": "01b7594c18c88724",
+      "body_hash": "a4e11193027c0e35",
       "link_hash": "642e3a15ac658d39",
       "qualifier": null
     },
@@ -8046,7 +8046,7 @@
       "clause": "no_call",
       "file": "crates/core/src/bin/tracelean-trace.rs",
       "anchor": "crates/core/src/bin/tracelean-trace.rs::main",
-      "body_hash": "01b7594c18c88724",
+      "body_hash": "a4e11193027c0e35",
       "link_hash": "9832a41f49e5f574",
       "qualifier": null
     },
@@ -8076,7 +8076,7 @@
       "clause": "prompt_exported",
       "file": "crates/core/src/bin/tracelean-trace.rs",
       "anchor": "crates/core/src/bin/tracelean-trace.rs::main",
-      "body_hash": "01b7594c18c88724",
+      "body_hash": "a4e11193027c0e35",
       "link_hash": "375f03d31121ea8c",
       "qualifier": null
     },
@@ -10516,7 +10516,7 @@
       "clause": "listed_for_a_script",
       "file": "crates/core/src/bin/tracelean-trace.rs",
       "anchor": "crates/core/src/bin/tracelean-trace.rs::main",
-      "body_hash": "01b7594c18c88724",
+      "body_hash": "a4e11193027c0e35",
       "link_hash": "24d049892b205e19",
       "qualifier": null
     },
@@ -27716,7 +27716,7 @@
       "inputs": [
         [
           "implementation",
-          "01b7594c18c88724+560440270dd7dc8e+69b717aadb840d9c"
+          "560440270dd7dc8e+69b717aadb840d9c+a4e11193027c0e35"
         ],
         [
           "model",
@@ -31531,7 +31531,7 @@
       "inputs": [
         [
           "implementation",
-          "01b7594c18c88724+3e85a7d5b06f305d+448cb95e43510bf3+79e8f4b682a14a28+95cbdb4e6ad99141"
+          "3e85a7d5b06f305d+448cb95e43510bf3+79e8f4b682a14a28+95cbdb4e6ad99141+a4e11193027c0e35"
         ],
         [
           "model",
@@ -31706,7 +31706,7 @@
       "inputs": [
         [
           "implementation",
-          "01b7594c18c88724+0bfb42630f56bb5b+20aa6e203b9f9046+a714e521334573b4"
+          "0bfb42630f56bb5b+20aa6e203b9f9046+a4e11193027c0e35+a714e521334573b4"
         ],
         [
           "model",

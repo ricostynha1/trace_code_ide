@@ -203,6 +203,19 @@ fn main() {
         return;
     }
 
+    // `--drt-due` says, for each differential suite, whether a clause it claims
+    // has no current agreed run (`due`) or none does (`current`): what
+    // `tools/differential-all.sh` runs, and what it skips.
+    if std::env::args().any(|a| a == "--drt-due") {
+        for (file, due) in tracelean_core::drt::auto::suites_due(&root, &index) {
+            match due.is_empty() {
+                true => println!("current {file}"),
+                false => println!("due     {file}  {}", due.join(" ")),
+            }
+        }
+        return;
+    }
+
     // `--drt` tests every clause a Lean function models and a Rust function
     // implements against each other, without a binding, records L3 where it
     // was earned, and refreshes the lock so the editor sees it.
