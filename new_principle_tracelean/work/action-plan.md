@@ -147,8 +147,8 @@ outside `arrange`, and `perform` names three prompt actions before `dispatch`.
 positive-only; and of the 14 tests in `architecture.rs` the needle checks
 (model/network, process spawn, clock), the shell check and the axiom check have
 a negative case, as do the scratch-name, visibility and process-spawn checks and
-a sensitivity check for `moving_a_file…`. Still without one: `every_finding_type…`,
-`every_unsure_answer…` (the exemption and transport checks have one now). In general the same rule is worth applying to
+a sensitivity check for `moving_a_file…`. The finding-vocabulary test now also rejects a bare flag;
+`every_unsure_answer…` asserts both the unsure and the sure side of each value. In general the same rule is worth applying to
 any test whose pass is "nothing found" — a search that finds nothing must be
 shown able to find something — but structural checks come first.
 

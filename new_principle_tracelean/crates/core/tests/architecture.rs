@@ -416,6 +416,11 @@ fn the_axiom_check_rejects_a_tree_that_breaks_it() {
     assert!(axiom_problems(&bare).len() >= 2, "{:?}", axiom_problems(&bare));
 }
 
+/// Whether a rendered finding names what is wrong rather than being a flag.
+fn names_the_problem(rendered: &str) -> bool {
+    rendered.len() > 6 && !rendered.contains("true") && !rendered.contains("false")
+}
+
 /// A finding is a named variant, not a string or a bool.
 ///
 /// The failure this prevents is the one that reads as working: a checker that
@@ -441,9 +446,13 @@ fn every_finding_type_is_a_closed_named_vocabulary() {
     ];
     for rendered in &named {
         assert!(
-            rendered.len() > 6 && !rendered.contains("true") && !rendered.contains("false"),
+            names_the_problem(rendered),
             "a finding rendered as {rendered}, which says nothing about what is wrong"
         );
+    }
+    // The predicate rejects what it is there to reject: a bare flag or "invalid".
+    for bad in ["false", "true", "\"ok\"", "{\"valid\":false}"] {
+        assert!(!names_the_problem(bad), "{bad} should not count as a named finding");
     }
     assert!(named[0].contains("unmodeled"));
     assert!(named[1].contains("containmentUnreported"));
