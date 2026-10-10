@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "ARCH-DETERMINISM",
+    "clause": "seeded_generation",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Generator::the_seed_alone_fixes_the_cases",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "3eb5ebe1cad4630b",
+  "inputs": [
+    [
+      "model",
+      "9ef66c65431edf29"
+    ],
+    [
+      "requirement",
+      "c406abe63455efc3"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

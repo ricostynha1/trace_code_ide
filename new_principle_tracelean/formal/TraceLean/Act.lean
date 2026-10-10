@@ -482,4 +482,64 @@ theorem an_unknown_action_is_refused :
     acts (dispatch "file.explode" cursorInFile noFiles []) = false := by
   native_decide
 
+/-- An action name means what dispatch resolves it to: undoing is a move back
+through the history, saving is persisting, and a station is a buffer to show.
+
+@proves REQ-ACT.action_to_intent -/
+theorem an_action_resolves_to_an_intent :
+    same (dispatch "history.undo" cursorInFile noFiles []) (Intent.travel Move.back) = true ∧
+    same (dispatch "file.save" cursorInFile noFiles []) Intent.persist = true ∧
+    same (dispatch "design.fold_all" cursorInFile noFiles [])
+      (Intent.observe Watch.designFold) = true := by
+  native_decide
+
+/-- A rendered affordance carries its target after the action's name; a key
+finds the same target under the cursor. Both reach the one intent.
+
+@proves REQ-ACT.one_path -/
+theorem a_key_and_an_affordance_agree :
+    same (dispatch "design.toggle REQ-A" cursorOverNothing noFiles [])
+      (dispatch "design.toggle" { cursorOverNothing with under := some "REQ-A" } noFiles []) = true ∧
+    same (dispatch "file.open src/lib.rs" cursorOverNothing noFiles [])
+      (dispatch "file.open" cursorInListing noFiles []) = true := by
+  native_decide
+
+/-- Whether an intent changes the workspace through a command. -/
+def isEdit : Intent → Bool
+  | Intent.edit _ => true
+  | _ => false
+
+/-- Every action that changes the workspace resolves to a command, and the
+deletion carries the content it removes.
+
+@proves REQ-ACT.edits_are_commands -/
+theorem changes_are_commands :
+    isEdit (dispatch "file.new" cursorInFile noFiles []) = true ∧
+    isEdit (dispatch "file.rename" cursorInFile noFiles []) = true ∧
+    isEdit (dispatch "trace.new_requirement REQ-NEW" cursorInFile noFiles []) = true ∧
+    same (dispatch "file.delete" cursorInFile ⟨[("a.rs", "fn f() -> u8 0")]⟩ [])
+      (Intent.edit (Command.deleteFile "a.rs" "fn f() -> u8 0")) = true := by
+  native_decide
+
+/-- Resolution reads its four arguments and nothing else: the same action,
+focus, workspace and waiting changes give the same intent. The workspace it is
+given is the one it reads; the waiting changes are the ones it takes in.
+
+@proves REQ-ACT.dispatch_is_pure -/
+theorem dispatch_reads_only_its_arguments (a a' : String) (f f' : Focus) (w w' : Workspace)
+    (ws ws' : List Command) (ha : a = a') (hf : f = f') (hw : w = w') (hws : ws = ws') :
+    dispatch a f w ws = dispatch a' f' w' ws' := by
+  subst ha hf hw hws
+  rfl
+
+/-- And what it reads is what it answers from: the waiting changes become the
+batch accepted, and none waiting is a refusal.
+
+@proves REQ-ACT.dispatch_is_pure -/
+theorem accepting_takes_the_changes_given :
+    same (dispatch "observe.accept" cursorInFile noFiles [Command.createFile "n.rs"])
+      (Intent.observe (Watch.accept (Command.batch [Command.createFile "n.rs"]))) = true ∧
+    acts (dispatch "observe.accept" cursorInFile noFiles []) = false := by
+  native_decide
+
 end TraceLean.Act

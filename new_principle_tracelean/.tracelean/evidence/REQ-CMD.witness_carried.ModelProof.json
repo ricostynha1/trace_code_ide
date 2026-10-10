@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-CMD",
+    "clause": "witness_carried",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Command::a_deletion_carries_what_it_deletes",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "0f2150d582ad7f76",
+  "inputs": [
+    [
+      "model",
+      "854a6245d289ba86"
+    ],
+    [
+      "requirement",
+      "8a0925daeaa6e691"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

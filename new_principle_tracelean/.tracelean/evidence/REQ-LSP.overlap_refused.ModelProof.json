@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-LSP",
+    "clause": "overlap_refused",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Lsp::overlapping_edits_are_refused",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "3e144b857b842452",
+  "inputs": [
+    [
+      "model",
+      "2598b04e1b26dfde"
+    ],
+    [
+      "requirement",
+      "a2735d267a9a7a6a"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

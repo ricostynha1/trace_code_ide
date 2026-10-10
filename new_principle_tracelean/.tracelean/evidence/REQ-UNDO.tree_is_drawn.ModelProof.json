@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-UNDO",
+    "clause": "tree_is_drawn",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.HistoryView::a_branch_opens_a_column",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "0ff44bd4be97c1bb",
+  "inputs": [
+    [
+      "model",
+      "dffba39f17e9bf07"
+    ],
+    [
+      "requirement",
+      "44794eb29e0a5ea6"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

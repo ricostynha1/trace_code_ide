@@ -14494,6 +14494,26 @@
     {
       "role": "proves",
       "req": "ARCH-DETERMINISM",
+      "clause": "replay_exact",
+      "file": "formal/TraceLean/Persistence.lean",
+      "anchor": "formal/TraceLean/Persistence.lean::TraceLean.Persistence::replay_is_each_command_in_turn",
+      "body_hash": "e5e64db580ce1732",
+      "link_hash": "3b8ed84885701380",
+      "qualifier": null
+    },
+    {
+      "role": "proves",
+      "req": "ARCH-DETERMINISM",
+      "clause": "seeded_generation",
+      "file": "formal/TraceLean/Generator.lean",
+      "anchor": "formal/TraceLean/Generator.lean::TraceLean.Generator::the_seed_alone_fixes_the_cases",
+      "body_hash": "22e6ba9e13ac3aa9",
+      "link_hash": "3eb5ebe1cad4630b",
+      "qualifier": null
+    },
+    {
+      "role": "proves",
+      "req": "ARCH-DETERMINISM",
       "clause": "stable_ordering",
       "file": "formal/TraceLean/Lockfile.lean",
       "anchor": "formal/TraceLean/Lockfile.lean::TraceLean.Lockfile::ordering_is_idempotent_on_the_empty_list",
@@ -14524,6 +14544,46 @@
     {
       "role": "proves",
       "req": "REQ-ACT",
+      "clause": "action_to_intent",
+      "file": "formal/TraceLean/Act.lean",
+      "anchor": "formal/TraceLean/Act.lean::TraceLean.Act::an_action_resolves_to_an_intent",
+      "body_hash": "738dfdfd9c4f2463",
+      "link_hash": "1610bd54bee13162",
+      "qualifier": null
+    },
+    {
+      "role": "proves",
+      "req": "REQ-ACT",
+      "clause": "dispatch_is_pure",
+      "file": "formal/TraceLean/Act.lean",
+      "anchor": "formal/TraceLean/Act.lean::TraceLean.Act::accepting_takes_the_changes_given",
+      "body_hash": "d28c8c12daa18718",
+      "link_hash": "1a91eb954e631793",
+      "qualifier": null
+    },
+    {
+      "role": "proves",
+      "req": "REQ-ACT",
+      "clause": "dispatch_is_pure",
+      "file": "formal/TraceLean/Act.lean",
+      "anchor": "formal/TraceLean/Act.lean::TraceLean.Act::dispatch_reads_only_its_arguments",
+      "body_hash": "60852a7d595b0069",
+      "link_hash": "5242cf8a88ceb82d",
+      "qualifier": null
+    },
+    {
+      "role": "proves",
+      "req": "REQ-ACT",
+      "clause": "edits_are_commands",
+      "file": "formal/TraceLean/Act.lean",
+      "anchor": "formal/TraceLean/Act.lean::TraceLean.Act::changes_are_commands",
+      "body_hash": "e7952652c3f87558",
+      "link_hash": "f7b3d27e9c680c74",
+      "qualifier": null
+    },
+    {
+      "role": "proves",
+      "req": "REQ-ACT",
       "clause": "focus_is_carried",
       "file": "formal/TraceLean/Act.lean",
       "anchor": "formal/TraceLean/Act.lean::TraceLean.Act::opening_follows_the_cursor",
@@ -14539,6 +14599,16 @@
       "anchor": "formal/TraceLean/Act.lean::TraceLean.Act::a_missing_target_is_named",
       "body_hash": "b664cfdac8fd708b",
       "link_hash": "171fdeddd48be875",
+      "qualifier": null
+    },
+    {
+      "role": "proves",
+      "req": "REQ-ACT",
+      "clause": "one_path",
+      "file": "formal/TraceLean/Act.lean",
+      "anchor": "formal/TraceLean/Act.lean::TraceLean.Act::a_key_and_an_affordance_agree",
+      "body_hash": "f5b9c45208826d36",
+      "link_hash": "e09305f563e25626",
       "qualifier": null
     },
     {
@@ -14604,6 +14674,16 @@
     {
       "role": "proves",
       "req": "REQ-ANNOT",
+      "clause": "qualifiers",
+      "file": "formal/TraceLean/Annotation.lean",
+      "anchor": "formal/TraceLean/Annotation.lean::TraceLean.Annotation::qualifiers_attach_or_name_their_own",
+      "body_hash": "a1f254e2226288d4",
+      "link_hash": "9ce50b244d6fd114",
+      "qualifier": null
+    },
+    {
+      "role": "proves",
+      "req": "REQ-ANNOT",
       "clause": "region_balanced",
       "file": "formal/TraceLean/Annotation.lean",
       "anchor": "formal/TraceLean/Annotation.lean::TraceLean.Annotation::a_balanced_region_is_quiet",
@@ -14619,6 +14699,16 @@
       "anchor": "formal/TraceLean/Annotation.lean::TraceLean.Annotation::a_stray_end_is_reported",
       "body_hash": "3ca5145aadc79c4d",
       "link_hash": "233dc024dabec419",
+      "qualifier": null
+    },
+    {
+      "role": "proves",
+      "req": "REQ-ANNOT",
+      "clause": "role_vocabulary",
+      "file": "formal/TraceLean/Annotation.lean",
+      "anchor": "formal/TraceLean/Annotation.lean::TraceLean.Annotation::the_seven_roles_and_nothing_else",
+      "body_hash": "e572bb17ad1c5673",
+      "link_hash": "2d1a7e28f7b4a10e",
       "qualifier": null
     },
     {
@@ -14753,6 +14843,46 @@
     },
     {
       "role": "proves",
+      "req": "REQ-CMD",
+      "clause": "round_trip",
+      "file": "formal/TraceLean/Command.lean",
+      "anchor": "formal/TraceLean/Command.lean::TraceLean.Command::each_command_round_trips",
+      "body_hash": "4ef1be5a7aa08b78",
+      "link_hash": "f80ebeef82c9f6cb",
+      "qualifier": null
+    },
+    {
+      "role": "proves",
+      "req": "REQ-CMD",
+      "clause": "single_path",
+      "file": "formal/TraceLean/Command.lean",
+      "anchor": "formal/TraceLean/Command.lean::TraceLean.Command::a_batch_is_its_members_in_turn",
+      "body_hash": "fced3711f804be1e",
+      "link_hash": "41f36a82ef34a45a",
+      "qualifier": null
+    },
+    {
+      "role": "proves",
+      "req": "REQ-CMD",
+      "clause": "total_or_refused",
+      "file": "formal/TraceLean/Command.lean",
+      "anchor": "formal/TraceLean/Command.lean::TraceLean.Command::a_misfit_is_refused_whole",
+      "body_hash": "4a8f6891eb5737d1",
+      "link_hash": "de95a4dfc843d77b",
+      "qualifier": null
+    },
+    {
+      "role": "proves",
+      "req": "REQ-CMD",
+      "clause": "witness_carried",
+      "file": "formal/TraceLean/Command.lean",
+      "anchor": "formal/TraceLean/Command.lean::TraceLean.Command::a_deletion_carries_what_it_deletes",
+      "body_hash": "e04d19fd672165f4",
+      "link_hash": "0f2150d582ad7f76",
+      "qualifier": null
+    },
+    {
+      "role": "proves",
       "req": "REQ-CONTEXT",
       "clause": "part_named",
       "file": "formal/TraceLean/Context.lean",
@@ -14844,11 +14974,31 @@
     {
       "role": "proves",
       "req": "REQ-DOCLINK",
+      "clause": "declares_target",
+      "file": "formal/TraceLean/DocLink.lean",
+      "anchor": "formal/TraceLean/DocLink.lean::TraceLean.DocLink::a_document_declares_its_targets",
+      "body_hash": "35d7a386df349b37",
+      "link_hash": "d0d39e4aeb5e1744",
+      "qualifier": null
+    },
+    {
+      "role": "proves",
+      "req": "REQ-DOCLINK",
       "clause": "hash_moves_review",
       "file": "formal/TraceLean/DocLink.lean",
       "anchor": "formal/TraceLean/DocLink.lean::TraceLean.DocLink::unmoved_is_current",
       "body_hash": "e3ab5b28f6eb4bde",
       "link_hash": "5f94f90b614fe1c5",
+      "qualifier": null
+    },
+    {
+      "role": "proves",
+      "req": "REQ-DOCLINK",
+      "clause": "records_hash",
+      "file": "formal/TraceLean/DocLink.lean",
+      "anchor": "formal/TraceLean/DocLink.lean::TraceLean.DocLink::a_document_records_each_targets_hash",
+      "body_hash": "be0904d55b0463cf",
+      "link_hash": "146451c755d4887d",
       "qualifier": null
     },
     {
@@ -15019,6 +15169,16 @@
       "anchor": "formal/TraceLean/Coverage.lean::TraceLean.Coverage::a_reached_waiver_is_reported",
       "body_hash": "34db23dedacf937b",
       "link_hash": "af9d5b96ba4e9e19",
+      "qualifier": null
+    },
+    {
+      "role": "proves",
+      "req": "REQ-DRT-GEN",
+      "clause": "edges_sampled",
+      "file": "formal/TraceLean/Generator.lean",
+      "anchor": "formal/TraceLean/Generator.lean::TraceLean.Generator::edges_are_drawn_heavily",
+      "body_hash": "90a3df40e5199dd4",
+      "link_hash": "9a6d49be701642a1",
       "qualifier": null
     },
     {
@@ -15434,6 +15594,16 @@
     {
       "role": "proves",
       "req": "REQ-LSP",
+      "clause": "edits_become_commands",
+      "file": "formal/TraceLean/Lsp.lean",
+      "anchor": "formal/TraceLean/Lsp.lean::TraceLean.Lsp::an_edit_lowers_to_delete_and_insert",
+      "body_hash": "9730569f4355becc",
+      "link_hash": "144bf407df732cce",
+      "qualifier": null
+    },
+    {
+      "role": "proves",
+      "req": "REQ-LSP",
       "clause": "edits_ordered",
       "file": "formal/TraceLean/Lsp.lean",
       "anchor": "formal/TraceLean/Lsp.lean::TraceLean.Lsp::no_edits_lower_to_nothing",
@@ -15469,6 +15639,26 @@
       "anchor": "formal/TraceLean/SpecLsp.lean::TraceLean.SpecLsp::offset_round_trip",
       "body_hash": "4ff066f8b393c9b8",
       "link_hash": "92b1b80e05c0d2d7",
+      "qualifier": null
+    },
+    {
+      "role": "proves",
+      "req": "REQ-LSP",
+      "clause": "overlap_refused",
+      "file": "formal/TraceLean/Lsp.lean",
+      "anchor": "formal/TraceLean/Lsp.lean::TraceLean.Lsp::overlapping_edits_are_refused",
+      "body_hash": "5a43922cdfe0687e",
+      "link_hash": "3e144b857b842452",
+      "qualifier": null
+    },
+    {
+      "role": "proves",
+      "req": "REQ-LSP",
+      "clause": "registry_per_language",
+      "file": "formal/TraceLean/Lsp.lean",
+      "anchor": "formal/TraceLean/Lsp.lean::TraceLean.Lsp::each_language_has_its_own_server",
+      "body_hash": "cbf861fc0f5f7f5a",
+      "link_hash": "1bdb5de6477b6cbe",
       "qualifier": null
     },
     {
@@ -15544,11 +15734,41 @@
     {
       "role": "proves",
       "req": "REQ-PERSIST",
+      "clause": "append_only",
+      "file": "formal/TraceLean/Persistence.lean",
+      "anchor": "formal/TraceLean/Persistence.lean::TraceLean.Persistence::appending_keeps_what_was_there",
+      "body_hash": "3c10b04b05c06bc8",
+      "link_hash": "626278aeb882cfea",
+      "qualifier": null
+    },
+    {
+      "role": "proves",
+      "req": "REQ-PERSIST",
       "clause": "checkpoint_equivalent",
       "file": "formal/TraceLean/Persistence.lean",
       "anchor": "formal/TraceLean/Persistence.lean::TraceLean.Persistence::a_checkpoint_over_the_whole_log_replays_nothing",
       "body_hash": "ace938f645e180ea",
       "link_hash": "87215c4fffa64328",
+      "qualifier": null
+    },
+    {
+      "role": "proves",
+      "req": "REQ-PERSIST",
+      "clause": "replay_exact",
+      "file": "formal/TraceLean/Persistence.lean",
+      "anchor": "formal/TraceLean/Persistence.lean::TraceLean.Persistence::replay_is_each_command_in_turn",
+      "body_hash": "e5e64db580ce1732",
+      "link_hash": "0d41bcb7ad646e7b",
+      "qualifier": null
+    },
+    {
+      "role": "proves",
+      "req": "REQ-PERSIST",
+      "clause": "truncated_is_reported",
+      "file": "formal/TraceLean/Persistence.lean",
+      "anchor": "formal/TraceLean/Persistence.lean::TraceLean.Persistence::a_torn_entry_is_reported_and_replay_stops_there",
+      "body_hash": "1603da4aaa820615",
+      "link_hash": "4609cd90b189f33b",
       "qualifier": null
     },
     {
@@ -16174,11 +16394,91 @@
     {
       "role": "proves",
       "req": "REQ-UNDO",
+      "clause": "hover_shows_change",
+      "file": "formal/TraceLean/HistoryView.lean",
+      "anchor": "formal/TraceLean/HistoryView.lean::TraceLean.HistoryView::a_change_shows_its_lines",
+      "body_hash": "88abb633d00ed9a8",
+      "link_hash": "66eda418624d7b02",
+      "qualifier": null
+    },
+    {
+      "role": "proves",
+      "req": "REQ-UNDO",
       "clause": "jump_equivalence",
       "file": "formal/TraceLean/Tree.lean",
       "anchor": "formal/TraceLean/Tree.lean::TraceLean.Tree::an_empty_history_has_nothing_to_disagree_about",
       "body_hash": "7ac25729eb845caa",
       "link_hash": "fb15f063f9e35073",
+      "qualifier": null
+    },
+    {
+      "role": "proves",
+      "req": "REQ-UNDO",
+      "clause": "no_loss_on_branch",
+      "file": "formal/TraceLean/Tree.lean",
+      "anchor": "formal/TraceLean/Tree.lean::TraceLean.Tree::editing_after_undo_branches",
+      "body_hash": "c2aceb86e02104cd",
+      "link_hash": "d11e053ac5debae1",
+      "qualifier": null
+    },
+    {
+      "role": "proves",
+      "req": "REQ-UNDO",
+      "clause": "path_via_ancestor",
+      "file": "formal/TraceLean/Tree.lean",
+      "anchor": "formal/TraceLean/Tree.lean::TraceLean.Tree::a_jump_goes_through_the_common_ancestor",
+      "body_hash": "9cc29447c4a82244",
+      "link_hash": "8133dede57f2a323",
+      "qualifier": null
+    },
+    {
+      "role": "proves",
+      "req": "REQ-UNDO",
+      "clause": "preview_is_pure",
+      "file": "formal/TraceLean/Tree.lean",
+      "anchor": "formal/TraceLean/Tree.lean::TraceLean.Tree::a_preview_is_before_and_after",
+      "body_hash": "412daba706f9de3b",
+      "link_hash": "04b98c128a9d82f2",
+      "qualifier": null
+    },
+    {
+      "role": "proves",
+      "req": "REQ-UNDO",
+      "clause": "preview_is_pure",
+      "file": "formal/TraceLean/Tree.lean",
+      "anchor": "formal/TraceLean/Tree.lean::TraceLean.Tree::previewing_moves_nothing",
+      "body_hash": "5c9ac680c1f63f81",
+      "link_hash": "466938234a4daa4d",
+      "qualifier": null
+    },
+    {
+      "role": "proves",
+      "req": "REQ-UNDO",
+      "clause": "reachable",
+      "file": "formal/TraceLean/Tree.lean",
+      "anchor": "formal/TraceLean/Tree.lean::TraceLean.Tree::no_node_is_ever_dropped",
+      "body_hash": "b796067ef310c20c",
+      "link_hash": "3776efe349d62b9a",
+      "qualifier": null
+    },
+    {
+      "role": "proves",
+      "req": "REQ-UNDO",
+      "clause": "tree_is_drawn",
+      "file": "formal/TraceLean/HistoryView.lean",
+      "anchor": "formal/TraceLean/HistoryView.lean::TraceLean.HistoryView::a_branch_opens_a_column",
+      "body_hash": "e52497c1663862e8",
+      "link_hash": "0ff44bd4be97c1bb",
+      "qualifier": null
+    },
+    {
+      "role": "proves",
+      "req": "REQ-UNDO",
+      "clause": "tree_is_shown",
+      "file": "formal/TraceLean/HistoryView.lean",
+      "anchor": "formal/TraceLean/HistoryView.lean::TraceLean.HistoryView::every_node_is_named_and_jumps",
+      "body_hash": "c09b0238d1983078",
+      "link_hash": "8b5464ed5f077814",
       "qualifier": null
     },
     {
@@ -25803,6 +26103,35 @@
     {
       "key": {
         "reqId": "ARCH-DETERMINISM",
+        "clause": "replay_exact",
+        "bond": "modelProof"
+      },
+      "level": "L4",
+      "detail": {
+        "proof": {
+          "theoremName": "TraceLean.Persistence::replay_is_each_command_in_turn",
+          "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        }
+      },
+      "linkHash": "3b8ed84885701380",
+      "inputs": [
+        [
+          "model",
+          "28d6b9470ce598fd"
+        ],
+        [
+          "requirement",
+          "d93ac3e8b138f885"
+        ],
+        [
+          "toolchain",
+          "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "ARCH-DETERMINISM",
         "clause": "seeded_generation",
         "bond": "requirementModel"
       },
@@ -25855,6 +26184,35 @@
         [
           "requirement",
           "c406abe63455efc3"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "ARCH-DETERMINISM",
+        "clause": "seeded_generation",
+        "bond": "modelProof"
+      },
+      "level": "L4",
+      "detail": {
+        "proof": {
+          "theoremName": "TraceLean.Generator::the_seed_alone_fixes_the_cases",
+          "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        }
+      },
+      "linkHash": "3eb5ebe1cad4630b",
+      "inputs": [
+        [
+          "model",
+          "9ef66c65431edf29"
+        ],
+        [
+          "requirement",
+          "c406abe63455efc3"
+        ],
+        [
+          "toolchain",
+          "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
         ]
       ]
     },
@@ -26179,6 +26537,35 @@
     {
       "key": {
         "reqId": "REQ-ACT",
+        "clause": "action_to_intent",
+        "bond": "modelProof"
+      },
+      "level": "L4",
+      "detail": {
+        "proof": {
+          "theoremName": "TraceLean.Act::an_action_resolves_to_an_intent",
+          "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        }
+      },
+      "linkHash": "1610bd54bee13162",
+      "inputs": [
+        [
+          "model",
+          "43418699da34631e"
+        ],
+        [
+          "requirement",
+          "aab0062c5c79bfc2"
+        ],
+        [
+          "toolchain",
+          "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-ACT",
         "clause": "dispatch_is_pure",
         "bond": "requirementModel"
       },
@@ -26237,6 +26624,35 @@
     {
       "key": {
         "reqId": "REQ-ACT",
+        "clause": "dispatch_is_pure",
+        "bond": "modelProof"
+      },
+      "level": "L4",
+      "detail": {
+        "proof": {
+          "theoremName": "TraceLean.Act::accepting_takes_the_changes_given",
+          "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        }
+      },
+      "linkHash": "1a91eb954e631793",
+      "inputs": [
+        [
+          "model",
+          "43418699da34631e"
+        ],
+        [
+          "requirement",
+          "159c72b18a9d8c8f"
+        ],
+        [
+          "toolchain",
+          "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-ACT",
         "clause": "edits_are_commands",
         "bond": "requirementModel"
       },
@@ -26289,6 +26705,35 @@
         [
           "requirement",
           "f483d1bec841e49f"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-ACT",
+        "clause": "edits_are_commands",
+        "bond": "modelProof"
+      },
+      "level": "L4",
+      "detail": {
+        "proof": {
+          "theoremName": "TraceLean.Act::changes_are_commands",
+          "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        }
+      },
+      "linkHash": "f7b3d27e9c680c74",
+      "inputs": [
+        [
+          "model",
+          "43418699da34631e"
+        ],
+        [
+          "requirement",
+          "f483d1bec841e49f"
+        ],
+        [
+          "toolchain",
+          "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
         ]
       ]
     },
@@ -26579,6 +27024,35 @@
         [
           "requirement",
           "78ca4adb9622fddd"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-ACT",
+        "clause": "one_path",
+        "bond": "modelProof"
+      },
+      "level": "L4",
+      "detail": {
+        "proof": {
+          "theoremName": "TraceLean.Act::a_key_and_an_affordance_agree",
+          "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        }
+      },
+      "linkHash": "e09305f563e25626",
+      "inputs": [
+        [
+          "model",
+          "43418699da34631e"
+        ],
+        [
+          "requirement",
+          "78ca4adb9622fddd"
+        ],
+        [
+          "toolchain",
+          "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
         ]
       ]
     },
@@ -27222,6 +27696,35 @@
     {
       "key": {
         "reqId": "REQ-ANNOT",
+        "clause": "qualifiers",
+        "bond": "modelProof"
+      },
+      "level": "L4",
+      "detail": {
+        "proof": {
+          "theoremName": "TraceLean.Annotation::qualifiers_attach_or_name_their_own",
+          "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        }
+      },
+      "linkHash": "9ce50b244d6fd114",
+      "inputs": [
+        [
+          "model",
+          "c3ada71c9c444a58"
+        ],
+        [
+          "requirement",
+          "62ca00da5ea277ed"
+        ],
+        [
+          "toolchain",
+          "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-ANNOT",
         "clause": "region_balanced",
         "bond": "requirementModel"
       },
@@ -27360,6 +27863,35 @@
         [
           "requirement",
           "1a41816762f47d62"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-ANNOT",
+        "clause": "role_vocabulary",
+        "bond": "modelProof"
+      },
+      "level": "L4",
+      "detail": {
+        "proof": {
+          "theoremName": "TraceLean.Annotation::the_seven_roles_and_nothing_else",
+          "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        }
+      },
+      "linkHash": "2d1a7e28f7b4a10e",
+      "inputs": [
+        [
+          "model",
+          "c3ada71c9c444a58"
+        ],
+        [
+          "requirement",
+          "1a41816762f47d62"
+        ],
+        [
+          "toolchain",
+          "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
         ]
       ]
     },
@@ -28464,6 +28996,35 @@
     {
       "key": {
         "reqId": "REQ-CMD",
+        "clause": "round_trip",
+        "bond": "modelProof"
+      },
+      "level": "L4",
+      "detail": {
+        "proof": {
+          "theoremName": "TraceLean.Command::each_command_round_trips",
+          "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        }
+      },
+      "linkHash": "f80ebeef82c9f6cb",
+      "inputs": [
+        [
+          "model",
+          "03fee9805742243c"
+        ],
+        [
+          "requirement",
+          "8b7aad0d88dac8d9"
+        ],
+        [
+          "toolchain",
+          "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-CMD",
         "clause": "single_path",
         "bond": "requirementModel"
       },
@@ -28516,6 +29077,35 @@
         [
           "requirement",
           "f7bb3c68b813cb8c"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-CMD",
+        "clause": "single_path",
+        "bond": "modelProof"
+      },
+      "level": "L4",
+      "detail": {
+        "proof": {
+          "theoremName": "TraceLean.Command::a_batch_is_its_members_in_turn",
+          "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        }
+      },
+      "linkHash": "41f36a82ef34a45a",
+      "inputs": [
+        [
+          "model",
+          "de96745070240343"
+        ],
+        [
+          "requirement",
+          "f7bb3c68b813cb8c"
+        ],
+        [
+          "toolchain",
+          "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
         ]
       ]
     },
@@ -28580,6 +29170,35 @@
     {
       "key": {
         "reqId": "REQ-CMD",
+        "clause": "total_or_refused",
+        "bond": "modelProof"
+      },
+      "level": "L4",
+      "detail": {
+        "proof": {
+          "theoremName": "TraceLean.Command::a_misfit_is_refused_whole",
+          "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        }
+      },
+      "linkHash": "de95a4dfc843d77b",
+      "inputs": [
+        [
+          "model",
+          "de96745070240343"
+        ],
+        [
+          "requirement",
+          "d0d101053ed35ba7"
+        ],
+        [
+          "toolchain",
+          "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-CMD",
         "clause": "witness_carried",
         "bond": "requirementModel"
       },
@@ -28632,6 +29251,35 @@
         [
           "requirement",
           "8a0925daeaa6e691"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-CMD",
+        "clause": "witness_carried",
+        "bond": "modelProof"
+      },
+      "level": "L4",
+      "detail": {
+        "proof": {
+          "theoremName": "TraceLean.Command::a_deletion_carries_what_it_deletes",
+          "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        }
+      },
+      "linkHash": "0f2150d582ad7f76",
+      "inputs": [
+        [
+          "model",
+          "854a6245d289ba86"
+        ],
+        [
+          "requirement",
+          "8a0925daeaa6e691"
+        ],
+        [
+          "toolchain",
+          "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
         ]
       ]
     },
@@ -29709,6 +30357,35 @@
     {
       "key": {
         "reqId": "REQ-DOCLINK",
+        "clause": "declares_target",
+        "bond": "modelProof"
+      },
+      "level": "L4",
+      "detail": {
+        "proof": {
+          "theoremName": "TraceLean.DocLink::a_document_declares_its_targets",
+          "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        }
+      },
+      "linkHash": "d0d39e4aeb5e1744",
+      "inputs": [
+        [
+          "model",
+          "35e6357949d421ab"
+        ],
+        [
+          "requirement",
+          "ec5786c131735979"
+        ],
+        [
+          "toolchain",
+          "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-DOCLINK",
         "clause": "hash_moves_review",
         "bond": "requirementModel"
       },
@@ -29848,6 +30525,35 @@
         [
           "requirement",
           "bae0e29608820e42"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-DOCLINK",
+        "clause": "records_hash",
+        "bond": "modelProof"
+      },
+      "level": "L4",
+      "detail": {
+        "proof": {
+          "theoremName": "TraceLean.DocLink::a_document_records_each_targets_hash",
+          "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        }
+      },
+      "linkHash": "146451c755d4887d",
+      "inputs": [
+        [
+          "model",
+          "35e6357949d421ab"
+        ],
+        [
+          "requirement",
+          "bae0e29608820e42"
+        ],
+        [
+          "toolchain",
+          "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
         ]
       ]
     },
@@ -31094,6 +31800,35 @@
         [
           "requirement",
           "eb63a6d441170a5d"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-DRT-GEN",
+        "clause": "edges_sampled",
+        "bond": "modelProof"
+      },
+      "level": "L4",
+      "detail": {
+        "proof": {
+          "theoremName": "TraceLean.Generator::edges_are_drawn_heavily",
+          "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        }
+      },
+      "linkHash": "9a6d49be701642a1",
+      "inputs": [
+        [
+          "model",
+          "f9e5075bb9a3064a"
+        ],
+        [
+          "requirement",
+          "eb63a6d441170a5d"
+        ],
+        [
+          "toolchain",
+          "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
         ]
       ]
     },
@@ -34838,6 +35573,35 @@
     {
       "key": {
         "reqId": "REQ-LSP",
+        "clause": "edits_become_commands",
+        "bond": "modelProof"
+      },
+      "level": "L4",
+      "detail": {
+        "proof": {
+          "theoremName": "TraceLean.Lsp::an_edit_lowers_to_delete_and_insert",
+          "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        }
+      },
+      "linkHash": "144bf407df732cce",
+      "inputs": [
+        [
+          "model",
+          "2598b04e1b26dfde"
+        ],
+        [
+          "requirement",
+          "d36c3c3777d38253"
+        ],
+        [
+          "toolchain",
+          "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-LSP",
         "clause": "edits_ordered",
         "bond": "requirementModel"
       },
@@ -35157,6 +35921,35 @@
     {
       "key": {
         "reqId": "REQ-LSP",
+        "clause": "overlap_refused",
+        "bond": "modelProof"
+      },
+      "level": "L4",
+      "detail": {
+        "proof": {
+          "theoremName": "TraceLean.Lsp::overlapping_edits_are_refused",
+          "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        }
+      },
+      "linkHash": "3e144b857b842452",
+      "inputs": [
+        [
+          "model",
+          "2598b04e1b26dfde"
+        ],
+        [
+          "requirement",
+          "a2735d267a9a7a6a"
+        ],
+        [
+          "toolchain",
+          "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-LSP",
         "clause": "registry_per_language",
         "bond": "requirementModel"
       },
@@ -35209,6 +36002,35 @@
         [
           "requirement",
           "62f5554020aba398"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-LSP",
+        "clause": "registry_per_language",
+        "bond": "modelProof"
+      },
+      "level": "L4",
+      "detail": {
+        "proof": {
+          "theoremName": "TraceLean.Lsp::each_language_has_its_own_server",
+          "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        }
+      },
+      "linkHash": "1bdb5de6477b6cbe",
+      "inputs": [
+        [
+          "model",
+          "24979beb9cebcabd"
+        ],
+        [
+          "requirement",
+          "62f5554020aba398"
+        ],
+        [
+          "toolchain",
+          "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
         ]
       ]
     },
@@ -36398,6 +37220,35 @@
     {
       "key": {
         "reqId": "REQ-PERSIST",
+        "clause": "append_only",
+        "bond": "modelProof"
+      },
+      "level": "L4",
+      "detail": {
+        "proof": {
+          "theoremName": "TraceLean.Persistence::appending_keeps_what_was_there",
+          "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        }
+      },
+      "linkHash": "626278aeb882cfea",
+      "inputs": [
+        [
+          "model",
+          "a4f38c1a37bb81c7"
+        ],
+        [
+          "requirement",
+          "cdd5ea752334f1c3"
+        ],
+        [
+          "toolchain",
+          "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-PERSIST",
         "clause": "checkpoint_equivalent",
         "bond": "requirementModel"
       },
@@ -36541,6 +37392,35 @@
     {
       "key": {
         "reqId": "REQ-PERSIST",
+        "clause": "replay_exact",
+        "bond": "modelProof"
+      },
+      "level": "L4",
+      "detail": {
+        "proof": {
+          "theoremName": "TraceLean.Persistence::replay_is_each_command_in_turn",
+          "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        }
+      },
+      "linkHash": "0d41bcb7ad646e7b",
+      "inputs": [
+        [
+          "model",
+          "28d6b9470ce598fd"
+        ],
+        [
+          "requirement",
+          "6f643e188747b2cd"
+        ],
+        [
+          "toolchain",
+          "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-PERSIST",
         "clause": "truncated_is_reported",
         "bond": "requirementModel"
       },
@@ -36592,6 +37472,35 @@
         [
           "requirement",
           "1b55ac09ed1d968a"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-PERSIST",
+        "clause": "truncated_is_reported",
+        "bond": "modelProof"
+      },
+      "level": "L4",
+      "detail": {
+        "proof": {
+          "theoremName": "TraceLean.Persistence::a_torn_entry_is_reported_and_replay_stops_there",
+          "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        }
+      },
+      "linkHash": "4609cd90b189f33b",
+      "inputs": [
+        [
+          "model",
+          "28d6b9470ce598fd"
+        ],
+        [
+          "requirement",
+          "1b55ac09ed1d968a"
+        ],
+        [
+          "toolchain",
+          "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
         ]
       ]
     },
@@ -43747,6 +44656,35 @@
     {
       "key": {
         "reqId": "REQ-UNDO",
+        "clause": "hover_shows_change",
+        "bond": "modelProof"
+      },
+      "level": "L4",
+      "detail": {
+        "proof": {
+          "theoremName": "TraceLean.HistoryView::a_change_shows_its_lines",
+          "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        }
+      },
+      "linkHash": "66eda418624d7b02",
+      "inputs": [
+        [
+          "model",
+          "6b637b2e9eb085b9"
+        ],
+        [
+          "requirement",
+          "9747a710917660e5"
+        ],
+        [
+          "toolchain",
+          "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-UNDO",
         "clause": "jump_equivalence",
         "bond": "requirementModel"
       },
@@ -43890,6 +44828,35 @@
     {
       "key": {
         "reqId": "REQ-UNDO",
+        "clause": "no_loss_on_branch",
+        "bond": "modelProof"
+      },
+      "level": "L4",
+      "detail": {
+        "proof": {
+          "theoremName": "TraceLean.Tree::editing_after_undo_branches",
+          "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        }
+      },
+      "linkHash": "d11e053ac5debae1",
+      "inputs": [
+        [
+          "model",
+          "4f4d41ec41bf2c80"
+        ],
+        [
+          "requirement",
+          "0b9293da91b8794e"
+        ],
+        [
+          "toolchain",
+          "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-UNDO",
         "clause": "path_via_ancestor",
         "bond": "requirementModel"
       },
@@ -43941,6 +44908,35 @@
         [
           "requirement",
           "7671b7c4a1eec783"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-UNDO",
+        "clause": "path_via_ancestor",
+        "bond": "modelProof"
+      },
+      "level": "L4",
+      "detail": {
+        "proof": {
+          "theoremName": "TraceLean.Tree::a_jump_goes_through_the_common_ancestor",
+          "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        }
+      },
+      "linkHash": "8133dede57f2a323",
+      "inputs": [
+        [
+          "model",
+          "4f4d41ec41bf2c80"
+        ],
+        [
+          "requirement",
+          "7671b7c4a1eec783"
+        ],
+        [
+          "toolchain",
+          "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
         ]
       ]
     },
@@ -44004,6 +45000,35 @@
     {
       "key": {
         "reqId": "REQ-UNDO",
+        "clause": "preview_is_pure",
+        "bond": "modelProof"
+      },
+      "level": "L4",
+      "detail": {
+        "proof": {
+          "theoremName": "TraceLean.Tree::a_preview_is_before_and_after",
+          "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        }
+      },
+      "linkHash": "04b98c128a9d82f2",
+      "inputs": [
+        [
+          "model",
+          "4f4d41ec41bf2c80"
+        ],
+        [
+          "requirement",
+          "9ef31d958b332d35"
+        ],
+        [
+          "toolchain",
+          "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-UNDO",
         "clause": "reachable",
         "bond": "requirementModel"
       },
@@ -44055,6 +45080,35 @@
         [
           "requirement",
           "a9082a28c57c4530"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-UNDO",
+        "clause": "reachable",
+        "bond": "modelProof"
+      },
+      "level": "L4",
+      "detail": {
+        "proof": {
+          "theoremName": "TraceLean.Tree::no_node_is_ever_dropped",
+          "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        }
+      },
+      "linkHash": "3776efe349d62b9a",
+      "inputs": [
+        [
+          "model",
+          "4f4d41ec41bf2c80"
+        ],
+        [
+          "requirement",
+          "a9082a28c57c4530"
+        ],
+        [
+          "toolchain",
+          "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
         ]
       ]
     },
@@ -44119,6 +45173,35 @@
     {
       "key": {
         "reqId": "REQ-UNDO",
+        "clause": "tree_is_drawn",
+        "bond": "modelProof"
+      },
+      "level": "L4",
+      "detail": {
+        "proof": {
+          "theoremName": "TraceLean.HistoryView::a_branch_opens_a_column",
+          "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        }
+      },
+      "linkHash": "0ff44bd4be97c1bb",
+      "inputs": [
+        [
+          "model",
+          "dffba39f17e9bf07"
+        ],
+        [
+          "requirement",
+          "44794eb29e0a5ea6"
+        ],
+        [
+          "toolchain",
+          "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-UNDO",
         "clause": "tree_is_shown",
         "bond": "requirementModel"
       },
@@ -44171,6 +45254,35 @@
         [
           "requirement",
           "8c27c6edfa27ff8c"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-UNDO",
+        "clause": "tree_is_shown",
+        "bond": "modelProof"
+      },
+      "level": "L4",
+      "detail": {
+        "proof": {
+          "theoremName": "TraceLean.HistoryView::every_node_is_named_and_jumps",
+          "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        }
+      },
+      "linkHash": "8b5464ed5f077814",
+      "inputs": [
+        [
+          "model",
+          "140ff145ef11d236"
+        ],
+        [
+          "requirement",
+          "8c27c6edfa27ff8c"
+        ],
+        [
+          "toolchain",
+          "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
         ]
       ]
     },

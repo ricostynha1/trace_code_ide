@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-ACT",
+    "clause": "action_to_intent",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Act::an_action_resolves_to_an_intent",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "1610bd54bee13162",
+  "inputs": [
+    [
+      "model",
+      "43418699da34631e"
+    ],
+    [
+      "requirement",
+      "aab0062c5c79bfc2"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

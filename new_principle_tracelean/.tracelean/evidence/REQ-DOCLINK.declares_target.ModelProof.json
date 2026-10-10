@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-DOCLINK",
+    "clause": "declares_target",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.DocLink::a_document_declares_its_targets",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "d0d39e4aeb5e1744",
+  "inputs": [
+    [
+      "model",
+      "35e6357949d421ab"
+    ],
+    [
+      "requirement",
+      "ec5786c131735979"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

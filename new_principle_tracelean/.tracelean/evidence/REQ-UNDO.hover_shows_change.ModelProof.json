@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-UNDO",
+    "clause": "hover_shows_change",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.HistoryView::a_change_shows_its_lines",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "66eda418624d7b02",
+  "inputs": [
+    [
+      "model",
+      "6b637b2e9eb085b9"
+    ],
+    [
+      "requirement",
+      "9747a710917660e5"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

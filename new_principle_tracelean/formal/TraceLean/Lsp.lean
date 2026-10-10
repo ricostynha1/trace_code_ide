@@ -246,4 +246,42 @@ theorem a_declared_encoding_is_the_answer :
     encodingFor [("rust", .running .utf8)] "rust" = DisplayEncoding.result .utf8 := by
   native_decide
 
+/-- Each language is answered by its own server: two registered side by side
+keep their own encodings, and a third language has none of theirs.
+
+@proves REQ-LSP.registry_per_language -/
+theorem each_language_has_its_own_server :
+    let registry := [("rust", ServerState.running .utf8), ("lean", ServerState.running .utf16)]
+    encodingFor registry "rust" = .result .utf8 ∧ encodingFor registry "lean" = .result .utf16 ∧
+      encodingFor registry "python" = .unavailable "no server is registered for python" := by
+  native_decide
+
+/-- What lowering produced, as text, to compare: commands have no decidable
+equality, being recursive. -/
+def loweredText (lowered : Lowered) : String := (Lean.toJson lowered).compress
+
+/-- Whether lowering refused. -/
+def isRefused : Lowered → Bool
+  | .refused _ => true
+  | .commands _ => false
+
+/-- A server's edit becomes the commands that make it: a replacement is the
+deletion of what was there, carrying it, and the insertion of the new text.
+
+@proves REQ-LSP.edits_become_commands -/
+theorem an_edit_lowers_to_delete_and_insert :
+    loweredText (lower "a.rs" "hello" [⟨0, 1, "J"⟩])
+      = loweredText (.commands [Command.delete "a.rs" 0 "h", Command.insert "a.rs" 0 "J"]) := by
+  native_decide
+
+/-- Two edits covering the same text are refused, naming both; two that only
+touch at a boundary are not.
+
+@proves REQ-LSP.overlap_refused -/
+theorem overlapping_edits_are_refused :
+    loweredText (lower "a.rs" "hello" [⟨0, 3, "x"⟩, ⟨2, 4, "y"⟩])
+      = loweredText (.refused (.overlap 0 2)) ∧
+    isRefused (lower "a.rs" "hello" [⟨0, 2, "x"⟩, ⟨2, 4, "y"⟩]) = false := by
+  native_decide
+
 end TraceLean.Lsp

@@ -234,4 +234,22 @@ theorem confirming_an_unknown_target_says_so :
     recordedFrontmatter ["a"] [] = "describes: [a]\ndescribed_hash:\n  a: ?\n" := by
   native_decide
 
+/-- A document declares what it describes in its frontmatter, as anchors read
+back in the order written.
+
+@proves REQ-DOCLINK.declares_target -/
+theorem a_document_declares_its_targets :
+    (declaredIn ["---", "describes: [REQ-A, src/x.rs::f]", "---", "# Doc"]).map (·.1)
+      = ["REQ-A", "src/x.rs::f"] := by
+  native_decide
+
+/-- A document records what each target hashed to when it was written, and a
+target with nothing recorded reads as an empty hash rather than a guessed one.
+
+@proves REQ-DOCLINK.records_hash -/
+theorem a_document_records_each_targets_hash :
+    declaredIn ["---", "describes: [REQ-A, REQ-B]", "described_hash:", "  REQ-A: 3c66", "---"]
+      = [("REQ-A", "3c66"), ("REQ-B", "")] := by
+  native_decide
+
 end TraceLean.DocLink

@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-ACT",
+    "clause": "dispatch_is_pure",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Act::accepting_takes_the_changes_given",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "1a91eb954e631793",
+  "inputs": [
+    [
+      "model",
+      "43418699da34631e"
+    ],
+    [
+      "requirement",
+      "159c72b18a9d8c8f"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

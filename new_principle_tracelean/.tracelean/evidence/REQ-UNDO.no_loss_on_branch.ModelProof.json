@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-UNDO",
+    "clause": "no_loss_on_branch",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Tree::editing_after_undo_branches",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "d11e053ac5debae1",
+  "inputs": [
+    [
+      "model",
+      "4f4d41ec41bf2c80"
+    ],
+    [
+      "requirement",
+      "0b9293da91b8794e"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

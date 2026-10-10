@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-CMD",
+    "clause": "single_path",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Command::a_batch_is_its_members_in_turn",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "41f36a82ef34a45a",
+  "inputs": [
+    [
+      "model",
+      "de96745070240343"
+    ],
+    [
+      "requirement",
+      "f7bb3c68b813cb8c"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

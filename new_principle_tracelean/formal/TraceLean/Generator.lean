@@ -311,4 +311,33 @@ theorem a_zero_seed_does_not_stick :
     rawStream 0 3 ≠ [0, 0, 0] := by
   native_decide
 
+theorem raw_stream_go_prefix (n m : Nat) :
+    ∀ r : Rng, (rawStreamGo (n + m) r).take n = rawStreamGo n r := by
+  induction n
+  case zero =>
+    intro r
+    simp [rawStreamGo]
+  case succ k ih =>
+    intro r
+    rw [Nat.succ_add]
+    simp [rawStreamGo, ih]
+
+/-- The cases are a function of the seed alone: asking for more never changes
+the ones already drawn, and another seed draws others.
+
+@proves ARCH-DETERMINISM.seeded_generation -/
+theorem the_seed_alone_fixes_the_cases (seed n m : Nat) :
+    (rawStream seed (n + m)).take n = rawStream seed n ∧ rawStream 1 4 ≠ rawStream 2 4 := by
+  constructor
+  · exact raw_stream_go_prefix n m _
+  · native_decide
+
+/-- A declared edge is drawn far more often than uniform drawing would give it:
+one value in a thousand and one, drawn in more than one case in five.
+
+@proves REQ-DRT-GEN.edges_sampled -/
+theorem edges_are_drawn_heavily :
+    ((natStream 1 (some 1000) [7] 200).filter (· == 7)).length ≥ 40 := by
+  native_decide
+
 end TraceLean.Generator

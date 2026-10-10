@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-CMD",
+    "clause": "total_or_refused",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Command::a_misfit_is_refused_whole",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "de95a4dfc843d77b",
+  "inputs": [
+    [
+      "model",
+      "de96745070240343"
+    ],
+    [
+      "requirement",
+      "d0d101053ed35ba7"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

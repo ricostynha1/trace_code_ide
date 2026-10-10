@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-PERSIST",
+    "clause": "truncated_is_reported",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Persistence::a_torn_entry_is_reported_and_replay_stops_there",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "4609cd90b189f33b",
+  "inputs": [
+    [
+      "model",
+      "28d6b9470ce598fd"
+    ],
+    [
+      "requirement",
+      "1b55ac09ed1d968a"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

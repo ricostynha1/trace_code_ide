@@ -137,4 +137,41 @@ theorem a_checkpoint_over_the_whole_log_replays_nothing
     replayFrom { workspace := w, entries := commands.length } commands = .ok w.canon := by
   simp [replayFrom, replay]
 
+/-- Replaying a history is applying its commands in order to the state it began
+from, and nothing else: no entries reaches that state, and one more entry is
+that command applied to where the rest reached, or the refusal it met.
+
+@proves REQ-PERSIST.replay_exact
+@proves ARCH-DETERMINISM.replay_exact -/
+theorem replay_is_each_command_in_turn (base : Workspace) (commands : List Command) (last : Command) :
+    replay base [] = .ok base.canon ∧
+    replay base (commands ++ [last]) = replayStep (replay base commands) last := by
+  constructor
+  · simp [replay]
+  · simp [replay, List.foldl_append]
+
+/-- Two entries as a log writes them, as text. -/
+def sampleEntries : List String :=
+  [(Lean.toJson (Command.createFile "a.rs")).compress, (Lean.toJson (Command.insert "a.rs" 0 "x")).compress]
+
+/-- A record that ends mid-entry is reported at that entry, and replays the
+entries before it and nothing after.
+
+@proves REQ-PERSIST.truncated_is_reported -/
+theorem a_torn_entry_is_reported_and_replay_stops_there :
+    (parseLog [sampleEntries.headD "", "torn mid-wri"]).commands.length = 1 ∧
+    (parseLog [sampleEntries.headD "", "torn mid-wri"]).truncatedAfter = some 1 ∧
+    (parseLog (sampleEntries.take 1 ++ ["torn"] ++ sampleEntries.drop 1)).commands.length = 1 ∧
+    (parseLog sampleEntries).truncatedAfter = none := by
+  native_decide
+
+/-- Appending to a log leaves what its earlier entries replay as it was: the
+history grows at its end and is not rewritten.
+
+@proves REQ-PERSIST.append_only -/
+theorem appending_keeps_what_was_there :
+    ((parseLog (sampleEntries.take 1)).commands.map (fun c => (Lean.toJson c).compress))
+      = ((parseLog sampleEntries).commands.take 1).map (fun c => (Lean.toJson c).compress) := by
+  native_decide
+
 end TraceLean.Persistence

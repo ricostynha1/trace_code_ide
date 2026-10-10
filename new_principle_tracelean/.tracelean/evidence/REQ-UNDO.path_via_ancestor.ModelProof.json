@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-UNDO",
+    "clause": "path_via_ancestor",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Tree::a_jump_goes_through_the_common_ancestor",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "8133dede57f2a323",
+  "inputs": [
+    [
+      "model",
+      "4f4d41ec41bf2c80"
+    ],
+    [
+      "requirement",
+      "7671b7c4a1eec783"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

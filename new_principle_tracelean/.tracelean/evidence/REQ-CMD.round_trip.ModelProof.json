@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-CMD",
+    "clause": "round_trip",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Command::each_command_round_trips",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "f80ebeef82c9f6cb",
+  "inputs": [
+    [
+      "model",
+      "03fee9805742243c"
+    ],
+    [
+      "requirement",
+      "8b7aad0d88dac8d9"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

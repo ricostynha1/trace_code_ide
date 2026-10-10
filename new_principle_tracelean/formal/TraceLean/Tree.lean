@@ -292,4 +292,84 @@ theorem an_empty_history_has_nothing_to_disagree_about (base : Workspace) :
     (runScript base []).travelled = (runScript base []).replayed := by
   rfl
 
+/-- One file, to edit below. -/
+def one : Workspace := ⟨[("a.rs", "hello")]⟩
+
+/-- Edit, undo, edit again: two different first changes, the second a sibling
+of the first. -/
+def branching : List Step :=
+  [.push (.insert "a.rs" 0 "x"), .move .undo, .push (.insert "a.rs" 0 "y")]
+
+/-- Undoing and then editing makes a branch: the abandoned change is still a
+node, and the new one is beside it rather than over it.
+
+@proves REQ-UNDO.no_loss_on_branch -/
+theorem editing_after_undo_branches :
+    (runScript one branching).nodes = [0, 1] ∧
+    (runScript one branching).current = some 1 ∧
+    (((fromScript one branching).node? 1).map (·.parent)) = some none ∧
+    (runScript one branching).replayed
+      = [.ok ⟨[("a.rs", "xhello")]⟩, .ok ⟨[("a.rs", "yhello")]⟩] := by
+  native_decide
+
+/-- Recording a command keeps every node there was, adding at most one; moving
+through the history keeps them all.
+
+@proves REQ-UNDO.reachable -/
+theorem no_node_is_ever_dropped (t : Tree) (c : Command) :
+    ((t.push c).ids = t.ids ∨ (t.push c).ids = t.ids ++ [t.nextId]) ∧
+    t.undo.ids = t.ids ∧ t.redo.ids = t.ids ∧ (t.jumpTo 0).2.ids = t.ids := by
+  refine ⟨?_, ?_, ?_, ?_⟩
+  · unfold Tree.push
+    split
+    · exact Or.inl rfl
+    · split
+      · exact Or.inl rfl
+      · apply Or.inr
+        simp only [Tree.ids, List.map_append, List.map_map]
+        congr 1
+        apply List.map_congr_left
+        intro n _
+        simp only [Function.comp]
+        split <;> rfl
+  · unfold Tree.undo
+    split
+    · rfl
+    · split <;> rfl
+  · unfold Tree.redo
+    simp only
+    split <;> rfl
+  · unfold Tree.jumpTo
+    simp only
+    split <;> rfl
+
+/-- Jumping between branches goes up to the shared ancestor, inverting, then
+down, applying: from `y` to `x` undoes `y` and does `x`; from a grandchild to
+its aunt shares one step of ancestry.
+
+@proves REQ-UNDO.path_via_ancestor -/
+theorem a_jump_goes_through_the_common_ancestor :
+    outcomeOf ((fromScript one branching).jumpTo 0).1 = .ok ⟨[("a.rs", "xhello")]⟩ ∧
+    Tree.sharedPrefix [0, 2] [0, 1] = 1 ∧
+    (let t := fromScript one [.push (.insert "a.rs" 0 "a"), .push (.insert "a.rs" 0 "b"),
+                              .move .undo, .push (.insert "a.rs" 0 "c")]
+     t.ancestry 2 = [0, 2] ∧ outcomeOf (t.jumpTo 1).1 = .ok ⟨[("a.rs", "bahello")]⟩) := by
+  native_decide
+
+/-- Previewing a node returns the states either side of its change and leaves
+the position where it was.
+
+@proves REQ-UNDO.preview_is_pure -/
+theorem previewing_moves_nothing (base : Workspace) (script : List Step) :
+    (runScript base script).currentAfterPreviews = (runScript base script).current := by
+  rfl
+
+/-- And what it returns is the change: before and after the node's command.
+
+@proves REQ-UNDO.preview_is_pure -/
+theorem a_preview_is_before_and_after :
+    (runScript one branching).previews
+      = [(.ok one, .ok ⟨[("a.rs", "xhello")]⟩), (.ok one, .ok ⟨[("a.rs", "yhello")]⟩)] := by
+  native_decide
+
 end TraceLean.Tree

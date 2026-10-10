@@ -390,4 +390,30 @@ theorem a_balanced_region_is_quiet :
         Directive.«end» 5 ] = [] := by
   native_decide
 
+/-- The seven roles parse, and a near miss does not.
+
+@proves REQ-ANNOT.role_vocabulary -/
+theorem the_seven_roles_and_nothing_else :
+    ["models", "specifies", "implements", "tests", "drt", "proves", "pins"].map Role.parse
+      = [some .models, some .specifies, some .implements, some .tests, some .drt, some .proves,
+         some .pins] ∧
+    ["model", "test", "implement", "requires", "", "Models"].map Role.parse
+      = [none, none, none, none, none, none] := by
+  native_decide
+
+/-- A bare qualifier attaches to the annotation before it; one carrying an
+identifier names its own clause.
+
+@proves REQ-ANNOT.qualifiers -/
+theorem qualifiers_attach_or_name_their_own :
+    (parseComment "@implements REQ-A.x\n@partial" 0).directives.getLast?
+      = some (Directive.qualified (.partial none) none none 1) ∧
+    (parseComment "@exempt REQ-B.y" 0).directives
+      = [Directive.qualified (.exempt none none none) (some "REQ-B") (some "y") 0] ∧
+    (parseComment "@nondeterministic" 0).directives
+      = [Directive.qualified (.nondeterministic none) none none 0] ∧
+    (parseComment "@structural" 0).directives
+      = [Directive.qualified (.structural none) none none 0] := by
+  native_decide
+
 end TraceLean.Annotation

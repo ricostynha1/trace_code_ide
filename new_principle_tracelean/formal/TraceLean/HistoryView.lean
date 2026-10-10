@@ -263,4 +263,39 @@ def changeView (node : Nat) (said : String) (changed : List Changed) : Buffer :=
   { id := "record:change " ++ name, kind := .record ("change " ++ name), text := done.1,
     spans := tidy done.1.length done.2 }
 
+/-- A history that branched: two changes made after the first, the workspace at
+the later one. -/
+def branched : List Point :=
+  [⟨0, none, false, "a", none, false⟩, ⟨1, some 0, false, "b", none, false⟩,
+   ⟨2, some 0, true, "c", none, false⟩]
+
+/-- Each node is drawn once, under the node it was made after: the first child
+continues its parent's column, and the later one opens a column joined to it.
+
+@proves REQ-UNDO.tree_is_drawn -/
+theorem a_branch_opens_a_column :
+    historyGraph branched =
+      [⟨none, "○ "⟩, ⟨some 0, "○─╮ "⟩, ⟨some 2, "│ ● "⟩, ⟨some 1, "○   "⟩] := by
+  native_decide
+
+/-- Every node is named, the one the workspace is at is marked, and each name
+jumps to its node.
+
+@proves REQ-UNDO.tree_is_shown -/
+theorem every_node_is_named_and_jumps :
+    (historyView branched .all none).text
+      = "All  File  Saved  \n○   #0  the tree as it was opened\n○─╮ #1  a\n│ ● #3  c\n○   #2  b" ∧
+    ((historyView branched .all none).spans.filter (·.actions == ["history.jump"])).length = 4 := by
+  native_decide
+
+/-- Pointing at a node shows the lines its change removed and added, and the
+view is a function of the change alone, so nothing moves the workspace.
+
+@proves REQ-UNDO.hover_shows_change -/
+theorem a_change_shows_its_lines :
+    (changeView 1 "b" [⟨"a.rs", "x\ny", "x\nz"⟩]).text = "#2  b\na.rs\n x\n-y\n+z" ∧
+    ((changeView 1 "b" [⟨"a.rs", "x\ny", "x\nz"⟩]).spans.map (·.role))
+      = [Role.heading, Role.path, Role.removed, Role.added] := by
+  native_decide
+
 end TraceLean.HistoryView
