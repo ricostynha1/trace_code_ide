@@ -1086,6 +1086,23 @@
       }
     },
     {
+      "req_id": "REQ-STALE",
+      "clause": "requirement_reopens_all",
+      "model": {
+        "import": "TraceLean.Hash",
+        "function": "TraceLean.Hash.clauseHash",
+        "arguments": [
+          "key",
+          "text",
+          "narrowings"
+        ]
+      },
+      "implementation": {
+        "language": "rust",
+        "entry": "crates/core/src/trace/hash.rs::clause_of"
+      }
+    },
+    {
       "req_id": "REQ-REQDOC",
       "clause": "refines_dag",
       "floors": [

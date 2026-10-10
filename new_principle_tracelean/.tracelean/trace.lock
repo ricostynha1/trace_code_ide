@@ -3072,7 +3072,7 @@
       "clause": "clause_addressable",
       "file": "crates/core/tests/differential_hash.rs",
       "anchor": "crates/core/tests/differential_hash.rs::model_and_implementation_agree_on_a_clause_hash",
-      "body_hash": "a25e424807d8a311",
+      "body_hash": "0c7c3284f6765a49",
       "link_hash": "95b2a13fe5080ef6",
       "qualifier": null
     },
@@ -4074,6 +4074,26 @@
       "anchor": "crates/core/tests/differential_surface.rs::a_stale_record_never_revives_itself",
       "body_hash": "d68f166385714ad7",
       "link_hash": "ce0bc5795bb2f29f",
+      "qualifier": null
+    },
+    {
+      "role": "drt",
+      "req": "REQ-STALE",
+      "clause": "requirement_reopens_all",
+      "file": "crates/core/src/trace/hash.rs",
+      "anchor": "crates/core/src/trace/hash.rs::clause_of",
+      "body_hash": "a77b3e4f2b79f845",
+      "link_hash": "191f41080652ffe9",
+      "qualifier": null
+    },
+    {
+      "role": "drt",
+      "req": "REQ-STALE",
+      "clause": "requirement_reopens_all",
+      "file": "crates/core/tests/differential_hash.rs",
+      "anchor": "crates/core/tests/differential_hash.rs::model_and_implementation_agree_on_the_hash_records_carry",
+      "body_hash": "2816fcb13aa2cce7",
+      "link_hash": "25609e895b00d632",
       "qualifier": null
     },
     {
@@ -13009,6 +13029,16 @@
     {
       "role": "models",
       "req": "REQ-STALE",
+      "clause": "requirement_reopens_all",
+      "file": "formal/TraceLean/Hash.lean",
+      "anchor": "formal/TraceLean/Hash.lean::TraceLean.Hash::clauseHash",
+      "body_hash": "5a549cc79c8f08e0",
+      "link_hash": "cec0f4581b48be05",
+      "qualifier": null
+    },
+    {
+      "role": "models",
+      "req": "REQ-STALE",
       "clause": "retarget_invalidates",
       "file": "formal/TraceLean/Staleness.lean",
       "anchor": "formal/TraceLean/Staleness.lean::TraceLean.Staleness::staleness",
@@ -21222,7 +21252,7 @@
       "clause": "clause_addressable",
       "file": "crates/core/tests/differential_hash.rs",
       "anchor": "crates/core/tests/differential_hash.rs::model_and_implementation_agree_on_a_clause_hash",
-      "body_hash": "a25e424807d8a311",
+      "body_hash": "0c7c3284f6765a49",
       "link_hash": "1bb3726a133cfdc7",
       "qualifier": null
     },
@@ -22914,6 +22944,16 @@
       "anchor": "crates/core/src/trace/requirement.rs::tests::a_clause_hash_moves_with_that_clause_only",
       "body_hash": "8013e72ce5737e3d",
       "link_hash": "56d68e3d9ffbcb7c",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-STALE",
+      "clause": "requirement_reopens_all",
+      "file": "crates/core/tests/differential_hash.rs",
+      "anchor": "crates/core/tests/differential_hash.rs::model_and_implementation_agree_on_the_hash_records_carry",
+      "body_hash": "2816fcb13aa2cce7",
+      "link_hash": "181db7b18c50f34b",
       "qualifier": null
     },
     {

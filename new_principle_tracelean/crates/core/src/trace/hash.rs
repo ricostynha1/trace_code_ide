@@ -165,6 +165,7 @@ pub fn normalize_of(
 ///
 /// @implements REQ-REQDOC.clause_addressable
 /// @drt REQ-REQDOC.clause_addressable
+/// @drt REQ-STALE.requirement_reopens_all
 pub fn clause_of(key: Option<String>, text: String, narrowings: Vec<(String, String)>) -> String {
     clause(key.as_deref(), &text, &narrowings.into_iter().collect())
 }

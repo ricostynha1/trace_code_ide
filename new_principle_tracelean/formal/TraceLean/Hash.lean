@@ -125,7 +125,8 @@ narrowing added re-opens it. Keyed by name, so a renamed clause is a different
 clause. Without a key it is a requirement's one implicit clause, whose text is
 the body, hashed as a normalised body.
 
-@models REQ-REQDOC.clause_addressable -/
+@models REQ-REQDOC.clause_addressable
+@models REQ-STALE.requirement_reopens_all -/
 def clauseHash (key : Option String) (text : String) (narrowings : List (String × String)) :
     String :=
   match key with

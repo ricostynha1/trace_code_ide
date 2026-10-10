@@ -144,11 +144,27 @@ fn model_and_implementation_agree_on_the_body_hash() {
 #[test]
 #[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
 fn model_and_implementation_agree_on_a_clause_hash() {
-    let scratch = harness::scratch("clausehash");
-    let op = "REQ-REQDOC.clause_addressable";
+    clause_hash_agrees("REQ-REQDOC", "clause_addressable");
+}
+
+/// The hash records carry as the clause's text moves with that text and its
+/// narrowings, so rewording or narrowing it re-opens what rests on it.
+///
+/// @drt REQ-STALE.requirement_reopens_all
+/// @tests REQ-STALE.requirement_reopens_all
+#[test]
+#[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
+fn model_and_implementation_agree_on_the_hash_records_carry() {
+    clause_hash_agrees("REQ-STALE", "requirement_reopens_all");
+}
+
+fn clause_hash_agrees(req: &str, clause: &str) {
+    let scratch = harness::scratch(&format!("clausehash-{clause}"));
+    let op = format!("{req}.{clause}");
+    let op = op.as_str();
     let implementation = harness::rust_runner(
-        "REQ-REQDOC",
-        "clause_addressable",
+        req,
+        clause,
         "crates/core/src/trace/hash.rs::clause_of",
         &scratch,
     );
