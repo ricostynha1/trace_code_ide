@@ -329,45 +329,72 @@ fn the_shell_checks_reject_a_tree_that_breaks_them() {
 #[test]
 fn axioms_live_in_one_file_and_each_one_states_a_law() {
     let formal = project_root().join("formal").join("TraceLean");
-    let mut with_axioms = Vec::new();
+    let mut models = Vec::new();
     for entry in std::fs::read_dir(&formal).expect("the model directory").flatten() {
         let path = entry.path();
         let Ok(text) = std::fs::read_to_string(&path) else { continue };
-        let name = path.file_name().unwrap().to_string_lossy().to_string();
-        let declares = text
-            .lines()
-            .filter(|line| line.trim_start().starts_with("axiom "))
-            .count();
-        if declares > 0 {
-            with_axioms.push((name, text, declares));
-        }
+        models.push((path.file_name().unwrap().to_string_lossy().to_string(), text));
     }
+    let problems = axiom_problems(&models);
+    assert!(problems.is_empty(), "{problems:#?}");
+}
 
-    assert_eq!(
-        with_axioms.iter().map(|(name, _, _)| name.as_str()).collect::<Vec<_>>(),
-        vec!["Effects.lean"],
-        "axioms must live in one module, so the project's assumptions read in one sitting"
-    );
+/// What is wrong with how a set of model files declares axioms.
+fn axiom_problems(models: &[(String, String)]) -> Vec<String> {
+    let mut problems = Vec::new();
+    let with_axioms: Vec<(&String, &String, usize)> = models
+        .iter()
+        .map(|(name, text)| {
+            let declares = text.lines().filter(|line| line.trim_start().starts_with("axiom ")).count();
+            (name, text, declares)
+        })
+        .filter(|(_, _, declares)| *declares > 0)
+        .collect();
 
-    let (_, text, declared) = &with_axioms[0];
+    let names: Vec<&str> = with_axioms.iter().map(|(name, _, _)| name.as_str()).collect();
+    if names != vec!["Effects.lean"] {
+        problems.push(format!(
+            "axioms must live in one module, so the project's assumptions read in one sitting: {names:?}"
+        ));
+    }
+    let Some((_, text, declared)) = with_axioms.iter().find(|(name, _, _)| name.as_str() == "Effects.lean") else {
+        return problems;
+    };
     // Laws are the axioms that state something; effects are the axioms that
     // only declare a constant. Every effect either has a law or says in its own
     // doc comment why its type is the whole claim.
     let laws = text.lines().filter(|line| line.contains("axiom") && line.contains("_")).count();
-    assert!(
-        laws > 0 && *declared >= laws,
-        "{declared} axioms and {laws} of them named as laws"
-    );
-    assert!(
-        text.contains("No axiom accompanies this one, and the absence is the point"),
-        "an effect without a law must say why, in the module itself"
-    );
-
+    if !(laws > 0 && *declared >= laws) {
+        problems.push(format!("{declared} axioms and {laws} of them named as laws"));
+    }
+    if !text.contains("No axiom accompanies this one, and the absence is the point") {
+        problems.push("an effect without a law must say why, in the module itself".to_string());
+    }
     // And every law is reachable as a function: the model computes violations,
     // so a differential test can ask the implementation the same question.
     for law in ["copyViolations", "capabilityViolations", "escapeViolations", "runViolations"] {
-        assert!(text.contains(&format!("def {law}")), "the law `{law}` is not a function");
+        if !text.contains(&format!("def {law}")) {
+            problems.push(format!("the law `{law}` is not a function"));
+        }
     }
+    problems
+}
+
+/// @tests REQ-CHECK.structural_rejects
+#[test]
+fn the_axiom_check_rejects_a_tree_that_breaks_it() {
+    let laws = "def copyViolations := 1\ndef capabilityViolations := 1\ndef escapeViolations := 1\ndef runViolations := 1\n";
+    let good = format!(
+        "axiom copy_law : True\naxiom run_law : True\n-- No axiom accompanies this one, and the absence is the point\n{laws}"
+    );
+    assert!(axiom_problems(&tree(&[("Effects.lean", &good)])).is_empty());
+
+    // An axiom in another module.
+    let stray = tree(&[("Effects.lean", &good), ("Other.lean", "axiom sneaky_law : True\n")]);
+    assert_eq!(axiom_problems(&stray).len(), 1);
+    // A law that is not a function, and an effect that does not say why it has no law.
+    let bare = tree(&[("Effects.lean", "axiom copy_law : True\n")]);
+    assert!(axiom_problems(&bare).len() >= 2, "{:?}", axiom_problems(&bare));
 }
 
 /// A finding is a named variant, not a string or a bool.
