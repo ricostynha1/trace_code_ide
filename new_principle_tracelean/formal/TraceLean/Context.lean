@@ -43,15 +43,19 @@ def fuelOf (nodes : List Node) : Nat :=
 def closure (next : String → List String) (nodes : List Node) (id : String) : List String :=
   ((reach next (fuelOf nodes) [id] [id]).filter (· != id)).mergeSort (fun a b => decide (a ≤ b))
 
-/-- Everything `id` refines, transitively, each once, in name order.
-
-@models REQ-CONTEXT.neighbourhood_is_closed -/
+/-- Everything `id` refines, transitively, each once, in name order. -/
 def ancestors (nodes : List Node) (id : String) : List String :=
   closure (parentsOf nodes) nodes id
 
 /-- Everything that refines `id`, transitively, each once, in name order. -/
 def descendants (nodes : List Node) (id : String) : List String :=
   closure (childrenOf nodes) nodes id
+
+/-- The neighbourhood of `id`: what it refines and what refines it.
+
+@models REQ-CONTEXT.neighbourhood_is_closed -/
+def neighbourhood (nodes : List Node) (id : String) : List String × List String :=
+  (ancestors nodes id, descendants nodes id)
 
 /-- One part of a context. -/
 inductive Part where

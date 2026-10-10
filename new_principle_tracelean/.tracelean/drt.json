@@ -1537,6 +1537,12 @@
     {
       "req_id": "REQ-OBS",
       "clause": "workspace_is_a_copy",
+      "waive": [
+        {
+          "situations": ["line: (None, None) => None,"],
+          "reason": "`copy_violations` asks `copy_check` only about paths in the original or the copy (`both_paths`), so a path in neither never reaches it"
+        }
+      ],
       "floors": [
         { "situation": "missing from copy", "atLeast": 20 },
         { "situation": "copy differs", "atLeast": 10 },
@@ -3529,12 +3535,12 @@
       ],
       "model": {
         "import": "TraceLean.Context",
-        "function": "TraceLean.Context.ancestors",
+        "function": "TraceLean.Context.neighbourhood",
         "arguments": ["nodes", "id"]
       },
       "implementation": {
         "language": "rust",
-        "entry": "crates/core/src/surface/context.rs::ancestors"
+        "entry": "crates/core/src/surface/context.rs::neighbourhood"
       }
     },
     {

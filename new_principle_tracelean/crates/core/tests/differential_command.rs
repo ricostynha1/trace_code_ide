@@ -5,13 +5,10 @@
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
-use std::process::Command as Process;
 
 use tracelean_core::drt::lean_runner::{self, LeanEntry};
-use tracelean_core::drt::rust_runner;
 use tracelean_core::drt::run::{run, RunOptions, RunnerSpec};
 use tracelean_core::drt::schema::Schema;
-use tracelean_core::drt::{Binding, CallSpec};
 
 mod harness;
 mod support;
@@ -97,46 +94,10 @@ fn input_schema() -> Schema {
     strukt(&[("workspace", workspace()), ("command", command())])
 }
 
+/// The shared runner, as every other suite has it — which is also the one a
+/// measured run builds instrumented, so these ops' lines are counted too.
 fn rust_runner_for(entry_path: &str, op_clause: &str, scratch: &Path) -> RunnerSpec {
-    let root = project_root();
-    let binding = Binding {
-        req_id: "REQ-CMD".into(),
-        clause: Some(op_clause.into()),
-        op: None,
-        also_checks: Vec::new(),
-        also_implemented_by: Vec::new(),
-        floors: Vec::new(),
-        waive: Vec::new(),
-        model: None,
-        implementation: CallSpec {
-            language: "rust".into(),
-            entry: entry_path.into(),
-            params: BTreeMap::new(),
-        },
-    };
-    let entry = rust_runner::resolve(&root, &binding).expect("binding resolves");
-    let mut deps = BTreeMap::new();
-    deps.insert(
-        "tracelean-core".to_string(),
-        root.join("crates").join("core").display().to_string(),
-    );
-    rust_runner::materialize(scratch, &[entry], &deps).expect("generated");
-
-    let dir = rust_runner::package_dir(scratch);
-    let built = Process::new("cargo")
-        .args(["build", "--release", "--quiet"])
-        .current_dir(&dir)
-        .output()
-        .expect("cargo runs");
-    assert!(
-        built.status.success(),
-        "the generated Rust runner did not compile:\n{}",
-        String::from_utf8_lossy(&built.stderr)
-    );
-    RunnerSpec {
-        cmd: vec![dir.join("target/release/tracelean-drt-runner").display().to_string()],
-        cwd: None,
-    }
+    harness::rust_runner("REQ-CMD", op_clause, entry_path, scratch)
 }
 
 fn lean_runner_for(function: &str, op: &str, arguments: &[&str], scratch: &Path) -> RunnerSpec {

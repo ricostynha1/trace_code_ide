@@ -2,8 +2,9 @@
   "agreed": {
     "89": {
       "cases": 200,
-      "stamp": "b8ba6c73aa55829e"
+      "stamp": "fe88eb1a714e6c77"
     }
   },
-  "covered": "b8ba6c73aa55829e"
+  "covered": "fe88eb1a714e6c77",
+  "lines": "fe88eb1a714e6c77"
 }

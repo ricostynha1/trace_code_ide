@@ -71,31 +71,18 @@ fn check(req: &str, op: &str, function: &str, entry: &str, arguments: &[&str], f
 /// @tests REQ-CONTEXT.neighbourhood_is_closed
 #[test]
 #[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
-fn model_and_implementation_agree_on_what_a_requirement_refines() {
+fn model_and_implementation_agree_on_a_requirements_neighbourhood() {
+    // Both directions in one call: what it refines and what refines it. Two
+    // suites once named `ancestors` and `descendants` under the one op, and
+    // the binding drove only the first.
     check(
         "REQ-CONTEXT",
         "REQ-CONTEXT.neighbourhood_is_closed",
-        "TraceLean.Context.ancestors",
-        "crates/core/src/surface/context.rs::ancestors",
+        "TraceLean.Context.neighbourhood",
+        "crates/core/src/surface/context.rs::neighbourhood",
         &["nodes", "id"],
         graph(),
         97,
-    );
-}
-
-/// @drt REQ-CONTEXT.neighbourhood_is_closed
-/// @tests REQ-CONTEXT.neighbourhood_is_closed
-#[test]
-#[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
-fn model_and_implementation_agree_on_what_refines_a_requirement() {
-    check(
-        "REQ-CONTEXT",
-        "REQ-CONTEXT.neighbourhood_is_closed",
-        "TraceLean.Context.descendants",
-        "crates/core/src/surface/context.rs::descendants",
-        &["nodes", "id"],
-        graph(),
-        98,
     );
 }
 

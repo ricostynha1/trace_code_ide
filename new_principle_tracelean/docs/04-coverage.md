@@ -48,8 +48,11 @@ are the other half: `coverage::line_reach` names
 each executable line of an implementing item by its text, for a run measured
 under coverage: `TRACELEAN_DRT_LINES=1` builds the Rust runner instrumented
 and writes `target/tracelean-drt-lines/<op>.json`, and fails the op when the
-bound entry has a line no case ran and no waiver names. Other items claiming
-the clause are reported only. Any run fails when the implementation could not
+bound entry has a line no case ran and no waiver names (a wrapper no
+annotation claims is held through the clause's items in its file that the run
+entered). Other items claiming the clause are reported only. A passing
+measured run records the `lines` half, which a Rust-bound op needs for L3;
+`tools/differential-all.sh` measures by default. Any run fails when the implementation could not
 read one of its cases (two sides failing to read agree, and ask nothing),
 unless the binding waives `unreadable input`.
 
@@ -61,7 +64,7 @@ waivers cannot pile up.
 ## What it is worth
 
 `coverage::level(agreed, verdict)` is `L3` only for an agreeing run that met its
-floor. Everything else is `L1`. A run that agreed but did not reach its floor
+floor (classes, named floors, and for Rust the bound entry's lines). Everything else is `L1`. A run that agreed but did not reach its floor
 has not shown what the floor exists to make it show.
 
 ## Counting

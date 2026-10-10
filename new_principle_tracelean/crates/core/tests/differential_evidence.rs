@@ -45,52 +45,10 @@ fn input_schema() -> Schema {
     Schema::Struct { fields }
 }
 
-fn build_rust_runner(root: &Path, scratch: &Path) -> RunnerSpec {
-    let binding = Binding {
-        req_id: "REQ-EVID".into(),
-        clause: Some("weakest_link".into()),
-        op: None,
-        also_checks: Vec::new(),
-        also_implemented_by: Vec::new(),
-        floors: Vec::new(),
-        waive: Vec::new(),
-        model: None,
-        implementation: CallSpec {
-            language: "rust".into(),
-            entry: "crates/core/src/evidence.rs::assurance".into(),
-            params: BTreeMap::new(),
-        },
-    };
-    let entry = rust_runner::resolve(root, &binding).expect("binding resolves");
-    assert_eq!(entry.op, OP);
-
-    let mut deps = BTreeMap::new();
-    deps.insert(
-        "tracelean-core".to_string(),
-        root.join("crates").join("core").display().to_string(),
-    );
-    rust_runner::materialize(scratch, &[entry], &deps).expect("generated");
-
-    let dir = rust_runner::package_dir(scratch);
-    let built = Command::new("cargo")
-        .args(["build", "--release", "--quiet"])
-        .current_dir(&dir)
-        .output()
-        .expect("cargo runs");
-    assert!(
-        built.status.success(),
-        "the generated Rust runner did not compile:\n{}",
-        String::from_utf8_lossy(&built.stderr)
-    );
-    RunnerSpec {
-        cmd: vec![dir
-            .join("target")
-            .join("release")
-            .join("tracelean-drt-runner")
-            .display()
-            .to_string()],
-        cwd: None,
-    }
+/// The shared runner every suite uses, so a measured run (`TRACELEAN_DRT_LINES`)
+/// counts this slice's lines as well.
+fn build_rust_runner(_root: &Path, scratch: &Path) -> RunnerSpec {
+    harness::rust_runner("REQ-EVID", "weakest_link", "crates/core/src/evidence.rs::assurance", scratch)
 }
 
 fn build_lean_runner(root: &Path, scratch: &Path) -> RunnerSpec {

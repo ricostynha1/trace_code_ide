@@ -51,6 +51,17 @@ record.
   REQ-VIEW.everything_is_a_buffer, REQ-VIEW.frontend_adds_nothing,
   REQ-VIEW.rendering_is_total, REQ-VIEW.structure_over_text
 
+  Note for the two REQ-ACT ones: `Act.dispatch` changed on 2026-10-10 — it
+  now puts a target carried in the action (`history.filter Saved`) under the
+  focus before dispatching the name (`dispatchNamed`), as the Rust always
+  did; widening the generator found the gap. Judge against that model.
+
+  New: `REQ-CONTEXT.neighbourhood_is_closed` is now modelled and bound by
+  `neighbourhood` (both directions) instead of `ancestors` alone. **Left
+  open:** in a refinement cycle a requirement is both above and below and
+  appears in both lists; whether that is "each once" is a reading of the
+  clause, not a formality.
+
 ## Documents in review — 9
 
 Each read against what changed in the requirement since it was confirmed:

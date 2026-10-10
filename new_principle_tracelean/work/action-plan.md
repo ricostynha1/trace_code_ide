@@ -257,8 +257,14 @@ reason; an unused one fails), and any case the implementation cannot read
 fails the run (`DrtResult.unreadable`). Widening generators to meet it found
 a model gap (`Act.dispatch` ignored a target carried in the action) and a
 vacuous suite (`binary_handled` drew opaque files neither side could read).
-Four waivers, each a branch no input reaches. Open: measured runs are a
-separate pass (`TRACELEAN_DRT_LINES=1`), not yet part of the evidence level.
+Four waivers, each a branch no input reaches.
+
+Stage 3, done: the `lines` half — a Rust-bound op composes to L3 only when a
+measured run under the current stamp held its bound entry to every line (or,
+for an unannotated wrapper, the clause's items in its file that the run
+entered). `tools/differential-all.sh` measures by default. All 153 bindings
+have it; the four suites with their own runners now use the shared one, and
+`neighbourhood_is_closed` binds `neighbourhood` (it drove `ancestors` only).
 
 ## 11. Carried over from the removed progress and gap documents
 

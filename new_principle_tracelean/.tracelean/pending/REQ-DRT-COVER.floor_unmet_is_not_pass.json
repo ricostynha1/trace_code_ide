@@ -2,8 +2,9 @@
   "agreed": {
     "101": {
       "cases": 1000,
-      "stamp": "864cc268c2e908ae"
+      "stamp": "dfd1499320e6d62e"
     }
   },
-  "covered": "864cc268c2e908ae"
+  "covered": "dfd1499320e6d62e",
+  "lines": "dfd1499320e6d62e"
 }

@@ -30,6 +30,11 @@ cd "$root"
 # saturates it.
 jobs="${1:-8}"
 
+# Measured: the Rust runner is built instrumented and each op's bound entry is
+# held to every line run or waived, which a Rust-bound op needs for L3
+# (docs/04-coverage.md). TRACELEAN_DRT_LINES= (empty) to skip it.
+export TRACELEAN_DRT_LINES="${TRACELEAN_DRT_LINES-1}"
+
 echo "building the test binaries"
 cargo test --workspace --no-run --quiet || exit 1
 

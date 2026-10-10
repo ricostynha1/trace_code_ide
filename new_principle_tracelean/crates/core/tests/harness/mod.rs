@@ -170,7 +170,7 @@ fn binding_for(req: &str, clause: &str, implementation: CallSpec) -> Binding {
 /// `-C instrument-coverage`, elsewhere, and each op's runner leaves its profile
 /// in a directory of its own (`lines_dir`).
 pub fn lines_wanted() -> bool {
-    std::env::var_os("TRACELEAN_DRT_LINES").is_some()
+    std::env::var_os("TRACELEAN_DRT_LINES").is_some_and(|v| !v.is_empty())
 }
 
 /// Where the instrumented runner for `op` leaves its profiles.

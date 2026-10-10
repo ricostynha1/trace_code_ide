@@ -12,7 +12,7 @@
       "op": "REQ-CONTEXT.neighbourhood_is_closed"
     }
   },
-  "linkHash": "133a7410b482942c",
+  "linkHash": "29409b1233b4b5c9",
   "inputs": [
     [
       "implementation",
@@ -20,7 +20,7 @@
     ],
     [
       "model",
-      "7435c03d233292a6"
+      "fee04d72f15c3cb8"
     ],
     [
       "requirement",

@@ -117,6 +117,11 @@ struct Half {
     /// The stamp under which the generator reached the situations the binding
     /// declared.
     covered: Option<String>,
+    /// The stamp under which a measured run ran every line of the bound entry
+    /// or a waiver excused it (`report_lines`). A Rust-bound op needs it for
+    /// L3: an agreeing run that left lines unrun has not asked them anything.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    lines: Option<String>,
 }
 
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -191,17 +196,22 @@ pub fn agreed(result: &tracelean_core::drt::run::DrtResult) {
     }
     write_half(&result.op, &half);
     compose(&result.op);
-    if std::env::var_os("TRACELEAN_DRT_LINES").is_some() {
+    if std::env::var_os("TRACELEAN_DRT_LINES").is_some_and(|v| !v.is_empty()) {
         report_lines(&result.op);
     }
 }
 
 /// Which executable lines of each implementing item the op's cases ran, from
 /// the profile its instrumented runner left (`TRACELEAN_DRT_LINES=1`), written
-/// beside the profiles as `<op>.json`. The line half of action plan §10,
-/// measured; not yet a condition of L3.
+/// beside the profiles as `<op>.json` — and the line half of action plan §10:
+/// every line of the bound entry run or waived, recorded as the `lines` half
+/// that a Rust-bound op needs for L3.
+///
+/// The bound entry is the function the binding calls. When that is a thin
+/// wrapper no annotation claims (`rows_owned` around `rows`), the items in its
+/// file claiming the op's own clause are held to it instead.
 fn report_lines(op: &str) {
-    use tracelean_core::drt::coverage::{floors_of, line_reach, unused_waivers, verdict, Verdict};
+    use tracelean_core::drt::coverage::{floors_of, line_reach, unused_waivers, verdict, Observed, Verdict};
     let root = root();
     let base = root.join("target").join("tracelean-drt-lines");
     let binary = tracelean_core::drt::rust_runner::package_dir(&root.join("target").join("tracelean-drt-rust-lines"))
@@ -215,7 +225,7 @@ fn report_lines(op: &str) {
     };
     let binding = binding_for(op);
     let index = tracelean_core::trace::index::build(&root);
-    let mut items = Vec::new();
+    let mut measured = Vec::new();
     for qualified in binding.clauses() {
         let (req_id, clause) = match qualified.split_once('.') {
             Some((req, clause)) => (req.to_string(), Some(clause.to_string())),
@@ -239,48 +249,65 @@ fn report_lines(op: &str) {
                 Verdict::Unmet { gaps } => gaps.iter().map(|g| g.situation().to_string()).collect(),
                 _ => Vec::new(),
             };
-            // The function the binding calls is what its cases can reach, so
-            // every line of it is run or waived (§10). Other items claiming
-            // the clause are reported, not held to it: a shell or a wrapper
-            // is evidenced elsewhere.
-            let (entry_file, entry_name) =
-                binding.implementation.entry.split_once("::").unwrap_or((binding.implementation.entry.as_str(), ""));
-            let bound = anchor.file == entry_file && first.contains(&format!("fn {entry_name}"));
-            assert!(
-                !bound || missed.is_empty(),
-                "`{op}`: lines of `{}` its cases never run, and no waiver says why: {missed:#?}",
-                binding.implementation.entry
-            );
-            // And a line waiver that excuses a line the cases now run is
-            // reported, so waivers do not outlive their cause.
-            if bound {
-                let line_waivers: Vec<_> = binding
-                    .waive
-                    .iter()
-                    .cloned()
-                    .filter_map(|mut w| {
-                        w.situations.retain(|s| s.starts_with("line: "));
-                        (!w.situations.is_empty()).then_some(w)
-                    })
-                    .collect();
-                let unused = unused_waivers(floors_of(&observed), observed.clone(), line_waivers);
-                assert!(
-                    unused.is_empty(),
-                    "`{op}` waives lines of `{}` its cases run, or that are not in it: {unused:?}",
-                    binding.implementation.entry
-                );
-            }
-            items.push(serde_json::json!({
-                "clause": qualified,
-                "file": anchor.file,
-                "from": anchor.start_line + 1,
-                "lines": observed.len(),
-                "missed": missed,
-            }));
+            measured.push((qualified.clone(), anchor.file.clone(), anchor.start_line + 1, first, observed, missed));
         }
     }
+
+    // The function the binding calls is what its cases can reach, so every
+    // line of it is run or waived (§10). Other items claiming the clause are
+    // reported, not held to it: a shell is evidenced elsewhere.
+    let entry = &binding.implementation.entry;
+    let (entry_file, entry_name) = entry.split_once("::").unwrap_or((entry.as_str(), ""));
+    let is_entry = |m: &&(String, String, u32, String, Vec<Observed>, Vec<String>)| {
+        m.1 == entry_file
+            && m.3.split(|c: char| !c.is_alphanumeric() && c != '_').any(|word| word == entry_name)
+            && m.3.contains("fn ")
+    };
+    let mut bound: Vec<_> = measured.iter().filter(is_entry).collect();
+    if bound.is_empty() {
+        // A wrapper: what it calls is what its cases entered. An item of the
+        // clause no case entered at all is another way in, not this one.
+        bound = measured
+            .iter()
+            .filter(|m| m.1 == entry_file && m.0 == op && m.4.iter().any(|o| o.reached > 0))
+            .collect();
+    }
+    assert!(
+        !bound.is_empty(),
+        "`{op}`: its bound entry `{entry}` is no item claiming the clause, and nothing in its file does: \
+         nothing to hold to every line"
+    );
+    for (_, _, _, _, _, missed) in &bound {
+        assert!(missed.is_empty(), "`{op}`: lines of `{entry}` its cases never run, and no waiver says why: {missed:#?}");
+    }
+    // And a line waiver that excuses a line the cases now run is reported, so
+    // waivers do not outlive their cause.
+    let line_waivers: Vec<_> = binding
+        .waive
+        .iter()
+        .cloned()
+        .filter_map(|mut w| {
+            w.situations.retain(|s| s.starts_with("line: "));
+            (!w.situations.is_empty()).then_some(w)
+        })
+        .collect();
+    let observed: Vec<Observed> = bound.iter().flat_map(|m| m.4.clone()).collect();
+    let unused = unused_waivers(floors_of(&observed), observed.clone(), line_waivers);
+    assert!(unused.is_empty(), "`{op}` waives lines of `{entry}` its cases run, or that are not in it: {unused:?}");
+
+    let items: Vec<serde_json::Value> = measured
+        .iter()
+        .map(|(clause, file, from, _, observed, missed)| {
+            serde_json::json!({ "clause": clause, "file": file, "from": from, "lines": observed.len(), "missed": missed })
+        })
+        .collect();
     let report = serde_json::json!({ "op": op, "items": items });
     let _ = std::fs::write(base.join(format!("{op}.json")), serde_json::to_string_pretty(&report).unwrap_or_default());
+
+    let mut half = read_half(op);
+    half.lines = Some(current_stamp(op));
+    write_half(op, &half);
+    compose(op);
 }
 
 /// Every class of the arguments was reached by some case, or is waived with a
@@ -389,9 +416,13 @@ fn compose(op: &str) {
     // both halves established against the inputs as they are now.
     let current = current_stamp(op);
     let stamps: Vec<String> = half.agreed.values().map(|run| run.stamp.clone()).collect();
+    // Coverage is classes, floors and — where lines can be measured, which is
+    // a Rust implementation — every line of the bound entry, under the same
+    // stamp (§10). Without the measured run the coverage half is not in.
+    let lines_in = binding.implementation.language != "rust" || half.lines.as_deref() == Some(current.as_str());
     if !tracelean_core::trace::earn::halves_compose(
         &stamps,
-        half.covered.as_deref(),
+        half.covered.as_deref().filter(|_| lines_in),
         &current,
         binding.implementations().len(),
     ) {
