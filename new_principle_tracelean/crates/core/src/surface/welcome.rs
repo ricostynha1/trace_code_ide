@@ -14,7 +14,7 @@ pub const INTRO: &[&str] = &[
     "the letters in the file tree show where each clause is met.",
     "",
     "🔗 on the left shows what the open file claims and what else claims it;",
-    "📋 lists the requirements. Put the cursor on a requirement name and the",
+    "🕸 shows the design, roots first. Put the cursor on a requirement and the",
     "bar at the bottom offers to open it, or to gather what an agent needs to",
     "change it (Space c o). Space shows every key; F1 lists them all.",
     "",

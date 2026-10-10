@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-SHOW",
+    "clause": "recent_reopens",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Welcome::each_recent_folder_is_a_way_back",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "8711b66a388cb93e",
+  "inputs": [
+    [
+      "model",
+      "7e581973d12cc3b6"
+    ],
+    [
+      "requirement",
+      "6400dd54c5a95ff9"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

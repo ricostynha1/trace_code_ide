@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-LINECOV",
+    "clause": "lines_listed",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.CoverageView::each_item_lists_its_tests_and_unrun_lines",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "b8704d7fe4da21e6",
+  "inputs": [
+    [
+      "model",
+      "4345d0eb87051f5b"
+    ],
+    [
+      "requirement",
+      "30fc64a7334d0dce"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

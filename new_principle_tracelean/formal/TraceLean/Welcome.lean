@@ -21,7 +21,7 @@ def introLines : List String :=
     "the letters in the file tree show where each clause is met.",
     "",
     "🔗 on the left shows what the open file claims and what else claims it;",
-    "📋 lists the requirements. Put the cursor on a requirement name and the",
+    "🕸 shows the design, roots first. Put the cursor on a requirement and the",
     "bar at the bottom offers to open it, or to gather what an agent needs to",
     "change it (Space c o). Space shows every key; F1 lists them all.",
     "",
@@ -71,5 +71,20 @@ def welcome (starts : List MenuEntry) (recent : List String) : Buffer :=
   else
     let rows := recentRows (text, spans) recent
     { menu with text := rows.1, spans := tidy rows.1.length rows.2 }
+
+/-- The text a span covers. -/
+def covered (b : Buffer) (s : Span) : String :=
+  String.mk ((b.text.toList.drop s.start).take (s.stop - s.start))
+
+/-- Each folder opened before is listed under `Recent`, and each is a link
+covering exactly its path, which opens it.
+
+@proves REQ-SHOW.recent_reopens -/
+theorem each_recent_folder_is_a_way_back :
+    ((welcome [] ["/home/u/p", "/tmp/q"]).spans.filter (·.actions == ["file.open"])).map
+        (covered (welcome [] ["/home/u/p", "/tmp/q"]))
+      = ["/home/u/p", "/tmp/q"] ∧
+    ((welcome [] ["/home/u/p", "/tmp/q"]).text.splitOn "Recent").length = 2 := by
+  native_decide
 
 end TraceLean.Welcome

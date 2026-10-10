@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-LOCK",
+    "clause": "deterministic_bytes",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Lockfile::every_walk_writes_the_same_order",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "c32744ff913c2ec5",
+  "inputs": [
+    [
+      "model",
+      "a105d7f65b4db0a6"
+    ],
+    [
+      "requirement",
+      "5c2b7461aad7195f"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

@@ -147,4 +147,21 @@ theorem rendering_no_evidence_carries_none :
     carriedEvidence [] = [] := by
   native_decide
 
+/-- Three links that differ late in the record, the first two only in their
+qualifier. -/
+def walked : List LockLink :=
+  [⟨"tests", "REQ-A", some "x", "b.rs", "b.rs::t", "h2", "l2", none⟩,
+   ⟨"implements", "REQ-A", some "x", "a.rs", "a.rs::f", "h1", "l1", some "partial"⟩,
+   ⟨"implements", "REQ-A", some "x", "a.rs", "a.rs::f", "h1", "l1", none⟩]
+
+/-- Whatever order a scan walked the tree in, the links are written in one order,
+so the same state gives the same bytes.
+
+@proves REQ-LOCK.deterministic_bytes -/
+theorem every_walk_writes_the_same_order :
+    orderedLinks walked = orderedLinks walked.reverse ∧
+    orderedLinks walked = orderedLinks [walked.getD 1 default, walked.getD 0 default, walked.getD 2 default] ∧
+    (orderedLinks walked).map (·.qualifier) = [none, some "partial", none] := by
+  native_decide
+
 end TraceLean.Lockfile

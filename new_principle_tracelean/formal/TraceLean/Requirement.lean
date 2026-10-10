@@ -445,4 +445,14 @@ theorem one_declaration_is_not_a_duplicate (id file : String) :
     duplicateIds [(id, file)] = [] := by
   simp [duplicateIds]
 
+/-- A requirement is what its frontmatter declares: the parser is given no file
+name or directory, and a heading naming something else does not rename it.
+
+@proves REQ-REQDOC.id_is_identity -/
+theorem the_declared_id_is_the_identity :
+    (parseLines ["---", "id: REQ-X", "---", "# REQ-Y"]).id = "REQ-X" ∧
+    (parseLines ["---", "id: REQ-X", "---", "# REQ-Y"]).isRequirement = true ∧
+    (parseLines ["---", "title: REQ-Y", "---", "# REQ-Y"]).isRequirement = false := by
+  native_decide
+
 end TraceLean.Requirement

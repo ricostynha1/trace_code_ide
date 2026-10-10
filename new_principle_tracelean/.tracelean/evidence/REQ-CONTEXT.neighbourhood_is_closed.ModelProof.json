@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-CONTEXT",
+    "clause": "neighbourhood_is_closed",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Context::the_neighbourhood_is_transitive_and_once",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "b38ada84194c3dfe",
+  "inputs": [
+    [
+      "model",
+      "fee04d72f15c3cb8"
+    ],
+    [
+      "requirement",
+      "95f70d1598e55dc3"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

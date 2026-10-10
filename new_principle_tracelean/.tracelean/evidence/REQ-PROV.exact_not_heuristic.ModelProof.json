@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-PROV",
+    "clause": "exact_not_heuristic",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Provenance::the_answer_is_exact",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "3007d1bf5796d282",
+  "inputs": [
+    [
+      "model",
+      "3c74019b46571f27"
+    ],
+    [
+      "requirement",
+      "a4bbed003d7ad8ec"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

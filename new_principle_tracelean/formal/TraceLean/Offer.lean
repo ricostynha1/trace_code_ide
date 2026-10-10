@@ -147,4 +147,30 @@ def offers (buffer : Buffer) (offset : Nat) (keymap : Keymap) : List Offered :=
     ["screen.split.across", "screen.split.down", "screen.close"].map (fun a => entry keymap "panes" a none) ++
     places.map (fun a => entry keymap "go" a none)).filter (fun o => known o.action)
 
+/-- A leader that enters the design's mode, which unfolds everything. -/
+def leader : Keymap :=
+  ⟨"Normal", [("Normal", ⟨none, [("Space", .enter "Leader" "leader")]⟩),
+              ("Leader", ⟨some "Normal", [("g", .enter "Design" "design")]⟩),
+              ("Design", ⟨some "Leader", [("e", .dispatch "design.expand_everything" "all")]⟩)]⟩
+
+/-- A design row whose mark declares an action the dispatcher knows and one it
+does not. -/
+def marked : Buffer :=
+  { id := "d", kind := .menu "design", text := "▸ REQ-A",
+    spans := [⟨0, 1, .entry, ["design.toggle REQ-A", "file.explode"]⟩] }
+
+/-- Pointing at the mark offers what it declares, the design's own actions,
+the panes and the places, each with the keys that reach it, and nothing the
+dispatcher would refuse as unknown.
+
+@proves REQ-ACT.everything_is_offered -/
+theorem the_menu_holds_everything_that_applies :
+    (offers marked 0 leader).map (·.action)
+      = ["design.toggle REQ-A", "file.copy_line", "file.copy", "design.expand_everything",
+         "design.fold_all", "trace.new_requirement", "screen.split.across", "screen.split.down",
+         "screen.close"] ++ places ∧
+    ((offers marked 0 leader).find? (·.action == "design.expand_everything")).bind (·.keys)
+      = some "Space g e" := by
+  native_decide
+
 end TraceLean.Offer

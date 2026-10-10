@@ -133,4 +133,65 @@ theorem nothing_recorded_means_nothing_written (base : Workspace) (file : String
     origins base [] file p = [] := by
   rfl
 
+/-- A position before an insertion maps back unchanged.
+
+@proves REQ-PROV.mapping_before -/
+theorem before_an_edit_is_unchanged (file text : String) (offset position : Nat)
+    (h : position < offset) :
+    back (.insert file offset text) file position = .moved position ∧
+    back (.delete file offset text) file position = .moved position := by
+  constructor <;> simp [back, h]
+
+/-- A position after an insertion maps back by the length it added; after a
+deletion, by the length it removed.
+
+@proves REQ-PROV.mapping_after -/
+theorem after_an_edit_is_shifted (file text : String) (offset position : Nat)
+    (h : offset + byteLen text ≤ position) :
+    back (.insert file offset text) file position = .moved (position - byteLen text) ∧
+    back (.delete file offset text) file position = .moved (position + byteLen text) := by
+  have h1 : ¬ position < offset := by omega
+  have h2 : ¬ position < offset + byteLen text := by omega
+  constructor <;> simp [back, h1, h2]
+
+/-- A position inside what an insertion wrote ends the search there.
+
+@proves REQ-PROV.mapping_inside -/
+theorem inside_an_edit_is_written_there (file text : String) (offset position : Nat)
+    (h1 : offset ≤ position) (h2 : position < offset + byteLen text) :
+    back (.insert file offset text) file position = .writtenHere := by
+  have h3 : ¬ position < offset := by omega
+  simp [back, h3, h2]
+
+/-- Two insertions and a deletion over `hello`. -/
+def edits : List Step :=
+  [.push (.insert "a.rs" 0 "xy"), .push (.insert "a.rs" 1 "Q"), .push (.delete "a.rs" 3 "he")]
+
+/-- Each position is answered with the edit that wrote it, at every point of the
+history: `x` and `y` by the first edit, `Q` between them by the second, and the
+text the file arrived with by none.
+
+@proves REQ-PROV.position_question -/
+theorem each_position_names_its_writer :
+    [0, 1, 2, 3].map (fun p => origins ⟨[("a.rs", "hello")]⟩ edits "a.rs" p)
+      = [[.node 0, .node 0, .node 0], [.node 0, .node 1, .node 1],
+         [.base, .node 0, .node 0], [.base, .base, .base]] := by
+  native_decide
+
+/-- The answer comes from inverting the edit, never from the text: its offset
+and length alone place every position before it, inside it or after it, with
+nothing left to estimate.
+
+@proves REQ-PROV.exact_not_heuristic -/
+theorem the_answer_is_exact (file text : String) (offset position : Nat) :
+    back (.insert file offset text) file position = .moved position ∨
+    back (.insert file offset text) file position = .writtenHere ∨
+    back (.insert file offset text) file position = .moved (position - byteLen text) := by
+  simp only [back, bne_self_eq_false, Bool.false_eq_true, ite_false]
+  split
+  · exact Or.inl rfl
+  · split
+    · exact Or.inr (Or.inl rfl)
+    · exact Or.inr (Or.inr rfl)
+
 end TraceLean.Provenance

@@ -188,4 +188,16 @@ theorem empty_is_empty :
     readTranscript "" = { events := [], unrecognised := [], held := "", usage := [] } := by
   native_decide
 
+/-- One record of a known shape, as a line. -/
+def said : String := (Json.mkObj [("type", Json.str "user"), ("text", Json.str "hi")]).compress
+
+/-- A record of a shape nobody taught the reader is reported as unrecognised,
+and the records around it are still read.
+
+@proves REQ-TRANSCRIPT.unknown_preserved -/
+theorem an_unknown_record_is_kept_and_reading_goes_on :
+    (readTranscript (said ++ "\nnot a record\n" ++ said ++ "\n")).unrecognised = ["not a record"] ∧
+    (readTranscript (said ++ "\nnot a record\n" ++ said ++ "\n")).events.length = 2 := by
+  native_decide
+
 end TraceLean.Transcript

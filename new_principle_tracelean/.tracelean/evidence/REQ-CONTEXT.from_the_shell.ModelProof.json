@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-CONTEXT",
+    "clause": "from_the_shell",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Context::the_shell_chooses_parts_by_label",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "6dabdb704e198acf",
+  "inputs": [
+    [
+      "model",
+      "a5290587d3e6e387"
+    ],
+    [
+      "requirement",
+      "a72a6476ac9d0fc4"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

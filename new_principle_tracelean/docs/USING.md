@@ -22,10 +22,9 @@ editor reads what is there and writes only what you save.
 ┌──┬──────────────── tabs: what is open ──────────────────────┐
 │📁│ explorer      │ document                  │ side panel    │
 │🔗│ (files)       │ (the file you edit)       │ (trace,       │
-│🧪│               │ I T M P chips in gutter   │  requirements,│
-│📋│               │                           │  sandbox,     │
-│🕸│               │                           │  history…)    │
-│🌳│               │                           │               │
+│🧪│               │ I T M P chips in gutter   │  design,      │
+│🕸│               │                           │  sandbox,     │
+│🌳│               │                           │  history…)    │
 ├──┴──────────── which-key: the actions here, with keys ───────┤
 └───────────────────────── status line ────────────────────────┘
 ```
@@ -37,8 +36,7 @@ The icons on the left are **stations**, always there:
 | 📁 | the project's files |
 | 🔗 | the trace of the file you are reading: each claim it makes, the clause's text, and every other claim on that clause (its tests, its model, the code it tests) — it follows you from file to file. On a requirement's own document it lists each clause and everything that claims it, flagging clauses nothing claims |
 | 🧪 | the sandbox: run an AI agent on a copy of the tree, then review its changes |
-| 📋 | the requirements and how well each is evidenced |
-| 🕸 | the refinement graph: which requirement refines which |
+| 🕸 | the design: the requirements as their refinement graph, opening on the roots. Click ▸ to unfold one level; with the cursor on it, the bar (or `Space g a`) unfolds everything under it; **[ expand all ]** and **[ fold all ]** at the top do the whole graph |
 | 🌳 | the undo tree: every state the project has been in, each branch in its own column; `#0` is the tree as it was opened. Click a node to go there, rest on it to see the change it made; **All / File / Saved** at the top show everything, only the open file's changes, or only where you saved (`Space h f`) |
 
 ## Finding your way between requirements and code
@@ -72,9 +70,8 @@ The icons on the left are **stations**, always there:
   opened requirement lists every clause with its evidence level (L1–L4) and
   every claim as a `path:line` link — click to jump there. A clause nothing
   claims says so in red.
-- **📋 Requirements** lists them all with their levels and a bar of how many
-  clauses something implements (`███░░ 3/5`); **🕸** shows how they refine
-  each other.
+- **🕸 Design** shows how they refine each other, each with its level and a
+  bar of how many clauses something implements (`███░░ 3/5`).
 
 Evidence levels, weakest to strongest: **L1** annotated, **L2** judged by a
 person, **L3** differentially tested, **L4** proved. A clause's level is the

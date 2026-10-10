@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-STRENGTH",
+    "clause": "obligation_generated",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Strength::each_model_owes_the_determining_question",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "bee4db38aecac259",
+  "inputs": [
+    [
+      "model",
+      "9772b5a355704b31"
+    ],
+    [
+      "requirement",
+      "3fe26295b19608a6"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

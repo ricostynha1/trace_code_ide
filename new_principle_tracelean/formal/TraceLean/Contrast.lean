@@ -91,4 +91,20 @@ def judge (colours : List (String × String)) (pair : Pair) : List Finding :=
 def findings (pairs : List Pair) (colours : List (String × String)) : List Finding :=
   pairs.bind (judge colours)
 
+/-- Black, white and a light grey. -/
+def greys : List (String × String) := [("fg", "#000000"), ("bg", "#ffffff"), ("dim", "#bbbbbb")]
+
+/-- Black on white meets the text minimum at 21:1; light grey on white does not
+and is reported with its ratio; a waiver with a reason excuses it; a waiver on
+a pair that meets its minimum is reported; an unknown colour is named.
+
+@proves REQ-LOOK.contrast_sufficient -/
+theorem each_pair_meets_its_minimum_or_is_named :
+    (findings [⟨"fg", "bg", 450, none⟩, ⟨"dim", "bg", 450, none⟩, ⟨"dim", "bg", 450, some "decor"⟩,
+               ⟨"fg", "bg", 450, some "old"⟩, ⟨"x", "bg", 300, none⟩] greys).map
+      (fun f => (f.text, f.ratio, f.problem))
+      = [("dim", some 191, "below its minimum"), ("fg", some 2100, "waiver unused"),
+         ("x", none, "unknown colour")] := by
+  native_decide
+
 end TraceLean.Contrast

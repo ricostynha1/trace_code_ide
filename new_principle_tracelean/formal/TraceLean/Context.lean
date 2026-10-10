@@ -315,4 +315,58 @@ def affected (claims : List Claim) (id : String) (clause : Option String) (down 
   let claimedFiles := (state.2 ++ claimed.tests).map (·.path)
   usesIn symbols claimedFiles files state.2
 
+/-! ## What holds -/
+
+/-- A graph with a diamond under `A` and a cycle between `X` and `Y`. -/
+def graph : List Node :=
+  [⟨"A", []⟩, ⟨"B", ["A"]⟩, ⟨"C", ["B"]⟩, ⟨"D", ["C", "A"]⟩, ⟨"X", ["Y"]⟩, ⟨"Y", ["X"]⟩]
+
+/-- The neighbourhood goes all the way up and all the way down, names each
+requirement once, and leaves out the requirement itself, even round a cycle.
+
+@proves REQ-CONTEXT.neighbourhood_is_closed -/
+theorem the_neighbourhood_is_transitive_and_once :
+    neighbourhood graph "B" = (["A"], ["C", "D"]) ∧
+    neighbourhood graph "D" = (["A", "B", "C"], []) ∧
+    neighbourhood graph "X" = (["Y"], ["Y"]) := by
+  native_decide
+
+/-- Claims on `REQ-A`, of each kind, and one on another requirement. -/
+def claims : List Claim :=
+  [⟨"implements", "REQ-A", some "one", "src/m.rs::convert", "src/m.rs", 3, some "m::convert", "fn convert()"⟩,
+   ⟨"tests", "REQ-A", some "one", "tests/a.rs::t2", "tests/a.rs", 9, some "t2", "fn t2()"⟩,
+   ⟨"models", "REQ-A", some "one", "M.lean::convert", "M.lean", 5, some "convert", "def convert"⟩,
+   ⟨"tests", "REQ-B", none, "tests/b.rs::t1", "tests/b.rs", 2, some "t1", "fn t1()"⟩,
+   ⟨"tests", "REQ-C", none, "tests/c.rs::t3", "tests/c.rs", 7, some "t3", "fn t3() convert()"⟩]
+
+/-- Each claim on the target comes with its place and the source of its item,
+sorted by kind; a claim on something else does not.
+
+@proves REQ-CONTEXT.claims_with_source -/
+theorem claims_come_with_their_source :
+    (claimsOn claims "REQ-A" none).code.map (fun i => (i.path, i.line, i.source))
+      = [("src/m.rs", 3, "fn convert()")] ∧
+    (claimsOn claims "REQ-A" none).tests.map (·.path) = ["tests/a.rs"] ∧
+    (claimsOn claims "REQ-A" none).models.map (·.source) = ["def convert"] := by
+  native_decide
+
+/-- A test claiming what refines the target is affected, and so is one naming
+an item that implements it; one already claiming the target is not.
+
+@proves REQ-CONTEXT.affected_tests -/
+theorem affected_are_below_or_naming :
+    (affected claims "REQ-A" none ["REQ-B"] []).map (·.path) = ["tests/b.rs", "tests/c.rs"] := by
+  native_decide
+
+/-- The shell chooses parts by label, all of them by `all`, the default by
+nothing, and refuses a label that names no part.
+
+@proves REQ-CONTEXT.from_the_shell -/
+theorem the_shell_chooses_parts_by_label :
+    shellParts none = .chosen defaultParts ∧
+    shellParts (some "all") = .chosen allParts ∧
+    shellParts (some "affected-tests, code") = .chosen [.code, .affected] ∧
+    shellParts (some "code,bogus") = .unknown "bogus" := by
+  native_decide
+
 end TraceLean.Context

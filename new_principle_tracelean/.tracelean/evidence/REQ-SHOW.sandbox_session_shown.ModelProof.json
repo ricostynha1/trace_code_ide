@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-SHOW",
+    "clause": "sandbox_session_shown",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.SandboxView::the_session_is_shown_whole",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "d0a9fa5d139df1d0",
+  "inputs": [
+    [
+      "model",
+      "cebf0149688306d8"
+    ],
+    [
+      "requirement",
+      "59a9702a9f011b7c"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

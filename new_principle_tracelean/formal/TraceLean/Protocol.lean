@@ -373,4 +373,13 @@ theorem a_refusal_against_an_answer_is_a_divergence :
 theorem finding_nothing_is_not_a_proof : drtLevel true ≠ Level.L4 := by
   native_decide
 
+/-- A case names, in its op, the entry point it exercises, after its number and
+before its input.
+
+@proves REQ-DRT-PROTO.case_names_op -/
+theorem a_case_names_its_op :
+    ((caseLine 3 "Lsp.lower" (Json.num 1)).splitOn "\"case\":3,\"op\":\"Lsp.lower\",\"input\":1").length
+      = 2 := by
+  native_decide
+
 end TraceLean.Protocol

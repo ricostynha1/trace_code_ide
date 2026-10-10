@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-STRENGTH",
+    "clause": "per_input",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Pinning::the_obligation_meets_and_determines",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "a4bb89b2a294f34f",
+  "inputs": [
+    [
+      "model",
+      "7f7ee44ab1ea97e6"
+    ],
+    [
+      "requirement",
+      "c403b125b5aab33d"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

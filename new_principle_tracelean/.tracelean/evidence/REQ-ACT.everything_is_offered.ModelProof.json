@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-ACT",
+    "clause": "everything_is_offered",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Offer::the_menu_holds_everything_that_applies",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "6f3a70470e3ced63",
+  "inputs": [
+    [
+      "model",
+      "e582bb091cef893d"
+    ],
+    [
+      "requirement",
+      "d5bb8b17730a8f9b"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

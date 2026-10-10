@@ -228,4 +228,49 @@ theorem an_obligation_is_never_discharged :
                            strength := .open }).splitOn "sorry").length = 2 := by
   native_decide
 
+/-- A model, a theorem about it and a pin started on it. -/
+def pinnedAt : List StrengthLink :=
+  [⟨.models, "REQ-A", some "one", "M::f", none⟩, ⟨.proves, "REQ-A", some "one", "T::p", none⟩,
+   ⟨.pins, "REQ-A", some "one", "T::pin", none⟩]
+
+/-- Each modelled declaration owes one obligation, and its text asks whether the
+proved properties determine the model.
+
+@proves REQ-STRENGTH.obligation_generated -/
+theorem each_model_owes_the_determining_question :
+    (obligationsFrom pinnedAt).map (·.symbol) = ["M::f"] ∧
+    ((obligationSource ((obligationsFrom pinnedAt).headD default)).splitOn
+      "∀ f g, Spec_M_f f → Spec_M_f g → f = g").length = 2 := by
+  native_decide
+
+/-- A pin started is neither open nor finished: three states, and only the
+kernel's record moves an attempt to pinned.
+
+@proves REQ-STRENGTH.attempted_distinguished -/
+theorem an_attempt_is_its_own_state :
+    ((obligationsFrom pinnedAt).map (·.strength)) = [.attempted "T::pin"] ∧
+    Strength.attempted "T::pin" ≠ Strength.«open» ∧
+    Strength.attempted "T::pin" ≠ Strength.pinned "T::pin" ∧
+    (Strength.attempted "T::pin").isSettled = false := by
+  native_decide
+
+/-- A model declared nondeterministic carries its reason, and is settled rather
+than open forever.
+
+@proves REQ-STRENGTH.nondeterministic_declared -/
+theorem a_declared_nondeterminism_is_settled :
+    ((obligationsFrom [⟨.models, "REQ-A", none, "M::clock", some "reads the time"⟩]).map (·.strength))
+      = [.nondeterministic "reads the time"] ∧
+    (Strength.nondeterministic "reads the time").isSettled = true := by
+  native_decide
+
+/-- An obligation carries the theorems proved about the model beside its
+strength, so a proof level is never shown without it.
+
+@proves REQ-STRENGTH.qualifies_proof -/
+theorem a_proof_comes_with_its_strength :
+    (obligationsFrom pinnedAt).map (fun o => (o.theorems, o.strength))
+      = [(["T::p"], .attempted "T::pin")] := by
+  native_decide
+
 end TraceLean.Strength

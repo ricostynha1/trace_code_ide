@@ -80,4 +80,19 @@ theorem an_identity_never_mentions_a_line :
     ∧ anchorIdent "a.rs" .file = "a.rs" := by
   native_decide
 
+/-- A declaration's identity is its file and its name, whatever lines it sits on
+and however its body is laid out; a region's moves with its markers.
+
+@proves REQ-ANCHOR.stable_under_move -/
+theorem moving_a_declaration_keeps_its_identity (file name : String) :
+    anchorIdent file (.decl name) = file ++ "::" ++ name ∧
+    anchorIdent file .file = file := ⟨rfl, rfl⟩
+
+/-- And an edit above a region, which moves its markers down a line, changes it.
+
+@proves REQ-ANCHOR.stable_under_move -/
+theorem an_edit_above_a_region_moves_it :
+    anchorIdent "a.rs" (.region 3 9) ≠ anchorIdent "a.rs" (.region 4 10) := by
+  native_decide
+
 end TraceLean.Anchor

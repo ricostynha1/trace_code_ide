@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-TRANSCRIPT",
+    "clause": "unknown_preserved",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Transcript::an_unknown_record_is_kept_and_reading_goes_on",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "efb5fe8666c2cde9",
+  "inputs": [
+    [
+      "model",
+      "bcd8789899d37482"
+    ],
+    [
+      "requirement",
+      "8328c757f3309cd4"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

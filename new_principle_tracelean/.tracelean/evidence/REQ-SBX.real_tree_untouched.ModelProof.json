@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-SBX",
+    "clause": "real_tree_untouched",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Effects::the_real_tree_is_checked_untouched",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "8bf8ba2565b1ea0e",
+  "inputs": [
+    [
+      "model",
+      "4e8f955d1c1ecf6a"
+    ],
+    [
+      "requirement",
+      "561953de2a6bbad3"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

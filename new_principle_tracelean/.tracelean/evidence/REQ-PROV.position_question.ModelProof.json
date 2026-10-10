@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-PROV",
+    "clause": "position_question",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Provenance::each_position_names_its_writer",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "5659aed03eddbf9c",
+  "inputs": [
+    [
+      "model",
+      "8df56585372e9725"
+    ],
+    [
+      "requirement",
+      "af941ff7f4d93e7b"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

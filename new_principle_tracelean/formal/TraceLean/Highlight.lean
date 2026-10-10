@@ -71,4 +71,13 @@ def requirementNames (text : String) (start stop : Nat) : List (Nat × Nat) :=
   let first := min start last
   namesFrom cs first last (last + 1) first
 
+/-- A requirement named in a comment is marked, clause and all; a word running
+into it, a single capital and a name without its dash are not names.
+
+@proves REQ-SHOW.references_are_links -/
+theorem a_named_requirement_is_marked :
+    requirementNames "// see REQ-ABC.x and REQ-B, not lowREQ-C, R-1 or REQ" 0 60
+      = [(7, 16), (21, 26)] := by
+  native_decide
+
 end TraceLean.Highlight

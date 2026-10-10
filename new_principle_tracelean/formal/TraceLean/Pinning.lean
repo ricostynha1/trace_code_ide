@@ -200,4 +200,14 @@ theorem another_key_does_not_pin (t key : String) (r : PinRecord) (h : r.key ≠
 theorem a_failed_run_is_not_accepted (t output : String) : accepted t output false = false := by
   simp [accepted]
 
+/-- The obligation is that the model meets the specification on every input and
+that no input has two answers the specification accepts.
+
+@proves REQ-STRENGTH.per_input -/
+theorem the_obligation_meets_and_determines :
+    statement "Spec" "f" 2
+      = "(∀ x1 x2, Spec x1 x2 (f x1 x2)) ∧ (∀ x1 x2 y1 y2, Spec x1 x2 y1 → Spec x1 x2 y2 → y1 = y2)" ∧
+    statement "Spec" "c" 0 = "(Spec c) ∧ (∀ y1 y2, Spec y1 → Spec y2 → y1 = y2)" := by
+  native_decide
+
 end TraceLean.Pinning

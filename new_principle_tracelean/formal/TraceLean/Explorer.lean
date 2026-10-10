@@ -57,4 +57,15 @@ def level (files opened : List String) : Nat → String → Nat → List Row
 def rows (files opened : List String) : List Row :=
   level files opened (files.foldl (fun m f => max m f.length) 0 + 2) "" 0
 
+/-- The files as a tree: an opened folder shows what it holds a level deeper, a
+closed one shows nothing under it, and every row stands for its whole path.
+
+@proves REQ-SHOW.listing_is_a_tree -/
+theorem the_listing_is_a_tree :
+    rows ["src/a.rs", "src/b/c.rs", "README.md"] ["src"]
+      = [⟨0, "src", "src", true, true⟩, ⟨1, "b", "src/b", true, false⟩,
+         ⟨1, "a.rs", "src/a.rs", false, false⟩, ⟨0, "README.md", "README.md", false, false⟩] ∧
+    (rows ["src/a.rs", "src/b/c.rs", "README.md"] []).map (·.path) = ["src", "README.md"] := by
+  native_decide
+
 end TraceLean.Explorer

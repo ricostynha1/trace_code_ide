@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-SHOW",
+    "clause": "requirement_opened",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.RequirementView::an_opened_requirement_shows_clauses_and_claims",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "72dd34ccbb78e57b",
+  "inputs": [
+    [
+      "model",
+      "9fc505ffe2567ff4"
+    ],
+    [
+      "requirement",
+      "fb9969e3b2c26e70"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

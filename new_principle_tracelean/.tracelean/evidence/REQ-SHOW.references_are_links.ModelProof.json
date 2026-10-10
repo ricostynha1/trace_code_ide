@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-SHOW",
+    "clause": "references_are_links",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Highlight::a_named_requirement_is_marked",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "28727b45f0d0c785",
+  "inputs": [
+    [
+      "model",
+      "4a1c00bf5fccde09"
+    ],
+    [
+      "requirement",
+      "2d7cea09b2b24247"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

@@ -74,4 +74,24 @@ def coverageView (named : String) (items : List Item) (width : Nat) : Buffer :=
     let out := countLine out "" (total (items.map (fun i => (i.path, i.lines))))
     finish (items.foldl itemLines out) ("coverage " ++ named)
 
+/-- Each span that does something: the text it covers and what it does. -/
+def linked (b : Buffer) : List (String × List String) :=
+  (b.spans.filter (!·.actions.isEmpty)).map
+    (fun s => (String.mk ((b.text.toList.drop s.start).take (s.stop - s.start)), s.actions))
+
+/-- One item of two lines, the first run twice by one test. -/
+def measured : List Item :=
+  [⟨"src/a.rs", 10, some "f", some "one", [⟨10, 2, [("t1", 2)]⟩, ⟨11, 0, []⟩], ["fn f()", "  x"]⟩]
+
+/-- Each item opens to the tests that ran its lines, with how often, and each
+line no test ran is a link to that line.
+
+@proves REQ-LINECOV.lines_listed -/
+theorem each_item_lists_its_tests_and_unrun_lines :
+    linked (coverageView "REQ-A" measured 60)
+      = [("REQ-A", ["trace.requirement"]), ("src/a.rs:10", ["file.open"]),
+         ("src/a.rs:11", ["file.open"])] ∧
+    ((coverageView "REQ-A" measured 60).text.splitOn "ran by  t1 ×2").length = 2 := by
+  native_decide
+
 end TraceLean.CoverageView

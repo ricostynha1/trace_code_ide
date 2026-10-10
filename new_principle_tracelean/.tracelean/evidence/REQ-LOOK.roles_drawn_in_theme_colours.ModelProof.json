@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-LOOK",
+    "clause": "roles_drawn_in_theme_colours",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Cells::each_character_is_checked_where_it_landed",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "49bcd5047e2f4e14",
+  "inputs": [
+    [
+      "model",
+      "be1b38068a75470e"
+    ],
+    [
+      "requirement",
+      "5468d0c637731224"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

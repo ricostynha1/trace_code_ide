@@ -283,4 +283,36 @@ theorem weakest_link_pinned :
       exact h2.2 b1
     exact Level.le_both_eq below above
 
+/-- Any two levels compare, and the rungs run annotation, judgement,
+differential testing, proof.
+
+@proves REQ-EVID.ladder -/
+theorem the_ladder_is_a_total_order (a b : Level) :
+    (a ≤ b ∨ b ≤ a) ∧
+    Level.L1.toNat < Level.L2.toNat ∧ Level.L2.toNat < Level.L3.toNat ∧
+    Level.L3.toNat < Level.L4.toNat := by
+  refine ⟨Nat.le_total a.toNat b.toNat, ?_, ?_, ?_⟩ <;> decide
+
+/-- A bond nothing has recorded stands at the lowest rung.
+
+@proves REQ-EVID.absent_is_lowest -/
+theorem a_bond_without_records_is_lowest (b : Bond) : bondLevel [] b = Level.L1 := rfl
+
+/-- A record on one bond leaves every other bond's level as it was.
+
+@proves REQ-EVID.bonds_separate -/
+theorem a_record_moves_only_its_own_bond (records : List Record) (b other : Bond) (l : Level)
+    (h : other ≠ b) :
+    bondLevel (records ++ [⟨other, l⟩]) b = bondLevel records b := by
+  simp [bondLevel, List.foldl_append, h]
+
+/-- The chain keeps each bond's level, in the order of the bonds, rather than
+the single value they collapse to.
+
+@proves REQ-EVID.chain_rendered -/
+theorem the_chain_is_each_bond :
+    chain [⟨.modelImpl, .L3⟩, ⟨.requirementModel, .L2⟩] = [.L2, .L3, .L1] ∧
+    assurance [⟨.modelImpl, .L3⟩, ⟨.requirementModel, .L2⟩] = .L1 := by
+  native_decide
+
 end TraceLean.Evidence

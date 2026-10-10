@@ -698,6 +698,16 @@ impl Editor {
         if self.is_tree(&buffer) {
             focus.under = self.tree_row_at(&buffer, self.offset).map(|row| row.path);
         }
+        // A fold mark of the design is about its row's requirement, which its
+        // action carries; the mark's own text is a glyph.
+        if matches!(&buffer.kind, BufferKind::Menu { title } if title == "design") {
+            let carried = actions_at(buffer.clone(), self.offset)
+                .iter()
+                .find_map(|a| a.strip_prefix("design.toggle ").map(str::to_string));
+            if carried.is_some() {
+                focus.under = carried;
+            }
+        }
         // An opened requirement's Approve button is about its document, the
         // view's third line.
         let requirement = matches!(&buffer.kind, BufferKind::Record { title } if title.starts_with("requirement "));

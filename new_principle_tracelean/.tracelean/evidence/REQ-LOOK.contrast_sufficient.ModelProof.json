@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-LOOK",
+    "clause": "contrast_sufficient",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Contrast::each_pair_meets_its_minimum_or_is_named",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "1e2f9f104bde1b8c",
+  "inputs": [
+    [
+      "model",
+      "8b614feb3e36a144"
+    ],
+    [
+      "requirement",
+      "91e58479cc6a0fc3"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

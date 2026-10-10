@@ -113,4 +113,31 @@ def events (text : String) : List Event :=
     | .ok value => record value
     | .error _ => []
 
+/-- A record of Claude Code's: its kind, and its message's content blocks. -/
+def recordLine (kind : String) (blocks : List Json) : String :=
+  (Json.mkObj [("type", Json.str kind),
+    ("message", Json.mkObj [("content", Json.arr blocks.toArray)])]).compress
+
+/-- An assistant turn that thought, spoke and called a tool, and the result
+coming back: each block a row, in order. -/
+def turn : String :=
+  recordLine "assistant"
+    [Json.mkObj [("type", Json.str "thinking"), ("thinking", Json.str "look")],
+     Json.mkObj [("type", Json.str "text"), ("text", Json.str "Reading it.")],
+     Json.mkObj [("type", Json.str "tool_use"), ("name", Json.str "Read"),
+       ("input", Json.mkObj [("file_path", Json.str "a.rs")])]] ++ "\n" ++
+  recordLine "user"
+    [Json.mkObj [("type", Json.str "tool_result"), ("content", Json.str "fn main")]] ++ "\n"
+
+/-- Claude Code's content blocks are read into the conversation, a row for what
+was said, thought, called and returned; a last record without its newline is
+left for the next read.
+
+@proves REQ-TRANSCRIPT.tool_format_read -/
+theorem a_turn_reads_as_its_rows :
+    (events turn).map (fun e => (e.kind, e.text))
+      = [("thinking", "look"), ("agent", "Reading it."), ("tool", "Read(a.rs)"), ("result", "fn main")] ∧
+    events (turn ++ "partial record") = events turn := by
+  native_decide
+
 end TraceLean.Claude

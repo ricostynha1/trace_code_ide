@@ -67,3 +67,19 @@ fn the_design_opens_on_its_roots_and_unfolds_on_request() {
     assert_eq!(rows(&editor).len(), 3);
     let _ = std::fs::remove_dir_all(&root);
 }
+
+/// @tests REQ-ACT.one_path
+#[test]
+fn a_key_on_a_fold_mark_unfolds_its_row() {
+    let root = project(TREE);
+    let mut editor = Editor::open(root.clone(), keymap());
+    editor.perform(tracelean_core::surface::act::Intent::Display { what: BufferKind::Menu { title: "design".into() } });
+    // The cursor on the mark of the first row, past the header line.
+    let header = plain_text(editor.buffer())[0].chars().count();
+    editor.offset = header + 1;
+    for key in ["Space", "g", "o"] {
+        editor.key(key);
+    }
+    assert_eq!(rows(&editor), vec!["ARCH-X", "REQ-A"], "the key acted on the mark's glyph, not its row");
+    let _ = std::fs::remove_dir_all(&root);
+}

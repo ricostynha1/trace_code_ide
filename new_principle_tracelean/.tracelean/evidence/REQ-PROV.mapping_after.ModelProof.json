@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-PROV",
+    "clause": "mapping_after",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Provenance::after_an_edit_is_shifted",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "34b9c980a3290eae",
+  "inputs": [
+    [
+      "model",
+      "3c74019b46571f27"
+    ],
+    [
+      "requirement",
+      "fefadbfa045fc253"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-REQDOC",
+    "clause": "id_is_identity",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Requirement::the_declared_id_is_the_identity",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "a8ebc7506f4d3f2d",
+  "inputs": [
+    [
+      "model",
+      "cad3550825a70c07"
+    ],
+    [
+      "requirement",
+      "e02b29e91263c1e2"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

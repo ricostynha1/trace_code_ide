@@ -341,4 +341,14 @@ theorem only_a_covered_agreement_is_evidence (agreed : Bool) (v : CoverageVerdic
   intro h
   cases agreed <;> cases v <;> simp_all [coverageLevel]
 
+/-- A run records, for each situation its binding names, whether generated cases
+reached it: one reached is met, one never reached is named as vacuous.
+
+@proves REQ-DRT-COVER.law_coverage -/
+theorem whether_a_situation_was_reached_is_recorded :
+    coverageVerdict [⟨"overlap", 1⟩] [⟨"overlap", 4⟩] [] = .met ∧
+    coverageVerdict [⟨"overlap", 1⟩, ⟨"empty", 1⟩] [⟨"overlap", 4⟩] []
+      = .unmet [.vacuous "empty"] := by
+  native_decide
+
 end TraceLean.Coverage

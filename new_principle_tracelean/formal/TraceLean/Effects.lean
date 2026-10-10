@@ -305,4 +305,16 @@ theorem nothing_written_is_nothing_escaped :
     escapeViolations [] = [] := by
   simp [escapeViolations]
 
+/-- A real tree nobody wrote while the workspace was live shows no change, and
+one written to, created in or removed from is named at each path.
+
+@proves REQ-SBX.real_tree_untouched -/
+theorem the_real_tree_is_checked_untouched (w : Workspace) :
+    treeChanges w w = [] ∧
+    treeChanges ⟨[("a.rs", "x"), ("b.rs", "y")]⟩ ⟨[("a.rs", "z"), ("c.rs", "")]⟩
+      = [.realTreeChanged "a.rs", .realTreeChanged "b.rs", .realTreeChanged "c.rs"] := by
+  constructor
+  · simp [treeChanges]
+  · native_decide
+
 end TraceLean.Effects

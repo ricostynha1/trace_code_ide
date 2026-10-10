@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-SHOW",
+    "clause": "claims_beside_code",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Chips::each_clause_line_carries_its_claims",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "0eb234622a7267ea",
+  "inputs": [
+    [
+      "model",
+      "75880f0a18b9bc63"
+    ],
+    [
+      "requirement",
+      "eda3abed10e8803b"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

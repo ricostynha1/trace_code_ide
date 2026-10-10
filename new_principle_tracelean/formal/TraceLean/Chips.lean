@@ -79,4 +79,14 @@ def clauseChips (text id : String) (claims : List (Option String × Role)) : Lis
     (["M", "I", "T", "D", "P"].filter letters.contains).map fun l =>
       { line := pair.1, letter := l, requirement := id ++ "." ++ pair.2 }
 
+/-- Each clause's line is marked with a letter for each kind of claim on it, in
+one order, and each mark opens that clause.
+
+@proves REQ-SHOW.claims_beside_code -/
+theorem each_clause_line_carries_its_claims :
+    clauseChips "---\nid: REQ-A\nclauses:\n  one: x\n  two: y\n---\n" "REQ-A"
+        [(some "one", .tests), (some "one", .implements), (some "two", .models)]
+      = [⟨3, "I", "REQ-A.one"⟩, ⟨3, "T", "REQ-A.one"⟩, ⟨4, "M", "REQ-A.two"⟩] := by
+  native_decide
+
 end TraceLean.Chips

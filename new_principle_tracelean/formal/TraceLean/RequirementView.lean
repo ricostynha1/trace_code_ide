@@ -228,4 +228,37 @@ def requirementView (view : Shown) : Buffer :=
   let out := coveredLine "covered    " view.id (view.clauses.any implemented) (evidenceLine out view.clauses) view.lines
   finish (view.clauses.foldl (clauseLines view.id) out) ("requirement " ++ view.id)
 
+/-- Over two items that share a line of one file: that line counted once, the
+lines run among the three, and each test once.
+
+@proves REQ-LINECOV.requirement_summary -/
+theorem a_shared_line_counts_once :
+    (fun c => (c.run, c.all, c.tests))
+        (total [("a.rs", [⟨1, 2, [("t1", 2)]⟩, ⟨2, 0, []⟩]), ("a.rs", [⟨2, 1, [("t2", 1)]⟩, ⟨3, 0, []⟩])])
+      = (2, 3, 2) := by
+  native_decide
+
+/-- Each span that does something: the text it covers and what it does. -/
+def linked (b : Buffer) : List (String × List String) :=
+  (b.spans.filter (!·.actions.isEmpty)).map
+    (fun s => (String.mk ((b.text.toList.drop s.start).take (s.stop - s.start)), s.actions))
+
+/-- A requirement of one clause, implemented and tested. -/
+def oneClause : Shown :=
+  ⟨"REQ-A", "A thing", "reqs/REQ-A.md", "draft", [], [],
+   [⟨some "one", "It shall.", [], .L3, "L2/L3/L1",
+     [⟨"implements", "src/a.rs", 4, some "f"⟩, ⟨"tests", "tests/a.rs", 9, none⟩], none, true, none, none⟩],
+   60, none⟩
+
+/-- An opened requirement shows each clause with the level its evidence reached
+and every claim on it, each claim opening the claiming file at its line.
+
+@proves REQ-SHOW.requirement_opened -/
+theorem an_opened_requirement_shows_clauses_and_claims :
+    ((requirementView oneClause).text.splitOn "L3  one  L2/L3/L1\n  It shall.").length = 2 ∧
+    (linked (requirementView oneClause)).filter (fun l => l.2 == ["file.open"])
+      = [("reqs/REQ-A.md", ["file.open"]), ("src/a.rs:4", ["file.open"]),
+         ("tests/a.rs:9", ["file.open"])] := by
+  native_decide
+
 end TraceLean.RequirementView

@@ -53,4 +53,19 @@ def findingsView (title : String) (found : List Found) : Buffer :=
   { id := "record:" ++ title, kind := .record title, text := done.1,
     spans := tidy done.1.length done.2 }
 
+/-- Each span that does something: the text it covers and what it does. -/
+def linked (b : Buffer) : List (String × List String) :=
+  (b.spans.filter (!·.actions.isEmpty)).map
+    (fun s => (String.mk ((b.text.toList.drop s.start).take (s.stop - s.start)), s.actions))
+
+/-- A finding's place opens the file at its line, and each requirement its
+message names opens that requirement.
+
+@proves REQ-SHOW.findings_lead_somewhere -/
+theorem a_finding_links_its_place_and_names :
+    linked (findingsView "check" [⟨"dangling", "src/a.rs", 4, "REQ-X.y names nothing; see REQ-Z"⟩])
+      = [("src/a.rs:4", ["file.open"]), ("REQ-X.y", ["trace.requirement"]),
+         ("REQ-Z", ["trace.requirement"])] := by
+  native_decide
+
 end TraceLean.FindingsView
