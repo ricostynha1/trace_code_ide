@@ -2648,6 +2648,7 @@ impl Editor {
     /// person reads in a window.
     ///
     /// @implements REQ-CONTEXT.views_from_the_shell
+    /// @structural REQ-CONTEXT.views_from_the_shell reason="the shell and the window call the one producer, which is a fact about the call graph; what each producer makes is modelled under REQ-SHOW"
     pub fn view(&mut self, what: BufferKind) -> Buffer {
         self.produce(what)
     }

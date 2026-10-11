@@ -26,7 +26,7 @@ Given by ricostynha ("I give you autonomy to decide"); judgements recorded by
   `lines_listed` judged `agrees`. `REQ-STALE.current_not_rerun` split into
   `agreed_not_rerun` (`Staleness.rerun`) and `measured_not_retaken`
   (`Hash.retake`), both modelled, bound and judged. `views_from_the_shell`
-  stays Unmodeled: it reads the disk.
+  is `@structural`: the shell and the window call the one producer.
 - **Sandbox brief:** within `REQ-OBS.no_instruction_channel`, now said by its
   `environment` narrowing: a fixed text naming tools and skills, from the host
   alone, written before the tool starts.
@@ -44,3 +44,13 @@ Given by ricostynha ("I give you autonomy to decide"); judgements recorded by
   move onto functions when their file is next touched.
 - **Trace station** ("same every time"): closed, not reproduced — it follows
   the file the document shows (`crates/editor/tests/trace_station.rs`).
+- **Proofs:** every modelled clause (258) has a `@proves` theorem. Most are
+  worked examples checked by `native_decide`; the general ones are the laws a
+  clause states outright (`back` before/inside/after, `bondLevel` per bond,
+  `lineBreaches` totality, tree reachability, batch = members in turn).
+- **Bugs met on the way:** a coverage figure in the design and the index
+  offered a diff's accept/reject (now opens `trace.coverage <id>`); a key on a
+  design fold mark acted on the glyph, not the row; the welcome page and
+  `docs/USING.md` still named the removed 📋 station.
+- **Findings left:** seven, all the demo's deliberate gaps (REQ-THERMO,
+  REQ-TABLE).

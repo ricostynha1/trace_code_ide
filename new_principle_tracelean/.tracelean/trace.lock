@@ -6359,7 +6359,7 @@
       "anchor": "crates/editor/src/lib.rs::Editor::view",
       "body_hash": "96dcadba745ff1ae",
       "link_hash": "7892b343ad7425e7",
-      "qualifier": null
+      "qualifier": "structural"
     },
     {
       "role": "implements",
@@ -41519,9 +41519,9 @@
       "level": "L3",
       "detail": {
         "drt": {
-          "seed": 53,
+          "seed": 13,
           "cases": 2000,
-          "op": "REQ-OBS.workspace_is_a_copy"
+          "op": "REQ-SBX.classification_total"
         }
       },
       "linkHash": "cd95fe45786ad4d7",
