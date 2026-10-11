@@ -2,8 +2,8 @@
 describes: [ARCH-EFFECT-LAW, ARCH-HONEST, REQ-EVID]
 described_hash:
   ARCH-EFFECT-LAW: a52673a3000aa966
-  ARCH-HONEST: fb288c153afd69f8
-  REQ-EVID: c3dfc3a07c7808a1
+  ARCH-HONEST: cfd9f166b870b9b3
+  REQ-EVID: 3c2190ae90139f20
 ---
 
 # Methodology
@@ -32,17 +32,18 @@ Theorems about the model are `@proves`; the theorem that those properties
 
 ## Evidence
 
-| Level | Means |
+| Mark | Means |
 |---|---|
-| `L1` | The annotation resolves. Nothing checked. |
-| `L2` | A human judged requirement and model consistent. |
-| `L3` | Differential testing found no disagreement, over a stated case count meeting a coverage floor. |
-| `L4` | A Lean theorem discharges the property. |
+| `A` | The annotation resolves. Nothing checked. |
+| `J` | A human judged requirement and model consistent. |
+| `T` | Differential testing found no disagreement, over a stated case count meeting a coverage floor. |
+| `P` | A Lean theorem discharges the property. |
 
-Three bonds — requirement↔model, model↔implementation, model-property — graded
-separately and aggregated by **minimum**. A proved model with no implementation
-bound to it reads `L4 model · L1 code`. Averaging those is the most effective way
-to build a dashboard that lies.
+Each mark is read from its own bond — requirement↔model, model↔implementation,
+model-property — and held or not on its own, written `AJTP` with a dash for each
+gap. A proved model with no implementation bound to it reads `A--P`. Averaging,
+or ranking the marks on a ladder, is the most effective way to build a dashboard
+that lies: an aggregate holds a mark only when every part holds it.
 
 ## Modelling what Lean cannot run
 
@@ -72,8 +73,8 @@ refines: [ARCH-HONEST, ARCH-CORE-SHELL]
 status: draft
 decomposition: complete
 clauses:
-  ladder: Evidence levels are totally ordered.
-  weakest_link: A link's assurance is the minimum over its bonds.
+  marks: A clause shall hold four marks, each on its own.
+  mark_per_bond: Each mark shall be read from its own bond.
 ---
 ```
 

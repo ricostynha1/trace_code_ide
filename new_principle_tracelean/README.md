@@ -134,22 +134,26 @@ unsound exemptions.
 
 ## Evidence
 
-| Level | Means |
+A clause holds four marks, each on its own, written in fixed positions with a
+dash for each one missing: `AJTP`, `A-TP`, `A---`.
+
+| Mark | Means |
 |---|---|
-| `L1` | The annotation resolves. Nothing checked. |
-| `L2` | A person judged requirement and model consistent. |
-| `L3` | Differential testing found no disagreement, over a stated case count **that reached the situations the binding declared** ([docs/04-coverage.md](docs/04-coverage.md)). |
-| `L4` | A Lean theorem discharges the property. |
+| `A` annotated | Something in the tree claims the clause. |
+| `J` judged | A person judged requirement and model consistent (a requirement↔model record at L2). |
+| `T` tested | Differential testing found no disagreement, over a stated case count **that reached the situations the binding declared** ([docs/04-coverage.md](docs/04-coverage.md)) (model↔implementation at L3). |
+| `P` proved | A Lean theorem discharges the property (model-property at L4). |
 
-Three bonds — requirement↔model, model↔implementation, model-property — graded
-separately and aggregated by **minimum**, never averaged.
+A mark is not a rung: a model can be proved and tested before anyone judged it,
+and reads `A-TP`. An aggregate holds a mark only when **every** part holds it,
+never by average or majority.
 
-A level is **earned**, never annotated. A backend writes a record into
+A mark is **earned**, never annotated. A backend writes a record into
 `.tracelean/evidence/`, and `--lock` folds the directory into the committed
 index, dropping whatever went stale:
 
 ```bash
-cargo test -p tracelean-core --test proofs_are_earned -- --ignored   # L4: what the kernel accepted
+cargo test -p tracelean-core --test proofs_are_earned -- --ignored   # P: what the kernel accepted
 cargo run  -p tracelean-core --bin tracelean-trace -- . --lock       # collect into the lock
 ```
 
@@ -163,8 +167,8 @@ the binding names it and its floor in `.tracelean/drt.json` while the generation
 test counts how often the name was reached; the differential test reports
 agreement. Neither half alone is L3, and the two are usually separate processes,
 so each writes to `.tracelean/pending/` and whichever lands second composes the
-record. 34 of 86 bindings declare floors; the rest answer `Undeclared` and stay
-at L1. See [docs/04-coverage.md](docs/04-coverage.md) and
+record. 34 of 86 bindings declare floors; the rest answer `Undeclared` and are
+never marked tested. See [docs/04-coverage.md](docs/04-coverage.md) and
 `REQ-DRT-COVER.floor_stated`.
 
 ## Reading order

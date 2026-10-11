@@ -1,7 +1,7 @@
 {
   "key": {
     "reqId": "REQ-ROLLUP",
-    "clause": "min_not_mean",
+    "clause": "every_part_holds",
     "bond": "requirementModel"
   },
   "level": "L2",
@@ -11,18 +11,18 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+      "note": "combine of [] is empty; otherwise the per-mark AND over every part."
     }
   },
-  "linkHash": "0207c3ceca79b1f0",
+  "linkHash": "7c889a6e706c7ac6",
   "inputs": [
     [
       "requirement",
-      "dc86e49bc935989a"
+      "28d8ce151a558680"
     ],
     [
       "model",
-      "30f0a5ab73add768"
+      "9d57426604aad65f"
     ]
   ]
 }

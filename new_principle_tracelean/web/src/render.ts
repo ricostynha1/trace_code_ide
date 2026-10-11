@@ -41,15 +41,15 @@ export interface Piece {
 // is the stylesheet's business, which is the same division the terminal
 // frontend makes with colours.
 //
-// A level gets two classes: one for being a level at all, one for its grade.
-// So a stylesheet that has not been taught the grades still colours levels, and
-// one that has tells L1 from L4 — which is `rendering_is_total` applied to a
-// role's payload rather than to the role.
+// A mark gets two classes: one for being a mark at all, one for which mark it
+// is, or for being missing. So a stylesheet that has not been taught the marks
+// still colours them, and one that has tells a gap from a proof — which is
+// `rendering_is_total` applied to a role's payload rather than to the role.
 export function classOf(role: Role): string {
   if (typeof role === "string") return `role-${role}`;
   if ("token" in role) return `role-token token-${role.token.kind}`;
   if ("claim" in role) return `role-claim claim-${role.claim.role}`;
-  return `role-level role-level-${role.level.grade.toLowerCase()}`;
+  return `role-mark role-mark-${role.mark.held ? role.mark.mark : "missing"}`;
 }
 
 // Characters, not code units: `text[i]` in JavaScript indexes UTF-16, so a

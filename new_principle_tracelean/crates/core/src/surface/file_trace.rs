@@ -11,8 +11,8 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::evidence::Level;
-use crate::surface::requirement_view::{link_text, Claim};
+use crate::evidence::Marks;
+use crate::surface::requirement_view::{link_text, mark_pieces, Claim};
 use crate::surface::sandbox_view::Lines;
 use crate::surface::view::{Buffer, Role, TokenKind};
 
@@ -28,7 +28,7 @@ pub struct Entry {
     /// `REQ-X.clause`, or `REQ-X` for a requirement without clauses.
     pub clause: String,
     pub text: String,
-    pub level: Level,
+    pub marks: Marks,
     /// Every other claim on the same clause, anywhere in the tree.
     pub others: Vec<Claim>,
 }
@@ -74,15 +74,16 @@ pub fn file_trace_view(path: &str, entries: &[Entry], width: usize) -> Buffer {
         head.push(("  ", Role::Plain, &[]));
         head.push((&place, Role::Path, &["file.open"]));
         out.line(&head);
-        let grade = format!("{:?}", entry.level);
-        out.line(&[
+        let letters = mark_pieces(entry.marks);
+        let mut row: Vec<(&str, Role, &[&str])> = vec![
             ("  ", Role::Plain, &[]),
             (&entry.role, claim_role(&entry.role), &[]),
             (" ", Role::Plain, &[]),
             (&entry.clause, Role::Requirement, &["trace.requirement", "trace.context"]),
             ("  ", Role::Plain, &[]),
-            (&grade, Role::Level { grade: entry.level }, &["trace.rollup"]),
-        ]);
+        ];
+        row.extend(letters.iter().map(|(text, role)| (text.as_str(), *role, &["trace.rollup"][..])));
+        out.line(&row);
         out.wrapped("  ", &entry.text, Role::Plain, &[]);
         if entry.others.is_empty() {
             out.line(&[("  nothing else claims it", Role::Removed, &[])]);
@@ -122,7 +123,7 @@ mod tests {
             role: "implements".into(),
             clause: "REQ-A.one".into(),
             text: "It does the thing.".into(),
-            level: Level::L2,
+            marks: Marks { annotated: true, judged: true, ..Marks::NONE },
             others: vec![Claim { role: "tests".into(), path: "tests/t.rs".into(), line: 9, symbol: Some("it_does".into()) }],
         }];
         let shown = file_trace_view("src/a.rs", &entries, 60);
@@ -131,6 +132,7 @@ mod tests {
         assert_eq!(actions_at(shown.clone(), offset_of(&shown, "tests/t.rs:9")), vec!["file.open".to_string()]);
         assert!(actions_at(shown.clone(), offset_of(&shown, "REQ-A.one")).contains(&"trace.context".to_string()));
         assert!(shown.text.contains("It does the thing."));
+        assert!(shown.text.contains("REQ-A.one  AJ--"));
     }
 
     /// A requirement's document lists its clauses, saying which nothing claims.
@@ -142,7 +144,7 @@ mod tests {
             role: "clause".into(),
             clause: format!("REQ-A.{key}"),
             text: "It does.".into(),
-            level: Level::L1,
+            marks: Marks::NONE,
             others,
         };
         let entries = vec![

@@ -103,7 +103,7 @@ fn what_the_terminal_frontend_paints_is_the_buffer() {
 /// @tests REQ-LOOK.roles_drawn_in_theme_colours
 #[test]
 fn the_terminal_frontend_paints_each_role_in_the_themes_colour() {
-    use tracelean_core::evidence::Level;
+    use tracelean_core::evidence::Mark as Kind;
     use tracelean_core::surface::cells::{drawn_wrong, look_of};
     use tracelean_core::surface::view::TokenKind;
     use tracelean_core::trace::annotation::Role as Claimed;
@@ -113,10 +113,11 @@ fn the_terminal_frontend_paints_each_role_in_the_themes_colour() {
     // Every kind of role the theme colours, side by side and nested.
     shown.push(file_buffer(
         "b.rs".into(),
-        "L4 L1 +x -y fn tests\nplain".into(),
+        "P- T- +x -y fn tests\nplain".into(),
         vec![
-            Mark { start: 0, stop: 2, role: Role::Level { grade: Level::L4 } },
-            Mark { start: 3, stop: 5, role: Role::Level { grade: Level::L1 } },
+            Mark { start: 0, stop: 1, role: Role::Mark { mark: Kind::Proved, held: true } },
+            Mark { start: 1, stop: 2, role: Role::Mark { mark: Kind::Judged, held: false } },
+            Mark { start: 3, stop: 4, role: Role::Mark { mark: Kind::Tested, held: true } },
             Mark { start: 6, stop: 8, role: Role::Added },
             Mark { start: 9, stop: 11, role: Role::Removed },
             Mark { start: 12, stop: 14, role: Role::Token { kind: TokenKind::Keyword } },

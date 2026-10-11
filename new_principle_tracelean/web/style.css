@@ -348,18 +348,11 @@ button.item {
 
 .pane.kind-menu .claim-implements { color: var(--chips-implements); }
 
-/* An evidence level is a small pill in its grade's colour, so a column of
- * them reads at a glance. */
-.pane .role-level,
-.pane .role-level-l1,
-.pane .role-level-l2,
-.pane .role-level-l3,
-.pane .role-level-l4 {
-  border-radius: 3px;
-  padding: 0 3px;
-  font-size: 11px;
+/* Evidence marks are bold, each letter in its own colour and every gap in one,
+ * so a column of them reads at a glance. No padding: the four letters are four
+ * spans and must stay one word wide. */
+.pane .role-mark {
   font-weight: 600;
-  background: color-mix(in srgb, currentColor 16%, transparent);
 }
 
 /* The pane a key goes to, marked the way the first one marked the active tab. */
@@ -548,11 +541,12 @@ button.actionable:focus {
 .role-entry { color: var(--roles-entry); }
 .role-heading { color: var(--roles-heading); font-weight: 600; }
 .role-requirement { color: var(--roles-requirement); }
-.role-level { color: var(--roles-level); }
-.role-level-l1 { color: var(--roles-levelL1); }
-.role-level-l2 { color: var(--roles-levelL2); }
-.role-level-l3 { color: var(--roles-levelL3); }
-.role-level-l4 { color: var(--roles-levelL4); font-weight: 600; }
+.role-mark { color: var(--roles-markMissing); }
+.role-mark-annotated { color: var(--roles-markAnnotated); }
+.role-mark-judged { color: var(--roles-markJudged); }
+.role-mark-tested { color: var(--roles-markTested); }
+.role-mark-proved { color: var(--roles-markProved); }
+.role-mark-missing { color: var(--roles-markMissing); }
 .role-added { color: var(--roles-added); background: color-mix(in srgb, var(--roles-added) 8%, transparent); }
 .role-removed { color: var(--roles-removed); background: color-mix(in srgb, var(--roles-removed) 8%, transparent); }
 

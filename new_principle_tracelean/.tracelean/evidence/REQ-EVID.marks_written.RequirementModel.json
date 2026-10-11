@@ -1,7 +1,7 @@
 {
   "key": {
     "reqId": "REQ-EVID",
-    "clause": "absent_is_lowest",
+    "clause": "marks_written",
     "bond": "requirementModel"
   },
   "level": "L2",
@@ -11,18 +11,18 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "re-recorded: clause text identical to the text judged and model unchanged; only the clause hash changed"
+      "note": "written emits A J T P in fixed positions, a dash for each unheld mark."
     }
   },
-  "linkHash": "2bd5ae7ee4a8aa11",
+  "linkHash": "1a6ddbe9285b244a",
   "inputs": [
     [
       "requirement",
-      "2836ae8e9a75e559"
+      "bcad2263016bccfb"
     ],
     [
       "model",
-      "e09d0d6a6454a4f9"
+      "9687c753fed48a43"
     ]
   ]
 }

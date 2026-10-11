@@ -6,7 +6,10 @@
 
 use serde::{Deserialize, Serialize};
 
-/// @implements REQ-EVID.ladder
+/// What kind of record a piece of evidence is: a judgement is the second, a
+/// differential run the third, a proof the fourth. Ordered, because a record
+/// can be capped below what it claims (`judgement_caps`); never ranked across
+/// bonds, which is what `Marks` is for.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum Level {
     L1,
@@ -42,10 +45,10 @@ pub const ALL_BONDS: [Bond; 3] = [Bond::RequirementModel, Bond::ModelImpl, Bond:
 /// The level established on one bond: the best record for it, or `L1` when
 /// there is none.
 ///
-/// A bond with no record is not absent from the aggregate — it contributes the
-/// lowest level, which is what makes an unchecked bond visible.
+/// A bond with no record reads `L1`, which sets no mark: an unchecked bond is
+/// a gap, not a zero averaged away.
 ///
-/// @implements REQ-EVID.absent_is_lowest
+/// @implements REQ-EVID.absent_is_unset
 pub fn bond_level(records: &[Record], bond: Bond) -> Level {
     records
         .iter()
@@ -54,28 +57,93 @@ pub fn bond_level(records: &[Record], bond: Bond) -> Level {
         .fold(Level::L1, Level::max)
 }
 
-/// A link's assurance: the minimum over the three bonds.
+/// What evidence a clause holds, each kind on its own: a model can be proved
+/// and tested before anybody judged it, and a ladder would read that as
+/// "annotated only".
 ///
-/// @implements REQ-EVID.weakest_link
-/// @implements REQ-EVID.monotone
-/// @drt REQ-EVID.weakest_link
-/// @drt REQ-EVID.monotone
-/// @drt REQ-EVID.absent_is_lowest
-/// @drt REQ-EVID.bonds_separate
-/// @drt REQ-EVID.ladder
-pub fn assurance(records: Vec<Record>) -> Level {
-    ALL_BONDS
-        .iter()
-        .fold(Level::L4, |acc, &b| acc.min(bond_level(&records, b)))
+/// @implements REQ-EVID.marks
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub struct Marks {
+    pub annotated: bool,
+    pub judged: bool,
+    pub tested: bool,
+    pub proved: bool,
 }
 
-/// The per-bond chain, in `ALL_BONDS` order — the information the single value
-/// collapses, kept presentable.
+/// Which of the four marks a position of `AJTP` is.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum Mark {
+    Annotated,
+    Judged,
+    Tested,
+    Proved,
+}
+
+impl Marks {
+    /// Each mark in its position, with whether it is held and its letter.
+    pub fn each(&self) -> [(Mark, bool, char); 4] {
+        [
+            (Mark::Annotated, self.annotated, 'A'),
+            (Mark::Judged, self.judged, 'J'),
+            (Mark::Tested, self.tested, 'T'),
+            (Mark::Proved, self.proved, 'P'),
+        ]
+    }
+
+    /// No mark at all.
+    pub const NONE: Marks = Marks { annotated: false, judged: false, tested: false, proved: false };
+
+    /// Every mark `floor` asks for is held here.
+    pub fn holds(&self, floor: Marks) -> bool {
+        (self.annotated || !floor.annotated)
+            && (self.judged || !floor.judged)
+            && (self.tested || !floor.tested)
+            && (self.proved || !floor.proved)
+    }
+
+    /// The marks both hold.
+    pub fn and(self, other: Marks) -> Marks {
+        Marks {
+            annotated: self.annotated && other.annotated,
+            judged: self.judged && other.judged,
+            tested: self.tested && other.tested,
+            proved: self.proved && other.proved,
+        }
+    }
+
+    /// The marks as they are written, `AJTP` with gaps.
+    pub fn text(&self) -> String {
+        written(*self)
+    }
+}
+
+/// A clause's marks, from whether something claims it and its records: each
+/// bond sets its own mark and no other.
 ///
-/// @implements REQ-EVID.chain_rendered
-/// @drt REQ-EVID.chain_rendered
-pub fn chain(records: Vec<Record>) -> Vec<Level> {
-    ALL_BONDS.iter().map(|&b| bond_level(&records, b)).collect()
+/// @implements REQ-EVID.mark_per_bond
+/// @implements REQ-EVID.monotone
+/// @drt REQ-EVID.mark_per_bond
+/// @drt REQ-EVID.monotone
+/// @drt REQ-EVID.absent_is_unset
+/// @drt REQ-EVID.bonds_separate
+/// @drt REQ-EVID.marks
+pub fn marks(records: Vec<Record>, annotated: bool) -> Marks {
+    Marks {
+        annotated,
+        judged: bond_level(&records, Bond::RequirementModel) >= Level::L2,
+        tested: bond_level(&records, Bond::ModelImpl) >= Level::L3,
+        proved: bond_level(&records, Bond::ModelProof) >= Level::L4,
+    }
+}
+
+/// Marks in fixed positions, a dash where one is not held, so a gap names
+/// what is missing: `AJTP`, `A-TP`, `A---`.
+///
+/// @implements REQ-EVID.marks_written
+/// @drt REQ-EVID.marks_written
+pub fn written(marks: Marks) -> String {
+    marks.each().iter().map(|&(_, held, letter)| if held { letter } else { '-' }).collect()
 }
 
 #[cfg(test)]
@@ -86,26 +154,59 @@ mod tests {
         Record { bond, level }
     }
 
-    /// @tests REQ-EVID.weakest_link
+    /// A proved model nobody judged or tested reads `A--P`: the proof is not
+    /// hidden behind the gaps, and the gaps are not hidden behind the proof.
+    ///
+    /// @tests REQ-EVID.mark_per_bond
     #[test]
-    fn proved_model_with_unbound_code_is_not_three_quarters_assured() {
+    fn proved_model_with_unbound_code_reads_as_proved_only() {
         let records = vec![r(Bond::ModelProof, Level::L4)];
-        assert_eq!(assurance(records.clone()), Level::L1);
-        assert_eq!(chain(records), vec![Level::L1, Level::L1, Level::L4]);
+        assert_eq!(marks(records, true).text(), "A--P");
     }
 
-    /// The levels are a total order, and a strict one: no two are equal, and
-    /// sorting them gives the ladder the requirement names.
+    /// Each mark is held or not on its own: every one of the sixteen
+    /// combinations is reachable, so none implies another.
     ///
-    /// Adding a record never lowers an assurance.
+    /// @tests REQ-EVID.marks
+    #[test]
+    fn every_combination_of_marks_is_reachable() {
+        let mut seen = std::collections::BTreeSet::new();
+        for bits in 0..16u8 {
+            let mut records = Vec::new();
+            if bits & 2 != 0 {
+                records.push(r(Bond::RequirementModel, Level::L2));
+            }
+            if bits & 4 != 0 {
+                records.push(r(Bond::ModelImpl, Level::L3));
+            }
+            if bits & 8 != 0 {
+                records.push(r(Bond::ModelProof, Level::L4));
+            }
+            seen.insert(marks(records, bits & 1 != 0).text());
+        }
+        assert_eq!(seen.len(), 16);
+    }
+
+    /// @tests REQ-EVID.marks_written
+    #[test]
+    fn marks_are_written_in_fixed_positions() {
+        assert_eq!(written(Marks::NONE), "----");
+        assert_eq!(written(Marks { annotated: true, judged: false, tested: true, proved: true }), "A-TP");
+        assert_eq!(
+            written(Marks { annotated: true, judged: true, tested: true, proved: true }),
+            "AJTP"
+        );
+    }
+
+    /// Adding a record never clears a mark.
     ///
     /// What keeps the algebra sane under incremental work: somebody proving a
-    /// theorem, or a differential run finishing, can only move a figure up, so
+    /// theorem, or a differential run finishing, can only add a mark, so
     /// nobody has to reason about evidence that made things worse.
     ///
     /// @tests REQ-EVID.monotone
     #[test]
-    fn adding_a_record_never_lowers_an_assurance() {
+    fn adding_a_record_never_clears_a_mark() {
         let every = [Bond::RequirementModel, Bond::ModelImpl, Bond::ModelProof];
         let levels = [Level::L1, Level::L2, Level::L3, Level::L4];
         // Every starting set of up to two records, against every record that
@@ -120,30 +221,18 @@ mod tests {
             }
         }
         for start in &starts {
-            let before = assurance(start.clone());
+            let before = marks(start.clone(), true);
             for bond in every {
                 for level in levels {
                     let mut after = start.clone();
                     after.push(r(bond, level));
                     assert!(
-                        assurance(after.clone()) >= before,
-                        "adding {bond:?} at {level:?} to {start:?} lowered the assurance"
+                        marks(after.clone(), true).holds(before),
+                        "adding {bond:?} at {level:?} to {start:?} cleared a mark"
                     );
                 }
             }
         }
-    }
-
-    /// @tests REQ-EVID.ladder
-    #[test]
-    fn the_levels_climb_and_no_two_are_the_same_rung() {
-        let mut levels = vec![Level::L3, Level::L1, Level::L4, Level::L2];
-        levels.sort();
-        assert_eq!(levels, vec![Level::L1, Level::L2, Level::L3, Level::L4]);
-        assert!(Level::L1 < Level::L2 && Level::L2 < Level::L3 && Level::L3 < Level::L4);
-        // Annotation is below judgement is below differential testing is below
-        // proof, and the minimum in `assurance` is a minimum of *this* order.
-        assert_eq!(levels.iter().copied().fold(Level::L4, Level::min), Level::L1);
     }
 
     /// Evidence on one bond does not move another. This is the clause that
@@ -170,36 +259,25 @@ mod tests {
         }
     }
 
-    /// @tests REQ-EVID.absent_is_lowest
+    /// @tests REQ-EVID.absent_is_unset
     #[test]
-    fn no_records_is_lowest_everywhere() {
-        assert_eq!(assurance(vec![]), Level::L1);
-        assert_eq!(chain(vec![]), vec![Level::L1; 3]);
+    fn no_records_sets_no_mark() {
+        assert_eq!(marks(vec![], true).text(), "A---");
+        assert_eq!(marks(vec![], false), Marks::NONE);
     }
 
-    /// @tests REQ-EVID.monotone
+    /// A record below what its bond's mark needs sets nothing: a drift
+    /// judgement at L1 is not a judged mark, nor a capped run a tested one.
     #[test]
-    fn adding_a_record_never_lowers_assurance() {
-        let base = vec![r(Bond::RequirementModel, Level::L2), r(Bond::ModelImpl, Level::L3)];
-        let before = assurance(base.clone());
-        for bond in ALL_BONDS {
-            for level in [Level::L1, Level::L2, Level::L3, Level::L4] {
-                let mut more = base.clone();
-                more.push(r(bond, level));
-                assert!(assurance(more) >= before);
-            }
-        }
-    }
-
-    /// The whole point: a full chain is only as good as its weakest bond.
-    #[test]
-    fn assurance_is_the_minimum_bond() {
-        let records = vec![
+    fn a_record_below_its_mark_sets_nothing() {
+        let records = vec![r(Bond::RequirementModel, Level::L1), r(Bond::ModelImpl, Level::L2)];
+        assert_eq!(marks(records, true).text(), "A---");
+        let full = vec![
             r(Bond::RequirementModel, Level::L2),
             r(Bond::ModelImpl, Level::L3),
             r(Bond::ModelProof, Level::L4),
         ];
-        assert_eq!(assurance(records), Level::L2);
+        assert_eq!(marks(full, true).text(), "AJTP");
     }
 
     /// Wire shape must match what Lean's derived encoding produces.

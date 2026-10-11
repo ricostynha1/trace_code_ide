@@ -47,22 +47,23 @@ pub enum Role {
     Heading,
     /// A requirement or clause identifier.
     Requirement,
-    /// An evidence level, and which one.
+    /// One position of a clause's evidence marks (`AJTP`), which mark it is,
+    /// and whether it is held or a dash.
     ///
-    /// The grade is carried rather than left in the text. A frontend that had
-    /// to read `L3` out of the characters to colour it would be parsing the
-    /// buffer, which is the one thing a frontend may not do; and one that could
-    /// not tell L1 from L4 would have to paint every level the same, which is
-    /// the whole of what a colour is for here.
-    Level { grade: crate::evidence::Level },
+    /// Carried rather than left in the text. A frontend that had to read `T`
+    /// out of the characters to colour it would be parsing the buffer, which
+    /// is the one thing a frontend may not do; and one that could not tell a
+    /// held mark from a gap would paint them the same, which is the whole of
+    /// what a colour is for here.
+    Mark { mark: crate::evidence::Mark, held: bool },
     /// A line a change added.
     Added,
     /// A line a change removed.
     Removed,
     /// A token of source code, and what kind: what syntax highlighting colours.
     ///
-    /// The kind comes from parsing, in the core, for the same reason a level
-    /// carries its grade: a frontend deciding what was a keyword would be
+    /// The kind comes from parsing, in the core, for the same reason a mark
+    /// carries which it is: a frontend deciding what was a keyword would be
     /// parsing the buffer itself.
     Token { kind: TokenKind },
     /// What a claim on a requirement is — implements, tests, models, proves —

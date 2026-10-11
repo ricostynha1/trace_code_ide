@@ -13,11 +13,11 @@ clauses:
   review_from_change: A change between two workspace states shall become a buffer whose text shows what changed and whose spans mark what was added and what was removed.
   menu_from_keymap: A keymap mode shall become a buffer whose text is the keys available in it, and whose spans carry the action a key dispatches where it dispatches one.
   record_from_events: Observed events shall become a buffer whose text is those events and whose spans mark each one.
-  index_from_requirements: The requirement set shall become a buffer whose text is one row a requirement and whose spans mark each requirement's identifier and the level its evidence reached.
+  index_from_requirements: The requirement set shall become a buffer whose text is one row a requirement and whose spans mark each requirement's identifier and the evidence marks it holds.
   graph_from_refinement: The refinement relation shall become a buffer whose text is that relation drawn as an indented graph, folded to the requirements that refine nothing except where unfolded, and a requirement that refines an unfolded one shall appear under it.
   sandbox_from_observation: What a sandboxed agent changed, what it said, and what its usage is estimated to have cost shall become the rows of one buffer, in that order.
   sandbox_session_shown: The sandbox station shall show whether a session exists, the command that enters it, each change waiting with a way to review it, ways to accept and reject them, and the agent's conversation newest first, wrapped to the width it is shown in.
-  requirement_opened: A requirement shall open as a buffer showing each of its clauses with the level its evidence reached and every annotation that claims it, each claim a link that opens the claiming file at its line.
+  requirement_opened: A requirement shall open as a buffer showing each of its clauses with the evidence marks it holds and every annotation that claims it, each claim a link that opens the claiming file at its line.
   references_are_links: A requirement named in a comment of a file shall be marked as a requirement, so that it opens the requirement it names.
   recent_reopens: The page a project opens on shall list the folders opened before, each as a path that opens that folder as the project.
   claims_beside_code: Each declaration a file's annotations claim shall be marked beside its line with the role of each claim, from the text as it is being edited, and each mark shall open the requirement it claims.

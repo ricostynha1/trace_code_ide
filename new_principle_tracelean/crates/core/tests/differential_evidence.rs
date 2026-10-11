@@ -2,7 +2,7 @@
 //! implementation, and a differential test between them.
 //!
 //! This is the shape everything else in the port is patterned on. It is also
-//! the first thing in this tree that can reach L3.
+//! the first thing in this tree that could be marked tested.
 
 mod harness;
 
@@ -19,7 +19,7 @@ use tracelean_core::drt::{Binding, CallSpec};
 
 mod support;
 
-const OP: &str = "REQ-EVID.weakest_link";
+const OP: &str = "REQ-EVID.mark_per_bond";
 
 fn project_root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap().parent().unwrap().to_path_buf()
@@ -42,22 +42,17 @@ fn input_schema() -> Schema {
             max_len: Some(6),
         },
     );
+    fields.insert("annotated".to_string(), Schema::Bool);
     Schema::Struct { fields }
-}
-
-/// The shared runner every suite uses, so a measured run (`TRACELEAN_DRT_LINES`)
-/// counts this slice's lines as well.
-fn build_rust_runner(_root: &Path, scratch: &Path) -> RunnerSpec {
-    harness::rust_runner("REQ-EVID", "weakest_link", "crates/core/src/evidence.rs::assurance", scratch)
 }
 
 fn build_lean_runner(root: &Path, scratch: &Path) -> RunnerSpec {
     lean_runner::toolchain().expect("a Lean toolchain");
 
     let entries = [LeanEntry {
-        op: OP.to_string(),
-        function: "TraceLean.Evidence.assurance".to_string(),
-        arguments: vec!["records".to_string()],
+        op: "REQ-EVID.marks_written".to_string(),
+        function: "TraceLean.Evidence.written".to_string(),
+        arguments: vec!["marks".to_string()],
     }];
     // The generated package sits at <scratch>/.tracelean/drt-lean, so the model
     // package is reached by an absolute path rather than a fragile relative one.
@@ -92,21 +87,24 @@ fn build_lean_runner(root: &Path, scratch: &Path) -> RunnerSpec {
     }
 }
 
-/// @drt REQ-EVID.weakest_link
-/// @tests REQ-EVID.weakest_link
+/// @drt REQ-EVID.mark_per_bond
+/// @tests REQ-EVID.mark_per_bond
 #[test]
 #[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
-fn model_and_implementation_agree_on_assurance() {
-    let root = project_root();
-    let scratch = std::env::temp_dir().join("tracelean-drt-evidence");
-    let _ = std::fs::remove_dir_all(&scratch);
-
-    let implementation = build_rust_runner(&root, &scratch);
-    let model = build_lean_runner(&root, &scratch);
+fn model_and_implementation_agree_on_the_marks() {
+    let scratch = harness::scratch("evidence");
+    let implementation =
+        harness::rust_runner("REQ-EVID", "mark_per_bond", "crates/core/src/evidence.rs::marks", &scratch);
+    let model = harness::lean_runner(
+        "TraceLean.Evidence",
+        "TraceLean.Evidence.marks",
+        OP,
+        &["records", "annotated"],
+        &scratch,
+    );
 
     let options = RunOptions { seed: 7, cases: 2_000, shrink_rounds: 100 };
-    let result = run(OP, &input_schema(), &model, &implementation, options)
-        .expect("both runners answer");
+    let result = run(OP, &input_schema(), &model, &implementation, options).expect("both runners answer");
 
     support::agreed(&result);
     assert_eq!(result.cases, 2_000);
@@ -116,8 +114,8 @@ fn model_and_implementation_agree_on_assurance() {
 }
 
 /// A divergence must actually be reported when one exists — otherwise a clean
-/// run says nothing. `chain` returns the per-bond list rather than the minimum,
-/// so binding it to the same op as the model is a deliberate mismatch.
+/// run says nothing. The model writes marks as text and the implementation
+/// bound here caps them instead, so the two disagree on every input.
 ///
 /// @tests REQ-DRT.divergence_reported
 /// @structural REQ-DRT.divergence_reported reason="a claim about what the harness loop does with a disagreement, checked by producing a real one"
@@ -132,7 +130,7 @@ fn a_real_disagreement_is_found_and_reduced() {
 
     let binding = Binding {
         req_id: "REQ-EVID".into(),
-        clause: Some("weakest_link".into()),
+        clause: Some("marks_written".into()),
         op: None,
         also_checks: Vec::new(),
         also_implemented_by: Vec::new(),
@@ -141,8 +139,8 @@ fn a_real_disagreement_is_found_and_reduced() {
         model: None,
         implementation: CallSpec {
             language: "rust".into(),
-            // Deliberately the wrong function.
-            entry: "crates/core/src/evidence.rs::chain".into(),
+            // Deliberately the wrong function: same argument, another answer.
+            entry: "crates/core/src/trace/rollup.rs::partial_cap".into(),
             params: BTreeMap::new(),
         },
     };
@@ -166,9 +164,11 @@ fn a_real_disagreement_is_found_and_reduced() {
     };
     let model = build_lean_runner(&root, &scratch);
 
+    let mut fields = BTreeMap::new();
+    fields.insert("marks".to_string(), support::marks());
     let result = run(
-        OP,
-        &input_schema(),
+        "REQ-EVID.marks_written",
+        &Schema::Struct { fields },
         &model,
         &implementation,
         RunOptions { seed: 3, cases: 200, shrink_rounds: 100 },
@@ -176,75 +176,73 @@ fn a_real_disagreement_is_found_and_reduced() {
     .expect("both runners answer");
 
     let divergence = result.divergence.expect("a disagreement is found");
-    // Reduced to the smallest input that still disagrees: the empty list, where
-    // the minimum is `L1` and the chain is three of them.
-    assert_eq!(divergence.input, serde_json::json!({"records": []}));
-    assert_eq!(divergence.model.output, Some(serde_json::json!("L1")));
-    assert_eq!(
-        divergence.implementation.output,
-        Some(serde_json::json!(["L1", "L1", "L1"]))
-    );
+    // Reduced to the smallest input that still disagrees: no mark held, which
+    // the model writes as four dashes and the cap hands back unchanged.
+    let none = serde_json::json!({"annotated": false, "judged": false, "tested": false, "proved": false});
+    assert_eq!(divergence.input, serde_json::json!({ "marks": none }));
+    assert_eq!(divergence.model.output, Some(serde_json::json!("----")));
+    assert_eq!(divergence.implementation.output, Some(none));
 
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
-/// The generator must actually reach the case that matters — a run in which no
-/// case had records for all three bonds would agree vacuously.
+/// The generator must actually reach the cases that matter: a run in which no
+/// case had records for all three bonds, or none held a mark without the one
+/// before it, would agree without ever asking whether the marks are separate.
 ///
 /// @tests REQ-DRT-COVER.floor_stated
+/// @tests REQ-EVID.marks
 #[test]
-fn generation_reaches_full_chains() {
+fn generation_reaches_marks_held_out_of_order() {
+    use tracelean_core::evidence::{marks, Record};
+
     let schema = input_schema();
     let mut rng = gen::Rng::new(7);
-    let full = (0..2_000)
-        .filter(|_| {
-            let v = gen::value(&schema, &mut rng);
-            let records = v["records"].as_array().cloned().unwrap_or_default();
-            let bonds: std::collections::BTreeSet<String> = records
-                .iter()
-                .filter_map(|r| r["bond"].as_str().map(str::to_string))
-                .collect();
-            bonds.len() == 3
-        })
-        .count();
-    support::covered("REQ-EVID.weakest_link", &[("exercised all three bonds", full as u64)]);
+    let (mut full, mut skipped) = (0u64, 0u64);
+    for _ in 0..2_000 {
+        let v = gen::value(&schema, &mut rng);
+        let records: Vec<Record> = serde_json::from_value(v["records"].clone()).unwrap();
+        let bonds: std::collections::BTreeSet<_> = records.iter().map(|r| r.bond).collect();
+        if bonds.len() == 3 {
+            full += 1;
+        }
+        let held = marks(records, v["annotated"].as_bool().unwrap());
+        let each = held.each();
+        if each.windows(2).any(|w| !w[0].1 && w[1].1) {
+            skipped += 1;
+        }
+    }
+    support::covered(
+        OP,
+        &[("exercised all three bonds", full), ("a mark held without the one before it", skipped)],
+    );
 }
 
-/// The chain, not only the number it reduces to.
+fn written_input() -> Schema {
+    let mut fields = BTreeMap::new();
+    fields.insert("marks".to_string(), support::marks());
+    Schema::Struct { fields }
+}
+
+/// The written marks, not only the marks.
 ///
-/// `assurance` is a minimum, so it cannot distinguish `L1 · L1 · L4` from
-/// `L1 · L4 · L1` — and the whole point of `chain_rendered` is that a reader
-/// can see which bond is the weak one. Agreement on the minimum is therefore no
-/// evidence at all about the chain; this asks the question the requirement
-/// actually asks.
-///
-/// @drt REQ-EVID.chain_rendered
-/// @tests REQ-EVID.chain_rendered
+/// @drt REQ-EVID.marks_written
+/// @tests REQ-EVID.marks_written
 #[test]
 #[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
-fn model_and_implementation_agree_on_the_per_bond_chain() {
-    let scratch = harness::scratch("chain");
-    let op = "REQ-EVID.chain_rendered";
-    let implementation = harness::rust_runner(
-        "REQ-EVID",
-        "chain_rendered",
-        "crates/core/src/evidence.rs::chain",
-        &scratch,
-    );
-    let model = harness::lean_runner(
-        "TraceLean.Evidence",
-        "TraceLean.Evidence.chain",
-        op,
-        &["records"],
-        &scratch,
-    );
+fn model_and_implementation_agree_on_writing_the_marks() {
+    let scratch = harness::scratch("written");
+    let op = "REQ-EVID.marks_written";
+    let implementation =
+        harness::rust_runner("REQ-EVID", "marks_written", "crates/core/src/evidence.rs::written", &scratch);
+    let model = harness::lean_runner("TraceLean.Evidence", "TraceLean.Evidence.written", op, &["marks"], &scratch);
 
     let result = run(
         op,
-        &input_schema(),
+        &written_input(),
         &model,
         &implementation,
-        RunOptions { seed: 29, cases: 2_000, shrink_rounds: 100 },
+        RunOptions { seed: 29, cases: 1_000, shrink_rounds: 100 },
     )
     .expect("both runners answer");
 
@@ -253,61 +251,35 @@ fn model_and_implementation_agree_on_the_per_bond_chain() {
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
-/// The chain has to be asked where it says more than the minimum does.
+/// The writing has to be asked where a gap sits between two marks, which is
+/// where a ladder and fixed positions disagree, as well as at both ends.
 ///
-/// A run whose chains were all `L1 · L1 · L1` would agree perfectly and
-/// establish nothing: the whole content of `chain_rendered` is that a reader
-/// can see *which* bond is the weak one, and that is only visible when the
-/// bonds differ. So the floor is on chains that are not flat, and separately on
-/// chains where a bond is absent — absence is the case a reader most needs told
-/// apart from a bond that was checked and came back low.
-///
-/// @tests REQ-EVID.chain_rendered
+/// @tests REQ-EVID.marks_written
 /// @tests REQ-DRT-COVER.law_coverage
 #[test]
-fn generation_reaches_chains_that_say_more_than_their_minimum() {
-    use tracelean_core::evidence::{assurance, chain, Bond, Level, Record};
+fn generation_reaches_gaps_between_marks() {
+    use tracelean_core::evidence::{written, Marks};
 
-    let schema = input_schema();
     let mut rng = gen::Rng::new(29);
-    let (mut varied, mut flat, mut absent, mut complete) = (0u64, 0u64, 0u64, 0u64);
-    for _ in 0..2_000 {
-        let v = gen::value(&schema, &mut rng);
-        let records: Vec<Record> = serde_json::from_value(v["records"].clone()).unwrap();
-
-        let rendered = chain(records.clone());
-        assert_eq!(rendered.len(), 3, "a chain is one level per bond");
-        // The minimum is the chain's minimum, so a reader who quotes one number
-        // and a reader who reads the chain never disagree.
-        assert_eq!(
-            assurance(records.clone()),
-            *rendered.iter().min().expect("three bonds"),
-            "the aggregate is not the chain's minimum"
-        );
-
-        if rendered.iter().any(|level| *level != rendered[0]) {
-            varied += 1;
-        } else {
-            flat += 1;
+    let (mut gap, mut none, mut all) = (0u64, 0u64, 0u64);
+    for _ in 0..1_000 {
+        let v = gen::value(&written_input(), &mut rng);
+        let marks: Marks = serde_json::from_value(v["marks"].clone()).unwrap();
+        let text = written(marks);
+        assert_eq!(text.chars().count(), 4, "marks are four positions");
+        let inner = text.trim_matches('-');
+        if inner.contains('-') {
+            gap += 1;
         }
-        let bonds: std::collections::BTreeSet<Bond> =
-            records.iter().map(|record| record.bond).collect();
-        if bonds.len() == 3 {
-            complete += 1;
+        if text == "----" {
+            none += 1;
         }
-        // A bond nothing recorded reads `L1`, which is also what a bond checked
-        // and found wanting reads. The chain must be asked both.
-        if bonds.len() < 3 && rendered.contains(&Level::L1) {
-            absent += 1;
+        if text == "AJTP" {
+            all += 1;
         }
     }
     support::covered(
-        "REQ-EVID.chain_rendered",
-        &[
-            ("a chain whose bonds are not all equal", varied),
-            ("a chain that is flat", flat),
-            ("a chain with a bond nothing recorded", absent),
-            ("a chain with all three bonds recorded", complete),
-        ],
+        "REQ-EVID.marks_written",
+        &[("marks with a gap between two held", gap), ("no mark held", none), ("every mark held", all)],
     );
 }

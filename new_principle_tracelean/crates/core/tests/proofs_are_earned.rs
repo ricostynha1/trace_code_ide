@@ -97,7 +97,7 @@ fn proved_links(index: &Index) -> Vec<Proved> {
         .collect()
 }
 
-/// @tests REQ-EVID.ladder
+/// @tests REQ-EVID.mark_per_bond
 /// @tests REQ-EVID.record_reproducible
 /// @tests REQ-STALE.inputs_identified
 #[test]
@@ -206,8 +206,8 @@ fn a_pinning_proof_the_kernel_accepted_reads_as_pinned() {
     }
 
     assert!(
-        pinned.iter().any(|symbol| symbol.ends_with("assurance")),
-        "the pinning proof for `assurance` did not confirm; pinned: {pinned:#?}"
+        pinned.iter().any(|symbol| symbol.ends_with("Rollup::combine")),
+        "the pinning proof for `combine` did not confirm; pinned: {pinned:#?}"
     );
     println!("{} obligation(s) pinned: {pinned:#?}", pinned.len());
 

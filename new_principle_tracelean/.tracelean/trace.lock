@@ -48,7 +48,7 @@
         "untraced_visible",
         "weakest_link"
       ],
-      "content_hash": "fb288c153afd69f8",
+      "content_hash": "cfd9f166b870b9b3",
       "file": "reqs/arch/ARCH-HONEST.md",
       "refines": [],
       "decomposition": "open"
@@ -149,7 +149,7 @@
         "structural_rejects",
         "unbound_reported"
       ],
-      "content_hash": "56b80e5e840f9f8d",
+      "content_hash": "449bede2d23ec998",
       "file": "reqs/trace/REQ-CHECK.md",
       "refines": [
         "ARCH-HONEST"
@@ -405,16 +405,16 @@
     },
     "REQ-EVID": {
       "clauses": [
-        "absent_is_lowest",
+        "absent_is_unset",
         "bonds_separate",
-        "chain_rendered",
         "judgement_caps",
-        "ladder",
+        "mark_per_bond",
+        "marks",
+        "marks_written",
         "monotone",
-        "record_reproducible",
-        "weakest_link"
+        "record_reproducible"
       ],
-      "content_hash": "c3dfc3a07c7808a1",
+      "content_hash": "3c2190ae90139f20",
       "file": "reqs/trace/REQ-EVID.md",
       "refines": [
         "ARCH-HONEST",
@@ -630,14 +630,14 @@
       "clauses": [
         "counted_once",
         "deterministic_order",
+        "every_part_holds",
         "exempt_leaves_denominator",
-        "min_not_mean",
         "never_complete_when_open",
         "open_is_lower_bound",
         "partial_capped",
         "untraced_counted"
       ],
-      "content_hash": "44424fd9e2e5f00a",
+      "content_hash": "86ff29fed6f52569",
       "file": "reqs/trace/REQ-ROLLUP.md",
       "refines": [
         "ARCH-HONEST",
@@ -733,7 +733,7 @@
         "well_formed_by_construction",
         "window_is_a_buffer"
       ],
-      "content_hash": "ef7db576d47e74de",
+      "content_hash": "4489cd043cd925da",
       "file": "reqs/surface/REQ-SHOW.md",
       "refines": [
         "REQ-VIEW",
@@ -777,7 +777,7 @@
         "qualifies_proof",
         "verdict_kept"
       ],
-      "content_hash": "9a9373676bdde79f",
+      "content_hash": "20fcf7b0d2a2fb58",
       "file": "reqs/trace/REQ-STRENGTH.md",
       "refines": [
         "ARCH-HONEST",
@@ -927,7 +927,7 @@
       "clause": "weakest_link",
       "file": "crates/core/src/trace/rollup.rs",
       "anchor": "crates/core/src/trace/rollup.rs::combine",
-      "body_hash": "b9b7749514a5a105",
+      "body_hash": "57403df8c3e42203",
       "link_hash": "e74a2afe478396bc",
       "qualifier": null
     },
@@ -2254,11 +2254,11 @@
     {
       "role": "drt",
       "req": "REQ-EVID",
-      "clause": "absent_is_lowest",
+      "clause": "absent_is_unset",
       "file": "crates/core/src/evidence.rs",
-      "anchor": "crates/core/src/evidence.rs::assurance",
-      "body_hash": "d934f495a6aee879",
-      "link_hash": "0488e447971a5c48",
+      "anchor": "crates/core/src/evidence.rs::marks",
+      "body_hash": "eacf6a030b89c80b",
+      "link_hash": "077034da43e7b0d0",
       "qualifier": null
     },
     {
@@ -2266,29 +2266,9 @@
       "req": "REQ-EVID",
       "clause": "bonds_separate",
       "file": "crates/core/src/evidence.rs",
-      "anchor": "crates/core/src/evidence.rs::assurance",
-      "body_hash": "d934f495a6aee879",
-      "link_hash": "7d397995cd908da9",
-      "qualifier": null
-    },
-    {
-      "role": "drt",
-      "req": "REQ-EVID",
-      "clause": "chain_rendered",
-      "file": "crates/core/src/evidence.rs",
-      "anchor": "crates/core/src/evidence.rs::chain",
-      "body_hash": "e7b9b6651ebf205e",
-      "link_hash": "6586ef2416c48f5e",
-      "qualifier": null
-    },
-    {
-      "role": "drt",
-      "req": "REQ-EVID",
-      "clause": "chain_rendered",
-      "file": "crates/core/tests/differential_evidence.rs",
-      "anchor": "crates/core/tests/differential_evidence.rs::model_and_implementation_agree_on_the_per_bond_chain",
-      "body_hash": "792255ec318f3e3f",
-      "link_hash": "0be4eea3af413eb9",
+      "anchor": "crates/core/src/evidence.rs::marks",
+      "body_hash": "eacf6a030b89c80b",
+      "link_hash": "f490dd55c68cfc88",
       "qualifier": null
     },
     {
@@ -2314,11 +2294,51 @@
     {
       "role": "drt",
       "req": "REQ-EVID",
-      "clause": "ladder",
+      "clause": "mark_per_bond",
       "file": "crates/core/src/evidence.rs",
-      "anchor": "crates/core/src/evidence.rs::assurance",
-      "body_hash": "d934f495a6aee879",
-      "link_hash": "02a9198060a27c57",
+      "anchor": "crates/core/src/evidence.rs::marks",
+      "body_hash": "eacf6a030b89c80b",
+      "link_hash": "59fc0a70a8d559a9",
+      "qualifier": null
+    },
+    {
+      "role": "drt",
+      "req": "REQ-EVID",
+      "clause": "mark_per_bond",
+      "file": "crates/core/tests/differential_evidence.rs",
+      "anchor": "crates/core/tests/differential_evidence.rs::model_and_implementation_agree_on_the_marks",
+      "body_hash": "e2c67992c5eb1f75",
+      "link_hash": "7913006019f931ee",
+      "qualifier": null
+    },
+    {
+      "role": "drt",
+      "req": "REQ-EVID",
+      "clause": "marks",
+      "file": "crates/core/src/evidence.rs",
+      "anchor": "crates/core/src/evidence.rs::marks",
+      "body_hash": "eacf6a030b89c80b",
+      "link_hash": "2496b29593154436",
+      "qualifier": null
+    },
+    {
+      "role": "drt",
+      "req": "REQ-EVID",
+      "clause": "marks_written",
+      "file": "crates/core/src/evidence.rs",
+      "anchor": "crates/core/src/evidence.rs::written",
+      "body_hash": "644bf118fba64a36",
+      "link_hash": "edb2d0d1a9586c1b",
+      "qualifier": null
+    },
+    {
+      "role": "drt",
+      "req": "REQ-EVID",
+      "clause": "marks_written",
+      "file": "crates/core/tests/differential_evidence.rs",
+      "anchor": "crates/core/tests/differential_evidence.rs::model_and_implementation_agree_on_writing_the_marks",
+      "body_hash": "4e99891dff395db6",
+      "link_hash": "a7736b031a228fb2",
       "qualifier": null
     },
     {
@@ -2326,9 +2346,9 @@
       "req": "REQ-EVID",
       "clause": "monotone",
       "file": "crates/core/src/evidence.rs",
-      "anchor": "crates/core/src/evidence.rs::assurance",
-      "body_hash": "d934f495a6aee879",
-      "link_hash": "cf5f21c261df86ba",
+      "anchor": "crates/core/src/evidence.rs::marks",
+      "body_hash": "eacf6a030b89c80b",
+      "link_hash": "f630618864e98bc3",
       "qualifier": null
     },
     {
@@ -2349,26 +2369,6 @@
       "anchor": "crates/core/tests/differential_lockfile.rs::model_and_implementation_agree_on_whether_a_record_can_be_reproduced",
       "body_hash": "1e3ca60149bc1d9a",
       "link_hash": "3775fd5a751040f1",
-      "qualifier": null
-    },
-    {
-      "role": "drt",
-      "req": "REQ-EVID",
-      "clause": "weakest_link",
-      "file": "crates/core/src/evidence.rs",
-      "anchor": "crates/core/src/evidence.rs::assurance",
-      "body_hash": "d934f495a6aee879",
-      "link_hash": "7d602cc9de6680b4",
-      "qualifier": null
-    },
-    {
-      "role": "drt",
-      "req": "REQ-EVID",
-      "clause": "weakest_link",
-      "file": "crates/core/tests/differential_evidence.rs",
-      "anchor": "crates/core/tests/differential_evidence.rs::model_and_implementation_agree_on_assurance",
-      "body_hash": "1ba0f49ec23ddee4",
-      "link_hash": "585a2599df5e5ec1",
       "qualifier": null
     },
     {
@@ -3387,7 +3387,7 @@
       "clause": "counted_once",
       "file": "crates/core/src/trace/rollup.rs",
       "anchor": "crates/core/src/trace/rollup.rs::roll_up",
-      "body_hash": "94bf5fb9b2a867da",
+      "body_hash": "344b5dc81a82dd4d",
       "link_hash": "e2b305c861164d5a",
       "qualifier": null
     },
@@ -3397,8 +3397,28 @@
       "clause": "deterministic_order",
       "file": "crates/core/src/trace/rollup.rs",
       "anchor": "crates/core/src/trace/rollup.rs::roll_up",
-      "body_hash": "94bf5fb9b2a867da",
+      "body_hash": "344b5dc81a82dd4d",
       "link_hash": "c9cd35d27703ef19",
+      "qualifier": null
+    },
+    {
+      "role": "drt",
+      "req": "REQ-ROLLUP",
+      "clause": "every_part_holds",
+      "file": "crates/core/src/trace/rollup.rs",
+      "anchor": "crates/core/src/trace/rollup.rs::combine",
+      "body_hash": "57403df8c3e42203",
+      "link_hash": "491f6cd9cf74a784",
+      "qualifier": null
+    },
+    {
+      "role": "drt",
+      "req": "REQ-ROLLUP",
+      "clause": "every_part_holds",
+      "file": "crates/core/tests/differential_rollup.rs",
+      "anchor": "crates/core/tests/differential_rollup.rs::model_and_implementation_agree_on_aggregation",
+      "body_hash": "a4878479fef8e374",
+      "link_hash": "12418aa742577bd6",
       "qualifier": null
     },
     {
@@ -3407,28 +3427,8 @@
       "clause": "exempt_leaves_denominator",
       "file": "crates/core/src/trace/rollup.rs",
       "anchor": "crates/core/src/trace/rollup.rs::roll_up",
-      "body_hash": "94bf5fb9b2a867da",
+      "body_hash": "344b5dc81a82dd4d",
       "link_hash": "9ef460819636ec5f",
-      "qualifier": null
-    },
-    {
-      "role": "drt",
-      "req": "REQ-ROLLUP",
-      "clause": "min_not_mean",
-      "file": "crates/core/src/trace/rollup.rs",
-      "anchor": "crates/core/src/trace/rollup.rs::combine",
-      "body_hash": "b9b7749514a5a105",
-      "link_hash": "ebbd99bb2ae6cbca",
-      "qualifier": null
-    },
-    {
-      "role": "drt",
-      "req": "REQ-ROLLUP",
-      "clause": "min_not_mean",
-      "file": "crates/core/tests/differential_rollup.rs",
-      "anchor": "crates/core/tests/differential_rollup.rs::model_and_implementation_agree_on_aggregation",
-      "body_hash": "11305f164a491087",
-      "link_hash": "2283cc271faeda18",
       "qualifier": null
     },
     {
@@ -3437,7 +3437,7 @@
       "clause": "never_complete_when_open",
       "file": "crates/core/src/trace/rollup.rs",
       "anchor": "crates/core/src/trace/rollup.rs::roll_up",
-      "body_hash": "94bf5fb9b2a867da",
+      "body_hash": "344b5dc81a82dd4d",
       "link_hash": "753b16df3d369bf6",
       "qualifier": null
     },
@@ -3447,7 +3447,7 @@
       "clause": "open_is_lower_bound",
       "file": "crates/core/src/trace/rollup.rs",
       "anchor": "crates/core/src/trace/rollup.rs::roll_up",
-      "body_hash": "94bf5fb9b2a867da",
+      "body_hash": "344b5dc81a82dd4d",
       "link_hash": "cc7bc7ff84f3f6e2",
       "qualifier": null
     },
@@ -3457,7 +3457,7 @@
       "clause": "open_is_lower_bound",
       "file": "crates/core/tests/differential_rollup.rs",
       "anchor": "crates/core/tests/differential_rollup.rs::model_and_implementation_agree_on_rolling_a_graph_up",
-      "body_hash": "6977df77a469917f",
+      "body_hash": "b70adce5848d40ff",
       "link_hash": "147694ba4d73ce8e",
       "qualifier": null
     },
@@ -3467,7 +3467,7 @@
       "clause": "partial_capped",
       "file": "crates/core/src/trace/rollup.rs",
       "anchor": "crates/core/src/trace/rollup.rs::roll_up",
-      "body_hash": "94bf5fb9b2a867da",
+      "body_hash": "344b5dc81a82dd4d",
       "link_hash": "356b5ab78e444c59",
       "qualifier": null
     },
@@ -3957,7 +3957,7 @@
       "clause": "actions_by_role",
       "file": "crates/core/src/surface/produce.rs",
       "anchor": "crates/core/src/surface/produce.rs::actions_for",
-      "body_hash": "a03ca3e19f6eec8a",
+      "body_hash": "afedeac4d10a0ecb",
       "link_hash": "f33c68af29dfd9fb",
       "qualifier": null
     },
@@ -4237,7 +4237,7 @@
       "clause": "requirement_opened",
       "file": "crates/core/src/surface/requirement_view.rs",
       "anchor": "crates/core/src/surface/requirement_view.rs::requirement_view",
-      "body_hash": "33b2ce03e8113c63",
+      "body_hash": "8a0b42bc537f0d69",
       "link_hash": "c2afcddb379a9bf1",
       "qualifier": null
     },
@@ -4247,7 +4247,7 @@
       "clause": "requirement_opened",
       "file": "crates/core/tests/differential_station.rs",
       "anchor": "crates/core/tests/differential_station.rs::model_and_implementation_agree_on_an_opened_requirement",
-      "body_hash": "fab21739d0396969",
+      "body_hash": "6ad3d8188aeda70c",
       "link_hash": "6c07c32079ced441",
       "qualifier": null
     },
@@ -5447,7 +5447,7 @@
       "clause": "weakest_link",
       "file": "crates/core/src/trace/rollup.rs",
       "anchor": "crates/core/src/trace/rollup.rs::combine",
-      "body_hash": "b9b7749514a5a105",
+      "body_hash": "57403df8c3e42203",
       "link_hash": "ab17a7b14c89fa38",
       "qualifier": null
     },
@@ -7684,11 +7684,11 @@
     {
       "role": "implements",
       "req": "REQ-EVID",
-      "clause": "absent_is_lowest",
+      "clause": "absent_is_unset",
       "file": "crates/core/src/evidence.rs",
       "anchor": "crates/core/src/evidence.rs::bond_level",
       "body_hash": "caab54fee472e871",
-      "link_hash": "0ce4ab760ecbb643",
+      "link_hash": "18f23b73aa163a70",
       "qualifier": null
     },
     {
@@ -7699,26 +7699,6 @@
       "anchor": "crates/core/src/evidence.rs::Bond",
       "body_hash": "add4d85cd5670c94",
       "link_hash": "c71445aee8d116d5",
-      "qualifier": null
-    },
-    {
-      "role": "implements",
-      "req": "REQ-EVID",
-      "clause": "chain_rendered",
-      "file": "crates/core/src/evidence.rs",
-      "anchor": "crates/core/src/evidence.rs::chain",
-      "body_hash": "e7b9b6651ebf205e",
-      "link_hash": "f480bab1defa83da",
-      "qualifier": null
-    },
-    {
-      "role": "implements",
-      "req": "REQ-EVID",
-      "clause": "chain_rendered",
-      "file": "crates/editor/src/lib.rs",
-      "anchor": "crates/editor/src/lib.rs::chain_of",
-      "body_hash": "92e3165fc2b36c0a",
-      "link_hash": "7136f10b37ca03b0",
       "qualifier": null
     },
     {
@@ -7746,29 +7726,59 @@
       "req": "REQ-EVID",
       "clause": "judgement_caps",
       "file": "crates/editor/src/lib.rs",
-      "anchor": "crates/editor/src/lib.rs::levels_of",
-      "body_hash": "ab4982978eec7f8b",
-      "link_hash": "15ac5843f3bbf952",
+      "anchor": "crates/editor/src/lib.rs::marks_of",
+      "body_hash": "4111bb428ac63dbc",
+      "link_hash": "ad9a525c6bde1c5b",
       "qualifier": null
     },
     {
       "role": "implements",
       "req": "REQ-EVID",
-      "clause": "ladder",
+      "clause": "mark_per_bond",
       "file": "crates/core/src/evidence.rs",
-      "anchor": "crates/core/src/evidence.rs::Level",
-      "body_hash": "700f7a164db50e69",
-      "link_hash": "63d9725baa84520e",
+      "anchor": "crates/core/src/evidence.rs::marks",
+      "body_hash": "eacf6a030b89c80b",
+      "link_hash": "2dfa4d19c80900ab",
       "qualifier": null
     },
     {
       "role": "implements",
       "req": "REQ-EVID",
-      "clause": "ladder",
+      "clause": "mark_per_bond",
       "file": "crates/core/tests/support/mod.rs",
       "anchor": "crates/core/tests/support/mod.rs::compose",
       "body_hash": "5fa768286519c00c",
-      "link_hash": "6bb823193c4d1af4",
+      "link_hash": "1599a7778300ad0d",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-EVID",
+      "clause": "mark_per_bond",
+      "file": "crates/editor/src/lib.rs",
+      "anchor": "crates/editor/src/lib.rs::marks_of",
+      "body_hash": "4111bb428ac63dbc",
+      "link_hash": "525aa6a8a8070e8b",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-EVID",
+      "clause": "marks",
+      "file": "crates/core/src/evidence.rs",
+      "anchor": "crates/core/src/evidence.rs::Marks",
+      "body_hash": "44d66765baf6588d",
+      "link_hash": "84fda5bf84887af2",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-EVID",
+      "clause": "marks_written",
+      "file": "crates/core/src/evidence.rs",
+      "anchor": "crates/core/src/evidence.rs::written",
+      "body_hash": "644bf118fba64a36",
+      "link_hash": "f0cedcd775b815ed",
       "qualifier": null
     },
     {
@@ -7776,9 +7786,9 @@
       "req": "REQ-EVID",
       "clause": "monotone",
       "file": "crates/core/src/evidence.rs",
-      "anchor": "crates/core/src/evidence.rs::assurance",
-      "body_hash": "d934f495a6aee879",
-      "link_hash": "fc83da57a0f39a96",
+      "anchor": "crates/core/src/evidence.rs::marks",
+      "body_hash": "eacf6a030b89c80b",
+      "link_hash": "a06f0bafcd9412f5",
       "qualifier": null
     },
     {
@@ -7819,26 +7829,6 @@
       "anchor": "crates/core/src/trace/record.rs::reproducibility",
       "body_hash": "5f97e741b1189529",
       "link_hash": "7931af2882ef3fb8",
-      "qualifier": null
-    },
-    {
-      "role": "implements",
-      "req": "REQ-EVID",
-      "clause": "weakest_link",
-      "file": "crates/core/src/evidence.rs",
-      "anchor": "crates/core/src/evidence.rs::assurance",
-      "body_hash": "d934f495a6aee879",
-      "link_hash": "24324430676cc550",
-      "qualifier": null
-    },
-    {
-      "role": "implements",
-      "req": "REQ-EVID",
-      "clause": "weakest_link",
-      "file": "crates/editor/src/lib.rs",
-      "anchor": "crates/editor/src/lib.rs::levels_of",
-      "body_hash": "ab4982978eec7f8b",
-      "link_hash": "1f1cdc853c21ef4e",
       "qualifier": null
     },
     {
@@ -8187,7 +8177,7 @@
       "clause": "requirement_summary",
       "file": "crates/core/src/surface/requirement_view.rs",
       "anchor": "crates/core/src/surface/requirement_view.rs::requirement_view",
-      "body_hash": "33b2ce03e8113c63",
+      "body_hash": "8a0b42bc537f0d69",
       "link_hash": "0844d922ad771cb3",
       "qualifier": null
     },
@@ -9397,7 +9387,7 @@
       "clause": "counted_once",
       "file": "crates/core/src/trace/rollup.rs",
       "anchor": "crates/core/src/trace/rollup.rs::roll_up",
-      "body_hash": "94bf5fb9b2a867da",
+      "body_hash": "344b5dc81a82dd4d",
       "link_hash": "5fc2365b02d9c4b6",
       "qualifier": null
     },
@@ -9407,8 +9397,18 @@
       "clause": "deterministic_order",
       "file": "crates/core/src/trace/rollup.rs",
       "anchor": "crates/core/src/trace/rollup.rs::roll_up",
-      "body_hash": "94bf5fb9b2a867da",
+      "body_hash": "344b5dc81a82dd4d",
       "link_hash": "844f411a1b0d6d9b",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-ROLLUP",
+      "clause": "every_part_holds",
+      "file": "crates/core/src/trace/rollup.rs",
+      "anchor": "crates/core/src/trace/rollup.rs::combine",
+      "body_hash": "57403df8c3e42203",
+      "link_hash": "ee8ac809df0a6c20",
       "qualifier": null
     },
     {
@@ -9427,18 +9427,8 @@
       "clause": "exempt_leaves_denominator",
       "file": "crates/core/src/trace/rollup.rs",
       "anchor": "crates/core/src/trace/rollup.rs::roll_up",
-      "body_hash": "94bf5fb9b2a867da",
+      "body_hash": "344b5dc81a82dd4d",
       "link_hash": "127567ddd6c8d3e1",
-      "qualifier": null
-    },
-    {
-      "role": "implements",
-      "req": "REQ-ROLLUP",
-      "clause": "min_not_mean",
-      "file": "crates/core/src/trace/rollup.rs",
-      "anchor": "crates/core/src/trace/rollup.rs::combine",
-      "body_hash": "b9b7749514a5a105",
-      "link_hash": "7849773533e807e6",
       "qualifier": null
     },
     {
@@ -9477,7 +9467,7 @@
       "clause": "open_is_lower_bound",
       "file": "crates/core/src/trace/rollup.rs",
       "anchor": "crates/core/src/trace/rollup.rs::roll_up",
-      "body_hash": "94bf5fb9b2a867da",
+      "body_hash": "344b5dc81a82dd4d",
       "link_hash": "6ae185d5c5a34bfe",
       "qualifier": null
     },
@@ -9487,7 +9477,7 @@
       "clause": "open_is_lower_bound",
       "file": "crates/editor/src/lib.rs",
       "anchor": "crates/editor/src/lib.rs::Editor::rollup",
-      "body_hash": "8d101cfe3d5b86a4",
+      "body_hash": "3a4f0e85eef16ebb",
       "link_hash": "cb16c1a4caa10707",
       "qualifier": null
     },
@@ -9497,7 +9487,7 @@
       "clause": "partial_capped",
       "file": "crates/core/src/trace/rollup.rs",
       "anchor": "crates/core/src/trace/rollup.rs::roll_up",
-      "body_hash": "94bf5fb9b2a867da",
+      "body_hash": "344b5dc81a82dd4d",
       "link_hash": "b826f49e5710f7db",
       "qualifier": null
     },
@@ -9997,7 +9987,7 @@
       "clause": "actions_by_role",
       "file": "crates/core/src/surface/produce.rs",
       "anchor": "crates/core/src/surface/produce.rs::actions_for",
-      "body_hash": "a03ca3e19f6eec8a",
+      "body_hash": "afedeac4d10a0ecb",
       "link_hash": "064b6074ce545e4d",
       "qualifier": null
     },
@@ -10287,7 +10277,7 @@
       "clause": "requirement_opened",
       "file": "crates/core/src/surface/file_trace.rs",
       "anchor": "crates/core/src/surface/file_trace.rs::Entry",
-      "body_hash": "99ea256942475964",
+      "body_hash": "5fb3cd61976fbbec",
       "link_hash": "48f75a31762d7129",
       "qualifier": null
     },
@@ -10297,7 +10287,7 @@
       "clause": "requirement_opened",
       "file": "crates/core/src/surface/requirement_view.rs",
       "anchor": "crates/core/src/surface/requirement_view.rs::requirement_view",
-      "body_hash": "33b2ce03e8113c63",
+      "body_hash": "8a0b42bc537f0d69",
       "link_hash": "23988b976a100f73",
       "qualifier": null
     },
@@ -11577,7 +11567,7 @@
       "clause": "structure_over_text",
       "file": "crates/core/src/surface/view.rs",
       "anchor": "crates/core/src/surface/view.rs::Role",
-      "body_hash": "c35380abee687fff",
+      "body_hash": "a936b8212d548706",
       "link_hash": "8f94acf2f7207d57",
       "qualifier": null
     },
@@ -11677,7 +11667,7 @@
       "clause": "weakest_link",
       "file": "formal/TraceLean/Rollup.lean",
       "anchor": "formal/TraceLean/Rollup.lean::TraceLean.Rollup::combine",
-      "body_hash": "30f0a5ab73add768",
+      "body_hash": "9d57426604aad65f",
       "link_hash": "673b93f13a696d06",
       "qualifier": null
     },
@@ -12474,11 +12464,11 @@
     {
       "role": "models",
       "req": "REQ-EVID",
-      "clause": "absent_is_lowest",
+      "clause": "absent_is_unset",
       "file": "formal/TraceLean/Evidence.lean",
       "anchor": "formal/TraceLean/Evidence.lean::TraceLean.Evidence::bondLevel",
       "body_hash": "e09d0d6a6454a4f9",
-      "link_hash": "2bd5ae7ee4a8aa11",
+      "link_hash": "10a8ba661b21de36",
       "qualifier": null
     },
     {
@@ -12494,16 +12484,6 @@
     {
       "role": "models",
       "req": "REQ-EVID",
-      "clause": "chain_rendered",
-      "file": "formal/TraceLean/Evidence.lean",
-      "anchor": "formal/TraceLean/Evidence.lean::TraceLean.Evidence::chain",
-      "body_hash": "ef9574811b50a30d",
-      "link_hash": "6f8aa811ccc39957",
-      "qualifier": null
-    },
-    {
-      "role": "models",
-      "req": "REQ-EVID",
       "clause": "judgement_caps",
       "file": "formal/TraceLean/Judge.lean",
       "anchor": "formal/TraceLean/Judge.lean::TraceLean.Judge::Detail.ceiling",
@@ -12514,11 +12494,31 @@
     {
       "role": "models",
       "req": "REQ-EVID",
-      "clause": "ladder",
+      "clause": "mark_per_bond",
       "file": "formal/TraceLean/Evidence.lean",
-      "anchor": "formal/TraceLean/Evidence.lean::TraceLean.Evidence::Level",
-      "body_hash": "99d1fb18af025d88",
-      "link_hash": "8de5a7334cde5bd3",
+      "anchor": "formal/TraceLean/Evidence.lean::TraceLean.Evidence::marks",
+      "body_hash": "a1cef9e4de9c1212",
+      "link_hash": "eac2caae256dee44",
+      "qualifier": null
+    },
+    {
+      "role": "models",
+      "req": "REQ-EVID",
+      "clause": "marks",
+      "file": "formal/TraceLean/Evidence.lean",
+      "anchor": "formal/TraceLean/Evidence.lean::TraceLean.Evidence::Marks",
+      "body_hash": "db2758d1b5fa8a3a",
+      "link_hash": "f9ad64f1cb5668dd",
+      "qualifier": null
+    },
+    {
+      "role": "models",
+      "req": "REQ-EVID",
+      "clause": "marks_written",
+      "file": "formal/TraceLean/Evidence.lean",
+      "anchor": "formal/TraceLean/Evidence.lean::TraceLean.Evidence::written",
+      "body_hash": "9687c753fed48a43",
+      "link_hash": "1a6ddbe9285b244a",
       "qualifier": null
     },
     {
@@ -12526,9 +12526,9 @@
       "req": "REQ-EVID",
       "clause": "monotone",
       "file": "formal/TraceLean/Evidence.lean",
-      "anchor": "formal/TraceLean/Evidence.lean::TraceLean.Evidence::assurance",
-      "body_hash": "d47ffb3b29e8752b",
-      "link_hash": "96569a5b6899d22b",
+      "anchor": "formal/TraceLean/Evidence.lean::TraceLean.Evidence::marks",
+      "body_hash": "a1cef9e4de9c1212",
+      "link_hash": "b6a903e0747472c0",
       "qualifier": null
     },
     {
@@ -12539,16 +12539,6 @@
       "anchor": "formal/TraceLean/Record.lean::TraceLean.Record::missingField",
       "body_hash": "3c303b7e5462a2e6",
       "link_hash": "5fb7030406a3083f",
-      "qualifier": null
-    },
-    {
-      "role": "models",
-      "req": "REQ-EVID",
-      "clause": "weakest_link",
-      "file": "formal/TraceLean/Evidence.lean",
-      "anchor": "formal/TraceLean/Evidence.lean::TraceLean.Evidence::assurance",
-      "body_hash": "d47ffb3b29e8752b",
-      "link_hash": "d07d2c299d150f19",
       "qualifier": null
     },
     {
@@ -13217,7 +13207,7 @@
       "clause": "counted_once",
       "file": "formal/TraceLean/Rollup.lean",
       "anchor": "formal/TraceLean/Rollup.lean::TraceLean.Rollup::rollUp",
-      "body_hash": "f96f84510583693b",
+      "body_hash": "ae45a1a9d281d747",
       "link_hash": "243da6456bc4c003",
       "qualifier": null
     },
@@ -13227,8 +13217,18 @@
       "clause": "deterministic_order",
       "file": "formal/TraceLean/Rollup.lean",
       "anchor": "formal/TraceLean/Rollup.lean::TraceLean.Rollup::rollUp",
-      "body_hash": "f96f84510583693b",
+      "body_hash": "ae45a1a9d281d747",
       "link_hash": "3e73cf8d75d44110",
+      "qualifier": null
+    },
+    {
+      "role": "models",
+      "req": "REQ-ROLLUP",
+      "clause": "every_part_holds",
+      "file": "formal/TraceLean/Rollup.lean",
+      "anchor": "formal/TraceLean/Rollup.lean::TraceLean.Rollup::combine",
+      "body_hash": "9d57426604aad65f",
+      "link_hash": "7c889a6e706c7ac6",
       "qualifier": null
     },
     {
@@ -13237,18 +13237,8 @@
       "clause": "exempt_leaves_denominator",
       "file": "formal/TraceLean/Rollup.lean",
       "anchor": "formal/TraceLean/Rollup.lean::TraceLean.Rollup::rollUp",
-      "body_hash": "f96f84510583693b",
+      "body_hash": "ae45a1a9d281d747",
       "link_hash": "774073328127a482",
-      "qualifier": null
-    },
-    {
-      "role": "models",
-      "req": "REQ-ROLLUP",
-      "clause": "min_not_mean",
-      "file": "formal/TraceLean/Rollup.lean",
-      "anchor": "formal/TraceLean/Rollup.lean::TraceLean.Rollup::combine",
-      "body_hash": "30f0a5ab73add768",
-      "link_hash": "0207c3ceca79b1f0",
       "qualifier": null
     },
     {
@@ -13267,7 +13257,7 @@
       "clause": "open_is_lower_bound",
       "file": "formal/TraceLean/Rollup.lean",
       "anchor": "formal/TraceLean/Rollup.lean::TraceLean.Rollup::rollUp",
-      "body_hash": "f96f84510583693b",
+      "body_hash": "ae45a1a9d281d747",
       "link_hash": "3dc4621e6caa0b25",
       "qualifier": null
     },
@@ -13277,7 +13267,7 @@
       "clause": "partial_capped",
       "file": "formal/TraceLean/Rollup.lean",
       "anchor": "formal/TraceLean/Rollup.lean::TraceLean.Rollup::rollUp",
-      "body_hash": "f96f84510583693b",
+      "body_hash": "ae45a1a9d281d747",
       "link_hash": "33b0a6396e693602",
       "qualifier": null
     },
@@ -13587,7 +13577,7 @@
       "clause": "actions_by_role",
       "file": "formal/TraceLean/Produce.lean",
       "anchor": "formal/TraceLean/Produce.lean::TraceLean.Produce::actionsFor",
-      "body_hash": "148951689474b0de",
+      "body_hash": "9b9e674698f33c44",
       "link_hash": "73e5d1c89edb65d4",
       "qualifier": null
     },
@@ -14236,9 +14226,9 @@
       "req": "ARCH-HONEST",
       "clause": "weakest_link",
       "file": "formal/TraceLean/SpecRollup.lean",
-      "anchor": "formal/TraceLean/SpecRollup.lean::TraceLean.SpecRollup::min_not_mean_pinned",
-      "body_hash": "c1c5ce261a75f901",
-      "link_hash": "96290262bab9d786",
+      "anchor": "formal/TraceLean/SpecRollup.lean::TraceLean.SpecRollup::every_part_holds_pinned",
+      "body_hash": "3809c5f56a0e3e2d",
+      "link_hash": "2d192fbdc50c0dd4",
       "qualifier": null
     },
     {
@@ -14323,16 +14313,6 @@
     },
     {
       "role": "pins",
-      "req": "REQ-EVID",
-      "clause": "weakest_link",
-      "file": "formal/TraceLean/Evidence.lean",
-      "anchor": "formal/TraceLean/Evidence.lean::TraceLean.Evidence::weakest_link_pinned",
-      "body_hash": "d8c324897d437f9e",
-      "link_hash": "9ace94615dd25132",
-      "qualifier": null
-    },
-    {
-      "role": "pins",
       "req": "REQ-JUDGE",
       "clause": "invalidated_by_change",
       "file": "formal/TraceLean/SpecJudge.lean",
@@ -14404,11 +14384,11 @@
     {
       "role": "pins",
       "req": "REQ-ROLLUP",
-      "clause": "min_not_mean",
+      "clause": "every_part_holds",
       "file": "formal/TraceLean/SpecRollup.lean",
-      "anchor": "formal/TraceLean/SpecRollup.lean::TraceLean.SpecRollup::min_not_mean_pinned",
-      "body_hash": "c1c5ce261a75f901",
-      "link_hash": "c6d22a967e6548d4",
+      "anchor": "formal/TraceLean/SpecRollup.lean::TraceLean.SpecRollup::every_part_holds_pinned",
+      "body_hash": "3809c5f56a0e3e2d",
+      "link_hash": "0a60e468b14d9364",
       "qualifier": null
     },
     {
@@ -14536,9 +14516,9 @@
       "req": "ARCH-HONEST",
       "clause": "weakest_link",
       "file": "formal/TraceLean/SpecRollup.lean",
-      "anchor": "formal/TraceLean/SpecRollup.lean::TraceLean.SpecRollup::rollUp_is_minimum_over_reach",
-      "body_hash": "ef7367fd7e7ec817",
-      "link_hash": "168c012c5cfd9c01",
+      "anchor": "formal/TraceLean/SpecRollup.lean::TraceLean.SpecRollup::rollUp_holds_what_every_clause_holds",
+      "body_hash": "2e0ef7a4068870f3",
+      "link_hash": "4213f3eae49ddb75",
       "qualifier": null
     },
     {
@@ -15464,11 +15444,11 @@
     {
       "role": "proves",
       "req": "REQ-EVID",
-      "clause": "absent_is_lowest",
+      "clause": "absent_is_unset",
       "file": "formal/TraceLean/Evidence.lean",
-      "anchor": "formal/TraceLean/Evidence.lean::TraceLean.Evidence::a_bond_without_records_is_lowest",
-      "body_hash": "844e6acfe6b51046",
-      "link_hash": "e7b9c853ab7fb4ec",
+      "anchor": "formal/TraceLean/Evidence.lean::TraceLean.Evidence::no_records_set_no_mark",
+      "body_hash": "99967f6d6ef922e8",
+      "link_hash": "cb3f270e4d6b9a8b",
       "qualifier": null
     },
     {
@@ -15484,16 +15464,6 @@
     {
       "role": "proves",
       "req": "REQ-EVID",
-      "clause": "chain_rendered",
-      "file": "formal/TraceLean/Evidence.lean",
-      "anchor": "formal/TraceLean/Evidence.lean::TraceLean.Evidence::the_chain_is_each_bond",
-      "body_hash": "c6fb87280f749163",
-      "link_hash": "18ab2d78215628fb",
-      "qualifier": null
-    },
-    {
-      "role": "proves",
-      "req": "REQ-EVID",
       "clause": "judgement_caps",
       "file": "formal/TraceLean/Judge.lean",
       "anchor": "formal/TraceLean/Judge.lean::TraceLean.Judge::a_judgement_caps_at_the_second_level",
@@ -15504,11 +15474,31 @@
     {
       "role": "proves",
       "req": "REQ-EVID",
-      "clause": "ladder",
+      "clause": "mark_per_bond",
       "file": "formal/TraceLean/Evidence.lean",
-      "anchor": "formal/TraceLean/Evidence.lean::TraceLean.Evidence::the_ladder_is_a_total_order",
-      "body_hash": "22682db7567689c4",
-      "link_hash": "2072c170de524c31",
+      "anchor": "formal/TraceLean/Evidence.lean::TraceLean.Evidence::each_mark_reads_its_own_bond",
+      "body_hash": "02d20a32c41adb42",
+      "link_hash": "ad2ea803085353b6",
+      "qualifier": null
+    },
+    {
+      "role": "proves",
+      "req": "REQ-EVID",
+      "clause": "marks",
+      "file": "formal/TraceLean/Evidence.lean",
+      "anchor": "formal/TraceLean/Evidence.lean::TraceLean.Evidence::every_combination_is_reachable",
+      "body_hash": "7cd397b2d7a5280f",
+      "link_hash": "1dfc2f4ee1c73e2c",
+      "qualifier": null
+    },
+    {
+      "role": "proves",
+      "req": "REQ-EVID",
+      "clause": "marks_written",
+      "file": "formal/TraceLean/Evidence.lean",
+      "anchor": "formal/TraceLean/Evidence.lean::TraceLean.Evidence::marks_are_written_in_place",
+      "body_hash": "015ccd6c48c29045",
+      "link_hash": "293e4f73946bab19",
       "qualifier": null
     },
     {
@@ -15516,9 +15506,9 @@
       "req": "REQ-EVID",
       "clause": "monotone",
       "file": "formal/TraceLean/Evidence.lean",
-      "anchor": "formal/TraceLean/Evidence.lean::TraceLean.Evidence::adding_a_record_never_lowers_assurance",
-      "body_hash": "6ede4ca38d00c7da",
-      "link_hash": "3835cb0a1cb4d2d2",
+      "anchor": "formal/TraceLean/Evidence.lean::TraceLean.Evidence::adding_a_record_never_clears_a_mark",
+      "body_hash": "407dd5e484a4ff1e",
+      "link_hash": "5287aa3e51d93b6a",
       "qualifier": null
     },
     {
@@ -15529,26 +15519,6 @@
       "anchor": "formal/TraceLean/Record.lean::TraceLean.Record::no_cases_is_not_reproducible",
       "body_hash": "a5a1e55a49be3f65",
       "link_hash": "d5b2e2dfd83a7cfb",
-      "qualifier": null
-    },
-    {
-      "role": "proves",
-      "req": "REQ-EVID",
-      "clause": "weakest_link",
-      "file": "formal/TraceLean/Evidence.lean",
-      "anchor": "formal/TraceLean/Evidence.lean::TraceLean.Evidence::assurance_le_bond",
-      "body_hash": "cba5439daaba0afb",
-      "link_hash": "19600c7eea311514",
-      "qualifier": null
-    },
-    {
-      "role": "proves",
-      "req": "REQ-EVID",
-      "clause": "weakest_link",
-      "file": "formal/TraceLean/Evidence.lean",
-      "anchor": "formal/TraceLean/Evidence.lean::TraceLean.Evidence::assurance_mem_chain",
-      "body_hash": "ac365ebee0e14fbe",
-      "link_hash": "bfc5b44e2d3e279e",
       "qualifier": null
     },
     {
@@ -16256,9 +16226,9 @@
       "req": "REQ-ROLLUP",
       "clause": "counted_once",
       "file": "formal/TraceLean/Rollup.lean",
-      "anchor": "formal/TraceLean/Rollup.lean::TraceLean.Rollup::assurance_is_over_the_reachable_set",
-      "body_hash": "f226829cb83470ee",
-      "link_hash": "238bbb28f22832ac",
+      "anchor": "formal/TraceLean/Rollup.lean::TraceLean.Rollup::marks_are_over_the_reachable_set",
+      "body_hash": "d6b59f865ebe1354",
+      "link_hash": "8c74aea1c73cec37",
       "qualifier": null
     },
     {
@@ -16266,9 +16236,9 @@
       "req": "REQ-ROLLUP",
       "clause": "counted_once",
       "file": "formal/TraceLean/SpecRollup.lean",
-      "anchor": "formal/TraceLean/SpecRollup.lean::TraceLean.SpecRollup::rollUp_is_minimum_over_reach",
-      "body_hash": "ef7367fd7e7ec817",
-      "link_hash": "a43d8706388965ef",
+      "anchor": "formal/TraceLean/SpecRollup.lean::TraceLean.SpecRollup::rollUp_holds_what_every_clause_holds",
+      "body_hash": "2e0ef7a4068870f3",
+      "link_hash": "77eba19b6a742c0b",
       "qualifier": null
     },
     {
@@ -16277,8 +16247,18 @@
       "clause": "deterministic_order",
       "file": "formal/TraceLean/Rollup.lean",
       "anchor": "formal/TraceLean/Rollup.lean::TraceLean.Rollup::rollUp_perm",
-      "body_hash": "28f7d11f5f698557",
+      "body_hash": "9f505eef11462a47",
       "link_hash": "321370309b9bbb6a",
+      "qualifier": null
+    },
+    {
+      "role": "proves",
+      "req": "REQ-ROLLUP",
+      "clause": "every_part_holds",
+      "file": "formal/TraceLean/Rollup.lean",
+      "anchor": "formal/TraceLean/Rollup.lean::TraceLean.Rollup::combine_holds_what_every_part_holds",
+      "body_hash": "77867d2fa2dbaae6",
+      "link_hash": "60b96f32c5ce4774",
       "qualifier": null
     },
     {
@@ -16287,18 +16267,8 @@
       "clause": "exempt_leaves_denominator",
       "file": "formal/TraceLean/Rollup.lean",
       "anchor": "formal/TraceLean/Rollup.lean::TraceLean.Rollup::an_exempt_clause_is_not_counted",
-      "body_hash": "578a7f1765e9d681",
+      "body_hash": "3f7713dc0e8b9591",
       "link_hash": "653db7ba46015120",
-      "qualifier": null
-    },
-    {
-      "role": "proves",
-      "req": "REQ-ROLLUP",
-      "clause": "min_not_mean",
-      "file": "formal/TraceLean/Rollup.lean",
-      "anchor": "formal/TraceLean/Rollup.lean::TraceLean.Rollup::combine_empty",
-      "body_hash": "6fa5cac2da6975bd",
-      "link_hash": "12931ae49d9d8549",
       "qualifier": null
     },
     {
@@ -16317,7 +16287,7 @@
       "clause": "open_is_lower_bound",
       "file": "formal/TraceLean/Rollup.lean",
       "anchor": "formal/TraceLean/Rollup.lean::TraceLean.Rollup::an_open_roll_up_is_provisional",
-      "body_hash": "60f2c88e4f118994",
+      "body_hash": "ca53a59912332bb4",
       "link_hash": "b9b1f7112ba1fca2",
       "qualifier": null
     },
@@ -16326,9 +16296,9 @@
       "req": "REQ-ROLLUP",
       "clause": "partial_capped",
       "file": "formal/TraceLean/Rollup.lean",
-      "anchor": "formal/TraceLean/Rollup.lean::TraceLean.Rollup::a_partial_clause_is_capped_at_L2",
-      "body_hash": "b70ae546505898c9",
-      "link_hash": "b74f607d022f0854",
+      "anchor": "formal/TraceLean/Rollup.lean::TraceLean.Rollup::a_partial_clause_is_never_tested_or_proved",
+      "body_hash": "4d5509dc64bf0376",
+      "link_hash": "8146ac765c7484af",
       "qualifier": null
     },
     {
@@ -16717,7 +16687,7 @@
       "clause": "graph_from_refinement",
       "file": "formal/TraceLean/Produce.lean",
       "anchor": "formal/TraceLean/Produce.lean::TraceLean.Produce::the_graph_unfolds_where_asked",
-      "body_hash": "41cee9c2b7ecf886",
+      "body_hash": "ff0b3018e3c41dfd",
       "link_hash": "6fbb0b42d1ed6e7f",
       "qualifier": null
     },
@@ -16727,7 +16697,7 @@
       "clause": "index_from_requirements",
       "file": "formal/TraceLean/Produce.lean",
       "anchor": "formal/TraceLean/Produce.lean::TraceLean.Produce::one_row_a_requirement",
-      "body_hash": "efd4874c32fa3297",
+      "body_hash": "a208468585c5ede1",
       "link_hash": "069676dcc9828b70",
       "qualifier": null
     },
@@ -16817,7 +16787,7 @@
       "clause": "requirement_opened",
       "file": "formal/TraceLean/RequirementView.lean",
       "anchor": "formal/TraceLean/RequirementView.lean::TraceLean.RequirementView::an_opened_requirement_shows_clauses_and_claims",
-      "body_hash": "b887ded6e5f05edf",
+      "body_hash": "4eba35c51d3598cb",
       "link_hash": "72dd34ccbb78e57b",
       "qualifier": null
     },
@@ -17366,9 +17336,9 @@
       "req": "ARCH-HONEST",
       "clause": "weakest_link",
       "file": "formal/TraceLean/SpecRollup.lean",
-      "anchor": "formal/TraceLean/SpecRollup.lean::TraceLean.SpecRollup::MinimumOf",
-      "body_hash": "c1bb9fa5eb4c2f8f",
-      "link_hash": "5f5f0b79abba25c7",
+      "anchor": "formal/TraceLean/SpecRollup.lean::TraceLean.SpecRollup::EveryPartHolds",
+      "body_hash": "a3c2ce3bbccc4c86",
+      "link_hash": "1b03dee1e425d6ae",
       "qualifier": null
     },
     {
@@ -17453,16 +17423,6 @@
     },
     {
       "role": "specifies",
-      "req": "REQ-EVID",
-      "clause": "weakest_link",
-      "file": "formal/TraceLean/Evidence.lean",
-      "anchor": "formal/TraceLean/Evidence.lean::TraceLean.Evidence::WeakestLink",
-      "body_hash": "1000e627aa211a98",
-      "link_hash": "e176834989e1141f",
-      "qualifier": null
-    },
-    {
-      "role": "specifies",
       "req": "REQ-JUDGE",
       "clause": "invalidated_by_change",
       "file": "formal/TraceLean/SpecJudge.lean",
@@ -17534,11 +17494,11 @@
     {
       "role": "specifies",
       "req": "REQ-ROLLUP",
-      "clause": "min_not_mean",
+      "clause": "every_part_holds",
       "file": "formal/TraceLean/SpecRollup.lean",
-      "anchor": "formal/TraceLean/SpecRollup.lean::TraceLean.SpecRollup::MinimumOf",
-      "body_hash": "c1bb9fa5eb4c2f8f",
-      "link_hash": "55907c1d7d518189",
+      "anchor": "formal/TraceLean/SpecRollup.lean::TraceLean.SpecRollup::EveryPartHolds",
+      "body_hash": "a3c2ce3bbccc4c86",
+      "link_hash": "d661ae99a1daa1e4",
       "qualifier": null
     },
     {
@@ -17817,7 +17777,7 @@
       "clause": "absence_is_not_pass",
       "file": "crates/core/tests/architecture.rs",
       "anchor": "crates/core/tests/architecture.rs::every_unsure_answer_carries_a_field_saying_so",
-      "body_hash": "67868a98247560d5",
+      "body_hash": "bfb0480fe2619822",
       "link_hash": "a1bc4d93503bf992",
       "qualifier": "structural"
     },
@@ -17827,7 +17787,7 @@
       "clause": "confidence_carried",
       "file": "crates/core/tests/architecture.rs",
       "anchor": "crates/core/tests/architecture.rs::every_unsure_answer_carries_a_field_saying_so",
-      "body_hash": "67868a98247560d5",
+      "body_hash": "bfb0480fe2619822",
       "link_hash": "9a66a29377e7b4ab",
       "qualifier": "structural"
     },
@@ -17887,7 +17847,7 @@
       "clause": "weakest_link",
       "file": "crates/core/src/trace/rollup.rs",
       "anchor": "crates/core/src/trace/rollup.rs::tests::a_diamond_counts_the_shared_child_under_both_parents",
-      "body_hash": "76694f058101c2c1",
+      "body_hash": "3568e50c26521731",
       "link_hash": "f8076ebd10d1b530",
       "qualifier": null
     },
@@ -17896,9 +17856,9 @@
       "req": "ARCH-HONEST",
       "clause": "weakest_link",
       "file": "crates/core/tests/differential_rollup.rs",
-      "anchor": "crates/core/tests/differential_rollup.rs::the_result_is_always_one_of_the_inputs",
-      "body_hash": "1e608e55d367c9f0",
-      "link_hash": "1ff0384f51eeb9c6",
+      "anchor": "crates/core/tests/differential_rollup.rs::a_mark_is_held_only_when_every_part_holds_it",
+      "body_hash": "3e25a0c29b37efb7",
+      "link_hash": "d2aee6aac0e073f0",
       "qualifier": null
     },
     {
@@ -19767,7 +19727,7 @@
       "clause": "divergence_reported",
       "file": "crates/core/tests/differential_evidence.rs",
       "anchor": "crates/core/tests/differential_evidence.rs::a_real_disagreement_is_found_and_reduced",
-      "body_hash": "b2c7dc0481581869",
+      "body_hash": "9d86729ac551fb5e",
       "link_hash": "b72bcd4a27dc8396",
       "qualifier": "structural"
     },
@@ -19847,7 +19807,7 @@
       "clause": "binding_is_the_bond",
       "file": "crates/core/tests/runners_are_generated.rs",
       "anchor": "crates/core/tests/runners_are_generated.rs::a_binding_describes_a_call_and_nothing_more",
-      "body_hash": "d761f6ffc2210a25",
+      "body_hash": "47fc82d6f1738981",
       "link_hash": "3f8ce7dab8a94b1e",
       "qualifier": "structural"
     },
@@ -19867,7 +19827,7 @@
       "clause": "call_only",
       "file": "crates/core/tests/runners_are_generated.rs",
       "anchor": "crates/core/tests/runners_are_generated.rs::a_binding_describes_a_call_and_nothing_more",
-      "body_hash": "d761f6ffc2210a25",
+      "body_hash": "47fc82d6f1738981",
       "link_hash": "4db951004e4b5661",
       "qualifier": "structural"
     },
@@ -19887,7 +19847,7 @@
       "clause": "no_adapter",
       "file": "crates/core/tests/runners_are_generated.rs",
       "anchor": "crates/core/tests/runners_are_generated.rs::a_binding_describes_a_call_and_nothing_more",
-      "body_hash": "d761f6ffc2210a25",
+      "body_hash": "47fc82d6f1738981",
       "link_hash": "4293323875b51df9",
       "qualifier": "structural"
     },
@@ -19917,7 +19877,7 @@
       "clause": "rename_only",
       "file": "crates/core/tests/runners_are_generated.rs",
       "anchor": "crates/core/tests/runners_are_generated.rs::a_binding_describes_a_call_and_nothing_more",
-      "body_hash": "d761f6ffc2210a25",
+      "body_hash": "47fc82d6f1738981",
       "link_hash": "cfd77d3cd50fbf27",
       "qualifier": "structural"
     },
@@ -19996,9 +19956,9 @@
       "req": "REQ-DRT-COVER",
       "clause": "floor_stated",
       "file": "crates/core/tests/differential_evidence.rs",
-      "anchor": "crates/core/tests/differential_evidence.rs::generation_reaches_full_chains",
-      "body_hash": "e3dd45fd174515bb",
-      "link_hash": "e4f9223e1ecde4eb",
+      "anchor": "crates/core/tests/differential_evidence.rs::generation_reaches_marks_held_out_of_order",
+      "body_hash": "9d084ba563180165",
+      "link_hash": "462adaab0e76b8c1",
       "qualifier": null
     },
     {
@@ -20186,9 +20146,9 @@
       "req": "REQ-DRT-COVER",
       "clause": "law_coverage",
       "file": "crates/core/tests/differential_evidence.rs",
-      "anchor": "crates/core/tests/differential_evidence.rs::generation_reaches_chains_that_say_more_than_their_minimum",
-      "body_hash": "4a51c70e70876f01",
-      "link_hash": "c7c9fcc36f01c0c8",
+      "anchor": "crates/core/tests/differential_evidence.rs::generation_reaches_gaps_between_marks",
+      "body_hash": "7bbfcbd039e86592",
+      "link_hash": "1fc5ceac55fe1335",
       "qualifier": null
     },
     {
@@ -20397,7 +20357,7 @@
       "clause": "law_coverage",
       "file": "crates/core/tests/differential_produce.rs",
       "anchor": "crates/core/tests/differential_produce.rs::generation_reaches_every_role_and_the_one_that_affords_nothing",
-      "body_hash": "f54c85d24b954c19",
+      "body_hash": "0999862cdc9229f6",
       "link_hash": "f5dc38408a4d6136",
       "qualifier": null
     },
@@ -20517,7 +20477,7 @@
       "clause": "law_coverage",
       "file": "crates/core/tests/differential_rollup.rs",
       "anchor": "crates/core/tests/differential_rollup.rs::the_roll_up_is_a_function_of_the_graph_and_never_flatters_it",
-      "body_hash": "14635649e9103636",
+      "body_hash": "1767b19faae9fdc4",
       "link_hash": "c5e6ace02e4db58b",
       "qualifier": null
     },
@@ -20687,7 +20647,7 @@
       "clause": "law_coverage",
       "file": "crates/core/tests/differential_station.rs",
       "anchor": "crates/core/tests/differential_station.rs::generation_reaches_the_graphs_that_are_hard_to_draw",
-      "body_hash": "61166b2538c03fbc",
+      "body_hash": "2f85794cc4ebe610",
       "link_hash": "e1432fa6bc71131e",
       "qualifier": null
     },
@@ -21017,7 +20977,7 @@
       "clause": "shrink_preserves",
       "file": "crates/core/tests/differential_evidence.rs",
       "anchor": "crates/core/tests/differential_evidence.rs::a_real_disagreement_is_found_and_reduced",
-      "body_hash": "b2c7dc0481581869",
+      "body_hash": "9d86729ac551fb5e",
       "link_hash": "60b5dda41af75a66",
       "qualifier": "structural"
     },
@@ -21037,7 +20997,7 @@
       "clause": "compiled_not_interpreted",
       "file": "crates/core/tests/runners_are_generated.rs",
       "anchor": "crates/core/tests/runners_are_generated.rs::the_lean_runner_is_a_generated_package_that_is_compiled",
-      "body_hash": "7ff5544b324b31c1",
+      "body_hash": "b6d3bc7e9c1689ba",
       "link_hash": "d48f8370b02f1502",
       "qualifier": "structural"
     },
@@ -21057,7 +21017,7 @@
       "clause": "encoding_declared",
       "file": "crates/core/tests/runners_are_generated.rs",
       "anchor": "crates/core/tests/runners_are_generated.rs::the_lean_runner_is_a_generated_package_that_is_compiled",
-      "body_hash": "7ff5544b324b31c1",
+      "body_hash": "b6d3bc7e9c1689ba",
       "link_hash": "a868f36bf69a5ca6",
       "qualifier": "structural"
     },
@@ -21077,7 +21037,7 @@
       "clause": "generated",
       "file": "crates/core/tests/runners_are_generated.rs",
       "anchor": "crates/core/tests/runners_are_generated.rs::the_lean_runner_is_a_generated_package_that_is_compiled",
-      "body_hash": "7ff5544b324b31c1",
+      "body_hash": "b6d3bc7e9c1689ba",
       "link_hash": "72ce21b67950702d",
       "qualifier": "structural"
     },
@@ -21097,7 +21057,7 @@
       "clause": "project_untouched",
       "file": "crates/core/tests/runners_are_generated.rs",
       "anchor": "crates/core/tests/runners_are_generated.rs::the_lean_runner_is_a_generated_package_that_is_compiled",
-      "body_hash": "7ff5544b324b31c1",
+      "body_hash": "b6d3bc7e9c1689ba",
       "link_hash": "e06c1d5473b04365",
       "qualifier": "structural"
     },
@@ -21117,7 +21077,7 @@
       "clause": "toolchain_explained",
       "file": "crates/core/tests/runners_are_generated.rs",
       "anchor": "crates/core/tests/runners_are_generated.rs::the_lean_runner_is_a_generated_package_that_is_compiled",
-      "body_hash": "7ff5544b324b31c1",
+      "body_hash": "b6d3bc7e9c1689ba",
       "link_hash": "952a2fc1218a7d6c",
       "qualifier": "structural"
     },
@@ -21417,7 +21377,7 @@
       "clause": "generated",
       "file": "crates/core/tests/runners_are_generated.rs",
       "anchor": "crates/core/tests/runners_are_generated.rs::the_rust_runner_is_a_generated_crate_under_the_cache",
-      "body_hash": "5fcb597c29a15576",
+      "body_hash": "31b243300834fbe9",
       "link_hash": "18638a15f6070347",
       "qualifier": "structural"
     },
@@ -21497,7 +21457,7 @@
       "clause": "path_dependency",
       "file": "crates/core/tests/runners_are_generated.rs",
       "anchor": "crates/core/tests/runners_are_generated.rs::the_rust_runner_is_a_generated_crate_under_the_cache",
-      "body_hash": "5fcb597c29a15576",
+      "body_hash": "31b243300834fbe9",
       "link_hash": "461f498cb747189b",
       "qualifier": "structural"
     },
@@ -21527,7 +21487,7 @@
       "clause": "project_untouched",
       "file": "crates/core/tests/runners_are_generated.rs",
       "anchor": "crates/core/tests/runners_are_generated.rs::the_rust_runner_is_a_generated_crate_under_the_cache",
-      "body_hash": "5fcb597c29a15576",
+      "body_hash": "31b243300834fbe9",
       "link_hash": "f92472aa618e9d0f",
       "qualifier": "structural"
     },
@@ -21547,7 +21507,7 @@
       "clause": "rewritten_when_stale",
       "file": "crates/core/tests/runners_are_generated.rs",
       "anchor": "crates/core/tests/runners_are_generated.rs::the_rust_runner_is_a_generated_crate_under_the_cache",
-      "body_hash": "5fcb597c29a15576",
+      "body_hash": "31b243300834fbe9",
       "link_hash": "ed35a1d15b35784b",
       "qualifier": "structural"
     },
@@ -21854,11 +21814,11 @@
     {
       "role": "tests",
       "req": "REQ-EVID",
-      "clause": "absent_is_lowest",
+      "clause": "absent_is_unset",
       "file": "crates/core/src/evidence.rs",
-      "anchor": "crates/core/src/evidence.rs::tests::no_records_is_lowest_everywhere",
-      "body_hash": "9d500f7ca56b9cea",
-      "link_hash": "dbaf23613c849672",
+      "anchor": "crates/core/src/evidence.rs::tests::no_records_sets_no_mark",
+      "body_hash": "46bb68d086ba273d",
+      "link_hash": "4afdc3da5e922252",
       "qualifier": null
     },
     {
@@ -21869,26 +21829,6 @@
       "anchor": "crates/core/src/evidence.rs::tests::evidence_on_one_bond_does_not_raise_another",
       "body_hash": "8b48c5d2adf92888",
       "link_hash": "517786e6e14da9d7",
-      "qualifier": null
-    },
-    {
-      "role": "tests",
-      "req": "REQ-EVID",
-      "clause": "chain_rendered",
-      "file": "crates/core/tests/differential_evidence.rs",
-      "anchor": "crates/core/tests/differential_evidence.rs::generation_reaches_chains_that_say_more_than_their_minimum",
-      "body_hash": "4a51c70e70876f01",
-      "link_hash": "ca7d7fb8c160f49e",
-      "qualifier": null
-    },
-    {
-      "role": "tests",
-      "req": "REQ-EVID",
-      "clause": "chain_rendered",
-      "file": "crates/core/tests/differential_evidence.rs",
-      "anchor": "crates/core/tests/differential_evidence.rs::model_and_implementation_agree_on_the_per_bond_chain",
-      "body_hash": "792255ec318f3e3f",
-      "link_hash": "cadc17dbe48b920c",
       "qualifier": null
     },
     {
@@ -21924,21 +21864,81 @@
     {
       "role": "tests",
       "req": "REQ-EVID",
-      "clause": "ladder",
+      "clause": "mark_per_bond",
       "file": "crates/core/src/evidence.rs",
-      "anchor": "crates/core/src/evidence.rs::tests::the_levels_climb_and_no_two_are_the_same_rung",
-      "body_hash": "8a8658807e93e975",
-      "link_hash": "c6e2953d5687f5c5",
+      "anchor": "crates/core/src/evidence.rs::tests::proved_model_with_unbound_code_reads_as_proved_only",
+      "body_hash": "af4bcb7160207205",
+      "link_hash": "a34fbd691ac981b5",
       "qualifier": null
     },
     {
       "role": "tests",
       "req": "REQ-EVID",
-      "clause": "ladder",
+      "clause": "mark_per_bond",
+      "file": "crates/core/tests/differential_evidence.rs",
+      "anchor": "crates/core/tests/differential_evidence.rs::model_and_implementation_agree_on_the_marks",
+      "body_hash": "e2c67992c5eb1f75",
+      "link_hash": "1acaf44e8d6327ff",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-EVID",
+      "clause": "mark_per_bond",
       "file": "crates/core/tests/proofs_are_earned.rs",
       "anchor": "crates/core/tests/proofs_are_earned.rs::every_theorem_the_kernel_accepts_earns_its_clause_a_record",
       "body_hash": "3a1c31dee69b8edb",
-      "link_hash": "d80c23e77128b826",
+      "link_hash": "81b9b0e9354f0a47",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-EVID",
+      "clause": "marks",
+      "file": "crates/core/src/evidence.rs",
+      "anchor": "crates/core/src/evidence.rs::tests::every_combination_of_marks_is_reachable",
+      "body_hash": "4f36f2ca8fc09478",
+      "link_hash": "c1a794b6e8fa0881",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-EVID",
+      "clause": "marks",
+      "file": "crates/core/tests/differential_evidence.rs",
+      "anchor": "crates/core/tests/differential_evidence.rs::generation_reaches_marks_held_out_of_order",
+      "body_hash": "9d084ba563180165",
+      "link_hash": "67de64dade27a515",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-EVID",
+      "clause": "marks_written",
+      "file": "crates/core/src/evidence.rs",
+      "anchor": "crates/core/src/evidence.rs::tests::marks_are_written_in_fixed_positions",
+      "body_hash": "fc68c4c9cd96db53",
+      "link_hash": "05e9381d16fa3f79",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-EVID",
+      "clause": "marks_written",
+      "file": "crates/core/tests/differential_evidence.rs",
+      "anchor": "crates/core/tests/differential_evidence.rs::generation_reaches_gaps_between_marks",
+      "body_hash": "7bbfcbd039e86592",
+      "link_hash": "3e4c29444fb06b46",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-EVID",
+      "clause": "marks_written",
+      "file": "crates/core/tests/differential_evidence.rs",
+      "anchor": "crates/core/tests/differential_evidence.rs::model_and_implementation_agree_on_writing_the_marks",
+      "body_hash": "4e99891dff395db6",
+      "link_hash": "cdcce9ef833428cb",
       "qualifier": null
     },
     {
@@ -21946,19 +21946,9 @@
       "req": "REQ-EVID",
       "clause": "monotone",
       "file": "crates/core/src/evidence.rs",
-      "anchor": "crates/core/src/evidence.rs::tests::adding_a_record_never_lowers_an_assurance",
-      "body_hash": "667385c40a973cb1",
-      "link_hash": "ff8f42481dded29e",
-      "qualifier": null
-    },
-    {
-      "role": "tests",
-      "req": "REQ-EVID",
-      "clause": "monotone",
-      "file": "crates/core/src/evidence.rs",
-      "anchor": "crates/core/src/evidence.rs::tests::adding_a_record_never_lowers_assurance",
-      "body_hash": "0810532fe2b51cc8",
-      "link_hash": "31e2c8cb2583f36a",
+      "anchor": "crates/core/src/evidence.rs::tests::adding_a_record_never_clears_a_mark",
+      "body_hash": "0dcd699b16418c1f",
+      "link_hash": "a674d3da02e2ab62",
       "qualifier": null
     },
     {
@@ -21999,26 +21989,6 @@
       "anchor": "crates/core/tests/properties.rs::an_evidence_record_cannot_omit_what_would_reproduce_it",
       "body_hash": "ea9c9611ad50a393",
       "link_hash": "968b01f51fbb000a",
-      "qualifier": null
-    },
-    {
-      "role": "tests",
-      "req": "REQ-EVID",
-      "clause": "weakest_link",
-      "file": "crates/core/src/evidence.rs",
-      "anchor": "crates/core/src/evidence.rs::tests::proved_model_with_unbound_code_is_not_three_quarters_assured",
-      "body_hash": "1f643f62093dbb5c",
-      "link_hash": "a9be48cf3665ff36",
-      "qualifier": null
-    },
-    {
-      "role": "tests",
-      "req": "REQ-EVID",
-      "clause": "weakest_link",
-      "file": "crates/core/tests/differential_evidence.rs",
-      "anchor": "crates/core/tests/differential_evidence.rs::model_and_implementation_agree_on_assurance",
-      "body_hash": "1ba0f49ec23ddee4",
-      "link_hash": "e8c4510a80802334",
       "qualifier": null
     },
     {
@@ -22777,7 +22747,7 @@
       "clause": "roles_drawn_in_theme_colours",
       "file": "crates/tui/tests/conformance.rs",
       "anchor": "crates/tui/tests/conformance.rs::the_terminal_frontend_paints_each_role_in_the_themes_colour",
-      "body_hash": "ed3bf1d4dfb77af0",
+      "body_hash": "df6db3161fc60075",
       "link_hash": "410aa4b9a8ca7f64",
       "qualifier": null
     },
@@ -24107,7 +24077,7 @@
       "clause": "counted_once",
       "file": "crates/core/src/trace/rollup.rs",
       "anchor": "crates/core/src/trace/rollup.rs::tests::a_cycle_ends_and_counts_each_member_once",
-      "body_hash": "ca4471f1afb225e2",
+      "body_hash": "f7d45fb099e89358",
       "link_hash": "9df6162631c00e1c",
       "qualifier": null
     },
@@ -24117,7 +24087,7 @@
       "clause": "counted_once",
       "file": "crates/core/src/trace/rollup.rs",
       "anchor": "crates/core/src/trace/rollup.rs::tests::a_diamond_counts_the_shared_child_under_both_parents",
-      "body_hash": "76694f058101c2c1",
+      "body_hash": "3568e50c26521731",
       "link_hash": "ee0b1776bdf8f554",
       "qualifier": null
     },
@@ -24127,7 +24097,7 @@
       "clause": "counted_once",
       "file": "crates/core/tests/differential_rollup.rs",
       "anchor": "crates/core/tests/differential_rollup.rs::model_and_implementation_agree_on_rolling_a_graph_up",
-      "body_hash": "6977df77a469917f",
+      "body_hash": "b70adce5848d40ff",
       "link_hash": "45320e217ee0e3cf",
       "qualifier": null
     },
@@ -24137,7 +24107,7 @@
       "clause": "counted_once",
       "file": "crates/core/tests/differential_rollup.rs",
       "anchor": "crates/core/tests/differential_rollup.rs::the_roll_up_is_a_function_of_the_graph_and_never_flatters_it",
-      "body_hash": "14635649e9103636",
+      "body_hash": "1767b19faae9fdc4",
       "link_hash": "e8f02df55beb8e74",
       "qualifier": null
     },
@@ -24147,7 +24117,7 @@
       "clause": "deterministic_order",
       "file": "crates/core/src/trace/rollup.rs",
       "anchor": "crates/core/src/trace/rollup.rs::tests::a_diamond_counts_the_shared_child_under_both_parents",
-      "body_hash": "76694f058101c2c1",
+      "body_hash": "3568e50c26521731",
       "link_hash": "7ccc5fd9758f8bb9",
       "qualifier": null
     },
@@ -24157,7 +24127,7 @@
       "clause": "deterministic_order",
       "file": "crates/core/tests/differential_rollup.rs",
       "anchor": "crates/core/tests/differential_rollup.rs::model_and_implementation_agree_on_rolling_a_graph_up",
-      "body_hash": "6977df77a469917f",
+      "body_hash": "b70adce5848d40ff",
       "link_hash": "cbe2703133e4cc28",
       "qualifier": null
     },
@@ -24167,8 +24137,28 @@
       "clause": "deterministic_order",
       "file": "crates/core/tests/differential_rollup.rs",
       "anchor": "crates/core/tests/differential_rollup.rs::the_roll_up_is_a_function_of_the_graph_and_never_flatters_it",
-      "body_hash": "14635649e9103636",
+      "body_hash": "1767b19faae9fdc4",
       "link_hash": "7a1a2ffa217488d9",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-ROLLUP",
+      "clause": "every_part_holds",
+      "file": "crates/core/src/trace/rollup.rs",
+      "anchor": "crates/core/src/trace/rollup.rs::tests::aggregation_holds_what_every_part_holds",
+      "body_hash": "b93de36788d7b3eb",
+      "link_hash": "e3e69c2f457efc0e",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-ROLLUP",
+      "clause": "every_part_holds",
+      "file": "crates/core/tests/differential_rollup.rs",
+      "anchor": "crates/core/tests/differential_rollup.rs::model_and_implementation_agree_on_aggregation",
+      "body_hash": "a4878479fef8e374",
+      "link_hash": "55bd0bdaaa1be0a7",
       "qualifier": null
     },
     {
@@ -24187,7 +24177,7 @@
       "clause": "exempt_leaves_denominator",
       "file": "crates/core/src/trace/rollup.rs",
       "anchor": "crates/core/src/trace/rollup.rs::tests::exempt_leaves_and_partial_is_capped",
-      "body_hash": "f41f8e2645336498",
+      "body_hash": "5f0c046f9143e34e",
       "link_hash": "f8282ee89eff8383",
       "qualifier": null
     },
@@ -24197,7 +24187,7 @@
       "clause": "exempt_leaves_denominator",
       "file": "crates/core/tests/differential_rollup.rs",
       "anchor": "crates/core/tests/differential_rollup.rs::model_and_implementation_agree_on_rolling_a_graph_up",
-      "body_hash": "6977df77a469917f",
+      "body_hash": "b70adce5848d40ff",
       "link_hash": "a1a1156f14ed1aa2",
       "qualifier": null
     },
@@ -24207,28 +24197,8 @@
       "clause": "exempt_leaves_denominator",
       "file": "crates/core/tests/differential_rollup.rs",
       "anchor": "crates/core/tests/differential_rollup.rs::the_roll_up_is_a_function_of_the_graph_and_never_flatters_it",
-      "body_hash": "14635649e9103636",
+      "body_hash": "1767b19faae9fdc4",
       "link_hash": "edaec00c9abaab57",
-      "qualifier": null
-    },
-    {
-      "role": "tests",
-      "req": "REQ-ROLLUP",
-      "clause": "min_not_mean",
-      "file": "crates/core/src/trace/rollup.rs",
-      "anchor": "crates/core/src/trace/rollup.rs::tests::aggregation_is_the_minimum",
-      "body_hash": "b0051e3f02b7afb5",
-      "link_hash": "acd12f10554264e3",
-      "qualifier": null
-    },
-    {
-      "role": "tests",
-      "req": "REQ-ROLLUP",
-      "clause": "min_not_mean",
-      "file": "crates/core/tests/differential_rollup.rs",
-      "anchor": "crates/core/tests/differential_rollup.rs::model_and_implementation_agree_on_aggregation",
-      "body_hash": "11305f164a491087",
-      "link_hash": "d43ab87b247d3795",
       "qualifier": null
     },
     {
@@ -24257,7 +24227,7 @@
       "clause": "never_complete_when_open",
       "file": "crates/core/tests/differential_rollup.rs",
       "anchor": "crates/core/tests/differential_rollup.rs::model_and_implementation_agree_on_rolling_a_graph_up",
-      "body_hash": "6977df77a469917f",
+      "body_hash": "b70adce5848d40ff",
       "link_hash": "6904ce77ea612bbb",
       "qualifier": null
     },
@@ -24267,7 +24237,7 @@
       "clause": "never_complete_when_open",
       "file": "crates/core/tests/differential_rollup.rs",
       "anchor": "crates/core/tests/differential_rollup.rs::the_roll_up_is_a_function_of_the_graph_and_never_flatters_it",
-      "body_hash": "14635649e9103636",
+      "body_hash": "1767b19faae9fdc4",
       "link_hash": "866eb482a62d86c0",
       "qualifier": null
     },
@@ -24277,7 +24247,7 @@
       "clause": "open_is_lower_bound",
       "file": "crates/core/tests/differential_rollup.rs",
       "anchor": "crates/core/tests/differential_rollup.rs::model_and_implementation_agree_on_rolling_a_graph_up",
-      "body_hash": "6977df77a469917f",
+      "body_hash": "b70adce5848d40ff",
       "link_hash": "4e7e195cf8e0929f",
       "qualifier": null
     },
@@ -24287,7 +24257,7 @@
       "clause": "partial_capped",
       "file": "crates/core/src/trace/rollup.rs",
       "anchor": "crates/core/src/trace/rollup.rs::tests::exempt_leaves_and_partial_is_capped",
-      "body_hash": "f41f8e2645336498",
+      "body_hash": "5f0c046f9143e34e",
       "link_hash": "e8b9e52fdd745a43",
       "qualifier": null
     },
@@ -24297,7 +24267,7 @@
       "clause": "partial_capped",
       "file": "crates/core/tests/differential_rollup.rs",
       "anchor": "crates/core/tests/differential_rollup.rs::model_and_implementation_agree_on_rolling_a_graph_up",
-      "body_hash": "6977df77a469917f",
+      "body_hash": "b70adce5848d40ff",
       "link_hash": "dedf7932acdd5940",
       "qualifier": null
     },
@@ -24307,7 +24277,7 @@
       "clause": "partial_capped",
       "file": "crates/core/tests/differential_rollup.rs",
       "anchor": "crates/core/tests/differential_rollup.rs::the_roll_up_is_a_function_of_the_graph_and_never_flatters_it",
-      "body_hash": "14635649e9103636",
+      "body_hash": "1767b19faae9fdc4",
       "link_hash": "af568a9fcf988527",
       "qualifier": null
     },
@@ -24917,7 +24887,7 @@
       "clause": "actions_by_role",
       "file": "crates/core/tests/differential_produce.rs",
       "anchor": "crates/core/tests/differential_produce.rs::generation_reaches_every_role_and_the_one_that_affords_nothing",
-      "body_hash": "f54c85d24b954c19",
+      "body_hash": "0999862cdc9229f6",
       "link_hash": "a0d8ef8bf3e3d542",
       "qualifier": null
     },
@@ -25027,7 +24997,7 @@
       "clause": "graph_from_refinement",
       "file": "crates/core/tests/differential_station.rs",
       "anchor": "crates/core/tests/differential_station.rs::generation_reaches_the_graphs_that_are_hard_to_draw",
-      "body_hash": "61166b2538c03fbc",
+      "body_hash": "2f85794cc4ebe610",
       "link_hash": "f1b36a5d7a6c3eb1",
       "qualifier": null
     },
@@ -25057,7 +25027,7 @@
       "clause": "index_from_requirements",
       "file": "crates/core/tests/differential_station.rs",
       "anchor": "crates/core/tests/differential_station.rs::generation_reaches_the_graphs_that_are_hard_to_draw",
-      "body_hash": "61166b2538c03fbc",
+      "body_hash": "2f85794cc4ebe610",
       "link_hash": "0b33f9a215445212",
       "qualifier": null
     },
@@ -25287,7 +25257,7 @@
       "clause": "requirement_opened",
       "file": "crates/core/src/surface/file_trace.rs",
       "anchor": "crates/core/src/surface/file_trace.rs::tests::a_file_shows_what_it_claims_and_what_else_claims_the_same",
-      "body_hash": "cf4d578646876b63",
+      "body_hash": "0478c2ea8b23a446",
       "link_hash": "7af82ed0252e6b95",
       "qualifier": null
     },
@@ -25297,7 +25267,7 @@
       "clause": "requirement_opened",
       "file": "crates/core/src/surface/requirement_view.rs",
       "anchor": "crates/core/src/surface/requirement_view.rs::tests::a_requirement_shows_its_clauses_and_links_to_what_claims_them",
-      "body_hash": "9888600f61743ef7",
+      "body_hash": "e53d7144cd5c6508",
       "link_hash": "0225f80afe554648",
       "qualifier": null
     },
@@ -25307,7 +25277,7 @@
       "clause": "requirement_opened",
       "file": "crates/core/tests/differential_station.rs",
       "anchor": "crates/core/tests/differential_station.rs::model_and_implementation_agree_on_an_opened_requirement",
-      "body_hash": "fab21739d0396969",
+      "body_hash": "6ad3d8188aeda70c",
       "link_hash": "6c9f1b6bdfb374b4",
       "qualifier": null
     },
@@ -25757,7 +25727,7 @@
       "clause": "attempted_distinguished",
       "file": "crates/core/tests/proofs_are_earned.rs",
       "anchor": "crates/core/tests/proofs_are_earned.rs::a_pinning_proof_the_kernel_accepted_reads_as_pinned",
-      "body_hash": "964993a2f624b8d9",
+      "body_hash": "36d1eb0d02fc5f1f",
       "link_hash": "80089db75fa48e9b",
       "qualifier": null
     },
@@ -25937,7 +25907,7 @@
       "clause": "qualifies_proof",
       "file": "crates/core/tests/proofs_are_earned.rs",
       "anchor": "crates/core/tests/proofs_are_earned.rs::a_pinning_proof_the_kernel_accepted_reads_as_pinned",
-      "body_hash": "964993a2f624b8d9",
+      "body_hash": "36d1eb0d02fc5f1f",
       "link_hash": "e0cf59c17a80a7c4",
       "qualifier": null
     },
@@ -27253,18 +27223,18 @@
           "judgedBy": "claude-review",
           "delegatedBy": "ricostynha",
           "promptVersion": "1",
-          "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+          "note": "combine ANDs each mark over the parts; no averaging or majority exists in the model."
         }
       },
       "linkHash": "673b93f13a696d06",
       "inputs": [
         [
           "requirement",
-          "883a5bf07791b64f"
+          "b494971e3ddb6e27"
         ],
         [
           "model",
-          "30f0a5ab73add768"
+          "9d57426604aad65f"
         ]
       ]
     },
@@ -27279,22 +27249,22 @@
         "drt": {
           "seed": 37,
           "cases": 2000,
-          "op": "REQ-ROLLUP.min_not_mean"
+          "op": "REQ-ROLLUP.every_part_holds"
         }
       },
       "linkHash": "e74a2afe478396bc",
       "inputs": [
         [
           "implementation",
-          "b9b7749514a5a105"
+          "57403df8c3e42203"
         ],
         [
           "model",
-          "30f0a5ab73add768"
+          "9d57426604aad65f"
         ],
         [
           "requirement",
-          "883a5bf07791b64f"
+          "b494971e3ddb6e27"
         ]
       ]
     },
@@ -27307,19 +27277,19 @@
       "level": "L4",
       "detail": {
         "proof": {
-          "theoremName": "TraceLean.SpecRollup::rollUp_is_minimum_over_reach",
+          "theoremName": "TraceLean.SpecRollup::rollUp_holds_what_every_clause_holds",
           "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
         }
       },
-      "linkHash": "168c012c5cfd9c01",
+      "linkHash": "4213f3eae49ddb75",
       "inputs": [
         [
           "model",
-          "30f0a5ab73add768"
+          "9d57426604aad65f"
         ],
         [
           "requirement",
-          "883a5bf07791b64f"
+          "b494971e3ddb6e27"
         ],
         [
           "toolchain",
@@ -29511,14 +29481,14 @@
           "judgedBy": "claude-review",
           "delegatedBy": "ricostynha",
           "promptVersion": "1",
-          "note": "a structural clause requires a test and no model; its denominator and level are the roll-up's and the ladder's; decided under autonomy, night of 2026-10-10"
+          "note": "Wording change only (tested mark); the model's distinction between structural and exempt is unchanged."
         }
       },
       "linkHash": "d55d3fe1117a3cd0",
       "inputs": [
         [
           "requirement",
-          "f5f60cf344eb2bee"
+          "9804e54407d990a9"
         ],
         [
           "model",
@@ -29552,7 +29522,7 @@
         ],
         [
           "requirement",
-          "f5f60cf344eb2bee"
+          "9804e54407d990a9"
         ]
       ]
     },
@@ -29577,7 +29547,7 @@
         ],
         [
           "requirement",
-          "f5f60cf344eb2bee"
+          "9804e54407d990a9"
         ],
         [
           "toolchain",
@@ -34192,7 +34162,7 @@
     {
       "key": {
         "reqId": "REQ-EVID",
-        "clause": "absent_is_lowest",
+        "clause": "absent_is_unset",
         "bond": "requirementModel"
       },
       "level": "L2",
@@ -34202,14 +34172,14 @@
           "judgedBy": "claude-review",
           "delegatedBy": "ricostynha",
           "promptVersion": "1",
-          "note": "re-recorded: clause text identical to the text judged and model unchanged; only the clause hash changed"
+          "note": "bondLevel defaults to L1, below every mark's threshold, so an unrecorded bond sets nothing."
         }
       },
-      "linkHash": "2bd5ae7ee4a8aa11",
+      "linkHash": "10a8ba661b21de36",
       "inputs": [
         [
           "requirement",
-          "2836ae8e9a75e559"
+          "9ed5003dbd9eeec9"
         ],
         [
           "model",
@@ -34220,7 +34190,7 @@
     {
       "key": {
         "reqId": "REQ-EVID",
-        "clause": "absent_is_lowest",
+        "clause": "absent_is_unset",
         "bond": "modelImpl"
       },
       "level": "L3",
@@ -34228,10 +34198,10 @@
         "drt": {
           "seed": 7,
           "cases": 2000,
-          "op": "REQ-EVID.weakest_link"
+          "op": "REQ-EVID.mark_per_bond"
         }
       },
-      "linkHash": "0488e447971a5c48",
+      "linkHash": "077034da43e7b0d0",
       "inputs": [
         [
           "implementation",
@@ -34243,24 +34213,24 @@
         ],
         [
           "requirement",
-          "2836ae8e9a75e559"
+          "9ed5003dbd9eeec9"
         ]
       ]
     },
     {
       "key": {
         "reqId": "REQ-EVID",
-        "clause": "absent_is_lowest",
+        "clause": "absent_is_unset",
         "bond": "modelProof"
       },
       "level": "L4",
       "detail": {
         "proof": {
-          "theoremName": "TraceLean.Evidence::a_bond_without_records_is_lowest",
+          "theoremName": "TraceLean.Evidence::no_records_set_no_mark",
           "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
         }
       },
-      "linkHash": "e7b9c853ab7fb4ec",
+      "linkHash": "cb3f270e4d6b9a8b",
       "inputs": [
         [
           "model",
@@ -34268,7 +34238,7 @@
         ],
         [
           "requirement",
-          "2836ae8e9a75e559"
+          "9ed5003dbd9eeec9"
         ],
         [
           "toolchain",
@@ -34289,7 +34259,7 @@
           "judgedBy": "claude-review",
           "delegatedBy": "ricostynha",
           "promptVersion": "1",
-          "note": "re-recorded: clause text identical to the text judged and model unchanged; only the clause hash changed"
+          "note": "Bond is a separate key; a record moves only bondLevel of its own bond."
         }
       },
       "linkHash": "eaf97597ddfe7db6",
@@ -34315,10 +34285,10 @@
         "drt": {
           "seed": 7,
           "cases": 2000,
-          "op": "REQ-EVID.weakest_link"
+          "op": "REQ-EVID.mark_per_bond"
         }
       },
-      "linkHash": "7d397995cd908da9",
+      "linkHash": "f490dd55c68cfc88",
       "inputs": [
         [
           "implementation",
@@ -34356,93 +34326,6 @@
         [
           "requirement",
           "165016157b4b5ba0"
-        ],
-        [
-          "toolchain",
-          "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
-        ]
-      ]
-    },
-    {
-      "key": {
-        "reqId": "REQ-EVID",
-        "clause": "chain_rendered",
-        "bond": "requirementModel"
-      },
-      "level": "L2",
-      "detail": {
-        "judge": {
-          "verdict": "agrees",
-          "judgedBy": "claude-review",
-          "delegatedBy": "ricostynha",
-          "promptVersion": "1",
-          "note": "re-recorded: clause text identical to the text judged and model unchanged; only the clause hash changed"
-        }
-      },
-      "linkHash": "6f8aa811ccc39957",
-      "inputs": [
-        [
-          "requirement",
-          "a148857f83c8eb80"
-        ],
-        [
-          "model",
-          "ef9574811b50a30d"
-        ]
-      ]
-    },
-    {
-      "key": {
-        "reqId": "REQ-EVID",
-        "clause": "chain_rendered",
-        "bond": "modelImpl"
-      },
-      "level": "L3",
-      "detail": {
-        "drt": {
-          "seed": 29,
-          "cases": 2000,
-          "op": "REQ-EVID.chain_rendered"
-        }
-      },
-      "linkHash": "0be4eea3af413eb9",
-      "inputs": [
-        [
-          "implementation",
-          "92e3165fc2b36c0a+e7b9b6651ebf205e"
-        ],
-        [
-          "model",
-          "ef9574811b50a30d"
-        ],
-        [
-          "requirement",
-          "a148857f83c8eb80"
-        ]
-      ]
-    },
-    {
-      "key": {
-        "reqId": "REQ-EVID",
-        "clause": "chain_rendered",
-        "bond": "modelProof"
-      },
-      "level": "L4",
-      "detail": {
-        "proof": {
-          "theoremName": "TraceLean.Evidence::the_chain_is_each_bond",
-          "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
-        }
-      },
-      "linkHash": "18ab2d78215628fb",
-      "inputs": [
-        [
-          "model",
-          "ef9574811b50a30d"
-        ],
-        [
-          "requirement",
-          "a148857f83c8eb80"
         ],
         [
           "toolchain",
@@ -34496,7 +34379,7 @@
       "inputs": [
         [
           "implementation",
-          "65990c639c28d354+ab4982978eec7f8b+cc47d150967b06d6"
+          "4111bb428ac63dbc+65990c639c28d354+cc47d150967b06d6"
         ],
         [
           "model",
@@ -34540,7 +34423,7 @@
     {
       "key": {
         "reqId": "REQ-EVID",
-        "clause": "ladder",
+        "clause": "mark_per_bond",
         "bond": "requirementModel"
       },
       "level": "L2",
@@ -34550,25 +34433,25 @@
           "judgedBy": "claude-review",
           "delegatedBy": "ricostynha",
           "promptVersion": "1",
-          "note": "re-recorded: clause text identical to the text judged and model unchanged; only the clause hash changed"
+          "note": "marks reads judged from RM>=L2, tested from MI>=L3, proved from MP>=L4 and annotated from its argument only."
         }
       },
-      "linkHash": "8de5a7334cde5bd3",
+      "linkHash": "eac2caae256dee44",
       "inputs": [
         [
           "requirement",
-          "01cbff43e1a880c0"
+          "bcf322481f7fdbc5"
         ],
         [
           "model",
-          "99d1fb18af025d88"
+          "a1cef9e4de9c1212"
         ]
       ]
     },
     {
       "key": {
         "reqId": "REQ-EVID",
-        "clause": "ladder",
+        "clause": "mark_per_bond",
         "bond": "modelImpl"
       },
       "level": "L3",
@@ -34576,47 +34459,221 @@
         "drt": {
           "seed": 7,
           "cases": 2000,
-          "op": "REQ-EVID.weakest_link"
+          "op": "REQ-EVID.mark_per_bond"
         }
       },
-      "linkHash": "02a9198060a27c57",
+      "linkHash": "59fc0a70a8d559a9",
       "inputs": [
         [
           "implementation",
-          "5fa768286519c00c+700f7a164db50e69"
+          "4111bb428ac63dbc+5fa768286519c00c+eacf6a030b89c80b"
         ],
         [
           "model",
-          "99d1fb18af025d88"
+          "a1cef9e4de9c1212"
         ],
         [
           "requirement",
-          "01cbff43e1a880c0"
+          "bcf322481f7fdbc5"
         ]
       ]
     },
     {
       "key": {
         "reqId": "REQ-EVID",
-        "clause": "ladder",
+        "clause": "mark_per_bond",
         "bond": "modelProof"
       },
       "level": "L4",
       "detail": {
         "proof": {
-          "theoremName": "TraceLean.Evidence::the_ladder_is_a_total_order",
+          "theoremName": "TraceLean.Evidence::each_mark_reads_its_own_bond",
           "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
         }
       },
-      "linkHash": "2072c170de524c31",
+      "linkHash": "ad2ea803085353b6",
       "inputs": [
         [
           "model",
-          "99d1fb18af025d88"
+          "a1cef9e4de9c1212"
         ],
         [
           "requirement",
-          "01cbff43e1a880c0"
+          "bcf322481f7fdbc5"
+        ],
+        [
+          "toolchain",
+          "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-EVID",
+        "clause": "marks",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "Marks is four independent Bools; every_combination_is_reachable shows all sixteen occur."
+        }
+      },
+      "linkHash": "f9ad64f1cb5668dd",
+      "inputs": [
+        [
+          "requirement",
+          "712e1124dbf7cd19"
+        ],
+        [
+          "model",
+          "db2758d1b5fa8a3a"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-EVID",
+        "clause": "marks",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 7,
+          "cases": 2000,
+          "op": "REQ-EVID.mark_per_bond"
+        }
+      },
+      "linkHash": "2496b29593154436",
+      "inputs": [
+        [
+          "implementation",
+          "44d66765baf6588d"
+        ],
+        [
+          "model",
+          "db2758d1b5fa8a3a"
+        ],
+        [
+          "requirement",
+          "712e1124dbf7cd19"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-EVID",
+        "clause": "marks",
+        "bond": "modelProof"
+      },
+      "level": "L4",
+      "detail": {
+        "proof": {
+          "theoremName": "TraceLean.Evidence::every_combination_is_reachable",
+          "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        }
+      },
+      "linkHash": "1dfc2f4ee1c73e2c",
+      "inputs": [
+        [
+          "model",
+          "db2758d1b5fa8a3a"
+        ],
+        [
+          "requirement",
+          "712e1124dbf7cd19"
+        ],
+        [
+          "toolchain",
+          "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-EVID",
+        "clause": "marks_written",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "written emits A J T P in fixed positions, a dash for each unheld mark."
+        }
+      },
+      "linkHash": "1a6ddbe9285b244a",
+      "inputs": [
+        [
+          "requirement",
+          "bcad2263016bccfb"
+        ],
+        [
+          "model",
+          "9687c753fed48a43"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-EVID",
+        "clause": "marks_written",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 29,
+          "cases": 1000,
+          "op": "REQ-EVID.marks_written"
+        }
+      },
+      "linkHash": "a7736b031a228fb2",
+      "inputs": [
+        [
+          "implementation",
+          "644bf118fba64a36"
+        ],
+        [
+          "model",
+          "9687c753fed48a43"
+        ],
+        [
+          "requirement",
+          "bcad2263016bccfb"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-EVID",
+        "clause": "marks_written",
+        "bond": "modelProof"
+      },
+      "level": "L4",
+      "detail": {
+        "proof": {
+          "theoremName": "TraceLean.Evidence::marks_are_written_in_place",
+          "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        }
+      },
+      "linkHash": "293e4f73946bab19",
+      "inputs": [
+        [
+          "model",
+          "9687c753fed48a43"
+        ],
+        [
+          "requirement",
+          "bcad2263016bccfb"
         ],
         [
           "toolchain",
@@ -34637,18 +34694,18 @@
           "judgedBy": "claude-review",
           "delegatedBy": "ricostynha",
           "promptVersion": "1",
-          "note": "re-recorded: clause text identical to the text judged and model unchanged; only the clause hash changed"
+          "note": "bondLevel is a max fold; each mark is a threshold on it, so an added record can only set marks."
         }
       },
-      "linkHash": "96569a5b6899d22b",
+      "linkHash": "b6a903e0747472c0",
       "inputs": [
         [
           "requirement",
-          "643cadd33fd8ee4b"
+          "14e509e8b9fe4305"
         ],
         [
           "model",
-          "d47ffb3b29e8752b"
+          "a1cef9e4de9c1212"
         ]
       ]
     },
@@ -34663,22 +34720,22 @@
         "drt": {
           "seed": 7,
           "cases": 2000,
-          "op": "REQ-EVID.weakest_link"
+          "op": "REQ-EVID.mark_per_bond"
         }
       },
-      "linkHash": "cf5f21c261df86ba",
+      "linkHash": "f630618864e98bc3",
       "inputs": [
         [
           "implementation",
-          "d934f495a6aee879"
+          "eacf6a030b89c80b"
         ],
         [
           "model",
-          "d47ffb3b29e8752b"
+          "a1cef9e4de9c1212"
         ],
         [
           "requirement",
-          "643cadd33fd8ee4b"
+          "14e509e8b9fe4305"
         ]
       ]
     },
@@ -34691,19 +34748,19 @@
       "level": "L4",
       "detail": {
         "proof": {
-          "theoremName": "TraceLean.Evidence::adding_a_record_never_lowers_assurance",
+          "theoremName": "TraceLean.Evidence::adding_a_record_never_clears_a_mark",
           "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
         }
       },
-      "linkHash": "3835cb0a1cb4d2d2",
+      "linkHash": "5287aa3e51d93b6a",
       "inputs": [
         [
           "model",
-          "d47ffb3b29e8752b"
+          "a1cef9e4de9c1212"
         ],
         [
           "requirement",
-          "643cadd33fd8ee4b"
+          "14e509e8b9fe4305"
         ],
         [
           "toolchain",
@@ -34791,93 +34848,6 @@
         [
           "requirement",
           "6202e164965fe80d"
-        ],
-        [
-          "toolchain",
-          "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
-        ]
-      ]
-    },
-    {
-      "key": {
-        "reqId": "REQ-EVID",
-        "clause": "weakest_link",
-        "bond": "requirementModel"
-      },
-      "level": "L2",
-      "detail": {
-        "judge": {
-          "verdict": "agrees",
-          "judgedBy": "claude-review",
-          "delegatedBy": "ricostynha",
-          "promptVersion": "1",
-          "note": "re-recorded: clause text identical to the text judged, model declaration byte-identical; only hashes moved"
-        }
-      },
-      "linkHash": "d07d2c299d150f19",
-      "inputs": [
-        [
-          "requirement",
-          "32f9f3bb103c0c04"
-        ],
-        [
-          "model",
-          "d47ffb3b29e8752b"
-        ]
-      ]
-    },
-    {
-      "key": {
-        "reqId": "REQ-EVID",
-        "clause": "weakest_link",
-        "bond": "modelImpl"
-      },
-      "level": "L3",
-      "detail": {
-        "drt": {
-          "seed": 7,
-          "cases": 2000,
-          "op": "REQ-EVID.weakest_link"
-        }
-      },
-      "linkHash": "585a2599df5e5ec1",
-      "inputs": [
-        [
-          "implementation",
-          "ab4982978eec7f8b+d934f495a6aee879"
-        ],
-        [
-          "model",
-          "d47ffb3b29e8752b"
-        ],
-        [
-          "requirement",
-          "32f9f3bb103c0c04"
-        ]
-      ]
-    },
-    {
-      "key": {
-        "reqId": "REQ-EVID",
-        "clause": "weakest_link",
-        "bond": "modelProof"
-      },
-      "level": "L4",
-      "detail": {
-        "proof": {
-          "theoremName": "TraceLean.Evidence::assurance_mem_chain",
-          "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
-        }
-      },
-      "linkHash": "19600c7eea311514",
-      "inputs": [
-        [
-          "model",
-          "d47ffb3b29e8752b"
-        ],
-        [
-          "requirement",
-          "32f9f3bb103c0c04"
         ],
         [
           "toolchain",
@@ -35973,7 +35943,7 @@
       "inputs": [
         [
           "implementation",
-          "33b2ce03e8113c63+7f6e2d0f3302538b"
+          "7f6e2d0f3302538b+8a0b42bc537f0d69"
         ],
         [
           "model",
@@ -40626,7 +40596,7 @@
           "judgedBy": "claude-review",
           "delegatedBy": "ricostynha",
           "promptVersion": "1",
-          "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+          "note": "rollUp combines marks over the reachable set built once per id; types moved from Level to Marks."
         }
       },
       "linkHash": "243da6456bc4c003",
@@ -40637,7 +40607,7 @@
         ],
         [
           "model",
-          "f96f84510583693b"
+          "ae45a1a9d281d747"
         ]
       ]
     },
@@ -40659,11 +40629,11 @@
       "inputs": [
         [
           "implementation",
-          "94bf5fb9b2a867da"
+          "344b5dc81a82dd4d"
         ],
         [
           "model",
-          "f96f84510583693b"
+          "ae45a1a9d281d747"
         ],
         [
           "requirement",
@@ -40680,15 +40650,15 @@
       "level": "L4",
       "detail": {
         "proof": {
-          "theoremName": "TraceLean.SpecRollup::rollUp_is_minimum_over_reach",
+          "theoremName": "TraceLean.SpecRollup::rollUp_holds_what_every_clause_holds",
           "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
         }
       },
-      "linkHash": "238bbb28f22832ac",
+      "linkHash": "77eba19b6a742c0b",
       "inputs": [
         [
           "model",
-          "f96f84510583693b"
+          "ae45a1a9d281d747"
         ],
         [
           "requirement",
@@ -40713,7 +40683,7 @@
           "judgedBy": "claude-review",
           "delegatedBy": "ricostynha",
           "promptVersion": "1",
-          "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+          "note": "rollUp canonicalises nodes and held marks before folding; order-independence unchanged by the Marks type."
         }
       },
       "linkHash": "3e73cf8d75d44110",
@@ -40724,7 +40694,7 @@
         ],
         [
           "model",
-          "f96f84510583693b"
+          "ae45a1a9d281d747"
         ]
       ]
     },
@@ -40746,11 +40716,11 @@
       "inputs": [
         [
           "implementation",
-          "94bf5fb9b2a867da"
+          "344b5dc81a82dd4d"
         ],
         [
           "model",
-          "f96f84510583693b"
+          "ae45a1a9d281d747"
         ],
         [
           "requirement",
@@ -40775,11 +40745,98 @@
       "inputs": [
         [
           "model",
-          "f96f84510583693b"
+          "ae45a1a9d281d747"
         ],
         [
           "requirement",
           "04cbf462882c495c"
+        ],
+        [
+          "toolchain",
+          "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-ROLLUP",
+        "clause": "every_part_holds",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "combine of [] is empty; otherwise the per-mark AND over every part."
+        }
+      },
+      "linkHash": "7c889a6e706c7ac6",
+      "inputs": [
+        [
+          "requirement",
+          "28d8ce151a558680"
+        ],
+        [
+          "model",
+          "9d57426604aad65f"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-ROLLUP",
+        "clause": "every_part_holds",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 37,
+          "cases": 2000,
+          "op": "REQ-ROLLUP.every_part_holds"
+        }
+      },
+      "linkHash": "12418aa742577bd6",
+      "inputs": [
+        [
+          "implementation",
+          "57403df8c3e42203"
+        ],
+        [
+          "model",
+          "9d57426604aad65f"
+        ],
+        [
+          "requirement",
+          "28d8ce151a558680"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-ROLLUP",
+        "clause": "every_part_holds",
+        "bond": "modelProof"
+      },
+      "level": "L4",
+      "detail": {
+        "proof": {
+          "theoremName": "TraceLean.Rollup::combine_holds_what_every_part_holds",
+          "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        }
+      },
+      "linkHash": "60b96f32c5ce4774",
+      "inputs": [
+        [
+          "model",
+          "9d57426604aad65f"
+        ],
+        [
+          "requirement",
+          "28d8ce151a558680"
         ],
         [
           "toolchain",
@@ -40800,18 +40857,18 @@
           "judgedBy": "claude-review",
           "delegatedBy": "ricostynha",
           "promptVersion": "1",
-          "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+          "note": "Exempt clauses are filtered before both the figure and the marks combine."
         }
       },
       "linkHash": "774073328127a482",
       "inputs": [
         [
           "requirement",
-          "8d3bda74a5062f4f"
+          "92684d812b924cc7"
         ],
         [
           "model",
-          "f96f84510583693b"
+          "ae45a1a9d281d747"
         ]
       ]
     },
@@ -40833,15 +40890,15 @@
       "inputs": [
         [
           "implementation",
-          "8bc9971e95aa3caf+94bf5fb9b2a867da"
+          "344b5dc81a82dd4d+8bc9971e95aa3caf"
         ],
         [
           "model",
-          "f96f84510583693b"
+          "ae45a1a9d281d747"
         ],
         [
           "requirement",
-          "8d3bda74a5062f4f"
+          "92684d812b924cc7"
         ]
       ]
     },
@@ -40862,98 +40919,11 @@
       "inputs": [
         [
           "model",
-          "f96f84510583693b"
+          "ae45a1a9d281d747"
         ],
         [
           "requirement",
-          "8d3bda74a5062f4f"
-        ],
-        [
-          "toolchain",
-          "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
-        ]
-      ]
-    },
-    {
-      "key": {
-        "reqId": "REQ-ROLLUP",
-        "clause": "min_not_mean",
-        "bond": "requirementModel"
-      },
-      "level": "L2",
-      "detail": {
-        "judge": {
-          "verdict": "agrees",
-          "judgedBy": "claude-review",
-          "delegatedBy": "ricostynha",
-          "promptVersion": "1",
-          "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
-        }
-      },
-      "linkHash": "0207c3ceca79b1f0",
-      "inputs": [
-        [
-          "requirement",
-          "dc86e49bc935989a"
-        ],
-        [
-          "model",
-          "30f0a5ab73add768"
-        ]
-      ]
-    },
-    {
-      "key": {
-        "reqId": "REQ-ROLLUP",
-        "clause": "min_not_mean",
-        "bond": "modelImpl"
-      },
-      "level": "L3",
-      "detail": {
-        "drt": {
-          "seed": 37,
-          "cases": 2000,
-          "op": "REQ-ROLLUP.min_not_mean"
-        }
-      },
-      "linkHash": "2283cc271faeda18",
-      "inputs": [
-        [
-          "implementation",
-          "b9b7749514a5a105"
-        ],
-        [
-          "model",
-          "30f0a5ab73add768"
-        ],
-        [
-          "requirement",
-          "dc86e49bc935989a"
-        ]
-      ]
-    },
-    {
-      "key": {
-        "reqId": "REQ-ROLLUP",
-        "clause": "min_not_mean",
-        "bond": "modelProof"
-      },
-      "level": "L4",
-      "detail": {
-        "proof": {
-          "theoremName": "TraceLean.Rollup::combine_empty",
-          "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
-        }
-      },
-      "linkHash": "12931ae49d9d8549",
-      "inputs": [
-        [
-          "model",
-          "30f0a5ab73add768"
-        ],
-        [
-          "requirement",
-          "dc86e49bc935989a"
+          "92684d812b924cc7"
         ],
         [
           "toolchain",
@@ -41061,7 +41031,7 @@
           "judgedBy": "claude-review",
           "delegatedBy": "ricostynha",
           "promptVersion": "1",
-          "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+          "note": "Figure exactness still follows decomposition; floor is now Marks via holds."
         }
       },
       "linkHash": "3dc4621e6caa0b25",
@@ -41072,7 +41042,7 @@
         ],
         [
           "model",
-          "f96f84510583693b"
+          "ae45a1a9d281d747"
         ]
       ]
     },
@@ -41094,11 +41064,11 @@
       "inputs": [
         [
           "implementation",
-          "8d101cfe3d5b86a4+94bf5fb9b2a867da+e33a44d720f5aa31"
+          "344b5dc81a82dd4d+3a4f0e85eef16ebb+e33a44d720f5aa31"
         ],
         [
           "model",
-          "f96f84510583693b"
+          "ae45a1a9d281d747"
         ],
         [
           "requirement",
@@ -41123,7 +41093,7 @@
       "inputs": [
         [
           "model",
-          "f96f84510583693b"
+          "ae45a1a9d281d747"
         ],
         [
           "requirement",
@@ -41148,18 +41118,18 @@
           "judgedBy": "claude-review",
           "delegatedBy": "ricostynha",
           "promptVersion": "1",
-          "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+          "note": "partialCap clears tested and proved, so a partial clause never meets a floor asking for either."
         }
       },
       "linkHash": "33b0a6396e693602",
       "inputs": [
         [
           "requirement",
-          "a17c049127179bae"
+          "8eadae2473ace6ab"
         ],
         [
           "model",
-          "f96f84510583693b"
+          "ae45a1a9d281d747"
         ]
       ]
     },
@@ -41181,15 +41151,15 @@
       "inputs": [
         [
           "implementation",
-          "94bf5fb9b2a867da"
+          "344b5dc81a82dd4d"
         ],
         [
           "model",
-          "f96f84510583693b"
+          "ae45a1a9d281d747"
         ],
         [
           "requirement",
-          "a17c049127179bae"
+          "8eadae2473ace6ab"
         ]
       ]
     },
@@ -41202,19 +41172,19 @@
       "level": "L4",
       "detail": {
         "proof": {
-          "theoremName": "TraceLean.Rollup::a_partial_clause_is_capped_at_L2",
+          "theoremName": "TraceLean.Rollup::a_partial_clause_is_never_tested_or_proved",
           "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
         }
       },
-      "linkHash": "b74f607d022f0854",
+      "linkHash": "8146ac765c7484af",
       "inputs": [
         [
           "model",
-          "f96f84510583693b"
+          "ae45a1a9d281d747"
         ],
         [
           "requirement",
-          "a17c049127179bae"
+          "8eadae2473ace6ab"
         ],
         [
           "toolchain",
@@ -43836,7 +43806,7 @@
           "judgedBy": "claude-review",
           "delegatedBy": "ricostynha",
           "promptVersion": "1",
-          "note": "actionsFor is the one role-to-actions table; core_produces stays structural; decided under autonomy, night of 2026-10-10"
+          "note": "actionsFor maps Role.mark to trace.rollup as Role.level did; other roles unchanged."
         }
       },
       "linkHash": "73e5d1c89edb65d4",
@@ -43847,7 +43817,7 @@
         ],
         [
           "model",
-          "148951689474b0de"
+          "9b9e674698f33c44"
         ]
       ]
     },
@@ -43869,11 +43839,11 @@
       "inputs": [
         [
           "implementation",
-          "a03ca3e19f6eec8a"
+          "afedeac4d10a0ecb"
         ],
         [
           "model",
-          "148951689474b0de"
+          "9b9e674698f33c44"
         ],
         [
           "requirement",
@@ -43898,7 +43868,7 @@
       "inputs": [
         [
           "model",
-          "148951689474b0de"
+          "9b9e674698f33c44"
         ],
         [
           "requirement",
@@ -44271,14 +44241,14 @@
           "judgedBy": "claude-review",
           "delegatedBy": "ricostynha",
           "promptVersion": "1",
-          "note": "re-recorded: clause text identical to the text judged and model unchanged; only the clause hash changed"
+          "note": "Each row carries its four marks as spans, then the id, bar and title."
         }
       },
       "linkHash": "a85d576ce63e64b8",
       "inputs": [
         [
           "requirement",
-          "ac6ab63de0ca4bc5"
+          "fec0d6ade0d1ab48"
         ],
         [
           "model",
@@ -44312,7 +44282,7 @@
         ],
         [
           "requirement",
-          "ac6ab63de0ca4bc5"
+          "fec0d6ade0d1ab48"
         ]
       ]
     },
@@ -44337,7 +44307,7 @@
         ],
         [
           "requirement",
-          "ac6ab63de0ca4bc5"
+          "fec0d6ade0d1ab48"
         ],
         [
           "toolchain",
@@ -45054,14 +45024,14 @@
           "judgedBy": "claude-review",
           "delegatedBy": "ricostynha",
           "promptVersion": "1",
-          "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+          "note": "Each clause row leads with its marks as spans; claims remain path:line links."
         }
       },
       "linkHash": "6cfca4316b773547",
       "inputs": [
         [
           "requirement",
-          "fb9969e3b2c26e70"
+          "56b664e251de23cf"
         ],
         [
           "model",
@@ -45087,7 +45057,7 @@
       "inputs": [
         [
           "implementation",
-          "33b2ce03e8113c63+99ea256942475964"
+          "5fb3cd61976fbbec+8a0b42bc537f0d69"
         ],
         [
           "model",
@@ -45095,7 +45065,7 @@
         ],
         [
           "requirement",
-          "fb9969e3b2c26e70"
+          "56b664e251de23cf"
         ]
       ]
     },
@@ -45120,7 +45090,7 @@
         ],
         [
           "requirement",
-          "fb9969e3b2c26e70"
+          "56b664e251de23cf"
         ],
         [
           "toolchain",
@@ -47053,14 +47023,14 @@
           "judgedBy": "claude-review",
           "delegatedBy": "ricostynha",
           "promptVersion": "1",
-          "note": "re-recorded: clause text identical to the text judged and model unchanged; only the clause hash changed"
+          "note": "Wording change only: the proved mark is shown with its strength as pinned/attempted/open."
         }
       },
       "linkHash": "49ceb3e6f6ad0d21",
       "inputs": [
         [
           "requirement",
-          "cacb63e69439addc"
+          "65aeda31cbec6a7d"
         ],
         [
           "model",
@@ -47094,7 +47064,7 @@
         ],
         [
           "requirement",
-          "cacb63e69439addc"
+          "65aeda31cbec6a7d"
         ]
       ]
     },
@@ -47119,7 +47089,7 @@
         ],
         [
           "requirement",
-          "cacb63e69439addc"
+          "65aeda31cbec6a7d"
         ],
         [
           "toolchain",
@@ -49135,7 +49105,7 @@
       "inputs": [
         [
           "implementation",
-          "4f18850bc2ccc9a6+c35380abee687fff"
+          "4f18850bc2ccc9a6+a936b8212d548706"
         ],
         [
           "model",

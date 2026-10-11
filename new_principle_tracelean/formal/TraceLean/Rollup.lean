@@ -14,29 +14,43 @@ namespace TraceLean.Rollup
 open TraceLean.Evidence
 
 /--
-Aggregate over children by taking the minimum.
+Aggregate over children, mark by mark: held only when every part holds it.
 
-An average invents a level nothing established; a minimum is always a level
-something did.
+A majority invents evidence nothing established; requiring every part is a
+claim each of them makes. Nothing to aggregate holds nothing.
 
-@models REQ-ROLLUP.min_not_mean
+@models REQ-ROLLUP.every_part_holds
 @models ARCH-HONEST.weakest_link
 -/
-def combine (levels : List Level) : Level :=
-  levels.foldl Level.min Level.L4 |> fun result =>
-    if levels.isEmpty then Level.L1 else result
+def combine (parts : List Marks) : Marks :=
+  match parts with
+  | [] => Marks.empty
+  | first :: rest => rest.foldl Marks.both first
 
-/-- Nothing to aggregate is the lowest, not the highest: an empty list is an
-absence of evidence, and the top of the ladder is the last thing it should
-report.
+/-- Nothing to aggregate holds no mark, not every mark; a mark held by all but
+one part is not held; one held by all is.
 
-@proves REQ-ROLLUP.min_not_mean -/
-theorem combine_empty : combine [] = Level.L1 := by
-  simp [combine]
+@proves REQ-ROLLUP.every_part_holds -/
+theorem combine_holds_what_every_part_holds :
+    combine [] = Marks.empty ∧
+    written (combine [⟨true, true, true, true⟩, ⟨true, true, true, true⟩, ⟨true, true, true, false⟩])
+      = "AJT-" ∧
+    written (combine [⟨true, true, false, false⟩, ⟨true, false, false, true⟩]) = "A---" := by
+  native_decide
 
-/-- A single level aggregates to itself. -/
-theorem combine_singleton (l : Level) : combine [l] = Level.min Level.L4 l := by
-  simp [combine]
+/-- An aggregate holds the tested mark only if its first part does: one part
+without a mark clears it for the whole. -/
+theorem a_part_without_a_mark_clears_it (first : Marks) (rest : List Marks) :
+    (combine (first :: rest)).holds ⟨false, false, true, false⟩ = true →
+      first.tested = true := by
+  simp only [combine]
+  induction rest generalizing first with
+  | nil => simp [Marks.holds]
+  | cons x xs ih =>
+    intro h
+    have := ih (Marks.both first x) h
+    simp only [Marks.both, Bool.and_eq_true] at this
+    exact this.1
 
 /-! ## Rolling a declared graph up
 
@@ -47,8 +61,8 @@ figure down. The figure is marked, never rendered bare.
 
 **An exemption leaves the denominator; a partial does not.** Exempting a clause
 is saying it does not apply, so counting it would permanently cap the figure.
-Marking one partial is saying it is half done, so it stays, capped below the
-level at which anything ran.
+Marking one partial is saying it is half done, so it stays, never counted as
+tested or proved.
 
 **Each requirement's figures are over its own reachable set.** A set, not a
 walk: in a diamond (B and C refine A, D refines both) D is in B's set and in
@@ -96,13 +110,13 @@ structure Node where
   refines : List String
   deriving Repr, DecidableEq, Inhabited, ToJson, FromJson
 
-/-- Assurance of one node, and of everything under it. -/
+/-- The marks of one node, and of everything under it. -/
 inductive RollUp where
-  | mk (id : String) (assurance : Level) (covered : Figure) (children : List RollUp)
+  | mk (id : String) (marks : Marks) (covered : Figure) (children : List RollUp)
   deriving Repr, Inhabited
 
-def RollUp.assurance : RollUp → Level
-  | .mk _ a _ _ => a
+def RollUp.marks : RollUp → Marks
+  | .mk _ m _ _ => m
 
 def RollUp.covered : RollUp → Figure
   | .mk _ _ f _ => f
@@ -110,16 +124,19 @@ def RollUp.covered : RollUp → Figure
 /-- Written by hand because a derived encoding for a recursive type would nest
 its own constructor name at every level, and the implementation's is flat. -/
 partial def RollUp.toJsonValue : RollUp → Json
-  | .mk id assurance covered children =>
-    Json.mkObj [("id", Json.str id), ("assurance", toJson assurance),
+  | .mk id marks covered children =>
+    Json.mkObj [("id", Json.str id), ("marks", toJson marks),
                 ("covered", toJson covered),
                 ("children", Json.arr (children.map RollUp.toJsonValue).toArray)]
 
 instance : ToJson RollUp := ⟨RollUp.toJsonValue⟩
 
-def levelAt (levels : List ((String × Option String) × Level)) (key : String × Option String)
-    : Option Level :=
-  (levels.find? (·.1 == key)).map (·.2)
+def marksAt (held : List ((String × Option String) × Marks)) (key : String × Option String)
+    : Option Marks :=
+  (held.find? (·.1 == key)).map (·.2)
+
+/-- What a clause claimed only in part contributes: never tested or proved. -/
+def partialCap (m : Marks) : Marks := { m with tested := false, proved := false }
 
 /-! ### A canonical graph
 
@@ -147,9 +164,9 @@ def dedupLast : List Node → List Node
 def canonNodes (nodes : List Node) : List Node :=
   (dedupLast nodes).mergeSort idLe
 
-def canonLevels (levels : List ((String × Option String) × Level))
-    : List ((String × Option String) × Level) :=
-  levels.foldl
+def canonHeld (held : List ((String × Option String) × Marks))
+    : List ((String × Option String) × Marks) :=
+  held.foldl
     (fun acc kv => if acc.any (·.1 == kv.1) then acc.map (fun p => if p.1 == kv.1 then kv else p)
                    else acc ++ [kv]) []
 
@@ -175,35 +192,35 @@ each identifier appears in it once. -/
 def members (graph : List Node) (root : String) : List Node :=
   graph.filter (fun n => (reach graph root).contains n.id)
 
-/-- What one requirement contributes on its own: the level of each clause that
-counts. Exempt clauses leave; partial ones stay, capped at L2. -/
-def ownLevels (levels : List ((String × Option String) × Level)) (n : Node) : List Level :=
+/-- What one requirement contributes on its own: the marks of each clause that
+counts. Exempt clauses leave; partial ones stay, never tested or proved. -/
+def ownMarks (held : List ((String × Option String) × Marks)) (n : Node) : List Marks :=
   (n.clauses.filter (fun c => !(n.exempt.contains c))).map (fun c =>
-    if n.partialClauses.contains c then Level.min ((levelAt levels (n.id, c)).getD Level.L1) Level.L2
-    else (levelAt levels (n.id, c)).getD Level.L1)
+    if n.partialClauses.contains c then partialCap ((marksAt held (n.id, c)).getD Marks.empty)
+    else (marksAt held (n.id, c)).getD Marks.empty)
 
-/-- Every counted clause level over a requirement's reachable set. -/
-def reachLevels (graph : List Node) (levels : List ((String × Option String) × Level))
-    (root : String) : List Level :=
-  (members graph root).bind (ownLevels levels)
+/-- Every counted clause's marks over a requirement's reachable set. -/
+def reachMarks (graph : List Node) (held : List ((String × Option String) × Marks))
+    (root : String) : List Marks :=
+  (members graph root).bind (ownMarks held)
 
-def figureOf (graph : List Node) (levels : List ((String × Option String) × Level))
-    (floor : Level) (root : String) : Figure :=
-  let all := reachLevels graph levels root
-  { met := (all.filter (fun l => decide (floor ≤ l))).length,
+def figureOf (graph : List Node) (held : List ((String × Option String) × Marks))
+    (floor : Marks) (root : String) : Figure :=
+  let all := reachMarks graph held root
+  { met := (all.filter (fun m => m.holds floor)).length,
     total := all.length,
     exact := graph.any (·.id == root) && (members graph root).all (·.complete) }
 
 /-- The tree shown: every requirement under every parent it refines, sorted; a
 child already on the path is left out, so a cycle cannot loop. Each node's
 figures are over its own set, so where it is shown changes nothing. -/
-def rollUpTree (graph : List Node) (levels : List ((String × Option String) × Level))
-    (floor : Level) : Nat → List String → String → RollUp
-  | 0, _, id => .mk id (combine (reachLevels graph levels id)) (figureOf graph levels floor id) []
+def rollUpTree (graph : List Node) (held : List ((String × Option String) × Marks))
+    (floor : Marks) : Nat → List String → String → RollUp
+  | 0, _, id => .mk id (combine (reachMarks graph held id)) (figureOf graph held floor id) []
   | fuel + 1, path, id =>
-    .mk id (combine (reachLevels graph levels id)) (figureOf graph levels floor id)
+    .mk id (combine (reachMarks graph held id)) (figureOf graph held floor id)
       ((graph.filter (fun n => n.refines.contains id && !((path ++ [id]).contains n.id))).map
-        (fun n => rollUpTree graph levels floor fuel (path ++ [id]) n.id))
+        (fun n => rollUpTree graph held floor fuel (path ++ [id]) n.id))
 
 /--
 Roll a declared graph up.
@@ -214,10 +231,10 @@ Roll a declared graph up.
 @models REQ-ROLLUP.deterministic_order
 @models REQ-ROLLUP.counted_once
 -/
-def rollUp (nodes : List Node) (levels : List ((String × Option String) × Level))
-    (root : String) (floor : Level) : RollUp :=
+def rollUp (nodes : List Node) (held : List ((String × Option String) × Marks))
+    (root : String) (floor : Marks) : RollUp :=
   let graph := canonNodes nodes
-  rollUpTree graph (canonLevels levels) floor (graph.length + 1) [] root
+  rollUpTree graph (canonHeld held) floor (graph.length + 1) [] root
 
 /-- An unclaimed decomposition never renders as finished, whatever its figure.
 
@@ -226,15 +243,15 @@ theorem an_unclaimed_decomposition_is_never_complete (met total : Nat) :
     Figure.isComplete { met := met, total := total, exact := false } = false := by
   simp [Figure.isComplete]
 
-/-- A requirement's assurance is the aggregate of every counted clause over its
+/-- A requirement's marks are the aggregate of every counted clause over its
 reachable set — the set, each member once, whatever path reaches it.
 
 @proves REQ-ROLLUP.counted_once -/
-theorem assurance_is_over_the_reachable_set (nodes : List Node)
-    (levels : List ((String × Option String) × Level)) (root : String) (floor : Level) :
-    (rollUp nodes levels root floor).assurance =
-      combine (reachLevels (canonNodes nodes) (canonLevels levels) root) := by
-  simp [rollUp, rollUpTree, RollUp.assurance]
+theorem marks_are_over_the_reachable_set (nodes : List Node)
+    (held : List ((String × Option String) × Marks)) (root : String) (floor : Marks) :
+    (rollUp nodes held root floor).marks =
+      combine (reachMarks (canonNodes nodes) (canonHeld held) root) := by
+  simp [rollUp, rollUpTree, RollUp.marks]
 
 /-! ### The order of declaration does not matter -/
 
@@ -401,8 +418,8 @@ theorem canonNodes_perm (l other : List Node) (p : List.Perm l other)
 @proves REQ-ROLLUP.deterministic_order -/
 theorem rollUp_perm (nodes other : List Node) (p : List.Perm nodes other)
     (distinct : List.Pairwise (fun a b => Not (a.id = b.id)) nodes)
-    (levels : List ((String × Option String) × Level)) (root : String) (floor : Level) :
-    rollUp nodes levels root floor = rollUp other levels root floor := by
+    (held : List ((String × Option String) × Marks)) (root : String) (floor : Marks) :
+    rollUp nodes held root floor = rollUp other held root floor := by
   simp only [rollUp, canonNodes_perm nodes other p distinct]
 
 /-! ## Coverage over files
@@ -444,29 +461,31 @@ theorem an_unclaimed_file_is_counted :
     fileCoverage ["a.rs", "b.rs"] ["a.rs"] = { met := 1, total := 2, exact := true } := by
   native_decide
 
-/-- An exempt clause contributes nothing -- neither a level nor a place in the
+/-- An exempt clause contributes nothing -- neither marks nor a place in the
 denominator -- while its sibling is still counted.
 
 @proves REQ-ROLLUP.exempt_leaves_denominator -/
-theorem an_exempt_clause_is_not_counted (levels : List ((String × Option String) × Level)) :
-    ownLevels levels { id := "R", complete := true, clauses := [some "a", some "b"],
-                       exempt := [some "b"], partialClauses := [], refines := [] }
-      = [(levelAt levels ("R", some "a")).getD Level.L1] := by
-  simp [ownLevels]
+theorem an_exempt_clause_is_not_counted (held : List ((String × Option String) × Marks)) :
+    ownMarks held { id := "R", complete := true, clauses := [some "a", some "b"],
+                    exempt := [some "b"], partialClauses := [], refines := [] }
+      = [(marksAt held ("R", some "a")).getD Marks.empty] := by
+  simp [ownMarks]
 
-/-- A partial clause stays counted, at whatever it reached but never above L2,
-so it never meets a floor of L3.
+/-- A partial clause stays counted with what it holds, but never as tested or
+proved, so it never meets a floor asking for either.
 
 @proves REQ-ROLLUP.partial_capped -/
-theorem a_partial_clause_is_capped_at_L2 (reached : Level) :
-    ownLevels [(("R", some "a"), reached)]
+theorem a_partial_clause_is_never_tested_or_proved (reached : Marks) :
+    ownMarks [(("R", some "a"), reached)]
         { id := "R", complete := true, clauses := [some "a"], exempt := [],
           partialClauses := [some "a"], refines := [] }
-      = [Level.min reached Level.L2] ∧
-    (Level.min reached Level.L2).toNat ≤ Level.L2.toNat := by
-  constructor
-  · simp [ownLevels, levelAt]
-  · cases reached <;> simp [Level.min, Level.toNat]
+      = [partialCap reached] ∧
+    (partialCap reached).holds ⟨false, false, true, false⟩ = false ∧
+    (partialCap reached).holds ⟨false, false, false, true⟩ = false := by
+  refine ⟨?_, ?_, ?_⟩
+  · simp [ownMarks, marksAt]
+  · simp [partialCap, Marks.holds]
+  · simp [partialCap, Marks.holds]
 
 /-- A roll-up over a decomposition nobody claimed complete is not exact, so it
 renders marked provisional, as a figure that can only fall.
@@ -475,10 +494,12 @@ renders marked provisional, as a figure that can only fall.
 theorem an_open_roll_up_is_provisional :
     (rollUp [{ id := "R", complete := false, clauses := [some "a"], exempt := [],
                partialClauses := [], refines := [] }]
-            [(("R", some "a"), Level.L4)] "R" Level.L3).covered.exact = false ∧
+            [(("R", some "a"), ⟨true, true, true, true⟩)] "R" ⟨false, false, true, false⟩).covered.exact
+      = false ∧
     (rollUp [{ id := "R", complete := true, clauses := [some "a"], exempt := [],
                partialClauses := [], refines := [] }]
-            [(("R", some "a"), Level.L4)] "R" Level.L3).covered.exact = true := by
+            [(("R", some "a"), ⟨true, true, true, true⟩)] "R" ⟨false, false, true, false⟩).covered.exact
+      = true := by
   native_decide
 
 end TraceLean.Rollup

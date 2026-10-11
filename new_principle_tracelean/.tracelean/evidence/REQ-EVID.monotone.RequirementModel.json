@@ -11,18 +11,18 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "re-recorded: clause text identical to the text judged and model unchanged; only the clause hash changed"
+      "note": "bondLevel is a max fold; each mark is a threshold on it, so an added record can only set marks."
     }
   },
-  "linkHash": "96569a5b6899d22b",
+  "linkHash": "b6a903e0747472c0",
   "inputs": [
     [
       "requirement",
-      "643cadd33fd8ee4b"
+      "14e509e8b9fe4305"
     ],
     [
       "model",
-      "d47ffb3b29e8752b"
+      "a1cef9e4de9c1212"
     ]
   ]
 }

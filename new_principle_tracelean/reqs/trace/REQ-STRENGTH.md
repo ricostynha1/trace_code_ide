@@ -10,7 +10,7 @@ clauses:
   open_is_the_default: A clause with no pinning attempt shall report as open, and open shall not be presented as a pass.
   attempted_distinguished: An obligation stated but unfinished shall be distinguished from one never attempted and from one discharged.
   nondeterministic_declared: A model that cannot be pinned shall be declarable as such with a reason, and shall then be excluded rather than reported as open forever.
-  qualifies_proof: A proof level shall be presented together with its strength, in the way a testing level is presented together with its coverage.
+  qualifies_proof: The proved mark shall be presented together with its strength, in the way the tested mark is presented together with its coverage.
   per_input: Where a clause has both a specification predicate (its one specifies declaration) and a model function (its one models declaration), the obligation shall be that the function meets the predicate and that no input has two answers the predicate accepts.
   inputs_counted: The obligation shall quantify over every explicit argument the model takes, whether named in a binder or given only as an arrow of its type.
   kernel_decides: A clause shall be reported pinned only when Lean accepted its pinning theorem, stated as the obligation, without error and without depending on sorry.

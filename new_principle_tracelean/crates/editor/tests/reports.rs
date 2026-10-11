@@ -121,14 +121,15 @@ fn locking_writes_a_lock_that_parses() {
     let _ = std::fs::remove_dir_all(&root);
 }
 
-/// A clause nothing has earned evidence for reads L1, not blank and not higher.
+/// A claimed clause nothing has earned evidence for holds its annotation and
+/// nothing more, not blank and not higher.
 #[test]
-fn a_clause_with_no_recorded_evidence_reads_l1() {
+fn a_clause_with_no_recorded_evidence_holds_only_its_annotation() {
     let root = project(TREE);
     let mut editor = Editor::open(root.clone(), keymap());
     let shown = ask(&mut editor, "trace.evidence");
     assert!(shown.contains("REQ-A.one"), "the clause is missing:\n{shown}");
-    assert!(shown.contains("l1"), "the clause does not read L1:\n{shown}");
+    assert!(shown.contains("A---"), "the clause does not read A---:\n{shown}");
     assert!(shown.contains("implements"), "the role it is claimed by is missing:\n{shown}");
     let _ = std::fs::remove_dir_all(&root);
 }

@@ -62,7 +62,7 @@ fn the_rust_runner_is_a_generated_crate_under_the_cache() {
 
     let binding = Binding {
         req_id: "REQ-EVID".into(),
-        clause: Some("weakest_link".into()),
+        clause: Some("mark_per_bond".into()),
         op: None,
         also_checks: Vec::new(),
         also_implemented_by: Vec::new(),
@@ -71,7 +71,7 @@ fn the_rust_runner_is_a_generated_crate_under_the_cache() {
         model: None,
         implementation: CallSpec {
             language: "rust".into(),
-            entry: "crates/core/src/evidence.rs::assurance".into(),
+            entry: "crates/core/src/evidence.rs::marks".into(),
             params: BTreeMap::new(),
         },
     };
@@ -132,9 +132,9 @@ fn the_lean_runner_is_a_generated_package_that_is_compiled() {
     let out = scratch("lean");
 
     let entries = [LeanEntry {
-        op: "REQ-EVID.weakest_link".to_string(),
-        function: "TraceLean.Evidence.assurance".to_string(),
-        arguments: vec!["records".to_string()],
+        op: "REQ-EVID.mark_per_bond".to_string(),
+        function: "TraceLean.Evidence.marks".to_string(),
+        arguments: vec!["records".to_string(), "annotated".to_string()],
     }];
     lean_runner::materialize(
         &out,
@@ -318,7 +318,7 @@ fn a_binding_describes_a_call_and_nothing_more() {
         &root,
         &Binding {
             req_id: "REQ-EVID".into(),
-            clause: Some("weakest_link".into()),
+            clause: Some("mark_per_bond".into()),
             op: None,
             also_checks: Vec::new(),
             also_implemented_by: Vec::new(),
@@ -327,7 +327,7 @@ fn a_binding_describes_a_call_and_nothing_more() {
             model: None,
             implementation: CallSpec {
                 language: "rust".into(),
-                entry: "crates/core/src/evidence.rs::assurance".into(),
+                entry: "crates/core/src/evidence.rs::marks".into(),
                 params: BTreeMap::new(),
             },
         },
@@ -335,7 +335,7 @@ fn a_binding_describes_a_call_and_nothing_more() {
     .expect("resolves");
     let generated = rust_runner::main_rs(&[entry]);
     assert!(
-        generated.contains("assurance(records)"),
+        generated.contains("marks(records, annotated)"),
         "the generated dispatch does not call the entry point directly:\n{generated}"
     );
 }

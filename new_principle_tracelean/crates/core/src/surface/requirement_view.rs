@@ -8,7 +8,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::evidence::Level;
+use crate::evidence::{Level, Marks};
 use crate::surface::sandbox_view::Lines;
 use crate::surface::view::{Buffer, Role};
 
@@ -27,6 +27,16 @@ pub struct Claim {
     pub symbol: Option<String>,
 }
 
+/// The marks as pieces of a line, a letter or a dash each with the role saying
+/// which mark it is and whether it is held.
+pub fn mark_pieces(marks: Marks) -> Vec<(String, Role)> {
+    marks
+        .each()
+        .iter()
+        .map(|&(mark, held, letter)| ((if held { letter } else { '-' }).to_string(), Role::Mark { mark, held }))
+        .collect()
+}
+
 /// One clause as the view shows it.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -37,9 +47,8 @@ pub struct ClauseShown {
     /// What narrows the clause, key and text, shown indented under it.
     #[serde(default)]
     pub narrowings: Vec<(String, String)>,
-    pub level: Level,
-    /// The chain the level is the minimum of, as `L2/L1/L3`.
-    pub chain: String,
+    /// What evidence it holds, written `AJTP` with gaps.
+    pub marks: Marks,
     pub claims: Vec<Claim>,
     /// Whether its specification pins its model, for a modelled clause:
     /// `pinned`, `attempted` or `open`, with the theorem, or what is owed.
@@ -266,15 +275,13 @@ pub fn requirement_view(view: RequirementShown) -> Buffer {
     }
     for clause in &view.clauses {
         out.blank();
-        let grade = format!("{:?}", clause.level);
         let key = clause.key.clone().unwrap_or_else(|| "(the whole requirement)".into());
-        let chain = format!("  {}", clause.chain);
-        out.line(&[
-            (&grade, Role::Level { grade: clause.level }, &["trace.rollup"]),
-            ("  ", Role::Plain, &[]),
-            (&key, Role::Heading, &[]),
-            (&chain, Role::Plain, &[]),
-        ]);
+        let letters = mark_pieces(clause.marks);
+        let mut row: Vec<(&str, Role, &[&str])> =
+            letters.iter().map(|(text, role)| (text.as_str(), *role, &["trace.rollup"][..])).collect();
+        row.push(("  ", Role::Plain, &[]));
+        row.push((&key, Role::Heading, &[]));
+        out.line(&row);
         out.wrapped("  ", &clause.text, Role::Plain, &[]);
         // Narrowings belong to the clause: indented under its text, never
         // given a level or a line of their own in the counts above.
@@ -388,8 +395,7 @@ mod tests {
                     key: Some("holds".into()),
                     text: "It shall hold.".into(),
                     narrowings: vec![("empty".into(), "With nothing, it holds.".into())],
-                    level: Level::L2,
-                    chain: "L2/L3/L2".into(),
+                    marks: Marks { annotated: true, judged: true, tested: true, proved: false },
                     claims: vec![Claim { role: "implements".into(), path: "src/x.rs".into(), line: 12, symbol: Some("hold".into()) }],
                     pins: Some(("pinned".into(), "X.holds_pinned".into())),
                     tested: true,
@@ -406,8 +412,7 @@ mod tests {
                     key: Some("unclaimed".into()),
                     text: "Nobody does this.".into(),
                     narrowings: vec![],
-                    level: Level::L1,
-                    chain: "L1/L1/L1".into(),
+                    marks: Marks::NONE,
                     claims: vec![],
                     pins: None,
                     tested: false,
@@ -460,6 +465,7 @@ mod tests {
         assert_eq!(opens("REQ-X.holds  3/4"), vec!["trace.coverage".to_string()]);
         assert_eq!(opens("REQ-X  3/8"), vec!["trace.coverage".to_string()]);
         assert!(shown.text.find("holds").unwrap() < shown.text.find("unclaimed").unwrap());
+        assert!(shown.text.contains("AJT-  holds") && shown.text.contains("----  unclaimed"), "{}", shown.text);
     }
 
     /// A narrowing is shown indented under its clause's text, and is not

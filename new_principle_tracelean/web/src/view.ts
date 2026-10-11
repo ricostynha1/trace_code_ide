@@ -22,21 +22,22 @@
 // and its two neighbours as implementations of `REQ-VIEW`, and
 // `crates/core/tests/differential_typescript.rs` is what drives them.
 
-// An evidence level, as the core spells it.
-export type Grade = "L1" | "L2" | "L3" | "L4";
+// One of the four evidence marks, as the core spells it.
+export type EvidenceMark = "annotated" | "judged" | "tested" | "proved";
 
 // What a region of text *is*. Never how it looks.
 //
-// `level` carries which grade it is, so a frontend colours L1 and L4 apart
-// without reading the characters — a frontend that parsed the text to decide
-// how to draw it would be computing its own view of the buffer.
+// `mark` carries which mark a position of `AJTP` is and whether it is held, so
+// a frontend colours a gap apart from a mark without reading the characters — a
+// frontend that parsed the text to decide how to draw it would be computing its
+// own view of the buffer.
 export type Role =
   | "plain"
   | "path"
   | "entry"
   | "heading"
   | "requirement"
-  | { level: { grade: Grade } }
+  | { mark: { mark: EvidenceMark; held: boolean } }
   | "added"
   | "removed"
   | { token: { kind: string } }
@@ -44,10 +45,10 @@ export type Role =
 
 // Whether two roles are the same. Written out because two of them are objects
 // and `===` on objects compares identity, which would make every character of a
-// level or a token its own region.
+// mark or a token its own region.
 export function sameRole(a: Role, b: Role): boolean {
   if (typeof a === "string" || typeof b === "string") return a === b;
-  if ("level" in a && "level" in b) return a.level.grade === b.level.grade;
+  if ("mark" in a && "mark" in b) return a.mark.mark === b.mark.mark && a.mark.held === b.mark.held;
   if ("token" in a && "token" in b) return a.token.kind === b.token.kind;
   if ("claim" in a && "claim" in b) return a.claim.role === b.claim.role;
   return false;

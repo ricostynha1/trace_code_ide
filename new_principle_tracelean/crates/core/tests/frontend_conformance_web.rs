@@ -15,7 +15,7 @@ use tracelean_core::observe::transcript::Event;
 use tracelean_core::surface::produce::{
     file_buffer, menu_buffer, record_buffer, review_buffer, Mark, MenuEntry,
 };
-use tracelean_core::evidence::Level;
+use tracelean_core::evidence::Mark as Kind;
 use tracelean_core::surface::screen::station_entries;
 use tracelean_core::surface::view::{directory_buffer, Breach, Buffer, Role};
 
@@ -37,20 +37,21 @@ fn frontend(flags: &[&str]) -> RunnerSpec {
     RunnerSpec { cmd, cwd: None }
 }
 
-/// A buffer with grades in its spans.
+/// A buffer with evidence marks in its spans.
 ///
-/// The first line is two spans of the *same* grade, side by side, and that is
+/// The first line is two spans of the *same* mark, side by side, and that is
 /// the whole point: they are equal roles in two different span values. A
 /// frontend comparing roles by identity sees two regions where there is one,
 /// and the text it draws is identical either way.
 fn graded() -> Buffer {
+    let tested = Role::Mark { mark: Kind::Tested, held: true };
     file_buffer(
         "rollup.txt".into(),
-        "L3 REQ-VIEW\nL4 REQ-COST".into(),
+        "-T REQ-VIEW\n-P REQ-COST".into(),
         vec![
-            Mark { start: 0, stop: 5, role: Role::Level { grade: Level::L3 } },
-            Mark { start: 5, stop: 11, role: Role::Level { grade: Level::L3 } },
-            Mark { start: 12, stop: 23, role: Role::Level { grade: Level::L4 } },
+            Mark { start: 0, stop: 5, role: tested },
+            Mark { start: 5, stop: 11, role: tested },
+            Mark { start: 12, stop: 23, role: Role::Mark { mark: Kind::Proved, held: true } },
         ],
     )
 }

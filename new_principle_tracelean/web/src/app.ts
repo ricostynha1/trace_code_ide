@@ -950,7 +950,7 @@ function place(into: HTMLElement, line: number, column: number) {
 }
 
 // Paint with the theme: every colour in it becomes a CSS variable, named by its
-// section and key — `--ui-accent`, `--roles-levelL1`, `--syntax-keyword` — and
+// section and key — `--ui-accent`, `--roles-markTested`, `--syntax-keyword` — and
 // the stylesheet refers to nothing else. Changing a colour is editing JSON.
 async function paint(invoke: Invoke) {
   const theme = (await invoke("theme", {})) as Record<string, unknown>;

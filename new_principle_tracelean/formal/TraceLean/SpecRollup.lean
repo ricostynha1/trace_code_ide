@@ -3,7 +3,7 @@ import TraceLean.Rollup
 /-!
 # Specifications for the roll-up
 
-What `REQ-ROLLUP.min_not_mean` and `ARCH-HONEST.weakest_link` ask of an
+What `REQ-ROLLUP.every_part_holds` and `ARCH-HONEST.weakest_link` ask of an
 aggregate, written from the clauses rather than from `combine`, and the proof
 that they leave `combine` no freedom.
 -/
@@ -13,110 +13,98 @@ namespace TraceLean.SpecRollup
 open TraceLean.Evidence
 open TraceLean.Rollup
 
-/-- Reading a level back from its rung. -/
-def rungLevel : Nat → Level
-  | 1 => Level.L1 | 2 => Level.L2 | 3 => Level.L3 | _ => Level.L4
-
-theorem rungLevel_toNat (a : Level) : rungLevel a.toNat = a := by
-  cases a
-  all_goals rfl
-
-/-- Each below the other is the same level. -/
-theorem level_le_both_eq {a b : Level} (h1 : a ≤ b) (h2 : b ≤ a) : a = b := by
-  have h : a.toNat = b.toNat := Nat.le_antisymm h1 h2
-  rw [← rungLevel_toNat a, ← rungLevel_toNat b, h]
-
 /--
-`y` is the aggregate of `levels`: the minimum of them, which is one of the
-levels themselves and above none of them. A mean would in general be neither.
+`y` is the aggregate of `parts`: each mark held exactly when every part holds
+it. A majority or a mean would hold marks some part does not.
 
-With no children there is nothing to take a minimum of, and no evidence is the
-lowest level (`REQ-EVID.absent_is_lowest`); the top of the ladder is the last
-thing an absence should report.
+With no parts there is nothing to hold a mark, so none is held; every mark
+held vacuously is the comfort `ARCH-HONEST` refuses.
 
-@specifies REQ-ROLLUP.min_not_mean
+@specifies REQ-ROLLUP.every_part_holds
 @specifies ARCH-HONEST.weakest_link
 -/
-def MinimumOf (levels : List Level) (y : Level) : Prop :=
-  (levels = [] → y = Level.L1) ∧
-  (Not (levels = []) → List.Mem y levels ∧ ∀ l, List.Mem l levels → y ≤ l)
+def EveryPartHolds (parts : List Marks) (y : Marks) : Prop :=
+  (parts = [] → y = Marks.empty) ∧
+  (Not (parts = []) →
+    y.annotated = parts.all (·.annotated) ∧ y.judged = parts.all (·.judged) ∧
+    y.tested = parts.all (·.tested) ∧ y.proved = parts.all (·.proved))
 
-/-- What a left fold of `Level.min` from a start value comes to: the start or
-one of the list, and no higher than either. -/
-theorem fold_min (levels : List Level) : ∀ a : Level,
-    (List.Mem (levels.foldl Level.min a) levels ∨ levels.foldl Level.min a = a) ∧
-    levels.foldl Level.min a ≤ a ∧
-    (∀ l, List.Mem l levels → levels.foldl Level.min a ≤ l) := by
-  induction levels
+/-- What a left fold of `Marks.both` from a first part comes to: each mark held
+exactly when the first part and every later one hold it. -/
+theorem fold_both (rest : List Marks) : ∀ first : Marks,
+    (rest.foldl Marks.both first).annotated = (first :: rest).all (·.annotated) ∧
+    (rest.foldl Marks.both first).judged = (first :: rest).all (·.judged) ∧
+    (rest.foldl Marks.both first).tested = (first :: rest).all (·.tested) ∧
+    (rest.foldl Marks.both first).proved = (first :: rest).all (·.proved) := by
+  induction rest
   case nil =>
-    intro a
-    exact ⟨Or.inr rfl, Level.le_refl a, (fun l h => (nomatch h))⟩
-  case cons x rest ih =>
-    intro a
-    have h := ih (Level.min a x)
+    intro first
+    simp
+  case cons x xs ih =>
+    intro first
+    have h := ih (Marks.both first x)
     simp only [List.foldl]
-    refine ⟨?_, ?_, ?_⟩
-    · refine h.1.elim (fun hm => Or.inl (List.Mem.tail x hm)) (fun he => ?_)
-      rw [he]
-      refine (Level.min_eq a x).elim (fun ha => Or.inr ha) (fun hx => ?_)
-      rw [hx]
-      exact Or.inl (List.Mem.head rest)
-    · exact Level.le_trans h.2.1 (Level.min_le_left a x)
-    · intro l hl
-      cases hl
-      case head => exact Level.le_trans h.2.1 (Level.min_le_right a x)
-      case tail hr => exact h.2.2 l hr
+    refine ⟨h.1.trans ?_, h.2.1.trans ?_, h.2.2.1.trans ?_, h.2.2.2.trans ?_⟩ <;>
+      simp [Marks.both, Bool.and_assoc]
+
+/-- Two marks agreeing on every field are the same marks. -/
+theorem marks_ext (a b : Marks) (h1 : a.annotated = b.annotated) (h2 : a.judged = b.judged)
+    (h3 : a.tested = b.tested) (h4 : a.proved = b.proved) : a = b := by
+  cases a
+  cases b
+  simp only at h1 h2 h3 h4
+  rw [h1, h2, h3, h4]
 
 /-- The aggregate meets the clause, and nothing else does.
 
-@pins REQ-ROLLUP.min_not_mean
+@pins REQ-ROLLUP.every_part_holds
 @pins ARCH-HONEST.weakest_link -/
-theorem min_not_mean_pinned :
-    (∀ x1, MinimumOf x1 (combine x1)) ∧
-    (∀ x1 y1 y2, MinimumOf x1 y1 → MinimumOf x1 y2 → y1 = y2) := by
+theorem every_part_holds_pinned :
+    (∀ x1, EveryPartHolds x1 (combine x1)) ∧
+    (∀ x1 y1 y2, EveryPartHolds x1 y1 → EveryPartHolds x1 y2 → y1 = y2) := by
   constructor
   · intro x1
     cases x1
     case nil =>
       constructor
       · intro _
-        exact combine_empty
+        rfl
       · intro h
         exact absurd rfl h
     case cons x rest =>
-      refine ⟨(fun h => (nomatch h)), (fun _ => ?_)⟩
-      have h := fold_min (x :: rest) Level.L4
-      have hc : combine (x :: rest) = (x :: rest).foldl Level.min Level.L4 := rfl
-      rw [hc]
-      refine ⟨?_, h.2.2⟩
-      refine h.1.elim id (fun he => ?_)
-      have hx : Level.L4 ≤ x := by
-        rw [← he]
-        exact h.2.2 x (List.Mem.head rest)
-      have top : x = Level.L4 := Level.eq_L4_of_four_le hx
-      rw [he, ← top]
-      exact List.Mem.head rest
+      constructor
+      · intro h
+        exact (nomatch h)
+      · intro _
+        exact fold_both rest x
   · intro x1 y1 y2 h1 h2
     cases x1
     case nil =>
       rw [h1.1 rfl, h2.1 rfl]
     case cons x rest =>
-      have n : Not (x :: rest = []) := fun h => nomatch h
+      have n : Not (x :: rest = []) := fun h => (nomatch h)
       have m1 := h1.2 n
       have m2 := h2.2 n
-      exact level_le_both_eq (m1.2 y2 m2.1) (m2.2 y1 m1.1)
+      have a1 := m1.2
+      have a2 := m2.2
+      have b1 := a1.2
+      have b2 := a2.2
+      apply marks_ext y1 y2
+      · rw [m1.1, m2.1]
+      · rw [a1.1, a2.1]
+      · rw [b1.1, b2.1]
+      · rw [b1.2, b2.2]
 
-/-- A requirement's assurance is the minimum over its reachable set: one of the
-levels of the requirements below it, and above none of them — whichever path
-reaches each.
+/-- A requirement's marks are what every counted clause over its reachable set
+holds — whichever path reaches each.
 
 @proves REQ-ROLLUP.counted_once
 @proves ARCH-HONEST.weakest_link -/
-theorem rollUp_is_minimum_over_reach (nodes : List Node)
-    (levels : List ((String × Option String) × Level)) (root : String) (floor : Level) :
-    MinimumOf (reachLevels (canonNodes nodes) (canonLevels levels) root)
-      (rollUp nodes levels root floor).assurance := by
-  rw [assurance_is_over_the_reachable_set]
-  exact min_not_mean_pinned.1 _
+theorem rollUp_holds_what_every_clause_holds (nodes : List Node)
+    (held : List ((String × Option String) × Marks)) (root : String) (floor : Marks) :
+    EveryPartHolds (reachMarks (canonNodes nodes) (canonHeld held) root)
+      (rollUp nodes held root floor).marks := by
+  rw [marks_are_over_the_reachable_set]
+  exact every_part_holds_pinned.1 _
 
 end TraceLean.SpecRollup

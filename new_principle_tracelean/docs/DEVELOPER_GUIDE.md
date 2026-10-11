@@ -130,7 +130,7 @@ anywhere else. Sections:
 |---|---|
 | `ui` | window chrome: backgrounds, tabs, status bar, menus, selection, caret |
 | `fonts` | `code`, `codeSize`, `chrome`, `chromeSize`, `panelSize` (side panels, small enough to fit the columns the core wraps to) |
-| `roles` | what each role is drawn in (`path`, `heading`, `levelL1`…) |
+| `roles` | what each role is drawn in (`path`, `heading`, `markTested`, `markMissing`…) |
 | `chips` | gutter chips and claim pills: `implements`, `tests`, `models`, `proves`, `drt` |
 | `modes` | the status line's mode badge: `normal`, `insert`, `other` |
 | `syntax` | token kinds: `keyword`, `string`, `comment`, …, Markdown `heading`/`bold`/`italic`/`link` |

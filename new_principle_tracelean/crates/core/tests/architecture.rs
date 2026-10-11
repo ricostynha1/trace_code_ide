@@ -634,14 +634,16 @@ fn moving_a_file_does_not_change_what_it_claims() {
 /// @structural ARCH-HONEST.confidence_carried reason="a claim that certain fields exist and reach the artefact, not a property of any one call"
 #[test]
 fn every_unsure_answer_carries_a_field_saying_so() {
-    use tracelean_core::evidence::{assurance, Bond, Level, Record};
+    use tracelean_core::evidence::{marks, Bond, Level, Marks, Record};
     use tracelean_core::trace::anchor::{Anchor, AnchorKind};
     use tracelean_core::trace::checker::coverage_kinds;
-    use tracelean_core::trace::rollup::Figure;
+    use tracelean_core::trace::rollup::{combine, Figure};
 
-    // No evidence is the bottom of the ladder, not the top.
-    assert_eq!(assurance(vec![]), Level::L1);
-    assert_eq!(assurance(vec![Record { bond: Bond::ModelProof, level: Level::L4 }]), Level::L1);
+    // No evidence sets no mark, and a proof sets only its own.
+    assert_eq!(marks(vec![], false), Marks::NONE);
+    assert_eq!(marks(vec![Record { bond: Bond::ModelProof, level: Level::L4 }], true).text(), "A--P");
+    // Nothing to aggregate holds nothing, rather than everything.
+    assert_eq!(combine(vec![]), Marks::NONE);
 
     // No roles is a finding, not silence.
     assert!(

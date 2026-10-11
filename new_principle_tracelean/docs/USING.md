@@ -67,17 +67,18 @@ The icons on the left are **stations**, always there:
 - **`F12` (or Ctrl+click) on a requirement name** in code jumps to that
   clause's line in its document.
 - **Click any requirement name** (in code, prose or a panel) to open it. An
-  opened requirement lists every clause with its evidence level (L1–L4) and
+  opened requirement lists every clause with its evidence marks (`AJTP`) and
   every claim as a `path:line` link — click to jump there. A clause nothing
   claims says so in red.
-- **🕸 Design** shows how they refine each other, each with its level and a
+- **🕸 Design** shows how they refine each other, each with its marks and a
   bar of how many clauses something implements (`███░░ 3/5`).
 
-Evidence levels, weakest to strongest: **L1** annotated, **L2** judged by a
-person, **L3** differentially tested, **L4** proved. A clause's level is the
-weakest of three bonds — requirement↔model, model↔code, model↔proof — so an
-unchecked bond shows as L1 however strong the others are; the chain beside
-the level (`L2/L1/L3`) says which bond holds it back.
+Evidence marks, in fixed positions, a dash for each one missing: **A**
+annotated, **J** judged by a person, **T** differentially tested, **P** proved.
+Each is read from its own bond — something claims it; requirement↔model;
+model↔code; model↔proof — and none needs another, so a proved and tested model
+nobody judged reads `A-TP`. A requirement holds a mark only when every one of its
+clauses does.
 
 A proof says the model has a property, not that the property leaves one
 answer. Model a clause twice — a specification `def P (x y : Int) : Prop` and
@@ -93,8 +94,8 @@ every clause a Lean `def` models and a Rust `fn` implements, pairs their
 arguments by position (`Int`/`i64`, `Nat`/`u32`, `Bool`, `String`, `List`/`Vec`,
 `Option`, structures with serde-matching fields), generates both runners in a
 scratch directory, and asks both 2000 cases. Agreement that reached every class
-of every argument (negative, zero, positive; empty and not; …) is recorded as
-L3 and counted under `drt` in the requirement. A divergence is shrunk and
+of every argument (negative, zero, positive; empty and not; …) sets the
+clause's **T** and is counted under `drt` in the requirement. A divergence is shrunk and
 printed; a type the two sides do not share (`Float`, `&str`) is named and left
 untested. A binding in `.tracelean/drt.json` overrides it for its clause.
 

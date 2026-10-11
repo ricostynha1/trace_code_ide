@@ -41,7 +41,7 @@ pub fn actions_for(role: Role) -> Vec<String> {
         Role::Entry => &["file.open"],
         Role::Heading => &["trace.evidence", "trace.check"],
         Role::Requirement => &["trace.requirement", "trace.context", "trace.evidence", "trace.findings"],
-        Role::Level { .. } => &["trace.rollup"],
+        Role::Mark { .. } => &["trace.rollup"],
         Role::Added => &["observe.accept", "observe.reject"],
         Role::Removed => &["observe.accept", "observe.reject"],
         // A token is something to read; what can be done with code is offered
@@ -368,7 +368,8 @@ pub struct Node {
     pub id: String,
     pub title: String,
     pub refines: Vec<String>,
-    pub level: crate::evidence::Level,
+    /// The marks every one of its clauses holds.
+    pub marks: crate::evidence::Marks,
     /// How many of its clauses something implements, of how many.
     pub implemented: usize,
     pub clauses: usize,
@@ -395,37 +396,41 @@ pub struct Row {
     pub node: Node,
 }
 
-fn grade_text(grade: crate::evidence::Level) -> &'static str {
-    use crate::evidence::Level;
-    match grade {
-        Level::L1 => "L1",
-        Level::L2 => "L2",
-        Level::L3 => "L3",
-        Level::L4 => "L4",
-    }
+/// How wide the marks are: `AJTP`, one character each.
+const MARKS_WIDTH: usize = 4;
+
+/// One span a position of the marks, each saying which mark it is and whether
+/// it is held, so a frontend colours a gap apart from what fills it without
+/// reading the letters.
+pub fn evidence_spans(at: usize, marks: crate::evidence::Marks) -> Vec<Span> {
+    marks
+        .each()
+        .iter()
+        .enumerate()
+        .map(|(i, &(mark, held, _))| Span {
+            start: at + i,
+            stop: at + i + 1,
+            role: Role::Mark { mark, held },
+            actions: actions_for(Role::Mark { mark, held }),
+        })
+        .collect()
 }
 
-/// The two spans every row of either station carries: the grade, and the id.
+/// The spans every row of either station carries: the marks, and the id.
 ///
-/// Both take their actions from their role, so a level in this buffer offers
-/// what a level offers anywhere. The grade is two characters wide, which is why
-/// the id starts four along.
+/// Both take their actions from their role, so a mark in this buffer offers
+/// what a mark offers anywhere. The marks are four characters wide, which is
+/// why the id starts six along.
 fn row_spans(at: usize, indent: usize, node: &Node) -> Vec<Span> {
     let lead = at + indent * 2;
-    vec![
-        Span {
-            start: lead,
-            stop: lead + 2,
-            role: Role::Level { grade: node.level },
-            actions: actions_for(Role::Level { grade: node.level }),
-        },
-        Span {
-            start: lead + 4,
-            stop: lead + 4 + node.id.chars().count(),
-            role: Role::Requirement,
-            actions: actions_for(Role::Requirement),
-        },
-    ]
+    let mut spans = evidence_spans(lead, node.marks);
+    spans.push(Span {
+        start: lead + MARKS_WIDTH + 2,
+        stop: lead + MARKS_WIDTH + 2 + node.id.chars().count(),
+        role: Role::Requirement,
+        actions: actions_for(Role::Requirement),
+    });
+    spans
 }
 
 /// Cells of five a node's implemented clauses fill, rounded, never past five.
@@ -441,7 +446,7 @@ fn bar_of(node: &Node) -> String {
 fn index_line(node: &Node) -> String {
     format!(
         "{}  {}  {} {}/{}  {}{}",
-        grade_text(node.level),
+        node.marks.text(),
         node.id,
         bar_of(node),
         node.implemented,
@@ -454,7 +459,7 @@ fn index_line(node: &Node) -> String {
 /// The bar's filled cells, in the colour of what fills them, and the measured
 /// lines: green when every one ran, red when one did not.
 fn bar_spans(at: usize, node: &Node) -> Vec<Span> {
-    let start = at + 4 + node.id.chars().count() + 2;
+    let start = at + MARKS_WIDTH + 2 + node.id.chars().count() + 2;
     let role = Role::Claim { role: crate::trace::annotation::Role::Implements };
     let mut out = match filled_of(node) {
         0 => Vec::new(),
@@ -669,26 +674,30 @@ mod tests {
             id: "REQ-A".into(),
             title: "A thing".into(),
             refines: vec![],
-            level: crate::evidence::Level::L1,
+            marks: crate::evidence::Marks { annotated: true, ..crate::evidence::Marks::NONE },
             implemented: 3,
             clauses: 4,
             covered: None,
         };
         let shown = requirements_buffer(vec![node.clone()]);
-        assert_eq!(plain_text(shown.clone()), vec!["L1  REQ-A  ████░ 3/4  A thing"]);
+        assert_eq!(plain_text(shown.clone()), vec!["A---  REQ-A  ████░ 3/4  A thing"]);
         let bar = shown.spans.iter().find(|s| matches!(s.role, Role::Claim { .. })).expect("a bar span");
-        assert_eq!((bar.start, bar.stop), (11, 15));
+        assert_eq!((bar.start, bar.stop), (13, 17));
+        // Each position of the marks is its own span, a gap told from a mark.
+        let gaps: Vec<bool> =
+            shown.spans.iter().filter_map(|s| match s.role { Role::Mark { held, .. } => Some(held), _ => None }).collect();
+        assert_eq!(gaps, vec![true, false, false, false]);
         assert!(faults(shown).is_empty());
         // Measured, the row says how much of its code ran, in red when not all.
         let measured = requirements_buffer(vec![Node { covered: Some((4, 7)), ..node.clone() }]);
-        assert_eq!(plain_text(measured.clone()), vec!["L1  REQ-A  ████░ 3/4  lines 57%  A thing"]);
+        assert_eq!(plain_text(measured.clone()), vec!["A---  REQ-A  ████░ 3/4  lines 57%  A thing"]);
         let lines = measured.spans.iter().find(|s| s.role == Role::Removed).expect("a coverage span");
         let said: String = measured.text.chars().skip(lines.start).take(lines.stop - lines.start).collect();
         assert_eq!(said, "lines 57%");
         assert_eq!(lines.actions, vec!["trace.coverage REQ-A".to_string()], "a coverage figure offered a diff's actions");
         // Code with no line a test could run is not all covered.
         let nothing = requirements_buffer(vec![Node { covered: Some((0, 0)), ..node }]);
-        assert_eq!(plain_text(nothing.clone()), vec!["L1  REQ-A  ████░ 3/4  lines none  A thing"]);
+        assert_eq!(plain_text(nothing.clone()), vec!["A---  REQ-A  ████░ 3/4  lines none  A thing"]);
         assert!(!nothing.spans.iter().any(|s| matches!(s.role, Role::Added | Role::Removed)));
     }
 
@@ -700,24 +709,24 @@ mod tests {
             id: id.into(),
             title: "t".into(),
             refines: refines.iter().map(|s| s.to_string()).collect(),
-            level: crate::evidence::Level::L1,
+            marks: crate::evidence::Marks { annotated: true, ..crate::evidence::Marks::NONE },
             implemented: 0,
             clauses: 1,
             covered: None,
         };
         let graph = vec![node("ARCH", &[]), node("REQ-A", &["ARCH"]), node("REQ-B", &["REQ-A"])];
         let folded = design_buffer(graph.clone(), vec![]);
-        assert_eq!(plain_text(folded.clone()), vec![DESIGN_HEADER, "▸ L1  ARCH  ░░░░░ 0/1  t"]);
+        assert_eq!(plain_text(folded.clone()), vec![DESIGN_HEADER, "▸ A---  ARCH  ░░░░░ 0/1  t"]);
         let toggle = folded.spans.iter().find(|s| s.actions.first().is_some_and(|a| a == "design.toggle ARCH"));
         assert_eq!(toggle.map(|s| (s.start, s.stop)), Some((29, 30)));
         assert!(faults(folded).is_empty());
 
         let one = design_buffer(graph.clone(), vec!["ARCH".into()]);
-        assert_eq!(plain_text(one)[1..], ["▾ L1  ARCH  ░░░░░ 0/1  t", "  ▸ L1  REQ-A  ░░░░░ 0/1  t"]);
+        assert_eq!(plain_text(one)[1..], ["▾ A---  ARCH  ░░░░░ 0/1  t", "  ▸ A---  REQ-A  ░░░░░ 0/1  t"]);
 
         let all = design_buffer(graph.clone(), design_unfolded(&graph, Some("ARCH")));
         assert_eq!(plain_text(all.clone()).len(), 4);
-        assert_eq!(plain_text(all.clone())[3], "    · L1  REQ-B  ░░░░░ 0/1  t");
+        assert_eq!(plain_text(all.clone())[3], "    · A---  REQ-B  ░░░░░ 0/1  t");
         assert!(!all.spans.iter().any(|s| s.actions.iter().any(|a| a == "design.toggle REQ-B")));
         assert!(faults(all).is_empty());
         assert_eq!(design_unfolded(&graph, None), vec!["ARCH".to_string(), "REQ-A".to_string()]);

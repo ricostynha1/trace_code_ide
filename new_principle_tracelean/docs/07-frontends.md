@@ -39,9 +39,9 @@ and drawing cannot come apart. `--embroider` and `--invent` make it draw wrongly
 on purpose, and the suite proves both are caught.
 
 A role becomes a class name and the stylesheet says how it looks — the same
-division the terminal makes with colours. `level` carries its grade, so both
-frontends paint L1 apart from L4 from the same value rather than by reading the
-characters. `--mislabel` and `--regions` are the other two wrong-on-purpose
+division the terminal makes with colours. `mark` carries which mark and
+whether it is held, so both frontends paint a gap apart from a proof from the
+same value rather than by reading the characters. `--mislabel` and `--regions` are the other two wrong-on-purpose
 handles: the first names a painted emblem after itself, the second reports how
 many regions each line was cut into, which is the one property of this frontend
 that the text it draws cannot show.

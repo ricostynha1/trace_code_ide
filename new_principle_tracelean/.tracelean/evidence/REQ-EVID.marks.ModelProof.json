@@ -1,25 +1,25 @@
 {
   "key": {
     "reqId": "REQ-EVID",
-    "clause": "ladder",
+    "clause": "marks",
     "bond": "modelProof"
   },
   "level": "L4",
   "detail": {
     "proof": {
-      "theoremName": "TraceLean.Evidence::the_ladder_is_a_total_order",
+      "theoremName": "TraceLean.Evidence::every_combination_is_reachable",
       "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
     }
   },
-  "linkHash": "2072c170de524c31",
+  "linkHash": "1dfc2f4ee1c73e2c",
   "inputs": [
     [
       "model",
-      "99d1fb18af025d88"
+      "db2758d1b5fa8a3a"
     ],
     [
       "requirement",
-      "01cbff43e1a880c0"
+      "712e1124dbf7cd19"
     ],
     [
       "toolchain",

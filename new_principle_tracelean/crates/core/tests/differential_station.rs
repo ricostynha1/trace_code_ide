@@ -30,7 +30,7 @@ fn node() -> Schema {
             max_len: Some(2),
         },
     );
-    fields.insert("level".to_string(), Schema::simple_enum(&["L1", "L2", "L3", "L4"]));
+    fields.insert("marks".to_string(), support::marks());
     // Counts past each other too, so a bar more than full is drawn as full.
     fields.insert("implemented".to_string(), Schema::Nat { max: Some(3), edges: vec![0, 7] });
     fields.insert("clauses".to_string(), Schema::Nat { max: Some(3), edges: vec![0, 4] });
@@ -306,8 +306,7 @@ fn model_and_implementation_agree_on_an_opened_requirement() {
         ("key", option(text(&["holds", "keeps_order"]))),
         ("text", text(&["It holds.", "A clause long enough to be wrapped at the narrowest width a pane can have."])),
         ("narrowings", list(Schema::Tuple { items: vec![text(&["when"]), text(&["always", ""])] }, 1)),
-        ("level", level()),
-        ("chain", text(&["L2/L1/L3"])),
+        ("marks", support::marks()),
         ("claims", list(claim, 3)),
         ("pins", option(Schema::Tuple { items: vec![text(&["pinned", "open"]), text(&["theorem t", ""])] })),
         ("tested", Schema::Bool),
@@ -439,8 +438,8 @@ fn model_and_implementation_agree_on_how_an_estimate_reads() {
 /// The two stations' rows, and the shapes of graph that make the drawing hard.
 ///
 /// A run of graphs that were all trees would agree about a walk that mishandled
-/// a cycle, and a run whose requirements all reached the same level would agree
-/// about a producer that ignored the level entirely.
+/// a cycle, and a run whose requirements all held the same marks would agree
+/// about a producer that ignored them entirely.
 ///
 /// @tests REQ-SHOW.index_from_requirements
 /// @tests REQ-SHOW.graph_from_refinement
@@ -448,7 +447,7 @@ fn model_and_implementation_agree_on_how_an_estimate_reads() {
 #[test]
 fn generation_reaches_the_graphs_that_are_hard_to_draw() {
     use tracelean_core::drt::gen;
-    use tracelean_core::evidence::Level;
+    use tracelean_core::evidence::Marks;
     use tracelean_core::surface::produce::{design_rows, requirements_buffer, Node};
     use tracelean_core::surface::view::{faults, Role};
 
@@ -462,16 +461,16 @@ fn generation_reaches_the_graphs_that_are_hard_to_draw() {
         let set: Vec<Node> = serde_json::from_value(value).expect("the schema generates nodes");
 
         // Whatever the graph, the index is a well-formed buffer and every row
-        // carries its own grade — which is the clause, asked of the run rather
-        // than of an example.
+        // carries its own four marks — which is the clause, asked of the run
+        // rather than of an example.
         let index = requirements_buffer(set.clone());
         assert_eq!(faults(index.clone()), vec![], "the index had a malformed span");
-        let graded = index
+        let marked = index
             .spans
             .iter()
-            .filter(|span| matches!(span.role, Role::Level { .. }))
+            .filter(|span| matches!(span.role, Role::Mark { .. }))
             .count();
-        assert!(graded <= set.len(), "more grades than requirements");
+        assert!(marked <= 4 * set.len(), "more marks than four a requirement");
 
         if set.is_empty() {
             empty += 1;
@@ -479,10 +478,10 @@ fn generation_reaches_the_graphs_that_are_hard_to_draw() {
         if set.len() > 1 {
             several += 1;
         }
-        if set.iter().any(|node| node.level == Level::L1) {
+        if set.iter().any(|node| node.marks == Marks::NONE) {
             lowest += 1;
         }
-        if set.iter().any(|node| node.level == Level::L4) {
+        if set.iter().any(|node| node.marks.text() == "AJTP") {
             highest += 1;
         }
 
@@ -520,8 +519,8 @@ fn generation_reaches_the_graphs_that_are_hard_to_draw() {
         "REQ-SHOW.index_from_requirements",
         &[
             ("no requirements at all", empty),
-            ("a requirement whose evidence reached L1", lowest),
-            ("a requirement whose evidence reached L4", highest),
+            ("a requirement holding no mark", lowest),
+            ("a requirement holding every mark", highest),
             ("two requirements or more", several),
         ],
     );

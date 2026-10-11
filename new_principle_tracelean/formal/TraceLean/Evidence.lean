@@ -3,11 +3,13 @@ import Lean
 /-!
 # Evidence algebra
 
-What a claim is worth, and how per-bond worth combines. Models `REQ-EVID`.
+What a claim is backed by. Models `REQ-EVID`.
 
-The whole content is the refusal to average: a proved model whose implementation
-nobody bound to it must read `L4 model · L1 code`, and the minimum is the only
-aggregate that preserves what its inputs mean.
+Four marks — annotated, judged, tested, proved — each held or not on its own.
+A model can be proved and differentially tested before anybody judged it; a
+single level on a ladder would read that as "annotated only", and an average
+would invent a figure nothing established. `AJTP` with gaps says exactly what
+is held and what is missing.
 -/
 
 namespace TraceLean.Evidence
@@ -17,7 +19,9 @@ open Lean (Json ToJson FromJson)
 -- Encodings are derived rather than written: the wire shape is then a
 -- consequence of the datatype, not a second description of it that can drift.
 
-/-- @models REQ-EVID.ladder -/
+/-- What kind of record a piece of evidence is: a judgement is the second, a
+differential run the third, a proof the fourth. Ordered so a record can be
+capped below what it claims; never ranked across bonds. -/
 inductive Level where
   | L1 | L2 | L3 | L4
   deriving Repr, DecidableEq, Inhabited, ToJson, FromJson
@@ -54,136 +58,108 @@ def allBonds : List Bond := [.requirementModel, .modelImpl, .modelProof]
 
 /--
 The level established on one bond: the best record for it, or `L1` when there is
-none.
+none, which sets no mark.
 
-A bond with no record is not missing from the aggregate — it contributes the
-lowest level, which is what makes an unchecked bond visible rather than absent.
-
-@models REQ-EVID.absent_is_lowest
+@models REQ-EVID.absent_is_unset
 -/
 def bondLevel (records : List Record) (b : Bond) : Level :=
   records.foldl (fun acc r => if r.bond = b then Level.max acc r.level else acc) Level.L1
 
-/--
-A link's assurance: the minimum over the three bonds.
+/-- What evidence a clause holds, each kind on its own.
 
-@models REQ-EVID.weakest_link
+@models REQ-EVID.marks -/
+structure Marks where
+  annotated : Bool
+  judged : Bool
+  tested : Bool
+  proved : Bool
+  deriving Repr, DecidableEq, Inhabited, ToJson, FromJson
+
+/-- Which of the four marks a position of `AJTP` is. -/
+inductive Mark where
+  | annotated | judged | tested | proved
+  deriving Repr, DecidableEq, Inhabited, ToJson, FromJson
+
+namespace Marks
+
+/-- Each mark in its position, with whether it is held and its letter. -/
+def each (m : Marks) : List (Mark × Bool × Char) :=
+  [(.annotated, m.annotated, 'A'), (.judged, m.judged, 'J'), (.tested, m.tested, 'T'),
+   (.proved, m.proved, 'P')]
+
+/-- No mark at all. -/
+def empty : Marks := ⟨false, false, false, false⟩
+
+/-- Every mark `floor` asks for is held by `m`. -/
+def holds (m floor : Marks) : Bool :=
+  (m.annotated || !floor.annotated) && (m.judged || !floor.judged) &&
+    (m.tested || !floor.tested) && (m.proved || !floor.proved)
+
+/-- The marks both hold. -/
+def both (a b : Marks) : Marks :=
+  ⟨a.annotated && b.annotated, a.judged && b.judged, a.tested && b.tested, a.proved && b.proved⟩
+
+end Marks
+
+/--
+A clause's marks, from whether something claims it and its records: each bond
+sets its own mark and no other.
+
+@models REQ-EVID.mark_per_bond
 @models REQ-EVID.monotone
 -/
-def assurance (records : List Record) : Level :=
-  allBonds.foldl (fun acc b => Level.min acc (bondLevel records b)) Level.L4
+def marks (records : List Record) (annotated : Bool) : Marks :=
+  ⟨annotated,
+   decide (2 ≤ (bondLevel records .requirementModel).toNat),
+   decide (3 ≤ (bondLevel records .modelImpl).toNat),
+   decide (4 ≤ (bondLevel records .modelProof).toNat)⟩
+
+/-- One position of the written marks: its letter, or a dash. -/
+def letter (held : Bool) (c : Char) : Char := if held then c else '-'
 
 /--
-The per-bond chain, in `allBonds` order. The same information the single value
-collapses, kept presentable.
+Marks in fixed positions, a dash where one is not held: `AJTP`, `A-TP`, `A---`.
 
-@models REQ-EVID.chain_rendered
+@models REQ-EVID.marks_written
 -/
-def chain (records : List Record) : List Level :=
-  allBonds.map (bondLevel records)
+def written (m : Marks) : String :=
+  String.mk [letter m.annotated 'A', letter m.judged 'J', letter m.tested 'T', letter m.proved 'P']
 
 /-! ## Properties -/
 
-namespace Level
+/-- Records for one combination of marks: bit 1 a judgement, bit 2 a run, bit 3
+a proof. -/
+def recordsFor (bits : Nat) : List Record :=
+  (if bits / 2 % 2 == 1 then [⟨.requirementModel, .L2⟩] else []) ++
+  (if bits / 4 % 2 == 1 then [⟨.modelImpl, .L3⟩] else []) ++
+  (if bits / 8 % 2 == 1 then [⟨.modelProof, .L4⟩] else [])
 
-theorem le_refl (a : Level) : a ≤ a := Nat.le_refl _
+/-- Every one of the sixteen combinations of marks is reachable, so none implies
+another.
 
-theorem le_trans {a b c : Level} (h1 : a ≤ b) (h2 : b ≤ c) : a ≤ c :=
-  Nat.le_trans h1 h2
+@proves REQ-EVID.marks -/
+theorem every_combination_is_reachable :
+    ((List.range 16).map (fun bits => written (marks (recordsFor bits) (bits % 2 == 1)))).eraseDups.length
+      = 16 := by
+  native_decide
 
-theorem min_le_left (a b : Level) : Level.min a b ≤ a := by
-  unfold Level.min
-  split
-  · exact le_refl a
-  · next h => exact Nat.le_of_lt (Nat.lt_of_not_le h)
+/-- Each mark is read from its own bond and nothing else, and a record below
+what its mark needs sets nothing.
 
-theorem min_le_right (a b : Level) : Level.min a b ≤ b := by
-  unfold Level.min
-  split
-  · next h => exact h
-  · exact le_refl b
-
-/-- A minimum is one of its arguments. This is what rules out an average: the
-result is always a level something actually established. -/
-theorem min_eq (a b : Level) : Level.min a b = a ∨ Level.min a b = b := by
-  unfold Level.min
-  split
-  · exact Or.inl rfl
-  · exact Or.inr rfl
-
-theorem toNat_le_four (a : Level) : a.toNat ≤ 4 := by cases a <;> simp [toNat]
-
-theorem eq_L4_of_four_le {a : Level} (h : Level.L4.toNat ≤ a.toNat) : a = Level.L4 := by
-  cases a <;> simp_all [toNat]
-
-/-- `L4` is the top, so taking a minimum against it is the identity. -/
-theorem min_L4_left (a : Level) : Level.min Level.L4 a = a := by
-  unfold Level.min
-  split
-  · next h => exact (eq_L4_of_four_le h).symm
-  · rfl
-
-end Level
-
-/--
-Assurance never exceeds any bond: the aggregate is bounded by its weakest part,
-which is what "never an average" means operationally. With three bonds, a link
-is exactly as good as its worst-evidenced one.
-
-@proves REQ-EVID.weakest_link
--/
-theorem assurance_le_bond (records : List Record) (b : Bond) :
-    assurance records ≤ bondLevel records b := by
-  cases b
-  case requirementModel =>
-    exact Level.le_trans (Level.min_le_left _ _)
-      (Level.le_trans (Level.min_le_left _ _) (Level.min_le_right _ _))
-  case modelImpl =>
-    exact Level.le_trans (Level.min_le_left _ _) (Level.min_le_right _ _)
-  case modelProof =>
-    exact Level.min_le_right _ _
-
-/--
-Assurance is one of the bond levels, never a value between them. An average
-could invent a level nothing established; a minimum cannot.
-
-@proves REQ-EVID.weakest_link
--/
-theorem assurance_mem_chain (records : List Record) :
-    List.Mem (assurance records) (chain records) := by
-  have h : assurance records =
-      Level.min (Level.min (bondLevel records .requirementModel)
-        (bondLevel records .modelImpl)) (bondLevel records .modelProof) := by
-    simp [assurance, allBonds, List.foldl, Level.min_L4_left]
-  simp only [chain, allBonds, List.map, h]
-  -- `Or.elim` rather than `rcases … with h | h`: the same case split, written in
-  -- the subset of Lean the annotation grammar reads (ADR-0008).
-  refine (Level.min_eq (Level.min (bondLevel records .requirementModel)
-      (bondLevel records .modelImpl)) (bondLevel records .modelProof)).elim ?_ ?_
-  · intro h1
-    rw [h1]
-    refine (Level.min_eq (bondLevel records .requirementModel)
-        (bondLevel records .modelImpl)).elim ?_ ?_
-    · intro h2
-      rw [h2]
-      exact List.Mem.head _
-    · intro h2
-      rw [h2]
-      exact List.Mem.tail _ (List.Mem.head _)
-  · intro h1
-    rw [h1]
-    exact List.Mem.tail _ (List.Mem.tail _ (List.Mem.head _))
+@proves REQ-EVID.mark_per_bond -/
+theorem each_mark_reads_its_own_bond (records : List Record) (a : Bool) :
+    (marks records a).judged = decide (2 ≤ (bondLevel records .requirementModel).toNat) ∧
+    (marks records a).tested = decide (3 ≤ (bondLevel records .modelImpl).toNat) ∧
+    (marks records a).proved = decide (4 ≤ (bondLevel records .modelProof).toNat) ∧
+    written (marks [⟨.modelProof, .L4⟩] true) = "A--P" ∧
+    written (marks [⟨.requirementModel, .L1⟩, ⟨.modelImpl, .L2⟩] true) = "A---" := by
+  refine ⟨rfl, rfl, rfl, ?_, ?_⟩ <;> native_decide
 
 /-! ## Monotonicity
 
-`REQ-EVID.monotone`. Adding a record never lowers an assurance. This is what
-keeps the algebra sane under incremental work: somebody proving a theorem, or a
-differential run finishing, can only move a figure up, so nobody has to reason
-about evidence that made things worse.
-
-It follows from the shape rather than from care: each bond takes a *maximum*
-over its records, so one more record can only raise it, and the aggregate is a
-minimum over values that only rose.
+`REQ-EVID.monotone`. Adding a record never clears a mark. Each bond takes a
+*maximum* over its records, so one more record can only raise it, and a mark is
+a threshold on a value that only rose.
 -/
 
 /-- One more record never lowers a bond's level. -/
@@ -195,108 +171,28 @@ theorem bond_level_is_monotone (records : List Record) (r : Record) (b : Bond) :
     split <;> omega
   · omega
 
-/-- And therefore never lowers an assurance.
+/-- And therefore never clears a mark.
 
 @proves REQ-EVID.monotone -/
-theorem adding_a_record_never_lowers_assurance (records : List Record) (r : Record) :
-    (assurance records).toNat ≤ (assurance (records ++ [r])).toNat := by
-  have h := fun b => bond_level_is_monotone records r b
-  simp only [assurance, allBonds, List.foldl_cons, List.foldl_nil]
-  have h1 := h Bond.requirementModel
-  have h2 := h Bond.modelImpl
-  have h3 := h Bond.modelProof
-  unfold Level.min
-  split <;> split <;> split <;> split <;> split <;> split <;> omega
+theorem adding_a_record_never_clears_a_mark (records : List Record) (r : Record) (a : Bool) :
+    (marks (records ++ [r]) a).holds (marks records a) = true := by
+  have kept : ∀ x y n : Nat, x ≤ y → (decide (n ≤ y) || !decide (n ≤ x)) = true := by
+    intro x y n hxy
+    by_cases h : n ≤ x
+    · have : n ≤ y := Nat.le_trans h hxy
+      simp [this]
+    · simp [h]
+  simp only [marks, Marks.holds,
+    kept _ _ 2 (bond_level_is_monotone records r .requirementModel),
+    kept _ _ 3 (bond_level_is_monotone records r .modelImpl),
+    kept _ _ 4 (bond_level_is_monotone records r .modelProof)]
+  cases a <;> rfl
 
-/-! ## Pinning `weakest_link`
+/-- A bond nothing has recorded sets no mark.
 
-The theorems above say the assurance is below every bond and is one of them.
-The specification below says the same thing in the clause's own words, and the
-pinning theorem says that leaves exactly one answer: the minimum is not one
-acceptable aggregate among several, it is the only one.
-
-The specification is written here rather than beside the other specifications
-because this clause already has a pinning theorem of an older shape elsewhere,
-and the first one found for a clause is the one checked.
--/
-
-namespace Level
-
-/-- Reading a level back from its rung. -/
-def ofRung : Nat → Level
-  | 1 => L1 | 2 => L2 | 3 => L3 | _ => L4
-
-theorem ofRung_toNat (a : Level) : ofRung a.toNat = a := by
-  cases a
-  all_goals rfl
-
-/-- Two levels on the same rung are the same level. -/
-theorem toNat_reflects_eq {a b : Level} (h : a.toNat = b.toNat) : a = b := by
-  rw [← ofRung_toNat a, ← ofRung_toNat b, h]
-
-/-- Each below the other is the same level. -/
-theorem le_both_eq {a b : Level} (h1 : a ≤ b) (h2 : b ≤ a) : a = b :=
-  toNat_reflects_eq (Nat.le_antisymm h1 h2)
-
-end Level
-
-/-- `y` is a link's assurance over `records`: the level of one of its bonds,
-and no higher than any of them. That is a minimum, and it is never an average,
-since an average need be none of the levels it was taken over.
-
-@specifies REQ-EVID.weakest_link -/
-def WeakestLink (records : List Record) (y : Level) : Prop :=
-  (∃ b, y = bondLevel records b) ∧ (∀ b, y ≤ bondLevel records b)
-
-/-- A level in the chain is some bond's level. -/
-theorem chain_member_is_a_bond {x : Level} {records : List Record}
-    (h : List.Mem x (chain records)) : ∃ b, x = bondLevel records b := by
-  revert h
-  simp only [chain, allBonds, List.map]
-  intro h
-  cases h
-  case head => exact ⟨Bond.requirementModel, rfl⟩
-  case tail h1 =>
-    cases h1
-    case head => exact ⟨Bond.modelImpl, rfl⟩
-    case tail h2 =>
-      cases h2
-      case head => exact ⟨Bond.modelProof, rfl⟩
-      case tail h3 => cases h3
-
-/-- The assurance meets the clause, and nothing else does.
-
-@pins REQ-EVID.weakest_link -/
-theorem weakest_link_pinned :
-    (∀ x1, WeakestLink x1 (assurance x1)) ∧
-    (∀ x1 y1 y2, WeakestLink x1 y1 → WeakestLink x1 y2 → y1 = y2) := by
-  constructor
-  · intro x1
-    exact ⟨chain_member_is_a_bond (assurance_mem_chain x1), assurance_le_bond x1⟩
-  · intro x1 y1 y2 h1 h2
-    refine h1.1.elim (fun b1 e1 => h2.1.elim (fun b2 e2 => ?_))
-    have below : y1 ≤ y2 := by
-      rw [e2]
-      exact h1.2 b2
-    have above : y2 ≤ y1 := by
-      rw [e1]
-      exact h2.2 b1
-    exact Level.le_both_eq below above
-
-/-- Any two levels compare, and the rungs run annotation, judgement,
-differential testing, proof.
-
-@proves REQ-EVID.ladder -/
-theorem the_ladder_is_a_total_order (a b : Level) :
-    (a ≤ b ∨ b ≤ a) ∧
-    Level.L1.toNat < Level.L2.toNat ∧ Level.L2.toNat < Level.L3.toNat ∧
-    Level.L3.toNat < Level.L4.toNat := by
-  refine ⟨Nat.le_total a.toNat b.toNat, ?_, ?_, ?_⟩ <;> decide
-
-/-- A bond nothing has recorded stands at the lowest rung.
-
-@proves REQ-EVID.absent_is_lowest -/
-theorem a_bond_without_records_is_lowest (b : Bond) : bondLevel [] b = Level.L1 := rfl
+@proves REQ-EVID.absent_is_unset -/
+theorem no_records_set_no_mark (a : Bool) : marks [] a = ⟨a, false, false, false⟩ := by
+  cases a <;> rfl
 
 /-- A record on one bond leaves every other bond's level as it was.
 
@@ -306,13 +202,12 @@ theorem a_record_moves_only_its_own_bond (records : List Record) (b other : Bond
     bondLevel (records ++ [⟨other, l⟩]) b = bondLevel records b := by
   simp [bondLevel, List.foldl_append, h]
 
-/-- The chain keeps each bond's level, in the order of the bonds, rather than
-the single value they collapse to.
+/-- Marks are written in fixed positions, a dash for each one not held.
 
-@proves REQ-EVID.chain_rendered -/
-theorem the_chain_is_each_bond :
-    chain [⟨.modelImpl, .L3⟩, ⟨.requirementModel, .L2⟩] = [.L2, .L3, .L1] ∧
-    assurance [⟨.modelImpl, .L3⟩, ⟨.requirementModel, .L2⟩] = .L1 := by
+@proves REQ-EVID.marks_written -/
+theorem marks_are_written_in_place :
+    written Marks.empty = "----" ∧ written ⟨true, false, true, true⟩ = "A-TP" ∧
+    written ⟨true, true, true, true⟩ = "AJTP" := by
   native_decide
 
 end TraceLean.Evidence

@@ -18,17 +18,15 @@ use tracelean_core::evidence::Level;
 
 /// The schema of `surface::view::Role`, in one place.
 ///
-/// Three suites generate roles and the enum is no longer flat — `level` carries
-/// its grade — so describing it three times would mean three chances to forget
-/// a grade and one suite quietly never generating an L4.
+/// Three suites generate roles and the enum is no longer flat — `mark` carries
+/// which mark and whether it is held — so describing it three times would mean
+/// three chances to forget one and a suite quietly never generating a proof.
 pub fn role() -> Schema {
     let mut variants: BTreeMap<String, Option<Box<Schema>>> = BTreeMap::new();
     for nullary in ["plain", "path", "entry", "heading", "requirement", "added", "removed"] {
         variants.insert(nullary.to_string(), None);
     }
-    let mut fields = BTreeMap::new();
-    fields.insert("grade".to_string(), Schema::simple_enum(&["L1", "L2", "L3", "L4"]));
-    variants.insert("level".to_string(), Some(Box::new(Schema::Struct { fields })));
+    variants.insert("mark".to_string(), Some(Box::new(mark_role())));
     let mut claim = BTreeMap::new();
     claim.insert(
         "role".to_string(),
@@ -36,6 +34,23 @@ pub fn role() -> Schema {
     );
     variants.insert("claim".to_string(), Some(Box::new(Schema::Struct { fields: claim })));
     Schema::Enum { variants }
+}
+
+/// `evidence::Marks`: four booleans, each held or not on its own.
+pub fn marks() -> Schema {
+    let mut fields = BTreeMap::new();
+    for mark in ["annotated", "judged", "tested", "proved"] {
+        fields.insert(mark.to_string(), Schema::Bool);
+    }
+    Schema::Struct { fields }
+}
+
+/// The payload of a mark's role: which of the four, and whether it is held.
+pub fn mark_role() -> Schema {
+    let mut fields = BTreeMap::new();
+    fields.insert("mark".to_string(), Schema::simple_enum(&["annotated", "judged", "tested", "proved"]));
+    fields.insert("held".to_string(), Schema::Bool);
+    Schema::Struct { fields }
 }
 
 /// Judge a run: each entry is a situation, the floor it must reach, and how
@@ -401,11 +416,12 @@ fn binding_for(op: &str) -> tracelean_core::drt::Binding {
 /// Write the record, once both halves are in.
 ///
 /// The level is `coverage::level`'s and never a suite's: agreement without a met
-/// floor is not L3, and a met floor without agreement is not L3 either. One
-/// record per clause the binding says this call establishes — `also_checks` is a
-/// claim the binding made, and the binding-shape tests hold it to it.
+/// floor is not L3, and a met floor without agreement is not L3 either — and
+/// only L3 sets the tested mark. One record per clause the binding says this
+/// call establishes — `also_checks` is a claim the binding made, and the
+/// binding-shape tests hold it to it.
 ///
-/// @implements REQ-EVID.ladder
+/// @implements REQ-EVID.mark_per_bond
 /// @implements REQ-DRT-COVER.floor_unmet_is_not_pass
 /// @implements REQ-DRT-BIND.binding_is_the_bond
 fn compose(op: &str) {

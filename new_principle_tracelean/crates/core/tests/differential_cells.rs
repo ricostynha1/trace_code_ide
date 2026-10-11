@@ -29,8 +29,8 @@ fn role() -> Schema {
         variants.insert(nullary.to_string(), None);
     }
     variants.insert(
-        "level".to_string(),
-        Some(Box::new(strukt(&[("grade", Schema::simple_enum(&["L1", "L4"]))]))),
+        "mark".to_string(),
+        Some(Box::new(strukt(&[("mark", Schema::simple_enum(&["tested", "proved"])), ("held", Schema::Bool)]))),
     );
     Schema::Enum { variants }
 }

@@ -60,7 +60,7 @@ def actionsFor : Role → List String
   | Role.entry => ["file.open"]
   | Role.heading => ["trace.evidence", "trace.check"]
   | Role.requirement => ["trace.requirement", "trace.context", "trace.evidence", "trace.findings"]
-  | Role.level _ => ["trace.rollup"]
+  | Role.mark _ _ => ["trace.rollup"]
   | Role.added => ["observe.accept", "observe.reject"]
   | Role.removed => ["observe.accept", "observe.reject"]
   | Role.token _ => []
@@ -304,8 +304,8 @@ Two stations' content. Both are lists of requirements with the level their
 evidence reached, so both rows look the same and are built by one function; what
 differs is the order and the indentation.
 
-The level is carried in the span rather than left for a frontend to read out of
-the text. A frontend that parsed `L3` to decide a colour would be computing its
+The marks are carried in the spans rather than left for a frontend to read out
+of the text. A frontend that parsed `T` to decide a colour would be computing its
 own view of the buffer, which is the one thing `REQ-VIEW` forbids.
 -/
 
@@ -314,7 +314,8 @@ structure Node where
   id : String
   title : String
   refines : List String
-  level : TraceLean.Evidence.Level
+  /-- The marks every one of its clauses holds. -/
+  marks : TraceLean.Evidence.Marks
   /-- How many of its clauses something implements, of how many. -/
   implemented : Nat
   clauses : Nat
@@ -329,31 +330,37 @@ structure Row where
   node : Node
   deriving Repr, DecidableEq, Inhabited, ToJson, FromJson
 
-private def gradeText (grade : TraceLean.Evidence.Level) : String :=
-  match grade with
-  | TraceLean.Evidence.Level.L1 => "L1"
-  | TraceLean.Evidence.Level.L2 => "L2"
-  | TraceLean.Evidence.Level.L3 => "L3"
-  | TraceLean.Evidence.Level.L4 => "L4"
-
 private def spaces : Nat → String
   | 0 => ""
   | Nat.succ n => " " ++ spaces n
 
-/-- The two spans every row of either station carries: the grade, and the id.
+/-- How wide the marks are: `AJTP`, one character each. -/
+def marksWidth : Nat := 4
 
-Both take their actions from their role, so a level in this buffer offers what a
-level offers anywhere. The grade is two characters wide, which is why the id
-starts four along. -/
+private def markSpansFrom (at_ : Nat) :
+    List (TraceLean.Evidence.Mark × Bool × Char) → List Span
+  | [] => []
+  | (mark, held, _) :: rest =>
+    ({ start := at_, stop := at_ + 1, role := Role.mark mark held,
+       actions := actionsFor (Role.mark mark held) } : Span) :: markSpansFrom (at_ + 1) rest
+
+/-- One span a position of the marks, each saying which mark it is and whether
+it is held, so a frontend colours a gap apart from what fills it without
+reading the letters. -/
+def evidenceSpans (at_ : Nat) (marks : TraceLean.Evidence.Marks) : List Span :=
+  markSpansFrom at_ marks.each
+
+/-- The spans every row of either station carries: the marks, and the id.
+
+Both take their actions from their role, so a mark in this buffer offers what a
+mark offers anywhere. The marks are four characters wide, which is why the id
+starts six along. -/
 private def rowSpans (at_ : Nat) (indent : Nat) (node : Node) : List Span :=
   let lead := at_ + indent * 2
-  let level :=
-    ({ start := lead, stop := lead + 2, role := Role.level node.level,
-       actions := actionsFor (Role.level node.level) } : Span)
   let ident :=
-    ({ start := lead + 4, stop := lead + 4 + node.id.length, role := Role.requirement,
-       actions := actionsFor Role.requirement } : Span)
-  [level, ident]
+    ({ start := lead + marksWidth + 2, stop := lead + marksWidth + 2 + node.id.length,
+       role := Role.requirement, actions := actionsFor Role.requirement } : Span)
+  evidenceSpans lead node.marks ++ [ident]
 
 /-- Cells of five a node's implemented clauses fill, rounded, never past five. -/
 private def filledOf (node : Node) : Nat :=
@@ -375,7 +382,7 @@ private def coveredPart (node : Node) : String :=
   | none => ""
 
 private def indexLine (node : Node) : String :=
-  gradeText node.level ++ "  " ++ node.id ++ "  " ++ barOf node ++ " " ++
+  TraceLean.Evidence.written node.marks ++ "  " ++ node.id ++ "  " ++ barOf node ++ " " ++
     toString node.implemented ++ "/" ++ toString node.clauses ++ "  " ++ coveredPart node ++ node.title
 
 /-- The measured lines' span: green when every one ran, red when one did not;
@@ -393,7 +400,7 @@ private def coveredSpans (from_ : Nat) (node : Node) : List Span :=
 /-- The bar's filled cells, in the colour of what fills them, and the
 measured lines. -/
 private def barSpans (at_ : Nat) (node : Node) : List Span :=
-  let start := at_ + 4 + node.id.length + 2
+  let start := at_ + marksWidth + 2 + node.id.length + 2
   let counts := (toString node.implemented ++ "/" ++ toString node.clauses).length
   let lines := coveredSpans (start + 5 + 1 + counts + 2) node
   if filledOf node = 0 then lines
@@ -620,8 +627,9 @@ def linked (b : Buffer) : List (String × List String) :=
 
 /-- A root, what refines it, and what refines that; the middle one measured. -/
 def graph : List Node :=
-  [⟨"ARCH-X", "Root", [], .L2, 1, 1, none⟩, ⟨"REQ-A", "Mid", ["ARCH-X"], .L3, 1, 2, some (3, 4)⟩,
-   ⟨"REQ-B", "Leaf", ["REQ-A"], .L1, 0, 1, none⟩]
+  [⟨"ARCH-X", "Root", [], ⟨true, true, false, false⟩, 1, 1, none⟩,
+   ⟨"REQ-A", "Mid", ["ARCH-X"], ⟨true, true, true, false⟩, 1, 2, some (3, 4)⟩,
+   ⟨"REQ-B", "Leaf", ["REQ-A"], ⟨true, false, false, true⟩, 0, 1, none⟩]
 
 /-- A region known only by its role offers that role's actions, whichever
 producer marked it; a requirement's name offers the same in the index as in the
@@ -656,17 +664,18 @@ theorem events_become_marked_rows :
       = [("changed: a.rs", ["observe.diff"]), ("said: hi", ["observe.diff"])] := by
   native_decide
 
-/-- The requirement set becomes one row a requirement, its name and its level
-marked.
+/-- The requirement set becomes one row a requirement, its name and each of its
+marks marked.
 
 @proves REQ-SHOW.index_from_requirements -/
 theorem one_row_a_requirement :
     (requirementsBuffer graph).text
-      = "L2  ARCH-X  █████ 1/1  Root\nL3  REQ-A  ███░░ 1/2  lines 75%  Mid\nL1  REQ-B  ░░░░░ 0/1  Leaf" ∧
-    linked (requirementsBuffer graph) =
-      [("L2", ["trace.rollup"]), ("ARCH-X", actionsFor .requirement), ("L3", ["trace.rollup"]),
-       ("REQ-A", actionsFor .requirement), ("lines 75%", ["trace.coverage REQ-A"]),
-       ("L1", ["trace.rollup"]), ("REQ-B", actionsFor .requirement)] := by
+      = "AJ--  ARCH-X  █████ 1/1  Root\nAJT-  REQ-A  ███░░ 1/2  lines 75%  Mid\nA--P  REQ-B  ░░░░░ 0/1  Leaf" ∧
+    ((requirementsBuffer graph).spans.filter (fun s => s.role == .mark .proved true)).length = 1 ∧
+    (linked (requirementsBuffer graph)).filter (fun l => l.2 != ["trace.rollup"]) =
+      [("ARCH-X", actionsFor .requirement), ("REQ-A", actionsFor .requirement),
+       ("lines 75%", ["trace.coverage REQ-A"]), ("REQ-B", actionsFor .requirement)] ∧
+    ((linked (requirementsBuffer graph)).filter (fun l => l.2 == ["trace.rollup"])).length = 12 := by
   native_decide
 
 /-- The graph opens folded to its roots; unfolding a requirement shows what
@@ -674,11 +683,11 @@ refines it beneath it, a level deeper.
 
 @proves REQ-SHOW.graph_from_refinement -/
 theorem the_graph_unfolds_where_asked :
-    (designBuffer graph []).text = "[ expand all ]  [ fold all ]\n▸ L2  ARCH-X  █████ 1/1  Root" ∧
+    (designBuffer graph []).text = "[ expand all ]  [ fold all ]\n▸ AJ--  ARCH-X  █████ 1/1  Root" ∧
     (designBuffer graph ["ARCH-X"]).text
-      = "[ expand all ]  [ fold all ]\n▾ L2  ARCH-X  █████ 1/1  Root\n  ▸ L3  REQ-A  ███░░ 1/2  lines 75%  Mid" ∧
+      = "[ expand all ]  [ fold all ]\n▾ AJ--  ARCH-X  █████ 1/1  Root\n  ▸ AJT-  REQ-A  ███░░ 1/2  lines 75%  Mid" ∧
     (designBuffer graph ["ARCH-X", "REQ-A"]).text
-      = "[ expand all ]  [ fold all ]\n▾ L2  ARCH-X  █████ 1/1  Root\n  ▾ L3  REQ-A  ███░░ 1/2  lines 75%  Mid\n    · L1  REQ-B  ░░░░░ 0/1  Leaf" := by
+      = "[ expand all ]  [ fold all ]\n▾ AJ--  ARCH-X  █████ 1/1  Root\n  ▾ AJT-  REQ-A  ███░░ 1/2  lines 75%  Mid\n    · A--P  REQ-B  ░░░░░ 0/1  Leaf" := by
   native_decide
 
 /-- What a sandboxed agent changed, then what it said, then what it cost.

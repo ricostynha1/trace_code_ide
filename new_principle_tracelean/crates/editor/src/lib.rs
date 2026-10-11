@@ -21,7 +21,7 @@ pub mod theme;
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
-use tracelean_core::evidence::Level;
+use tracelean_core::evidence::Marks;
 use tracelean_core::history::command::{Command, Workspace};
 use tracelean_core::history::tree::Tree;
 use tracelean_core::observe::transcript::Event;
@@ -2858,7 +2858,7 @@ impl Editor {
         let records: Vec<tracelean_core::trace::record::Evidence> = tracelean_core::trace::lockfile::read(&self.root)
             .map(|l| l.evidence)
             .unwrap_or_default();
-        let levels = levels_of(&records);
+        let held = marks_of(&index, &records);
         let plans = tracelean_core::trace::pinning::plans(&index, &self.workspace().files);
         let clauses = requirement
             .clause_keys()
@@ -2890,14 +2890,8 @@ impl Editor {
                         .and_then(|k| requirement.narrowings.get(k))
                         .map(|n| n.iter().map(|(k, v)| (k.clone(), v.clone())).collect())
                         .unwrap_or_default(),
-                    level: levels.get(&(id.to_string(), clause.clone())).copied().unwrap_or(Level::L1),
-                    chain: chain_of(&records, id, clause.as_deref()),
-                    tested: records.iter().any(|r| {
-                        r.key.req_id == id
-                            && r.key.clause == clause
-                            && r.key.bond == tracelean_core::evidence::Bond::ModelImpl
-                            && r.effective_level() >= Level::L3
-                    }),
+                    marks: held.get(&(id.to_string(), clause.clone())).copied().unwrap_or(Marks::NONE),
+                    tested: held.get(&(id.to_string(), clause.clone())).is_some_and(|m| m.tested),
                     lines: self.clause_lines(&index, id, Some(&clause)),
                     judged: tracelean_core::surface::requirement_view::judged_of(&records, id, clause.as_deref()),
                     key: clause,
@@ -2997,29 +2991,28 @@ impl Editor {
     ///
     /// Read here and handed to a producer, rather than read by one: a producer
     /// is a function of what it is given and reads no disk
-    /// ([ARCH-CORE-SHELL](../../reqs/arch/ARCH-CORE-SHELL.md)). The level is a
-    /// requirement's own, aggregated over its clauses by the same minimum the
-    /// ladder uses everywhere — a requirement is worth its weakest clause,
-    /// because a set of obligations is met only as well as the one least met.
+    /// ([ARCH-CORE-SHELL](../../reqs/arch/ARCH-CORE-SHELL.md)). The marks are a
+    /// requirement's own, held only where every clause holds them, as a
+    /// roll-up holds them everywhere — a set of obligations is met only as well
+    /// as the one least met.
     fn nodes(&self) -> Vec<make::Node> {
         let index = self.index();
         let lock = tracelean_core::trace::lockfile::read(&self.root);
-        let levels = levels_of(lock.as_ref().map(|l| &l.evidence[..]).unwrap_or(&[]));
+        let held = marks_of(&index, lock.as_ref().map(|l| &l.evidence[..]).unwrap_or(&[]));
         index
             .requirements
             .iter()
             .map(|(id, requirement)| {
-                let reached = requirement
-                    .clause_keys()
-                    .into_iter()
-                    .map(|clause| {
-                        levels.get(&(id.clone(), clause)).copied().unwrap_or(Level::L1)
-                    })
-                    .min()
-                    .unwrap_or(Level::L1);
+                let reached = tracelean_core::trace::rollup::combine(
+                    requirement
+                        .clause_keys()
+                        .into_iter()
+                        .map(|clause| held.get(&(id.clone(), clause)).copied().unwrap_or(Marks::NONE))
+                        .collect(),
+                );
                 // How many clauses something implements, of how many: the
-                // level is a minimum and says little until evidence is
-                // recorded, and this says where the work is.
+                // marks hold only what every clause holds and say little
+                // until evidence is recorded, and this says where the work is.
                 let clauses = requirement.clause_keys();
                 let implemented = clauses
                     .iter()
@@ -3035,7 +3028,7 @@ impl Editor {
                     id: id.clone(),
                     title: requirement.title.clone(),
                     refines: requirement.refines.clone(),
-                    level: reached,
+                    marks: reached,
                     implemented,
                     clauses: clauses.len(),
                     covered: self.clause_lines(&index, id, None).map(|(run, all, _)| (run, all)),
@@ -3387,21 +3380,22 @@ impl Editor {
 
     /// What each clause is claimed by, and what the lock says it is worth.
     ///
-    /// The level comes from the committed lock, never from the tree: an
-    /// annotation is a claim, and a claim is L1 until a backend earns more.
+    /// The marks past the annotation come from the committed lock, never from
+    /// the tree: an annotation is a claim, and holds nothing more until a
+    /// backend earns it.
     fn evidence(&self) -> Vec<Event> {
         let index = self.index();
         let lock = tracelean_core::trace::lockfile::read(&self.root);
         let records: Vec<tracelean_core::trace::record::Evidence> =
             lock.as_ref().map(|l| l.evidence.clone()).unwrap_or_default();
-        let levels = levels_of(&records);
+        let held = marks_of(&index, &records);
 
         let mut out = Vec::new();
         if lock.is_none() {
             out.push(Event {
                 kind: "no lock".into(),
-                text: "no lock file is committed, so no evidence is recorded and every clause \
-                       reads L1"
+                text: "no lock file is committed, so no evidence is recorded and no clause \
+                       holds more than its annotation"
                     .into(),
             });
         }
@@ -3415,21 +3409,12 @@ impl Editor {
                     .collect();
                 roles.sort();
                 roles.dedup();
-                let level = levels.get(&(id.clone(), clause.clone())).copied().unwrap_or(Level::L1);
+                let marks = held.get(&(id.clone(), clause.clone())).copied().unwrap_or(Marks::NONE);
                 let claimed =
                     if roles.is_empty() { "nothing claims it".into() } else { roles.join(" ") };
-                out.push(Event {
-                    kind: format!("{level:?}").to_lowercase(),
-                    // The chain beside the minimum, because the minimum is what
-                    // a clause is worth and the chain is why. A proved model
-                    // with an unchecked implementation reads L1, and without the
-                    // chain the proof is invisible.
-                    text: format!(
-                        "{} {} — {claimed}",
-                        named(id, &clause),
-                        chain_of(&records, id, clause.as_deref())
-                    ),
-                });
+                // Each mark in its place, so a proved model with an unchecked
+                // implementation reads A--P rather than vanishing into a minimum.
+                out.push(Event { kind: marks.text(), text: format!("{} — {claimed}", named(id, &clause)) });
             }
         }
         out
@@ -3481,10 +3466,10 @@ impl Editor {
         use tracelean_core::trace::rollup;
         let index = self.index();
         let lock = tracelean_core::trace::lockfile::read(&self.root);
-        let levels = levels_of(lock.as_ref().map(|l| &l.evidence[..]).unwrap_or(&[]));
-        // The floor is the level at which a clause counts as covered: checked
-        // by something that runs, rather than asserted or read.
-        let floor = Level::L3;
+        let held = marks_of(&index, lock.as_ref().map(|l| &l.evidence[..]).unwrap_or(&[]));
+        // The floor is what a clause needs to count as covered: checked by
+        // something that runs, rather than asserted or read.
+        let floor = Marks { tested: true, ..Marks::NONE };
 
         let roots: Vec<String> = index
             .requirements
@@ -3500,7 +3485,7 @@ impl Editor {
         }
         let mut out = Vec::new();
         for root in roots {
-            flatten(&rollup::tree(&index, &root, &levels, floor), 0, &mut out);
+            flatten(&rollup::tree(&index, &root, &held, floor), 0, &mut out);
         }
         out
     }
@@ -3909,7 +3894,8 @@ impl Editor {
         let records: Vec<tracelean_core::trace::record::Evidence> = tracelean_core::trace::lockfile::read(&self.root)
             .map(|l| l.evidence)
             .unwrap_or_default();
-        let levels = levels_of(&records);
+        let held = marks_of(&index, &records);
+        let marks = |id: &str, clause: Option<String>| held.get(&(id.to_string(), clause)).copied().unwrap_or(Marks::NONE);
         let claim_of = |link: &tracelean_core::trace::index::Link| Claim {
             role: link.role.as_str().to_string(),
             path: link.anchor.file.clone(),
@@ -3935,7 +3921,7 @@ impl Editor {
                     role: "clause".into(),
                     clause: format!("{}.{key}", requirement.id),
                     text: requirement.clauses[&key].clone(),
-                    level: levels.get(&(requirement.id.clone(), Some(key.clone()))).copied().unwrap_or(Level::L1),
+                    marks: marks(&requirement.id, Some(key.clone())),
                     others: index
                         .links
                         .iter()
@@ -3974,7 +3960,7 @@ impl Editor {
                         None => link.req_id.clone(),
                     },
                     text,
-                    level: levels.get(&(link.req_id.clone(), link.clause.clone())).copied().unwrap_or(Level::L1),
+                    marks: marks(&link.req_id, link.clause.clone()),
                     others,
                 }
             })
@@ -4323,18 +4309,20 @@ fn symbol_of(anchor: &tracelean_core::trace::anchor::Anchor) -> Option<String> {
     }
 }
 
-/// The level each clause reaches, from the evidence the lock file carries.
+/// The marks of every clause of every requirement: annotated when something in
+/// the tree claims it, the rest from the evidence the lock file carries.
 ///
-/// A clause's level is the minimum over its three bonds, and a record can never
-/// count for more than its backend supports — so this goes through the same two
-/// functions the rest of the project does rather than reading `level` directly.
+/// A record can never count for more than its backend supports, so this goes
+/// through the same functions the rest of the project does rather than reading
+/// `level` directly.
 ///
-/// @implements REQ-EVID.weakest_link
+/// @implements REQ-EVID.mark_per_bond
 /// @implements REQ-EVID.judgement_caps
-fn levels_of(
+fn marks_of(
+    index: &tracelean_core::trace::index::Index,
     evidence: &[tracelean_core::trace::record::Evidence],
-) -> BTreeMap<(String, Option<String>), Level> {
-    use tracelean_core::evidence::{assurance, Record};
+) -> BTreeMap<(String, Option<String>), Marks> {
+    use tracelean_core::evidence::{marks, Record};
     let mut collected: BTreeMap<(String, Option<String>), Vec<Record>> = BTreeMap::new();
     for record in evidence {
         collected
@@ -4342,36 +4330,23 @@ fn levels_of(
             .or_default()
             .push(Record { bond: record.key.bond, level: record.effective_level() });
     }
-    collected.into_iter().map(|(key, records)| (key, assurance(records))).collect()
-}
-
-/// The three bonds of one clause, written out.
-///
-/// `REQ-EVID.chain_rendered` exists because the single number a clause carries
-/// is a minimum, and a minimum says nothing about which bond held it down. A
-/// proved model whose implementation nothing compares reads `L1/L1/L4`, and
-/// that is a different situation from `L1/L1/L1` calling for different work.
-///
-/// @implements REQ-EVID.chain_rendered
-fn chain_of(
-    records: &[tracelean_core::trace::record::Evidence],
-    req_id: &str,
-    clause: Option<&str>,
-) -> String {
-    use tracelean_core::evidence::{chain, Record};
-    let here: Vec<Record> = records
-        .iter()
-        .filter(|record| record.key.req_id == req_id && record.key.clause.as_deref() == clause)
-        .map(|record| Record { bond: record.key.bond, level: record.effective_level() })
-        .collect();
-    chain(here).iter().map(|level| format!("{level:?}")).collect::<Vec<_>>().join("/")
+    let mut out = BTreeMap::new();
+    for (id, requirement) in &index.requirements {
+        for clause in requirement.clause_keys() {
+            let key = (id.clone(), clause);
+            let annotated = index.links.iter().any(|link| link.req_id == key.0 && link.clause == key.1);
+            let records = collected.remove(&key).unwrap_or_default();
+            out.insert(key, marks(records, annotated));
+        }
+    }
+    out
 }
 
 /// A roll-up tree, as lines. Depth is indentation, because a tree drawn as a
 /// tree is a tree the frontend would have to know about.
 fn flatten(node: &tracelean_core::trace::rollup::RollUp, depth: usize, out: &mut Vec<Event>) {
     out.push(Event {
-        kind: format!("{:?}", node.assurance).to_lowercase(),
+        kind: node.marks.text(),
         text: format!(
             "{}{} covered {}",
             "  ".repeat(depth),

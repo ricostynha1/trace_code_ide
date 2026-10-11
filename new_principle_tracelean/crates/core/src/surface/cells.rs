@@ -236,13 +236,14 @@ pub fn drawn_wrong(buffer: Buffer, painted: String, rows: u64, columns: u64, loo
 }
 
 /// The look the theme gives a role: tokens from `syntax`, claims from `chips`,
-/// the rest from `roles`, with headings, claims and L4 in bold. Plain text, and
+/// the rest from `roles`, with headings, claims and a held proof mark in bold,
+/// and every missing mark in one colour whichever it is. Plain text, and
 /// a role the theme has no colour for, are drawn in the terminal's own colour.
 ///
 /// The colour is spelled as a terminal draws it, lowercase, with a channel
 /// that is not hexadecimal read as `ff`.
 pub fn look_of(theme: &serde_json::Value, role: Role) -> Look {
-    use crate::evidence::Level;
+    use crate::evidence::Mark;
     let named = |section: &str, key: &str| theme.get(section)?.get(key)?.as_str().map(str::to_string);
     let (colour, bold) = match role {
         Role::Plain => (None, false),
@@ -255,11 +256,12 @@ pub fn look_of(theme: &serde_json::Value, role: Role) -> Look {
         Role::Entry => (named("roles", "entry"), false),
         Role::Heading => (named("roles", "heading"), true),
         Role::Requirement => (named("roles", "requirement"), false),
-        Role::Level { grade } => match grade {
-            Level::L1 => (named("roles", "levelL1"), false),
-            Level::L2 => (named("roles", "levelL2"), false),
-            Level::L3 => (named("roles", "levelL3"), false),
-            Level::L4 => (named("roles", "levelL4"), true),
+        Role::Mark { held: false, .. } => (named("roles", "markMissing"), false),
+        Role::Mark { mark, held: true } => match mark {
+            Mark::Annotated => (named("roles", "markAnnotated"), false),
+            Mark::Judged => (named("roles", "markJudged"), false),
+            Mark::Tested => (named("roles", "markTested"), false),
+            Mark::Proved => (named("roles", "markProved"), true),
         },
         Role::Added => (named("roles", "added"), false),
         Role::Removed => (named("roles", "removed"), false),

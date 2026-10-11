@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "a structural clause requires a test and no model; its denominator and level are the roll-up's and the ladder's; decided under autonomy, night of 2026-10-10"
+      "note": "Wording change only (tested mark); the model's distinction between structural and exempt is unchanged."
     }
   },
   "linkHash": "d55d3fe1117a3cd0",
   "inputs": [
     [
       "requirement",
-      "f5f60cf344eb2bee"
+      "9804e54407d990a9"
     ],
     [
       "model",

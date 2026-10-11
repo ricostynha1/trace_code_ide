@@ -6,7 +6,7 @@ import TraceLean.Lines
 # One requirement, opened
 
 Models `REQ-SHOW.requirement_opened`: a requirement as a buffer showing each of
-its clauses with the level its evidence reached and every annotation that
+its clauses with the evidence marks it holds and every annotation that
 claims it, each claim a `path:line` link that opens the claiming file there.
 -/
 
@@ -67,8 +67,7 @@ structure ClauseShown where
   key : Option String
   text : String
   narrowings : List (String × String)
-  level : Level
-  chain : String
+  marks : Marks
   claims : List Claim
   pins : Option (String × String)
   tested : Bool
@@ -184,13 +183,18 @@ def judgedLines (out : Lines) : Option Judged → Lines
     if judged.verdict == "agrees" then line out [("  judged      ", Role.plain, []), (said, Role.plain, [])]
     else wrapped out "  " said Role.removed []
 
-/-- One clause: its level, key and chain, its text and narrowings, what can be
-done with it, and every claim on it. -/
+/-- Each position of the marks as a piece of a line: a letter or a dash, with
+the role saying which mark it is and whether it is held. -/
+def markPieces : List (Mark × Bool × Char) → List (String × Role × List String)
+  | [] => []
+  | (mark, held, c) :: rest =>
+    (String.singleton (letter held c), Role.mark mark held, ["trace.rollup"]) :: markPieces rest
+
+/-- One clause: its marks and key, its text and narrowings, what can be done
+with it, and every claim on it. -/
 def clauseLines (id : String) (out : Lines) (clause : ClauseShown) : Lines :=
-  let grade := levelName clause.level
   let key := clause.key.getD "(the whole requirement)"
-  let out := line (blank out) [(grade, Role.level clause.level, ["trace.rollup"]), ("  ", Role.plain, []),
-                               (key, Role.heading, []), ("  " ++ clause.chain, Role.plain, [])]
+  let out := line (blank out) (markPieces clause.marks.each ++ [("  ", Role.plain, []), (key, Role.heading, [])])
   let out := wrapped out "  " clause.text Role.plain []
   let out := clause.narrowings.foldl (fun (o : Lines) (pair : String × String) =>
     wrapped o "    " (pair.1 ++ ": " ++ pair.2) Role.plain []) out
@@ -246,16 +250,16 @@ def linked (b : Buffer) : List (String × List String) :=
 /-- A requirement of one clause, implemented and tested. -/
 def oneClause : Shown :=
   ⟨"REQ-A", "A thing", "reqs/REQ-A.md", "draft", [], [],
-   [⟨some "one", "It shall.", [], .L3, "L2/L3/L1",
+   [⟨some "one", "It shall.", [], ⟨true, false, true, false⟩,
      [⟨"implements", "src/a.rs", 4, some "f"⟩, ⟨"tests", "tests/a.rs", 9, none⟩], none, true, none, none⟩],
    60, none⟩
 
-/-- An opened requirement shows each clause with the level its evidence reached
+/-- An opened requirement shows each clause with the evidence marks it holds
 and every claim on it, each claim opening the claiming file at its line.
 
 @proves REQ-SHOW.requirement_opened -/
 theorem an_opened_requirement_shows_clauses_and_claims :
-    ((requirementView oneClause).text.splitOn "L3  one  L2/L3/L1\n  It shall.").length = 2 ∧
+    ((requirementView oneClause).text.splitOn "A-T-  one\n  It shall.").length = 2 ∧
     (linked (requirementView oneClause)).filter (fun l => l.2 == ["file.open"])
       = [("reqs/REQ-A.md", ["file.open"]), ("src/a.rs:4", ["file.open"]),
          ("tests/a.rs:9", ["file.open"])] := by

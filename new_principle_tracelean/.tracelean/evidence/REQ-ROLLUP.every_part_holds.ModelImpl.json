@@ -1,30 +1,30 @@
 {
   "key": {
-    "reqId": "REQ-EVID",
-    "clause": "ladder",
+    "reqId": "REQ-ROLLUP",
+    "clause": "every_part_holds",
     "bond": "modelImpl"
   },
   "level": "L3",
   "detail": {
     "drt": {
-      "seed": 7,
+      "seed": 37,
       "cases": 2000,
-      "op": "REQ-EVID.weakest_link"
+      "op": "REQ-ROLLUP.every_part_holds"
     }
   },
-  "linkHash": "02a9198060a27c57",
+  "linkHash": "12418aa742577bd6",
   "inputs": [
     [
       "implementation",
-      "5fa768286519c00c+700f7a164db50e69"
+      "57403df8c3e42203"
     ],
     [
       "model",
-      "99d1fb18af025d88"
+      "9d57426604aad65f"
     ],
     [
       "requirement",
-      "01cbff43e1a880c0"
+      "28d8ce151a558680"
     ]
   ]
 }

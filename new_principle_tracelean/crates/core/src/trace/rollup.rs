@@ -6,7 +6,7 @@
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
 
-use crate::evidence::Level;
+use crate::evidence::Marks;
 
 use super::index::Index;
 use super::requirement::Decomposition;
@@ -64,26 +64,32 @@ pub fn render_figure(figure: Figure) -> String {
     }
 }
 
-/// Assurance of one node, and of everything under it.
+/// The marks of one node, and of everything under it.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct RollUp {
     pub id: String,
-    pub assurance: Level,
+    pub marks: Marks,
     pub covered: Figure,
     pub children: Vec<RollUp>,
 }
 
-/// Aggregate over children by taking the minimum.
+/// Aggregate over children, mark by mark: held only when every part holds it.
 ///
-/// An average invents a level nothing established; a minimum is always a level
-/// something did.
+/// A majority invents evidence nothing established; requiring every part is
+/// always a claim each of them makes. With nothing to aggregate, nothing is
+/// held: an empty set would hold every mark vacuously, which is the comfort
+/// `ARCH-HONEST` refuses.
 ///
-/// @implements REQ-ROLLUP.min_not_mean
+/// @implements REQ-ROLLUP.every_part_holds
 /// @implements ARCH-HONEST.weakest_link
-/// @drt REQ-ROLLUP.min_not_mean
+/// @drt REQ-ROLLUP.every_part_holds
 /// @drt ARCH-HONEST.weakest_link
-pub fn combine(levels: Vec<Level>) -> Level {
-    levels.into_iter().min().unwrap_or(Level::L1)
+pub fn combine(parts: Vec<Marks>) -> Marks {
+    let mut parts = parts.into_iter();
+    match parts.next() {
+        None => Marks::NONE,
+        Some(first) => parts.fold(first, Marks::and),
+    }
 }
 
 /// Coverage over files: how many of the files scanned are claimed by at least
@@ -133,9 +139,11 @@ pub struct Node {
     pub refines: Vec<String>,
 }
 
-/// The highest level a clause claimed only in part can contribute: below the
-/// level at which anything ran, so half of a clause never counts as checked.
-pub const PARTIAL_CAP: Level = Level::L2;
+/// What a clause claimed only in part contributes: never tested or proved, so
+/// half of a clause never counts as checked.
+pub fn partial_cap(marks: Marks) -> Marks {
+    Marks { tested: false, proved: false, ..marks }
+}
 
 /// The requirements reachable from `root` by following "is refined by", root
 /// included, each once.
@@ -155,32 +163,32 @@ pub fn reach(graph: &BTreeMap<String, Node>, root: &str) -> BTreeSet<String> {
     found
 }
 
-/// What one requirement contributes on its own: the level of each clause that
+/// What one requirement contributes on its own: the marks of each clause that
 /// counts (exempt clauses do not; partial ones are capped), and how many of
-/// them reach the floor.
-fn own(node: &Node, levels: &BTreeMap<(String, Option<String>), Level>, floor: Level) -> (Vec<Level>, u64) {
-    let counted: Vec<Level> = node
+/// them hold every mark the floor asks for.
+fn own(node: &Node, levels: &BTreeMap<(String, Option<String>), Marks>, floor: Marks) -> (Vec<Marks>, u64) {
+    let counted: Vec<Marks> = node
         .clauses
         .iter()
         .filter(|c| !node.exempt.contains(c))
         .map(|c| {
-            let level = levels.get(&(node.id.clone(), c.clone())).copied().unwrap_or(Level::L1);
+            let marks = levels.get(&(node.id.clone(), c.clone())).copied().unwrap_or(Marks::NONE);
             if node.partial_clauses.contains(c) {
-                level.min(PARTIAL_CAP)
+                partial_cap(marks)
             } else {
-                level
+                marks
             }
         })
         .collect();
-    let met = counted.iter().filter(|l| **l >= floor).count() as u64;
+    let met = counted.iter().filter(|m| m.holds(floor)).count() as u64;
     (counted, met)
 }
 
 /// Roll a declared graph up, over nothing but the graph.
 ///
 /// Each requirement's figures are computed over its own reachable set, each
-/// member counted once: the minimum of every counted clause's level, and the
-/// fraction of them at the floor. The figure is exact only when every member
+/// member counted once: the marks every counted clause holds, and the fraction
+/// of them holding every mark the floor asks for. The figure is exact only when every member
 /// claimed its decomposition complete. Children are shown under every parent
 /// they refine, sorted; a child already on the path is left out, so a cycle
 /// cannot loop.
@@ -198,21 +206,21 @@ fn own(node: &Node, levels: &BTreeMap<(String, Option<String>), Level>, floor: L
 /// @drt REQ-ROLLUP.counted_once
 pub fn roll_up(
     nodes: Vec<Node>,
-    levels: Vec<((String, Option<String>), Level)>,
+    held: Vec<((String, Option<String>), Marks)>,
     root: String,
-    floor: Level,
+    floor: Marks,
 ) -> RollUp {
     // Through maps, so a repeated identifier resolves the way the index
     // resolves it rather than the way a list happens to be ordered.
     let graph: BTreeMap<String, Node> =
         nodes.into_iter().map(|n| (n.id.clone(), n)).collect();
-    let levels: BTreeMap<(String, Option<String>), Level> = levels.into_iter().collect();
+    let held: BTreeMap<(String, Option<String>), Marks> = held.into_iter().collect();
 
     fn node_of(
         graph: &BTreeMap<String, Node>,
         id: &str,
-        levels: &BTreeMap<(String, Option<String>), Level>,
-        floor: Level,
+        held: &BTreeMap<(String, Option<String>), Marks>,
+        floor: Marks,
         path: &mut Vec<String>,
     ) -> RollUp {
         let members = reach(graph, id);
@@ -221,7 +229,7 @@ pub fn roll_up(
         for member in &members {
             match graph.get(member) {
                 Some(node) => {
-                    let (counted, m) = own(node, levels, floor);
+                    let (counted, m) = own(node, held, floor);
                     met += m;
                     total += counted.len() as u64;
                     exact &= node.complete;
@@ -236,20 +244,20 @@ pub fn roll_up(
         let mut children = Vec::new();
         for (child, node) in graph {
             if node.refines.iter().any(|p| p == id) && !path.contains(child) {
-                children.push(node_of(graph, child, levels, floor, path));
+                children.push(node_of(graph, child, held, floor, path));
             }
         }
         path.pop();
 
         RollUp {
             id: id.to_string(),
-            assurance: combine(all),
+            marks: combine(all),
             covered: Figure { met, total, exact },
             children,
         }
     }
 
-    node_of(&graph, &root, &levels, floor, &mut Vec::new())
+    node_of(&graph, &root, &held, floor, &mut Vec::new())
 }
 
 /// The graph an index declares, as `roll_up` reads it.
@@ -283,12 +291,12 @@ pub fn nodes(index: &Index) -> Vec<Node> {
 pub fn tree(
     index: &Index,
     id: &str,
-    levels: &BTreeMap<(String, Option<String>), Level>,
-    floor: Level,
+    held: &BTreeMap<(String, Option<String>), Marks>,
+    floor: Marks,
 ) -> RollUp {
     roll_up(
         nodes(index),
-        levels.iter().map(|(k, v)| (k.clone(), *v)).collect(),
+        held.iter().map(|(k, v)| (k.clone(), *v)).collect(),
         id.to_string(),
         floor,
     )
@@ -298,21 +306,26 @@ pub fn tree(
 mod tests {
     use super::*;
 
-    /// @tests REQ-ROLLUP.min_not_mean
-    #[test]
-    fn aggregation_is_the_minimum() {
-        assert_eq!(combine(vec![Level::L4, Level::L1]), Level::L1);
-        assert_eq!(combine(vec![Level::L3, Level::L3]), Level::L3);
-        // Nothing to aggregate is the lowest, not the highest.
-        assert_eq!(combine(vec![]), Level::L1);
+    /// Marks written as text, for the tests: `AJTP` with dashes.
+    fn m(text: &str) -> Marks {
+        let at = |i: usize| text.as_bytes()[i] != b'-';
+        Marks { annotated: at(0), judged: at(1), tested: at(2), proved: at(3) }
     }
 
-    /// A mean would report a level nothing established.
+    /// @tests REQ-ROLLUP.every_part_holds
     #[test]
-    fn the_result_is_always_a_level_something_established() {
-        let inputs = vec![Level::L4, Level::L2];
-        let result = combine(inputs.clone());
-        assert!(inputs.contains(&result));
+    fn aggregation_holds_what_every_part_holds() {
+        assert_eq!(combine(vec![m("AJTP"), m("A-TP")]), m("A-TP"));
+        assert_eq!(combine(vec![m("AJ--"), m("A--P")]), m("A---"));
+        // Nothing to aggregate holds nothing, not everything.
+        assert_eq!(combine(vec![]), Marks::NONE);
+    }
+
+    /// A majority would report a mark a part does not hold.
+    #[test]
+    fn a_mark_held_by_most_is_not_held() {
+        let result = combine(vec![m("AJTP"), m("AJTP"), m("AJT-")]);
+        assert!(!result.proved);
     }
 
     /// @tests ARCH-HONEST.lower_bound_marked
@@ -340,12 +353,12 @@ mod tests {
         }
     }
 
-    fn at(id: &str, clause: &str, level: Level) -> ((String, Option<String>), Level) {
-        ((id.into(), Some(clause.into())), level)
+    fn at(id: &str, clause: &str, marks: &str) -> ((String, Option<String>), Marks) {
+        ((id.into(), Some(clause.into())), m(marks))
     }
 
     /// The diamond: B and C refine A, D refines both. A walk sharing one
-    /// visited set across siblings put D under B only, so C read L4 while D was L1.
+    /// visited set across siblings put D under B only, so C read tested while D was not.
     ///
     /// @tests REQ-ROLLUP.counted_once
     /// @tests REQ-ROLLUP.deterministic_order
@@ -358,16 +371,16 @@ mod tests {
             node("C", "c", &["A"]),
             node("D", "d", &["B", "C"]),
         ];
-        let levels = vec![
-            at("A", "a", Level::L4),
-            at("B", "b", Level::L4),
-            at("C", "c", Level::L4),
-            at("D", "d", Level::L1),
+        let held = vec![
+            at("A", "a", "AJTP"),
+            at("B", "b", "AJTP"),
+            at("C", "c", "AJTP"),
+            at("D", "d", "A---"),
         ];
-        let rolled = roll_up(nodes, levels, "A".into(), Level::L3);
+        let rolled = roll_up(nodes, held, "A".into(), m("--T-"));
         assert_eq!(rolled.covered, Figure { met: 3, total: 4, exact: true }, "D counted once at A");
         for parent in &rolled.children {
-            assert_eq!(parent.assurance, Level::L1, "{} lost D", parent.id);
+            assert_eq!(parent.marks, m("A---"), "{} lost D", parent.id);
             assert_eq!(parent.covered, Figure { met: 1, total: 2, exact: true }, "{}", parent.id);
             assert_eq!(parent.children.len(), 1, "{} does not show D", parent.id);
         }
@@ -379,16 +392,16 @@ mod tests {
     #[test]
     fn a_cycle_ends_and_counts_each_member_once() {
         let nodes = vec![node("A", "a", &["B"]), node("B", "b", &["A"])];
-        let levels = vec![at("A", "a", Level::L4), at("B", "b", Level::L2)];
-        let rolled = roll_up(nodes, levels, "A".into(), Level::L3);
-        assert_eq!(rolled.assurance, Level::L2);
+        let held = vec![at("A", "a", "AJTP"), at("B", "b", "AJ--")];
+        let rolled = roll_up(nodes, held, "A".into(), m("--T-"));
+        assert_eq!(rolled.marks, m("AJ--"));
         assert_eq!(rolled.covered.total, 2);
         assert_eq!(rolled.children.len(), 1);
         assert!(rolled.children[0].children.is_empty(), "the walk went round the cycle");
     }
 
-    /// An exempt clause leaves both the denominator and the assurance; a
-    /// partial one stays and is capped below the floor.
+    /// An exempt clause leaves both the denominator and the marks; a partial
+    /// one stays and never counts as tested or proved.
     ///
     /// @tests REQ-ROLLUP.exempt_leaves_denominator
     /// @tests REQ-ROLLUP.partial_capped
@@ -398,9 +411,9 @@ mod tests {
         a.clauses = vec![Some("a".into()), Some("x".into()), Some("p".into())];
         a.exempt = vec![Some("x".into())];
         a.partial_clauses = vec![Some("p".into())];
-        let levels = vec![at("A", "a", Level::L4), at("A", "p", Level::L4)];
-        let rolled = roll_up(vec![a], levels, "A".into(), Level::L3);
+        let held = vec![at("A", "a", "AJTP"), at("A", "p", "AJTP")];
+        let rolled = roll_up(vec![a], held, "A".into(), m("--T-"));
         assert_eq!(rolled.covered, Figure { met: 1, total: 2, exact: true });
-        assert_eq!(rolled.assurance, PARTIAL_CAP);
+        assert_eq!(rolled.marks, m("AJ--"));
     }
 }

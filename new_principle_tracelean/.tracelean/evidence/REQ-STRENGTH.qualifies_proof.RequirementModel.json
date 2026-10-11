@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "re-recorded: clause text identical to the text judged and model unchanged; only the clause hash changed"
+      "note": "Wording change only: the proved mark is shown with its strength as pinned/attempted/open."
     }
   },
   "linkHash": "49ceb3e6f6ad0d21",
   "inputs": [
     [
       "requirement",
-      "cacb63e69439addc"
+      "65aeda31cbec6a7d"
     ],
     [
       "model",

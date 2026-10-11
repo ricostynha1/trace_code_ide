@@ -45,9 +45,9 @@ fn truecolour(hex: &str, bold: bool) -> String {
 /// frontend's business and nobody else's — and the window reads the same file,
 /// so the two cannot disagree about it.
 ///
-/// A level is coloured by its grade, and the four are meant to be told apart at
-/// a glance. The grade comes from the span — reading `L3` out of the text to
-/// decide would be this frontend parsing the buffer.
+/// A mark is coloured by which it is, and a gap in one colour whatever it
+/// stands for. Both come from the span — reading `T` out of the text to decide
+/// would be this frontend parsing the buffer.
 ///
 /// Which section and key, and which roles are bold, is the core's `look_of`:
 /// the same answer the suite that reads this frontend's cells back checks

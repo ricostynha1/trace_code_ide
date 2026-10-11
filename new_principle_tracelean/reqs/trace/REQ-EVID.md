@@ -5,28 +5,33 @@ refines: [ARCH-HONEST, ARCH-CORE-SHELL]
 status: approved
 decomposition: complete
 clauses:
-  ladder: Evidence levels shall be totally ordered, with annotation below judgement below differential testing below proof.
+  marks: A clause's evidence shall be four marks — annotated, judged, differentially tested and proved — each held or not independently, none implying another.
   bonds_separate: The requirement-to-model, model-to-implementation and model-property bonds shall be graded independently.
-  absent_is_lowest: A bond with no evidence record shall contribute the lowest level.
-  weakest_link: A link's assurance shall be the minimum over its bonds, and shall never be an average.
-  monotone: Adding an evidence record shall never lower an assurance.
-  chain_rendered: An assurance shall be presentable as a per-bond chain, not only as a single value.
+  mark_per_bond: The judged mark shall be held from a judgement of the requirement-to-model bond, the tested mark from a differential run of the model-to-implementation bond, and the proved mark from a proof of the model-property bond, and from nothing else.
+  absent_is_unset: A bond with no evidence record shall leave its mark unset.
+  monotone: Adding an evidence record shall never clear a mark.
+  marks_written: Marks shall be written in fixed positions, A J T P, with a dash for each mark not held, so that a gap names what is missing.
   judgement_caps: A judgement shall contribute at most the second level and shall never promote a link to tested or proved.
   record_reproducible: An evidence record shall carry what is needed to reproduce it, and shall not be expressible without it.
 ---
 
 # Evidence algebra
 
-An annotation is a claim; evidence is what backs it, and grading it is the
-difference between a document and an assurance.
+An annotation is a claim; evidence is what backs it, and saying which evidence
+is the difference between a document and an assurance.
 
-`weakest_link` is the most important rule here. A proved model whose
-implementation nobody bound to it is not three-quarters assured — it must read
-`L4 model · L1 code`. Collapsed into one averaged number, the number has no
-referent and a team acts on it anyway. `bonds_separate` is what makes the rule
-expressible: without three independent bonds there is nothing to take a minimum
-over.
+The marks are independent because the work is. A model can be proved and
+differentially tested before anybody has judged that it says what the clause
+says; a single level on a ladder would read that as "annotated only", hiding two
+of the three things done, and an average would invent a figure nothing
+established. `AJTP` with gaps (`A-TP`) says exactly what is held and what is
+missing. `bonds_separate` is what makes the marks expressible: each comes from
+its own bond.
+
+A record still carries a level: a judgement is the second, a differential run
+the third, a proof the fourth. The level says what kind of record it is and
+caps what it can set (`judgement_caps`); it is not summed or ranked across bonds.
 
 `monotone` keeps the algebra sane under incremental work — evidence accumulating
 must never make the display worse. It constrains *adding* a record;
-[REQ-STALE](REQ-STALE.md) may lower an assurance, and must.
+[REQ-STALE](REQ-STALE.md) may clear a mark, and must.

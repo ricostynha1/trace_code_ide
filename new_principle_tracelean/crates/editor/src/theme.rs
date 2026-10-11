@@ -58,12 +58,11 @@ mod tests {
     #[test]
     fn the_shipped_theme_names_every_role() {
         let theme: Value = serde_json::from_str(SHIPPED).unwrap();
-        for role in ["plain", "path", "entry", "heading", "requirement", "level", "added", "removed"]
-        {
+        for role in ["plain", "path", "entry", "heading", "requirement", "added", "removed"] {
             assert!(colour(&theme, "roles", role).is_some(), "no colour for `{role}`");
         }
-        for grade in ["levelL1", "levelL2", "levelL3", "levelL4"] {
-            assert!(colour(&theme, "roles", grade).is_some(), "no colour for `{grade}`");
+        for mark in ["markAnnotated", "markJudged", "markTested", "markProved", "markMissing"] {
+            assert!(colour(&theme, "roles", mark).is_some(), "no colour for `{mark}`");
         }
     }
 

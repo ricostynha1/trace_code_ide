@@ -1,30 +1,30 @@
 {
   "key": {
     "reqId": "REQ-EVID",
-    "clause": "weakest_link",
+    "clause": "marks_written",
     "bond": "modelImpl"
   },
   "level": "L3",
   "detail": {
     "drt": {
-      "seed": 7,
-      "cases": 2000,
-      "op": "REQ-EVID.weakest_link"
+      "seed": 29,
+      "cases": 1000,
+      "op": "REQ-EVID.marks_written"
     }
   },
-  "linkHash": "585a2599df5e5ec1",
+  "linkHash": "a7736b031a228fb2",
   "inputs": [
     [
       "implementation",
-      "ab4982978eec7f8b+d934f495a6aee879"
+      "644bf118fba64a36"
     ],
     [
       "model",
-      "d47ffb3b29e8752b"
+      "9687c753fed48a43"
     ],
     [
       "requirement",
-      "32f9f3bb103c0c04"
+      "bcad2263016bccfb"
     ]
   ]
 }

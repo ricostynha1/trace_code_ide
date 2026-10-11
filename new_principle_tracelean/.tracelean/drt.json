@@ -79,29 +79,34 @@
     },
     {
       "req_id": "REQ-EVID",
-      "clause": "weakest_link",
+      "clause": "mark_per_bond",
       "floors": [
         {
           "situation": "exercised all three bonds",
           "atLeast": 50
+        },
+        {
+          "situation": "a mark held without the one before it",
+          "atLeast": 200
         }
       ],
       "also_checks": [
-        "absent_is_lowest",
+        "absent_is_unset",
         "bonds_separate",
-        "ladder",
+        "marks",
         "monotone"
       ],
       "model": {
         "import": "TraceLean.Evidence",
-        "function": "TraceLean.Evidence.assurance",
+        "function": "TraceLean.Evidence.marks",
         "arguments": [
-          "records"
+          "records",
+          "annotated"
         ]
       },
       "implementation": {
         "language": "rust",
-        "entry": "crates/core/src/evidence.rs::assurance"
+        "entry": "crates/core/src/evidence.rs::marks"
       }
     },
     {
@@ -756,35 +761,31 @@
     },
     {
       "req_id": "REQ-EVID",
-      "clause": "chain_rendered",
+      "clause": "marks_written",
       "floors": [
         {
-          "situation": "a chain whose bonds are not all equal",
-          "atLeast": 500
-        },
-        {
-          "situation": "a chain that is flat",
-          "atLeast": 50
-        },
-        {
-          "situation": "a chain with a bond nothing recorded",
+          "situation": "marks with a gap between two held",
           "atLeast": 200
         },
         {
-          "situation": "a chain with all three bonds recorded",
-          "atLeast": 200
+          "situation": "no mark held",
+          "atLeast": 30
+        },
+        {
+          "situation": "every mark held",
+          "atLeast": 30
         }
       ],
       "model": {
         "import": "TraceLean.Evidence",
-        "function": "TraceLean.Evidence.chain",
+        "function": "TraceLean.Evidence.written",
         "arguments": [
-          "records"
+          "marks"
         ]
       },
       "implementation": {
         "language": "rust",
-        "entry": "crates/core/src/evidence.rs::chain"
+        "entry": "crates/core/src/evidence.rs::written"
       }
     },
     {
@@ -1558,7 +1559,7 @@
         "function": "TraceLean.Rollup.rollUp",
         "arguments": [
           "nodes",
-          "levels",
+          "held",
           "root",
           "floor"
         ]
@@ -1570,14 +1571,14 @@
     },
     {
       "req_id": "REQ-ROLLUP",
-      "clause": "min_not_mean",
+      "clause": "every_part_holds",
       "floors": [
         {
-          "situation": "levels that are not all the same",
+          "situation": "parts that do not all hold the same marks",
           "atLeast": 500
         },
         {
-          "situation": "every level the same",
+          "situation": "every part the same",
           "atLeast": 50
         },
         {
@@ -1589,7 +1590,7 @@
         "import": "TraceLean.Rollup",
         "function": "TraceLean.Rollup.combine",
         "arguments": [
-          "levels"
+          "parts"
         ]
       },
       "implementation": {
@@ -2692,8 +2693,8 @@
       "clause": "index_from_requirements",
       "floors": [
         { "situation": "no requirements at all", "atLeast": 400 },
-        { "situation": "a requirement whose evidence reached L1", "atLeast": 820 },
-        { "situation": "a requirement whose evidence reached L4", "atLeast": 840 },
+        { "situation": "a requirement holding no mark", "atLeast": 360 },
+        { "situation": "a requirement holding every mark", "atLeast": 370 },
         { "situation": "two requirements or more", "atLeast": 1290 }
       ],
       "model": {

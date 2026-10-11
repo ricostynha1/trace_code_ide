@@ -1,7 +1,7 @@
 {
   "key": {
     "reqId": "REQ-EVID",
-    "clause": "ladder",
+    "clause": "marks",
     "bond": "requirementModel"
   },
   "level": "L2",
@@ -11,18 +11,18 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "re-recorded: clause text identical to the text judged and model unchanged; only the clause hash changed"
+      "note": "Marks is four independent Bools; every_combination_is_reachable shows all sixteen occur."
     }
   },
-  "linkHash": "8de5a7334cde5bd3",
+  "linkHash": "f9ad64f1cb5668dd",
   "inputs": [
     [
       "requirement",
-      "01cbff43e1a880c0"
+      "712e1124dbf7cd19"
     ],
     [
       "model",
-      "99d1fb18af025d88"
+      "db2758d1b5fa8a3a"
     ]
   ]
 }

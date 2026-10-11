@@ -11,18 +11,18 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+      "note": "combine ANDs each mark over the parts; no averaging or majority exists in the model."
     }
   },
   "linkHash": "673b93f13a696d06",
   "inputs": [
     [
       "requirement",
-      "883a5bf07791b64f"
+      "b494971e3ddb6e27"
     ],
     [
       "model",
-      "30f0a5ab73add768"
+      "9d57426604aad65f"
     ]
   ]
 }

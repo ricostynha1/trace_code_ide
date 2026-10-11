@@ -1,8 +1,9 @@
 //! Roll-up, checked against the model.
 //!
-//! The rule is that an aggregate is the minimum and never an average. A mean
-//! would report a level nothing established, and this is the one output people
-//! quote without reading what produced it.
+//! The rule is that an aggregate holds a mark only when every part holds it,
+//! never by average or majority. A mean would report evidence nothing
+//! established, and this is the one output people quote without reading what
+//! produced it.
 
 mod harness;
 mod support;
@@ -12,35 +13,31 @@ use std::collections::{BTreeMap, BTreeSet};
 use tracelean_core::drt::run::{run, RunOptions};
 use tracelean_core::drt::schema::Schema;
 
-const OP: &str = "REQ-ROLLUP.min_not_mean";
+const OP: &str = "REQ-ROLLUP.every_part_holds";
 
 fn input_schema() -> Schema {
-    let mut variants: BTreeMap<String, Option<Box<Schema>>> = BTreeMap::new();
-    for name in ["L1", "L2", "L3", "L4"] {
-        variants.insert(name.to_string(), None);
-    }
     let mut fields = BTreeMap::new();
     fields.insert(
-        "levels".to_string(),
-        Schema::List { inner: Box::new(Schema::Enum { variants }), max_len: Some(5) },
+        "parts".to_string(),
+        Schema::List { inner: Box::new(support::marks()), max_len: Some(5) },
     );
     Schema::Struct { fields }
 }
 
-/// @drt REQ-ROLLUP.min_not_mean
-/// @tests REQ-ROLLUP.min_not_mean
+/// @drt REQ-ROLLUP.every_part_holds
+/// @tests REQ-ROLLUP.every_part_holds
 #[test]
 #[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
 fn model_and_implementation_agree_on_aggregation() {
     let scratch = harness::scratch("rollup");
     let implementation = harness::rust_runner(
         "REQ-ROLLUP",
-        "min_not_mean",
+        "every_part_holds",
         "crates/core/src/trace/rollup.rs::combine",
         &scratch,
     );
     let model =
-        harness::lean_runner("TraceLean.Rollup", "TraceLean.Rollup.combine", OP, &["levels"], &scratch);
+        harness::lean_runner("TraceLean.Rollup", "TraceLean.Rollup.combine", OP, &["parts"], &scratch);
 
     let result = run(
         OP,
@@ -56,14 +53,15 @@ fn model_and_implementation_agree_on_aggregation() {
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
-/// The property that rules out an average: the result is always one of the
-/// inputs. Checked directly, because it is the whole content of the rule.
+/// The property that rules out an average or a majority: a mark is held
+/// exactly when every part holds it. Checked directly, because it is the whole
+/// content of the rule.
 ///
 /// @tests ARCH-HONEST.weakest_link
 #[test]
-fn the_result_is_always_one_of_the_inputs() {
+fn a_mark_is_held_only_when_every_part_holds_it() {
     use tracelean_core::drt::gen;
-    use tracelean_core::evidence::Level;
+    use tracelean_core::evidence::Marks;
     use tracelean_core::trace::rollup::combine;
 
     let schema = input_schema();
@@ -71,28 +69,31 @@ fn the_result_is_always_one_of_the_inputs() {
     let (mut mixed, mut uniform, mut empty) = (0u64, 0u64, 0u64);
     for _ in 0..2_000 {
         let v = gen::value(&schema, &mut rng);
-        let levels: Vec<Level> = serde_json::from_value(v["levels"].clone()).unwrap();
-        let result = combine(levels.clone());
-        if levels.is_empty() {
-            assert_eq!(result, Level::L1, "nothing to aggregate is the lowest");
+        let parts: Vec<Marks> = serde_json::from_value(v["parts"].clone()).unwrap();
+        let result = combine(parts.clone());
+        if parts.is_empty() {
+            assert_eq!(result, Marks::NONE, "nothing to aggregate holds no mark");
             empty += 1;
+            continue;
+        }
+        for (i, (_, held, _)) in result.each().iter().enumerate() {
+            let every = parts.iter().all(|p| p.each()[i].1);
+            assert_eq!(*held, every, "{result:?} from {parts:?}");
+        }
+        if parts.iter().any(|p| *p != parts[0]) {
+            mixed += 1;
         } else {
-            assert!(levels.contains(&result), "{result:?} is not one of {levels:?}");
-            if levels.iter().any(|l| *l != levels[0]) {
-                mixed += 1;
-            } else {
-                uniform += 1;
-            }
+            uniform += 1;
         }
     }
-    // Mixed levels are the cases with content: a run where every input was the
-    // same level cannot tell a minimum from a mean, from a maximum, or from
-    // returning the first thing it was given.
+    // Mixed parts are the cases with content: a run where every part was the
+    // same cannot tell an all from a majority, or from returning the first
+    // thing it was given.
     support::covered(
         OP,
         &[
-            ("levels that are not all the same", mixed),
-            ("every level the same", uniform),
+            ("parts that do not all hold the same marks", mixed),
+            ("every part the same", uniform),
             ("nothing to aggregate", empty),
         ],
     );
@@ -122,10 +123,6 @@ fn clause_key() -> Schema {
     }
 }
 
-fn level_schema() -> Schema {
-    Schema::simple_enum(&["L1", "L2", "L3", "L4"])
-}
-
 fn graph_input() -> Schema {
     let node = strukt2(&[
         ("id", req_id()),
@@ -138,19 +135,19 @@ fn graph_input() -> Schema {
     strukt2(&[
         ("nodes", Schema::List { inner: Box::new(node), max_len: Some(4) }),
         (
-            "levels",
+            "held",
             Schema::List {
                 inner: Box::new(Schema::Tuple {
                     items: vec![
                         Schema::Tuple { items: vec![req_id(), clause_key()] },
-                        level_schema(),
+                        support::marks(),
                     ],
                 }),
                 max_len: Some(4),
             },
         ),
         ("root", req_id()),
-        ("floor", level_schema()),
+        ("floor", support::marks()),
     ])
 }
 
@@ -176,7 +173,7 @@ fn model_and_implementation_agree_on_rolling_a_graph_up() {
         "TraceLean.Rollup",
         "TraceLean.Rollup.rollUp",
         op,
-        &["nodes", "levels", "root", "floor"],
+        &["nodes", "held", "root", "floor"],
         &scratch,
     );
 
@@ -278,7 +275,7 @@ fn an_open_figure_is_always_marked() {
 #[test]
 fn the_roll_up_is_a_function_of_the_graph_and_never_flatters_it() {
     use tracelean_core::drt::gen;
-    use tracelean_core::evidence::Level;
+    use tracelean_core::evidence::Marks;
     use tracelean_core::trace::rollup::{roll_up, Node};
 
     let schema = graph_input();
@@ -291,12 +288,12 @@ fn the_roll_up_is_a_function_of_the_graph_and_never_flatters_it() {
     for _ in 0..10_000 {
         let v = gen::value(&schema, &mut rng);
         let nodes: Vec<Node> = serde_json::from_value(v["nodes"].clone()).unwrap();
-        let levels: Vec<((String, Option<String>), Level)> =
-            serde_json::from_value(v["levels"].clone()).unwrap();
+        let held: Vec<((String, Option<String>), Marks)> =
+            serde_json::from_value(v["held"].clone()).unwrap();
         let root = v["root"].as_str().unwrap().to_string();
-        let floor: Level = serde_json::from_value(v["floor"].clone()).unwrap();
+        let floor: Marks = serde_json::from_value(v["floor"].clone()).unwrap();
 
-        let rolled = roll_up(nodes.clone(), levels.clone(), root.clone(), floor);
+        let rolled = roll_up(nodes.clone(), held.clone(), root.clone(), floor);
 
         // Order independence, where the graph is well formed. Two nodes
         // declaring the same identifier is a `DuplicateId` fault reported by
@@ -308,7 +305,7 @@ fn the_roll_up_is_a_function_of_the_graph_and_never_flatters_it() {
             reversed.reverse();
             assert_eq!(
                 rolled,
-                roll_up(reversed, levels.clone(), root.clone(), floor),
+                roll_up(reversed, held.clone(), root.clone(), floor),
                 "the roll-up depends on the order nodes arrive in"
             );
         }
@@ -339,7 +336,7 @@ fn the_roll_up_is_a_function_of_the_graph_and_never_flatters_it() {
             }
             if node.clauses.iter().any(|c| node.partial_clauses.contains(c) && !node.exempt.contains(c)) {
                 partial += 1;
-                assert!(rolled.covered.met < rolled.covered.total || floor <= Level::L2);
+                assert!(rolled.covered.met < rolled.covered.total || !(floor.tested || floor.proved));
             }
         }
         if paths.values().any(|n| *n > 1) {

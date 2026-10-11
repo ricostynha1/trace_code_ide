@@ -73,21 +73,21 @@ inductive Role where
   | heading
   /-- A requirement or clause identifier. -/
   | requirement
-  /-- An evidence level, and which one.
+  /-- One position of a clause's evidence marks (`AJTP`), which mark it is, and
+  whether it is held or a dash.
 
-  The grade is carried rather than left in the text. A frontend that had to
-  read `L3` out of the characters to colour it would be parsing the buffer,
-  which is the one thing a frontend may not do; and one that could not tell L1
-  from L4 would have to paint every level the same, which is the whole of what
-  a colour is for here. -/
-  | level (grade : TraceLean.Evidence.Level)
+  Carried rather than left in the text. A frontend that had to read `T` out of
+  the characters to colour it would be parsing the buffer, which is the one
+  thing a frontend may not do; and one that could not tell a held mark from a
+  gap would paint them the same, which is the whole of what a colour is for. -/
+  | mark (mark : TraceLean.Evidence.Mark) (held : Bool)
   /-- A line a change added. -/
   | added
   /-- A line a change removed. -/
   | removed
   /-- A token of source code, and what kind: what syntax highlighting colours.
-  The kind comes from parsing, in the core, for the reason a level carries its
-  grade. -/
+  The kind comes from parsing, in the core, for the reason a mark carries which
+  it is. -/
   | token (kind : TokenKind)
   /-- What a claim on a requirement is -- implements, tests, models, proves --
   so each is coloured as its gutter chip is. -/

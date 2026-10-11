@@ -1,10 +1,10 @@
 ---
 describes: [REQ-SHOW, REQ-ACT, REQ-LOCK, REQ-ROLLUP]
 described_hash:
-  REQ-SHOW: ef7db576d47e74de
+  REQ-SHOW: 4489cd043cd925da
   REQ-ACT: 79e056ad0341b89d
   REQ-LOCK: bac341f63b8d1e71
-  REQ-ROLLUP: 44424fd9e2e5f00a
+  REQ-ROLLUP: 86ff29fed6f52569
 ---
 
 # The editor, end to end
@@ -35,8 +35,9 @@ One function per kind, in `surface::produce`:
 The last two are stations' content, and all three are producers for the same
 reason the rest are: a window that knew what a requirement index looks like and
 a terminal that did not would be two editors. Both of the first two carry the
-evidence level in a span (`Role::Level(grade)`) rather than leaving it in the
-text, so a frontend colours L1 apart from L4 without parsing what it was given.
+evidence marks in spans, one a letter (`Role::Mark { mark, held }`), rather than
+leaving them in the text, so a frontend colours a gap apart from a proof without
+parsing what it was given.
 The graph walk is bounded — `refines` is data, a cycle in it is representable,
 and a walk without a bound would not be a function.
 
@@ -111,16 +112,16 @@ fills it is a read of the tree:
 | Report | Reads |
 |---|---|
 | `check`, `findings` | the index, through `checker::check` |
-| `evidence` | the roles claiming each clause, and the level the lock records |
+| `evidence` | the roles claiming each clause, and the marks it holds |
 | `lock` | renders the index and writes `.tracelean/trace.lock` |
-| `rollup` | `rollup::tree` per root, coverage at floor L3 |
+| `rollup` | `rollup::tree` per root, covered where a clause is tested |
 | `stale` | every doclink's state |
 | `drt bindings` | `.tracelean/drt.json` |
 | `history`, `observed` | the history tree, and what watching saw |
 
-A clause's level comes from the lock and never from the tree: an annotation is a
-claim, and a claim is L1 until a backend earns more. A project with no lock reads
-L1 everywhere and says so.
+A clause's marks past `A` come from the lock and never from the tree: an
+annotation is a claim, and holds nothing more until a backend earns it. A
+project with no lock reads `A---` at most and says so.
 
 `drt run`, `drt shrink` and `drt coverage` name the command instead of answering
 — producing them means starting a process, and this editor starts none
@@ -137,15 +138,11 @@ work is undoable for the same reason typing is. `observe.reject` drops them and
 leaves the tree alone — deleting another process's work on a keystroke is not a
 decision this editor makes for anybody.
 
-The `evidence` report shows the per-bond chain beside the minimum
-(`REQ-EVID.chain_rendered`): a clause with a proved model and an unchecked
-implementation reads `L1/L1/L4`, which is a different situation from `L1/L1/L1`
-and calls for different work.
+The `evidence` report writes each clause's marks in place
+(`REQ-EVID.marks_written`): a clause with a proved model and an unchecked
+implementation reads `A--P`, which is a different situation from `A---` and
+calls for different work.
 
 ## Still open
 
-- The model↔implementation bond is L1 everywhere, because no binding declares
-  coverage floors and L3 needs one met. See [04-coverage](04-coverage.md).
-- No clause has been judged, so the requirement↔model bond is L1 too. That rung
-  is a person's.
 - Nobody has opened the desktop window (see [05-view](05-view.md)).

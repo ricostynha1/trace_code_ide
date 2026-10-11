@@ -9,22 +9,22 @@
     "drt": {
       "seed": 37,
       "cases": 2000,
-      "op": "REQ-ROLLUP.min_not_mean"
+      "op": "REQ-ROLLUP.every_part_holds"
     }
   },
   "linkHash": "e74a2afe478396bc",
   "inputs": [
     [
       "implementation",
-      "b9b7749514a5a105"
+      "57403df8c3e42203"
     ],
     [
       "model",
-      "30f0a5ab73add768"
+      "9d57426604aad65f"
     ],
     [
       "requirement",
-      "883a5bf07791b64f"
+      "b494971e3ddb6e27"
     ]
   ]
 }

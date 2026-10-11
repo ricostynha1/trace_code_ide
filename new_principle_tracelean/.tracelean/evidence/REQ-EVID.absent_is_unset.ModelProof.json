@@ -1,25 +1,25 @@
 {
   "key": {
     "reqId": "REQ-EVID",
-    "clause": "chain_rendered",
+    "clause": "absent_is_unset",
     "bond": "modelProof"
   },
   "level": "L4",
   "detail": {
     "proof": {
-      "theoremName": "TraceLean.Evidence::the_chain_is_each_bond",
+      "theoremName": "TraceLean.Evidence::no_records_set_no_mark",
       "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
     }
   },
-  "linkHash": "18ab2d78215628fb",
+  "linkHash": "cb3f270e4d6b9a8b",
   "inputs": [
     [
       "model",
-      "ef9574811b50a30d"
+      "e09d0d6a6454a4f9"
     ],
     [
       "requirement",
-      "a148857f83c8eb80"
+      "9ed5003dbd9eeec9"
     ],
     [
       "toolchain",

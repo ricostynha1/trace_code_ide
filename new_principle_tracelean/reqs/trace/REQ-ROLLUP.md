@@ -5,15 +5,15 @@ refines: [ARCH-HONEST, ARCH-CORE-SHELL]
 status: approved
 decomposition: complete
 clauses:
-  min_not_mean:
-    text: An aggregate over children shall take the minimum assurance, never the mean.
-    empty: With no parts to aggregate, the aggregate shall be L1.
+  every_part_holds:
+    text: An aggregate over children shall hold a mark only when every counted part holds it, never by mean or majority.
+    empty: With no parts to aggregate, the aggregate shall hold no mark.
   open_is_lower_bound: A roll-up over an unclaimed decomposition shall be marked provisional, because a clause not yet written can only lower it.
   never_complete_when_open: A requirement with an unclaimed decomposition shall never render as finished.
-  exempt_leaves_denominator: An exempted clause shall leave the coverage denominator and the assurance.
+  exempt_leaves_denominator: An exempted clause shall leave the coverage denominator and the aggregate marks.
   partial_capped:
-    text: A clause marked partial shall remain in the coverage denominator with its contribution capped below the level at which anything ran.
-    cap: The cap shall be L2, so a partial clause never meets a floor of L3 or above.
+    text: A clause marked partial shall remain in the coverage denominator with its contribution capped below anything that ran.
+    cap: A partial clause shall never count as tested or proved, so it never meets a floor asking for either.
   untraced_counted: A file that no annotation claims shall appear in the denominator of every per-file coverage figure that covers it.
   deterministic_order: Roll-up shall not depend on the order in which requirements are declared or children are visited.
   counted_once:

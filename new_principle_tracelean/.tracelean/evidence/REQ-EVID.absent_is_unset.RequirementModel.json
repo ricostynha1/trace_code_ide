@@ -1,7 +1,7 @@
 {
   "key": {
     "reqId": "REQ-EVID",
-    "clause": "weakest_link",
+    "clause": "absent_is_unset",
     "bond": "requirementModel"
   },
   "level": "L2",
@@ -11,18 +11,18 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "re-recorded: clause text identical to the text judged, model declaration byte-identical; only hashes moved"
+      "note": "bondLevel defaults to L1, below every mark's threshold, so an unrecorded bond sets nothing."
     }
   },
-  "linkHash": "d07d2c299d150f19",
+  "linkHash": "10a8ba661b21de36",
   "inputs": [
     [
       "requirement",
-      "32f9f3bb103c0c04"
+      "9ed5003dbd9eeec9"
     ],
     [
       "model",
-      "d47ffb3b29e8752b"
+      "e09d0d6a6454a4f9"
     ]
   ]
 }

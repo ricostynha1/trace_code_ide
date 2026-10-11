@@ -1,30 +1,30 @@
 {
   "key": {
-    "reqId": "REQ-ROLLUP",
-    "clause": "min_not_mean",
+    "reqId": "REQ-EVID",
+    "clause": "marks",
     "bond": "modelImpl"
   },
   "level": "L3",
   "detail": {
     "drt": {
-      "seed": 37,
+      "seed": 7,
       "cases": 2000,
-      "op": "REQ-ROLLUP.min_not_mean"
+      "op": "REQ-EVID.mark_per_bond"
     }
   },
-  "linkHash": "2283cc271faeda18",
+  "linkHash": "2496b29593154436",
   "inputs": [
     [
       "implementation",
-      "b9b7749514a5a105"
+      "44d66765baf6588d"
     ],
     [
       "model",
-      "30f0a5ab73add768"
+      "db2758d1b5fa8a3a"
     ],
     [
       "requirement",
-      "dc86e49bc935989a"
+      "712e1124dbf7cd19"
     ]
   ]
 }

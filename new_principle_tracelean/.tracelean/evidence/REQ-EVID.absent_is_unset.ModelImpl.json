@@ -1,7 +1,7 @@
 {
   "key": {
     "reqId": "REQ-EVID",
-    "clause": "absent_is_lowest",
+    "clause": "absent_is_unset",
     "bond": "modelImpl"
   },
   "level": "L3",
@@ -9,10 +9,10 @@
     "drt": {
       "seed": 7,
       "cases": 2000,
-      "op": "REQ-EVID.weakest_link"
+      "op": "REQ-EVID.mark_per_bond"
     }
   },
-  "linkHash": "0488e447971a5c48",
+  "linkHash": "077034da43e7b0d0",
   "inputs": [
     [
       "implementation",
@@ -24,7 +24,7 @@
     ],
     [
       "requirement",
-      "2836ae8e9a75e559"
+      "9ed5003dbd9eeec9"
     ]
   ]
 }

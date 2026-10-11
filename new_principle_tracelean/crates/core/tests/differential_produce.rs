@@ -204,11 +204,11 @@ fn generation_reaches_every_role_and_the_one_that_affords_nothing() {
             }
         }
     }
-    // Nineteen and not eight: `level` carries a grade, so there are four of
-    // it, `claim` its kind, six, and `token` two kinds; a run that reached only
-    // one of them would say nothing about a frontend that colours L1 and L4
-    // the same.
-    assert_eq!(roles.len(), 19, "only {roles:?} of the nineteen roles were generated");
+    // Twenty-three and not eight: `mark` carries which of four and whether it
+    // is held, so there are eight of it, `claim` its kind, six, and `token` two
+    // kinds; a run that reached only one of them would say nothing about a
+    // frontend that colours a gap and a proof the same.
+    assert_eq!(roles.len(), 23, "only {roles:?} of the twenty-three roles were generated");
     support::covered(
         "REQ-SHOW.actions_by_role",
         &[

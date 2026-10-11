@@ -1,7 +1,7 @@
 {
   "key": {
     "reqId": "REQ-EVID",
-    "clause": "chain_rendered",
+    "clause": "mark_per_bond",
     "bond": "requirementModel"
   },
   "level": "L2",
@@ -11,18 +11,18 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "re-recorded: clause text identical to the text judged and model unchanged; only the clause hash changed"
+      "note": "marks reads judged from RM>=L2, tested from MI>=L3, proved from MP>=L4 and annotated from its argument only."
     }
   },
-  "linkHash": "6f8aa811ccc39957",
+  "linkHash": "eac2caae256dee44",
   "inputs": [
     [
       "requirement",
-      "a148857f83c8eb80"
+      "bcf322481f7fdbc5"
     ],
     [
       "model",
-      "ef9574811b50a30d"
+      "a1cef9e4de9c1212"
     ]
   ]
 }
