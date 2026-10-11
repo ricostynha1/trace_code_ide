@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-SCREEN",
+    "clause": "one_arrangement_path",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Screen::a_key_and_a_pointer_arrange_alike",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "7cc2512ff0daa0fe",
+  "inputs": [
+    [
+      "model",
+      "f33bd6ef77cd82b4"
+    ],
+    [
+      "requirement",
+      "51bd2b4ab2f30637"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

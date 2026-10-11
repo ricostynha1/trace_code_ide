@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-SELFWRITE",
+    "clause": "own_writes_ignored",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Mirror::an_own_write_is_suppressed",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "1926af616eac3f9b",
+  "inputs": [
+    [
+      "model",
+      "e203d47d41f94328"
+    ],
+    [
+      "requirement",
+      "40ba3ed235418db1"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

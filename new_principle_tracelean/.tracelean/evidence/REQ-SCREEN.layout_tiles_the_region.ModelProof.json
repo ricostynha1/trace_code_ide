@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-SCREEN",
+    "clause": "layout_tiles_the_region",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Screen::placing_tiles_the_region",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "77fb97ac3d9d6c42",
+  "inputs": [
+    [
+      "model",
+      "737eeaaa0cd574c1"
+    ],
+    [
+      "requirement",
+      "423d198cdcacd0b8"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

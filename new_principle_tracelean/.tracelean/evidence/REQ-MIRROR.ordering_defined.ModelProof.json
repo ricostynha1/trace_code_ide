@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-MIRROR",
+    "clause": "ordering_defined",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Mirror::mutations_run_in_an_order_that_fits",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "fb451a2ebd5a4fe7",
+  "inputs": [
+    [
+      "model",
+      "33dad4e741f81e93"
+    ],
+    [
+      "requirement",
+      "9b87579730b59a14"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

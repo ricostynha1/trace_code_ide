@@ -981,4 +981,165 @@ says, for every layout.
 theorem distinct_panes_answers (layout : Layout) : PanesDistinct layout (distinctPanes layout) :=
   panes_distinct_pinned.1 layout
 
+/-! ## What holds of the arrangement -/
+
+/-- An empty buffer of an identity and kind. -/
+def bare (id : String) (kind : BufferKind) : Buffer := ⟨id, kind, "", []⟩
+
+/-- The workbench over a listing, a file and the design. -/
+def bench : Screen :=
+  workbench (bare "dir:." (.directory ".")) (bare "file:a.rs" (.file "a.rs")) (bare "menu:design" (.menu "design"))
+
+/-- An eighty by twenty-four region. -/
+def region : Rect := ⟨0, 0, 80, 24⟩
+
+/-- What a screen holds, as a value to compare: its panes, its focus, its opened
+buffers. -/
+def held (screen : Screen) : List (String × String) × String × List String :=
+  (panes screen.layout, screen.focus, screen.opened.map (·.id))
+
+/-- The weights of a split's parts. -/
+def weights : Layout → List Nat
+  | Layout.split _ parts => parts.map (·.1)
+  | Layout.pane _ _ => []
+
+/-- A session opens on the explorer, the document and the side panel side by
+side, the focus on the explorer.
+
+@proves REQ-SCREEN.workbench_has_three_places -/
+theorem the_workbench_is_three_places :
+    held bench = ([("explorer", "dir:."), ("document", "file:a.rs"), ("side", "menu:design")],
+                  "explorer", ["dir:.", "file:a.rs", "menu:design"]) ∧
+    place region bench.layout = [("explorer", ⟨0, 0, 20, 24⟩), ("document", ⟨20, 0, 40, 24⟩),
+                                 ("side", ⟨60, 0, 20, 24⟩)] := by
+  native_decide
+
+/-- What is on screen is one value: written out and read back, it is the same
+opened buffers, layout and focus.
+
+@proves REQ-SCREEN.screen_is_a_value -/
+theorem the_screen_is_one_value :
+    ((Lean.fromJson? (α := Screen) (Lean.toJson bench)).toOption.map held) = some (held bench) := by
+  native_decide
+
+/-- Every pane is given a rectangle and together they cover the region without
+gap or overlap, before a split and after one.
+
+@proves REQ-SCREEN.layout_tiles_the_region -/
+theorem placing_tiles_the_region :
+    place region (splitFocus .down bench).layout
+      = [("explorer", ⟨0, 0, 20, 12⟩), ("pane0", ⟨0, 12, 20, 12⟩),
+         ("document", ⟨20, 0, 40, 24⟩), ("side", ⟨60, 0, 20, 24⟩)] ∧
+    place region (closeBuffer "file:a.rs" bench).layout
+      = [("explorer", ⟨0, 0, 40, 24⟩), ("side", ⟨40, 0, 40, 24⟩)] := by
+  native_decide
+
+/-- Every buffer placed is opened, through every change; a pane showing a buffer
+nobody opened is caught.
+
+@proves REQ-SCREEN.every_pane_is_opened -/
+theorem every_placed_buffer_is_opened :
+    coherent bench = true ∧ coherent (splitFocus .down bench) = true ∧
+    coherent (closeBuffer "file:a.rs" bench) = true ∧
+    coherent { bench with opened := bench.opened.drop 1 } = false := by
+  native_decide
+
+/-- The focus is on a placed pane, and a pointer naming a pane nothing places
+leaves it there.
+
+@proves REQ-SCREEN.focus_is_placed -/
+theorem the_focus_stays_on_the_layout :
+    (arrange (.focusPane "nowhere") region bench).focus = "explorer" ∧
+    coherent { bench with focus := "nowhere" } = false ∧
+    (arrange .close region { bench with focus := "document" }).focus = "explorer" := by
+  native_decide
+
+/-- Splitting leaves the buffer that was there in both halves.
+
+@proves REQ-SCREEN.split_keeps_the_buffer -/
+theorem a_split_shows_the_buffer_twice :
+    held (splitFocus .down bench)
+      = ([("explorer", "dir:."), ("pane0", "dir:."), ("document", "file:a.rs"), ("side", "menu:design")],
+         "explorer", ["dir:.", "file:a.rs", "menu:design"]) := by
+  native_decide
+
+/-- Closing drops the buffer and gives its region to the rest; the last opened
+buffer stays.
+
+@proves REQ-SCREEN.close_collapses_the_pane -/
+theorem closing_gives_the_region_away :
+    held (closeBuffer "file:a.rs" bench)
+      = ([("explorer", "dir:."), ("side", "menu:design")], "explorer", ["dir:.", "menu:design"]) ∧
+    (closeBuffer "dir:." (closeBuffer "menu:design" (closeBuffer "file:a.rs" bench))).opened.length = 1 ∧
+    coherent (closeBuffer "dir:." (closeBuffer "menu:design" (closeBuffer "file:a.rs" bench))) = true := by
+  native_decide
+
+/-- Growing the explorer moves one weight across its divider, from the document,
+and no other pane's.
+
+@proves REQ-SCREEN.resize_moves_one_divider -/
+theorem a_resize_moves_one_divider :
+    weights (resizeFocus 1 bench).layout = [2, 1, 1] ∧
+    weights (resizeFocus 1 { bench with focus := "side" }).layout = [1, 1, 2] := by
+  native_decide
+
+/-- A resize that would leave either side below one is refused, every weight
+as it was.
+
+@proves REQ-SCREEN.resize_has_a_floor -/
+theorem a_resize_below_one_is_refused :
+    weights (resizeFocus (-1) bench).layout = [1, 2, 1] ∧
+    weights (resizeFocus 5 bench).layout = [1, 2, 1] := by
+  native_decide
+
+/-- A key and a pointer reach the one function: a key moving the focus right and
+a click on the pane to the right arrive at the same screen.
+
+@proves REQ-SCREEN.one_arrangement_path -/
+theorem a_key_and_a_pointer_arrange_alike :
+    held (arrange (.focus .right) region bench) = held (arrange (.focusPane "document") region bench) ∧
+    weights (arrange (.resize 1) region bench).layout = weights (resizeFocus 1 bench).layout := by
+  native_decide
+
+/-- The focus moves to the pane beside it in the direction asked, and stays put
+where there is none.
+
+@proves REQ-SCREEN.focus_follows_geometry -/
+theorem the_focus_moves_by_geometry :
+    [Direction.left, .right, .up, .down].map (focusStep region bench)
+      = ["explorer", "document", "explorer", "explorer"] ∧
+    [Direction.left, .right, .up, .down].map (focusStep region { bench with focus := "document" })
+      = ["explorer", "side", "document", "document"] := by
+  native_decide
+
+/-- The strip is a row an opened buffer, in the order opened, each naming the
+buffer it shows.
+
+@proves REQ-SCREEN.strip_is_the_opened_set -/
+theorem the_strip_lists_what_is_opened :
+    (strip bench).text = "1  files\n2  a.rs\n3  design" ∧
+    (strip bench).spans.map (·.actions)
+      = [["screen.show dir:."], ["screen.show file:a.rs"], ["screen.show menu:design"]] := by
+  native_decide
+
+/-- Opening a station's buffer shows it in the focused pane and changes nothing
+else about the layout.
+
+@proves REQ-SCREEN.station_opens_a_buffer -/
+theorem a_station_opens_where_the_focus_is :
+    held (openBuffer (bare "record:check" (.record "check")) bench)
+      = ([("explorer", "record:check"), ("document", "file:a.rs"), ("side", "menu:design")],
+         "explorer", ["dir:.", "file:a.rs", "menu:design", "record:check"]) := by
+  native_decide
+
+/-- A buffer goes to its kind's home pane while the layout places one, and to the
+focused pane once it does not.
+
+@proves REQ-SCREEN.buffer_goes_home -/
+theorem a_buffer_goes_home :
+    destination (.record "check") bench = "side" ∧ destination (.file "b.rs") bench = "document" ∧
+    destination (.record "requirement REQ-A") bench = "document" ∧
+    destination (.menu "x") (closeBuffer "menu:design" bench) = "explorer" := by
+  native_decide
+
 end TraceLean.Screen

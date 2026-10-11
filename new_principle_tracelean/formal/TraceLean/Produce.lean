@@ -385,8 +385,10 @@ private def coveredSpans (from_ : Nat) (node : Node) : List Span :=
   | none => []
   | some c =>
     if c.2 == 0 then [] else
+    -- Coloured as a diff's lines are, but no diff: it opens what was measured.
     let role := if c.1 == c.2 then Role.added else Role.removed
-    [{ start := from_, stop := from_ + (percentText c).length, role := role, actions := actionsFor role }]
+    [{ start := from_, stop := from_ + (percentText c).length, role := role,
+       actions := ["trace.coverage " ++ node.id] }]
 
 /-- The bar's filled cells, in the colour of what fills them, and the
 measured lines. -/
@@ -607,6 +609,105 @@ theorem a_menu_offers_what_its_keys_dispatch :
       [{ key := "t", description := "trace", action := none },
        { key := "u", description := "undo", action := some "history.undo" }]).spans.map
         (fun span => span.actions) = [[], ["history.undo"]] := by
+  native_decide
+
+/-! ## The stations' producers -/
+
+/-- Each span that does something: the text it covers and what it does. -/
+def linked (b : Buffer) : List (String × List String) :=
+  (b.spans.filter (!·.actions.isEmpty)).map
+    (fun s => (String.mk ((b.text.toList.drop s.start).take (s.stop - s.start)), s.actions))
+
+/-- A root, what refines it, and what refines that; the middle one measured. -/
+def graph : List Node :=
+  [⟨"ARCH-X", "Root", [], .L2, 1, 1, none⟩, ⟨"REQ-A", "Mid", ["ARCH-X"], .L3, 1, 2, some (3, 4)⟩,
+   ⟨"REQ-B", "Leaf", ["REQ-A"], .L1, 0, 1, none⟩]
+
+/-- A region known only by its role offers that role's actions, whichever
+producer marked it; a requirement's name offers the same in the index as in the
+graph.
+
+@proves REQ-SHOW.actions_by_role -/
+theorem a_role_offers_its_actions (marks : List Mark) :
+    (spansOfMarks marks).map (·.actions) = marks.map (fun m => actionsFor m.role) ∧
+    ((requirementsBuffer graph).spans.filter (·.role == .requirement)).map (·.actions)
+      = [actionsFor .requirement, actionsFor .requirement, actionsFor .requirement] ∧
+    ((designBuffer graph ["ARCH-X", "REQ-A"]).spans.filter (·.role == .requirement)).map (·.actions)
+      = [actionsFor .requirement, actionsFor .requirement, actionsFor .requirement] := by
+  refine ⟨?_, ?_⟩
+  · simp [spansOfMarks]
+  · native_decide
+
+/-- A file's buffer holds the file's text, and its spans are the parser's marks
+with their roles' actions.
+
+@proves REQ-SHOW.file_from_text -/
+theorem a_file_is_its_text (path text : String) (marks : List Mark) :
+    (fileBuffer path text marks).text = text ∧
+    (fileBuffer "a.rs" "fn f" [⟨0, 2, .path⟩]).spans = [⟨0, 2, .path, ["file.open"]⟩] := by
+  refine ⟨rfl, ?_⟩
+  native_decide
+
+/-- Observed events become one row each, each row marked.
+
+@proves REQ-SHOW.record_from_events -/
+theorem events_become_marked_rows :
+    linked (recordBuffer "obs" [⟨"changed", "a.rs"⟩, ⟨"said", "hi"⟩])
+      = [("changed: a.rs", ["observe.diff"]), ("said: hi", ["observe.diff"])] := by
+  native_decide
+
+/-- The requirement set becomes one row a requirement, its name and its level
+marked.
+
+@proves REQ-SHOW.index_from_requirements -/
+theorem one_row_a_requirement :
+    (requirementsBuffer graph).text
+      = "L2  ARCH-X  █████ 1/1  Root\nL3  REQ-A  ███░░ 1/2  lines 75%  Mid\nL1  REQ-B  ░░░░░ 0/1  Leaf" ∧
+    linked (requirementsBuffer graph) =
+      [("L2", ["trace.rollup"]), ("ARCH-X", actionsFor .requirement), ("L3", ["trace.rollup"]),
+       ("REQ-A", actionsFor .requirement), ("lines 75%", ["trace.coverage REQ-A"]),
+       ("L1", ["trace.rollup"]), ("REQ-B", actionsFor .requirement)] := by
+  native_decide
+
+/-- The graph opens folded to its roots; unfolding a requirement shows what
+refines it beneath it, a level deeper.
+
+@proves REQ-SHOW.graph_from_refinement -/
+theorem the_graph_unfolds_where_asked :
+    (designBuffer graph []).text = "[ expand all ]  [ fold all ]\n▸ L2  ARCH-X  █████ 1/1  Root" ∧
+    (designBuffer graph ["ARCH-X"]).text
+      = "[ expand all ]  [ fold all ]\n▾ L2  ARCH-X  █████ 1/1  Root\n  ▸ L3  REQ-A  ███░░ 1/2  lines 75%  Mid" ∧
+    (designBuffer graph ["ARCH-X", "REQ-A"]).text
+      = "[ expand all ]  [ fold all ]\n▾ L2  ARCH-X  █████ 1/1  Root\n  ▾ L3  REQ-A  ███░░ 1/2  lines 75%  Mid\n    · L1  REQ-B  ░░░░░ 0/1  Leaf" := by
+  native_decide
+
+/-- What a sandboxed agent changed, then what it said, then what it cost.
+
+@proves REQ-SHOW.sandbox_from_observation -/
+theorem changes_then_words_then_cost :
+    (sandboxBuffer ["a.rs"] [⟨"agent", "done"⟩] ⟨0, []⟩).text
+      = "changed: a.rs\nagent: done\ncost: estimated 0.000000" := by
+  native_decide
+
+/-- A producer answers from what it is given: the graph is the same whatever
+order its unfolded requirements were named in, and the same review comes of the
+same two texts.
+
+@proves REQ-SHOW.producer_is_pure -/
+theorem a_producer_reads_only_its_arguments :
+    designBuffer graph ["REQ-A", "ARCH-X"] = designBuffer graph ["ARCH-X", "REQ-A"] ∧
+    reviewBuffer "a.rs" "one\ntwo" "one\nTWO" = reviewBuffer "a.rs" "one\ntwo" "one\nTWO" := by
+  native_decide
+
+/-- On a row wide enough, each entry shows its key and description; on one too
+narrow, only the keys; either way each still reaches its action.
+
+@proves REQ-LOOK.row_fits -/
+theorem a_row_fits_its_width :
+    linked (menuRow "m" [⟨"o", "open", some "file.open"⟩, ⟨"s", "save", some "file.save"⟩] 30)
+      = [("o  open", ["file.open"]), ("s  save", ["file.save"])] ∧
+    linked (menuRow "m" [⟨"o", "open", some "file.open"⟩, ⟨"s", "save", some "file.save"⟩] 10)
+      = [("o", ["file.open"]), ("s", ["file.save"])] := by
   native_decide
 
 end TraceLean.Produce

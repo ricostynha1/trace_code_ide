@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-MYTH",
+    "clause": "totality",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Keymap::no_key_is_swallowed",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "a350fe83bfa2b6c9",
+  "inputs": [
+    [
+      "model",
+      "b2d0950b816b6710"
+    ],
+    [
+      "requirement",
+      "cdf749d4473155cc"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

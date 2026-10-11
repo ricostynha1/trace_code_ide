@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-MYTH",
+    "clause": "outcomes_closed",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Keymap::every_outcome_is_one_of_four",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "c7cd17b99409a531",
+  "inputs": [
+    [
+      "model",
+      "b2d0950b816b6710"
+    ],
+    [
+      "requirement",
+      "792e34449f42f8e2"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-SCREEN",
+    "clause": "split_keeps_the_buffer",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Screen::a_split_shows_the_buffer_twice",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "9f585e761cc6fae5",
+  "inputs": [
+    [
+      "model",
+      "8be7de2bdd0a8aed"
+    ],
+    [
+      "requirement",
+      "c0943c142cce71f3"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

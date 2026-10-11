@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-SCREEN",
+    "clause": "close_collapses_the_pane",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Screen::closing_gives_the_region_away",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "39426a16cd5a7502",
+  "inputs": [
+    [
+      "model",
+      "20bdfd43fa664359"
+    ],
+    [
+      "requirement",
+      "f0deaf2d4c25e196"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

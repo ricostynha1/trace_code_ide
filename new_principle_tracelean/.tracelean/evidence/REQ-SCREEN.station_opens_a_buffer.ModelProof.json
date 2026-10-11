@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-SCREEN",
+    "clause": "station_opens_a_buffer",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Screen::a_station_opens_where_the_focus_is",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "efead7ec8b8fcff9",
+  "inputs": [
+    [
+      "model",
+      "c06eb9b1d8f88429"
+    ],
+    [
+      "requirement",
+      "682ff4bfd828f0a5"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

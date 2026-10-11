@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-SELFWRITE",
+    "clause": "content_matched",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Mirror::other_content_at_the_path_is_external",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "0387ca6153f21dea",
+  "inputs": [
+    [
+      "model",
+      "e203d47d41f94328"
+    ],
+    [
+      "requirement",
+      "53e6310576f5e76e"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

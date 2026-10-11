@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-MIRROR",
+    "clause": "diff_is_pure",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Mirror::the_diff_is_of_the_trees_alone",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "f1ac84829820af14",
+  "inputs": [
+    [
+      "model",
+      "33dad4e741f81e93"
+    ],
+    [
+      "requirement",
+      "572d51b3b8c640e6"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

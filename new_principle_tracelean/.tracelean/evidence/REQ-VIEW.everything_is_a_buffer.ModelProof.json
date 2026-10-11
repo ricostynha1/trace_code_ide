@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-VIEW",
+    "clause": "everything_is_a_buffer",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.View::a_listing_is_a_buffer",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "a163f5a982b6eb1a",
+  "inputs": [
+    [
+      "model",
+      "1893cd03055540ab"
+    ],
+    [
+      "requirement",
+      "6281c6c32117943f"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

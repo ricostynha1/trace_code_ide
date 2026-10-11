@@ -309,4 +309,97 @@ theorem an_untouched_copy_offers_nothing :
       ⟨[("a.rs", "one, since edited"), ("new.md", "x")]⟩ ⟨[("a.rs", "one")]⟩ |>.isEmpty := by
   native_decide
 
+/-! ## What holds of mirroring -/
+
+/-- A tree before an agent ran, and after: a file deleted, one created, one
+changed, one emptied, one untouched, and a protected file written. -/
+def beforeRun : Workspace :=
+  ⟨[("gone.rs", "x"), ("same.rs", "s"), ("edit.rs", "old"), ("empty.rs", "e"), (".git/HEAD", "a")]⟩
+
+def afterRun : Workspace :=
+  ⟨[("same.rs", "s"), ("edit.rs", "new"), ("empty.rs", ""), ("made.rs", "m"), (".git/HEAD", "b")]⟩
+
+/-- Commands as text, to compare: they have no decidable equality. -/
+def asText (commands : List Command) : List String :=
+  commands.map (fun c => (Lean.toJson c).compress)
+
+/-- One command applied, a refusal leaving the state as it was. -/
+def applyOrKeep (w : Workspace) (c : Command) : Workspace :=
+  match apply w c with
+  | .ok next => next
+  | .error _ => w
+
+/-- The mirrored part of a tree: what mirroring is asked to reproduce. -/
+def mirroredPart (w : Workspace) : Workspace := ⟨w.canon.files.filter (fun f => isMirrored f.1)⟩
+
+/-- Applying the derived mutations to the original reproduces the observed tree
+on every mirrored path, with nothing refused, and leaves every other path as it
+was.
+
+@proves REQ-MIRROR.apply_reproduces -/
+theorem mirroring_reaches_the_observed_tree :
+    mirroredPart (mirrored beforeRun afterRun).reached = mirroredPart afterRun ∧
+    (mirrored beforeRun afterRun).refused.isEmpty = true ∧
+    (mirrored beforeRun afterRun).reached.get ".git/HEAD" = some "a" := by
+  native_decide
+
+/-- The mutations are a function of the two trees alone: the same trees listed
+in another order give the same mutations.
+
+@proves REQ-MIRROR.diff_is_pure -/
+theorem the_diff_is_of_the_trees_alone :
+    asText (mutationsOf ⟨beforeRun.files.reverse⟩ ⟨afterRun.files.reverse⟩)
+      = asText (mutationsOf beforeRun afterRun) := by
+  native_decide
+
+/-- Leaving out any one mutation no longer reproduces the observed tree.
+
+@proves REQ-MIRROR.minimal -/
+theorem no_mutation_is_spare :
+    (List.range (mutationsOf beforeRun afterRun).length).all (fun i =>
+      mirroredPart (((mutationsOf beforeRun afterRun).eraseIdx i).foldl applyOrKeep beforeRun.canon)
+        != mirroredPart afterRun) = true := by
+  native_decide
+
+/-- Nothing under a protected path is among the mutations, though it changed.
+
+@proves REQ-MIRROR.protected_excluded -/
+theorem a_protected_path_is_not_mirrored :
+    (mutationsOf beforeRun afterRun).all (fun c => isMirrored (commandPath c)) = true := by
+  native_decide
+
+/-- Deletions, then creations, then content changes: no command waits on a file
+a later one makes, and none is refused for it.
+
+@proves REQ-MIRROR.ordering_defined -/
+theorem mutations_run_in_an_order_that_fits :
+    asText (mutationsOf beforeRun afterRun)
+      = asText [.deleteFile "gone.rs" "x", .createFile "made.rs", .insert "made.rs" 0 "m",
+                .delete "edit.rs" 0 "old", .insert "edit.rs" 0 "new", .delete "empty.rs" 0 "e"] ∧
+    (mirrored beforeRun afterRun).refused.isEmpty = true := by
+  native_decide
+
+/-- The system's own write, observed coming back, is not taken in as a change.
+
+@proves REQ-SELFWRITE.own_writes_ignored -/
+theorem an_own_write_is_suppressed (path content : String) :
+    (suppress [⟨path, content, 3⟩] path content).suppressed = true := by
+  simp [suppress]
+
+/-- A different content at the same path is not suppressed: matching is on what
+was written, not on where.
+
+@proves REQ-SELFWRITE.content_matched -/
+theorem other_content_at_the_path_is_external (path written seen : String) (h : written ≠ seen) :
+    suppress [⟨path, written, 3⟩] path seen = { suppressed := false, pending := [⟨path, written, 3⟩] } := by
+  simp [suppress, h]
+
+/-- A write never observed runs out of rounds and is dropped, so it cannot hold
+back a later change for ever.
+
+@proves REQ-SELFWRITE.no_deadlock -/
+theorem an_unobserved_write_expires (path content : String) :
+    expire (expire [⟨path, content, 2⟩]) = [] ∧ expire [⟨path, content, 1⟩] = [] := by
+  simp [expire, decrement]
+
 end TraceLean.Mirror

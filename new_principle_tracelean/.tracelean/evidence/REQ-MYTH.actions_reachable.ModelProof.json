@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-MYTH",
+    "clause": "actions_reachable",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Keymap::an_unreachable_action_is_reported",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "23bde05930f85859",
+  "inputs": [
+    [
+      "model",
+      "4596c45eb436aa93"
+    ],
+    [
+      "requirement",
+      "8eef2f1dd3a245de"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

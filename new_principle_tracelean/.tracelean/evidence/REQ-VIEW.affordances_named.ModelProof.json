@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-VIEW",
+    "clause": "affordances_named",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.View::affordances_are_action_names",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "b051947389daaeac",
+  "inputs": [
+    [
+      "model",
+      "91324f0af65e3f3a"
+    ],
+    [
+      "requirement",
+      "e2cddf76fd5724c2"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

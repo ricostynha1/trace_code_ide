@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-VIEW",
+    "clause": "screen_is_readable",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.View::the_screen_is_read_by_its_names",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "2c964029174f6505",
+  "inputs": [
+    [
+      "model",
+      "7aca3c2e268cc9df"
+    ],
+    [
+      "requirement",
+      "f1928dcc07501fc7"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

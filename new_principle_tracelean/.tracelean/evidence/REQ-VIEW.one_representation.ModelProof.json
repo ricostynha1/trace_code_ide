@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-VIEW",
+    "clause": "one_representation",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.View::a_frontend_computing_its_own_view_is_caught",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "5aed9236cafebaa0",
+  "inputs": [
+    [
+      "model",
+      "1893cd03055540ab"
+    ],
+    [
+      "requirement",
+      "77d3c42b9c472b65"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-VIEW",
+    "clause": "rendering_is_total",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.View::drawing_the_text_always_conforms",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "4c459f0b0a32c4ed",
+  "inputs": [
+    [
+      "model",
+      "b9f69cf500f6df83"
+    ],
+    [
+      "requirement",
+      "12236ebe108747b9"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

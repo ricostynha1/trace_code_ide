@@ -317,4 +317,77 @@ theorem dangling_targets_do_not_hide_a_reachable_mode :
          Problem.undefinedMode "A" "3" "G3"] := by
   native_decide
 
+/-- Typing at the root, a leader under it, and a mode under the leader. -/
+def nested : Keymap :=
+  { root := "Normal", modes := [
+      ("Normal", { bindings := [("Space", .enter "Leader" "leader")] }),
+      ("Leader", { parent := some "Normal", bindings := [("g", .enter "Design" "design")] }),
+      ("Design", { parent := some "Leader", bindings := [("o", .dispatch "design.toggle" "fold")] })] }
+
+/-- Whatever the keymap, mode and key, the outcome is one of the four.
+
+@proves REQ-MYTH.outcomes_closed -/
+theorem every_outcome_is_one_of_four (keymap : Keymap) (mode key : String) :
+    (∃ t, step keymap mode key = .enter t) ∨ (∃ a, step keymap mode key = .dispatch a) ∨
+    (∃ t, step keymap mode key = .leave t) ∨ step keymap mode key = .passThrough := by
+  cases step keymap mode key <;> simp
+
+/-- Every key has an outcome and none is swallowed: a bound key does what it is
+bound to, an unbound one at the root is typing, and elsewhere it leaves.
+
+@proves REQ-MYTH.totality -/
+theorem no_key_is_swallowed :
+    step nested "Normal" "Space" = .enter "Leader" ∧ step nested "Normal" "x" = .passThrough ∧
+    step nested "Design" "o" = .dispatch "design.toggle" ∧
+    step nested "Leader" "x" = .leave "Normal" := by
+  native_decide
+
+/-- Escape goes up one level; any other unbound key outside the root goes all
+the way back.
+
+@proves REQ-MYTH.escape_pops_one -/
+theorem escape_is_one_level :
+    step nested "Design" leaveKey = .leave "Leader" ∧ step nested "Leader" leaveKey = .leave "Normal" ∧
+    step nested "Design" "q" = .leave "Normal" := by
+  native_decide
+
+/-- A binding entering a mode that does not exist is reported, and so is a
+parent that does not exist.
+
+@proves REQ-MYTH.modes_defined -/
+theorem an_undefined_mode_is_reported :
+    validate { root := "A", modes := [("A", { bindings := [("b", .enter "Ghost" "")] })] } []
+      = [Problem.undefinedMode "A" "b" "Ghost"] ∧
+    (validate { root := "A", modes := [("A", { bindings := [("b", .enter "B" "")] }),
+                                        ("B", { parent := some "Ghost" })] } []).contains
+      (Problem.undefinedParent "B" "Ghost") = true := by
+  native_decide
+
+/-- A binding naming an action the registry does not have is reported.
+
+@proves REQ-MYTH.actions_defined -/
+theorem an_undefined_action_is_reported :
+    validate { root := "A", modes := [("A", { bindings := [("x", .dispatch "file.explode" "")] })] } []
+      = [Problem.undefinedAction "A" "x" "file.explode"] := by
+  native_decide
+
+/-- An action no key sequence reaches from the root is reported, however deep
+the modes that would reach it.
+
+@proves REQ-MYTH.actions_reachable -/
+theorem an_unreachable_action_is_reported :
+    validate nested ["design.toggle", "file.save"] = [Problem.unreachableAction "file.save"] ∧
+    validate nested ["design.toggle"] = [] := by
+  native_decide
+
+/-- The keys a mode offers are its bindings as the keymap holds them, with
+Escape where there is somewhere to leave to: read off the keymap, not kept
+beside it.
+
+@proves REQ-MYTH.whichkey_is_a_query -/
+theorem which_key_reads_the_keymap :
+    whichKey nested "Design" = [("o", "fold"), (leaveKey, "leave this mode")] ∧
+    whichKey nested "Normal" = [("Space", "leader")] ∧ whichKey nested "Nowhere" = [] := by
+  native_decide
+
 end TraceLean.Keymap

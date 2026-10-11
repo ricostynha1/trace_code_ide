@@ -463,8 +463,11 @@ fn bar_spans(at: usize, node: &Node) -> Vec<Span> {
     // No line to run is neither whole nor short: left uncoloured.
     if let (Some(said), Some((run, all))) = (covered_of(node), node.covered.filter(|(_, all)| *all > 0)) {
         let from = start + 5 + 1 + format!("{}/{}", node.implemented, node.clauses).chars().count() + 2;
+        // Coloured as a diff's lines are, but it is no diff: it opens what was
+        // measured rather than the actions of a change under review.
         let role = if run == all { Role::Added } else { Role::Removed };
-        out.push(Span { start: from, stop: from + said.chars().count(), role, actions: actions_for(role) });
+        let actions = vec![format!("trace.coverage {}", node.id)];
+        out.push(Span { start: from, stop: from + said.chars().count(), role, actions });
     }
     out
 }
@@ -682,6 +685,7 @@ mod tests {
         let lines = measured.spans.iter().find(|s| s.role == Role::Removed).expect("a coverage span");
         let said: String = measured.text.chars().skip(lines.start).take(lines.stop - lines.start).collect();
         assert_eq!(said, "lines 57%");
+        assert_eq!(lines.actions, vec!["trace.coverage REQ-A".to_string()], "a coverage figure offered a diff's actions");
         // Code with no line a test could run is not all covered.
         let nothing = requirements_buffer(vec![Node { covered: Some((0, 0)), ..node }]);
         assert_eq!(plain_text(nothing.clone()), vec!["L1  REQ-A  ████░ 3/4  lines none  A thing"]);

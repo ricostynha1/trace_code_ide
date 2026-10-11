@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-MYTH",
+    "clause": "actions_defined",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Keymap::an_undefined_action_is_reported",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "ce60b35fc2276921",
+  "inputs": [
+    [
+      "model",
+      "4596c45eb436aa93"
+    ],
+    [
+      "requirement",
+      "b3723ab9a2821cf0"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

@@ -450,4 +450,88 @@ theorem a_symbol_is_read_as_its_name (buffer : Buffer) (rows : List (List Presen
   unfold presentedConformance
   rw [lines_ignore_painting]
 
+/-! ## What holds of buffers -/
+
+/-- A listing of two entries, one nested. -/
+def listing : Buffer := directoryBuffer "src" [(0, "main.rs"), (1, "deep.rs")]
+
+/-- A directory becomes one entry a line, each entry marked as a path that
+opens it.
+
+@proves REQ-SHOW.listing_from_entries -/
+theorem a_listing_is_one_entry_a_line :
+    listing.text = "main.rs\n  deep.rs" ∧
+    listing.spans = [⟨0, 7, .path, ["file.open"]⟩, ⟨10, 17, .path, ["file.open"]⟩] := by
+  native_decide
+
+/-- A listing nothing parsed is a buffer of the one type, with an identity, a
+kind and text.
+
+@proves REQ-VIEW.everything_is_a_buffer -/
+theorem a_listing_is_a_buffer :
+    listing.id = "dir:src" ∧ listing.kind = .directory "src" ∧ listing.text = "main.rs\n  deep.rs" := by
+  native_decide
+
+/-- The core's spans for a listing are the same `Span` a parser's marks become,
+held to the same well-formedness, so the listing needs no grammar of its own.
+
+@proves REQ-VIEW.structure_has_one_type -/
+theorem a_synthetic_buffer_meets_the_parsed_rules :
+    faults listing = [] ∧ listing.spans.all (fun s => s.role == .path) = true := by
+  native_decide
+
+/-- Structure is spans over the text, checked against it: a span past the end,
+one running backwards and two overlapping are each faults.
+
+@proves REQ-VIEW.structure_over_text -/
+theorem spans_answer_to_the_text :
+    faults ⟨"b", .record "b", "abc", [⟨2, 9, .plain, []⟩]⟩ = [.pastTheEnd 2 9 3] ∧
+    faults ⟨"b", .record "b", "abc", [⟨2, 1, .plain, []⟩]⟩ = [.backwards 2 1] ∧
+    faults ⟨"b", .record "b", "abc", [⟨0, 2, .plain, []⟩, ⟨1, 3, .plain, []⟩]⟩ = [.overlap 0 1] := by
+  native_decide
+
+/-- What can be done at a position is the action names its spans declare, each
+once, in span order.
+
+@proves REQ-VIEW.affordances_named -/
+theorem affordances_are_action_names :
+    actionsAt ⟨"b", .record "b", "ab", [⟨0, 2, .path, ["file.open"]⟩, ⟨0, 1, .heading, ["trace.check", "file.open"]⟩]⟩ 0
+      = ["file.open", "trace.check"] ∧
+    actionsAt ⟨"b", .record "b", "ab", [⟨0, 2, .path, ["file.open"]⟩, ⟨0, 1, .heading, ["trace.check"]⟩]⟩ 1
+      = ["file.open"] := by
+  native_decide
+
+private theorem no_breach_between_equal_lines (at_ : Nat) (lines : List String) :
+    lineBreaches at_ lines lines = [] := by
+  induction lines generalizing at_ with
+  | nil => simp [lineBreaches]
+  | cons line rest ih => simp [lineBreaches, ih]
+
+/-- Every buffer, of every kind, can be rendered conformantly: drawing its text
+and offering nothing is always allowed.
+
+@proves REQ-VIEW.rendering_is_total -/
+theorem drawing_the_text_always_conforms (buffer : Buffer) :
+    conformance buffer { lines := plainText buffer, offered := [] } = [] := by
+  simp [conformance, no_breach_between_equal_lines]
+
+/-- What is shown is judged against the core's one buffer: a frontend that drew
+its own idea of the text is in breach, line by line.
+
+@proves REQ-VIEW.one_representation -/
+theorem a_frontend_computing_its_own_view_is_caught :
+    conformance listing { lines := ["main.rs", "deep.rs"], offered := [] }
+      = [.lineDiffers 1 "deep.rs" "  deep.rs"] := by
+  native_decide
+
+/-- What a frontend drew is read back by the names of what it painted: a glyph
+named as its text conforms; a name that is not the text is a breach.
+
+@proves REQ-VIEW.screen_is_readable -/
+theorem the_screen_is_read_by_its_names :
+    presentedConformance listing [[⟨"📄", "main.rs"⟩], [⟨"  ", "  "⟩, ⟨"📄", "deep.rs"⟩]] [] = [] ∧
+    presentedConformance listing [[⟨"📄", "file"⟩], [⟨"  deep.rs", "  deep.rs"⟩]] []
+      = [.lineDiffers 0 "file" "main.rs"] := by
+  native_decide
+
 end TraceLean.View
