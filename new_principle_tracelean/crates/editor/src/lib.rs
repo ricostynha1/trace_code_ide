@@ -31,10 +31,22 @@ use tracelean_core::surface::explorer;
 use tracelean_core::surface::produce as make;
 use tracelean_core::surface::requirement_view;
 use tracelean_core::surface::screen::{
-    arrange, destination, panes, place, workbench, Arrangement, Layout, Rect, Screen,
+    arrange, close_buffer, destination, panes, place, workbench, Arrangement, Layout, Rect, Screen,
 };
 use tracelean_core::surface::view::{actions_at, Buffer, BufferKind};
 use tracelean_core::trace::anchor::Lang;
+
+/// A question waiting for its answer: see `Editor::asking`.
+#[derive(Debug, Clone)]
+struct Asking {
+    action: String,
+    target: Option<String>,
+    question: String,
+    /// Where the action was started, as `choose` takes it.
+    pane: String,
+    at: usize,
+    answer: String,
+}
 
 /// Everything on screen, and everything behind it.
 pub struct Editor {
@@ -126,6 +138,8 @@ pub struct Editor {
     /// The design's unfolded requirements; folded to its roots at first, so a
     /// project of hundreds opens as a handful.
     pub design_open: BTreeSet<String>,
+    /// Both requirement stations show only what is still to do.
+    pub open_only: bool,
     /// The keys typed so far in a sequence — `Space`, `f` — to head its menu.
     typed: Vec<String>,
     /// Which nodes the history shows: all, the open file's, or the saved.
@@ -137,6 +151,22 @@ pub struct Editor {
     /// The list `.` offered, while it is up: the pane and position it is
     /// about, and the offers in the order their keys name them.
     offering: Option<(String, usize, Vec<tracelean_core::surface::offer::Offer>)>,
+    /// An action waiting for its argument, which the keys typed next make up:
+    /// the status line is where it is asked for and answered, as the
+    /// minibuffer is in Emacs. The keys do what the context menu's box does.
+    asking: Option<Asking>,
+    /// The Lean server asked for the proof state, once the panel is opened on
+    /// a Lean file; it is not started before.
+    lean: Option<tracelean_core::lean_server::LeanServer>,
+    /// The Lean project the server above was started in, kept after it dies so
+    /// that a server that will not start is not started again on every key.
+    lean_project: Option<PathBuf>,
+    /// Why there is no proof state, when there is none to show.
+    lean_error: Option<String>,
+    /// What the panel says now.
+    goal: String,
+    /// The file, its text and the cursor the server was last asked about.
+    goal_asked: Option<(String, String, usize)>,
     /// The trace index of the tree on disk, read once and kept until this
     /// editor writes to the disk: reading it parses every file, which is
     /// seconds on a real project, and a click should not wait for that.
@@ -409,6 +439,7 @@ impl Editor {
             open_folders: BTreeSet::new(),
             context_parts: tracelean_core::surface::context::default_parts(),
             design_open: BTreeSet::new(),
+            open_only: false,
             // The file's own history first: the undo tree of what is being
             // read is what a person opening it is looking for. `All` is a click.
             history_filter: tracelean_core::surface::history_view::Filter::File,
@@ -416,6 +447,12 @@ impl Editor {
             saved_at: BTreeSet::new(),
             last_find: None,
             offering: None,
+            asking: None,
+            lean: None,
+            lean_project: None,
+            lean_error: None,
+            goal: String::new(),
+            goal_asked: None,
             index_cache: std::cell::RefCell::new(None),
             problems: std::cell::Cell::new(None),
             problems_stale: std::cell::Cell::new(true),
@@ -865,11 +902,13 @@ impl Editor {
     }
 
     /// Open again what was open last time, leaving out what no longer exists.
+    ///
+    /// @implements REQ-NAV.session_recalled
     fn restore(&mut self, kept: recall::Recalled) {
         let files = self.workspace().files;
         self.open_folders = kept.folders.into_iter().filter(|f| self.is_folder(f)).collect();
-        let last = kept.shown.into_iter().filter(|p| files.contains_key(p));
-        for path in kept.files.into_iter().filter(|p| files.contains_key(p)).chain(last) {
+        let existing: Vec<String> = files.keys().cloned().collect();
+        for path in tracelean_core::surface::reopen::reopened(kept.files, kept.shown, existing) {
             self.perform(Intent::Display { what: BufferKind::File { path } });
         }
     }
@@ -1110,8 +1149,16 @@ impl Editor {
 
     /// Apply a change to the file being edited and redraw it, keeping the
     /// cursor where the caller put it.
+    ///
+    /// The cursor counts characters and a command counts bytes (a file is a
+    /// `String`), so the offsets are converted here, once, against the text the
+    /// command is applied to. Anywhere else a character offset would land
+    /// early by the width of every multi-byte character before it, which in a
+    /// Lean file (`∀`, `→`, `λ`) is how typing went to the wrong place.
     fn change(&mut self, command: Command) {
         let Some(path) = self.editing() else { return };
+        let before = self.workspace().files.get(&path).cloned().unwrap_or_default();
+        let command = in_bytes(&before, command);
         let was_saved = self.saved.files.get(&path).map(String::as_str) == Some(self.buffer().text.as_str());
         match self.push(command) {
             Ok(_) => {
@@ -1131,6 +1178,12 @@ impl Editor {
         }
     }
 
+    /// How many characters of `file` come before byte `offset`.
+    fn chars_before(&self, file: &str, offset: usize) -> usize {
+        let text = self.workspace().files.get(file).cloned().unwrap_or_default();
+        text.get(..offset).map_or_else(|| text.chars().count(), |head| head.chars().count())
+    }
+
     /// Re-produce every opened listing and file from the workspace as it now
     /// is, without moving the focus or rearranging anything.
     ///
@@ -1139,6 +1192,19 @@ impl Editor {
     /// focus into the explorer and leave the document showing the old text.
     fn refresh_views(&mut self) {
         let workspace = self.workspace();
+        // A file that is gone (deleted here, or on disk) is no longer a thing
+        // to hold open: its buffer would be edited against a path the
+        // workspace does not have, and every change to it is refused.
+        let gone: Vec<String> = self
+            .screen
+            .opened
+            .iter()
+            .filter(|held| matches!(&held.kind, BufferKind::File { path } if !workspace.files.contains_key(path)))
+            .map(|held| held.id.clone())
+            .collect();
+        for id in gone {
+            self.screen = close_buffer(id, self.screen.clone());
+        }
         let fresh: Vec<Buffer> = self
             .screen
             .opened
@@ -1543,11 +1609,19 @@ impl Editor {
             return;
         }
         self.last_find = Some(wanted.to_string());
-        let text: Vec<char> = self.buffer().text.chars().collect();
-        let needle: Vec<char> = wanted.chars().collect();
-        let hits: Vec<usize> = (0..text.len().saturating_sub(needle.len() - 1))
-            .filter(|at| text[*at..].starts_with(&needle))
-            .collect();
+        // With `*` or `?` the text is a pattern, and each match has its own
+        // length; without, it is itself and every match is as long as it is.
+        let spans: Vec<(usize, usize)> = if wanted.contains(['*', '?']) {
+            tracelean_core::surface::find::glob_matches(self.buffer().text, wanted.to_string())
+        } else {
+            let text: Vec<char> = self.buffer().text.chars().collect();
+            let needle: Vec<char> = wanted.chars().collect();
+            (0..text.len().saturating_sub(needle.len() - 1))
+                .filter(|at| text[*at..].starts_with(&needle))
+                .map(|at| (at, at + needle.len()))
+                .collect()
+        };
+        let hits: Vec<usize> = spans.iter().map(|(start, _)| *start).collect();
         // From the start of what is selected — the last match, after a find.
         let from = self.selection().map_or(self.offset, |(start, _)| start);
         let found = if forward {
@@ -1561,7 +1635,7 @@ impl Editor {
                 let place = hits.iter().position(|h| *h == at).unwrap_or(0) + 1;
                 // The match is selected, so typing replaces it.
                 self.anchor = Some(at);
-                self.offset = at + needle.len();
+                self.offset = spans.iter().find(|(start, _)| *start == at).map_or(at, |(_, end)| *end);
                 let height = (self.region.height as usize).max(1);
                 self.follow_cursor(height);
                 self.say("found", &format!("{wanted}: {place} of {}; F3 for the next", hits.len()));
@@ -1674,6 +1748,103 @@ impl Editor {
         self.say("here", "a key picks one; Escape closes the list");
     }
 
+    /// Ask for the argument of `action` on the status line, when it takes one
+    /// that nobody pointed at (a new name). The context menu asks in a box; a
+    /// key sequence asks here, with what is there already filled in.
+    ///
+    /// Answers whether it asked.
+    fn start_asking(&mut self, action: &str) -> bool {
+        let pane = self.screen.focus.clone();
+        let at = self.window_offset(&pane, self.offset);
+        let Some(offer) = self.offers_at(&pane, at).into_iter().find(|o| o.action == action && o.asks.is_some())
+        else {
+            return false;
+        };
+        let question = offer.asks.clone().unwrap_or_default();
+        let answer = offer.target.clone().unwrap_or_default();
+        self.asking = Some(Asking { action: offer.action, target: offer.target, question, pane, at, answer });
+        self.show_question();
+        true
+    }
+
+    fn show_question(&mut self) {
+        if let Some(asking) = &self.asking {
+            let text = format!("{}: {}▏", asking.question, asking.answer);
+            self.say("ask", &text);
+        }
+    }
+
+    /// Ask what to look for: `Space f f` goes to the next match, `Space f /`
+    /// lists the lines that hold one. The text may hold `*` and `?`.
+    ///
+    /// @implements REQ-NAV.name_is_asked_for
+    fn ask_to_find(&mut self, title: &str) {
+        let (action, question) = if title == "find" {
+            ("file.find", "Find (* and ? match)")
+        } else {
+            ("file.find_lines", "List the lines matching (* and ? match)")
+        };
+        let pane = self.screen.focus.clone();
+        let at = self.window_offset(&pane, self.offset);
+        let answer = self.last_find.clone().unwrap_or_default();
+        self.asking = Some(Asking { action: action.into(), target: None, question: question.into(), pane, at, answer });
+        self.show_question();
+    }
+
+    /// The lines of the focused buffer that hold a match, as a list of their
+    /// numbers and their text: the way to search a file tree, the requirements
+    /// or the findings, where the lines are the information.
+    ///
+    /// @implements REQ-NAV.find_lists_lines
+    pub fn list_matching_lines(&mut self, wanted: &str) {
+        self.last_find = Some(wanted.to_string());
+        let lines = tracelean_core::surface::find::matching_lines(self.buffer().text, wanted.to_string());
+        let count = lines.len();
+        let events: Vec<Event> = lines
+            .into_iter()
+            .map(|(number, line)| Event { kind: format!("line {number}"), text: line })
+            .collect();
+        self.show(make::record_buffer(format!("lines matching {wanted}"), events));
+        self.say("found", &format!("{count} lines match {wanted}"));
+    }
+
+    /// A key while an argument is being asked for: text goes into the answer,
+    /// Enter gives it to the action, Escape drops the question.
+    fn answer(&mut self, key: &str) {
+        let Some(mut asking) = self.asking.take() else { return };
+        match key {
+            tracelean_core::surface::keymap::LEAVE => {
+                self.say("left", "nothing was changed");
+                return;
+            }
+            "Enter" => {
+                let answer = asking.answer.trim().to_string();
+                if answer.is_empty() {
+                    self.say("left", "no answer, nothing was changed");
+                } else if asking.action == "file.find" {
+                    self.find(&answer, true);
+                } else if asking.action == "file.find_lines" {
+                    self.list_matching_lines(&answer);
+                } else if asking.action == "definitions.edit" {
+                    if let Some(name) = asking.target {
+                        self.set_setting(&name, &answer);
+                    }
+                } else {
+                    self.choose(&asking.pane, asking.at, &asking.action, asking.target, Some(answer));
+                }
+                return;
+            }
+            "Backspace" => {
+                asking.answer.pop();
+            }
+            tracelean_core::surface::keymap::SPACE => asking.answer.push(' '),
+            other if other.chars().count() == 1 => asking.answer.push_str(other),
+            _ => {}
+        }
+        self.asking = Some(asking);
+        self.show_question();
+    }
+
     /// The key pressed while `.`'s list is up.
     fn pick_offer(&mut self, key: &str) {
         let Some((pane, offset, offered)) = self.offering.take() else { return };
@@ -1710,7 +1881,7 @@ impl Editor {
     pub fn list_occurrences(&mut self, needle: &str, whole: bool) {
         use tracelean_core::surface::findings_view::{findings_view, Found};
         let workspace = self.workspace();
-        let found = tracelean_core::surface::definition::occurrences(workspace.files.iter(), needle, whole, 500);
+        let found = tracelean_core::surface::definition::occurrences(workspace.files.into_iter().collect(), needle, whole, 500);
         let rows: Vec<Found> = found
             .iter()
             .map(|d| Found { kind: "at".into(), file: d.path.clone(), line: d.line, message: d.text.clone() })
@@ -1751,7 +1922,7 @@ impl Editor {
             }
         }
         let workspace = self.workspace();
-        let found = declarations(workspace.files.iter(), &name);
+        let found = declarations(workspace.files.into_iter().collect(), &name);
         match found.as_slice() {
             [] => self.say("not found", &format!("nothing here declares {name}")),
             [one] => {
@@ -1911,7 +2082,7 @@ impl Editor {
             }
         }
         let files: Vec<String> = self.workspace().files.keys().cloned().collect();
-        tracelean_core::surface::quick::matches(&files, query, 12).into_iter().map(at).collect()
+        tracelean_core::surface::quick::matches(files, query, 12).into_iter().map(at).collect()
     }
 
     /// Delete what lies between two positions of a pane — a selection made
@@ -2148,6 +2319,10 @@ impl Editor {
             self.pick_offer(key);
             return;
         }
+        if self.asking.is_some() {
+            self.answer(key);
+            return;
+        }
         match tracelean_core::surface::keymap::step(
             self.keymap.clone(),
             self.mode.clone(),
@@ -2191,6 +2366,11 @@ impl Editor {
                     Some(self.mode_menu(mode))
                 };
                 self.say("left", "back one mode");
+            }
+            Outcome::Dispatch { action } if self.start_asking(&action) => {
+                self.mode = self.keymap.root.clone();
+                self.typed.clear();
+                self.menu = None;
             }
             Outcome::Dispatch { action } => {
                 let intent = dispatch(action, self.focus(), self.workspace(), self.pending.clone());
@@ -2490,7 +2670,7 @@ impl Editor {
                     return;
                 }
                 "Left" | "Right" | "Up" | "Down" => self.anchor = None,
-                _ if key == "Enter" || key == "Tab" || key.chars().count() == 1 => {
+                _ if key == "Enter" || key == "Tab" || key == tracelean_core::surface::keymap::SPACE || key.chars().count() == 1 => {
                     self.take_selection();
                 }
                 _ => {}
@@ -2525,6 +2705,8 @@ impl Editor {
             "Right" => self.step(true),
             "Up" => self.step_line(false),
             "Down" => self.step_line(true),
+            // The keymap's name for the space bar, which is what a window sends.
+            tracelean_core::surface::keymap::SPACE => self.type_char(" "),
             other if other.chars().count() == 1 => self.type_char(other),
             other => self.say("nothing happened", &format!("`{other}` is not text")),
         }
@@ -2552,6 +2734,14 @@ impl Editor {
                 self.mark_jump();
                 self.perform(Intent::Display { what: BufferKind::File { path: file } });
                 self.go_to_line(line as usize);
+            }
+            // A setting's new value is asked for on the status line.
+            Intent::Display { what: BufferKind::Record { title } } if title.starts_with("edit ") => {
+                self.ask_to_edit_setting(&title["edit ".len()..]);
+            }
+            // What to look for is asked for on the status line.
+            Intent::Display { what: BufferKind::Record { title } } if title == "find" || title == "find lines" => {
+                self.ask_to_find(&title);
             }
             // Where the name under the cursor is declared: there, when it is
             // one place, else a list of the places.
@@ -2648,7 +2838,6 @@ impl Editor {
     /// person reads in a window.
     ///
     /// @implements REQ-CONTEXT.views_from_the_shell
-    /// @structural REQ-CONTEXT.views_from_the_shell reason="the shell and the window call the one producer, which is a fact about the call graph; what each producer makes is modelled under REQ-SHOW"
     pub fn view(&mut self, what: BufferKind) -> Buffer {
         self.produce(what)
     }
@@ -2706,8 +2895,8 @@ impl Editor {
                     );
                 }
                 match title.as_str() {
-                    "design" => make::design_buffer(nodes, self.design_open.iter().cloned().collect()),
-                    _ => make::requirements_buffer(nodes),
+                    "design" => make::design_buffer(nodes, self.design_open.iter().cloned().collect(), self.open_only),
+                    _ => make::requirements_buffer(nodes, self.open_only),
                 }
             }
             BufferKind::Menu { title } if title == "welcome" => self.welcome(),
@@ -2739,6 +2928,8 @@ impl Editor {
                 self.coverage(&title["coverage ".len()..])
             }
             BufferKind::Record { title } if title == "keys" => make::record_buffer(title, self.keys()),
+            BufferKind::Record { title } if title == "definitions" => self.definitions_buffer(),
+            BufferKind::Record { title } if title == "proof" => self.proof_buffer(),
             BufferKind::Record { title } => {
                 let events = self.report(&title);
                 make::record_buffer(title, events)
@@ -2912,6 +3103,8 @@ impl Editor {
                 .filter(|other| other.refines.iter().any(|parent| parent == id))
                 .map(|other| other.id.clone())
                 .collect(),
+            // A requirement with no clauses has its body as its one clause.
+            body: if requirement.clauses.is_empty() { String::new() } else { requirement.body.clone() },
             clauses,
             width: self.pane_width(tracelean_core::surface::screen::DOCUMENT),
             lines: self.clause_lines(&index, id, None),
@@ -3003,36 +3196,25 @@ impl Editor {
             .requirements
             .iter()
             .map(|(id, requirement)| {
-                let reached = tracelean_core::trace::rollup::combine(
-                    requirement
-                        .clause_keys()
-                        .into_iter()
-                        .map(|clause| held.get(&(id.clone(), clause)).copied().unwrap_or(Marks::NONE))
-                        .collect(),
-                );
-                // How many clauses something implements, of how many: the
-                // marks hold only what every clause holds and say little
-                // until evidence is recorded, and this says where the work is.
                 let clauses = requirement.clause_keys();
-                let implemented = clauses
+                let each: Vec<(Marks, bool)> = clauses
                     .iter()
-                    .filter(|clause| {
-                        index.links.iter().any(|link| {
+                    .map(|clause| {
+                        let implemented = index.links.iter().any(|link| {
                             &link.req_id == id
-                                && &link.clause == *clause
+                                && &link.clause == clause
                                 && link.role == tracelean_core::trace::annotation::Role::Implements
-                        })
+                        });
+                        (held.get(&(id.clone(), clause.clone())).copied().unwrap_or(Marks::NONE), implemented)
                     })
-                    .count();
-                make::Node {
-                    id: id.clone(),
-                    title: requirement.title.clone(),
-                    refines: requirement.refines.clone(),
-                    marks: reached,
-                    implemented,
-                    clauses: clauses.len(),
-                    covered: self.clause_lines(&index, id, None).map(|(run, all, _)| (run, all)),
-                }
+                    .collect();
+                make::node_of(
+                    id.clone(),
+                    requirement.title.clone(),
+                    requirement.refines.clone(),
+                    each,
+                    self.clause_lines(&index, id, None).map(|(run, all, _)| (run, all)),
+                )
             })
             .collect()
     }
@@ -3160,6 +3342,95 @@ impl Editor {
             .unwrap_or(60)
     }
 
+    /// Keep the proof panel in step with the document: when a Lean file is the
+    /// document and the panel is open, ask the Lean server what the goals are
+    /// at the cursor whenever the file or the cursor moved, and take in the
+    /// answer when it has come. Never waits: a slow server leaves the panel as
+    /// it was until it answers.
+    ///
+    /// Answers whether the panel changed.
+    ///
+    /// @implements REQ-LSP.proof_state_shown
+    fn follow_proof(&mut self) -> bool {
+        if !self.screen.opened.iter().any(|held| held.id == "record:proof") {
+            return false;
+        }
+        let mut changed = false;
+        if let Some(said) = self.lean.as_mut().and_then(|server| server.poll()) {
+            self.goal = said;
+            changed = true;
+        }
+        let Some((path, offset)) = self.document_place().filter(|(path, _)| path.ends_with(".lean")) else {
+            return self.refresh_proof(changed);
+        };
+        let text = self.workspace().files.get(&path).cloned().unwrap_or_default();
+        let asked = (path.clone(), text.clone(), offset);
+        if self.goal_asked.as_ref() == Some(&asked) {
+            return self.refresh_proof(changed);
+        }
+        let file = self.root.join(&path);
+        let Some(project) = tracelean_core::lean_server::project_of(&file, &self.root) else {
+            self.lean_error = Some(format!("{path} is in no Lean project (no lean-toolchain or lakefile above it)"));
+            self.goal_asked = Some(asked);
+            return self.refresh_proof(true);
+        };
+        // One server per project: a file in another one is another question.
+        if self.lean_project.as_ref() != Some(&project) {
+            self.lean = None;
+            self.lean_error = None;
+            match tracelean_core::lean_server::LeanServer::start(&project) {
+                Ok(server) => self.lean = Some(server),
+                Err(why) => self.lean_error = Some(format!("{why} (reopen the editor to try again)")),
+            }
+            self.lean_project = Some(project);
+        }
+        if self.lean.is_none() {
+            // Dead or never started: said once, not retried on every key.
+            self.goal_asked = Some(asked);
+            return self.refresh_proof(true);
+        }
+        let before: String = text.chars().take(offset).collect();
+        let line = before.matches('\n').count();
+        let column = before.rsplit('\n').next().map_or(0, |last| last.chars().count());
+        if let Some(server) = self.lean.as_mut() {
+            self.lean_error = server.ask(&file, &text, line, column).err();
+        }
+        // A server that cannot be written to is gone; the panel says so and
+        // the next project switch or restart starts another.
+        if self.lean_error.is_some() {
+            self.lean = None;
+        }
+        self.goal_asked = Some(asked);
+        self.refresh_proof(changed || self.lean_error.is_some())
+    }
+
+    /// Put the panel's buffer back in place when what it says changed.
+    fn refresh_proof(&mut self, changed: bool) -> bool {
+        if !changed {
+            return false;
+        }
+        let fresh = self.proof_buffer();
+        if let Some(held) = self.screen.opened.iter_mut().find(|held| held.id == "record:proof") {
+            *held = fresh;
+        }
+        true
+    }
+
+    /// The proof panel: the goals at the cursor, or why there are none.
+    fn proof_buffer(&self) -> Buffer {
+        let text = match (&self.lean_error, self.goal.is_empty()) {
+            (Some(why), _) => why.clone(),
+            (None, true) => "Open a Lean file; the goals at the cursor are shown here.".to_string(),
+            (None, false) => self.goal.clone(),
+        };
+        Buffer {
+            id: "record:proof".into(),
+            kind: BufferKind::Record { title: "proof".into() },
+            text,
+            spans: Vec::new(),
+        }
+    }
+
     /// Look at the sandbox again, without anyone asking: what the agent has
     /// changed and said since the last look. The panel is re-produced in place
     /// when it is open, and nothing is focused or moved.
@@ -3173,6 +3444,7 @@ impl Editor {
         }
         // Counted here, between keys, rather than on one: it reads the tree.
         let mut recounted = self.recount_chips();
+        recounted |= self.follow_proof();
         if self.problems_stale.replace(false) {
             let count = Some(self.found().len());
             recounted |= self.problems.replace(count) != count;
@@ -3338,6 +3610,105 @@ impl Editor {
                 },
             })
             .collect()
+    }
+
+    /// What can be configured, read from the JSON that configures it so the
+    /// list is never a second copy of it: every colour of the theme with its
+    /// value now, each a way to change it (`Space f e` on a row, or a click),
+    /// then where the keys and the languages live.
+    ///
+    /// A buffer like any other, produced from data; what is different is only
+    /// that its rows' actions write the project's override file.
+    ///
+    /// @implements REQ-LOOK.setting_edited_in_place
+    fn definitions_buffer(&self) -> Buffer {
+        use tracelean_core::surface::view::{Role, Span};
+        let theme = theme::load(&self.root);
+        let mut lines = vec![
+            format!("Definitions — Space f e (or a click) changes the setting under the cursor; it is saved to {} at once", theme::OVERRIDE),
+            "keys       assets/keymap.json: every binding is data; invalid ones are reported at load".to_string(),
+            "languages  assets/languages/: the grammar and the declaring words of each language".to_string(),
+            String::new(),
+        ];
+        let mut spans = Vec::new();
+        let mut at: usize = lines.iter().map(|line| line.chars().count() + 1).sum();
+        if let serde_json::Value::Object(sections) = &theme {
+            for (section, entries) in sections {
+                let serde_json::Value::Object(entries) = entries else { continue };
+                for (key, value) in entries {
+                    let Some(colour) = value.as_str() else { continue };
+                    let name = format!("{section}.{key}");
+                    let line = format!("{name}  {colour}");
+                    spans.push(Span {
+                        start: at,
+                        stop: at + name.chars().count(),
+                        role: Role::Path,
+                        actions: vec![format!("definitions.edit {name}")],
+                    });
+                    at += line.chars().count() + 1;
+                    lines.push(line);
+                }
+            }
+        }
+        Buffer {
+            id: "record:definitions".into(),
+            kind: BufferKind::Record { title: "definitions".into() },
+            text: lines.join("\n"),
+            spans,
+        }
+    }
+
+    /// Ask for a setting's new value, starting from the one it has.
+    fn ask_to_edit_setting(&mut self, name: &str) {
+        let current = theme::load(&self.root)
+            .get(name.split('.').next().unwrap_or_default())
+            .and_then(|section| section.get(name.split_once('.').map_or("", |(_, key)| key)))
+            .and_then(|value| value.as_str().map(str::to_string))
+            .unwrap_or_default();
+        let pane = self.screen.focus.clone();
+        let at = self.window_offset(&pane, self.offset);
+        self.asking = Some(Asking {
+            action: "definitions.edit".into(),
+            target: Some(name.to_string()),
+            question: format!("New value for {name} (#rrggbb)"),
+            pane,
+            at,
+            answer: current,
+        });
+        self.show_question();
+    }
+
+    /// Write a setting to the project's override file, and show the list again.
+    /// The window reads the theme on every draw it is told changed, so the
+    /// change is on screen without a restart.
+    ///
+    /// @implements REQ-LOOK.setting_edited_in_place
+    pub fn set_setting(&mut self, name: &str, value: &str) {
+        let Some((section, key)) = name.split_once('.') else {
+            return self.say("not a setting", name);
+        };
+        let hex = value.strip_prefix('#').unwrap_or("");
+        if !matches!(hex.len(), 3 | 4 | 6 | 8) || !hex.chars().all(|c| c.is_ascii_hexdigit()) {
+            return self.say("refused", &format!("`{value}` is not a colour like #1e90ff; nothing changed"));
+        }
+        let path = self.root.join(theme::OVERRIDE);
+        let mut over: serde_json::Value = std::fs::read_to_string(&path)
+            .ok()
+            .and_then(|text| serde_json::from_str(&text).ok())
+            .filter(serde_json::Value::is_object)
+            .unwrap_or_else(|| serde_json::json!({}));
+        over[section][key] = serde_json::Value::String(value.to_string());
+        let written = path
+            .parent()
+            .map_or(Ok(()), std::fs::create_dir_all)
+            .and_then(|()| std::fs::write(&path, serde_json::to_string_pretty(&over).unwrap_or_default() + "\n"));
+        match written {
+            Ok(()) => {
+                self.show(self.definitions_buffer());
+                self.say("setting saved", &format!("{name} = {value}"));
+            }
+            Err(error) => self.say("could not save", &error.to_string()),
+        }
     }
 
     /// What a report says.
@@ -3717,10 +4088,10 @@ impl Editor {
                 // The cursor goes to where the change was taken back.
                 match left {
                     Some(Command::Insert { file, offset, .. }) if self.editing() == Some(file.clone()) => {
-                        self.offset = offset;
+                        self.offset = self.chars_before(&file, offset);
                     }
                     Some(Command::Delete { file, offset, deleted }) if self.editing() == Some(file.clone()) => {
-                        self.offset = offset + deleted.chars().count();
+                        self.offset = self.chars_before(&file, offset) + deleted.chars().count();
                     }
                     _ => {}
                 }
@@ -3737,10 +4108,10 @@ impl Editor {
                 }
                 match last {
                     Some(Command::Insert { file, offset, text }) if self.editing() == Some(file.clone()) => {
-                        self.offset = offset + text.chars().count();
+                        self.offset = self.chars_before(&file, offset) + text.chars().count();
                     }
                     Some(Command::Delete { file, offset, .. }) if self.editing() == Some(file.clone()) => {
-                        self.offset = offset;
+                        self.offset = self.chars_before(&file, offset);
                     }
                     _ => {}
                 }
@@ -3864,6 +4235,16 @@ impl Editor {
             Watch::DesignFold => {
                 self.design_open.clear();
                 self.redraw_design();
+            }
+            Watch::DesignOpenOnly => {
+                self.open_only = !self.open_only;
+                // The index is filtered too; asked from there, it is redrawn
+                // where it is rather than replaced by the graph.
+                let index = BufferKind::Menu { title: "requirements".into() };
+                match self.buffer().kind == index {
+                    true => self.perform(Intent::Display { what: index }),
+                    false => self.redraw_design(),
+                }
             }
         }
     }
@@ -4229,6 +4610,23 @@ fn comment_marker(path: &str) -> Option<&'static str> {
     }
 }
 
+/// `command` with its offsets turned from characters into bytes of `text`.
+///
+/// A batch is converted against the same text for every part, which is right
+/// for the batches the editor makes: each part's offset is at or before the
+/// edits that precede it, so the text in front of it is unchanged.
+fn in_bytes(text: &str, command: Command) -> Command {
+    let bytes = |chars: usize| text.char_indices().nth(chars).map_or(text.len(), |(at, _)| at);
+    match command {
+        Command::Insert { file, offset, text: typed } => Command::Insert { file, offset: bytes(offset), text: typed },
+        Command::Delete { file, offset, deleted } => Command::Delete { file, offset: bytes(offset), deleted },
+        Command::Batch { commands } => {
+            Command::Batch { commands: commands.into_iter().map(|c| in_bytes(text, c)).collect() }
+        }
+        other => other,
+    }
+}
+
 /// Whether `next` carries on the typing `prev` did, so undo takes both at
 /// once: a character typed right after the last one, up to the start of the
 /// next word or line, or a Backspace right before the last one.
@@ -4241,12 +4639,12 @@ fn continues(prev: &Command, next: &Command) -> bool {
             let mut chars = text.chars();
             let (Some(c), None) = (chars.next(), chars.next()) else { return false };
             let after_space = typed.ends_with(char::is_whitespace) && !c.is_whitespace();
-            a == b && *offset == at + typed.chars().count() && c != '\n' && !typed.contains('\n') && !after_space
+            a == b && *offset == at + typed.len() && c != '\n' && !typed.contains('\n') && !after_space
         }
         (
             Command::Delete { file: a, offset: at, .. },
             Command::Delete { file: b, offset, deleted },
-        ) => a == b && deleted.chars().count() == 1 && offset + 1 == *at,
+        ) => a == b && deleted.chars().count() == 1 && offset + deleted.len() == *at,
         _ => false,
     }
 }
@@ -4318,6 +4716,7 @@ fn symbol_of(anchor: &tracelean_core::trace::anchor::Anchor) -> Option<String> {
 ///
 /// @implements REQ-EVID.mark_per_bond
 /// @implements REQ-EVID.judgement_caps
+/// @implements REQ-EVID.structural_not_applicable
 fn marks_of(
     index: &tracelean_core::trace::index::Index,
     evidence: &[tracelean_core::trace::record::Evidence],
@@ -4334,9 +4733,15 @@ fn marks_of(
     for (id, requirement) in &index.requirements {
         for clause in requirement.clause_keys() {
             let key = (id.clone(), clause);
-            let annotated = index.links.iter().any(|link| link.req_id == key.0 && link.clause == key.1);
+            let claims: Vec<_> =
+                index.links.iter().filter(|link| link.req_id == key.0 && link.clause == key.1).collect();
             let records = collected.remove(&key).unwrap_or_default();
-            out.insert(key, marks(records, annotated));
+            let held = marks(records, !claims.is_empty());
+            // Checked only by reading the tree: there is no model to test the
+            // code against or to prove anything of.
+            let by_reading = claims.iter().any(|link| link.is_structural())
+                && !claims.iter().any(|link| link.role == tracelean_core::trace::annotation::Role::Models);
+            out.insert(key, if by_reading { tracelean_core::evidence::structural(held) } else { held });
         }
     }
     out

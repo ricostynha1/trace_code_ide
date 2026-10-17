@@ -17,7 +17,7 @@ const INTRODUCERS: &[&str] = &[
 ];
 
 /// One place a name is declared.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct Declared {
     pub path: String,
     /// One-based.
@@ -53,10 +53,13 @@ pub fn identifier_at(text: &str, offset: usize) -> Option<String> {
 ///
 /// A dotted name (`Workspace.canon`) is also looked for by its last part,
 /// since that is how most declarations spell it.
-pub fn declarations<'a>(files: impl IntoIterator<Item = (&'a String, &'a String)>, name: &str) -> Vec<Declared> {
+///
+/// @implements REQ-NAV.definitions_found
+/// @drt REQ-NAV.definitions_found
+pub fn declarations(files: Vec<(String, String)>, name: &str) -> Vec<Declared> {
     let short = name.rsplit('.').next().unwrap_or(name);
     let mut found = Vec::new();
-    for (path, text) in files {
+    for (path, text) in &files {
         for (n, line) in text.lines().enumerate() {
             if declares(line, name) || (short != name && declares(line, short)) {
                 found.push(Declared { path: path.clone(), line: n as u32 + 1, text: line.trim().to_string() });
@@ -70,25 +73,27 @@ pub fn declarations<'a>(files: impl IntoIterator<Item = (&'a String, &'a String)
 /// Every line of every file that holds `needle`, by path then line, at most
 /// `limit` of them. As a whole word only when `whole` — which is how a name's
 /// uses are found — and ignoring case otherwise, which is how a person searches.
-pub fn occurrences<'a>(
-    files: impl IntoIterator<Item = (&'a String, &'a String)>,
-    needle: &str,
-    whole: bool,
-    limit: usize,
-) -> Vec<Declared> {
-    if needle.is_empty() {
+///
+/// @implements REQ-NAV.uses_found
+/// @drt REQ-NAV.uses_found
+pub fn occurrences(mut files: Vec<(String, String)>, needle: &str, whole: bool, limit: usize) -> Vec<Declared> {
+    if needle.is_empty() || limit == 0 {
         return Vec::new();
     }
     let lowered = needle.to_lowercase();
     let word = |c: Option<char>| c.is_some_and(|c| c.is_alphanumeric() || c == '_');
     let mut found = Vec::new();
-    let mut sorted: Vec<(&String, &String)> = files.into_iter().collect();
-    sorted.sort();
-    for (path, text) in sorted {
+    // By path alone, and stably: two files of one name keep their order.
+    files.sort_by(|a, b| a.0.cmp(&b.0));
+    for (path, text) in &files {
         for (n, line) in text.lines().enumerate() {
             let hit = if whole {
-                line.match_indices(needle).any(|(at, _)| {
-                    !word(line[..at].chars().next_back()) && !word(line[at + needle.len()..].chars().next())
+                // Every place it starts, overlapping too: in `x...`, `..`
+                // is a whole word only where it starts second.
+                line.char_indices().any(|(at, _)| {
+                    line[at..].starts_with(needle)
+                        && !word(line[..at].chars().next_back())
+                        && !word(line[at + needle.len()..].chars().next())
                 })
             } else {
                 line.to_lowercase().contains(&lowered)
@@ -112,6 +117,9 @@ fn declares(line: &str, name: &str) -> bool {
 
 /// The name a line declares, if it declares one: the word after its
 /// introducer, with only modifiers and visibility before that.
+///
+/// @implements REQ-NAV.declaration_line
+/// @drt REQ-NAV.declaration_line
 pub fn declared_on(line: &str) -> Option<String> {
     // A path stays one word: `let Kind::File { .. } = x` declares no `Kind`.
     let line = line.replace("::", "∷");
@@ -149,13 +157,15 @@ mod tests {
         ]
     }
 
+    /// @tests REQ-NAV.declaration_line
+    /// @tests REQ-NAV.definitions_found
     #[test]
     fn a_declaration_is_found_in_every_language_and_a_use_is_not() {
         let files = files();
-        let found = declarations(files.iter().map(|(p, t)| (p, t)), "open");
+        let found = declarations(files.clone(), "open");
         let places: Vec<(&str, u32)> = found.iter().map(|d| (d.path.as_str(), d.line)).collect();
         assert_eq!(places, vec![("src/a.rs", 2), ("web/app.ts", 1)]);
-        let canon = declarations(files.iter().map(|(p, t)| (p, t)), "Workspace.canon");
+        let canon = declarations(files, "Workspace.canon");
         assert_eq!(canon.first().map(|d| d.line), Some(1));
         // A pattern naming a path declares nothing of it.
         assert!(!declares("let Kind::File { path } = &kind else {", "Kind"));
@@ -165,15 +175,19 @@ mod tests {
         assert_eq!(declared_on("x = open(1)"), None);
     }
 
+    /// @tests REQ-NAV.uses_found
     #[test]
     fn uses_are_whole_words_and_a_search_ignores_case() {
         let files = files();
-        let uses = occurrences(files.iter().map(|(p, t)| (p, t)), "open", true, 50);
+        let uses = occurrences(files.clone(), "open", true, 50);
         let places: Vec<(&str, u32)> = uses.iter().map(|d| (d.path.as_str(), d.line)).collect();
         assert_eq!(places, vec![("src/a.rs", 2), ("src/a.rs", 3), ("web/app.ts", 1), ("web/app.ts", 2)]);
-        let searched = occurrences(files.iter().map(|(p, t)| (p, t)), "OPEN_ok", false, 50);
+        let searched = occurrences(files.clone(), "OPEN_ok", false, 50);
         assert_eq!(searched.len(), 1);
-        assert_eq!(occurrences(files.iter().map(|(p, t)| (p, t)), "open", true, 2).len(), 2);
+        assert_eq!(occurrences(files.clone(), "open", true, 2).len(), 2);
+        assert!(occurrences(files, "open", true, 0).is_empty());
+        let dots = vec![("a".to_string(), "x...".to_string())];
+        assert_eq!(occurrences(dots, "..", true, 5).len(), 1);
     }
 
     #[test]

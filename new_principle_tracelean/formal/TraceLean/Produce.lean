@@ -309,6 +309,15 @@ of the text. A frontend that parsed `T` to decide a colour would be computing it
 own view of the buffer, which is the one thing `REQ-VIEW` forbids.
 -/
 
+/-- How many of a requirement's clauses hold each thing a row counts. -/
+structure Tally where
+  implemented : Nat
+  annotated : Nat
+  judged : Nat
+  tested : Nat
+  proved : Nat
+  deriving Repr, DecidableEq, Inhabited, ToJson, FromJson
+
 /-- A requirement, as a station shows it. -/
 structure Node where
   id : String
@@ -316,9 +325,12 @@ structure Node where
   refines : List String
   /-- The marks every one of its clauses holds. -/
   marks : TraceLean.Evidence.Marks
-  /-- How many of its clauses something implements, of how many. -/
-  implemented : Nat
   clauses : Nat
+  /-- Clauses a model can answer: all but the structural ones. -/
+  modelled : Nat
+  /-- How many clauses hold each: implementing, testing and proving out of
+  `modelled`, annotating and judging out of `clauses`. -/
+  held : Tally
   /-- Lines of its implementing code tests run, of how many, when that code
   was measured as it is now. -/
   covered : Option (Nat × Nat)
@@ -334,101 +346,134 @@ private def spaces : Nat → String
   | 0 => ""
   | Nat.succ n => " " ++ spaces n
 
-/-- How wide the marks are: `AJTP`, one character each. -/
-def marksWidth : Nat := 4
+/-- A piece of a row: its text, and the role and actions of the span it is, if
+it is one. A row is built of pieces so that where each span falls is a
+consequence of the text rather than a second count of it. -/
+structure Piece where
+  text : String
+  role : Option Role
+  actions : List String
 
-private def markSpansFrom (at_ : Nat) :
-    List (TraceLean.Evidence.Mark × Bool × Char) → List Span
+private def bare (text : String) : Piece := ⟨text, none, []⟩
+
+private def spanned (text : String) (role : Role) : Piece := ⟨text, some role, actionsFor role⟩
+
+private def piecesText (pieces : List Piece) : String := String.join (pieces.map (·.text))
+
+/-- The spans of a row's pieces, the row starting at `at_`. -/
+private def piecesSpans (at_ : Nat) : List Piece → List Span
   | [] => []
-  | (mark, held, _) :: rest =>
-    ({ start := at_, stop := at_ + 1, role := Role.mark mark held,
-       actions := actionsFor (Role.mark mark held) } : Span) :: markSpansFrom (at_ + 1) rest
+  | p :: rest =>
+    let stop := at_ + p.text.length
+    (match p.role with
+     | some r => [({ start := at_, stop := stop, role := r, actions := p.actions } : Span)]
+     | none => []) ++ piecesSpans stop rest
 
-/-- One span a position of the marks, each saying which mark it is and whether
-it is held, so a frontend colours a gap apart from what fills it without
-reading the letters. -/
-def evidenceSpans (at_ : Nat) (marks : TraceLean.Evidence.Marks) : List Span :=
-  markSpansFrom at_ marks.each
-
-/-- The spans every row of either station carries: the marks, and the id.
-
-Both take their actions from their role, so a mark in this buffer offers what a
-mark offers anywhere. The marks are four characters wide, which is why the id
-starts six along. -/
-private def rowSpans (at_ : Nat) (indent : Nat) (node : Node) : List Span :=
-  let lead := at_ + indent * 2
-  let ident :=
-    ({ start := lead + marksWidth + 2, stop := lead + marksWidth + 2 + node.id.length,
-       role := Role.requirement, actions := actionsFor Role.requirement } : Span)
-  evidenceSpans lead node.marks ++ [ident]
-
-/-- Cells of five a node's implemented clauses fill, rounded, never past five. -/
-private def filledOf (node : Node) : Nat :=
-  min 5 ((node.implemented * 5 + node.clauses / 2) / max node.clauses 1)
-
-/-- The coverage bar: filled cells, then empty ones. -/
-private def barOf (node : Node) : String :=
-  String.mk (List.replicate (filledOf node) '█') ++ String.mk (List.replicate (5 - filledOf node) '░')
-
-/-- What a row says of its measured lines: `lines 57%`, `lines none` when its
-code has no line a test could run. -/
-private def percentText (c : Nat × Nat) : String :=
-  if c.2 == 0 then "lines none" else "lines " ++ toString (c.1 * 100 / c.2) ++ "%"
-
-/-- The measured lines and the gap after them; nothing unmeasured. -/
-private def coveredPart (node : Node) : String :=
-  match node.covered with
-  | some c => percentText c ++ "  "
-  | none => ""
-
-private def indexLine (node : Node) : String :=
-  TraceLean.Evidence.written node.marks ++ "  " ++ node.id ++ "  " ++ barOf node ++ " " ++
-    toString node.implemented ++ "/" ++ toString node.clauses ++ "  " ++ coveredPart node ++ node.title
-
-/-- The measured lines' span: green when every one ran, red when one did not;
-none when there was no line to run, which is neither. -/
-private def coveredSpans (from_ : Nat) (node : Node) : List Span :=
-  match node.covered with
-  | none => []
-  | some c =>
-    if c.2 == 0 then [] else
-    -- Coloured as a diff's lines are, but no diff: it opens what was measured.
-    let role := if c.1 == c.2 then Role.added else Role.removed
-    [{ start := from_, stop := from_ + (percentText c).length, role := role,
-       actions := ["trace.coverage " ++ node.id] }]
-
-/-- The bar's filled cells, in the colour of what fills them, and the
-measured lines. -/
-private def barSpans (at_ : Nat) (node : Node) : List Span :=
-  let start := at_ + marksWidth + 2 + node.id.length + 2
-  let counts := (toString node.implemented ++ "/" ++ toString node.clauses).length
-  let lines := coveredSpans (start + 5 + 1 + counts + 2) node
-  if filledOf node = 0 then lines
-  else { start := start, stop := start + filledOf node,
-         role := Role.claim TraceLean.Annotation.Role.implements,
-         actions := actionsFor (Role.claim TraceLean.Annotation.Role.implements) } :: lines
-
-private def indexSpans (at_ : Nat) : List Node → List Span
+/-- The spans of rows, one a line. -/
+private def linesSpans (at_ : Nat) : List (List Piece) → List Span
   | [] => []
-  | node :: rest =>
-    let line := indexLine node
-    rowSpans at_ 0 node ++ barSpans at_ node ++ indexSpans (at_ + line.length + 1) rest
-
-/--
-The requirement set as a buffer: one row a requirement, carrying what its
-evidence reached and what it is called.
-
-@models REQ-SHOW.index_from_requirements
--/
-def requirementsBuffer (nodes : List Node) : Buffer :=
-  let text := String.intercalate "\n" (nodes.map indexLine)
-  { id := "menu:requirements",
-    kind := BufferKind.menu "requirements",
-    text := text,
-    spans := tidy text.length (indexSpans 0 nodes) }
+  | row :: rest => piecesSpans at_ row ++ linesSpans (at_ + (piecesText row).length + 1) rest
 
 private def childrenOf (nodes : List Node) (parent : String) : List Node :=
   nodes.filter (fun node => node.refines.contains parent)
+
+/-- Lines run, of how many, over a requirement and everything refining it, each
+child's figure added in whole; `fuel` bounds it, as `refines` may hold a cycle. -/
+private def linesUnder (nodes : List Node) : Nat → Node → Nat × Nat
+  | 0, node => node.covered.getD (0, 0)
+  | Nat.succ f, node =>
+    (childrenOf nodes node.id).foldl
+      (fun acc child => (acc.1 + (linesUnder nodes f child).1, acc.2 + (linesUnder nodes f child).2))
+      (node.covered.getD (0, 0))
+
+/-- What the requirements refining a node left unrun, if anything: the figure
+over the node and all of them. -/
+private def childrenShort (nodes : List Node) (node : Node) : Option String :=
+  let sum := (childrenOf nodes node.id).foldl
+    (fun acc child => (acc.1 + (linesUnder nodes nodes.length child).1,
+                       acc.2 + (linesUnder nodes nodes.length child).2)) (0, 0)
+  let own := node.covered.getD (0, 0)
+  if sum.1 < sum.2 then some ("+children " ++ toString ((own.1 + sum.1) * 100 / (own.2 + sum.2)) ++ "%")
+  else none
+
+/-- One count: `J2/4` held of applicable, `T·` where none can be. -/
+private def countPiece (letter : String) (held of_ : Nat) (role : Role) : Piece :=
+  if of_ == 0 then bare (letter ++ "·") else spanned (letter ++ toString held ++ "/" ++ toString of_) role
+
+/-- Whether anything about a requirement is still to do: a clause short of a
+mark it can hold, or a line its tests never ran. -/
+def isOpen (node : Node) : Bool :=
+  let t := node.held
+  decide (t.implemented < node.modelled) || decide (t.tested < node.modelled) ||
+    decide (t.proved < node.modelled) || decide (t.annotated < node.clauses) ||
+    decide (t.judged < node.clauses) ||
+    (match node.covered with
+     | some c => decide (c.1 < c.2)
+     | none => false)
+
+/-- One position of the marks: its letter or a dash, in the colour of which mark
+it is and whether it is held; a dot, plain, where it cannot be held. -/
+private def markPiece (m : TraceLean.Evidence.Marks) (each : TraceLean.Evidence.Mark × Bool × Char) : Piece :=
+  if m.applies each.1 then
+    spanned (String.singleton (TraceLean.Evidence.letter each.2.1 each.2.2)) (Role.mark each.1 each.2.1)
+  else bare "·"
+
+/-- What a row says of its measured lines: `lines 57%` green when every one
+ran and red when one did not, `lines none` plain when there was none to run. -/
+private def linesPieces (node : Node) : List Piece :=
+  match node.covered with
+  | none => []
+  | some c =>
+    -- Coloured as a diff's lines are, but no diff: it opens what was measured.
+    (if c.2 == 0 then bare "lines none"
+     else ⟨"lines " ++ toString (c.1 * 100 / c.2) ++ "%",
+           some (if c.1 == c.2 then Role.added else Role.removed),
+           ["trace.coverage " ++ node.id]⟩) :: [bare "  "]
+
+/-- A row of either station, after its lead: the marks, the name, how many
+clauses hold each mark in that mark's colour, the lines measured and what the
+requirements under it left unrun, and the title. -/
+private def rowPieces (nodes : List Node) (node : Node) : List Piece :=
+  let t := node.held
+  let held := fun (m : TraceLean.Evidence.Mark) => Role.mark m true
+  let counts :=
+    [countPiece "I" t.implemented node.modelled (Role.claim TraceLean.Annotation.Role.implements),
+     countPiece "A" t.annotated node.clauses (held .annotated),
+     countPiece "J" t.judged node.clauses (held .judged),
+     countPiece "T" t.tested node.modelled (held .tested),
+     countPiece "P" t.proved node.modelled (held .proved)]
+  let under :=
+    match childrenShort nodes node with
+    | some said => [⟨said, some Role.removed, []⟩, bare "  "]
+    | none => []
+  node.marks.each.map (markPiece node.marks) ++ [bare "  ", spanned node.id Role.requirement, bare "  "] ++
+    counts.intersperse (bare " ") ++ [bare "  "] ++ linesPieces node ++ under ++ [bare node.title]
+
+/--
+The requirement set as a buffer: one row a requirement, carrying what its
+evidence reached and what it is called; with `openOnly`, only those with
+something still to do.
+
+@models REQ-SHOW.index_from_requirements
+@models REQ-SHOW.children_lines
+-/
+def requirementsBuffer (nodes : List Node) (openOnly : Bool) : Buffer :=
+  let rows := (nodes.filter (fun node => !openOnly || isOpen node)).map (rowPieces nodes)
+  let text := String.intercalate "\n" (rows.map piecesText)
+  { id := "menu:requirements",
+    kind := BufferKind.menu "requirements",
+    text := text,
+    spans := tidy text.length (linesSpans 0 rows) }
+
+/-- A node with something still to do in it or anywhere under it. -/
+private def openUnder (nodes : List Node) : Nat → Node → Bool
+  | 0, node => isOpen node
+  | Nat.succ f, node => isOpen node || (childrenOf nodes node.id).any (openUnder nodes f)
+
+/-- What the graph draws: everything, or with `openOnly` what has something to
+do in it or under it, which keeps the path to each. -/
+def shown (nodes : List Node) (openOnly : Bool) : List Node :=
+  nodes.filter (fun node => !openOnly || openUnder nodes nodes.length node)
 
 /-! `fuel` bounds the depth, and it has to: `refines` is data, so a cycle in it
 is representable and a graph walk without a bound would not be a function. A
@@ -469,44 +514,42 @@ private def foldMark (nodes : List Node) (opened : List String) (node : Node) : 
   else if opened.contains node.id then "▾" else "▸"
 
 /-- A row of the graph is its fold mark and a row of the index, indented under
-what it refines. -/
-private def designLine (nodes : List Node) (opened : List String) (row : Row) : String :=
-  spaces (row.indent * 2) ++ foldMark nodes opened row.node ++ " " ++ indexLine row.node
+what it refines. The mark of a node with something under it unfolds it one
+level, and offers to unfold everything under it. `graph` is what is drawn,
+`all` every requirement, over which what is left unrun under a row is counted. -/
+private def designPieces (graph all : List Node) (opened : List String) (row : Row) : List Piece :=
+  let mark := foldMark graph opened row.node
+  let fold : Piece :=
+    if (childrenOf graph row.node.id).isEmpty then bare mark
+    else ⟨mark, some Role.entry, ["design.toggle " ++ row.node.id, "design.expand_all " ++ row.node.id]⟩
+  [bare (spaces (row.indent * 2)), fold, bare " "] ++ rowPieces all row.node
 
-/-- The buttons above the graph, which unfold all of it or fold it to its
-roots. -/
-def designHeader : String := "[ expand all ]  [ fold all ]"
+/-- The buttons above the graph: unfold all of it, fold it to its roots, and
+show only what is still to do or everything again. -/
+def designHeader (openOnly : Bool) : List (String × String) :=
+  [("[ expand all ]", "design.expand_everything"), ("[ fold all ]", "design.fold_all"),
+   (if openOnly then "[ show all ]" else "[ open only ]", "design.open_only")]
 
-/-- The mark of a row with something under it: one level, or all of them. -/
-private def markSpans (nodes : List Node) (mark : Nat) (node : Node) : List Span :=
-  if (childrenOf nodes node.id).isEmpty then []
-  else [{ start := mark, stop := mark + 1, role := Role.entry,
-          actions := ["design.toggle " ++ node.id, "design.expand_all " ++ node.id] }]
-
-private def designSpans (nodes : List Node) (opened : List String) (at_ : Nat) : List Row → List Span
-  | [] => []
-  | row :: rest =>
-    let mark := at_ + row.indent * 2
-    markSpans nodes mark row.node ++ rowSpans (mark + 2) 0 row.node ++ barSpans (mark + 2) row.node ++
-      designSpans nodes opened (at_ + (designLine nodes opened row).length + 1) rest
+private def headerPieces (openOnly : Bool) : List Piece :=
+  ((designHeader openOnly).map (fun b => (⟨b.1, some Role.entry, [b.2]⟩ : Piece))).intersperse (bare "  ")
 
 /--
 The refinement graph as a buffer: the buttons, then one row a requirement,
-indented under what it refines; a folded one's mark unfolds it one level, and
-offers to unfold everything under it.
+indented under what it refines; with `openOnly`, only the requirements with
+something to do in them or under them.
 
 @models REQ-SHOW.graph_from_refinement
+@models REQ-SHOW.open_filtered
 -/
-def designBuffer (nodes : List Node) (opened : List String) : Buffer :=
-  let rows := designRows nodes opened
-  let text := String.intercalate "\n" (designHeader :: rows.map (designLine nodes opened))
-  let buttons : List Span :=
-    [{ start := 0, stop := 14, role := Role.entry, actions := ["design.expand_everything"] },
-     { start := 16, stop := 28, role := Role.entry, actions := ["design.fold_all"] }]
+def designBuffer (nodes : List Node) (opened : List String) (openOnly : Bool) : Buffer :=
+  let graph := shown nodes openOnly
+  let rows := designRows graph opened
+  let lines := headerPieces openOnly :: rows.map (designPieces graph nodes opened)
+  let text := String.intercalate "\n" (lines.map piecesText)
   { id := "menu:design",
     kind := BufferKind.menu "design",
     text := text,
-    spans := tidy text.length (buttons ++ designSpans nodes opened (designHeader.length + 1) rows) }
+    spans := tidy text.length (linesSpans 0 lines) }
 
 /-! ## Showing part of a buffer
 
@@ -625,11 +668,12 @@ def linked (b : Buffer) : List (String × List String) :=
   (b.spans.filter (!·.actions.isEmpty)).map
     (fun s => (String.mk ((b.text.toList.drop s.start).take (s.stop - s.start)), s.actions))
 
-/-- A root, what refines it, and what refines that; the middle one measured. -/
+/-- A root, what refines it, and what refines that; the last structural, the
+lower two measured. -/
 def graph : List Node :=
-  [⟨"ARCH-X", "Root", [], ⟨true, true, false, false⟩, 1, 1, none⟩,
-   ⟨"REQ-A", "Mid", ["ARCH-X"], ⟨true, true, true, false⟩, 1, 2, some (3, 4)⟩,
-   ⟨"REQ-B", "Leaf", ["REQ-A"], ⟨true, false, false, true⟩, 0, 1, none⟩]
+  [⟨"ARCH-X", "Root", [], ⟨true, true, false, false, false⟩, 1, 1, ⟨1, 1, 1, 0, 0⟩, none⟩,
+   ⟨"REQ-A", "Mid", ["ARCH-X"], ⟨true, true, true, false, false⟩, 2, 2, ⟨1, 2, 2, 2, 0⟩, some (3, 4)⟩,
+   ⟨"REQ-B", "Leaf", ["REQ-A"], ⟨true, false, false, false, true⟩, 1, 0, ⟨0, 1, 0, 0, 0⟩, some (0, 2)⟩]
 
 /-- A region known only by its role offers that role's actions, whichever
 producer marked it; a requirement's name offers the same in the index as in the
@@ -638,9 +682,9 @@ graph.
 @proves REQ-SHOW.actions_by_role -/
 theorem a_role_offers_its_actions (marks : List Mark) :
     (spansOfMarks marks).map (·.actions) = marks.map (fun m => actionsFor m.role) ∧
-    ((requirementsBuffer graph).spans.filter (·.role == .requirement)).map (·.actions)
+    ((requirementsBuffer graph false).spans.filter (·.role == .requirement)).map (·.actions)
       = [actionsFor .requirement, actionsFor .requirement, actionsFor .requirement] ∧
-    ((designBuffer graph ["ARCH-X", "REQ-A"]).spans.filter (·.role == .requirement)).map (·.actions)
+    ((designBuffer graph ["ARCH-X", "REQ-A"] false).spans.filter (·.role == .requirement)).map (·.actions)
       = [actionsFor .requirement, actionsFor .requirement, actionsFor .requirement] := by
   refine ⟨?_, ?_⟩
   · simp [spansOfMarks]
@@ -669,13 +713,15 @@ marks marked.
 
 @proves REQ-SHOW.index_from_requirements -/
 theorem one_row_a_requirement :
-    (requirementsBuffer graph).text
-      = "AJ--  ARCH-X  █████ 1/1  Root\nAJT-  REQ-A  ███░░ 1/2  lines 75%  Mid\nA--P  REQ-B  ░░░░░ 0/1  Leaf" ∧
-    ((requirementsBuffer graph).spans.filter (fun s => s.role == .mark .proved true)).length = 1 ∧
-    (linked (requirementsBuffer graph)).filter (fun l => l.2 != ["trace.rollup"]) =
+    (requirementsBuffer graph false).text
+      = "AJ--  ARCH-X  I1/1 A1/1 J1/1 T0/1 P0/1  +children 50%  Root\n" ++
+        "AJT-  REQ-A  I1/2 A2/2 J2/2 T2/2 P0/2  lines 75%  +children 50%  Mid\n" ++
+        "A-··  REQ-B  I· A1/1 J0/1 T· P·  lines 0%  Leaf" ∧
+    ((requirementsBuffer graph false).spans.filter (fun s => s.role == .mark .tested true)).length = 3 ∧
+    (linked (requirementsBuffer graph false)).filter (fun l => l.2 != ["trace.rollup"]) =
       [("ARCH-X", actionsFor .requirement), ("REQ-A", actionsFor .requirement),
-       ("lines 75%", ["trace.coverage REQ-A"]), ("REQ-B", actionsFor .requirement)] ∧
-    ((linked (requirementsBuffer graph)).filter (fun l => l.2 == ["trace.rollup"])).length = 12 := by
+       ("lines 75%", ["trace.coverage REQ-A"]), ("REQ-B", actionsFor .requirement),
+       ("lines 0%", ["trace.coverage REQ-B"])] := by
   native_decide
 
 /-- The graph opens folded to its roots; unfolding a requirement shows what
@@ -683,11 +729,45 @@ refines it beneath it, a level deeper.
 
 @proves REQ-SHOW.graph_from_refinement -/
 theorem the_graph_unfolds_where_asked :
-    (designBuffer graph []).text = "[ expand all ]  [ fold all ]\n▸ AJ--  ARCH-X  █████ 1/1  Root" ∧
-    (designBuffer graph ["ARCH-X"]).text
-      = "[ expand all ]  [ fold all ]\n▾ AJ--  ARCH-X  █████ 1/1  Root\n  ▸ AJT-  REQ-A  ███░░ 1/2  lines 75%  Mid" ∧
-    (designBuffer graph ["ARCH-X", "REQ-A"]).text
-      = "[ expand all ]  [ fold all ]\n▾ AJ--  ARCH-X  █████ 1/1  Root\n  ▾ AJT-  REQ-A  ███░░ 1/2  lines 75%  Mid\n    · A--P  REQ-B  ░░░░░ 0/1  Leaf" := by
+    (designBuffer graph [] false).text
+      = "[ expand all ]  [ fold all ]  [ open only ]\n▸ AJ--  ARCH-X  I1/1 A1/1 J1/1 T0/1 P0/1  +children 50%  Root" ∧
+    (designBuffer graph ["ARCH-X"] false).text
+      = "[ expand all ]  [ fold all ]  [ open only ]\n▾ AJ--  ARCH-X  I1/1 A1/1 J1/1 T0/1 P0/1  +children 50%  Root\n" ++
+        "  ▸ AJT-  REQ-A  I1/2 A2/2 J2/2 T2/2 P0/2  lines 75%  +children 50%  Mid" ∧
+    (designBuffer graph ["ARCH-X", "REQ-A"] false).text
+      = "[ expand all ]  [ fold all ]  [ open only ]\n▾ AJ--  ARCH-X  I1/1 A1/1 J1/1 T0/1 P0/1  +children 50%  Root\n" ++
+        "  ▾ AJT-  REQ-A  I1/2 A2/2 J2/2 T2/2 P0/2  lines 75%  +children 50%  Mid\n" ++
+        "    · A-··  REQ-B  I· A1/1 J0/1 T· P·  lines 0%  Leaf" := by
+  native_decide
+
+/-- A finished requirement: every mark it can hold, every line run. -/
+def finished (id : String) (parent : String) (covered : Nat × Nat) : Node :=
+  ⟨id, "Done", [parent], ⟨true, true, true, true, false⟩, 1, 1, ⟨1, 1, 1, 1, 1⟩, some covered⟩
+
+/-- A row says what the requirements under it left unrun, over itself and all
+of them; once they ran everything it says nothing more.
+
+@proves REQ-SHOW.children_lines -/
+theorem a_row_says_what_is_left_unrun_under_it :
+    ((requirementsBuffer graph false).text.splitOn "\n").map (fun l => (l.splitOn "+children ").length)
+      = [2, 2, 1] ∧
+    (requirementsBuffer [⟨"ARCH-X", "Root", [], ⟨true, true, true, true, false⟩, 1, 1, ⟨1, 1, 1, 1, 1⟩,
+      some (2, 2)⟩, finished "REQ-C" "ARCH-X" (3, 3)] false).text
+      = "AJTP  ARCH-X  I1/1 A1/1 J1/1 T1/1 P1/1  lines 100%  Root\n" ++
+        "AJTP  REQ-C  I1/1 A1/1 J1/1 T1/1 P1/1  lines 100%  Done" := by
+  native_decide
+
+/-- Only what is open: a finished requirement disappears from the index, and
+from the graph unless something under it is open, which keeps the path to it.
+
+@proves REQ-SHOW.open_filtered -/
+theorem open_only_keeps_what_is_still_to_do :
+    ((requirementsBuffer (graph ++ [finished "REQ-C" "ARCH-X" (1, 1)]) true).text.splitOn "REQ-C").length = 1 ∧
+    ((requirementsBuffer (graph ++ [finished "REQ-C" "ARCH-X" (1, 1)]) false).text.splitOn "REQ-C").length = 2 ∧
+    (designBuffer (graph ++ [finished "REQ-C" "ARCH-X" (1, 1)]) ["ARCH-X", "REQ-A"] true).text
+      = "[ expand all ]  [ fold all ]  [ show all ]\n▾ AJ--  ARCH-X  I1/1 A1/1 J1/1 T0/1 P0/1  +children 57%  Root\n" ++
+        "  ▾ AJT-  REQ-A  I1/2 A2/2 J2/2 T2/2 P0/2  lines 75%  +children 50%  Mid\n" ++
+        "    · A-··  REQ-B  I· A1/1 J0/1 T· P·  lines 0%  Leaf" := by
   native_decide
 
 /-- What a sandboxed agent changed, then what it said, then what it cost.
@@ -704,7 +784,7 @@ same two texts.
 
 @proves REQ-SHOW.producer_is_pure -/
 theorem a_producer_reads_only_its_arguments :
-    designBuffer graph ["REQ-A", "ARCH-X"] = designBuffer graph ["ARCH-X", "REQ-A"] ∧
+    designBuffer graph ["REQ-A", "ARCH-X"] true = designBuffer graph ["ARCH-X", "REQ-A"] true ∧
     reviewBuffer "a.rs" "one\ntwo" "one\nTWO" = reviewBuffer "a.rs" "one\ntwo" "one\nTWO" := by
   native_decide
 

@@ -75,7 +75,7 @@ fn model_and_implementation_agree_on_the_refinement_graph() {
         &input_schema(),
         &model,
         &implementation,
-        RunOptions { seed: 71, cases: 3_000, shrink_rounds: 100 },
+        RunOptions { seed: 71, cases: 3_000 },
     )
     .expect("both runners answer");
 

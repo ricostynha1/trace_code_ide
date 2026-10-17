@@ -140,7 +140,7 @@ fn model_and_implementation_agree_on_where_text_came_from() {
         &input_schema(),
         &model,
         &implementation,
-        RunOptions { seed: 88, cases: 3_000, shrink_rounds: 100 },
+        RunOptions { seed: 88, cases: 3_000 },
     )
     .expect("both runners answer");
 

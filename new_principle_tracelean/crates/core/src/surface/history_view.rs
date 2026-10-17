@@ -81,6 +81,24 @@ fn is_here(points: &[Point], node: Option<u64>) -> bool {
     }
 }
 
+/// Whether a node is on the branch the workspace is on: the base, where every
+/// branch starts, or the node the workspace is at, or one it was made after.
+/// Followed up from the node the workspace is at, a step at most once per
+/// point, so a history whose parents name each other still ends. Over the whole
+/// history, not what a filter shows: a hidden ancestor must not break the chain.
+fn on_current_branch(points: &[Point], node: Option<u64>) -> bool {
+    let Some(target) = node else { return true };
+    let mut at = points.iter().find(|p| p.here).map(|p| p.node);
+    for _ in 0..=points.len() {
+        let Some(current) = at else { return false };
+        if current == target {
+            return true;
+        }
+        at = points.iter().find(|p| p.node == current).and_then(|p| p.parent);
+    }
+    false
+}
+
 /// The first column from `from` on that no line runs through and no branch
 /// of this row has taken.
 fn free_column(open: &[bool], taken: &[usize], from: usize) -> usize {
@@ -229,7 +247,15 @@ pub fn history_view(points: &[Point], filter: Filter, file: Option<&str>) -> Buf
             Some(n) => (point_name(Some(n)), shown.iter().find(|p| p.node == n).map(|p| p.said.clone()).unwrap_or_default()),
         };
         let from = at + graph + 1;
-        let role = if here { Role::Heading } else { Role::Entry };
+        // The current node stands out; the rest of its branch is another colour
+        // than the branches it left, which stay as they were.
+        let role = if here {
+            Role::Heading
+        } else if on_current_branch(points, row.node) {
+            Role::Added
+        } else {
+            Role::Entry
+        };
         // The base is jumped to by its number, as every node is.
         let actions = vec!["history.jump".to_string()];
         spans.push(Span { start: from, stop: from + name.chars().count(), role, actions });
@@ -325,6 +351,25 @@ mod tests {
 
     fn tree_of(shown: &Buffer) -> String {
         shown.text.split_once('\n').map(|(_, t)| t.to_string()).unwrap_or_default()
+    }
+
+    /// The branch the workspace is on is a colour of its own, from the base to
+    /// the current node; a branch it left keeps the colour of any other node.
+    ///
+    /// @tests REQ-UNDO.tree_is_shown
+    #[test]
+    fn the_current_branch_has_its_own_colour() {
+        // 0 -> 1 -> 2 (here), and 0 -> 3 on another branch.
+        let points = [point(0, None, false), point(1, Some(0), false), point(2, Some(1), true), point(3, Some(0), false)];
+        let shown = history_view(&points, Filter::All, None);
+        let role_of = |name: &str| {
+            let at = shown.text[..shown.text.find(name).expect(name)].chars().count();
+            shown.spans.iter().find(|s| s.start == at).map(|s| s.role).expect(name)
+        };
+        assert_eq!(role_of("#0"), Role::Added, "the node the branch starts from");
+        assert_eq!(role_of("#2"), Role::Added, "an ancestor of the current node");
+        assert_eq!(role_of("#3"), Role::Heading, "the current node");
+        assert_eq!(role_of("#4"), Role::Entry, "a node on the branch left behind");
     }
 
     /// Each point is named by its number, which goes there; the one the

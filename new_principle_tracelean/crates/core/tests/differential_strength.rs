@@ -88,7 +88,7 @@ fn model_and_implementation_agree_on_what_a_proof_is_worth() {
         &input_schema(),
         &model,
         &implementation,
-        RunOptions { seed: 33, cases: 3_000, shrink_rounds: 100 },
+        RunOptions { seed: 33, cases: 3_000 },
     )
     .expect("both runners answer");
 
@@ -215,7 +215,7 @@ fn model_and_implementation_agree_on_the_obligation_text() {
         &schema,
         &model,
         &implementation,
-        RunOptions { seed: 103, cases: 2_000, shrink_rounds: 100 },
+        RunOptions { seed: 103, cases: 2_000 },
     )
     .expect("both runners answer");
 

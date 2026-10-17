@@ -65,7 +65,7 @@ fn check(clause: &str, function: &str, entry: &str, arguments: &[&str], params: 
     let scratch = harness::scratch(&format!("lines-{clause}"));
     let implementation = harness::rust_runner_with_params("REQ-LINECOV", clause, entry, params, &scratch);
     let model = harness::lean_runner("TraceLean.Lines", function, &op, arguments, &scratch);
-    let result = run(&op, &Schema::Struct { fields }, &model, &implementation, RunOptions { seed, cases: 3_000, shrink_rounds: 100 })
+    let result = run(&op, &Schema::Struct { fields }, &model, &implementation, RunOptions { seed, cases: 3_000 })
         .expect("both runners answer");
     support::agreed(&result);
     let _ = std::fs::remove_dir_all(&scratch);
@@ -111,7 +111,7 @@ fn model_and_implementation_agree_on_a_requirements_lines() {
     let Some(Schema::List { inner: hits, .. }) = summary().remove("lines") else { unreachable!() };
     let item = Schema::Tuple { items: vec![small(&["a.rs", "b.rs"]), Schema::List { inner: hits, max_len: Some(3) }] };
     let schema = Schema::Struct { fields: fields(vec![("items", Schema::List { inner: Box::new(item), max_len: Some(3) })]) };
-    let result = run(op, &schema, &model, &implementation, RunOptions { seed: 333, cases: 3_000, shrink_rounds: 100 })
+    let result = run(op, &schema, &model, &implementation, RunOptions { seed: 333, cases: 3_000 })
         .expect("both runners answer");
     support::agreed(&result);
     let _ = std::fs::remove_dir_all(&scratch);
@@ -148,7 +148,7 @@ fn model_and_implementation_agree_on_when_coverage_is_measured_again() {
             ("again", Schema::Bool),
         ]),
     };
-    let result = run(op, &schema, &model, &implementation, RunOptions { seed: 334, cases: 3_000, shrink_rounds: 100 })
+    let result = run(op, &schema, &model, &implementation, RunOptions { seed: 334, cases: 3_000 })
         .expect("both runners answer");
     support::agreed(&result);
     let _ = std::fs::remove_dir_all(&scratch);
@@ -187,7 +187,7 @@ fn model_and_implementation_agree_on_the_lines_a_count_opens() {
             ("width", Schema::Nat { max: Some(40), edges: vec![0, 30, 100] }),
         ]),
     };
-    let result = run(op, &schema, &model, &implementation, RunOptions { seed: 335, cases: 3_000, shrink_rounds: 100 })
+    let result = run(op, &schema, &model, &implementation, RunOptions { seed: 335, cases: 3_000 })
         .expect("both runners answer");
     support::agreed(&result);
     let _ = std::fs::remove_dir_all(&scratch);

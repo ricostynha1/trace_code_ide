@@ -81,7 +81,7 @@ pub fn value_stream(seed: u64, schema: Schema, count: u64) -> Vec<Value> {
 
 /// One schema of every shape, as the JSON a binding writes them in. The Lean
 /// model reads the same text, so the two streams are over the same shapes.
-const SHAPES: &str = "[{\"type\":\"nat\",\"max\":50,\"edges\":[7]},{\"type\":\"int\",\"min\":-5,\"max\":5},{\"type\":\"bool\"},{\"type\":\"str\",\"max_len\":4,\"examples\":[\"one\",\"\"]},{\"type\":\"option\",\"inner\":{\"type\":\"nat\",\"max\":9}},{\"type\":\"list\",\"inner\":{\"type\":\"int\",\"min\":0,\"max\":3},\"max_len\":3},{\"type\":\"tuple\",\"items\":[{\"type\":\"bool\"},{\"type\":\"nat\",\"max\":3}]},{\"type\":\"struct\",\"fields\":{\"a\":{\"type\":\"bool\"},\"b\":{\"type\":\"str\",\"max_len\":2}}},{\"type\":\"enum\",\"variants\":{\"x\":null,\"y\":{\"type\":\"nat\",\"max\":2}}},{\"type\":\"list\",\"inner\":{\"type\":\"struct\",\"fields\":{\"n\":{\"type\":\"option\",\"inner\":{\"type\":\"int\",\"min\":-1,\"max\":1}}}},\"max_len\":2}]";
+pub(crate) const SHAPES: &str ="[{\"type\":\"nat\",\"max\":50,\"edges\":[7]},{\"type\":\"int\",\"min\":-5,\"max\":5},{\"type\":\"bool\"},{\"type\":\"str\",\"max_len\":4,\"examples\":[\"one\",\"\"]},{\"type\":\"option\",\"inner\":{\"type\":\"nat\",\"max\":9}},{\"type\":\"list\",\"inner\":{\"type\":\"int\",\"min\":0,\"max\":3},\"max_len\":3},{\"type\":\"tuple\",\"items\":[{\"type\":\"bool\"},{\"type\":\"nat\",\"max\":3}]},{\"type\":\"struct\",\"fields\":{\"a\":{\"type\":\"bool\"},\"b\":{\"type\":\"str\",\"max_len\":2}}},{\"type\":\"enum\",\"variants\":{\"x\":null,\"y\":{\"type\":\"nat\",\"max\":2}}},{\"type\":\"list\",\"inner\":{\"type\":\"struct\",\"fields\":{\"n\":{\"type\":\"option\",\"inner\":{\"type\":\"int\",\"min\":-1,\"max\":1}}}},\"max_len\":2}]";
 
 /// The first `count` values the `shape`-th schema of `SHAPES` (counted round
 /// the list) generates from a seed: the same seed, the same cases, for every
@@ -201,7 +201,8 @@ pub fn shrink(schema: &Schema, v: &Value) -> Vec<Value> {
         (Schema::Str { .. }, Value::String(s)) => {
             if !s.is_empty() {
                 out.push(Value::from(""));
-                out.push(Value::from(&s[..s.len() / 2]));
+                // By characters: half the bytes of `é` is no string.
+                out.push(Value::from(s.chars().take(s.chars().count() / 2).collect::<String>()));
             }
         }
         (Schema::Option { .. }, v) if !v.is_null() => out.push(Value::Null),
@@ -311,6 +312,42 @@ mod tests {
                 assert!(steps < 500, "shrinking did not converge");
             }
         }
+    }
+
+    /// An integer shrinks toward zero, a tuple and an enum's payload shrink in
+    /// place, and what is already smallest — or not of its schema — offers
+    /// nothing.
+    ///
+    /// @tests REQ-DRT-GEN.shrink_terminates
+    #[test]
+    fn every_kind_of_value_shrinks_toward_its_smallest() {
+        let int = Schema::Int { min: None, max: None };
+        assert_eq!(shrink(&int, &Value::from(-9)), vec![Value::from(0), Value::from(-4)]);
+        assert!(shrink(&int, &Value::from(0)).is_empty());
+        assert!(shrink(&Schema::Nat { max: None, edges: vec![] }, &Value::from(-3)).is_empty());
+
+        let pair = Schema::Tuple { items: vec![Schema::Bool, Schema::Nat { max: None, edges: vec![] }] };
+        assert_eq!(
+            shrink(&pair, &serde_json::json!([true, 1])),
+            vec![serde_json::json!([false, 1]), serde_json::json!([true, 0])]
+        );
+        // A tuple of the wrong length is not of its schema.
+        assert!(shrink(&pair, &serde_json::json!([true])).is_empty());
+
+        let mut variants = std::collections::BTreeMap::new();
+        variants.insert("none".to_string(), None);
+        variants.insert("some".to_string(), Some(Box::new(Schema::Bool)));
+        let either = Schema::Enum { variants };
+        assert_eq!(shrink(&either, &serde_json::json!({"some": true})), vec![serde_json::json!({"some": false})]);
+        assert!(shrink(&either, &Value::from("none")).is_empty());
+    }
+
+    /// @tests REQ-DRT-GEN.shrink_terminates
+    #[test]
+    fn a_string_of_wide_characters_shrinks_by_characters() {
+        let schema = Schema::Str { max_len: Some(3), examples: vec![] };
+        let smaller = shrink(&schema, &Value::from("éé"));
+        assert_eq!(smaller, vec![Value::from(""), Value::from("é")]);
     }
 
     #[test]

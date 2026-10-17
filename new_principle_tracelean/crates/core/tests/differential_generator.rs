@@ -61,7 +61,7 @@ fn model_and_implementation_agree_on_the_raw_stream() {
         &strukt(&[("seed", seed()), ("count", count())]),
         &model,
         &implementation,
-        RunOptions { seed: 3, cases: 2_000, shrink_rounds: 100 },
+        RunOptions { seed: 3, cases: 2_000 },
     )
     .expect("both runners answer");
 
@@ -115,7 +115,7 @@ fn model_and_implementation_agree_on_generated_numbers() {
         &schema,
         &model,
         &implementation,
-        RunOptions { seed: 4, cases: 2_000, shrink_rounds: 100 },
+        RunOptions { seed: 4, cases: 2_000 },
     )
     .expect("both runners answer");
 
@@ -157,7 +157,7 @@ fn model_and_implementation_agree_on_every_shape_of_generated_value() {
         &schema,
         &model,
         &implementation,
-        RunOptions { seed: 8, cases: 2_000, shrink_rounds: 100 },
+        RunOptions { seed: 8, cases: 2_000 },
     )
     .expect("both runners answer");
 

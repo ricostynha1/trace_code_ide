@@ -92,7 +92,7 @@ fn model_and_implementation_agree_on_the_grammar() {
         &input_schema(),
         &model,
         &implementation,
-        RunOptions { seed: 44, cases: 3_000, shrink_rounds: 100 },
+        RunOptions { seed: 44, cases: 3_000 },
     )
     .expect("both runners answer");
 
@@ -256,7 +256,7 @@ fn model_and_implementation_agree_on_region_balance() {
         &schema,
         &model,
         &implementation,
-        RunOptions { seed: 107, cases: 2_000, shrink_rounds: 100 },
+        RunOptions { seed: 107, cases: 2_000 },
     )
     .expect("both runners answer");
 

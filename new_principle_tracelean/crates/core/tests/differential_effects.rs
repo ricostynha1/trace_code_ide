@@ -128,7 +128,7 @@ fn model_and_implementation_agree_on_what_a_run_got_wrong() {
         &input_schema(),
         &model,
         &implementation,
-        RunOptions { seed: 53, cases: 2_000, shrink_rounds: 100 },
+        RunOptions { seed: 53, cases: 2_000 },
     )
     .expect("both runners answer");
 

@@ -27,33 +27,76 @@ def EveryPartHolds (parts : List Marks) (y : Marks) : Prop :=
   (parts = [] → y = Marks.empty) ∧
   (Not (parts = []) →
     y.annotated = parts.all (·.annotated) ∧ y.judged = parts.all (·.judged) ∧
-    y.tested = parts.all (·.tested) ∧ y.proved = parts.all (·.proved))
+    y.structural = parts.all (·.structural) ∧
+    y.tested = (!parts.all (·.structural) && parts.all (fun m => m.tested || m.structural)) ∧
+    y.proved = (!parts.all (·.structural) && parts.all (fun m => m.proved || m.structural)))
 
-/-- What a left fold of `Marks.both` from a first part comes to: each mark held
-exactly when the first part and every later one hold it. -/
-theorem fold_both (rest : List Marks) : ∀ first : Marks,
-    (rest.foldl Marks.both first).annotated = (first :: rest).all (·.annotated) ∧
-    (rest.foldl Marks.both first).judged = (first :: rest).all (·.judged) ∧
-    (rest.foldl Marks.both first).tested = (first :: rest).all (·.tested) ∧
-    (rest.foldl Marks.both first).proved = (first :: rest).all (·.proved) := by
-  induction rest
-  case nil =>
-    intro first
-    simp
-  case cons x xs ih =>
-    intro first
-    have h := ih (Marks.both first x)
+/-- Marks where nothing that cannot apply is held. -/
+def Normal (m : Marks) : Prop := m.structural = true → m.tested = false ∧ m.proved = false
+
+theorem both_normal (a b : Marks) : Normal (Marks.both a b) := by
+  intro h
+  simp only [Marks.both] at h ⊢
+  simp [h]
+
+/-- What a left fold of `Marks.both` from marks with nothing held that cannot
+apply comes to: each mark held exactly when every part it applies to holds it. -/
+theorem fold_both (rest : List Marks) : ∀ acc : Marks, Normal acc →
+    (rest.foldl Marks.both acc).annotated = (acc.annotated && rest.all (·.annotated)) ∧
+    (rest.foldl Marks.both acc).judged = (acc.judged && rest.all (·.judged)) ∧
+    (rest.foldl Marks.both acc).structural = (acc.structural && rest.all (·.structural)) ∧
+    (rest.foldl Marks.both acc).tested = (!(acc.structural && rest.all (·.structural)) &&
+      (acc.tested || acc.structural) && rest.all (fun m => m.tested || m.structural)) ∧
+    (rest.foldl Marks.both acc).proved = (!(acc.structural && rest.all (·.structural)) &&
+      (acc.proved || acc.structural) && rest.all (fun m => m.proved || m.structural)) := by
+  induction rest with
+  | nil =>
+    intro acc hn
+    rcases acc with ⟨a, j, t, p, s⟩
+    cases s
+    · simp
+    · have := hn rfl
+      simp_all
+  | cons x xs ih =>
+    intro acc _
+    have h := ih (Marks.both acc x) (both_normal acc x)
     simp only [List.foldl]
-    refine ⟨h.1.trans ?_, h.2.1.trans ?_, h.2.2.1.trans ?_, h.2.2.2.trans ?_⟩ <;>
-      simp [Marks.both, Bool.and_assoc]
+    rw [h.1, h.2.1, h.2.2.1, h.2.2.2.1, h.2.2.2.2]
+    rcases acc with ⟨a, j, t, p, s⟩
+    rcases x with ⟨xa, xj, xt, xp, xs'⟩
+    simp only [Marks.both, List.all_cons]
+    generalize xs.all (·.annotated) = A
+    generalize xs.all (·.judged) = J
+    generalize xs.all (·.structural) = S
+    generalize xs.all (fun m => m.tested || m.structural) = T
+    generalize xs.all (fun m => m.proved || m.structural) = P
+    cases a <;> cases j <;> cases t <;> cases p <;> cases s <;> cases xs' <;> cases xt <;> cases xp <;>
+      simp
 
 /-- Two marks agreeing on every field are the same marks. -/
 theorem marks_ext (a b : Marks) (h1 : a.annotated = b.annotated) (h2 : a.judged = b.judged)
-    (h3 : a.tested = b.tested) (h4 : a.proved = b.proved) : a = b := by
+    (h3 : a.tested = b.tested) (h4 : a.proved = b.proved) (h5 : a.structural = b.structural) :
+    a = b := by
   cases a
   cases b
-  simp only at h1 h2 h3 h4
-  rw [h1, h2, h3, h4]
+  simp only at h1 h2 h3 h4 h5
+  rw [h1, h2, h3, h4, h5]
+
+/-- `combine` meets the specification on a part and what follows it. -/
+theorem combine_cons (x : Marks) (rest : List Marks) :
+    let y := combine (x :: rest)
+    y.annotated = (x :: rest).all (·.annotated) ∧ y.judged = (x :: rest).all (·.judged) ∧
+    y.structural = (x :: rest).all (·.structural) ∧
+    y.tested = (!(x :: rest).all (·.structural) &&
+      (x :: rest).all (fun m => m.tested || m.structural)) ∧
+    y.proved = (!(x :: rest).all (·.structural) &&
+      (x :: rest).all (fun m => m.proved || m.structural)) := by
+  have h := fold_both rest (Marks.both Marks.neutral x) (both_normal _ _)
+  simp only [combine, List.foldl]
+  rw [h.1, h.2.1, h.2.2.1, h.2.2.2.1, h.2.2.2.2]
+  rcases x with ⟨xa, xj, xt, xp, xs'⟩
+  simp only [Marks.both, Marks.neutral, List.all_cons]
+  cases xs' <;> cases xt <;> cases xp <;> simp
 
 /-- The aggregate meets the clause, and nothing else does.
 
@@ -76,7 +119,7 @@ theorem every_part_holds_pinned :
       · intro h
         exact (nomatch h)
       · intro _
-        exact fold_both rest x
+        exact combine_cons x rest
   · intro x1 y1 y2 h1 h2
     cases x1
     case nil =>
@@ -85,15 +128,12 @@ theorem every_part_holds_pinned :
       have n : Not (x :: rest = []) := fun h => (nomatch h)
       have m1 := h1.2 n
       have m2 := h2.2 n
-      have a1 := m1.2
-      have a2 := m2.2
-      have b1 := a1.2
-      have b2 := a2.2
       apply marks_ext y1 y2
       · rw [m1.1, m2.1]
-      · rw [a1.1, a2.1]
-      · rw [b1.1, b2.1]
-      · rw [b1.2, b2.2]
+      · rw [m1.2.1, m2.2.1]
+      · rw [m1.2.2.2.1, m2.2.2.2.1]
+      · rw [m1.2.2.2.2, m2.2.2.2.2]
+      · rw [m1.2.2.1, m2.2.2.1]
 
 /-- A requirement's marks are what every counted clause over its reachable set
 holds — whichever path reaches each.

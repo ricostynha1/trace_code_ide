@@ -93,7 +93,9 @@ fn launches_in(files: &[(String, String)]) -> Vec<String> {
     for (file, text) in files {
         // Building a runner is this project's own toolchain use, and it is
         // what `drt` exists to do; driving an agent is not.
-        if file.contains("/src/drt/") || file.contains("/tests/") {
+        // The Lean language server, asked what the proof state is, is the same
+        // toolchain: Lean's own, started for a question and never an agent.
+        if file.contains("/src/drt/") || file.contains("/tests/") || file.ends_with("src/lean_server.rs") {
             continue;
         }
         for (line_no, line) in code_lines(text, file) {
@@ -162,6 +164,7 @@ fn nothing_here_launches_a_coding_agent() {
 ///
 /// @tests ARCH-DETERMINISM.no_ambient_time
 /// @tests ARCH-DETERMINISM.seeded_generation
+/// @tests ARCH-CORE-SHELL.decision_total
 /// @structural ARCH-DETERMINISM.no_ambient_time reason="a constraint on what the source may mention; a function that read a clock would satisfy any model of itself"
 #[test]
 fn nothing_here_reads_a_clock_or_an_unseeded_source_of_randomness() {
@@ -229,33 +232,10 @@ fn varying_names_outside_scratch(files: &[(String, String)]) -> Vec<String> {
 /// that started classifying paths or grading evidence would fail here.
 ///
 /// @tests ARCH-CORE-SHELL.shell_thin
+/// @tests ARCH-CORE-SHELL.decision_total
 /// @structural ARCH-CORE-SHELL.shell_thin reason="a property of how the modules are divided, which no single function can express"
 #[test]
 fn only_declared_shells_touch_the_filesystem() {
-    // Each of these reads or writes, and each is listed with why. Adding a file
-    // here is the moment to ask whether the decision inside it belongs in a
-    // core module instead.
-    const SHELLS: &[&str] = &[
-        "core/src/observe/workspace.rs", // copies a tree into a workspace
-        "core/src/observe/watch.rs",     // reads an agent's transcript and the price table
-        "core/src/observe/workcopy.rs",  // makes, finds and ends a sandbox's copy
-        "core/src/trace/index.rs",       // walks a project and reads its files
-        "core/src/trace/lockfile.rs",    // writes the lock file
-        "core/src/trace/store.rs",       // holds the records backends earn
-        "core/src/history/persistence.rs", // appends and replays the journal
-        "core/src/drt/rust_runner.rs",   // generates a runner package
-        "core/src/drt/lean_runner.rs",   // generates a runner package
-        "core/src/drt/ts_runner.rs",     // generates a runner package
-        "core/src/drt/run.rs",           // speaks to two runner processes
-        "core/src/drt/config.rs",        // reads the binding file
-        "core/src/drt/pins.rs",          // asks Lean about a pinning theorem, keeps the verdict
-        "core/src/drt/auto.rs",          // generates, builds and runs a derived test's runners
-        "core/src/drt/lines_run.rs",     // runs each test under coverage, keeps the lines
-        "core/src/bin/tracelean-trace.rs", // the command-line entry point
-        "editor/src/theme.rs",           // reads the colours a project chose
-        "editor/src/recall.rs",          // keeps what was open for next time
-    ];
-
     let unexpected = filesystem_outside_shells(&sources(), SHELLS);
     assert!(
         unexpected.is_empty(),
@@ -263,6 +243,178 @@ fn only_declared_shells_touch_the_filesystem() {
     );
     let thick = thick_shells(&sources(), SHELLS);
     assert!(thick.is_empty(), "{thick:#?}");
+}
+
+/// Each of these reads or writes, and each is listed with why. Adding a file
+/// here is the moment to ask whether the decision inside it belongs in a core
+/// module instead.
+const SHELLS: &[&str] = &[
+    "core/src/observe/workspace.rs",   // copies a tree into a workspace
+    "core/src/observe/watch.rs",       // reads an agent's transcript and the price table
+    "core/src/observe/workcopy.rs",    // makes, finds and ends a sandbox's copy
+    "core/src/trace/index.rs",         // walks a project and reads its files
+    "core/src/trace/lockfile.rs",      // writes the lock file
+    "core/src/trace/store.rs",         // holds the records backends earn
+    "core/src/history/persistence.rs", // appends and replays the journal
+    "core/src/drt/rust_runner.rs",     // generates a runner package
+    "core/src/drt/lean_runner.rs",     // generates a runner package
+    "core/src/drt/ts_runner.rs",       // generates a runner package
+    "core/src/drt/run.rs",             // speaks to two runner processes
+    "core/src/drt/config.rs",          // reads the binding file
+    "core/src/drt/pins.rs",            // asks Lean about a pinning theorem, keeps the verdict
+    "core/src/drt/auto.rs",            // generates, builds and runs a derived test's runners
+    "core/src/drt/lines_run.rs",       // runs each test under coverage, keeps the lines
+    "core/src/bin/tracelean-trace.rs", // the command-line entry point
+    "editor/src/theme.rs",             // reads the colours a project chose
+    "editor/src/recall.rs",            // keeps what was open for next time
+];
+
+/// State a decision could read besides its arguments: a mutable static, a
+/// lazily set one, a per-thread one. Each the core holds is listed with why it
+/// cannot change an answer.
+const HELD: &[(&str, &str)] = &[(
+    "core/src/surface/highlight.rs",
+    "each language's compiled query, built from a constant; a cache, not an input",
+)];
+
+/// Core modules, other than shells and fixtures, that keep state outside their
+/// arguments.
+fn global_state_outside(files: &[(String, String)], shells: &[&str], held: &[(&str, &str)]) -> Vec<String> {
+    let mut found = Vec::new();
+    for (file, text) in files {
+        if !file.starts_with("core/src/") || shells.contains(&file.as_str()) || held.iter().any(|(f, _)| f == file) {
+            continue;
+        }
+        let fixtures_begin = text.lines().position(|line| line.trim() == "#[cfg(test)]").map(|i| i + 1).unwrap_or(usize::MAX);
+        for (line_no, line) in code_lines(text, file) {
+            let global = ["static mut", "thread_local!", "OnceLock", "OnceCell", "lazy_static", "static COUNTER"]
+                .iter()
+                .any(|needle| line.contains(needle))
+                || (line.starts_with("static ") && (line.contains("Mutex") || line.contains("Atomic")));
+            if global && line_no <= fixtures_begin {
+                found.push(format!("{file}:{line_no}: {line}"));
+            }
+        }
+    }
+    found
+}
+
+/// A decision is a total function of its arguments: it reads no file (above),
+/// no clock and no unseeded randomness (`no_ambient_time`), and no state kept
+/// between calls, which is this.
+///
+/// @tests ARCH-CORE-SHELL.decision_total
+/// @structural ARCH-CORE-SHELL.decision_total reason="a claim about every decision in the project at once: what the source may hold besides arguments, read off the tree"
+#[test]
+fn decisions_keep_no_state_between_calls() {
+    let found = global_state_outside(&sources(), SHELLS, HELD);
+    assert!(found.is_empty(), "a decision module keeps state outside its arguments:\n{found:#?}");
+}
+
+/// @tests REQ-CHECK.structural_rejects
+#[test]
+fn the_global_state_check_rejects_a_decision_that_keeps_some() {
+    let keeps = tree(&[("core/src/trace/x.rs", "static mut SEEN: u32 = 0;\nfn a() {}\n")]);
+    assert_eq!(global_state_outside(&keeps, SHELLS, HELD).len(), 1);
+    let cached = tree(&[("core/src/surface/highlight.rs", "thread_local! { static Q: u8 = 0; }\n")]);
+    assert!(global_state_outside(&cached, SHELLS, HELD).is_empty());
+    let fixture = tree(&[("core/src/trace/x.rs", "fn a() {}\n#[cfg(test)]\nmod t {\nstatic COUNTER: AtomicU64 = AtomicU64::new(0);\n}\n")]);
+    assert!(global_state_outside(&fixture, SHELLS, HELD).is_empty());
+}
+
+/// Lean's reflection: asking the elaborator what a declaration's type is.
+const REFLECTION: &[&str] = &["#print", "#check", "Lean.Meta", "Lean.Elab", "getConstInfo", "inferType", "MetaM", "TermElabM"];
+
+/// Lines of the differential machinery that ask Lean about a model's types.
+fn reflection_in(files: &[(String, String)]) -> Vec<String> {
+    let mut found = Vec::new();
+    for (file, text) in files {
+        if !file.starts_with("core/src/drt/") {
+            continue;
+        }
+        for (line_no, line) in code_lines(text, file) {
+            if REFLECTION.iter().any(|needle| line.contains(needle)) {
+                found.push(format!("{file}:{line_no}: {line}"));
+            }
+        }
+    }
+    found
+}
+
+/// A schema is declared in a binding or derived from the two signatures as
+/// written (`drt/derive.rs`); nothing asks Lean what a model's types are —
+/// neither the machinery here nor the runner it generates.
+///
+/// @tests REQ-DRT-SCHEMA.declared_not_reflected
+/// @structural REQ-DRT-SCHEMA.declared_not_reflected reason="an absence of reflection in the source and in what it generates, read off both"
+#[test]
+fn no_schema_is_extracted_from_a_model_by_reflection() {
+    use tracelean_core::drt::lean_runner::{self, LeanEntry};
+    let found = reflection_in(&sources());
+    assert!(found.is_empty(), "the differential machinery reflects on the model:\n{found:#?}");
+
+    let out = std::env::temp_dir().join(format!("tracelean-reflect-{}", std::process::id()));
+    let entries = [LeanEntry { op: "REQ-X.c".into(), function: "TraceLean.Nav.reopened".into(), arguments: vec!["files".into()] }];
+    lean_runner::materialize(&out, &["TraceLean.Nav"], "tracelean", "/models", &entries).expect("generated");
+    let main = std::fs::read_to_string(lean_runner::package_dir(&out).join("Main.lean")).expect("a runner");
+    let _ = std::fs::remove_dir_all(&out);
+    let asked: Vec<&&str> = REFLECTION.iter().filter(|needle| main.contains(**needle)).collect();
+    assert!(asked.is_empty(), "the generated runner reflects on the model: {asked:?}");
+}
+
+/// @tests REQ-CHECK.structural_rejects
+#[test]
+fn the_reflection_check_rejects_machinery_that_reflects() {
+    let reflects = tree(&[("core/src/drt/x.rs", "let q = \"#print TraceLean.Nav.reopened\";\n")]);
+    assert_eq!(reflection_in(&reflects).len(), 1);
+    assert!(reflection_in(&tree(&[("core/src/drt/x.rs", "let q = schema.clone();\n")])).is_empty());
+}
+
+/// The modules that read a transcript.
+const TRANSCRIPT_READERS: &[&str] =
+    &["core/src/observe/transcript.rs", "core/src/observe/claude.rs", "core/src/observe/watch.rs"];
+
+/// Lines of the transcript readers that could write, truncate or remove a file.
+fn writes_in(files: &[(String, String)], readers: &[&str]) -> Vec<String> {
+    let mut found = Vec::new();
+    for (file, text) in files {
+        if !readers.contains(&file.as_str()) {
+            continue;
+        }
+        for (line_no, line) in code_lines(text, file) {
+            let writes = ["fs::write", "File::create", "OpenOptions", "remove_file", "set_len", "fs::rename", "fs::copy"]
+                .iter()
+                .any(|needle| line.contains(needle));
+            if writes {
+                found.push(format!("{file}:{line_no}: {line}"));
+            }
+        }
+    }
+    found
+}
+
+/// What reads a transcript only reads it: no write, truncation, removal or
+/// rename anywhere in the modules that open one.
+///
+/// @tests REQ-TRANSCRIPT.read_only
+/// @structural REQ-TRANSCRIPT.read_only reason="an absence: nothing writes to the transcript, and a model of a read could not distinguish a version that also truncated"
+#[test]
+fn what_reads_a_transcript_writes_nothing() {
+    let sources = sources();
+    for reader in TRANSCRIPT_READERS {
+        assert!(sources.iter().any(|(f, _)| f == reader), "{reader} moved; this check would pass vacuously");
+    }
+    let found = writes_in(&sources, TRANSCRIPT_READERS);
+    assert!(found.is_empty(), "a transcript reader can write:\n{found:#?}");
+}
+
+/// @tests REQ-CHECK.structural_rejects
+#[test]
+fn the_transcript_check_rejects_a_reader_that_writes() {
+    let writes = tree(&[("core/src/observe/watch.rs", "let _ = std::fs::write(p, \"\");\n")]);
+    assert_eq!(writes_in(&writes, TRANSCRIPT_READERS).len(), 1);
+    let reads = tree(&[("core/src/observe/watch.rs", "let t = std::fs::read_to_string(p);\n")]);
+    assert!(writes_in(&reads, TRANSCRIPT_READERS).is_empty());
 }
 
 /// Files that touch the filesystem without being a declared shell.
@@ -734,6 +886,67 @@ fn the_escape_hatch_check_rejects_unsigned_and_unexplained_claims() {
     assert_eq!(escape_hatch_problems(&vec![("a.rs".to_string(), Some(signed)); 6]).len(), 1);
     assert!(escape_hatch_problems(&[("a.rs".into(), Some(Qualifier::Structural { reason: why }))]).is_empty());
     assert_eq!(escape_hatch_problems(&[("a.rs".into(), Some(Qualifier::Structural { reason: Some("short".into()) }))]).len(), 1);
+}
+
+/// Source files of this project, Rust and TypeScript, that hold code, with the
+/// path the index names them by.
+fn feature_files() -> Vec<String> {
+    let root = project_root();
+    let mut out = Vec::new();
+    let mut stack = vec![root.join("crates"), root.join("web/src")];
+    while let Some(dir) = stack.pop() {
+        let Ok(entries) = std::fs::read_dir(&dir) else { continue };
+        for entry in entries.flatten() {
+            let path = entry.path();
+            let name = path.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default();
+            if path.is_dir() {
+                // Tests claim what they test, and an example is a tool for a
+                // test; what is traced is what ships.
+                if !matches!(name.as_str(), "target" | "tests" | "examples") {
+                    stack.push(path);
+                }
+            } else if (name.ends_with(".rs") || name.ends_with(".ts")) && name != "build.rs" {
+                out.push(path.strip_prefix(&root).unwrap_or(&path).display().to_string());
+            }
+        }
+    }
+    out.sort();
+    out
+}
+
+/// Files no annotation claims. A crate root or a `mod.rs` only says which
+/// modules exist, which is no feature of its own.
+fn unclaimed_files(files: &[String], claimed: &std::collections::BTreeSet<String>) -> Vec<String> {
+    files
+        .iter()
+        .filter(|file| !file.ends_with("/lib.rs") && !file.ends_with("/mod.rs") && !claimed.contains(*file))
+        .cloned()
+        .collect()
+}
+
+/// Every file that ships code is claimed by an annotation, so every feature is
+/// reached from a requirement clause; one nothing claims is a feature nobody
+/// asked for, or one nobody said why it is there.
+///
+/// @tests ARCH-SELFHOST.every_feature_traced
+/// @structural ARCH-SELFHOST.every_feature_traced reason="a claim about every source file in this repository at once"
+#[test]
+fn every_file_that_ships_code_is_claimed() {
+    use tracelean_core::trace::index::build;
+    let index = build(&project_root());
+    let claimed = index.links.iter().map(|l| l.anchor.file.clone()).collect();
+    let files = feature_files();
+    assert!(files.len() > 40, "only {} source files; the walk is wrong", files.len());
+    let missing = unclaimed_files(&files, &claimed);
+    assert!(missing.is_empty(), "nothing claims these files:\n{missing:#?}");
+}
+
+/// @tests REQ-CHECK.structural_rejects
+#[test]
+fn the_tracing_check_rejects_a_file_nothing_claims() {
+    let files = vec!["crates/a/src/lib.rs".to_string(), "crates/a/src/x.rs".to_string(), "web/src/y.ts".to_string()];
+    let claimed = std::collections::BTreeSet::from(["web/src/y.ts".to_string()]);
+    assert_eq!(unclaimed_files(&files, &claimed), vec!["crates/a/src/x.rs".to_string()]);
 }
 
 /// A bound entry point takes its inputs as arguments and reads nothing else.

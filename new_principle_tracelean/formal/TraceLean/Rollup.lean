@@ -25,32 +25,50 @@ claim each of them makes. Nothing to aggregate holds nothing.
 def combine (parts : List Marks) : Marks :=
   match parts with
   | [] => Marks.empty
-  | first :: rest => rest.foldl Marks.both first
+  | first :: rest => (first :: rest).foldl Marks.both Marks.neutral
 
 /-- Nothing to aggregate holds no mark, not every mark; a mark held by all but
-one part is not held; one held by all is.
+one part is not held; one held by all is; a structural part neither grants a
+test nor withholds one.
 
 @proves REQ-ROLLUP.every_part_holds -/
 theorem combine_holds_what_every_part_holds :
     combine [] = Marks.empty ∧
-    written (combine [⟨true, true, true, true⟩, ⟨true, true, true, true⟩, ⟨true, true, true, false⟩])
-      = "AJT-" ∧
-    written (combine [⟨true, true, false, false⟩, ⟨true, false, false, true⟩]) = "A---" := by
+    written (combine [⟨true, true, true, true, false⟩, ⟨true, true, true, true, false⟩,
+      ⟨true, true, true, false, false⟩]) = "AJT-" ∧
+    written (combine [⟨true, true, false, false, false⟩, ⟨true, false, false, true, false⟩]) = "A---" ∧
+    written (combine [⟨true, true, true, false, false⟩, ⟨true, true, false, false, true⟩]) = "AJT-" ∧
+    written (combine [⟨true, true, false, true, true⟩, ⟨true, true, false, false, true⟩]) = "AJ··" := by
   native_decide
 
-/-- An aggregate holds the tested mark only if its first part does: one part
-without a mark clears it for the whole. -/
+/-- A join that holds a test, or to which none applies, was joined from one
+that did too. -/
+theorem both_keeps (a b : Marks) :
+    ((Marks.both a b).tested || (Marks.both a b).structural) = true →
+      (a.tested || a.structural) = true := by
+  rcases a with ⟨_, _, t, _, s⟩
+  cases t <;> cases s <;> simp [Marks.both]
+
+theorem fold_keeps (rest : List Marks) : ∀ acc : Marks,
+    ((rest.foldl Marks.both acc).tested || (rest.foldl Marks.both acc).structural) = true →
+      (acc.tested || acc.structural) = true := by
+  induction rest with
+  | nil => intro acc h; simpa using h
+  | cons x xs ih => intro acc h; exact both_keeps acc x (ih (Marks.both acc x) h)
+
+/-- An aggregate holds the tested mark only if its first part does or cannot:
+one part without a mark it can hold clears it for the whole. -/
 theorem a_part_without_a_mark_clears_it (first : Marks) (rest : List Marks) :
-    (combine (first :: rest)).holds ⟨false, false, true, false⟩ = true →
-      first.tested = true := by
-  simp only [combine]
-  induction rest generalizing first with
-  | nil => simp [Marks.holds]
-  | cons x xs ih =>
-    intro h
-    have := ih (Marks.both first x) h
-    simp only [Marks.both, Bool.and_eq_true] at this
-    exact this.1
+    (combine (first :: rest)).holds ⟨false, false, true, false, false⟩ = true →
+      (first.tested || first.structural) = true := by
+  intro h
+  have held : ((combine (first :: rest)).tested || (combine (first :: rest)).structural) = true := by
+    simp only [Marks.holds] at h
+    simp_all
+  simp only [combine, List.foldl] at held
+  have := fold_keeps rest (Marks.both Marks.neutral first) held
+  rcases first with ⟨_, _, t, _, s⟩
+  cases t <;> cases s <;> simp_all [Marks.both, Marks.neutral]
 
 /-! ## Rolling a declared graph up
 
@@ -480,8 +498,8 @@ theorem a_partial_clause_is_never_tested_or_proved (reached : Marks) :
         { id := "R", complete := true, clauses := [some "a"], exempt := [],
           partialClauses := [some "a"], refines := [] }
       = [partialCap reached] ∧
-    (partialCap reached).holds ⟨false, false, true, false⟩ = false ∧
-    (partialCap reached).holds ⟨false, false, false, true⟩ = false := by
+    (partialCap reached).holds ⟨false, false, true, false, false⟩ = false ∧
+    (partialCap reached).holds ⟨false, false, false, true, false⟩ = false := by
   refine ⟨?_, ?_, ?_⟩
   · simp [ownMarks, marksAt]
   · simp [partialCap, Marks.holds]
@@ -494,11 +512,11 @@ renders marked provisional, as a figure that can only fall.
 theorem an_open_roll_up_is_provisional :
     (rollUp [{ id := "R", complete := false, clauses := [some "a"], exempt := [],
                partialClauses := [], refines := [] }]
-            [(("R", some "a"), ⟨true, true, true, true⟩)] "R" ⟨false, false, true, false⟩).covered.exact
+            [(("R", some "a"), ⟨true, true, true, true, false⟩)] "R" ⟨false, false, true, false, false⟩).covered.exact
       = false ∧
     (rollUp [{ id := "R", complete := true, clauses := [some "a"], exempt := [],
                partialClauses := [], refines := [] }]
-            [(("R", some "a"), ⟨true, true, true, true⟩)] "R" ⟨false, false, true, false⟩).covered.exact
+            [(("R", some "a"), ⟨true, true, true, true, false⟩)] "R" ⟨false, false, true, false, false⟩).covered.exact
       = true := by
   native_decide
 

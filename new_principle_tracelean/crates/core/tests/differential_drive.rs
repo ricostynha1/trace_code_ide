@@ -114,7 +114,7 @@ fn model_and_implementation_agree_on_what_a_sequence_of_keys_does() {
         &session(),
         &model,
         &implementation,
-        RunOptions { seed: 27, cases: 2_000, shrink_rounds: 100 },
+        RunOptions { seed: 27, cases: 2_000 },
     )
     .expect("both runners answer");
 

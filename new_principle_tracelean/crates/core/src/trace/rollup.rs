@@ -85,10 +85,9 @@ pub struct RollUp {
 /// @drt REQ-ROLLUP.every_part_holds
 /// @drt ARCH-HONEST.weakest_link
 pub fn combine(parts: Vec<Marks>) -> Marks {
-    let mut parts = parts.into_iter();
-    match parts.next() {
-        None => Marks::NONE,
-        Some(first) => parts.fold(first, Marks::and),
+    match parts.is_empty() {
+        true => Marks::NONE,
+        false => parts.into_iter().fold(Marks::NEUTRAL, Marks::and),
     }
 }
 
@@ -306,10 +305,12 @@ pub fn tree(
 mod tests {
     use super::*;
 
-    /// Marks written as text, for the tests: `AJTP` with dashes.
+    /// Marks written as text, for the tests: `AJTP` with dashes, `··` where
+    /// testing and proving do not apply.
     fn m(text: &str) -> Marks {
-        let at = |i: usize| text.as_bytes()[i] != b'-';
-        Marks { annotated: at(0), judged: at(1), tested: at(2), proved: at(3) }
+        let at: Vec<char> = text.chars().collect();
+        let held = |i: usize| at[i] != '-' && at[i] != '·';
+        Marks { annotated: held(0), judged: held(1), tested: held(2), proved: held(3), structural: at[2] == '·' }
     }
 
     /// @tests REQ-ROLLUP.every_part_holds

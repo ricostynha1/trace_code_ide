@@ -8,6 +8,7 @@ pub mod drt;
 pub mod evidence;
 pub mod history;
 pub mod judge;
+pub mod lean_server;
 pub mod observe;
 pub mod surface;
 pub mod trace;

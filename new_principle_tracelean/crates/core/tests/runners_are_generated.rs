@@ -179,17 +179,15 @@ fn the_lean_runner_is_a_generated_package_that_is_compiled() {
     assert!(main.contains("toJson"), "the generated runner does not use the declared encoding");
     assert!(main.contains("fromJson?"), "the generated runner does not use the declared encoding");
 
-    // And a missing toolchain is a named state. This machine has one, so what
-    // is checked is that the question is asked and answered rather than
-    // assumed — a runner that skipped the check would report a model failure
-    // on a machine without Lean.
-    match lean_runner::toolchain() {
-        Ok(()) => {}
-        Err(reason) => assert!(
-            reason.len() > 10,
-            "a missing toolchain was reported as `{reason}`, which explains nothing"
-        ),
-    }
+    // And a missing toolchain is a named state, explained, rather than a
+    // failure of the model: asked of a PATH with nothing on it, the answer
+    // names the tool and how to get it.
+    let missing = lean_runner::toolchain_on(std::ffi::OsStr::new("")).expect_err("nothing on an empty PATH");
+    assert!(missing.contains("`lean`") && missing.contains("elan"), "explains nothing: {missing}");
+    let empty = scratch("no-lean");
+    let _ = std::fs::create_dir_all(&empty);
+    assert!(lean_runner::toolchain_on(empty.as_os_str()).is_err(), "a directory without Lean has Lean");
+    let _ = std::fs::remove_dir_all(&empty);
 
     let _ = std::fs::remove_dir_all(&out);
 }

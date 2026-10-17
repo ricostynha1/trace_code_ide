@@ -34,6 +34,8 @@ pub fn read_record(root: &Path, req_id: &str, clause: Option<&str>) -> Option<Pi
 
 /// Check one clause's theorem, write the verdict, and return it. `None` when
 /// the clause has no `@pins` theorem to check.
+///
+/// @implements REQ-STRENGTH.kernel_decides
 pub fn check(root: &Path, plan: &PinPlan) -> Option<PinRecord> {
     let (theorem, file) = (plan.theorem.clone()?, plan.file.clone()?);
     let source = root.join(&file);

@@ -26,6 +26,8 @@ pub struct Recalled {
 
 /// What was kept, or nothing: a missing or unreadable file is a fresh start,
 /// never a reason not to open.
+///
+/// @implements REQ-NAV.session_recalled
 pub fn load(root: &Path) -> Option<Recalled> {
     let text = std::fs::read_to_string(root.join(FILE)).ok()?;
     decode(&serde_json::from_str(&text).ok()?)
@@ -64,6 +66,8 @@ pub fn named(root: &Path) -> String {
 }
 
 /// Put `root` first among the folders opened before, and answer the list.
+///
+/// @implements REQ-SHOW.recent_reopens
 pub fn note_recent(root: &Path) -> Vec<String> {
     let Some(file) = recent_file() else { return Vec::new() };
     let shown = named(root);

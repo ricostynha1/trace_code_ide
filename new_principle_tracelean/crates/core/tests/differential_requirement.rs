@@ -127,7 +127,7 @@ fn model_and_implementation_agree_on_what_a_document_declares() {
         &input_schema(),
         &model,
         &implementation,
-        RunOptions { seed: 61, cases: 2_000, shrink_rounds: 100 },
+        RunOptions { seed: 61, cases: 2_000 },
     )
     .expect("both runners answer");
 
@@ -236,7 +236,7 @@ fn model_and_implementation_agree_on_which_identifiers_are_redeclared() {
         &schema,
         &model,
         &implementation,
-        RunOptions { seed: 109, cases: 2_000, shrink_rounds: 100 },
+        RunOptions { seed: 109, cases: 2_000 },
     )
     .expect("both runners answer");
 

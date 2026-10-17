@@ -13,7 +13,9 @@ clauses:
   review_from_change: A change between two workspace states shall become a buffer whose text shows what changed and whose spans mark what was added and what was removed.
   menu_from_keymap: A keymap mode shall become a buffer whose text is the keys available in it, and whose spans carry the action a key dispatches where it dispatches one.
   record_from_events: Observed events shall become a buffer whose text is those events and whose spans mark each one.
-  index_from_requirements: The requirement set shall become a buffer whose text is one row a requirement and whose spans mark each requirement's identifier and the evidence marks it holds.
+  index_from_requirements: The requirement set shall become a buffer whose text is one row a requirement and whose spans mark each requirement's identifier, the evidence marks it holds, and how many of its clauses hold each mark, each count in its mark's colour.
+  children_lines: A requirement's row shall, when the requirements refining it left a line of their code unrun, say what share of the lines of it and of them together tests ran.
+  open_filtered: Either station shall, on request, show only the requirements with a clause short of a mark it can hold or a line its tests never ran, and in the graph also those above them.
   graph_from_refinement: The refinement relation shall become a buffer whose text is that relation drawn as an indented graph, folded to the requirements that refine nothing except where unfolded, and a requirement that refines an unfolded one shall appear under it.
   sandbox_from_observation: What a sandboxed agent changed, what it said, and what its usage is estimated to have cost shall become the rows of one buffer, in that order.
   sandbox_session_shown: The sandbox station shall show whether a session exists, the command that enters it, each change waiting with a way to review it, ways to accept and reject them, and the agent's conversation newest first, wrapped to the width it is shown in.

@@ -127,6 +127,8 @@ fn declaration(files: &BTreeMap<String, String>, file: &str, start: u32, end: u3
 
 /// Every clause with a Lean function modelling it and a Rust function
 /// implementing it, minus those a binding already declares.
+///
+/// @implements REQ-DRT-SCHEMA.derived_from_both
 pub fn candidates(root: &Path, index: &Index, files: &BTreeMap<String, String>) -> Vec<Candidate> {
     let bound: Vec<String> = super::config::read(root).unwrap_or_default().iter().map(|b| b.op()).collect();
     let mut clauses: Vec<(String, Option<String>)> =
@@ -331,7 +333,7 @@ fn rust_side(root: &Path, scratch: &Path, chosen: &[&Candidate]) -> Result<Runne
 /// Run one candidate against built runners.
 fn exercise(c: &Candidate, model: &RunnerSpec, implementation: &RunnerSpec) -> Outcome {
     let Ok(derived) = &c.derived else { return Outcome::Mismatch(c.derived.clone().err().unwrap_or_default()) };
-    let result = match run(&c.op, &derived.schema, model, implementation, RunOptions { seed: SEED, cases: CASES, shrink_rounds: 100 }) {
+    let result = match run(&c.op, &derived.schema, model, implementation, RunOptions { seed: SEED, cases: CASES }) {
         Ok(result) => result,
         Err(error) => return Outcome::Failed(format!("{error:?}")),
     };
@@ -363,6 +365,8 @@ fn exercise(c: &Candidate, model: &RunnerSpec, implementation: &RunnerSpec) -> O
 /// A candidate already agreed against inputs that hash as they do now is not
 /// run again (`Cached`), and no runner is built when none is left; `again`
 /// runs every one regardless.
+///
+/// @implements REQ-DRT-SCHEMA.derived_from_both
 pub fn run_all(root: &Path, index: &Index, files: &BTreeMap<String, String>, again: bool) -> Vec<(Candidate, Outcome)> {
     let found = candidates(root, index, files);
     let held = crate::trace::earn::merge(

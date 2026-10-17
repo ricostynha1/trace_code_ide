@@ -7,10 +7,6 @@
 //
 // The rendering comes from `render.ts`, which is the module the conformance
 // harness checks — so what a person sees here is what that harness verified.
-//
-// Realises REQ-VIEW.one_representation and REQ-SHOW.core_produces. Written out
-// rather than annotated: TraceLean has no TypeScript grammar and cannot place a
-// claim inside this file (ADR-0008).
 
 import { classOf, pieces, shown } from "./render.ts";
 import type { Buffer, Pane } from "./view.ts";
@@ -61,6 +57,9 @@ function region(into: HTMLElement): { width: number; height: number } {
 // Every line and piece records the offset it starts at, so a pointer anywhere
 // in the pane can be turned back into a position in the buffer — which is all
 // the editor needs to place a cursor or list what can be done there.
+//
+// @implements REQ-VIEW.one_representation
+// @implements REQ-SHOW.core_produces
 export function draw(into: HTMLElement, buffer: Buffer, act: (action: string, at: number) => void) {
   into.textContent = "";
   let start = 0;
@@ -276,6 +275,94 @@ function hideChange() {
 // it is not taken as a click to place the cursor.
 let dragged = false;
 
+// A bar down the pane's right edge whose thumb is the window's share of the
+// buffer: dragging it, or clicking the track, scrolls to there. What it sends is
+// the editor's own `scroll`, a number of lines, so a drag, the wheel and a key
+// are one change with different amounts. Nothing is drawn when the whole buffer
+// fits, which is also what an editor that does not say how long it is gets.
+function drawScrollbar(box: HTMLElement, pane: Pane) {
+  const total = pane.lines ?? 0;
+  const shown = pane.at.height;
+  if (total <= shown || shown <= 0) return;
+  const top = pane.top ?? 0;
+  const track = document.createElement("div");
+  track.className = "scrollbar";
+  const thumb = document.createElement("div");
+  thumb.className = "scrollthumb";
+  const room = () => Math.max(1, track.clientHeight || box.clientHeight);
+  const fraction = Math.max(0.05, shown / total);
+  thumb.style.height = `${fraction * 100}%`;
+  thumb.style.top = `${(Math.min(top, total - shown) / total) * 100}%`;
+  track.appendChild(thumb);
+  box.appendChild(track);
+  // The pane scrolls across for a long line; the bar stays at its edge.
+  const keepAtEdge = () => (track.style.transform = `translateX(${box.scrollLeft}px)`);
+  box.addEventListener("scroll", keepAtEdge);
+  keepAtEdge();
+
+  // Scroll so the window starts at `wanted`, from where it is now.
+  let at = top;
+  const scrollTo = (wanted: number) => {
+    const target = Math.round(Math.max(0, Math.min(total - 1, wanted)));
+    const lines = target - at;
+    if (lines === 0) return;
+    at = target;
+    void run("scroll", { pane: pane.pane, lines });
+  };
+  thumb.addEventListener("mousedown", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const [from, startedAt] = [event.clientY, at];
+    const move = (moved: MouseEvent) => scrollTo(startedAt + ((moved.clientY - from) / room()) * total);
+    const release = () => {
+      document.removeEventListener("mousemove", move);
+      document.removeEventListener("mouseup", release);
+      dragged = true;
+    };
+    document.addEventListener("mousemove", move);
+    document.addEventListener("mouseup", release);
+  });
+  // A click on the track puts the middle of the thumb there.
+  track.addEventListener("mousedown", (event) => {
+    if (event.target !== track) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const place = (event.clientY - track.getBoundingClientRect().top) / room();
+    scrollTo(place * total - shown / 2);
+  });
+  track.addEventListener("click", (event) => event.stopPropagation());
+}
+
+// What each drawn pane was drawn from. A pane whose value has not changed since
+// it was drawn is left as it is: a key that moves the cursor changes what is
+// drawn over one pane (the caret, a selection), not the pane, and drawing every
+// pane again for it is what made moving between lines lag. A pane is the
+// window's lines only, so the cost of one that did change is what is in view.
+const drawnFrom = new WeakMap<Element, string>();
+// The same for the two bars above the panes and the panel below them.
+let barsDrawn = "";
+let barDrawn = "";
+let barCursor = 0;
+
+function syncPanes(into: HTMLElement, panes: Pane[]) {
+  panes.forEach((pane, index) => {
+    const value = JSON.stringify(pane);
+    const held = into.children[index];
+    if (held instanceof HTMLElement && drawnFrom.get(held) === value) {
+      // What is laid over it is drawn again by the caller, so it is taken off.
+      for (const over of Array.from(held.querySelectorAll(".caret, .selection, .occurrence, .bracket"))) over.remove();
+      for (const row of Array.from(held.querySelectorAll(".line.active"))) row.classList.remove("active");
+      return;
+    }
+    drawPane(into, pane);
+    const fresh = into.lastElementChild;
+    if (!fresh) return;
+    drawnFrom.set(fresh, value);
+    if (held && held !== fresh) into.replaceChild(fresh, held);
+  });
+  while (into.children.length > panes.length) into.lastElementChild?.remove();
+}
+
 function drawPane(into: HTMLElement, pane: Pane) {
   const box = document.createElement("div");
   // The buffer's kind becomes a class, so a listing can look like a sidebar
@@ -299,6 +386,7 @@ function drawPane(into: HTMLElement, pane: Pane) {
     drawChips(box, pane);
     drawCoverage(box, pane);
   }
+  drawScrollbar(box, pane);
 
   // A history node rested on shows the change it made, beside the pointer,
   // as the editor draws it; nothing moves until it is clicked.
@@ -508,9 +596,15 @@ async function openContext(pane: string, at: number, _x: number, _y: number) {
   document.body.appendChild(overlay(offered, pane, at));
 }
 
+// Where an offer is about: a position, or something that says where the cursor
+// is now. The panel at the bottom is not redrawn when the cursor moves and the
+// offers are the same, so what it acts on is asked for when it is clicked.
+type Where = number | (() => number);
+const whereIs = (at: Where) => (typeof at === "function" ? at() : at);
+
 // The box laid over the bottom of the window: the offers, or a question one
 // of them asks.
-function overlay(offered: Offer[], pane: string, at: number): HTMLElement {
+function overlay(offered: Offer[], pane: string, at: Where): HTMLElement {
   const menu = document.createElement("div");
   menu.id = "context";
   menu.className = "which-key";
@@ -522,7 +616,7 @@ function overlay(offered: Offer[], pane: string, at: number): HTMLElement {
 // Offers as which-key columns, one per group, keys first. A click chooses the
 // entry where it was offered; one that asks for a name asks in a box over the
 // bottom of the window.
-function whichKey(into: HTMLElement, offered: Offer[], pane: string, at: number) {
+function whichKey(into: HTMLElement, offered: Offer[], pane: string, at: Where) {
   let group = "";
   let column: HTMLElement = into;
   for (const offer of offered) {
@@ -558,14 +652,14 @@ function whichKey(into: HTMLElement, offered: Offer[], pane: string, at: number)
         return;
       }
       closeContext();
-      void run("choose", { pane, offset: at, action: offer.action, target: offer.target, answer: null });
+      void run("choose", { pane, offset: whereIs(at), action: offer.action, target: offer.target, answer: null });
     });
     column.appendChild(entry);
   }
 }
 
 // Ask for an entry's argument inside the menu.
-function ask(menu: HTMLElement, offer: Offer, pane: string, at: number) {
+function ask(menu: HTMLElement, offer: Offer, pane: string, at: Where) {
   menu.textContent = "";
   const question = document.createElement("div");
   question.className = "context-group";
@@ -577,7 +671,7 @@ function ask(menu: HTMLElement, offer: Offer, pane: string, at: number) {
     const answer = input.value.trim();
     closeContext();
     if (answer) {
-      void run("choose", { pane, offset: at, action: offer.action, target: offer.target, answer });
+      void run("choose", { pane, offset: whereIs(at), action: offer.action, target: offer.target, answer });
     }
   };
   input.addEventListener("keydown", (event) => {
@@ -800,6 +894,7 @@ async function run(command: string, args: Record<string, unknown>) {
   if (!ctx) return;
   const said = (await ctx.invoke(command, args)) as string;
   ctx.status.textContent = said;
+  if (said.startsWith("setting saved")) await paint(ctx.invoke);
   await copyIfAsked(ctx.invoke);
   await show(ctx.invoke, ctx.into, ctx.status);
 }
@@ -844,8 +939,7 @@ function poll() {
 async function show(invoke: Invoke, into: HTMLElement, status: HTMLElement) {
   const size = region(into);
   const panes = (await invoke("shown", size)) as Pane[];
-  into.textContent = "";
-  for (const pane of panes) drawPane(into, pane);
+  syncPanes(into, panes);
 
   const at = (await invoke("cursor", { height: size.height })) as [number, number] | null;
   const focused = panes.find((pane) => pane.focused);
@@ -901,8 +995,13 @@ async function show(invoke: Invoke, into: HTMLElement, status: HTMLElement) {
   const [stations, strip] = (await invoke("bars", {})) as [Buffer, Buffer];
   const inBar = (station: boolean, action: string, at: number) =>
     void run("act_in_bar", { station, action, offset: at });
-  drawBar(document.getElementById("stations"), stations, true, inBar);
-  drawBar(document.getElementById("strip"), strip, false, inBar);
+  // Redrawn when what it says changed, as the panes are.
+  const barsValue = JSON.stringify([stations, strip]);
+  if (barsValue !== barsDrawn) {
+    barsDrawn = barsValue;
+    drawBar(document.getElementById("stations"), stations, true, inBar);
+    drawBar(document.getElementById("strip"), strip, false, inBar);
+  }
 
   // The menu the mode offers, beside the buffer rather than instead of it. It
   // is a buffer, so it is drawn by the same function — and its rows carry
@@ -916,6 +1015,13 @@ async function show(invoke: Invoke, into: HTMLElement, status: HTMLElement) {
   const bar = document.getElementById("menu");
   if (!bar) return;
   const offered = (await invoke("menu", {})) as Buffer | null;
+  const here = offered ? null : ((await invoke("offers_here", {})) as [string, number, Offer[]] | null);
+  // The bottom panel is drawn again only when what it lists changed: moving
+  // between the elements of a text leaves the keys it offers as they were.
+  barCursor = here ? here[1] : 0;
+  const barValue = JSON.stringify([offered, here && [here[0], here[2]]]);
+  if (barValue === barDrawn && !bar.hidden) return;
+  barDrawn = barValue;
   bar.hidden = false;
   bar.textContent = "";
   if (offered) {
@@ -923,9 +1029,8 @@ async function show(invoke: Invoke, into: HTMLElement, status: HTMLElement) {
     draw(bar, offered, (action) => void run("act_here", { action }));
     return;
   }
-  const here = (await invoke("offers_here", {})) as [string, number, Offer[]] | null;
   bar.className = "which-key";
-  if (here) whichKey(bar, here[2], here[0], here[1]);
+  if (here) whichKey(bar, here[2], here[0], () => barCursor);
 }
 
 // Put a caret where the editor says the cursor is.
@@ -1004,10 +1109,10 @@ export async function start() {
   // not do is invent a name: a name the keymap does not use is a binding that
   // silently does nothing, which is what the space bar was here — the browser
   // calls it `" "`, the keymap calls it `Space`, and nothing said so, so the
-  // leader menu could not be opened. Realises REQ-MYTH.actions_reachable;
-  // written out rather than annotated, because TraceLean has no TypeScript
-  // grammar to place a claim with (ADR-0008). What checks it is
-  // `crates/core/tests/shipped_keymap.rs`, where the claim is annotated.
+  // leader menu could not be opened. What checks it is
+  // `crates/core/tests/shipped_keymap.rs`.
+  //
+  // @implements REQ-MYTH.actions_reachable
   const named = new Set([
     "Backspace",
     "Down",
@@ -1133,6 +1238,8 @@ export async function start() {
     event.preventDefault();
     const said = (await invoke("press", { key })) as string;
     status.textContent = said;
+    // A setting just written to the theme shows at once.
+    if (said.startsWith("setting saved")) await paint(invoke);
     await show(invoke, into, status);
   });
 

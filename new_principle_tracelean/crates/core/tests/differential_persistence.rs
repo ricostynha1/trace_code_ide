@@ -108,7 +108,7 @@ fn model_and_implementation_agree_on_replaying_a_log() {
         &input_schema(),
         &model,
         &implementation,
-        RunOptions { seed: 62, cases: 3_000, shrink_rounds: 100 },
+        RunOptions { seed: 62, cases: 3_000 },
     )
     .expect("both runners answer");
 

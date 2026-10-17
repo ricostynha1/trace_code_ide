@@ -98,7 +98,7 @@ fn check(op: &str, function: &str, entry: &str, arguments: &[&str], schema: Sche
         &schema,
         &model,
         &implementation,
-        RunOptions { seed, cases: 2_000, shrink_rounds: 100 },
+        RunOptions { seed, cases: 2_000 },
     )
     .expect("both runners answer");
 
@@ -157,8 +157,12 @@ fn model_and_implementation_agree_on_the_reference_rendering() {
     );
 }
 
+/// A listing comes out of the core as a buffer — an identity, a kind and
+/// text — the same as the model's, so it is no second representation.
+///
 /// @drt REQ-VIEW.structure_has_one_type
 /// @tests REQ-VIEW.structure_has_one_type
+/// @tests REQ-VIEW.everything_is_a_buffer
 #[test]
 #[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
 fn model_and_implementation_agree_on_a_listing_nobody_parsed() {

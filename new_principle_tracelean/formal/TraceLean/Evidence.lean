@@ -73,6 +73,9 @@ structure Marks where
   judged : Bool
   tested : Bool
   proved : Bool
+  /-- Checked by reading the tree rather than against a model, so testing and
+  proving do not apply. -/
+  structural : Bool
   deriving Repr, DecidableEq, Inhabited, ToJson, FromJson
 
 /-- Which of the four marks a position of `AJTP` is. -/
@@ -88,16 +91,30 @@ def each (m : Marks) : List (Mark × Bool × Char) :=
    (.proved, m.proved, 'P')]
 
 /-- No mark at all. -/
-def empty : Marks := ⟨false, false, false, false⟩
+def empty : Marks := ⟨false, false, false, false, false⟩
+
+/-- What withholds nothing from what it is joined with; only where a join
+starts. -/
+def neutral : Marks := ⟨true, true, false, false, true⟩
+
+/-- Whether a mark can be held at all: testing and proving need a model. -/
+def applies (m : Marks) : Mark → Bool
+  | .tested => !m.structural
+  | .proved => !m.structural
+  | _ => true
 
 /-- Every mark `floor` asks for is held by `m`. -/
 def holds (m floor : Marks) : Bool :=
   (m.annotated || !floor.annotated) && (m.judged || !floor.judged) &&
     (m.tested || !floor.tested) && (m.proved || !floor.proved)
 
-/-- The marks both hold. -/
+/-- The marks both hold. A mark that does not apply to one side leaves the
+other's standing; one that applies to neither applies to neither together. -/
 def both (a b : Marks) : Marks :=
-  ⟨a.annotated && b.annotated, a.judged && b.judged, a.tested && b.tested, a.proved && b.proved⟩
+  let s := a.structural && b.structural
+  ⟨a.annotated && b.annotated, a.judged && b.judged,
+   !s && (a.tested || a.structural) && (b.tested || b.structural),
+   !s && (a.proved || a.structural) && (b.proved || b.structural), s⟩
 
 end Marks
 
@@ -112,18 +129,31 @@ def marks (records : List Record) (annotated : Bool) : Marks :=
   ⟨annotated,
    decide (2 ≤ (bondLevel records .requirementModel).toNat),
    decide (3 ≤ (bondLevel records .modelImpl).toNat),
-   decide (4 ≤ (bondLevel records .modelProof).toNat)⟩
+   decide (4 ≤ (bondLevel records .modelProof).toNat), false⟩
+
+/--
+A structural clause's marks: whatever it holds, testing and proving do not
+apply to it.
+
+@models REQ-EVID.structural_not_applicable
+-/
+def structural (m : Marks) : Marks := { m with tested := false, proved := false, structural := true }
 
 /-- One position of the written marks: its letter, or a dash. -/
 def letter (held : Bool) (c : Char) : Char := if held then c else '-'
 
+/-- One position as written: a dot where the mark cannot be held. -/
+def letterOf (m : Marks) (each : Mark × Bool × Char) : Char :=
+  if m.applies each.1 then letter each.2.1 each.2.2 else '·'
+
 /--
-Marks in fixed positions, a dash where one is not held: `AJTP`, `A-TP`, `A---`.
+Marks in fixed positions, a dash where one is not held: `AJTP`, `A-TP`, `A---`;
+a dot where one cannot be, `AJ··`.
 
 @models REQ-EVID.marks_written
 -/
 def written (m : Marks) : String :=
-  String.mk [letter m.annotated 'A', letter m.judged 'J', letter m.tested 'T', letter m.proved 'P']
+  String.mk (m.each.map (letterOf m))
 
 /-! ## Properties -/
 
@@ -191,7 +221,7 @@ theorem adding_a_record_never_clears_a_mark (records : List Record) (r : Record)
 /-- A bond nothing has recorded sets no mark.
 
 @proves REQ-EVID.absent_is_unset -/
-theorem no_records_set_no_mark (a : Bool) : marks [] a = ⟨a, false, false, false⟩ := by
+theorem no_records_set_no_mark (a : Bool) : marks [] a = ⟨a, false, false, false, false⟩ := by
   cases a <;> rfl
 
 /-- A record on one bond leaves every other bond's level as it was.
@@ -206,8 +236,28 @@ theorem a_record_moves_only_its_own_bond (records : List Record) (b other : Bond
 
 @proves REQ-EVID.marks_written -/
 theorem marks_are_written_in_place :
-    written Marks.empty = "----" ∧ written ⟨true, false, true, true⟩ = "A-TP" ∧
-    written ⟨true, true, true, true⟩ = "AJTP" := by
+    written Marks.empty = "----" ∧ written ⟨true, false, true, true, false⟩ = "A-TP" ∧
+    written ⟨true, true, true, true, false⟩ = "AJTP" ∧
+    written (structural ⟨true, false, false, false, false⟩) = "A-··" := by
   native_decide
+
+/-- A structural clause holds neither a test nor a proof whatever its records
+say, never meets a floor asking for one, and joined with a modelled clause
+leaves that clause's test and proof as they were.
+
+@proves REQ-EVID.structural_not_applicable -/
+theorem testing_and_proving_do_not_apply_by_reading (m other : Marks) (h : other.structural = false) :
+    (structural m).tested = false ∧ (structural m).proved = false ∧
+    (structural m).holds ⟨false, false, true, false, false⟩ = false ∧
+    (Marks.both (structural m) other).tested = other.tested ∧
+    (Marks.both (structural m) other).proved = other.proved ∧
+    (Marks.both other (structural m)).tested = other.tested ∧
+    written (structural ⟨true, true, true, true, false⟩) = "AJ··" := by
+  refine ⟨rfl, rfl, ?_, ?_, ?_, ?_, ?_⟩
+  · simp [structural, Marks.holds]
+  · simp [structural, Marks.both, h]
+  · simp [structural, Marks.both, h]
+  · simp [structural, Marks.both, h]
+  · native_decide
 
 end TraceLean.Evidence

@@ -57,7 +57,7 @@ fn model_and_implementation_agree_on_the_marks_beside_clauses() {
         &Schema::Struct { fields },
         &model,
         &implementation,
-        RunOptions { seed: 404, cases: 1_500, shrink_rounds: 100 },
+        RunOptions { seed: 404, cases: 1_500 },
     )
     .expect("both runners answer");
     support::agreed(&result);

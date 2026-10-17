@@ -154,7 +154,7 @@ fn model_and_implementation_agree_on_the_round_trip() {
         &input_schema(),
         &model,
         &implementation,
-        RunOptions { seed: 11, cases: 3_000, shrink_rounds: 100 },
+        RunOptions { seed: 11, cases: 3_000 },
     )
     .expect("both runners answer");
 
@@ -188,7 +188,7 @@ fn model_and_implementation_agree_on_applying() {
         &input_schema(),
         &model,
         &implementation,
-        RunOptions { seed: 5, cases: 3_000, shrink_rounds: 100 },
+        RunOptions { seed: 5, cases: 3_000 },
     )
     .expect("both runners answer");
 
@@ -310,7 +310,7 @@ fn model_and_implementation_agree_on_inverses() {
         &strukt(&[("command", command())]),
         &model,
         &implementation,
-        RunOptions { seed: 71, cases: 3_000, shrink_rounds: 100 },
+        RunOptions { seed: 71, cases: 3_000 },
     )
     .expect("both runners answer");
 

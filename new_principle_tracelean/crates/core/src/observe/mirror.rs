@@ -397,6 +397,50 @@ mod tests {
         assert!(change_at("logo.png".into(), state("1"), state("1")).is_empty());
     }
 
+    /// Text that appeared, vanished, changed, emptied or stayed: each becomes
+    /// the commands that reproduce it, and a path never mirrored becomes none.
+    ///
+    /// @tests REQ-MIRROR.binary_handled
+    /// @tests REQ-MIRROR.minimal
+    #[test]
+    fn each_change_to_a_text_file_becomes_the_commands_that_make_it() {
+        let text = |s: &str| FileState::Text { content: s.into() };
+        let path = || "a.rs".to_string();
+        assert!(change_at(path(), FileState::Absent, FileState::Absent).is_empty());
+        assert!(change_at("target/x".into(), FileState::Absent, text("x")).is_empty());
+        assert_eq!(
+            change_at(path(), FileState::Absent, text("hi")),
+            vec![
+                Change::Mirror { command: Command::CreateFile { path: path() } },
+                Change::Mirror { command: Command::Insert { file: path(), offset: 0, text: "hi".into() } },
+            ]
+        );
+        assert_eq!(
+            change_at(path(), FileState::Absent, text("")),
+            vec![Change::Mirror { command: Command::CreateFile { path: path() } }]
+        );
+        assert_eq!(
+            change_at(path(), text("old"), FileState::Absent),
+            vec![Change::Mirror { command: Command::DeleteFile { path: path(), content: "old".into() } }]
+        );
+        assert!(change_at(path(), text("same"), text("same")).is_empty());
+        assert_eq!(
+            change_at(path(), text("old"), text("new")),
+            vec![
+                Change::Mirror { command: Command::Delete { file: path(), offset: 0, deleted: "old".into() } },
+                Change::Mirror { command: Command::Insert { file: path(), offset: 0, text: "new".into() } },
+            ]
+        );
+        assert_eq!(
+            change_at(path(), text(""), text("new")),
+            vec![Change::Mirror { command: Command::Insert { file: path(), offset: 0, text: "new".into() } }]
+        );
+        assert_eq!(
+            change_at(path(), text("old"), text("")),
+            vec![Change::Mirror { command: Command::Delete { file: path(), offset: 0, deleted: "old".into() } }]
+        );
+    }
+
     /// @tests REQ-MIRROR.minimal
     #[test]
     fn an_unchanged_file_produces_nothing() {

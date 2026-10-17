@@ -128,7 +128,7 @@ fn model_and_implementation_agree_on_a_history() {
         &input_schema(),
         &model,
         &implementation,
-        RunOptions { seed: 77, cases: 3_000, shrink_rounds: 100 },
+        RunOptions { seed: 77, cases: 3_000 },
     )
     .expect("both runners answer");
 

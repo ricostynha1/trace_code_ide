@@ -571,13 +571,28 @@ fn index_holding(pane: &str, parts: &[(u64, Layout)]) -> Option<usize> {
 /// The divider *after* the part holding it, unless that part is last, in which
 /// case the divider before it — so the last pane of a split can still be
 /// resized.
+///
+/// A part that is itself a split along the same axis answers first: the pane
+/// is one of *its* parts, and its divider is that split's. Without this, three
+/// panes made by splitting the middle one beside itself moved the outer
+/// divider whenever one of them was dragged, so the first pane shrank, and
+/// the other way round from the drag.
 fn resize_at(pane: &str, amount: i64, layout: Layout) -> Layout {
     match layout {
         Layout::Pane { id, buffer } => Layout::Pane { id, buffer },
         Layout::Split { axis, parts } => match index_holding(pane, &parts) {
             None => Layout::Split { axis, parts },
             Some(index) => {
-                if index + 1 < parts.len() {
+                let nested = matches!(&parts[index].1, Layout::Split { axis: inner, .. } if *inner == axis);
+                if nested {
+                    Layout::Split {
+                        axis,
+                        parts: parts
+                            .into_iter()
+                            .map(|(weight, inner)| (weight, resize_at(pane, amount, inner)))
+                            .collect(),
+                    }
+                } else if index + 1 < parts.len() {
                     Layout::Split { axis, parts: shift_at(index, amount, parts) }
                 } else if index == 0 {
                     // One part, or the pane is in the only part there is: nothing
@@ -879,7 +894,7 @@ pub fn title_of(buffer: &Buffer) -> String {
     }
 }
 
-/// The five stations, in the order they are always in. The requirements are
+/// The eight stations, in the order they are always in. The requirements are
 /// the design's: a flat list of them beside it said nothing the graph does not.
 ///
 /// Each row carries its own action rather than a shared one taking the row as a
@@ -892,6 +907,9 @@ pub fn station_entries() -> Vec<MenuEntry> {
         ("sandbox", "Watch a sandboxed agent"),
         ("design", "Requirements, as the refinement graph"),
         ("history", "The undo tree"),
+        ("findings", "What the checker found, and what to create"),
+        ("definitions", "What can be configured: colours, keys, languages"),
+        ("proof", "The goals Lean reports at the cursor"),
     ]
     .into_iter()
     .map(|(key, description)| MenuEntry {
@@ -937,6 +955,9 @@ pub fn station_kind(station: String) -> Option<BufferKind> {
         "sandbox" => Some(BufferKind::Record { title: "sandbox".to_string() }),
         "history" => Some(BufferKind::Record { title: "history".to_string() }),
         "trace" => Some(BufferKind::Record { title: "trace".to_string() }),
+        "findings" => Some(BufferKind::Record { title: "findings".to_string() }),
+        "definitions" => Some(BufferKind::Record { title: "definitions".to_string() }),
+        "proof" => Some(BufferKind::Record { title: "proof".to_string() }),
         _ => None,
     }
 }
@@ -1214,5 +1235,40 @@ mod tests {
         assert_eq!(destination(station, closed.clone()), closed.focus);
         // And a screen that never had the places keeps its focus.
         assert_eq!(destination(file, screen(&["one"])), "pane0");
+    }
+
+    /// A pane that is one of the parts of a split nested in a split along the
+    /// same axis moves that split's divider and no other: dragging it used to
+    /// move the outer one, which shrank the first pane, the wrong way round.
+    ///
+    /// @tests REQ-SCREEN.resize_moves_one_divider
+    #[test]
+    fn a_pane_in_a_nested_split_moves_its_own_divider() {
+        let pane = |id: &str| Layout::Pane { id: id.into(), buffer: id.into() };
+        let nested = Layout::Split {
+            axis: Axis::Across,
+            parts: vec![
+                (10, pane("first")),
+                (
+                    20,
+                    Layout::Split { axis: Axis::Across, parts: vec![(5, pane("middle")), (5, pane("last"))] },
+                ),
+            ],
+        };
+        let weights = |layout: &Layout| match layout {
+            Layout::Split { parts, .. } => parts.iter().map(|(w, _)| *w).collect::<Vec<_>>(),
+            Layout::Pane { .. } => vec![],
+        };
+        let inner = |layout: &Layout| match layout {
+            Layout::Split { parts, .. } => weights(&parts[1].1),
+            Layout::Pane { .. } => vec![],
+        };
+        let moved = resize_at("middle", 2, nested.clone());
+        assert_eq!(weights(&moved), vec![10, 20], "the outer divider moved");
+        assert_eq!(inner(&moved), vec![7, 3], "the middle pane did not take the weight from the last");
+        // The last pane of the inner split resizes against its neighbour.
+        let moved = resize_at("last", 2, nested);
+        assert_eq!(weights(&moved), vec![10, 20], "the outer divider moved");
+        assert_eq!(inner(&moved), vec![3, 7]);
     }
 }

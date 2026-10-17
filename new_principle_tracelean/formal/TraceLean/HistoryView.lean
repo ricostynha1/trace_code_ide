@@ -47,6 +47,21 @@ def isHere (ps : List Point) : Option Nat → Bool
   | none => !ps.any (·.here)
   | some n => ps.any (fun p => p.node == n && p.here)
 
+/-- Whether a node is on the branch the workspace is on, followed up from the
+node the workspace is at, one step a point at most. -/
+def climbs (ps : List Point) (target : Nat) : Nat → Option Nat → Bool
+  | 0, _ => false
+  | _, none => false
+  | fuel + 1, some current =>
+    if current == target then true
+    else climbs ps target fuel ((ps.find? (fun p => p.node == current)).bind (·.parent))
+
+/-- The base, where every branch starts, or a node on the way up from the node
+the workspace is at. -/
+def onCurrentBranch (ps : List Point) : Option Nat → Bool
+  | none => true
+  | some target => climbs ps target (ps.length + 1) ((ps.find? (·.here)).map (·.node))
+
 /-- The first column from `c` on that no line runs through and no branch has
 taken. Each step passes a blocked column, and there are no more of those
 than the fuel. -/
@@ -182,7 +197,7 @@ def switchLine (filter : Filter) : String × List Span :=
 
 /-- One row of the tree: its cells cut or padded to the graph's width, then the
 node's name, which jumps there, and what it did. -/
-def treeRow (shown : List Point) (graph : Nat) (acc : String × List Span) (row : GraphRow) :
+def treeRow (all shown : List Point) (graph : Nat) (acc : String × List Span) (row : GraphRow) :
     String × List Span :=
   let text := acc.1 ++ "\n"
   let at_ := text.length
@@ -194,7 +209,10 @@ def treeRow (shown : List Point) (graph : Nat) (acc : String × List Span) (row 
     | some n => ((shown.find? (·.node == n)).map (·.said)).getD ""
   let name := pointName row.node
   let from_ := at_ + graph + 1
-  let role := if row.cells.toList.contains '●' then Role.heading else Role.entry
+  let role :=
+    if row.cells.toList.contains '●' then Role.heading
+    else if onCurrentBranch all row.node then Role.added
+    else Role.entry
   (text ++ cells ++ " " ++ name ++ "  " ++ said,
    acc.2 ++ [{ start := from_, stop := from_ + name.length, role := role, actions := ["history.jump"] }])
 
@@ -216,7 +234,7 @@ def historyView (points : List Point) (filter : Filter) (file : Option String) :
     match drawn with
     | [] => 0
     | _ => (drawn.foldl (fun m r => max m r.cells.length) 0) - 1
-  let done := drawn.foldl (treeRow shown graph) (heading, top.2)
+  let done := drawn.foldl (treeRow points shown graph) (heading, top.2)
   { id := "record:history", kind := .record "history", text := done.1,
     spans := tidy done.1.length done.2 }
 

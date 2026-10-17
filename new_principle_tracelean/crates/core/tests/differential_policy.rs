@@ -72,7 +72,7 @@ fn model_and_implementation_agree_on_classification() {
         &input_schema(),
         &model,
         &implementation,
-        RunOptions { seed: 13, cases: 2_000, shrink_rounds: 100 },
+        RunOptions { seed: 13, cases: 2_000 },
     )
     .expect("both runners answer");
 

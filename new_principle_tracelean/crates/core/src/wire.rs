@@ -7,6 +7,8 @@
 //! would disagree with its model about a value both sides compute identically.
 
 /// A `BTreeMap` on the wire as `[[key, value], …]`, sorted by key.
+///
+/// @implements REQ-DRT-SCHEMA.json_shape_matches
 pub mod pairs {
     use serde::{Deserialize, Deserializer, Serialize, Serializer};
     use std::collections::BTreeMap;

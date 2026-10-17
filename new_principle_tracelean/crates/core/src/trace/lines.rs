@@ -216,6 +216,18 @@ pub fn markers(lines: Vec<LineHits>, top: usize, height: usize) -> Vec<Marker> {
 mod tests {
     use super::*;
 
+    /// Only lines inside the window are marked, counted from its rows; a line
+    /// numbered 0 is no line.
+    ///
+    /// @tests REQ-LINECOV.uncovered_shown
+    #[test]
+    fn markers_fall_on_the_rows_shown() {
+        let hit = |line: u32, hits: u64| LineHits { line, hits, tests: Vec::new() };
+        let shown = markers(vec![hit(0, 1), hit(3, 2), hit(5, 0), hit(9, 1)], 2, 4);
+        assert_eq!(shown.iter().map(|m| (m.line, m.hits)).collect::<Vec<_>>(), vec![(2, 2), (4, 0)]);
+        assert_eq!(shown[1].said, said(&hit(5, 0)));
+    }
+
     fn run(test: &str, lines: &[(u32, u64)]) -> TestLines {
         TestLines { test: test.into(), file: "src/a.rs".into(), lines: lines.to_vec() }
     }

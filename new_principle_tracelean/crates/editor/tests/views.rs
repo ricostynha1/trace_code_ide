@@ -33,6 +33,31 @@ fn view(root: &Path, words: &[&str]) -> (bool, String) {
     (out.status.success(), String::from_utf8_lossy(&out.stdout).to_string())
 }
 
+/// Whether a shell's source prints only what the editor produces: it asks
+/// `editor.view` and builds no buffer, and calls no producer, of its own.
+fn prints_only_what_the_editor_makes(source: &str) -> bool {
+    source.contains("editor.view(")
+        && !source.contains("Buffer {")
+        && !source.contains("produce::")
+        && !source.contains("make::")
+}
+
+/// The shell prints the buffer the editor's one producer makes, the same
+/// call the window's panes go through; a shell building its own text would
+/// be a second description that could drift.
+///
+/// @tests REQ-CONTEXT.views_from_the_shell
+/// @structural REQ-CONTEXT.views_from_the_shell reason="the shell and the window call the one producer, which is a fact about the call graph; what each producer makes is modelled under REQ-SHOW"
+#[test]
+fn the_shell_prints_what_the_editor_produces_and_builds_nothing() {
+    let source = std::fs::read_to_string(Path::new(env!("CARGO_MANIFEST_DIR")).join("src/bin/tracelean-view.rs"))
+        .expect("the shell's source");
+    assert!(prints_only_what_the_editor_makes(&source));
+    // The check rejects a shell that makes its own.
+    assert!(!prints_only_what_the_editor_makes("let b = Buffer { text };"));
+    assert!(!prints_only_what_the_editor_makes("editor.view(x); produce::requirements_buffer(n, false)"));
+}
+
 /// Each view prints the text the editor produces for it — the same words a
 /// person reads — and nothing a person keeps is written.
 ///
@@ -46,7 +71,7 @@ fn every_view_prints_what_the_editor_shows_and_keeps_nothing() {
         (&["requirement", "REQ-THERMO"], "to_celsius"),
         (&["trace", "src/celsius.rs"], "REQ-THERMO.to_celsius"),
         (&["context", "REQ-THERMO.to_celsius"], "to_celsius"),
-        (&["findings"], "has no model"),
+        (&["findings"], "missing a model"),
         (&["evidence"], "REQ-THERMO"),
         (&["bindings"], ""),
         (&["keys"], "Space"),

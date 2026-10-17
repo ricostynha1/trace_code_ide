@@ -189,6 +189,7 @@ pub fn drt_stamp(index: &Index, clauses: &[String]) -> String {
 /// with the model — a record made valid by a backend that never ran on it.
 ///
 /// @implements REQ-STALE.no_silent_revalidation
+/// @implements REQ-DRT.case_count_stated
 pub fn halves_compose(
     agreed: &[String],
     covered: Option<&str>,
@@ -341,7 +342,7 @@ pub fn current_inputs(index: &Index, record: &Evidence) -> Vec<(String, String)>
         .iter()
         .filter_map(|(name, was)| {
             let now = match name.as_str() {
-                "model" => anchor_hash(index, req, clause, Role::Models),
+                "model" => crate::trace::material::model_hashes(index, req, clause),
                 "implementation" => anchor_hash(index, req, clause, Role::Implements),
                 // The requirement a judgement was about. Without this arm the
                 // name resolved to nothing, and a missing input counts as
@@ -410,6 +411,7 @@ mod tests {
     /// the run that agreed was a run against other code.
     ///
     /// @tests REQ-STALE.no_silent_revalidation
+    /// @tests REQ-DRT.case_count_stated
     #[test]
     fn halves_stamped_against_other_inputs_do_not_compose() {
         let (dir, before) = tree(FILES);

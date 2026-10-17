@@ -79,7 +79,7 @@ fn model_and_implementation_agree_on_mirroring() {
         &input_schema(),
         &model,
         &implementation,
-        RunOptions { seed: 17, cases: 2_000, shrink_rounds: 100 },
+        RunOptions { seed: 17, cases: 2_000 },
     )
     .expect("both runners answer");
 
@@ -160,7 +160,7 @@ fn model_and_implementation_agree_on_the_mutations_themselves() {
         &input_schema(),
         &model,
         &implementation,
-        RunOptions { seed: 64, cases: 2_000, shrink_rounds: 100 },
+        RunOptions { seed: 64, cases: 2_000 },
     )
     .expect("both runners answer");
 
@@ -256,7 +256,7 @@ fn model_and_implementation_agree_on_what_happens_to_an_opaque_file() {
         &schema,
         &model,
         &implementation,
-        RunOptions { seed: 131, cases: 2_000, shrink_rounds: 100 },
+        RunOptions { seed: 131, cases: 2_000 },
     )
     .expect("both runners answer");
 
@@ -302,7 +302,7 @@ fn model_and_implementation_agree_on_what_the_agent_changed() {
         &schema,
         &model,
         &implementation,
-        RunOptions { seed: 211, cases: 2_000, shrink_rounds: 100 },
+        RunOptions { seed: 211, cases: 2_000 },
     )
     .expect("both runners answer");
 

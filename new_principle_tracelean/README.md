@@ -135,7 +135,8 @@ unsound exemptions.
 ## Evidence
 
 A clause holds four marks, each on its own, written in fixed positions with a
-dash for each one missing: `AJTP`, `A-TP`, `A---`.
+dash for each one missing: `AJTP`, `A-TP`, `A---`. A clause checked only by
+reading the tree has nothing to test or prove: `AJ··`.
 
 | Mark | Means |
 |---|---|

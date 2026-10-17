@@ -1,7 +1,4 @@
 //! The documentation rule, applied to this project's own documentation.
-//!
-//! @tests ARCH-SELFHOST.docs_checked
-//! @structural ARCH-SELFHOST.docs_checked reason="a claim about every document in this repository at once"
 
 use std::path::{Path, PathBuf};
 
@@ -15,6 +12,8 @@ fn project_root() -> PathBuf {
 /// Every document in this tree describes something that exists.
 ///
 /// @tests REQ-DOCLINK.dangling_reported
+/// @tests ARCH-SELFHOST.docs_checked
+/// @structural ARCH-SELFHOST.docs_checked reason="a claim about every document in this repository at once"
 #[test]
 fn no_document_describes_something_that_does_not_exist() {
     let index = build(&project_root());

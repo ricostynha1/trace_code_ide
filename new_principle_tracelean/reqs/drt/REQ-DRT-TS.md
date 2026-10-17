@@ -33,15 +33,9 @@ compile error, which is why `failure_is_an_answer` is a clause — the mismatch
 must be reported as this case's error, with the name of what did not fit, and
 must not be mistaken for a divergence about values.
 
-One consequence is worth stating plainly: **the TypeScript carries no
-annotations.** TraceLean has no TypeScript grammar, so it cannot say which
-declaration a claim in one of those files is about, and
-[ADR-0008](../../docs/decisions/ADR-0008-lean-grammar-limits.md) rejects
-recovering that by reading text. So the claims about the TypeScript are made
-where they can be placed and checked — in the binding file, which names
-`web/src/view.ts::plainText` and its neighbours, and in the suites that drive
-them. The files themselves say in prose what they realise, and say why the
-claim is not in them.
+The TypeScript carries its own `@implements`, placed on declarations by
+`tree-sitter-typescript`; the binding file names `web/src/view.ts::plainText`
+and its neighbours as the second implementations the suites drive.
 
 `second_implementation_same_oracle` is the one that matters most. Comparing the
 TypeScript against the Rust would be comparing two implementations, and two

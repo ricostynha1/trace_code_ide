@@ -80,6 +80,9 @@ struct Pane {
     focused: bool,
     /// The buffer line the window starts at, so a gutter can number lines.
     top: usize,
+    /// How many lines the whole buffer has, so the page can draw a scrollbar
+    /// whose thumb is the window's share of it.
+    lines: usize,
     /// The claims marked beside the window's lines (`surface::chips`): the
     /// buffer line, the role's letter, the requirement it opens.
     chips: Vec<(usize, char, String)>,
@@ -107,6 +110,7 @@ fn shown(held: State<'_, Held>, width: u64, height: u64) -> Vec<Pane> {
         .laid_out(region)
         .into_iter()
         .map(|placed| Pane {
+            lines: placed.buffer.text.split('\n').count(),
             chips: editor.chips_shown(&placed.buffer, placed.top, placed.at.height as usize),
             coverage: editor.coverage_shown(&placed.buffer, placed.top, placed.at.height as usize),
             buffer: window(placed.buffer, placed.top, placed.at.height as usize),

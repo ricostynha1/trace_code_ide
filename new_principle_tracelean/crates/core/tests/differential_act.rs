@@ -148,7 +148,7 @@ fn check(op: &str, function: &str, entry: &str, arguments: &[&str], schema: Sche
         &schema,
         &model,
         &implementation,
-        RunOptions { seed, cases: 8_000, shrink_rounds: 100 },
+        RunOptions { seed, cases: 8_000 },
     )
     .expect("both runners answer");
 

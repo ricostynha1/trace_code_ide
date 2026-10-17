@@ -1,7 +1,7 @@
 //! Findings: what is claimed, what is missing, and what has gone stale.
 //!
 //! Naming is the feature. "Traceability error" is not actionable in a diff;
-//! *this clause has a model and an implementation and nothing binds them* is a
+//! *this clause is missing a DRT binding between its model and its implementation* is a
 //! task. Most findings are progress rather than faults, and a tool that reports
 //! progress as failure gets its checks disabled in week one.
 
@@ -436,17 +436,17 @@ pub fn check(index: &Index, policy: &Policy) -> Vec<Finding> {
             let is_structural = structural.contains(&key);
             for kind in coverage_kinds(have.into_iter().collect(), false, is_structural) {
                 let message = match kind {
-                    Kind::Unmodeled => format!("{what} has no model"),
-                    Kind::Unimplemented => format!("{what} is modelled but not implemented"),
+                    Kind::Unmodeled => format!("{what}: missing a model — write a Lean function and mark it `@models {what}`"),
+                    Kind::Unimplemented => format!("{what}: missing an implementation — write the code and mark it `@implements {what}`"),
                     // The most important finding: the formal work was done, the
                     // code was written, and nothing compares them.
                     Kind::Unbound => {
-                        format!("{what} has a model and an implementation, and nothing binds them")
+                        format!("{what}: missing a DRT binding — bind the model and the implementation so generated inputs are compared")
                     }
                     _ if is_structural => {
-                        format!("{what} is checked structurally and nothing tests it")
+                        format!("{what}: missing a test — write one that reads the tree and mark it `@tests {what}`")
                     }
-                    _ => format!("{what} is implemented but not tested"),
+                    _ => format!("{what}: missing a test — write one and mark it `@tests {what}`"),
                 };
                 findings.push(
                     Finding::new(kind, message, &req.file, 1, policy).about(id, clause.as_deref()),
@@ -558,6 +558,39 @@ mod tests {
         assert!(qualifier_kinds(exempt("2027-01-01"), on("2026-10-11")).is_empty());
         assert!(qualifier_kinds(exempt("2026-10-11"), on("2026-10-11")).is_empty(), "the last day is still inside");
         assert!(qualifier_kinds(exempt("2026-01-01"), None).is_empty());
+    }
+
+    /// A `refines` naming nothing, a cycle of `refines`, a link to a missing
+    /// requirement, and a qualifier that does not say why are each one finding;
+    /// a link to a whole requirement that exists is none.
+    ///
+    /// @tests REQ-CHECK.exactly_once
+    /// @tests REQ-CHECK.qualifier_soundness
+    #[test]
+    fn a_broken_refinement_a_missing_name_and_a_silent_qualifier_are_each_reported() {
+        let req = |id: &str, refines: &str| {
+            format!("---\nid: {id}\nrefines: [{refines}]\ndecomposition: complete\nclauses:\n  one: First.\n---\nbody")
+        };
+        let (_d, index) = tree(&[
+            ("reqs/a.md", &req("REQ-A", "REQ-B")),
+            ("reqs/b.md", &req("REQ-B", "REQ-A")),
+            ("reqs/c.md", &req("REQ-C", "REQ-GONE")),
+            (
+                "src/i.rs",
+                "// @implements REQ-A\npub fn whole() {}\n\n// @implements REQ-NONE.one\npub fn lost() {}\n\n\
+                 // @implements REQ-C.one\n// @partial\npub fn half() {}\n\n// @tests REQ-C.one\n// @structural\n#[test]\nfn t() {}\n",
+            ),
+        ]);
+        let findings = check(&index, &Policy::default());
+        let count = |kind: Kind| findings.iter().filter(|f| f.kind == kind).count();
+        assert_eq!(count(Kind::DanglingRefines), 1, "{findings:#?}");
+        assert!(findings.iter().any(|f| f.kind == Kind::DanglingRefines && f.message.contains("REQ-GONE")));
+        assert_eq!(count(Kind::RefinesCycle), 1, "{findings:#?}");
+        let dangling: Vec<_> = findings.iter().filter(|f| f.kind == Kind::Dangling).collect();
+        assert_eq!(dangling.len(), 1, "{dangling:#?}");
+        assert!(dangling[0].message.contains("REQ-NONE.one"));
+        assert_eq!(count(Kind::UnsoundQualifier), 2, "{findings:#?}");
+        assert!(findings.iter().all(|f| f.message != "an exemption must carry a reason and an approver, and not be past its `until`"));
     }
 
     /// @tests REQ-CHECK.unbound_reported

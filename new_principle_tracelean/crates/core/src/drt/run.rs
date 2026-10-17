@@ -186,17 +186,18 @@ impl DrtResult {
     }
 }
 
+/// How many cases to ask, from which seed. A divergence is reduced as far as
+/// it goes, with no bound on the rounds: every reduction step is strictly
+/// smaller (`REQ-DRT-GEN.shrink_terminates`), so the reduction ends on its own.
 #[derive(Debug, Clone, Copy)]
 pub struct RunOptions {
     pub seed: u64,
     pub cases: u64,
-    /// How many reduction rounds to attempt on a divergence.
-    pub shrink_rounds: usize,
 }
 
 impl Default for RunOptions {
     fn default() -> Self {
-        RunOptions { seed: 1, cases: 500, shrink_rounds: 200 }
+        RunOptions { seed: 1, cases: 500 }
     }
 }
 
@@ -245,7 +246,6 @@ pub fn run(
                 &input,
                 &mut model_runner,
                 &mut impl_runner,
-                options.shrink_rounds,
             )?;
             return Ok(DrtResult {
                 op: op.to_string(),
@@ -276,13 +276,13 @@ pub fn run(
 /// a different one — so only candidates that still disagree are accepted.
 ///
 /// @implements REQ-DRT-GEN.shrink_preserves
+/// @implements REQ-DRT-GEN.shrink_minimal
 fn shrink_divergence(
     op: &str,
     schema: &Schema,
     input: &Value,
     model: &mut Runner,
     implementation: &mut Runner,
-    rounds: usize,
 ) -> Result<Divergence, RunnerError> {
     let mut current = input.clone();
     // A number far above any run's case count, so a reduction's cases cannot be
@@ -295,21 +295,19 @@ fn shrink_divergence(
     // needed. 2^50 is exact in a double and larger than any case count here.
     let mut case = 1u64 << 50;
 
-    for _ in 0..rounds {
-        let mut improved = false;
+    // Until no candidate diverges: stopping earlier would report a case with a
+    // smaller diverging one still in reach.
+    'reducing: loop {
         for candidate in gen::shrink(schema, &current) {
             case += 1;
             let a = model.ask(case, op, &candidate)?;
             let b = implementation.ask(case, op, &candidate)?;
             if !agree(&a, &b) {
                 current = candidate;
-                improved = true;
-                break;
+                continue 'reducing;
             }
         }
-        if !improved {
-            break;
-        }
+        break;
     }
 
     case += 1;

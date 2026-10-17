@@ -53,7 +53,10 @@ fn letters_from(lower: &[char], wanted: &[char], from: usize, name_starts: usize
 
 /// The best `limit` paths for `query`, best first; every path, shortest first,
 /// for an empty query.
-pub fn matches(files: &[String], query: &str, limit: usize) -> Vec<String> {
+///
+/// @implements REQ-NAV.quick_open
+/// @drt REQ-NAV.quick_open
+pub fn matches(files: Vec<String>, query: &str, limit: usize) -> Vec<String> {
     let mut scored: Vec<(i64, &String)> =
         files.iter().filter_map(|path| score(path, query).map(|s| (s, path))).collect();
     scored.sort_by(|a, b| b.0.cmp(&a.0).then_with(|| a.1.cmp(b.1)));
@@ -71,12 +74,13 @@ mod tests {
             .collect()
     }
 
+    /// @tests REQ-NAV.quick_open
     #[test]
     fn letters_in_order_find_a_file_and_the_name_counts_most() {
-        assert_eq!(matches(&files(), "screen", 2), vec!["src/surface/screen.rs", "docs/screenshots.md"]);
-        assert_eq!(matches(&files(), "vw", 5), vec!["src/surface/view.rs"]);
-        assert_eq!(matches(&files(), "LIB", 5), vec!["crates/core/src/lib.rs"]);
-        assert!(matches(&files(), "zzz", 5).is_empty());
-        assert_eq!(matches(&files(), "", 1), vec!["README.md"]);
+        assert_eq!(matches(files(), "screen", 2), vec!["src/surface/screen.rs", "docs/screenshots.md"]);
+        assert_eq!(matches(files(), "vw", 5), vec!["src/surface/view.rs"]);
+        assert_eq!(matches(files(), "LIB", 5), vec!["crates/core/src/lib.rs"]);
+        assert!(matches(files(), "zzz", 5).is_empty());
+        assert_eq!(matches(files(), "", 1), vec!["README.md"]);
     }
 }

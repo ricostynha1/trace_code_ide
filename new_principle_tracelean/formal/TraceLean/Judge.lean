@@ -256,6 +256,27 @@ def stillApplies (judgement : Judgement) (material : Material) : Bool :=
   judgement.modelHash == material.modelHash
 
 /--
+What a judgement of a clause rests on: the hashes of every model of it, or,
+with none, of every test checking it by reading the tree; sorted, once each,
+joined. None when there is neither, and nothing to judge.
+
+@models REQ-JUDGE.structural_judged
+-/
+def restsOn (models checks : List String) : Option String :=
+  let found := ((if models.isEmpty then checks else models).mergeSort (fun a b => decide (a ≤ b))).eraseDups
+  if found.isEmpty then none else some (String.intercalate "+" found)
+
+/-- A clause nothing models rests on its structural checks, and a change to one
+of them is a change to what was judged; a clause with a model rests on the
+model alone.
+
+@proves REQ-JUDGE.structural_judged -/
+theorem a_structural_clause_rests_on_its_checks :
+    restsOn [] ["b", "a", "b"] = some "a+b" ∧ restsOn ["m"] ["a"] = some "m" ∧
+    restsOn [] [] = none ∧ restsOn [] ["a"] ≠ restsOn [] ["a2"] := by
+  native_decide
+
+/--
 No judgement, whatever it says and whoever makes it, records above `L2`.
 
 Stated over every material and every judgement rather than checked on examples:

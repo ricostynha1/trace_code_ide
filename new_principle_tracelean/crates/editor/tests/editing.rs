@@ -201,3 +201,182 @@ fn an_unbound_key_says_nothing_happened() {
     assert!(said.contains("nothing happened"), "an unbound key was silent: {said:?}");
     let _ = std::fs::remove_dir_all(&root);
 }
+
+/// The space bar types a space in insert mode. The window sends it by the
+/// keymap's name for it, `Space`, and that name is five characters long, so it
+/// was refused as "not text" until the editor read it as the character it names.
+///
+/// @tests REQ-ACT.one_path
+#[test]
+fn the_space_bar_types_a_space_in_insert_mode() {
+    let (root, mut editor) = opened();
+    editor.key("i");
+    for key in ["a", "Space", "b"] {
+        editor.key(key);
+    }
+    assert_eq!(
+        editor.workspace().files.get("src/i.rs").map(String::as_str),
+        Some("a bone\ntwo\nthree\n"),
+        "the space bar did not type a space"
+    );
+    let _ = std::fs::remove_dir_all(&root);
+}
+
+/// The cursor counts characters and a file is bytes; a file with `∀` and `→`
+/// before the cursor took what was typed to a place earlier by the width of
+/// each, which is what made typing in a Lean file go "to a random place".
+///
+/// @tests REQ-ACT.edits_are_commands
+#[test]
+fn typing_after_multibyte_characters_lands_at_the_cursor() {
+    let root = project();
+    let original = "theorem a : ∀ x, x → x := by\n  intro x\n  exact x\n-- λ end\nlast\n";
+    std::fs::write(root.join("src/m.lean"), original).unwrap();
+    let mut editor = Editor::open(root.clone(), keymap());
+    editor.perform(Intent::Display { what: BufferKind::File { path: "src/m.lean".into() } });
+    editor.key("i");
+    for key in ["Down", "Down", "Right", "Right", "z"] {
+        editor.key(key);
+    }
+    let file = |editor: &Editor| editor.workspace().files.get("src/m.lean").cloned().expect("the file");
+    assert_eq!(file(&editor), "theorem a : ∀ x, x → x := by\n  intro x\n  zexact x\n-- λ end\nlast\n");
+    // Two lines further down, past a line with `λ` in it.
+    for key in ["Down", "Down", "y"] {
+        editor.key(key);
+    }
+    assert_eq!(file(&editor), "theorem a : ∀ x, x → x := by\n  intro x\n  zexact x\n-- λ end\nlasyt\n");
+    // Backspace takes back the character before the cursor.
+    editor.key("Backspace");
+    assert_eq!(file(&editor), "theorem a : ∀ x, x → x := by\n  intro x\n  zexact x\n-- λ end\nlast\n");
+    // Undo restores the `y` and puts the cursor just after it.
+    editor.perform(Intent::Travel { move_: tracelean_core::surface::act::Move::Back });
+    editor.key("q");
+    assert_eq!(file(&editor), "theorem a : ∀ x, x → x := by\n  intro x\n  zexact x\n-- λ end\nlasyqt\n");
+    let _ = std::fs::remove_dir_all(&root);
+}
+
+/// A file deleted while its buffer is open does not leave the buffer behind:
+/// the buffer would be edited against a path the workspace no longer has, and
+/// closing it was refused with `NoSuchFile`.
+///
+/// @tests REQ-ACT.edits_are_commands
+#[test]
+fn deleting_a_file_closes_its_buffer() {
+    use tracelean_core::history::command::Command;
+    let (root, mut editor) = opened();
+    assert_eq!(editor.buffer().kind, BufferKind::File { path: "src/i.rs".into() });
+    editor.perform(Intent::Edit {
+        command: Command::DeleteFile { path: "src/i.rs".into(), content: "one\ntwo\nthree\n".into() },
+    });
+    assert_ne!(
+        editor.buffer().kind,
+        BufferKind::File { path: "src/i.rs".into() },
+        "the buffer of a deleted file stayed open"
+    );
+    let _ = std::fs::remove_dir_all(&root);
+}
+
+/// A key sequence that needs a name asks for it on the status line, takes the
+/// keys typed as the answer, and Enter performs it: `Space f r` renames the
+/// file under the cursor. Before, it said "nothing happened" and there was
+/// nowhere to type the new name.
+///
+/// @tests REQ-ACT.one_path
+#[test]
+fn rename_by_keys_asks_for_the_name_and_renames() {
+    let (root, mut editor) = opened();
+    for key in ["Space", "f", "r"] {
+        editor.key(key);
+    }
+    let said = text_of_status(&editor);
+    assert!(said.contains("New name for src/i.rs"), "the rename did not ask: {said}");
+    // The answer starts as the path; take it back and type another.
+    for _ in 0.."src/i.rs".len() {
+        editor.key("Backspace");
+    }
+    for key in ["s", "r", "c", "/", "j", ".", "r", "s"] {
+        editor.key(key);
+    }
+    editor.key("Enter");
+    let files = editor.workspace().files;
+    assert!(files.contains_key("src/j.rs") && !files.contains_key("src/i.rs"), "{:?}", files.keys());
+    let _ = std::fs::remove_dir_all(&root);
+}
+
+fn text_of_status(editor: &Editor) -> String {
+    plain_text(editor.status.clone()).join("\n")
+}
+
+/// `Space f f` asks what to look for on the status line and goes to the next
+/// match, the text taking `*` and `?`; `Space f /` lists the lines that match.
+///
+/// @tests REQ-NAV.name_is_asked_for
+/// @tests REQ-NAV.find_by_glob
+/// @tests REQ-NAV.find_lists_lines
+#[test]
+fn find_asks_on_the_status_line_and_takes_a_pattern() {
+    let (root, mut editor) = opened();
+    for key in ["Space", "f", "f"] {
+        editor.key(key);
+    }
+    assert!(text_of_status(&editor).contains("Find"), "{}", text_of_status(&editor));
+    for key in ["t", "?", "o", "Enter"] {
+        editor.key(key);
+    }
+    assert_eq!(editor.offset, 7, "the cursor did not go to the end of `two`");
+
+    for key in ["Space", "f", "/"] {
+        editor.key(key);
+    }
+    // The last text is offered again; Backspace takes it back.
+    for _ in 0..3 {
+        editor.key("Backspace");
+    }
+    for key in ["t", "h", "*", "Enter"] {
+        editor.key(key);
+    }
+    let listed = plain_text(editor.buffer()).join("\n");
+    assert!(listed.contains("three") && !listed.contains("two"), "{listed}");
+    let _ = std::fs::remove_dir_all(&root);
+}
+
+/// A setting is changed by asking for its value: it is written to the
+/// project's override file at once, a value that is no colour is refused, and
+/// the theme read back has the change.
+///
+/// @tests REQ-LOOK.setting_edited_in_place
+#[test]
+fn a_setting_is_written_to_the_override_and_a_bad_value_is_refused() {
+    let (root, mut editor) = opened();
+    editor.set_setting("ui.accent", "#ff0000");
+    let theme = tracelean_editor::theme::load(&root);
+    assert_eq!(theme["ui"]["accent"], "#ff0000");
+    assert!(theme["ui"]["sidebar"].is_string(), "the rest of the theme survived");
+
+    editor.set_setting("ui.accent", "red");
+    assert_eq!(tracelean_editor::theme::load(&root)["ui"]["accent"], "#ff0000", "a bad value changed the file");
+    assert!(text_of_status(&editor).contains("not a colour"), "{}", text_of_status(&editor));
+
+    // The list shows the value now.
+    editor.perform(Intent::Display { what: BufferKind::Record { title: "definitions".into() } });
+    assert!(text(&editor).contains("ui.accent  #ff0000"), "{}", text(&editor));
+    let _ = std::fs::remove_dir_all(&root);
+}
+
+/// The proof panel follows a Lean file in the document, and says why when it
+/// has nothing to show: a file in no Lean project has no server to ask, and the
+/// panel names that instead of staying blank. (Nothing is spawned here.)
+///
+/// @tests REQ-LSP.proof_state_shown
+#[test]
+fn the_proof_panel_names_why_a_lean_file_has_no_goals() {
+    let root = project();
+    std::fs::write(root.join("src/m.lean"), "theorem a : 1 = 1 := rfl\n").unwrap();
+    let mut editor = Editor::open(root.clone(), keymap());
+    editor.perform(Intent::Display { what: BufferKind::File { path: "src/m.lean".into() } });
+    editor.perform(Intent::Display { what: BufferKind::Record { title: "proof".into() } });
+    assert!(text(&editor).contains("Open a Lean file"), "{}", text(&editor));
+    assert!(editor.tick(), "the panel did not change");
+    assert!(text(&editor).contains("no Lean project"), "{}", text(&editor));
+    let _ = std::fs::remove_dir_all(&root);
+}

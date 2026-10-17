@@ -88,7 +88,7 @@ fn model_and_implementation_agree_on_the_normalised_body() {
         &input_schema(),
         &model,
         &implementation,
-        RunOptions { seed: 55, cases: 3_000, shrink_rounds: 100 },
+        RunOptions { seed: 55, cases: 3_000 },
     )
     .expect("both runners answer");
 
@@ -127,7 +127,7 @@ fn model_and_implementation_agree_on_the_body_hash() {
         &input_schema(),
         &model,
         &implementation,
-        RunOptions { seed: 56, cases: 2_000, shrink_rounds: 100 },
+        RunOptions { seed: 56, cases: 2_000 },
     )
     .expect("both runners answer");
 
@@ -202,7 +202,7 @@ fn clause_hash_agrees(req: &str, clause: &str) {
         &schema,
         &model,
         &implementation,
-        RunOptions { seed: 57, cases: 2_000, shrink_rounds: 100 },
+        RunOptions { seed: 57, cases: 2_000 },
     )
     .expect("both runners answer");
 
@@ -335,7 +335,7 @@ fn model_and_implementation_agree_on_an_anchors_identity() {
         &anchor_ident_input(),
         &model,
         &implementation,
-        RunOptions { seed: 73, cases: 2_000, shrink_rounds: 100 },
+        RunOptions { seed: 73, cases: 2_000 },
     )
     .expect("both runners answer");
 
@@ -381,7 +381,7 @@ fn model_and_implementation_agree_on_the_cap_for_an_imprecise_anchor() {
         &schema,
         &model,
         &implementation,
-        RunOptions { seed: 79, cases: 500, shrink_rounds: 100 },
+        RunOptions { seed: 79, cases: 500 },
     )
     .expect("both runners answer");
 

@@ -36,10 +36,11 @@ pub fn role() -> Schema {
     Schema::Enum { variants }
 }
 
-/// `evidence::Marks`: four booleans, each held or not on its own.
+/// `evidence::Marks`: four booleans, each held or not on its own, and whether
+/// testing and proving apply at all.
 pub fn marks() -> Schema {
     let mut fields = BTreeMap::new();
-    for mark in ["annotated", "judged", "tested", "proved"] {
+    for mark in ["annotated", "judged", "tested", "proved", "structural"] {
         fields.insert(mark.to_string(), Schema::Bool);
     }
     Schema::Struct { fields }

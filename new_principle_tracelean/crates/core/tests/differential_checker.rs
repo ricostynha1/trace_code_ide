@@ -66,7 +66,7 @@ fn model_and_implementation_agree_on_what_roles_imply() {
         &coverage_input(),
         &model,
         &implementation,
-        RunOptions { seed: 41, cases: 2_000, shrink_rounds: 100 },
+        RunOptions { seed: 41, cases: 2_000 },
     )
     .expect("both runners answer");
 
@@ -116,7 +116,7 @@ fn model_and_implementation_agree_on_what_each_kind_means() {
         &strukt(&[("kind", kind())]),
         &model,
         &implementation,
-        RunOptions { seed: 42, cases: 1_000, shrink_rounds: 100 },
+        RunOptions { seed: 42, cases: 1_000 },
     )
     .expect("both runners answer");
 
@@ -192,7 +192,7 @@ fn model_and_implementation_agree_on_unsound_qualifiers() {
         &strukt(&[("qualifier", Schema::Option { inner: Box::new(qualifier()) }), ("today", today)]),
         &model,
         &implementation,
-        RunOptions { seed: 43, cases: 1_000, shrink_rounds: 100 },
+        RunOptions { seed: 43, cases: 1_000 },
     )
     .expect("both runners answer");
 
@@ -283,7 +283,7 @@ fn model_and_implementation_agree_on_which_roles_are_crowded() {
         &crowded_input(),
         &model,
         &implementation,
-        RunOptions { seed: 44, cases: 2_000, shrink_rounds: 100 },
+        RunOptions { seed: 44, cases: 2_000 },
     )
     .expect("both runners answer");
 

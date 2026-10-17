@@ -252,6 +252,7 @@ fn listing_line(entry: &(usize, String)) -> String {
 /// @implements REQ-VIEW.everything_is_a_buffer
 /// @implements REQ-SHOW.listing_from_entries
 /// @drt REQ-VIEW.structure_has_one_type
+/// @drt REQ-VIEW.everything_is_a_buffer
 /// @drt REQ-SHOW.listing_from_entries
 pub fn directory_buffer(path: String, entries: Vec<(usize, String)>) -> Buffer {
     let mut spans = Vec::new();

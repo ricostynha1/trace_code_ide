@@ -29,11 +29,15 @@ pub struct Claim {
 
 /// The marks as pieces of a line, a letter or a dash each with the role saying
 /// which mark it is and whether it is held.
+/// A mark that cannot be held is plain: it is neither a gap nor evidence.
 pub fn mark_pieces(marks: Marks) -> Vec<(String, Role)> {
     marks
         .each()
         .iter()
-        .map(|&(mark, held, letter)| ((if held { letter } else { '-' }).to_string(), Role::Mark { mark, held }))
+        .map(|&(mark, held, letter)| {
+            let shown = crate::evidence::letter_of(marks, (mark, held, letter)).to_string();
+            (shown, if marks.applies(mark) { Role::Mark { mark, held } } else { Role::Plain })
+        })
         .collect()
 }
 
@@ -141,6 +145,11 @@ pub struct RequirementShown {
     /// The requirements that refine this one: what a change here reaches.
     #[serde(default)]
     pub refined_by: Vec<String>,
+    /// The prose under the frontmatter: what the document says besides its
+    /// clauses. Empty for a requirement whose body is its one clause, which
+    /// the clause already shows.
+    #[serde(default)]
+    pub body: String,
     pub clauses: Vec<ClauseShown>,
     /// The characters a line may take before it wraps.
     pub width: usize,
@@ -170,6 +179,40 @@ pub const NO_LINES: &str = "no line a test could run";
 /// Whether code claims the clause.
 fn implemented(clause: &ClauseShown) -> bool {
     clause.claims.iter().any(|c| c.role == "implements")
+}
+
+/// How many clauses hold each kind of evidence, one letter each and in the
+/// order the `evidence` line above it names them — implements, proves, models,
+/// tests, strong, drt — each in the colour of its claim, so the two lines read
+/// as one thing written twice: in words and in letters. A count is out of the
+/// clauses a model can answer, `I·` where none can.
+fn marks_line(out: &mut Lines, clauses: &[ClauseShown]) {
+    use crate::trace::annotation::Role as R;
+    let modelled: Vec<&ClauseShown> = clauses.iter().filter(|c| !c.marks.structural).collect();
+    let count = |held: &dyn Fn(&ClauseShown) -> bool| modelled.iter().filter(|c| held(c)).count();
+    let counts = [
+        ("I", count(&implemented), R::Implements),
+        ("P", count(&|c| c.marks.proved), R::Proves),
+        ("M", count(&|c| c.claims.iter().any(|claim| claim.role == "models")), R::Models),
+        ("T", count(&|c| c.marks.tested), R::Tests),
+        ("S", count(&|c| c.pins.as_ref().is_some_and(|(state, _)| state == "pinned")), R::Pins),
+        ("D", count(&|c| c.tested), R::Drt),
+    ];
+    let said: Vec<(String, Role)> = counts
+        .iter()
+        .map(|&(letter, held, role)| match modelled.len() {
+            0 => (format!("{letter}·"), Role::Plain),
+            of => (format!("{letter}{held}/{of}"), Role::Claim { role }),
+        })
+        .collect();
+    let mut pieces: Vec<(&str, Role, &[&str])> = vec![("marks      ", Role::Plain, &[])];
+    for (n, (text, role)) in said.iter().enumerate() {
+        if n > 0 {
+            pieces.push((" ", Role::Plain, &[]));
+        }
+        pieces.push((text.as_str(), *role, &[]));
+    }
+    out.line(&pieces);
 }
 
 /// A count's colour: whole in green, short in red, nothing to run in neither.
@@ -225,34 +268,40 @@ pub fn requirement_view(view: RequirementShown) -> Buffer {
         }
         out.line(&pieces);
     }
+    // What the document says: opening a requirement shows its text, not only
+    // its title, status and clauses.
+    if !view.body.is_empty() {
+        out.blank();
+        for paragraph in view.body.split('\n') {
+            out.wrapped("", paragraph, Role::Plain, &[]);
+        }
+        out.blank();
+    }
     // How many clauses each kind of claim reaches, in the claims' colours: where
     // this requirement is implemented, tested, modelled and proved, at a glance.
     let total = view.clauses.len();
-    let counts: Vec<(crate::trace::annotation::Role, String)> = [
-        crate::trace::annotation::Role::Implements,
-        crate::trace::annotation::Role::Tests,
-        crate::trace::annotation::Role::Models,
-        crate::trace::annotation::Role::Proves,
-        crate::trace::annotation::Role::Drt,
-    ]
-    .into_iter()
-    .map(|role| {
-        let reached = view
-            .clauses
+    // The order is the one the marks line below it keeps: implements, proves,
+    // models, tests, strong, drt.
+    let reaching = |role: crate::trace::annotation::Role| {
+        view.clauses
             .iter()
             .filter(|c| {
                 c.claims.iter().any(|claim| claim.role == role.as_str())
                     || (role == crate::trace::annotation::Role::Drt && c.tested)
             })
-            .count();
-        (role, format!("{} {reached}/{total}", role.as_str()))
-    })
-    // And how many clauses Lean has said their specification pins.
-    .chain(std::iter::once({
-        let pinned = view.clauses.iter().filter(|c| c.pins.as_ref().is_some_and(|(state, _)| state == "pinned")).count();
-        (crate::trace::annotation::Role::Pins, format!("pins {pinned}/{total}"))
-    }))
-    .collect();
+            .count()
+    };
+    let pinned = view.clauses.iter().filter(|c| c.pins.as_ref().is_some_and(|(state, _)| state == "pinned")).count();
+    use crate::trace::annotation::Role as R;
+    let counts: Vec<(R, String)> = vec![
+        (R::Implements, format!("implements {}/{total}", reaching(R::Implements))),
+        (R::Proves, format!("proves {}/{total}", reaching(R::Proves))),
+        (R::Models, format!("models {}/{total}", reaching(R::Models))),
+        (R::Tests, format!("tests {}/{total}", reaching(R::Tests))),
+        // How many clauses Lean has said their specification pins: strong.
+        (R::Pins, format!("strong {pinned}/{total}")),
+        (R::Drt, format!("drt {}/{total}", reaching(R::Drt))),
+    ];
     // What an agent needs to change it: the name opens its context.
     out.line(&[("for agent  ", Role::Plain, &[]), (&view.id, Role::Requirement, &["trace.context"]), ("  context to copy", Role::Plain, &[])]);
     let mut pieces: Vec<(&str, Role, &[&str])> = vec![("evidence   ", Role::Plain, &[])];
@@ -263,6 +312,7 @@ pub fn requirement_view(view: RequirementShown) -> Buffer {
         pieces.push((said.as_str(), Role::Claim { role: *role }, &[]));
     }
     out.line(&pieces);
+    marks_line(&mut out, &view.clauses);
     match view.lines {
         Some(lines) => covered_line(&mut out, "covered    ", &view.id, lines),
         // Code claims it and nothing measured the code as it is: said, so an
@@ -277,8 +327,14 @@ pub fn requirement_view(view: RequirementShown) -> Buffer {
         out.blank();
         let key = clause.key.clone().unwrap_or_else(|| "(the whole requirement)".into());
         let letters = mark_pieces(clause.marks);
-        let mut row: Vec<(&str, Role, &[&str])> =
-            letters.iter().map(|(text, role)| (text.as_str(), *role, &["trace.rollup"][..])).collect();
+        // A mark that cannot be held is plain, and offers nothing.
+        let mut row: Vec<(&str, Role, &[&str])> = letters
+            .iter()
+            .map(|(text, role)| {
+                let actions: &[&str] = if *role == Role::Plain { &[] } else { &["trace.rollup"] };
+                (text.as_str(), *role, actions)
+            })
+            .collect();
         row.push(("  ", Role::Plain, &[]));
         row.push((&key, Role::Heading, &[]));
         out.line(&row);
@@ -390,12 +446,13 @@ mod tests {
             status: "draft".into(),
             refines: vec!["ARCH-A".into()],
             refined_by: vec!["REQ-Y".into()],
+            body: "The prose of the document.".into(),
             clauses: vec![
                 ClauseShown {
                     key: Some("holds".into()),
                     text: "It shall hold.".into(),
                     narrowings: vec![("empty".into(), "With nothing, it holds.".into())],
-                    marks: Marks { annotated: true, judged: true, tested: true, proved: false },
+                    marks: Marks { annotated: true, judged: true, tested: true, ..Marks::NONE },
                     claims: vec![Claim { role: "implements".into(), path: "src/x.rs".into(), line: 12, symbol: Some("hold".into()) }],
                     pins: Some(("pinned".into(), "X.holds_pinned".into())),
                     tested: true,
@@ -448,9 +505,10 @@ mod tests {
         assert_eq!(actions_at(shown.clone(), offset_of(&shown, "src/x.rs:12")), vec!["file.open".to_string()]);
         assert_eq!(actions_at(shown.clone(), offset_of(&shown, "ARCH-A")), vec!["trace.requirement".to_string()]);
         assert!(shown.text.contains("nothing claims it yet"));
+        assert!(shown.text.contains("The prose of the document."), "the body is not shown: {}", shown.text);
         assert!(shown.text.contains("  pinned\n    X.holds_pinned"), "{}", shown.text);
         assert!(shown.text.contains("drt 1/2"), "a derived test counts: {}", shown.text);
-        assert!(shown.text.contains("drt 1/2 pins 1/2"), "a pinned clause counts: {}", shown.text);
+        assert!(shown.text.contains("strong 1/2 drt 1/2"), "a pinned clause counts: {}", shown.text);
         // Unmeasured, the count says so rather than vanishing.
         let mut unmeasured = view();
         unmeasured.lines = None;

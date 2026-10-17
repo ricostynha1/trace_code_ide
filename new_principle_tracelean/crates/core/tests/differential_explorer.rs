@@ -43,7 +43,7 @@ fn model_and_implementation_agree_on_the_rows_of_the_tree() {
         &Schema::Struct { fields },
         &model,
         &implementation,
-        RunOptions { seed: 405, cases: 2_000, shrink_rounds: 100 },
+        RunOptions { seed: 405, cases: 2_000 },
     )
     .expect("both runners answer");
     support::agreed(&result);

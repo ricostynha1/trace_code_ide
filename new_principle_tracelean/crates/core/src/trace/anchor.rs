@@ -23,6 +23,7 @@ use super::annotation::{Directive, ParsedComment, Problem, ProblemKind, RawAnnot
 pub enum Lang {
     Rust,
     Lean4,
+    TypeScript,
 }
 
 impl Lang {
@@ -30,6 +31,7 @@ impl Lang {
         match ext {
             "rs" => Some(Lang::Rust),
             "lean" => Some(Lang::Lean4),
+            "ts" => Some(Lang::TypeScript),
             _ => None,
         }
     }
@@ -38,6 +40,7 @@ impl Lang {
         match self {
             Lang::Rust => tree_sitter_rust::LANGUAGE.into(),
             Lang::Lean4 => tree_sitter_lean4::language(),
+            Lang::TypeScript => tree_sitter_typescript::LANGUAGE_TYPESCRIPT.into(),
         }
     }
 
@@ -58,6 +61,17 @@ impl Lang {
                 "mod_item",
             ],
             Lang::Lean4 => &["definition", "inductive", "structure", "abbreviation"],
+            // `const x = …` is declared by its declarator, which carries the
+            // name; the `const` around it does not.
+            Lang::TypeScript => &[
+                "function_declaration",
+                "class_declaration",
+                "interface_declaration",
+                "type_alias_declaration",
+                "enum_declaration",
+                "method_definition",
+                "variable_declarator",
+            ],
         }
     }
 
@@ -70,7 +84,7 @@ impl Lang {
     fn scope_only(self) -> &'static [&'static str] {
         match self {
             Lang::Rust => &["impl_item"],
-            Lang::Lean4 => &[],
+            Lang::Lean4 | Lang::TypeScript => &[],
         }
     }
 
@@ -78,7 +92,7 @@ impl Lang {
     /// containing their contents.
     fn sibling_scope(self) -> Option<(&'static str, &'static str)> {
         match self {
-            Lang::Rust => None,
+            Lang::Rust | Lang::TypeScript => None,
             Lang::Lean4 => Some(("namespace", "end")),
         }
     }
@@ -92,6 +106,7 @@ const LITERAL_KINDS: &[&str] = &[
     "char_literal",
     "string",
     "string_content",
+    "template_string",
 ];
 
 /// One declaration found in a file.
@@ -365,7 +380,7 @@ fn declaration_name(node: tree_sitter::Node, content: &str, lang: Lang) -> Optio
             let found = node.children(&mut cursor).find_map(|child| {
                 let kind = child.kind();
                 let names = match lang {
-                    Lang::Rust => kind == "identifier" || kind == "type_identifier",
+                    Lang::Rust | Lang::TypeScript => kind == "identifier" || kind == "type_identifier",
                     Lang::Lean4 => kind == "identifier",
                 };
                 names.then(|| child.byte_range())
@@ -590,6 +605,21 @@ impl Holder {
         let src = "fn f() { let s = \"@implements REQ-FAKE.c\"; }";
         let scan = scan(src, Some(Lang::Rust));
         assert!(scan.comments.directives.is_empty(), "{:?}", scan.comments.directives);
+        // Nor in code that is neither string nor comment: a macro's tokens.
+        let code = "macro_rules! m { (@implements REQ-FAKE.c) => {} }\n";
+        assert!(super::scan(code, Some(Lang::Rust)).comments.directives.is_empty());
+        let ts = "const s = `@implements REQ-FAKE.c`;\n// @implements REQ-X.c\nfunction f() {}\n";
+        let read = super::scan(ts, Some(Lang::TypeScript));
+        assert_eq!(read.comments.directives.len(), 1, "{:?}", read.comments.directives);
+    }
+
+    #[test]
+    fn typescript_declarations_are_anchored_by_name() {
+        let src = "export interface Piece { a: number }\nexport function render(b: Buffer): void {}\nconst KEY = 1;\nclass Box {\n  draw() {}\n}\n";
+        let scanned = scan(src, Some(Lang::TypeScript));
+        let paths: Vec<&str> = scanned.declarations.iter().map(|d| d.symbol_path.as_str()).collect();
+        assert_eq!(paths, vec!["Piece", "render", "KEY", "Box", "Box::draw"]);
+        assert!(scanned.precise);
     }
 
     #[test]

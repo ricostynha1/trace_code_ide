@@ -94,7 +94,7 @@ fn check(op: &str, function: &str, entry: &str, arguments: &[&str], schema: Sche
         &schema,
         &model,
         &implementation,
-        RunOptions { seed, cases: 2_000, shrink_rounds: 100 },
+        RunOptions { seed, cases: 2_000 },
     )
     .expect("both runners answer");
 
@@ -331,7 +331,7 @@ fn model_and_implementation_agree_on_a_typescript_signature() {
         &ts_signature_input(),
         &model,
         &implementation,
-        RunOptions { seed: 109, cases: 3_000, shrink_rounds: 100 },
+        RunOptions { seed: 109, cases: 3_000 },
     )
     .expect("both runners answer");
     support::agreed(&result);

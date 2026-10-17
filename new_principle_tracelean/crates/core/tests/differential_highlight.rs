@@ -61,7 +61,7 @@ fn model_and_implementation_agree_on_the_names_a_comment_holds() {
         &comment(),
         &model,
         &implementation,
-        RunOptions { seed: 401, cases: 2_000, shrink_rounds: 100 },
+        RunOptions { seed: 401, cases: 2_000 },
     )
     .expect("both runners answer");
     support::agreed(&result);
@@ -102,7 +102,7 @@ fn model_and_implementation_agree_on_where_findings_lead() {
         &Schema::Struct { fields },
         &model,
         &implementation,
-        RunOptions { seed: 403, cases: 1_500, shrink_rounds: 100 },
+        RunOptions { seed: 403, cases: 1_500 },
     )
     .expect("both runners answer");
     support::agreed(&result);

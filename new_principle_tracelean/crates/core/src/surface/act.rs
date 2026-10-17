@@ -80,6 +80,8 @@ pub enum Watch {
     DesignExpand { id: Option<String> },
     /// Fold the design to its roots.
     DesignFold,
+    /// Show only the requirements with something still to do, or all again.
+    DesignOpenOnly,
 }
 
 /// Why nothing happened.
@@ -161,7 +163,9 @@ fn approve(focus: &Focus, w: &Workspace) -> Intent {
     let found = focus_path(focus).or_else(|| focus.under.clone()).and_then(|path| {
         let text = w.files.get(&path)?;
         let at = text.find(DRAFT)?;
-        Some((path.clone(), text[..at].chars().count() + "\nstatus: ".chars().count()))
+        // Bytes, which is what a command counts: a requirement with `λ` in its
+        // title would put the edit early by the width of each.
+        Some((path.clone(), text[..at].len() + "\nstatus: ".len()))
     });
     match found {
         None => needs("trace.approve", "a draft requirement"),
@@ -328,6 +332,13 @@ pub fn dispatch(action: String, focus: Focus, w: Workspace, waiting: Vec<Command
         "trace.check" => report("check"),
         "trace.evidence" => report("evidence"),
         "trace.findings" => report("findings"),
+        // What to look for is asked for by the shell, on the status line.
+        "definitions.edit" => match &focus.under {
+            None => needs("definitions.edit", "a setting"),
+            Some(setting) => report(&format!("edit {setting}")),
+        },
+        "file.find" => report("find"),
+        "file.find_lines" => report("find lines"),
         "trace.lock" => report("lock"),
         // What an agent needs to change the requirement or clause here.
         "trace.context" => match &focus.under {
@@ -358,6 +369,7 @@ pub fn dispatch(action: String, focus: Focus, w: Workspace, waiting: Vec<Command
         },
         "design.expand_everything" => Intent::Observe { watch: Watch::DesignExpand { id: None } },
         "design.fold_all" => Intent::Observe { watch: Watch::DesignFold },
+        "design.open_only" => Intent::Observe { watch: Watch::DesignOpenOnly },
         "trace.judge" => match &focus.under {
             None => needs("trace.judge", "a clause"),
             Some(clause) => report(&format!("judge {clause}")),

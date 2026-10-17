@@ -5,10 +5,6 @@
 //! the other, the claim and the mechanism have come apart — which is the exact
 //! failure `REQ-CHECK.unbound_reported` exists to catch, applied to this
 //! project's own configuration.
-//!
-//! @tests REQ-DRT-BIND.binding_is_the_bond
-//! @tests ARCH-SELFHOST.every_feature_traced
-//! @structural ARCH-SELFHOST.every_feature_traced reason="a claim about this project's own annotations and binding file agreeing"
 
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
@@ -52,6 +48,11 @@ fn bindings_in_config(root: &Path) -> BTreeSet<String> {
         .collect()
 }
 
+/// A `@drt` comment with no binding behind it binds nothing, and a binding is
+/// claimed: the binding, not the comment, is the bond.
+///
+/// @tests REQ-DRT-BIND.binding_is_the_bond
+/// @structural REQ-DRT-BIND.binding_is_the_bond reason="a claim that the binding file and the annotations name the same bonds, read off both"
 #[test]
 fn every_drt_annotation_has_a_binding_and_every_binding_has_an_annotation() {
     let root = project_root();

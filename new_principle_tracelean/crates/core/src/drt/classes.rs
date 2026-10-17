@@ -215,6 +215,17 @@ mod tests {
         Schema::Struct { fields: fields.iter().map(|(k, v)| (k.to_string(), v.clone())).collect() }
     }
 
+    /// Every shape a run is checked over reports its classes, counted round.
+    ///
+    /// @tests REQ-DRT-COVER.classes_reached
+    #[test]
+    fn every_shape_reports_its_classes() {
+        let first = reached_shape(0, 7, 50);
+        assert!(!first.is_empty());
+        let count = serde_json::from_str::<Vec<Schema>>(gen::SHAPES).unwrap().len() as u64;
+        assert_eq!(reached_shape(count, 7, 50), first, "the shapes are counted round");
+    }
+
     /// @tests REQ-DRT-COVER.classes_reached
     #[test]
     fn classes_come_from_the_bounds_and_reach_into_payloads() {

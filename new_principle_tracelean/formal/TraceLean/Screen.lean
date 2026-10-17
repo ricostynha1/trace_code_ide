@@ -599,14 +599,24 @@ mutual
 
   The divider *after* the part holding it, unless that part is last, in which
   case the divider before it -- so the last pane of a split can still be
-  resized. -/
+  resized.
+
+  A part that is itself a split along the same axis answers first: the pane is
+  one of *its* parts, and its divider is that split's. -/
   def resizeAt (pane : String) (amount : Int) : Layout → Layout
     | Layout.pane id buffer => Layout.pane id buffer
     | Layout.split axis parts =>
       match indexHolding pane 0 parts with
       | none => Layout.split axis parts
       | some index =>
-        if index + 1 < parts.length then
+        let nested :=
+          match axis, parts.get? index with
+          | Axis.across, some (_, Layout.split Axis.across _) => true
+          | Axis.down, some (_, Layout.split Axis.down _) => true
+          | _, _ => false
+        if nested then
+          Layout.split axis (resizeAtParts pane amount parts)
+        else if index + 1 < parts.length then
           Layout.split axis (shiftAt index amount parts)
         else if index = 0 then
           -- One part, or the pane is in the only part there is: nothing to move
@@ -834,7 +844,7 @@ def strip (screen : Screen) : Buffer :=
   let rows := menuBuffer "opened" (stripEntries screen.opened 1 screen.opened)
   { rows with spans := markFocused (focusedBuffer screen) screen.opened rows.spans }
 
-/-- The five stations, in the order they are always in. The requirements are
+/-- The eight stations, in the order they are always in. The requirements are
 the design's: a flat list of them beside it said nothing the graph does not.
 
 Each row carries its own action rather than a shared one taking the row as a
@@ -850,7 +860,13 @@ def stationEntries : List MenuEntry :=
    { key := "design", description := "Requirements, as the refinement graph",
      action := some "screen.station.design" },
    { key := "history", description := "The undo tree",
-     action := some "screen.station.history" }]
+     action := some "screen.station.history" },
+   { key := "findings", description := "What the checker found, and what to create",
+     action := some "screen.station.findings" },
+   { key := "definitions", description := "What can be configured: colours, keys, languages",
+     action := some "screen.station.definitions" },
+   { key := "proof", description := "The goals Lean reports at the cursor",
+     action := some "screen.station.proof" }]
 
 /--
 The stations, as a buffer.
@@ -887,6 +903,9 @@ def stationKind (station : String) : Option BufferKind :=
   else if station == "sandbox" then some (BufferKind.record "sandbox")
   else if station == "history" then some (BufferKind.record "history")
   else if station == "trace" then some (BufferKind.record "trace")
+  else if station == "findings" then some (BufferKind.record "findings")
+  else if station == "definitions" then some (BufferKind.record "definitions")
+  else if station == "proof" then some (BufferKind.record "proof")
   else none
 
 /-- Every station on the bar produces something.

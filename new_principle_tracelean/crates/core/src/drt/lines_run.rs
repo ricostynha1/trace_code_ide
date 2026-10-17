@@ -90,6 +90,8 @@ pub fn profiled_lines(root: &Path, binary: &Path, profiles: &Path) -> Result<Vec
 
 /// Measure every test of the project at `root`, and the coverage of each of
 /// its files that a test reached or could have.
+///
+/// @implements REQ-LINECOV.per_test
 pub fn measure(root: &Path, files: &BTreeMap<String, String>) -> Result<(Coverage, usize), String> {
     let (profdata, cov) = (llvm_tool("llvm-profdata")?, llvm_tool("llvm-cov")?);
     let scratch = std::env::temp_dir().join(format!("tracelean-lines-{}", crate::trace::hash::text(&root.display().to_string())));

@@ -97,7 +97,7 @@ fn model_and_implementation_agree_on_how_two_types_pair() {
         &["lean", "rust", "leanStructs", "rustStructs", "fuel"],
         &scratch,
     );
-    let result = run(op, &input(), &model, &implementation, RunOptions { seed: 321, cases: 20_000, shrink_rounds: 100 })
+    let result = run(op, &input(), &model, &implementation, RunOptions { seed: 321, cases: 20_000 })
         .expect("both runners answer");
     support::agreed(&result);
     let _ = std::fs::remove_dir_all(&scratch);
@@ -201,7 +201,7 @@ fn model_and_implementation_agree_on_how_two_signatures_pair() {
         &["model", "implementation", "lean", "rust"],
         &scratch,
     );
-    let result = run(op, &signatures(), &model, &implementation, RunOptions { seed: 322, cases: 60_000, shrink_rounds: 100 })
+    let result = run(op, &signatures(), &model, &implementation, RunOptions { seed: 322, cases: 60_000 })
         .expect("both runners answer");
     support::agreed(&result);
     let _ = std::fs::remove_dir_all(&scratch);

@@ -112,7 +112,7 @@ fn model_and_implementation_agree_on_every_key() {
         &keymap_input(),
         &model,
         &implementation,
-        RunOptions { seed: 23, cases: 3_000, shrink_rounds: 100 },
+        RunOptions { seed: 23, cases: 3_000 },
     )
     .expect("both runners answer");
 
@@ -220,7 +220,7 @@ fn model_and_implementation_agree_on_staleness() {
         &staleness_input(),
         &model,
         &implementation,
-        RunOptions { seed: 29, cases: 3_000, shrink_rounds: 100 },
+        RunOptions { seed: 29, cases: 3_000 },
     )
     .expect("both runners answer");
 
@@ -255,7 +255,7 @@ fn model_and_implementation_agree_on_running_a_clause_again() {
         ("live", parts["liveLinkHashes"].clone()),
         ("again", Schema::Bool),
     ]);
-    let result = run(op, &schema, &model, &implementation, RunOptions { seed: 31, cases: 3_000, shrink_rounds: 100 })
+    let result = run(op, &schema, &model, &implementation, RunOptions { seed: 31, cases: 3_000 })
         .expect("both runners answer");
     support::agreed(&result);
     let _ = std::fs::remove_dir_all(&scratch);
@@ -349,7 +349,7 @@ fn model_and_implementation_agree_on_position_encoding() {
         &encoding_input(),
         &model,
         &implementation,
-        RunOptions { seed: 31, cases: 2_000, shrink_rounds: 100 },
+        RunOptions { seed: 31, cases: 2_000 },
     )
     .expect("both runners answer");
 
@@ -427,7 +427,7 @@ fn model_and_implementation_agree_on_columns_for_offsets() {
         &offset_input(),
         &model,
         &implementation,
-        RunOptions { seed: 32, cases: 2_000, shrink_rounds: 100 },
+        RunOptions { seed: 32, cases: 2_000 },
     )
     .expect("both runners answer");
 
@@ -536,7 +536,7 @@ fn model_and_implementation_agree_on_lowering_edits() {
         &lower_input(),
         &model,
         &implementation,
-        RunOptions { seed: 53, cases: 2_000, shrink_rounds: 100 },
+        RunOptions { seed: 53, cases: 2_000 },
     )
     .expect("both runners answer");
 
@@ -638,7 +638,7 @@ fn model_and_implementation_agree_on_a_whole_sweep() {
         &schema,
         &model,
         &implementation,
-        RunOptions { seed: 31, cases: 2_000, shrink_rounds: 100 },
+        RunOptions { seed: 31, cases: 2_000 },
     )
     .expect("both runners answer");
 
@@ -717,7 +717,7 @@ fn model_and_implementation_agree_on_what_comes_back() {
         &schema,
         &model,
         &implementation,
-        RunOptions { seed: 37, cases: 2_000, shrink_rounds: 100 },
+        RunOptions { seed: 37, cases: 2_000 },
     )
     .expect("both runners answer");
 
@@ -793,7 +793,7 @@ fn model_and_implementation_agree_on_what_to_show_without_a_server() {
         &schema,
         &model,
         &implementation,
-        RunOptions { seed: 67, cases: 2_000, shrink_rounds: 100 },
+        RunOptions { seed: 67, cases: 2_000 },
     )
     .expect("both runners answer");
 
@@ -846,7 +846,7 @@ fn model_and_implementation_agree_on_which_encoding_a_language_uses() {
         &schema,
         &model,
         &implementation,
-        RunOptions { seed: 71, cases: 2_000, shrink_rounds: 100 },
+        RunOptions { seed: 71, cases: 2_000 },
     )
     .expect("both runners answer");
 

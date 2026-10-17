@@ -118,7 +118,7 @@ fn model_and_implementation_agree_on_what_is_drawn_in_the_wrong_look() {
         ("columns", Schema::Nat { max: Some(6), edges: vec![0, 1] }),
         ("looks", Schema::List { inner: Box::new(look), max_len: Some(3) }),
     ]);
-    let result = run(op, &schema, &model, &implementation, RunOptions { seed: 410, cases: 3_000, shrink_rounds: 100 })
+    let result = run(op, &schema, &model, &implementation, RunOptions { seed: 410, cases: 3_000 })
         .expect("both runners answer");
     support::agreed(&result);
     let _ = std::fs::remove_dir_all(&scratch);

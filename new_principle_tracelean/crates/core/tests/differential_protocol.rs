@@ -89,7 +89,7 @@ fn model_and_implementation_agree_on_what_a_line_says() {
         &input_schema(),
         &model,
         &implementation,
-        RunOptions { seed: 17, cases: 2_000, shrink_rounds: 100 },
+        RunOptions { seed: 17, cases: 2_000 },
     )
     .expect("both runners answer");
 
@@ -124,7 +124,7 @@ fn model_and_implementation_agree_on_which_ops_collide() {
         &ops_input(),
         &model,
         &implementation,
-        RunOptions { seed: 23, cases: 2_000, shrink_rounds: 100 },
+        RunOptions { seed: 23, cases: 2_000 },
     )
     .expect("both runners answer");
 
@@ -199,7 +199,7 @@ fn model_and_implementation_agree_on_what_is_exclusive() {
         &exclusive_input(),
         &model,
         &implementation,
-        RunOptions { seed: 29, cases: 1_000, shrink_rounds: 100 },
+        RunOptions { seed: 29, cases: 1_000 },
     )
     .expect("both runners answer");
     support::agreed(&result);
@@ -309,7 +309,7 @@ fn model_and_implementation_agree_on_what_a_case_came_to() {
         &event_input(),
         &model,
         &implementation,
-        RunOptions { seed: 31, cases: 2_000, shrink_rounds: 100 },
+        RunOptions { seed: 31, cases: 2_000 },
     )
     .expect("both runners answer");
     support::agreed(&result);
@@ -405,7 +405,7 @@ fn model_and_implementation_agree_on_how_a_case_is_written() {
         &case_input(),
         &model,
         &implementation,
-        RunOptions { seed: 37, cases: 2_000, shrink_rounds: 100 },
+        RunOptions { seed: 37, cases: 2_000 },
     )
     .expect("both runners answer");
     support::agreed(&result);
@@ -482,7 +482,7 @@ fn model_and_implementation_agree_on_which_runners_a_project_needs() {
         &placed_input(),
         &model,
         &implementation,
-        RunOptions { seed: 41, cases: 2_000, shrink_rounds: 100 },
+        RunOptions { seed: 41, cases: 2_000 },
     )
     .expect("both runners answer");
     support::agreed(&result);
@@ -603,7 +603,7 @@ fn model_and_implementation_agree_on_when_two_answers_agree() {
         &schema,
         &model,
         &implementation,
-        RunOptions { seed: 83, cases: 2_000, shrink_rounds: 100 },
+        RunOptions { seed: 83, cases: 2_000 },
     )
     .expect("both runners answer");
 
@@ -635,7 +635,7 @@ fn model_and_implementation_agree_that_finding_nothing_is_not_a_proof() {
         &strukt(&[("agreed", Schema::Bool)]),
         &model,
         &implementation,
-        RunOptions { seed: 89, cases: 200, shrink_rounds: 100 },
+        RunOptions { seed: 89, cases: 200 },
     )
     .expect("both runners answer");
 

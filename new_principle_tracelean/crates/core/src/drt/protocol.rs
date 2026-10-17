@@ -406,6 +406,16 @@ impl std::fmt::Display for RunnerError {
 mod tests {
     use super::*;
 
+    /// Agreement over the cases tried is the testing rung, not the proving one;
+    /// disagreement leaves only the annotation.
+    ///
+    /// @tests REQ-DRT.falsification_only
+    #[test]
+    fn agreement_earns_testing_and_never_proof() {
+        assert_eq!(drt_level(true), crate::evidence::Level::L3);
+        assert_eq!(drt_level(false), crate::evidence::Level::L1);
+    }
+
     /// A model returning `none` answers `null`, which is an answer.
     ///
     /// @tests REQ-DRT-PROTO.reply_exclusive

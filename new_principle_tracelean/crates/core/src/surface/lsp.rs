@@ -266,6 +266,28 @@ pub fn encoding_for(registry: Vec<(String, ServerState)>, language: String) -> D
 mod tests {
     use super::*;
 
+    /// The exchanged shape says commands or the refusal, never both.
+    ///
+    /// @tests REQ-LSP.overlap_refused
+    /// @tests REQ-LSP.edits_ordered
+    #[test]
+    fn a_lowering_is_commands_or_a_refusal() {
+        let edit = |start, end| Edit { start, end, text: "x".into() };
+        let lowered = lower_outcome("a.rs".into(), "abcd".into(), vec![edit(0, 1), edit(2, 3)]);
+        // Each replacement is a delete then an insert, the later edit first.
+        let Lowered::Commands { commands } = lowered else { panic!("{lowered:?}") };
+        let offsets: Vec<usize> = commands
+            .iter()
+            .map(|c| match c {
+                Command::Delete { offset, .. } | Command::Insert { offset, .. } => *offset,
+                other => panic!("{other:?}"),
+            })
+            .collect();
+        assert_eq!(offsets, vec![2, 2, 0, 0]);
+        let refused = lower_outcome("a.rs".into(), "abcd".into(), vec![edit(0, 2), edit(1, 3)]);
+        assert!(matches!(refused, Lowered::Refused { error: LowerError::Overlap { .. } }), "{refused:?}");
+    }
+
     /// The class of bug this closes: an off-by-some on exactly the lines with
     /// non-ASCII text.
     ///

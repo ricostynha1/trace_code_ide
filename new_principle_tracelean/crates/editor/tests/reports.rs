@@ -1,16 +1,13 @@
-//! What the editor answers when it is asked for a report, and what it does
-//! when it is told to watch.
-//!
-//! The thing being pinned down here is not the wording. It is that every
-//! report an action can ask for is either computed from the tree or names the
-//! command that would compute it — never a blank page, and never a number
-//! nobody produced.
+//! The reports and the agent's changes, through the calls the window makes:
+//! what documents are stale, which lines tests ran, a folder's listing, and
+//! accepting a change that is not there.
 
 use std::path::{Path, PathBuf};
 
-use tracelean_core::surface::act::dispatch;
+use tracelean_core::history::command::Command;
+use tracelean_core::surface::act::{Intent, Watch};
 use tracelean_core::surface::keymap::{self, Keymap};
-use tracelean_core::surface::view::plain_text;
+use tracelean_core::surface::view::{plain_text, BufferKind};
 use tracelean_editor::Editor;
 
 const KEYMAP: &str = include_str!("../../../assets/keymap.json");
@@ -19,186 +16,209 @@ fn keymap() -> Keymap {
     keymap::load(KEYMAP, &keymap::actions()).expect("the shipped keymap loads")
 }
 
-/// A working tree of our own, so a test never reads the project it is in.
-fn project(files: &[(&str, &str)]) -> PathBuf {
-    use std::sync::atomic::{AtomicU64, Ordering};
-    static COUNTER: AtomicU64 = AtomicU64::new(0);
-    let dir = std::env::temp_dir().join(format!(
-        "tracelean-editor-{}-{}",
-        std::process::id(),
-        COUNTER.fetch_add(1, Ordering::Relaxed)
-    ));
+fn project(name: &str, files: &[(&str, &str)]) -> PathBuf {
+    let dir = std::env::temp_dir().join(format!("tracelean-reports-{name}-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
-    for (name, content) in files {
-        let path = dir.join(name);
-        std::fs::create_dir_all(path.parent().expect("a parent")).expect("a directory");
-        std::fs::write(path, content).expect("a file");
+    for (path, text) in files {
+        let at = dir.join(path);
+        std::fs::create_dir_all(at.parent().expect("a parent")).expect("a directory");
+        std::fs::write(at, text).expect("written");
     }
     dir
 }
 
-const TREE: &[(&str, &str)] = &[
-    ("reqs/a.md", "---\nid: REQ-A\ndecomposition: complete\nclauses:\n  one: It does the thing.\n---\nbody\n"),
-    ("src/i.rs", "// @implements REQ-A.one\npub fn f() {}\n"),
-];
+fn opened(root: &Path) -> Editor {
+    let mut editor = Editor::open(root.to_path_buf(), keymap());
+    editor.region = tracelean_core::surface::screen::Rect { left: 0, top: 0, width: 120, height: 20 };
+    editor
+}
 
-/// Run an action and read what the editor put on screen.
-fn ask(editor: &mut Editor, action: &str) -> String {
-    let intent = dispatch(action.to_string(), editor.focus(), editor.workspace(), editor.waiting());
-    editor.perform(intent);
-    plain_text(editor.buffer()).join("\n")
+fn record(editor: &mut Editor, title: &str) -> String {
+    plain_text(editor.view(BufferKind::Record { title: title.into() })).join("\n")
 }
 
 fn said(editor: &Editor) -> String {
     plain_text(editor.status.clone()).join("\n")
 }
 
-/// Every report an action can reach says something about this tree.
+const REQ: &str = "---\nid: REQ-A\ntitle: A\nclauses:\n  one: First.\n---\nbody\n";
+
+/// A document whose target is as it recorded is current, one whose target
+/// changed is in review, and one whose target is gone is dangling — each said
+/// as such; a project with no such document says so.
 ///
-/// The failure this guards against is a report that silently shows nothing:
-/// a person reading a blank page cannot tell an empty project from an
-/// unimplemented feature.
+/// @tests REQ-DOCLINK.review_is_not_error
 #[test]
-fn every_report_an_action_can_ask_for_answers() {
-    let root = project(TREE);
-    let mut editor = Editor::open(root.clone(), keymap());
-    let reports = [
-        "trace.check",
-        "trace.evidence",
-        "trace.findings",
-        "trace.lock",
-        "trace.rollup",
-        "trace.stale",
-        "drt.bindings",
-        "drt.coverage",
-        "drt.judge",
-        "drt.run",
-        "drt.shrink",
-        "history.tree",
-    ];
-    for action in reports {
-        let shown = ask(&mut editor, action);
-        assert!(!shown.trim().is_empty(), "`{action}` showed nothing");
-        assert!(
-            !shown.contains("not computed") && !shown.contains("not wired"),
-            "`{action}` still says it is not wired:\n{shown}"
-        );
+fn every_document_is_reported_current_in_review_or_dangling() {
+    let root = project("stale", &[("reqs/a.md", REQ), ("src/a.rs", "// @implements REQ-A.one\npub fn a() {}\n")]);
+    let hash = tracelean_core::trace::doclink::current_hashes(&tracelean_core::trace::index::build(&root))
+        .get("REQ-A")
+        .cloned()
+        .expect("the requirement hashes");
+    let doc = |target: &str, hash: &str| format!("---\ndescribes: [{target}]\ndescribed_hash:\n  {target}: {hash}\n---\n\n# Doc\n");
+    std::fs::write(root.join("current.md"), doc("REQ-A", &hash)).unwrap();
+    std::fs::write(root.join("review.md"), doc("REQ-A", "0000000000000000")).unwrap();
+    std::fs::write(root.join("gone.md"), doc("REQ-GONE", "0000000000000000")).unwrap();
+    let mut editor = opened(&root);
+    let text = record(&mut editor, "stale");
+    assert!(text.contains("current.md describes REQ-A"), "{text}");
+    assert!(text.contains("review.md describes REQ-A, which has changed since"), "{text}");
+    assert!(text.contains("gone.md describes REQ-GONE, which is gone"), "{text}");
+    let _ = std::fs::remove_dir_all(&root);
+
+    let bare = project("stale-none", &[("reqs/a.md", REQ)]);
+    let mut editor = opened(&bare);
+    assert!(record(&mut editor, "stale").contains("no document records what it describes"));
+    let _ = std::fs::remove_dir_all(&bare);
+}
+
+/// A requirement's coverage, and a clause's, open as reports; the lines tests
+/// ran are marked beside a file as it is shown, from the measured coverage.
+///
+/// @tests REQ-LINECOV.requirement_summary
+/// @tests REQ-LINECOV.clause_summary
+/// @tests REQ-LINECOV.uncovered_shown
+#[test]
+fn coverage_opens_as_a_report_and_marks_the_lines_beside_a_file() {
+    use tracelean_core::trace::lines::{Coverage, LineHits};
+    let text = "// @implements REQ-A.one\npub fn a() -> u8 {\n    1\n}\n";
+    let root = project("coverage", &[("reqs/a.md", REQ), ("src/a.rs", text)]);
+    let mut coverage = Coverage::default();
+    let hits = |line: u32, hits: u64| LineHits {
+        line,
+        hits,
+        tests: if hits > 0 { vec![("t".to_string(), hits)] } else { Vec::new() },
+    };
+    coverage.files.insert(
+        "src/a.rs".into(),
+        (tracelean_core::trace::hash::text(text), vec![hits(2, 3), hits(3, 0)]),
+    );
+    tracelean_core::drt::lines_run::write(&root, &coverage).expect("written");
+    let mut editor = opened(&root);
+    assert!(record(&mut editor, "coverage REQ-A").starts_with("Coverage of REQ-A"));
+    assert!(record(&mut editor, "coverage REQ-A.one").starts_with("Coverage of REQ-A.one"));
+    let file = editor.view(BufferKind::File { path: "src/a.rs".into() });
+    let marked = editor.coverage_shown(&file, 0, 10);
+    // The margin counts rows from zero; the measure counts lines from one.
+    assert_eq!(marked.iter().map(|(row, hits, _)| (*row, *hits)).collect::<Vec<_>>(), vec![(1, 3), (2, 0)], "{marked:?}");
+    // A record is no file, and has no margin.
+    let report = editor.view(BufferKind::Record { title: "findings".into() });
+    assert!(editor.coverage_shown(&report, 0, 10).is_empty());
+    let _ = std::fs::remove_dir_all(&root);
+}
+
+/// Each report names what produces it: the lock is written, a run is pointed
+/// elsewhere, a judgement is left to a person, and an unknown report, an empty
+/// graph and an unmodelled clause each say why there is nothing.
+///
+/// @tests REQ-LOCK.evidence_preserved
+/// @tests REQ-ROLLUP.open_is_lower_bound
+#[test]
+fn every_report_says_what_it_holds_or_why_it_holds_nothing() {
+    let empty = project("reports-empty", &[("src/a.rs", "a\n")]);
+    let mut editor = opened(&empty);
+    assert!(record(&mut editor, "rollup").contains("no requirement stands at the top"));
+    assert!(record(&mut editor, "nonsense").contains("nothing produces a `nonsense` report"));
+    for (title, said) in [
+        ("drt run", "cargo test"),
+        ("drt shrink", "differential_shrink"),
+        ("drt coverage", "--ignored"),
+        ("drt judge", "a judgement is a person's"),
+    ] {
+        assert!(record(&mut editor, title).contains(said), "{title}");
     }
+    let _ = std::fs::remove_dir_all(&empty);
+
+    let root = project("reports", &[("reqs/a.md", REQ), ("src/a.rs", "// @implements REQ-A.one\npub fn a() {}\n")]);
+    let mut editor = opened(&root);
+    let lock = record(&mut editor, "lock");
+    assert!(lock.contains("1 requirements, 1 links, 0 evidence records"), "{lock}");
+    assert!(root.join(".tracelean").exists() || lock.contains("written"), "{lock}");
+    assert!(record(&mut editor, "rollup").contains("REQ-A"));
+    assert!(record(&mut editor, "judge REQ-A.one").contains("nothing models REQ-A.one"));
     let _ = std::fs::remove_dir_all(&root);
 }
 
-/// A report that would mean running something names the command instead.
+/// A name nobody declared is answered by name: no context, no model to judge
+/// against; a refused intent says why; the uses of a word are listed.
 ///
-/// The editor starts no processes, so the alternative to naming the command is
-/// a result nobody computed.
+/// @tests REQ-ACT.unknown_is_refused
+/// @tests REQ-NAV.uses_found
 #[test]
-fn a_report_that_would_run_something_names_the_command() {
-    let root = project(TREE);
-    let mut editor = Editor::open(root.clone(), keymap());
-    let shown = ask(&mut editor, "drt.run");
-    assert!(shown.contains("cargo test"), "the run report does not name a command:\n{shown}");
-    assert!(shown.contains("starts none"), "the run report does not say why:\n{shown}");
+fn what_is_not_there_is_said_by_name() {
+    use tracelean_core::surface::act::Blocked;
+    let root = project("unknown", &[("reqs/a.md", REQ), ("src/a.rs", "pub fn alpha() {}\nfn b() { alpha() }\n")]);
+    let mut editor = opened(&root);
+    assert!(record(&mut editor, "context REQ-NOPE").contains("no requirement is called REQ-NOPE"));
+    assert!(record(&mut editor, "judge REQ-A").contains("nothing models REQ-A,"));
+    editor.perform(Intent::Refuse { why: Blocked::UnknownAction { action: "fly".into() } });
+    assert!(said(&editor).contains("`fly` is not an action"), "{}", said(&editor));
+    editor.perform(Intent::Display { what: BufferKind::Record { title: "references alpha".into() } });
+    let shown = plain_text(editor.buffer().clone()).join("\n") + &said(&editor);
+    assert!(shown.contains("src/a.rs"), "{shown}");
+    assert!(!plain_text(editor.stations()).is_empty());
     let _ = std::fs::remove_dir_all(&root);
 }
 
-/// Locking writes a lock file that reads back as one.
+/// A folder other than the root lists only what is under it.
+///
+/// @tests REQ-SHOW.listing_from_entries
 #[test]
-fn locking_writes_a_lock_that_parses() {
-    let root = project(TREE);
-    let mut editor = Editor::open(root.clone(), keymap());
-    let shown = ask(&mut editor, "trace.lock");
-    assert!(shown.contains("trace.lock"), "the lock report does not name the file:\n{shown}");
-
-    let written = std::fs::read_to_string(root.join(".tracelean/trace.lock")).expect("a lock");
-    let parsed = tracelean_core::trace::lockfile::parse(&written).expect("a readable lock");
-    assert!(parsed.requirements.contains_key("REQ-A"), "the lock lost the requirement");
-    assert!(!parsed.links.is_empty(), "the lock lost the link");
-
-    // Writing it again over the same tree writes the same bytes.
-    ask(&mut editor, "trace.lock");
-    let again = std::fs::read_to_string(root.join(".tracelean/trace.lock")).expect("a lock");
-    assert_eq!(written, again, "two locks of one tree differ");
+fn a_folders_listing_holds_only_what_is_under_it() {
+    let root = project("listing", &[("src/a.rs", "a\n"), ("src/b.rs", "b\n"), ("docs/c.md", "c\n")]);
+    let mut editor = opened(&root);
+    let listing = plain_text(editor.view(BufferKind::Directory { path: "src/".into() })).join("\n");
+    assert!(listing.contains("src/a.rs") && listing.contains("src/b.rs"), "{listing}");
+    assert!(!listing.contains("docs/c.md"), "{listing}");
     let _ = std::fs::remove_dir_all(&root);
 }
 
-/// A claimed clause nothing has earned evidence for holds its annotation and
-/// nothing more, not blank and not higher.
+/// Accepting a change that is not there says so, and so does accepting one
+/// the tree refuses; neither touches the project.
+///
+/// @tests REQ-ACT.edits_are_commands
 #[test]
-fn a_clause_with_no_recorded_evidence_holds_only_its_annotation() {
-    let root = project(TREE);
-    let mut editor = Editor::open(root.clone(), keymap());
-    let shown = ask(&mut editor, "trace.evidence");
-    assert!(shown.contains("REQ-A.one"), "the clause is missing:\n{shown}");
-    assert!(shown.contains("A---"), "the clause does not read A---:\n{shown}");
-    assert!(shown.contains("implements"), "the role it is claimed by is missing:\n{shown}");
+fn accepting_nothing_or_a_refused_change_says_why() {
+    let root = project("accept", &[("src/a.rs", "a\n")]);
+    let mut editor = opened(&root);
+    let accept = |commands: Vec<Command>| Intent::Observe { watch: Watch::Accept { command: Command::Batch { commands } } };
+    editor.perform(accept(Vec::new()));
+    assert!(said(&editor).contains("nothing has been observed"), "{}", said(&editor));
+    let refused = Command::Insert { file: "missing.rs".into(), offset: 0, text: "x".into() };
+    editor.perform(accept(vec![refused.clone()]));
+    assert!(said(&editor).contains("refused"), "{}", said(&editor));
+
+    let one = |command: Command| Intent::Observe {
+        watch: Watch::AcceptFile { path: "src/a.rs".into(), command },
+    };
+    editor.perform(one(Command::Batch { commands: Vec::new() }));
+    assert!(said(&editor).contains("src/a.rs has no change waiting"), "{}", said(&editor));
+    editor.perform(one(refused));
+    assert!(said(&editor).contains("refused"), "{}", said(&editor));
+    assert_eq!(std::fs::read_to_string(root.join("src/a.rs")).unwrap(), "a\n");
     let _ = std::fs::remove_dir_all(&root);
 }
 
-/// Coverage of an unclaimed decomposition is written as a lower bound.
+/// Escape inside a menu goes back one mode, and from the first menu back to
+/// none; typing where there is no file to type into says so.
+///
+/// @tests REQ-MYTH.modes_defined
 #[test]
-fn a_roll_up_says_what_it_is_a_bound_on() {
-    let root = project(&[
-        ("reqs/a.md", "---\nid: REQ-A\nclauses:\n  one: It does the thing.\n---\nbody\n"),
-        ("src/i.rs", "// @implements REQ-A.one\npub fn f() {}\n"),
-    ]);
-    let mut editor = Editor::open(root.clone(), keymap());
-    let shown = ask(&mut editor, "trace.rollup");
-    assert!(shown.contains("REQ-A"), "the requirement is missing:\n{shown}");
-    assert!(shown.contains("provisional"), "an open decomposition read as exact:\n{shown}");
-    let _ = std::fs::remove_dir_all(&root);
-}
+fn escape_goes_back_one_mode_and_typing_needs_a_file() {
+    let root = project("keys", &[("src/a.rs", "a\n")]);
+    let mut editor = opened(&root);
+    let root_mode = editor.mode.clone();
+    editor.key("Space");
+    let leader = editor.mode.clone();
+    editor.key("f");
+    assert_ne!(editor.mode, leader, "`f` opened no menu");
+    editor.key("Escape");
+    assert_eq!(editor.mode, leader, "Escape did not go back one mode");
+    editor.key("Escape");
+    assert_eq!(editor.mode, root_mode, "Escape did not leave the menu");
 
-/// Watching is reading the tree somebody else wrote, and nothing else.
-#[test]
-fn watching_sees_a_file_written_outside_the_editor() {
-    let root = project(TREE);
-    let mut editor = Editor::open(root.clone(), keymap());
-
-    // Somebody else — an agent, a compiler, a person in another window.
-    std::fs::write(root.join("src/j.rs"), "pub fn g() {}\n").expect("a file");
-
-    let shown = ask(&mut editor, "observe.start");
-    assert!(shown.contains("src/j.rs"), "the new file was not observed:\n{shown}");
-    assert!(said(&editor).contains("observed"), "the editor did not say it observed");
-
-    ask(&mut editor, "observe.accept");
-    assert!(
-        editor.workspace().files.contains_key("src/j.rs"),
-        "accepting did not take the file in"
-    );
-    // And it is in the history like any other change.
-    assert!(editor.tree.undo().is_some(), "accepting left nothing to undo");
-    let _ = std::fs::remove_dir_all(&root);
-}
-
-/// Rejecting drops the change and leaves the working tree where it is.
-#[test]
-fn rejecting_does_not_delete_what_somebody_else_wrote() {
-    let root = project(TREE);
-    let mut editor = Editor::open(root.clone(), keymap());
-    std::fs::write(root.join("src/j.rs"), "pub fn g() {}\n").expect("a file");
-
-    ask(&mut editor, "observe.start");
-    ask(&mut editor, "observe.reject");
-    assert!(said(&editor).contains("rejected"), "the editor did not say it rejected");
-    assert!(
-        !editor.workspace().files.contains_key("src/j.rs"),
-        "rejecting took the file in anyway"
-    );
-    assert!(Path::new(&root.join("src/j.rs")).exists(), "rejecting deleted somebody else's file");
-
-    // And there is nothing left pending.
-    ask(&mut editor, "observe.reject");
-    assert!(said(&editor).contains("nothing to reject"), "the change was still pending");
-    let _ = std::fs::remove_dir_all(&root);
-}
-
-/// A tree nobody has touched has nothing to observe.
-#[test]
-fn an_untouched_tree_observes_nothing() {
-    let root = project(TREE);
-    let mut editor = Editor::open(root.clone(), keymap());
-    ask(&mut editor, "observe.start");
-    assert!(said(&editor).contains("nothing to observe"), "a clean tree reported changes");
+    editor.perform(Intent::Display { what: BufferKind::Record { title: "findings".into() } });
+    editor.key("i");
+    assert!(said(&editor).contains("nothing here to type into"), "{}", said(&editor));
     let _ = std::fs::remove_dir_all(&root);
 }

@@ -75,7 +75,7 @@ fn model_and_implementation_agree_on_the_generated_call_site() {
         &scratch,
     );
     let model = harness::lean_runner("TraceLean.RustRunner", "TraceLean.RustRunner.callSite", op, &["entry"], &scratch);
-    let result = run(op, &input(), &model, &implementation, RunOptions { seed: 4242, cases: 5_000, shrink_rounds: 100 })
+    let result = run(op, &input(), &model, &implementation, RunOptions { seed: 4242, cases: 5_000 })
         .expect("both runners answer");
     support::agreed(&result);
     let _ = std::fs::remove_dir_all(&scratch);

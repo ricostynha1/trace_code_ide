@@ -116,7 +116,7 @@ fn check_in(
         &schema,
         &model,
         &implementation,
-        RunOptions { seed, cases: 2_000, shrink_rounds: 100 },
+        RunOptions { seed, cases: 2_000 },
     )
     .expect("both runners answer");
 

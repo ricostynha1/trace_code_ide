@@ -47,8 +47,36 @@ pub struct ModelAt {
 /// is the choice moving between runs.
 ///
 /// @implements ARCH-DETERMINISM.stable_ordering
+///
+/// A clause nothing models but a test checks structurally (ADR-0012) is judged
+/// against that test: whether it asks what the clause says is the question a
+/// person can still answer, and the only one left to answer for it.
+///
+/// @implements REQ-JUDGE.structural_judged
 pub fn model_of(index: &Index, req_id: &str, clause: Option<&str>) -> Option<ModelAt> {
-    declarations_of(index, req_id, clause, Role::Models).into_iter().next()
+    declarations_of(index, req_id, clause, Role::Models)
+        .into_iter()
+        .next()
+        .or_else(|| structural_checks(index, req_id, clause).into_iter().next())
+}
+
+/// The tests that check a clause by reading the tree, in file and line order.
+pub fn structural_checks(index: &Index, req_id: &str, clause: Option<&str>) -> Vec<ModelAt> {
+    let mut found: Vec<ModelAt> = index
+        .links
+        .iter()
+        .filter(|link| link.is_structural() && link.req_id == req_id && link.clause.as_deref() == clause)
+        .map(|link| ModelAt {
+            file: link.anchor.file.clone(),
+            start_line: link.anchor.start_line,
+            end_line: link.anchor.end_line,
+            body_hash: link.anchor.body_hash.clone(),
+            link_hash: link.link_hash.clone(),
+        })
+        .collect();
+    found.sort_by(|a, b| (&a.file, a.start_line).cmp(&(&b.file, b.start_line)));
+    found.dedup_by(|a, b| a.file == b.file && a.start_line == b.start_line);
+    found
 }
 
 /// Every declaration claiming a clause in one role, in file and line order.
@@ -99,6 +127,25 @@ pub fn shown_source(models: &[(ModelAt, String)], specs: &[(ModelAt, String)]) -
     sections.join("\n\n")
 }
 
+/// What the judge reads for a clause checked only structurally: each test, said
+/// to be one, so nobody mistakes it for a model of the clause.
+///
+/// @implements REQ-JUDGE.structural_judged
+pub fn structural_source(checks: &[(ModelAt, String)]) -> String {
+    checks
+        .iter()
+        .map(|(at, source)| {
+            format!(
+                "-- structural check: a test reading the repository, {}:{}\n{}",
+                at.file,
+                at.start_line + 1,
+                source.trim_end()
+            )
+        })
+        .collect::<Vec<_>>()
+        .join("\n\n")
+}
+
 /// What every declaration modelling a clause hashes to, together.
 ///
 /// Sorted, deduplicated and joined, exactly as `earn::anchor_hash` does it, so
@@ -111,15 +158,29 @@ pub fn shown_source(models: &[(ModelAt, String)], specs: &[(ModelAt, String)]) -
 /// declarations is a judgement about the pair, and a record naming only one of
 /// them would survive a change to the other — a judgement nobody made, still
 /// standing.
-fn model_hashes(index: &Index, req_id: &str, clause: Option<&str>) -> Option<String> {
-    let mut found: Vec<&str> = index
-        .links
-        .iter()
-        .filter(|link| {
-            link.role == Role::Models && link.req_id == req_id && link.clause.as_deref() == clause
-        })
-        .map(|link| link.anchor.body_hash.as_str())
-        .collect();
+///
+/// A clause nothing models hashes to its structural checks, which are what it
+/// was judged against.
+pub fn model_hashes(index: &Index, req_id: &str, clause: Option<&str>) -> Option<String> {
+    let claims = |keep: &dyn Fn(&crate::trace::index::Link) -> bool| -> Vec<String> {
+        index
+            .links
+            .iter()
+            .filter(|link| keep(link) && link.req_id == req_id && link.clause.as_deref() == clause)
+            .map(|link| link.anchor.body_hash.clone())
+            .collect()
+    };
+    rests_on(claims(&|link| link.role == Role::Models), claims(&|link| link.is_structural()))
+}
+
+/// What a judgement of a clause rests on: the hashes of every model of it, or,
+/// with none, of every test checking it by reading the tree; sorted, once each,
+/// joined. None when there is neither.
+///
+/// @implements REQ-JUDGE.structural_judged
+/// @drt REQ-JUDGE.structural_judged
+pub fn rests_on(models: Vec<String>, checks: Vec<String>) -> Option<String> {
+    let mut found = if models.is_empty() { checks } else { models };
     found.sort();
     found.dedup();
     if found.is_empty() {
@@ -233,6 +294,37 @@ mod tests {
         assert_eq!(both, "-- model: m.lean:4\ndef f := 1\n\n-- specification: s.lean:10\ndef P : Prop := True");
         let two = shown_source(&[model.clone(), (at("m.lean", 7), "def g := 2".into())], &[]);
         assert!(two.contains("model 1 of 2") && two.contains("model 2 of 2") && two.contains("def g := 2"), "{two}");
+    }
+
+    /// A clause nothing models but a test checks structurally is judged against
+    /// that test, shown as one, and its hash is the test's: change the test and
+    /// the judgement no longer stands.
+    ///
+    /// @tests REQ-JUDGE.structural_judged
+    #[test]
+    fn a_structural_clause_is_judged_against_its_test() {
+        let dir = std::env::temp_dir().join(format!("tracelean-material-structural-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        let write = |name: &str, content: &str| {
+            let path = dir.join(name);
+            std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+            std::fs::write(path, content).unwrap();
+        };
+        write("reqs/a.md", "---\nid: REQ-A\nclauses:\n  shape: The tree shall have a shape.\n---\nbody");
+        let test = "/// @tests REQ-A.shape\n/// @structural REQ-A.shape reason=\"a shape\"\n#[test]\nfn shaped() {}\n";
+        write("tests/a.rs", test);
+        let index = build(&dir);
+        let at = model_of(&index, "REQ-A", Some("shape")).expect("the structural test stands in");
+        assert_eq!(at.file, "tests/a.rs");
+        let (material, _) = assemble(&index, "REQ-A", Some("shape"), String::new(), None).unwrap();
+        assert_eq!(Some(material.model_hash.clone()), model_hashes(&index, "REQ-A", Some("shape")));
+        let shown = structural_source(&[(at, "fn shaped() {}".into())]);
+        assert!(shown.starts_with("-- structural check: a test reading the repository, tests/a.rs:"), "{shown}");
+
+        write("tests/a.rs", &test.replace("fn shaped() {}", "fn shaped() { changed() }"));
+        let moved = build(&dir);
+        assert_ne!(model_hashes(&moved, "REQ-A", Some("shape")), Some(material.model_hash));
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]

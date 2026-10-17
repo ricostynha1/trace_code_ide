@@ -78,7 +78,7 @@ fn model_and_implementation_agree_on_the_order_links_are_written_in() {
         &input_schema(),
         &model,
         &implementation,
-        RunOptions { seed: 12, cases: 2_000, shrink_rounds: 100 },
+        RunOptions { seed: 12, cases: 2_000 },
     )
     .expect("both runners answer");
 
@@ -173,7 +173,7 @@ fn model_and_implementation_agree_on_which_versions_are_readable() {
         &schema,
         &model,
         &implementation,
-        RunOptions { seed: 11, cases: 2_000, shrink_rounds: 100 },
+        RunOptions { seed: 11, cases: 2_000 },
     )
     .expect("both runners answer");
 
@@ -214,7 +214,7 @@ fn model_and_implementation_agree_that_evidence_passes_through() {
         &evidence_list_schema(),
         &model,
         &implementation,
-        RunOptions { seed: 13, cases: 2_000, shrink_rounds: 100 },
+        RunOptions { seed: 13, cases: 2_000 },
     )
     .expect("both runners answer");
 
@@ -468,7 +468,7 @@ fn model_and_implementation_agree_on_whether_a_record_can_be_reproduced() {
         &schema,
         &model,
         &implementation,
-        RunOptions { seed: 113, cases: 2_000, shrink_rounds: 100 },
+        RunOptions { seed: 113, cases: 2_000 },
     )
     .expect("both runners answer");
 

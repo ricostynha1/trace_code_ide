@@ -62,7 +62,10 @@
       {
         "parent": "Screen",
         "bindings": [
+          ["c", { "dispatch": { "action": "screen.station.definitions", "description": "definitions: what can be configured" } }],
           ["d", { "dispatch": { "action": "screen.station.design", "description": "the refinement graph" } }],
+          ["f", { "dispatch": { "action": "screen.station.findings", "description": "what the checker found" } }],
+          ["g", { "dispatch": { "action": "screen.station.proof", "description": "the Lean goals at the cursor" } }],
           ["h", { "dispatch": { "action": "screen.station.history", "description": "the undo tree" } }],
           ["l", { "dispatch": { "action": "screen.station.trace", "description": "what this file claims, and what else claims it" } }],
           ["p", { "dispatch": { "action": "screen.station.project", "description": "open a project" } }],
@@ -98,7 +101,8 @@
           ["o", { "dispatch": { "action": "design.toggle", "description": "unfold or fold the requirement here" } }],
           ["a", { "dispatch": { "action": "design.expand_all", "description": "unfold everything under the requirement here" } }],
           ["e", { "dispatch": { "action": "design.expand_everything", "description": "unfold all of the design" } }],
-          ["f", { "dispatch": { "action": "design.fold_all", "description": "fold the design to its roots" } }]
+          ["f", { "dispatch": { "action": "design.fold_all", "description": "fold the design to its roots" } }],
+          ["u", { "dispatch": { "action": "design.open_only", "description": "only what is still to do, or everything" } }]
         ]
       }
     ],
@@ -135,6 +139,9 @@
           ["l", { "dispatch": { "action": "file.copy_line", "description": "copy this line" } }],
           ["p", { "dispatch": { "action": "file.copy_path", "description": "copy the path" } }],
           ["d", { "dispatch": { "action": "file.delete", "description": "delete" } }],
+          ["e", { "dispatch": { "action": "definitions.edit", "description": "edit the setting under the cursor (in Definitions)" } }],
+          ["f", { "dispatch": { "action": "file.find", "description": "find: go to the next match (* and ?)" } }],
+          ["/", { "dispatch": { "action": "file.find_lines", "description": "find: list the lines that match (* and ?)" } }],
           ["g", { "dispatch": { "action": "file.definition", "description": "go to the definition" } }],
           ["n", { "dispatch": { "action": "file.new", "description": "new file" } }],
           ["o", { "dispatch": { "action": "file.open", "description": "open" } }],

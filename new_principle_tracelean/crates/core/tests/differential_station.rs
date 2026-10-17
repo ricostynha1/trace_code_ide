@@ -1,6 +1,6 @@
 //! What a station holds, checked against the model.
 //!
-//! Four stations, three producers and a price table. The requirement index and
+//! Eight stations, three producers and a price table. The requirement index and
 //! the refinement graph are the same rows ordered differently; the sandbox is a
 //! record of what a tool changed, said and is estimated to have spent; and what
 //! a station stands for is itself a function, because a list of stations
@@ -31,9 +31,15 @@ fn node() -> Schema {
         },
     );
     fields.insert("marks".to_string(), support::marks());
-    // Counts past each other too, so a bar more than full is drawn as full.
-    fields.insert("implemented".to_string(), Schema::Nat { max: Some(3), edges: vec![0, 7] });
+    // Counts past each other too, so a count above what it counts of is
+    // written as it is rather than corrected.
     fields.insert("clauses".to_string(), Schema::Nat { max: Some(3), edges: vec![0, 4] });
+    fields.insert("modelled".to_string(), Schema::Nat { max: Some(3), edges: vec![0, 4] });
+    let mut held = BTreeMap::new();
+    for count in ["implemented", "annotated", "judged", "tested", "proved"] {
+        held.insert(count.to_string(), Schema::Nat { max: Some(3), edges: vec![0, 7] });
+    }
+    fields.insert("held".to_string(), Schema::Struct { fields: held });
     // Measured or not; every line run, some, none, or none to run.
     let count = || Schema::Nat { max: Some(3), edges: vec![0, 120] };
     fields.insert(
@@ -50,6 +56,7 @@ fn nodes() -> Schema {
 fn one_node_list() -> Schema {
     let mut fields = BTreeMap::new();
     fields.insert("nodes".to_string(), nodes());
+    fields.insert("openOnly".to_string(), Schema::Bool);
     Schema::Struct { fields }
 }
 
@@ -125,7 +132,9 @@ fn check(
 ) {
     let clause = op.split_once('.').expect("an op names a clause").1;
     let scratch = harness::scratch(&format!("station-{clause}"));
-    let implementation = harness::rust_runner(req, clause, entry, &scratch);
+    // The one argument the two sides spell differently.
+    let params: &[(&str, &str)] = if arguments.contains(&"openOnly") { &[("openOnly", "open_only")] } else { &[] };
+    let implementation = harness::rust_runner_with_params(req, clause, entry, params, &scratch);
     let model = harness::lean_runner(import, function, op, arguments, &scratch);
 
     let result = run(
@@ -133,7 +142,7 @@ fn check(
         &schema,
         &model,
         &implementation,
-        RunOptions { seed, cases: 2_000, shrink_rounds: 100 },
+        RunOptions { seed, cases: 2_000 },
     )
     .expect("both runners answer");
 
@@ -143,7 +152,9 @@ fn check(
 }
 
 /// @drt REQ-SHOW.index_from_requirements
+/// @drt REQ-SHOW.children_lines
 /// @tests REQ-SHOW.index_from_requirements
+/// @tests REQ-SHOW.children_lines
 #[test]
 #[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
 fn model_and_implementation_agree_on_the_requirement_index() {
@@ -153,14 +164,16 @@ fn model_and_implementation_agree_on_the_requirement_index() {
         "TraceLean.Produce",
         "TraceLean.Produce.requirementsBuffer",
         "crates/core/src/surface/produce.rs::requirements_buffer",
-        &["nodes"],
+        &["nodes", "openOnly"],
         one_node_list(),
         61,
     );
 }
 
 /// @drt REQ-SHOW.graph_from_refinement
+/// @drt REQ-SHOW.open_filtered
 /// @tests REQ-SHOW.graph_from_refinement
+/// @tests REQ-SHOW.open_filtered
 #[test]
 #[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
 fn model_and_implementation_agree_on_the_refinement_graph() {
@@ -170,7 +183,7 @@ fn model_and_implementation_agree_on_the_refinement_graph() {
         "TraceLean.Produce",
         "TraceLean.Produce.designBuffer",
         "crates/core/src/surface/produce.rs::design_buffer",
-        &["nodes", "opened"],
+        &["nodes", "opened", "openOnly"],
         folded_graph(),
         67,
     );
@@ -320,6 +333,8 @@ fn model_and_implementation_agree_on_an_opened_requirement() {
         ("status", text(&["draft", "approved"])),
         ("refines", list(text(&["REQ-B", "REQ-C"]), 2)),
         ("refinedBy", list(text(&["REQ-D"]), 2)),
+        // The prose: empty, a line, and several lines with a blank between.
+        ("body", text(&["", "It says something.", "One line.\n\nAnother, after a blank."])),
         ("clauses", list(clause, 2)),
         ("width", Schema::Nat { max: Some(40), edges: vec![0, 30, 100] }),
         ("lines", option(Schema::Tuple { items: vec![count(), count(), count()] })),
@@ -353,6 +368,9 @@ fn model_and_implementation_agree_on_what_a_station_stands_for() {
                 "design".into(),
                 "history".into(),
                 "trace".into(),
+                "findings".into(),
+                "definitions".into(),
+                "proof".into(),
                 "Project".into(),
             ],
         },
@@ -456,21 +474,46 @@ fn generation_reaches_the_graphs_that_are_hard_to_draw() {
     let (mut empty, mut lowest, mut highest, mut several) = (0u64, 0u64, 0u64, 0u64);
     let (mut nothing, mut under, mut twice, mut unreached, mut cyclic) =
         (0u64, 0u64, 0u64, 0u64, 0u64);
+    let (mut structural, mut children, mut hidden, mut kept) = (0u64, 0u64, 0u64, 0u64);
     for _ in 0..3_000 {
         let value = gen::value(&schema, &mut rng);
         let set: Vec<Node> = serde_json::from_value(value).expect("the schema generates nodes");
 
         // Whatever the graph, the index is a well-formed buffer and every row
-        // carries its own four marks — which is the clause, asked of the run
-        // rather than of an example.
-        let index = requirements_buffer(set.clone());
+        // carries its own four marks and six counts — which is the clause,
+        // asked of the run rather than of an example.
+        let index = requirements_buffer(set.clone(), false);
         assert_eq!(faults(index.clone()), vec![], "the index had a malformed span");
         let marked = index
             .spans
             .iter()
             .filter(|span| matches!(span.role, Role::Mark { .. }))
             .count();
-        assert!(marked <= 4 * set.len(), "more marks than four a requirement");
+        assert!(marked <= 8 * set.len(), "more marks than four and six counts a requirement");
+
+        if set.iter().any(|node| node.marks.structural) {
+            structural += 1;
+        }
+        if index.text.contains("+children") {
+            children += 1;
+        }
+        // Only what is open: a row hidden, and a row kept although finished,
+        // because something under it is not.
+        let open = requirements_buffer(set.clone(), true);
+        if open.text.lines().count() < set.len() {
+            hidden += 1;
+        }
+        let graph = tracelean_core::surface::produce::design_buffer(
+            set.clone(),
+            set.iter().map(|node| node.id.clone()).collect(),
+            true,
+        );
+        assert_eq!(faults(graph.clone()), vec![], "the open graph had a malformed span");
+        let drawn: Vec<&str> =
+            graph.text.lines().skip(1).filter_map(|line| line.split_whitespace().nth(2)).collect();
+        if set.iter().any(|node| !tracelean_core::surface::produce::is_open(node) && drawn.contains(&node.id.as_str())) {
+            kept += 1;
+        }
 
         if set.is_empty() {
             empty += 1;
@@ -522,6 +565,9 @@ fn generation_reaches_the_graphs_that_are_hard_to_draw() {
             ("a requirement holding no mark", lowest),
             ("a requirement holding every mark", highest),
             ("two requirements or more", several),
+            ("a structural requirement", structural),
+            ("a row saying what its children left unrun", children),
+            ("only what is open, something finished hidden", hidden),
         ],
     );
     support::covered(
@@ -532,6 +578,7 @@ fn generation_reaches_the_graphs_that_are_hard_to_draw() {
             ("a requirement refining two others, drawn under each", twice),
             ("a requirement no root reaches, drawn nowhere", unreached),
             ("a cycle in refines", cyclic),
+            ("a finished requirement kept for what is open under it", kept),
         ],
     );
 }
@@ -739,6 +786,9 @@ fn generation_reaches_every_station_and_a_name_that_is_none() {
                 "design".into(),
                 "history".into(),
                 "trace".into(),
+                "findings".into(),
+                "definitions".into(),
+                "proof".into(),
                 "Project".into(),
             ],
         },

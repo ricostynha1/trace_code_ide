@@ -92,6 +92,8 @@ inductive Watch where
   | designExpand (id : Option String)
   /-- Fold the design to its roots. -/
   | designFold
+  /-- Show only the requirements with something still to do, or all again. -/
+  | designOpenOnly
   -- No `DecidableEq`, for the reason `Intent` has none: `Command` is recursive.
   deriving Repr, Inhabited, ToJson, FromJson
 
@@ -210,7 +212,8 @@ private def approveUnder (focus : Focus) (w : Workspace) : Intent :=
       match findChars "\nstatus: draft\n".toList text.toList 0 with
       | none => refuse
       | some pos =>
-        let offset := pos + "\nstatus: ".length
+        -- Bytes, which is what a command counts.
+        let offset := (String.mk (text.toList.take pos)).utf8ByteSize + "\nstatus: ".utf8ByteSize
         Intent.edit (Command.batch
           [Command.delete path offset "draft", Command.insert path offset "approved"])
 
@@ -327,6 +330,12 @@ def dispatchNamed (action : String) (focus : Focus) (w : Workspace) (waiting : L
   | "trace.check" => report "check"
   | "trace.evidence" => report "evidence"
   | "trace.findings" => report "findings"
+  | "definitions.edit" =>
+    match focus.under with
+    | none => Intent.refuse (Blocked.needsTarget "definitions.edit" "a setting")
+    | some setting => report ("edit " ++ setting)
+  | "file.find" => report "find"
+  | "file.find_lines" => report "find lines"
   | "trace.lock" => report "lock"
   | "trace.requirement" => requirementUnder focus
   | "trace.context" =>
@@ -356,6 +365,7 @@ def dispatchNamed (action : String) (focus : Focus) (w : Workspace) (waiting : L
     | some id => Intent.observe (Watch.designExpand (some id))
   | "design.expand_everything" => Intent.observe (Watch.designExpand none)
   | "design.fold_all" => Intent.observe Watch.designFold
+  | "design.open_only" => Intent.observe Watch.designOpenOnly
   | "trace.judge" =>
     match focus.under with
     | none => Intent.refuse (Blocked.needsTarget "trace.judge" "a clause")

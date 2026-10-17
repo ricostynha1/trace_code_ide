@@ -44,7 +44,7 @@ fn model_and_implementation_agree_on_aggregation() {
         &input_schema(),
         &model,
         &implementation,
-        RunOptions { seed: 37, cases: 2_000, shrink_rounds: 100 },
+        RunOptions { seed: 37, cases: 2_000 },
     )
     .expect("both runners answer");
 
@@ -66,7 +66,7 @@ fn a_mark_is_held_only_when_every_part_holds_it() {
 
     let schema = input_schema();
     let mut rng = gen::Rng::new(37);
-    let (mut mixed, mut uniform, mut empty) = (0u64, 0u64, 0u64);
+    let (mut mixed, mut uniform, mut empty, mut beside) = (0u64, 0u64, 0u64, 0u64);
     for _ in 0..2_000 {
         let v = gen::value(&schema, &mut rng);
         let parts: Vec<Marks> = serde_json::from_value(v["parts"].clone()).unwrap();
@@ -76,14 +76,20 @@ fn a_mark_is_held_only_when_every_part_holds_it() {
             empty += 1;
             continue;
         }
-        for (i, (_, held, _)) in result.each().iter().enumerate() {
-            let every = parts.iter().all(|p| p.each()[i].1);
-            assert_eq!(*held, every, "{result:?} from {parts:?}");
+        // Testing and proving apply to the whole unless to no part; where
+        // they apply, every part they apply to holds them.
+        assert_eq!(result.structural, parts.iter().all(|p| p.structural), "{result:?} from {parts:?}");
+        for (i, &(mark, held, _)) in result.each().iter().enumerate() {
+            let every = parts.iter().filter(|p| p.applies(mark)).all(|p| p.each()[i].1);
+            assert_eq!(held, result.applies(mark) && every, "{result:?} from {parts:?}");
         }
         if parts.iter().any(|p| *p != parts[0]) {
             mixed += 1;
         } else {
             uniform += 1;
+        }
+        if parts.iter().any(|p| p.structural) && parts.iter().any(|p| !p.structural) {
+            beside += 1;
         }
     }
     // Mixed parts are the cases with content: a run where every part was the
@@ -95,6 +101,7 @@ fn a_mark_is_held_only_when_every_part_holds_it() {
             ("parts that do not all hold the same marks", mixed),
             ("every part the same", uniform),
             ("nothing to aggregate", empty),
+            ("a structural part beside one with a model", beside),
         ],
     );
 }
@@ -182,7 +189,7 @@ fn model_and_implementation_agree_on_rolling_a_graph_up() {
         &graph_input(),
         &model,
         &implementation,
-        RunOptions { seed: 91, cases: 10_000, shrink_rounds: 100 },
+        RunOptions { seed: 91, cases: 10_000 },
     )
     .expect("both runners answer");
 
@@ -222,7 +229,7 @@ fn model_and_implementation_agree_on_writing_a_figure() {
         &figure_input(),
         &model,
         &implementation,
-        RunOptions { seed: 53, cases: 1_000, shrink_rounds: 50 },
+        RunOptions { seed: 53, cases: 1_000 },
     )
     .expect("both runners answer");
     support::agreed(&result);
@@ -450,7 +457,7 @@ fn model_and_implementation_agree_on_coverage_over_files() {
         &file_coverage_input(),
         &model,
         &implementation,
-        RunOptions { seed: 127, cases: 2_000, shrink_rounds: 100 },
+        RunOptions { seed: 127, cases: 2_000 },
     )
     .expect("both runners answer");
 

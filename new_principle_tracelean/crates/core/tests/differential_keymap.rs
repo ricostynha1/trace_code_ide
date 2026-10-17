@@ -118,7 +118,7 @@ fn model_and_implementation_agree_on_what_is_wrong_with_a_keymap() {
         &validate_input(),
         &model,
         &implementation,
-        RunOptions { seed: 24, cases: 3_000, shrink_rounds: 100 },
+        RunOptions { seed: 24, cases: 3_000 },
     )
     .expect("both runners answer");
 
@@ -153,7 +153,7 @@ fn model_and_implementation_agree_on_which_keys_are_available() {
         &strukt(&[("keymap", keymap()), ("mode", mode_name())]),
         &model,
         &implementation,
-        RunOptions { seed: 25, cases: 2_000, shrink_rounds: 100 },
+        RunOptions { seed: 25, cases: 2_000 },
     )
     .expect("both runners answer");
 

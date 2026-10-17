@@ -73,7 +73,7 @@ fn model_and_implementation_agree_on_document_state() {
         &input_schema(),
         &model,
         &implementation,
-        RunOptions { seed: 5, cases: 2_000, shrink_rounds: 100 },
+        RunOptions { seed: 5, cases: 2_000 },
     )
     .expect("both runners answer");
 
@@ -153,7 +153,7 @@ fn model_and_implementation_agree_on_what_blocks() {
         &schema,
         &model,
         &implementation,
-        RunOptions { seed: 6, cases: 1_000, shrink_rounds: 100 },
+        RunOptions { seed: 6, cases: 1_000 },
     )
     .expect("both runners answer");
 
@@ -226,7 +226,7 @@ fn model_and_implementation_agree_on_what_a_document_declares() {
         &schema,
         &model,
         &implementation,
-        RunOptions { seed: 43, cases: 2_000, shrink_rounds: 100 },
+        RunOptions { seed: 43, cases: 2_000 },
     )
     .expect("both runners answer");
 
@@ -293,7 +293,7 @@ fn model_and_implementation_agree_on_what_confirming_would_write() {
         &schema,
         &model,
         &implementation,
-        RunOptions { seed: 47, cases: 2_000, shrink_rounds: 100 },
+        RunOptions { seed: 47, cases: 2_000 },
     )
     .expect("both runners answer");
 

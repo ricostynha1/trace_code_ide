@@ -115,7 +115,7 @@ fn model_and_implementation_agree_on_what_a_judgement_records() {
         &input_schema(),
         &model,
         &implementation,
-        RunOptions { seed: 17, cases: 2_000, shrink_rounds: 100 },
+        RunOptions { seed: 17, cases: 2_000 },
     )
     .expect("both runners answer");
 
@@ -223,7 +223,7 @@ fn model_and_implementation_agree_on_when_a_judgement_lapses() {
         &schema,
         &model,
         &implementation,
-        RunOptions { seed: 18, cases: 2_000, shrink_rounds: 100 },
+        RunOptions { seed: 18, cases: 2_000 },
     )
     .expect("both runners answer");
 
@@ -290,7 +290,7 @@ fn model_and_implementation_agree_on_what_each_backend_can_establish() {
         &ceiling_input(),
         &model,
         &implementation,
-        RunOptions { seed: 19, cases: 1_000, shrink_rounds: 100 },
+        RunOptions { seed: 19, cases: 1_000 },
     )
     .expect("both runners answer");
 
@@ -331,7 +331,7 @@ fn model_and_implementation_agree_on_the_prompt() {
         &schema,
         &model,
         &implementation,
-        RunOptions { seed: 59, cases: 2_000, shrink_rounds: 100 },
+        RunOptions { seed: 59, cases: 2_000 },
     )
     .expect("both runners answer");
 
@@ -468,7 +468,7 @@ fn model_and_implementation_agree_on_how_a_judgement_reads() {
         &judged_input(),
         &model,
         &implementation,
-        RunOptions { seed: 23, cases: 1_000, shrink_rounds: 100 },
+        RunOptions { seed: 23, cases: 1_000 },
     )
     .expect("both runners answer");
     support::agreed(&result);
@@ -508,6 +508,95 @@ fn generation_reaches_every_kind_of_judgement_shown() {
             ("an agreement", agreed),
             ("a drift or unmodelable verdict", drift),
             ("a delegated judgement", delegated),
+        ],
+    );
+}
+
+/// Hashes drawn from a small alphabet, so a list repeats one and two lists
+/// share one often enough to be asked about.
+fn rests_on_input() -> Schema {
+    let hash = || Schema::List {
+        inner: Box::new(Schema::Str { max_len: Some(0), examples: vec!["a".into(), "b".into(), "é".into()] }),
+        max_len: Some(3),
+    };
+    strukt(&[("models", hash()), ("checks", hash())])
+}
+
+/// What a judgement rests on, checked against the model.
+///
+/// @drt REQ-JUDGE.structural_judged
+/// @tests REQ-JUDGE.structural_judged
+#[test]
+#[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
+fn model_and_implementation_agree_on_what_a_judgement_rests_on() {
+    let scratch = harness::scratch("rests-on");
+    let op = "REQ-JUDGE.structural_judged";
+    let implementation = harness::rust_runner(
+        "REQ-JUDGE",
+        "structural_judged",
+        "crates/core/src/trace/material.rs::rests_on",
+        &scratch,
+    );
+    let model = harness::lean_runner(
+        "TraceLean.Judge",
+        "TraceLean.Judge.restsOn",
+        op,
+        &["models", "checks"],
+        &scratch,
+    );
+    let result = run(
+        op,
+        &rests_on_input(),
+        &model,
+        &implementation,
+        RunOptions { seed: 67, cases: 1_000 },
+    )
+    .expect("both runners answer");
+    support::agreed(&result);
+    let _ = std::fs::remove_dir_all(&scratch);
+}
+
+/// A clause with only structural checks, with a model, with nothing, and a
+/// hash named twice, so the agreement above is about each.
+///
+/// @tests REQ-JUDGE.structural_judged
+/// @tests REQ-DRT-COVER.law_coverage
+#[test]
+fn generation_reaches_clauses_judged_against_a_test() {
+    use tracelean_core::drt::gen;
+    use tracelean_core::trace::material::rests_on;
+
+    let mut rng = gen::Rng::new(67);
+    let (mut structural, mut modelled, mut nothing, mut repeated) = (0u64, 0u64, 0u64, 0u64);
+    for _ in 0..1_000 {
+        let v = gen::value(&rests_on_input(), &mut rng);
+        let models: Vec<String> = serde_json::from_value(v["models"].clone()).unwrap();
+        let checks: Vec<String> = serde_json::from_value(v["checks"].clone()).unwrap();
+        let rests = rests_on(models.clone(), checks.clone());
+        match (models.is_empty(), checks.is_empty()) {
+            (true, false) => structural += 1,
+            (false, _) => {
+                // A model makes the checks irrelevant to the judgement.
+                assert_eq!(rests, rests_on(models.clone(), vec![]));
+                modelled += 1
+            }
+            (true, true) => {
+                assert_eq!(rests, None);
+                nothing += 1
+            }
+        }
+        let named = if models.is_empty() { &checks } else { &models };
+        if named.iter().enumerate().any(|(i, h)| named[..i].contains(h)) {
+            repeated += 1;
+        }
+    }
+    support::covered(
+        "REQ-JUDGE.structural_judged",
+        &[
+            ("checked only structurally", structural),
+            ("modelled", modelled),
+            ("neither", nothing),
+            ("a hash named twice", repeated),
         ],
     );
 }

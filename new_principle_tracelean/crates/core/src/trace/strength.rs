@@ -287,6 +287,32 @@ mod tests {
         assert!(source.contains("@pins REQ-EVID.weakest_link"), "{source}");
     }
 
+    /// A project's obligations come from its links: a modelled declaration owes
+    /// one, and one declared nondeterministic carries the reason it gave — or
+    /// says it gave none.
+    ///
+    /// @tests REQ-STRENGTH.qualifies_proof
+    #[test]
+    fn a_project_owes_an_obligation_for_each_model_it_declares() {
+        let root = std::env::temp_dir().join(format!("tracelean-strength-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(root.join("reqs")).unwrap();
+        std::fs::write(root.join("reqs/a.md"), "---\nid: REQ-A\nclauses:\n  one: First.\n  two: Second.\n---\n").unwrap();
+        std::fs::write(
+            root.join("M.lean"),
+            "/-- @models REQ-A.one -/\ndef f (n : Nat) : Nat := n\n\n/-- @models REQ-A.two\n@nondeterministic -/\ndef g (n : Nat) : Nat := n\n",
+        )
+        .unwrap();
+        let found = obligations(&crate::trace::index::build(&root));
+        let _ = std::fs::remove_dir_all(&root);
+        assert_eq!(found.len(), 2, "{found:#?}");
+        assert!(found.iter().any(|o| o.symbol.ends_with("::f") && o.strength == Strength::Open), "{found:#?}");
+        assert!(
+            found.iter().any(|o| o.symbol.ends_with("::g") && format!("{:?}", o.strength).contains("no reason given")),
+            "{found:#?}"
+        );
+    }
+
     /// @tests REQ-STRENGTH.not_proved_by_us
     #[test]
     fn the_obligation_arrives_unproved() {

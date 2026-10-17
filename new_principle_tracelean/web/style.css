@@ -862,21 +862,21 @@ button.actionable:focus {
   min-width: 480px;
 }
 
-/* What the editor has selected, laid over the text. Lightened rather than
- * painted over, so the text stays readable under it. */
+/* What the editor has selected, laid over the text. Translucent rather than
+ * blended: `lighten` takes the lighter channel of the text and of the box, so
+ * a box lighter than the text painted the characters out and left a solid
+ * rectangle. Under a translucent tint the text stays what it was. */
 .selection {
   position: absolute;
   pointer-events: none;
-  background: var(--ui-selection);
-  mix-blend-mode: lighten;
+  background: color-mix(in srgb, var(--ui-selection) 45%, transparent);
 }
 
 /* Each other place the name under the cursor is written, in the window. */
 .occurrence {
   position: absolute;
   pointer-events: none;
-  background: var(--ui-wordHighlight);
-  mix-blend-mode: lighten;
+  background: color-mix(in srgb, var(--ui-wordHighlight) 40%, transparent);
 }
 
 /* The bracket beside the cursor and its match. */
@@ -888,4 +888,31 @@ button.actionable:focus {
 
 #context .context-entry.chosen {
   background: var(--ui-selected);
+}
+
+/* A bar down a pane's right edge when the buffer is longer than the window:
+ * the thumb is the window's share of it, dragged to scroll. Over the text's
+ * margin rather than taking a column from it. */
+.pane .scrollbar {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 10px;
+  background: transparent;
+  z-index: 3;
+}
+
+.pane .scrollbar:hover {
+  background: color-mix(in srgb, var(--ui-scrollbar) 25%, transparent);
+}
+
+.pane .scrollthumb {
+  position: absolute;
+  left: 2px;
+  right: 2px;
+  min-height: 12px;
+  border-radius: 3px;
+  background: var(--ui-scrollbar);
+  cursor: grab;
 }

@@ -328,4 +328,19 @@ mod tests {
         assert!(text.contains("describes: [REQ-EVID]"));
         assert!(text.contains("  REQ-EVID: h9"));
     }
+
+    /// A document's lines give each target with the hash it recorded.
+    ///
+    /// @tests REQ-DOCLINK.declares_target
+    /// @tests REQ-DOCLINK.records_hash
+    #[test]
+    fn a_documents_lines_declare_its_targets_and_their_hashes() {
+        let lines = ["---", "describes: [REQ-A, REQ-B]", "described_hash:", "  REQ-A: h1", "  REQ-B: h2", "---", "# Doc"];
+        let pairs = |a: &str, b: &str| (a.to_string(), b.to_string());
+        assert_eq!(
+            declared_in(lines.iter().map(|l| l.to_string()).collect()),
+            vec![pairs("REQ-A", "h1"), pairs("REQ-B", "h2")]
+        );
+        assert!(declared_in(vec!["# no frontmatter".into()]).is_empty());
+    }
 }

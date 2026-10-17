@@ -56,7 +56,7 @@ fn check(op: &str, function: &str, entry: &str, arguments: &[&str], fields: BTre
         &Schema::Struct { fields },
         &model,
         &implementation,
-        RunOptions { seed, cases: 2_000, shrink_rounds: 100 },
+        RunOptions { seed, cases: 2_000 },
     )
     .expect("both runners answer");
     support::agreed(&result);

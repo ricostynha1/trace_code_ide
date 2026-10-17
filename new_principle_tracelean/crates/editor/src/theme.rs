@@ -24,6 +24,8 @@ pub const OVERRIDE: &str = ".tracelean/theme.json";
 /// An override that is missing is the ordinary case; one that does not parse
 /// is ignored rather than allowed to take the editor down with it, because a
 /// typo in a colour should cost a colour and not the session.
+///
+/// @implements REQ-LOOK.roles_drawn_in_theme_colours
 pub fn load(root: &Path) -> Value {
     let mut theme: Value = serde_json::from_str(SHIPPED).expect("the shipped theme parses");
     if let Ok(text) = std::fs::read_to_string(root.join(OVERRIDE)) {
@@ -55,6 +57,7 @@ pub fn colour<'a>(theme: &'a Value, section: &str, key: &str) -> Option<&'a str>
 mod tests {
     use super::*;
 
+    /// @tests REQ-LOOK.roles_drawn_in_theme_colours
     #[test]
     fn the_shipped_theme_names_every_role() {
         let theme: Value = serde_json::from_str(SHIPPED).unwrap();
@@ -72,5 +75,22 @@ mod tests {
         merge(&mut theme, serde_json::json!({ "ui": { "accent": "#ff0000" } }));
         assert_eq!(colour(&theme, "ui", "accent"), Some("#ff0000"));
         assert!(colour(&theme, "ui", "sidebar").is_some(), "the rest of the section survived");
+    }
+
+    /// A project's override is laid over the shipped theme; one that does not
+    /// parse costs nothing, and no override is the shipped theme.
+    ///
+    /// @tests REQ-LOOK.roles_drawn_in_theme_colours
+    #[test]
+    fn a_projects_override_is_read_and_a_broken_one_ignored() {
+        let root = std::env::temp_dir().join(format!("tracelean-theme-{}", std::process::id()));
+        std::fs::create_dir_all(root.join(".tracelean")).unwrap();
+        let shipped: Value = serde_json::from_str(SHIPPED).unwrap();
+        assert_eq!(load(&root), shipped);
+        std::fs::write(root.join(OVERRIDE), r##"{"ui":{"accent":"#123456"}}"##).unwrap();
+        assert_eq!(colour(&load(&root), "ui", "accent"), Some("#123456"));
+        std::fs::write(root.join(OVERRIDE), "{ not json").unwrap();
+        assert_eq!(load(&root), shipped);
+        let _ = std::fs::remove_dir_all(&root);
     }
 }

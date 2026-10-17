@@ -3,7 +3,7 @@ describes: [ARCH-EFFECT-LAW, ARCH-HONEST, REQ-EVID]
 described_hash:
   ARCH-EFFECT-LAW: a52673a3000aa966
   ARCH-HONEST: cfd9f166b870b9b3
-  REQ-EVID: 3c2190ae90139f20
+  REQ-EVID: 081297c90e76bc0b
 ---
 
 # Methodology
@@ -44,6 +44,10 @@ model-property — and held or not on its own, written `AJTP` with a dash for ea
 gap. A proved model with no implementation bound to it reads `A--P`. Averaging,
 or ranking the marks on a ladder, is the most effective way to build a dashboard
 that lies: an aggregate holds a mark only when every part holds it.
+
+A clause checked only by reading the tree (`@structural`, ADR-0012) has no model,
+so T and P cannot apply: written `·`, done at `AJ··`, and leaving an aggregate's
+T and P to the clauses they apply to.
 
 ## Modelling what Lean cannot run
 

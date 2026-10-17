@@ -361,6 +361,17 @@ pub fn sandbox_buffer(
     record_buffer("sandbox".to_string(), sandbox_events(changed, said, spend))
 }
 
+/// How many of a requirement's clauses hold each thing a row counts.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Tally {
+    pub implemented: usize,
+    pub annotated: usize,
+    pub judged: usize,
+    pub tested: usize,
+    pub proved: usize,
+}
+
 /// A requirement, as a station shows it.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -370,22 +381,184 @@ pub struct Node {
     pub refines: Vec<String>,
     /// The marks every one of its clauses holds.
     pub marks: crate::evidence::Marks,
-    /// How many of its clauses something implements, of how many.
-    pub implemented: usize,
     pub clauses: usize,
+    /// Clauses a model can answer: all but the structural ones, which need no
+    /// implementation and cannot be tested or proved.
+    pub modelled: usize,
+    /// How many clauses hold each: implementing, testing and proving out of
+    /// `modelled`, annotating and judging out of `clauses`.
+    pub held: Tally,
     /// Lines of its implementing code tests run, of how many — when that code
     /// was measured as it is now.
     #[serde(default)]
     pub covered: Option<(u64, u64)>,
 }
 
-/// What a row says of its measured lines: `lines 57%`, `lines none` when its
-/// code has no line a test could run, nothing unmeasured.
-fn covered_of(node: &Node) -> Option<String> {
-    node.covered.map(|(run, all)| match all {
-        0 => "lines none".to_string(),
-        _ => format!("lines {}%", run * 100 / all),
-    })
+/// A piece of a row: its text, and the role and actions of the span it is,
+/// if it is one.
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct Piece {
+    text: String,
+    role: Option<Role>,
+    actions: Vec<String>,
+}
+
+fn plain(text: impl Into<String>) -> Piece {
+    Piece { text: text.into(), role: None, actions: Vec::new() }
+}
+
+fn spanned(text: impl Into<String>, role: Role) -> Piece {
+    Piece { text: text.into(), role: Some(role), actions: actions_for(role) }
+}
+
+fn pieces_text(pieces: &[Piece]) -> String {
+    pieces.iter().map(|p| p.text.as_str()).collect()
+}
+
+/// The spans of a row's pieces, the row starting at `at`.
+fn pieces_spans(at: usize, pieces: &[Piece]) -> Vec<Span> {
+    let mut out = Vec::new();
+    let mut start = at;
+    for piece in pieces {
+        let stop = start + piece.text.chars().count();
+        if let Some(role) = piece.role {
+            out.push(Span { start, stop, role, actions: piece.actions.clone() });
+        }
+        start = stop;
+    }
+    out
+}
+
+/// Lines run, of how many, over a requirement and everything refining it.
+///
+/// Each child's figure is added in whole, so a requirement two paths reach
+/// counts twice: this says how much under a row was run, not an exact count
+/// of lines. `fuel` bounds it, because `refines` may hold a cycle.
+fn lines_under(fuel: usize, nodes: &[Node], node: &Node) -> (u64, u64) {
+    let own = node.covered.unwrap_or((0, 0));
+    match fuel {
+        0 => own,
+        _ => children_of(nodes, &node.id).into_iter().fold(own, |(run, all), child| {
+            let (r, a) = lines_under(fuel - 1, nodes, child);
+            (run + r, all + a)
+        }),
+    }
+}
+
+/// What the requirements refining a node left unrun, if anything: the figure
+/// over the node and all of them, `+children 85%`.
+fn children_short(nodes: &[Node], node: &Node) -> Option<String> {
+    let (run, all) = children_of(nodes, &node.id).into_iter().fold((0, 0), |(run, all), child| {
+        let (r, a) = lines_under(nodes.len(), nodes, child);
+        (run + r, all + a)
+    });
+    let (own_run, own_all) = node.covered.unwrap_or((0, 0));
+    (run < all).then(|| format!("+children {}%", (own_run + run) * 100 / (own_all + all)))
+}
+
+/// One count: `J2/4` held of applicable, `T·` where none can be.
+fn count_piece(letter: char, held: usize, of: usize, role: Role) -> Piece {
+    match of {
+        0 => plain(format!("{letter}·")),
+        _ => spanned(format!("{letter}{held}/{of}"), role),
+    }
+}
+
+/// A requirement as a station shows it, from each clause's marks and whether
+/// something implements it: the marks every clause holds, and how many hold
+/// each. A structural clause is counted only where a mark can apply to it.
+///
+/// @implements REQ-SHOW.index_from_requirements
+/// @implements REQ-EVID.structural_not_applicable
+pub fn node_of(
+    id: String,
+    title: String,
+    refines: Vec<String>,
+    clauses: Vec<(crate::evidence::Marks, bool)>,
+    covered: Option<(u64, u64)>,
+) -> Node {
+    let modelled: Vec<&(crate::evidence::Marks, bool)> = clauses.iter().filter(|(m, _)| !m.structural).collect();
+    let count = |f: &dyn Fn(&crate::evidence::Marks) -> bool| clauses.iter().filter(|(m, _)| f(m)).count();
+    Node {
+        id,
+        title,
+        refines,
+        marks: crate::trace::rollup::combine(clauses.iter().map(|(m, _)| *m).collect()),
+        clauses: clauses.len(),
+        modelled: modelled.len(),
+        held: Tally {
+            implemented: modelled.iter().filter(|(_, implemented)| *implemented).count(),
+            annotated: count(&|m| m.annotated),
+            judged: count(&|m| m.judged),
+            tested: count(&|m| m.tested),
+            proved: count(&|m| m.proved),
+        },
+        covered,
+    }
+}
+
+/// Whether anything about a requirement is still to do: a clause short of a
+/// mark it can hold, or a line its tests never ran.
+pub fn is_open(node: &Node) -> bool {
+    let t = node.held;
+    t.implemented < node.modelled
+        || t.tested < node.modelled
+        || t.proved < node.modelled
+        || t.annotated < node.clauses
+        || t.judged < node.clauses
+        || node.covered.is_some_and(|(run, all)| run < all)
+}
+
+/// A row of either station, after its lead: the marks, the name, how many
+/// clauses hold each mark in that mark's colour, the lines measured and what
+/// the requirements under it left unrun, and the title.
+fn row_pieces(nodes: &[Node], node: &Node) -> Vec<Piece> {
+    use crate::evidence::Mark as M;
+    let mut out: Vec<Piece> = crate::surface::requirement_view::mark_pieces(node.marks)
+        .into_iter()
+        .map(|(text, role)| match role {
+            Role::Plain => plain(text),
+            role => spanned(text, role),
+        })
+        .collect();
+    out.push(plain("  "));
+    out.push(spanned(node.id.clone(), Role::Requirement));
+    out.push(plain("  "));
+    let t = node.held;
+    let held = |mark| Role::Mark { mark, held: true };
+    let counts = [
+        count_piece('I', t.implemented, node.modelled, Role::Claim { role: crate::trace::annotation::Role::Implements }),
+        count_piece('A', t.annotated, node.clauses, held(M::Annotated)),
+        count_piece('J', t.judged, node.clauses, held(M::Judged)),
+        count_piece('T', t.tested, node.modelled, held(M::Tested)),
+        count_piece('P', t.proved, node.modelled, held(M::Proved)),
+    ];
+    for (i, count) in counts.into_iter().enumerate() {
+        if i > 0 {
+            out.push(plain(" "));
+        }
+        out.push(count);
+    }
+    out.push(plain("  "));
+    if let Some((run, all)) = node.covered {
+        match all {
+            0 => out.push(plain("lines none")),
+            // Coloured as a diff's lines are, but it is no diff: it opens what
+            // was measured rather than the actions of a change under review.
+            _ => out.push(Piece {
+                text: format!("lines {}%", run * 100 / all),
+                role: Some(if run == all { Role::Added } else { Role::Removed }),
+                actions: vec![format!("trace.coverage {}", node.id)],
+            }),
+        }
+        out.push(plain("  "));
+    }
+    if let Some(said) = children_short(nodes, node) {
+        out.push(Piece { text: said, role: Some(Role::Removed), actions: Vec::new() });
+        out.push(plain("  "));
+    }
+    out.push(plain(node.title.clone()));
+    out
 }
 
 /// A node at a depth in the refinement graph.
@@ -396,103 +569,44 @@ pub struct Row {
     pub node: Node,
 }
 
-/// How wide the marks are: `AJTP`, one character each.
-const MARKS_WIDTH: usize = 4;
-
-/// One span a position of the marks, each saying which mark it is and whether
-/// it is held, so a frontend colours a gap apart from what fills it without
-/// reading the letters.
-pub fn evidence_spans(at: usize, marks: crate::evidence::Marks) -> Vec<Span> {
-    marks
-        .each()
-        .iter()
-        .enumerate()
-        .map(|(i, &(mark, held, _))| Span {
-            start: at + i,
-            stop: at + i + 1,
-            role: Role::Mark { mark, held },
-            actions: actions_for(Role::Mark { mark, held }),
-        })
-        .collect()
+/// A node with something still to do in it or anywhere under it.
+fn open_under(fuel: usize, nodes: &[Node], node: &Node) -> bool {
+    is_open(node)
+        || (fuel > 0 && children_of(nodes, &node.id).into_iter().any(|child| open_under(fuel - 1, nodes, child)))
 }
 
-/// The spans every row of either station carries: the marks, and the id.
-///
-/// Both take their actions from their role, so a mark in this buffer offers
-/// what a mark offers anywhere. The marks are four characters wide, which is
-/// why the id starts six along.
-fn row_spans(at: usize, indent: usize, node: &Node) -> Vec<Span> {
-    let lead = at + indent * 2;
-    let mut spans = evidence_spans(lead, node.marks);
-    spans.push(Span {
-        start: lead + MARKS_WIDTH + 2,
-        stop: lead + MARKS_WIDTH + 2 + node.id.chars().count(),
-        role: Role::Requirement,
-        actions: actions_for(Role::Requirement),
-    });
-    spans
-}
-
-/// Cells of five a node's implemented clauses fill, rounded, never past five.
-fn filled_of(node: &Node) -> usize {
-    ((node.implemented * 5 + node.clauses / 2) / node.clauses.max(1)).min(5)
-}
-
-/// The coverage bar, read at a glance down the list: filled cells, then empty.
-fn bar_of(node: &Node) -> String {
-    "█".repeat(filled_of(node)) + &"░".repeat(5 - filled_of(node))
-}
-
-fn index_line(node: &Node) -> String {
-    format!(
-        "{}  {}  {} {}/{}  {}{}",
-        node.marks.text(),
-        node.id,
-        bar_of(node),
-        node.implemented,
-        node.clauses,
-        covered_of(node).map(|said| format!("{said}  ")).unwrap_or_default(),
-        node.title
-    )
-}
-
-/// The bar's filled cells, in the colour of what fills them, and the measured
-/// lines: green when every one ran, red when one did not.
-fn bar_spans(at: usize, node: &Node) -> Vec<Span> {
-    let start = at + MARKS_WIDTH + 2 + node.id.chars().count() + 2;
-    let role = Role::Claim { role: crate::trace::annotation::Role::Implements };
-    let mut out = match filled_of(node) {
-        0 => Vec::new(),
-        filled => vec![Span { start, stop: start + filled, role, actions: actions_for(role) }],
-    };
-    // No line to run is neither whole nor short: left uncoloured.
-    if let (Some(said), Some((run, all))) = (covered_of(node), node.covered.filter(|(_, all)| *all > 0)) {
-        let from = start + 5 + 1 + format!("{}/{}", node.implemented, node.clauses).chars().count() + 2;
-        // Coloured as a diff's lines are, but it is no diff: it opens what was
-        // measured rather than the actions of a change under review.
-        let role = if run == all { Role::Added } else { Role::Removed };
-        let actions = vec![format!("trace.coverage {}", node.id)];
-        out.push(Span { start: from, stop: from + said.chars().count(), role, actions });
-    }
-    out
+/// The requirements a station shows: all of them, or with `open_only` those
+/// with something to do in them or under them, so the graph keeps the path to
+/// each.
+fn shown(nodes: &[Node], open_only: bool) -> Vec<Node> {
+    nodes.iter().filter(|node| !open_only || open_under(nodes.len(), nodes, node)).cloned().collect()
 }
 
 /// The requirement set as a buffer: one row a requirement, carrying what its
-/// evidence reached and what it is called.
+/// evidence reached and what it is called; with `open_only`, only those with
+/// something still to do.
 ///
 /// @implements REQ-SHOW.index_from_requirements
 /// @implements REQ-SHOW.producer_is_pure
 /// @implements REQ-SHOW.well_formed_by_construction
+/// @implements REQ-SHOW.open_filtered
+/// @implements REQ-SHOW.children_lines
 /// @drt REQ-SHOW.index_from_requirements
-pub fn requirements_buffer(nodes: Vec<Node>) -> Buffer {
+/// @drt REQ-SHOW.children_lines
+pub fn requirements_buffer(nodes: Vec<Node>, open_only: bool) -> Buffer {
+    // A flat list has no path to keep, so only what is open itself.
+    let rows: Vec<Vec<Piece>> = nodes
+        .iter()
+        .filter(|node| !open_only || is_open(node))
+        .map(|node| row_pieces(&nodes, node))
+        .collect();
     let mut spans = Vec::new();
     let mut at = 0usize;
-    for node in &nodes {
-        spans.extend(row_spans(at, 0, node));
-        spans.extend(bar_spans(at, node));
-        at += index_line(node).chars().count() + 1;
+    for row in &rows {
+        spans.extend(pieces_spans(at, row));
+        at += pieces_text(row).chars().count() + 1;
     }
-    let text: String = nodes.iter().map(index_line).collect::<Vec<_>>().join("\n");
+    let text: String = rows.iter().map(|row| pieces_text(row)).collect::<Vec<_>>().join("\n");
     let size = text.chars().count();
     Buffer {
         id: "menu:requirements".to_string(),
@@ -545,49 +659,67 @@ fn fold_mark(nodes: &[Node], open: &[String], node: &Node) -> char {
 }
 
 /// A row of the graph is its fold mark and a row of the index, indented under
-/// what it refines.
-fn design_line(nodes: &[Node], open: &[String], row: &Row) -> String {
-    format!("{}{} {}", " ".repeat(row.indent * 2), fold_mark(nodes, open, &row.node), index_line(&row.node))
+/// what it refines. The fold mark of a node with something under it unfolds
+/// it one level, and offers to unfold everything under it.
+///
+/// `graph` is what is drawn, `all` every requirement: what the requirements
+/// under a row left unrun is counted over all of them, shown or not.
+fn design_pieces(graph: &[Node], all: &[Node], open: &[String], row: &Row) -> Vec<Piece> {
+    let mut out = vec![plain(" ".repeat(row.indent * 2))];
+    let mark = fold_mark(graph, open, &row.node).to_string();
+    out.push(match children_of(graph, &row.node.id).is_empty() {
+        true => plain(mark),
+        false => Piece {
+            text: mark,
+            role: Some(Role::Entry),
+            actions: vec![format!("design.toggle {}", row.node.id), format!("design.expand_all {}", row.node.id)],
+        },
+    });
+    out.push(plain(" "));
+    out.extend(row_pieces(all, &row.node));
+    out
 }
 
-/// The buttons above the graph, which unfold all of it or fold it to its roots.
-pub const DESIGN_HEADER: &str = "[ expand all ]  [ fold all ]";
+/// The buttons above the graph: unfold all of it, fold it to its roots, and
+/// show only what is still to do or everything again.
+pub fn design_header(open_only: bool) -> Vec<(String, String)> {
+    vec![
+        ("[ expand all ]".into(), "design.expand_everything".into()),
+        ("[ fold all ]".into(), "design.fold_all".into()),
+        ((if open_only { "[ show all ]" } else { "[ open only ]" }).into(), "design.open_only".into()),
+    ]
+}
 
 /// The refinement graph as a buffer: the buttons, then one row a requirement,
-/// indented under what it refines; a folded one's mark unfolds it one level,
-/// and offers to unfold everything under it.
+/// indented under what it refines; with `open_only`, only the requirements
+/// with something to do in them or under them.
 ///
 /// @implements REQ-SHOW.graph_from_refinement
 /// @implements REQ-SHOW.producer_is_pure
 /// @implements REQ-SHOW.well_formed_by_construction
+/// @implements REQ-SHOW.open_filtered
 /// @drt REQ-SHOW.graph_from_refinement
-pub fn design_buffer(nodes: Vec<Node>, opened: Vec<String>) -> Buffer {
-    let open = opened;
-    let rows = design_rows(nodes.clone(), open.clone());
-    let button = |start: usize, stop: usize, action: &str| Span {
-        start,
-        stop,
-        role: Role::Entry,
-        actions: vec![action.to_string()],
-    };
-    let mut spans = vec![button(0, 14, "design.expand_everything"), button(16, 28, "design.fold_all")];
-    let mut at = DESIGN_HEADER.chars().count() + 1;
-    for row in &rows {
-        let mark = at + row.indent * 2;
-        if !children_of(&nodes, &row.node.id).is_empty() {
-            spans.push(Span {
-                start: mark,
-                stop: mark + 1,
-                role: Role::Entry,
-                actions: vec![format!("design.toggle {}", row.node.id), format!("design.expand_all {}", row.node.id)],
-            });
+/// @drt REQ-SHOW.open_filtered
+pub fn design_buffer(nodes: Vec<Node>, opened: Vec<String>, open_only: bool) -> Buffer {
+    let graph = shown(&nodes, open_only);
+    let rows = design_rows(graph.clone(), opened.clone());
+    let mut header = Vec::new();
+    for (i, (label, action)) in design_header(open_only).into_iter().enumerate() {
+        if i > 0 {
+            header.push(plain("  "));
         }
-        spans.extend(row_spans(mark + 2, 0, &row.node));
-        spans.extend(bar_spans(mark + 2, &row.node));
-        at += design_line(&nodes, &open, row).chars().count() + 1;
+        header.push(Piece { text: label, role: Some(Role::Entry), actions: vec![action] });
     }
-    let lines: Vec<String> = rows.iter().map(|row| design_line(&nodes, &open, row)).collect();
-    let text = std::iter::once(DESIGN_HEADER.to_string()).chain(lines).collect::<Vec<_>>().join("\n");
+    let lines: Vec<Vec<Piece>> = std::iter::once(header)
+        .chain(rows.iter().map(|row| design_pieces(&graph, &nodes, &opened, row)))
+        .collect();
+    let mut spans = Vec::new();
+    let mut at = 0usize;
+    for line in &lines {
+        spans.extend(pieces_spans(at, line));
+        at += pieces_text(line).chars().count() + 1;
+    }
+    let text = lines.iter().map(|line| pieces_text(line)).collect::<Vec<_>>().join("\n");
     let size = text.chars().count();
     Buffer {
         id: "menu:design".to_string(),
@@ -666,70 +798,162 @@ mod tests {
     use super::*;
     use crate::surface::view::{directory_buffer, faults, plain_text};
 
-    /// Three of four clauses implemented fill four cells of five, and those
-    /// cells are drawn in the colour of what fills them.
+    /// The text a span covers.
+    fn under(buffer: &Buffer, span: &Span) -> String {
+        buffer.text.chars().skip(span.start).take(span.stop - span.start).collect()
+    }
+
+    /// A row counts the clauses holding each mark, each count in the colour of
+    /// its mark, and says how much of its code tests ran.
     #[test]
-    fn the_index_draws_each_requirement_s_coverage_as_a_bar() {
+    fn the_index_counts_each_mark_in_its_colour() {
         let node = Node {
             id: "REQ-A".into(),
             title: "A thing".into(),
             refines: vec![],
             marks: crate::evidence::Marks { annotated: true, ..crate::evidence::Marks::NONE },
-            implemented: 3,
             clauses: 4,
+            modelled: 4,
+            held: Tally { implemented: 3, annotated: 4, ..Tally::default() },
             covered: None,
         };
-        let shown = requirements_buffer(vec![node.clone()]);
-        assert_eq!(plain_text(shown.clone()), vec!["A---  REQ-A  ████░ 3/4  A thing"]);
-        let bar = shown.spans.iter().find(|s| matches!(s.role, Role::Claim { .. })).expect("a bar span");
-        assert_eq!((bar.start, bar.stop), (13, 17));
+        let shown = requirements_buffer(vec![node.clone()], false);
+        assert_eq!(plain_text(shown.clone()), vec!["A---  REQ-A  I3/4 A4/4 J0/4 T0/4 P0/4  A thing"]);
+        let implemented = shown.spans.iter().find(|s| matches!(s.role, Role::Claim { .. })).expect("a count");
+        assert_eq!(under(&shown, implemented), "I3/4");
+        let tested = shown
+            .spans
+            .iter()
+            .find(|s| s.role == Role::Mark { mark: crate::evidence::Mark::Tested, held: true })
+            .expect("the tested count, in the tested colour");
+        assert_eq!(under(&shown, tested), "T0/4");
         // Each position of the marks is its own span, a gap told from a mark.
-        let gaps: Vec<bool> =
-            shown.spans.iter().filter_map(|s| match s.role { Role::Mark { held, .. } => Some(held), _ => None }).collect();
+        let gaps: Vec<bool> = shown.spans[..4]
+            .iter()
+            .filter_map(|s| match s.role { Role::Mark { held, .. } => Some(held), _ => None })
+            .collect();
         assert_eq!(gaps, vec![true, false, false, false]);
         assert!(faults(shown).is_empty());
         // Measured, the row says how much of its code ran, in red when not all.
-        let measured = requirements_buffer(vec![Node { covered: Some((4, 7)), ..node.clone() }]);
-        assert_eq!(plain_text(measured.clone()), vec!["A---  REQ-A  ████░ 3/4  lines 57%  A thing"]);
+        let measured = requirements_buffer(vec![Node { covered: Some((4, 7)), ..node.clone() }], false);
+        assert_eq!(plain_text(measured.clone()), vec!["A---  REQ-A  I3/4 A4/4 J0/4 T0/4 P0/4  lines 57%  A thing"]);
         let lines = measured.spans.iter().find(|s| s.role == Role::Removed).expect("a coverage span");
-        let said: String = measured.text.chars().skip(lines.start).take(lines.stop - lines.start).collect();
-        assert_eq!(said, "lines 57%");
+        assert_eq!(under(&measured, lines), "lines 57%");
         assert_eq!(lines.actions, vec!["trace.coverage REQ-A".to_string()], "a coverage figure offered a diff's actions");
         // Code with no line a test could run is not all covered.
-        let nothing = requirements_buffer(vec![Node { covered: Some((0, 0)), ..node }]);
-        assert_eq!(plain_text(nothing.clone()), vec!["A---  REQ-A  ████░ 3/4  lines none  A thing"]);
+        let nothing = requirements_buffer(vec![Node { covered: Some((0, 0)), ..node }], false);
+        assert_eq!(plain_text(nothing.clone()), vec!["A---  REQ-A  I3/4 A4/4 J0/4 T0/4 P0/4  lines none  A thing"]);
         assert!(!nothing.spans.iter().any(|s| matches!(s.role, Role::Added | Role::Removed)));
+    }
+
+    /// A structural requirement writes its test and proof as not applicable,
+    /// counts nothing it cannot hold, and with every clause judged is done.
+    ///
+    /// @tests REQ-EVID.structural_not_applicable
+    #[test]
+    fn a_structural_requirement_counts_only_what_applies() {
+        let marks = crate::evidence::structural(crate::evidence::Marks {
+            annotated: true,
+            judged: true,
+            ..crate::evidence::Marks::NONE
+        });
+        let node = Node {
+            id: "ARCH-X".into(),
+            title: "t".into(),
+            refines: vec![],
+            marks,
+            clauses: 2,
+            modelled: 0,
+            held: Tally { annotated: 2, judged: 2, ..Tally::default() },
+            covered: None,
+        };
+        let shown = requirements_buffer(vec![node.clone()], false);
+        assert_eq!(plain_text(shown.clone()), vec!["AJ··  ARCH-X  I· A2/2 J2/2 T· P·  t"]);
+        assert_eq!(shown.spans.iter().filter(|s| matches!(s.role, Role::Mark { .. })).count(), 4);
+        assert!(!is_open(&node));
+        assert!(requirements_buffer(vec![node], true).text.is_empty());
+    }
+
+    fn node(id: &str, refines: &[&str], covered: Option<(u64, u64)>) -> Node {
+        Node {
+            id: id.into(),
+            title: "t".into(),
+            refines: refines.iter().map(|s| s.to_string()).collect(),
+            marks: crate::evidence::Marks { annotated: true, judged: true, tested: true, proved: true, structural: false },
+            clauses: 1,
+            modelled: 1,
+            held: Tally { implemented: 1, annotated: 1, judged: 1, tested: 1, proved: 1 },
+            covered,
+        }
     }
 
     /// The design opens on its roots; a mark unfolds one level, unfolding all
     /// under a node reaches its grandchildren, and a leaf has no mark to press.
     #[test]
     fn the_design_unfolds_a_level_at_a_time_or_all_at_once() {
-        let node = |id: &str, refines: &[&str]| Node {
-            id: id.into(),
-            title: "t".into(),
-            refines: refines.iter().map(|s| s.to_string()).collect(),
-            marks: crate::evidence::Marks { annotated: true, ..crate::evidence::Marks::NONE },
-            implemented: 0,
-            clauses: 1,
-            covered: None,
-        };
-        let graph = vec![node("ARCH", &[]), node("REQ-A", &["ARCH"]), node("REQ-B", &["REQ-A"])];
-        let folded = design_buffer(graph.clone(), vec![]);
-        assert_eq!(plain_text(folded.clone()), vec![DESIGN_HEADER, "▸ A---  ARCH  ░░░░░ 0/1  t"]);
+        let graph = vec![node("ARCH", &[], None), node("REQ-A", &["ARCH"], None), node("REQ-B", &["REQ-A"], None)];
+        let header = "[ expand all ]  [ fold all ]  [ open only ]";
+        let folded = design_buffer(graph.clone(), vec![], false);
+        assert_eq!(plain_text(folded.clone()), vec![header, "▸ AJTP  ARCH  I1/1 A1/1 J1/1 T1/1 P1/1  t"]);
         let toggle = folded.spans.iter().find(|s| s.actions.first().is_some_and(|a| a == "design.toggle ARCH"));
-        assert_eq!(toggle.map(|s| (s.start, s.stop)), Some((29, 30)));
+        assert_eq!(toggle.map(|s| (s.start, s.stop)), Some((44, 45)));
+        let only = folded.spans.iter().find(|s| s.actions == vec!["design.open_only".to_string()]).expect("a button");
+        assert_eq!(under(&folded, only), "[ open only ]");
         assert!(faults(folded).is_empty());
 
-        let one = design_buffer(graph.clone(), vec!["ARCH".into()]);
-        assert_eq!(plain_text(one)[1..], ["▾ A---  ARCH  ░░░░░ 0/1  t", "  ▸ A---  REQ-A  ░░░░░ 0/1  t"]);
+        let one = design_buffer(graph.clone(), vec!["ARCH".into()], false);
+        assert_eq!(
+            plain_text(one)[1..],
+            ["▾ AJTP  ARCH  I1/1 A1/1 J1/1 T1/1 P1/1  t", "  ▸ AJTP  REQ-A  I1/1 A1/1 J1/1 T1/1 P1/1  t"]
+        );
 
-        let all = design_buffer(graph.clone(), design_unfolded(&graph, Some("ARCH")));
+        let all = design_buffer(graph.clone(), design_unfolded(&graph, Some("ARCH")), false);
         assert_eq!(plain_text(all.clone()).len(), 4);
-        assert_eq!(plain_text(all.clone())[3], "    · A---  REQ-B  ░░░░░ 0/1  t");
+        assert_eq!(plain_text(all.clone())[3], "    · AJTP  REQ-B  I1/1 A1/1 J1/1 T1/1 P1/1  t");
         assert!(!all.spans.iter().any(|s| s.actions.iter().any(|a| a == "design.toggle REQ-B")));
         assert!(faults(all).is_empty());
         assert_eq!(design_unfolded(&graph, None), vec!["ARCH".to_string(), "REQ-A".to_string()]);
+    }
+
+    /// A row whose own lines all ran says what the requirements under it left
+    /// unrun, over itself and all of them; one whose children ran everything
+    /// says nothing more.
+    ///
+    /// @tests REQ-SHOW.children_lines
+    #[test]
+    fn a_row_says_what_the_requirements_under_it_left_unrun() {
+        let graph = vec![
+            node("ARCH", &[], Some((10, 10))),
+            node("REQ-A", &["ARCH"], Some((5, 10))),
+            node("REQ-B", &["REQ-A"], Some((0, 10))),
+        ];
+        let shown = plain_text(design_buffer(graph.clone(), design_unfolded(&graph, None), false));
+        // ARCH: 15 of 30 lines under it ran, with its own 10 of 10.
+        assert_eq!(shown[1], "▾ AJTP  ARCH  I1/1 A1/1 J1/1 T1/1 P1/1  lines 100%  +children 50%  t");
+        assert_eq!(shown[2], "  ▾ AJTP  REQ-A  I1/1 A1/1 J1/1 T1/1 P1/1  lines 50%  +children 25%  t");
+        assert_eq!(shown[3], "    · AJTP  REQ-B  I1/1 A1/1 J1/1 T1/1 P1/1  lines 0%  t");
+        let whole = vec![node("ARCH", &[], Some((10, 10))), node("REQ-A", &["ARCH"], Some((3, 3)))];
+        assert!(!plain_text(design_buffer(whole, vec![], false))[1].contains("+children"));
+    }
+
+    /// With only what is open shown, a finished requirement disappears unless
+    /// something under it is open, which keeps the path to what is.
+    ///
+    /// @tests REQ-SHOW.open_filtered
+    #[test]
+    fn open_only_keeps_what_is_still_to_do_and_the_path_to_it() {
+        let mut short = node("REQ-B", &["REQ-A"], None);
+        short.held.judged = 0;
+        let graph = vec![node("ARCH", &[], None), node("REQ-A", &["ARCH"], None), short, node("REQ-C", &["ARCH"], None)];
+        let open = design_buffer(graph.clone(), design_unfolded(&graph, None), true);
+        let ids: Vec<String> = plain_text(open.clone())[1..]
+            .iter()
+            .map(|line| line.split_whitespace().nth(2).unwrap_or_default().to_string())
+            .collect();
+        assert_eq!(ids, vec!["ARCH", "REQ-A", "REQ-B"]);
+        assert!(plain_text(open)[0].ends_with("[ show all ]"));
+        let index = requirements_buffer(graph, true);
+        assert_eq!(plain_text(index).len(), 1);
     }
 
     fn mark(start: usize, stop: usize, role: Role) -> Mark {

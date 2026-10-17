@@ -6,6 +6,7 @@ status: approved
 decomposition: open
 clauses:
   roles_drawn_in_theme_colours: Every character of a buffer a frontend draws shall be drawn in the look the theme gives the role of the first span covering it — its foreground colour and whether it is bold — and a character in no span in the frontend's own plain colour; what is drawn shall be read back from what the frontend actually emitted, not from what it says it drew.
+  setting_edited_in_place: A setting listed by the definitions buffer shall be changed by asking for its new value, written to the project's override file at once, and shown on the next draw without a restart; a value that is not a colour shall be refused and change nothing.
   regions_present: The screen a frontend draws shall show each place in its own region — the stations, the strip, every pane at the rectangle the layout gives it, the status and the bar of what can be done — with nothing of one drawn inside another's.
   row_fits: A menu a frontend shows on one row of a given width shall be laid out to that width — each entry's key and description when all of them fit, and only the keys when they do not — so that no entry is cut off while a description takes its room, and each entry shall still carry what it reaches.
   focus_visible: Which pane has the focus shall be visible on the screen alone — every edge the focused pane shares with another pane drawn in a style no edge between unfocused panes has — for every pane, including one with no edge of its own.

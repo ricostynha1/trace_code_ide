@@ -274,8 +274,6 @@ fn a_runner_that_could_not_answer_is_distinguished_from_one_that_did() {
 /// Both sides refusing an input is agreement; one refusing is a divergence.
 ///
 /// @tests REQ-DRT.error_is_an_answer
-/// @tests REQ-DRT.same_question
-/// @structural REQ-DRT.same_question reason="a claim about the order two processes are driven in, which lives in the harness loop rather than in any value"
 #[test]
 fn an_error_on_both_sides_is_agreement_and_on_one_side_is_not() {
     let out = Reply::ok(1, serde_json::json!(3));
@@ -287,6 +285,80 @@ fn an_error_on_both_sides_is_agreement_and_on_one_side_is_not() {
     assert!(!agree(&out, &other));
     assert!(agree(&err, &other_err), "both refusing is the two behaving alike");
     assert!(!agree(&out, &err), "one answering and one refusing is a divergence");
+}
+
+/// A runner that writes down every line it is asked and answers `0`.
+fn recording_runner(log: &std::path::Path) -> tracelean_core::drt::run::RunnerSpec {
+    let script = format!(
+        "while IFS= read -r l; do printf '%s\\n' \"$l\" >> '{}'; n=${{l#*\\\"case\\\":}}; n=${{n%%,*}}; \
+         printf '{{\"case\":%s,\"output\":0}}\\n' \"$n\"; done",
+        log.display()
+    );
+    tracelean_core::drt::run::RunnerSpec { cmd: vec!["sh".into(), "-c".into(), script], cwd: None }
+}
+
+/// Both sides are asked the same cases, in the same order: each records what
+/// it was asked, and the two records are the same lines, numbered one up.
+///
+/// @tests REQ-DRT.same_question
+/// @tests REQ-DRT.case_count_stated
+/// @structural REQ-DRT.same_question reason="a claim about the order two processes are driven in, which lives in the harness loop rather than in any value; read off what each process was sent"
+#[test]
+fn both_sides_are_asked_the_same_cases_in_the_same_order() {
+    let scratch = std::env::temp_dir().join(format!("tracelean-same-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&scratch);
+    std::fs::create_dir_all(&scratch).unwrap();
+    let (a, b) = (scratch.join("model.log"), scratch.join("implementation.log"));
+    let schema = Schema::List { inner: Box::new(Schema::Nat { max: Some(9), edges: vec![] }), max_len: Some(3) };
+    let result = tracelean_core::drt::run::run(
+        "REQ-X.c",
+        &schema,
+        &recording_runner(&a),
+        &recording_runner(&b),
+        RunOptions { seed: 5, cases: 40 },
+    )
+    .expect("both answer");
+    assert!(result.agreed());
+    assert_eq!((result.seed, result.cases), (5, 40), "the run states the cases it ran");
+    let (asked_a, asked_b) = (std::fs::read_to_string(&a).unwrap(), std::fs::read_to_string(&b).unwrap());
+    assert_eq!(asked_a, asked_b, "the two sides were asked different questions");
+    let numbers: Vec<u64> = asked_a
+        .lines()
+        .map(|l| serde_json::from_str::<serde_json::Value>(l).unwrap()["case"].as_u64().unwrap())
+        .collect();
+    assert_eq!(numbers, (1..=40).collect::<Vec<u64>>());
+    let _ = std::fs::remove_dir_all(&scratch);
+}
+
+/// A runner answering the input it was asked (`echo`) or always `0`.
+fn answering_runner(echo: bool) -> tracelean_core::drt::run::RunnerSpec {
+    let output = if echo { "\"$i\"" } else { "0" };
+    let script = format!(
+        "while IFS= read -r l; do n=${{l#*\\\"case\\\":}}; n=${{n%%,*}}; i=${{l#*\\\"input\\\":}}; i=${{i%\\}}}}; \
+         printf '{{\"case\":%s,\"output\":%s}}\\n' \"$n\" {output}; done"
+    );
+    tracelean_core::drt::run::RunnerSpec { cmd: vec!["sh".into(), "-c".into(), script], cwd: None }
+}
+
+/// A divergence is reduced until no smaller one is in reach: a number the two
+/// sides disagree about whenever it is not `0` comes back as `1`, however far
+/// down that is — no round count stops it on the way.
+///
+/// @tests REQ-DRT-GEN.shrink_minimal
+/// @tests REQ-DRT.divergence_reported
+#[test]
+fn a_divergence_is_reduced_all_the_way_down() {
+    let schema = Schema::Nat { max: Some(1_000_000_000), edges: vec![] };
+    let result = tracelean_core::drt::run::run(
+        "REQ-X.c",
+        &schema,
+        &answering_runner(false),
+        &answering_runner(true),
+        RunOptions { seed: 3, cases: 20 },
+    )
+    .expect("both answer");
+    let divergence = result.divergence.expect("the two disagree about every number but 0");
+    assert_eq!(divergence.input, serde_json::json!(1), "stopped before the smallest diverging case");
 }
 
 /// A clean run states how many cases it ran, and never claims more.
@@ -310,7 +382,7 @@ fn a_result_carries_the_seed_and_the_case_count_it_actually_reached() {
 
     // The default is small enough to be a default and stated in one place.
     let options = RunOptions::default();
-    assert!(options.cases > 0 && options.shrink_rounds > 0);
+    assert!(options.cases > 0);
 }
 
 // ─── Generated runners ───────────────────────────────────────────────────────
@@ -475,9 +547,7 @@ fn a_judging_prompt_is_text_and_a_judgement_is_a_persons_own() {
 /// A transcript is read and never interpreted: what the tool says it did does
 /// not decide anything.
 ///
-/// @tests REQ-TRANSCRIPT.read_only
 /// @tests REQ-TRANSCRIPT.no_interpretation
-/// @structural REQ-TRANSCRIPT.read_only reason="an absence: nothing writes to the transcript, and a model of a read could not distinguish a version that also truncated"
 /// @structural REQ-TRANSCRIPT.no_interpretation reason="a claim that no code path turns a transcript event into a command, which is read off the tree"
 #[test]
 fn a_transcript_produces_events_and_no_commands() {

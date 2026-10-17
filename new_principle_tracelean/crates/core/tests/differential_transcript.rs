@@ -74,7 +74,7 @@ fn model_and_implementation_agree_on_what_is_complete() {
         &input_schema(),
         &model,
         &implementation,
-        RunOptions { seed: 91, cases: 2_000, shrink_rounds: 100 },
+        RunOptions { seed: 91, cases: 2_000 },
     )
     .expect("both runners answer");
 
@@ -136,7 +136,7 @@ fn model_and_implementation_agree_on_a_claude_code_transcript() {
         &strukt(&[("text", Schema::Str { max_len: Some(0), examples: texts })]),
         &model,
         &implementation,
-        RunOptions { seed: 408, cases: 2_000, shrink_rounds: 100 },
+        RunOptions { seed: 408, cases: 2_000 },
     )
     .expect("both runners answer");
     support::agreed(&result);

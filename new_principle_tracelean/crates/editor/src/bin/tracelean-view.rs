@@ -62,6 +62,9 @@ fn kind(view: &str, argument: Option<&str>) -> Option<BufferKind> {
     }
 }
 
+/// Pick the view the words name, have the editor produce it, print it.
+///
+/// @implements REQ-CONTEXT.views_from_the_shell
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let json = args.iter().any(|a| a == "--json");

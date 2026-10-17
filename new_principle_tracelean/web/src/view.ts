@@ -14,12 +14,8 @@
 // make this a second answer to what is on screen, which is the failure
 // `REQ-SHOW.core_produces` exists to prevent. Buffers arrive from the core.
 //
-// There are no `@` annotations in this file. TraceLean has no TypeScript
-// grammar, so it cannot say *which declaration* a claim here is about, and a
-// claim that cannot be placed is worse than one that is made elsewhere (see the
-// rejected alternative in ADR-0008). The claims about this file are made where
-// they can be checked: `.tracelean/drt.json` names `web/src/view.ts::plainText`
-// and its two neighbours as implementations of `REQ-VIEW`, and
+// `.tracelean/drt.json` names `web/src/view.ts::plainText` and its neighbours
+// as implementations of `REQ-VIEW`, and
 // `crates/core/tests/differential_typescript.rs` is what drives them.
 
 // One of the four evidence marks, as the core spells it.
@@ -99,6 +95,9 @@ export interface Pane {
   // The buffer line the window starts at; a gutter numbers from it. Absent
   // from an editor that predates it, which numbers from the top.
   top?: number;
+  // How many lines the whole buffer has, for the scrollbar. Absent from an
+  // editor that predates it, which draws none.
+  lines?: number;
   // The claims marked beside the window's lines: buffer line, the role's
   // letter, the requirement it opens.
   chips?: [number, string, string][];
@@ -119,7 +118,7 @@ export type Breach =
 // A frontend with a richer medium draws more than this. What it may not do is
 // show something else.
 //
-// Realises REQ-VIEW.rendering_is_total; bound in `.tracelean/drt.json`.
+// @implements REQ-VIEW.rendering_is_total
 export function plainText(buffer: Buffer): string[] {
   return buffer.text.split("\n");
 }
@@ -132,7 +131,7 @@ export function plainText(buffer: Buffer): string[] {
 // outside the basic plane, which is the kind of disagreement that shows up as
 // one wrong button and no error.
 //
-// Realises REQ-VIEW.affordances_named; bound in `.tracelean/drt.json`.
+// @implements REQ-VIEW.affordances_named
 export function actionsAt(buffer: Buffer, offset: number): string[] {
   const seen: string[] = [];
   for (const span of buffer.spans) {
@@ -147,7 +146,7 @@ export function actionsAt(buffer: Buffer, offset: number): string[] {
 
 // Every action any span of a buffer names, sorted and without repeats.
 //
-// Realises REQ-VIEW.frontend_adds_nothing.
+// @implements REQ-VIEW.frontend_adds_nothing
 export function declaredActions(buffer: Buffer): string[] {
   const seen: string[] = [];
   for (const span of buffer.spans) {
@@ -174,7 +173,7 @@ export interface Presented {
 //
 // The glyphs are not consulted, which is the whole content of the clause.
 //
-// Realises REQ-VIEW.presentation_may_be_symbolic; bound in `.tracelean/drt.json`.
+// @implements REQ-VIEW.presentation_may_be_symbolic
 export function accessible(row: Presented[]): string {
   return row.map((piece) => piece.name).join("");
 }
@@ -200,7 +199,7 @@ function lineBreaches(shown: string[], expected: string[]): Breach[] {
 // harness reaches. The same function checked against the same model is the
 // reason its answer means anything.
 //
-// Realises REQ-VIEW.frontend_adds_nothing; bound in `.tracelean/drt.json`.
+// @implements REQ-VIEW.frontend_adds_nothing
 export function conformance(buffer: Buffer, rendering: Rendering): Breach[] {
   const out: Breach[] = lineBreaches(rendering.lines, plainText(buffer));
   for (const [offset, action] of rendering.offered) {

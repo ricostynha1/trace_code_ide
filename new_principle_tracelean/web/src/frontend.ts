@@ -30,10 +30,7 @@
 // after the glyph has put something on the screen nobody can trace, and the
 // capture harness has to say so.
 //
-// Realises REQ-VIEW.frontend_is_checkable and REQ-VIEW.screen_is_readable.
-// What checks it is `crates/core/tests/frontend_conformance_web.rs`, which is
-// also where those claims are annotated — this file cannot carry them, because
-// TraceLean has no TypeScript grammar to place them with (ADR-0008).
+// What checks it is `crates/core/tests/frontend_conformance_web.rs`.
 
 import { pieces, render, screenText } from "./render.ts";
 import type { Buffer } from "./view.ts";
@@ -58,6 +55,9 @@ function wrongly(drawn: ReturnType<typeof render>): ReturnType<typeof render> {
 // escape sequences of its own; these are the harness's frame, not the page's,
 // and they are built by code point because a control character written into a
 // source file is a character nobody reading it can see.
+//
+// @implements REQ-VIEW.frontend_is_checkable
+// @implements REQ-VIEW.screen_is_readable
 const ESCAPE = String.fromCharCode(27);
 const CLEAR = ESCAPE + "[2J";
 const RESET = ESCAPE + "[0m";

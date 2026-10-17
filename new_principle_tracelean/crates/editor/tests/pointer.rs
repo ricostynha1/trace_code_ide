@@ -1174,6 +1174,8 @@ fn closing_with_unsaved_work_is_refused_once() {
 
 /// Reopening a project brings back its tabs, its open folders and the file in
 /// front; a file removed since is left out.
+///
+/// @tests REQ-NAV.session_recalled
 #[test]
 fn reopening_brings_back_what_was_open() {
     let (root, mut editor) = opened();
@@ -1194,6 +1196,8 @@ fn reopening_brings_back_what_was_open() {
 }
 
 /// Ctrl+P's list is the project's files that match, and choosing one opens it.
+///
+/// @tests REQ-NAV.quick_open
 #[test]
 fn quick_open_finds_a_file_by_a_few_letters() {
     let (root, mut editor) = opened();
@@ -1272,6 +1276,8 @@ fn a_command_in_a_report_is_copied_by_its_line() {
 }
 
 /// F12 on a name goes to where it is declared.
+///
+/// @tests REQ-NAV.definitions_found
 #[test]
 fn f12_goes_to_the_definition() {
     let root = project();
@@ -1289,6 +1295,8 @@ fn f12_goes_to_the_definition() {
 }
 
 /// Searching every file lists each line that holds the text, each a link.
+///
+/// @tests REQ-NAV.uses_found
 #[test]
 fn a_search_lists_every_line_that_holds_the_text() {
     let (root, mut editor) = opened();

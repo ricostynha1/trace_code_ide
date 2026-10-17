@@ -137,7 +137,7 @@ fn model_and_implementation_agree_on_what_a_position_offers() {
         &schema,
         &model,
         &implementation,
-        RunOptions { seed: 402, cases: 1_500, shrink_rounds: 100 },
+        RunOptions { seed: 402, cases: 1_500 },
     )
     .expect("both runners answer");
     support::agreed(&result);

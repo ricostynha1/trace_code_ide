@@ -103,7 +103,7 @@ fn model_and_implementation_agree_on_the_marks() {
         &scratch,
     );
 
-    let options = RunOptions { seed: 7, cases: 2_000, shrink_rounds: 100 };
+    let options = RunOptions { seed: 7, cases: 2_000 };
     let result = run(OP, &input_schema(), &model, &implementation, options).expect("both runners answer");
 
     support::agreed(&result);
@@ -171,14 +171,16 @@ fn a_real_disagreement_is_found_and_reduced() {
         &Schema::Struct { fields },
         &model,
         &implementation,
-        RunOptions { seed: 3, cases: 200, shrink_rounds: 100 },
+        RunOptions { seed: 3, cases: 200 },
     )
     .expect("both runners answer");
 
     let divergence = result.divergence.expect("a disagreement is found");
     // Reduced to the smallest input that still disagrees: no mark held, which
     // the model writes as four dashes and the cap hands back unchanged.
-    let none = serde_json::json!({"annotated": false, "judged": false, "tested": false, "proved": false});
+    let none = serde_json::json!({
+        "annotated": false, "judged": false, "tested": false, "proved": false, "structural": false
+    });
     assert_eq!(divergence.input, serde_json::json!({ "marks": none }));
     assert_eq!(divergence.model.output, Some(serde_json::json!("----")));
     assert_eq!(divergence.implementation.output, Some(none));
@@ -242,13 +244,81 @@ fn model_and_implementation_agree_on_writing_the_marks() {
         &written_input(),
         &model,
         &implementation,
-        RunOptions { seed: 29, cases: 1_000, shrink_rounds: 100 },
+        RunOptions { seed: 29, cases: 1_000 },
     )
     .expect("both runners answer");
 
     support::agreed(&result);
 
     let _ = std::fs::remove_dir_all(&scratch);
+}
+
+/// What a clause checked only by reading the tree holds.
+///
+/// @drt REQ-EVID.structural_not_applicable
+/// @tests REQ-EVID.structural_not_applicable
+#[test]
+#[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
+fn model_and_implementation_agree_on_a_structural_clause() {
+    let scratch = harness::scratch("structural");
+    let op = "REQ-EVID.structural_not_applicable";
+    let implementation = harness::rust_runner(
+        "REQ-EVID",
+        "structural_not_applicable",
+        "crates/core/src/evidence.rs::structural",
+        &scratch,
+    );
+    let model =
+        harness::lean_runner("TraceLean.Evidence", "TraceLean.Evidence.structural", op, &["marks"], &scratch);
+
+    let result = run(
+        op,
+        &written_input(),
+        &model,
+        &implementation,
+        RunOptions { seed: 31, cases: 1_000 },
+    )
+    .expect("both runners answer");
+
+    support::agreed(&result);
+
+    let _ = std::fs::remove_dir_all(&scratch);
+}
+
+/// A structural clause has to be asked with a test and a proof already
+/// recorded, which is what it must drop, and with neither.
+///
+/// @tests REQ-EVID.structural_not_applicable
+/// @tests REQ-DRT-COVER.law_coverage
+#[test]
+fn generation_reaches_structural_clauses_holding_what_cannot_apply() {
+    use tracelean_core::evidence::{structural, Marks};
+
+    let mut rng = gen::Rng::new(31);
+    let (mut dropped, mut nothing, mut judged) = (0u64, 0u64, 0u64);
+    for _ in 0..1_000 {
+        let v = gen::value(&written_input(), &mut rng);
+        let marks: Marks = serde_json::from_value(v["marks"].clone()).unwrap();
+        let read = structural(marks);
+        assert!(read.structural && !read.tested && !read.proved, "{marks:?} became {read:?}");
+        assert_eq!((read.annotated, read.judged), (marks.annotated, marks.judged));
+        if marks.tested || marks.proved {
+            dropped += 1;
+        } else {
+            nothing += 1;
+        }
+        if marks.judged {
+            judged += 1;
+        }
+    }
+    support::covered(
+        "REQ-EVID.structural_not_applicable",
+        &[
+            ("a test or proof held, and dropped", dropped),
+            ("neither held", nothing),
+            ("judged", judged),
+        ],
+    );
 }
 
 /// The writing has to be asked where a gap sits between two marks, which is
@@ -261,7 +331,7 @@ fn generation_reaches_gaps_between_marks() {
     use tracelean_core::evidence::{written, Marks};
 
     let mut rng = gen::Rng::new(29);
-    let (mut gap, mut none, mut all) = (0u64, 0u64, 0u64);
+    let (mut gap, mut none, mut all, mut neither) = (0u64, 0u64, 0u64, 0u64);
     for _ in 0..1_000 {
         let v = gen::value(&written_input(), &mut rng);
         let marks: Marks = serde_json::from_value(v["marks"].clone()).unwrap();
@@ -277,9 +347,20 @@ fn generation_reaches_gaps_between_marks() {
         if text == "AJTP" {
             all += 1;
         }
+        // A test or proof held where neither applies is still written as not
+        // applicable: the dot says nothing can be held there.
+        if text.ends_with("··") {
+            assert!(marks.structural);
+            neither += 1;
+        }
     }
     support::covered(
         "REQ-EVID.marks_written",
-        &[("marks with a gap between two held", gap), ("no mark held", none), ("every mark held", all)],
+        &[
+            ("marks with a gap between two held", gap),
+            ("no mark held", none),
+            ("every mark held", all),
+            ("testing and proving not applicable", neither),
+        ],
     );
 }

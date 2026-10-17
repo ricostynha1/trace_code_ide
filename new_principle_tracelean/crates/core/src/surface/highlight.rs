@@ -18,6 +18,7 @@ fn query_source(lang: Lang) -> &'static str {
     match lang {
         Lang::Rust => include_str!("../../../../assets/languages/rust/highlights.scm"),
         Lang::Lean4 => include_str!("../../../../assets/languages/lean4/highlights.scm"),
+        Lang::TypeScript => include_str!("../../../../assets/languages/typescript/highlights.scm"),
     }
 }
 
@@ -296,6 +297,18 @@ fn reference_at(text: &[char], at: usize, stop: usize) -> Option<usize> {
 mod tests {
     use super::*;
 
+    /// Names are found by character, a window past the end is cut at the end,
+    /// and a name inside a longer word is none.
+    ///
+    /// @tests REQ-SHOW.references_are_links
+    #[test]
+    fn requirement_names_are_found_in_a_window_of_characters() {
+        let text = "é REQ-A.one, xREQ-B and REQ-C".to_string();
+        assert_eq!(requirement_names(text.clone(), 0, 999), vec![(2, 11), (24, 29)]);
+        assert_eq!(requirement_names(text.clone(), 12, 20), Vec::<(usize, usize)>::new());
+        assert_eq!(requirement_names(text, 999, 5), Vec::<(usize, usize)>::new());
+    }
+
     fn kinds(text: &str, lang: Lang) -> Vec<(String, TokenKind)> {
         let chars: Vec<char> = text.chars().collect();
         tokens(text, Some(lang))
@@ -320,6 +333,20 @@ mod tests {
     fn lean_is_highlighted_too() {
         let found = kinds("def f : Nat := 1 -- c\n", Lang::Lean4);
         assert!(found.iter().any(|(t, k)| t == "def" && *k == TokenKind::Keyword), "{found:?}");
+    }
+
+    #[test]
+    fn typescript_is_highlighted_too() {
+        let found = kinds("// c\nexport function f(a: number): string { return `x`; }\n", Lang::TypeScript);
+        for (text, kind) in [
+            ("// c", TokenKind::Comment),
+            ("function", TokenKind::Keyword),
+            ("f", TokenKind::Function),
+            ("number", TokenKind::Type),
+            ("`x`", TokenKind::String),
+        ] {
+            assert!(found.contains(&(text.into(), kind)), "{text}: {found:?}");
+        }
     }
 
     /// @tests REQ-SHOW.references_are_links

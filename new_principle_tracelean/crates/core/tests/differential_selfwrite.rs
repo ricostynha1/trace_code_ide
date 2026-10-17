@@ -76,7 +76,7 @@ fn model_and_implementation_agree_on_suppression() {
         &input_schema(),
         &model,
         &implementation,
-        RunOptions { seed: 37, cases: 2_000, shrink_rounds: 100 },
+        RunOptions { seed: 37, cases: 2_000 },
     )
     .expect("both runners answer");
 
@@ -170,7 +170,7 @@ fn model_and_implementation_agree_on_expiry() {
         },
         &model,
         &implementation,
-        RunOptions { seed: 38, cases: 2_000, shrink_rounds: 100 },
+        RunOptions { seed: 38, cases: 2_000 },
     )
     .expect("both runners answer");
 

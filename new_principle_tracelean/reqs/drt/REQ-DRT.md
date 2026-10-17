@@ -9,7 +9,7 @@ clauses:
   error_is_an_answer: A failure on one side shall be compared against the other side's answer, not treated as an aborted run.
   divergence_reported: A disagreement shall be reported with the case that produced it, reduced to a minimal form.
   falsification_only: A run finding no disagreement shall be recorded as evidence at L3 and never as proof.
-  case_count_stated: Evidence shall state its case count, its seed, and the coverage it reached.
+  case_count_stated: Evidence shall state its case count and its seed, which fix the cases it ran, and shall be written only once the coverage those cases reached meets every floor its binding declares.
 ---
 
 # Differential testing

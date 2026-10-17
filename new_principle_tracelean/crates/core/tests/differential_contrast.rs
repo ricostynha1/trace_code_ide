@@ -47,7 +47,7 @@ fn model_and_implementation_agree_on_what_contrast_finds() {
         &Schema::Struct { fields },
         &model,
         &implementation,
-        RunOptions { seed: 409, cases: 3_000, shrink_rounds: 100 },
+        RunOptions { seed: 409, cases: 3_000 },
     )
     .expect("both runners answer");
     support::agreed(&result);

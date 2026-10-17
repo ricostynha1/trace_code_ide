@@ -1,7 +1,7 @@
 ---
 describes: [REQ-SHOW, REQ-ACT, REQ-LOCK, REQ-ROLLUP]
 described_hash:
-  REQ-SHOW: 4489cd043cd925da
+  REQ-SHOW: 1dc66ee5133e294d
   REQ-ACT: 79e056ad0341b89d
   REQ-LOCK: bac341f63b8d1e71
   REQ-ROLLUP: 86ff29fed6f52569
@@ -28,7 +28,7 @@ One function per kind, in `surface::produce`:
 | `review` | two texts, diffed by common prefix and suffix |
 | `menu` | a keymap mode's rows |
 | `record` | observed events |
-| `menu:requirements` | the requirement set, each row carrying the level it reached (`tracelean-view` only) |
+| `menu:requirements` | the requirement set, each row its marks, how many clauses hold each, and its lines run (`tracelean-view` only) |
 | `menu:design` | the same set, drawn indented along `refines`, folded to its roots except where unfolded |
 | `record:sandbox` | what an agent changed, said, and is estimated to have spent |
 
@@ -40,6 +40,13 @@ leaving them in the text, so a frontend colours a gap apart from a proof without
 parsing what it was given.
 The graph walk is bounded — `refines` is data, a cycle in it is representable,
 and a walk without a bound would not be a function.
+
+A row's `+children 88%` is lines run over it and everything refining it, each
+child's figure added whole, so a requirement two paths reach counts twice: it
+says how much under a row was run, not an exact count, and appears only when
+something under the row was left unrun. Both stations take `open_only`: the
+index keeps what has a clause short of a mark it can hold or a line never run,
+the graph also what is above such a requirement.
 
 None reads a disk; the state arrives as an argument. Every one ends with
 `tidy`, which clamps, drops backwards and overlapping spans and sorts — so a
@@ -142,6 +149,41 @@ The `evidence` report writes each clause's marks in place
 (`REQ-EVID.marks_written`): a clause with a proved model and an unchecked
 implementation reads `A--P`, which is a different situation from `A---` and
 calls for different work.
+
+## Asking for a name, and finding
+
+An action that needs a name nobody pointed at (`Space f r` renames the file
+under the cursor, `Space f n` makes one) asks for it on the status line, where
+the keys typed are the answer: Enter performs it, Escape drops it, Backspace
+edits it. The context menu asks in a box for the same actions and sends the same
+answer to `Editor::choose`, so a key and a pointer make the one change
+(`REQ-NAV.name_is_asked_for`).
+
+`Space f f` asks what to look for and goes to the next match; `Space f /` asks
+and lists the lines of the buffer that hold one — the way to search a file tree,
+the requirements or the findings, where the lines are the information. The text
+may hold `*` (any run of characters) and `?` (any one), within a line and in any
+case (`REQ-NAV.find_by_glob`); `F3` goes on to the next match of the last text.
+
+The stations on the left are Project, Trace, Sandbox, Design, History,
+Findings, Definitions and Proof.
+
+**Definitions** lists every colour of the theme with its value now, read from the
+JSON that sets it, and says where the keys and the languages live. `Space f e`
+(or a click) on a row asks for the new value on the status line and writes it to
+`.tracelean/theme.json` at once; the window repaints without a restart, and a
+value that is not a colour is refused (`REQ-LOOK.setting_edited_in_place`).
+
+**Proof** shows the goals Lean reports at the cursor of a Lean file, beside the
+file, following the cursor and the edits, as the infoview does in VS Code. It
+asks Lean's own server (`lake env lean --server`, in the nearest folder with a
+`lean-toolchain`) and never waits for it: the answer is picked up by the next
+poll, so a slow elaboration costs a stale panel and not a frozen key. The server
+is not started until the panel is opened on a Lean file, and when it cannot be
+the panel says why. This is the one process the editor starts apart from the
+differential runners, and the architecture test allows exactly that module
+(`crates/core/src/lean_server.rs`): it is Lean's toolchain, never an agent
+(`REQ-LSP.proof_state_shown`).
 
 ## Still open
 

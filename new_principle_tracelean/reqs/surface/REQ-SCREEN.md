@@ -111,8 +111,8 @@ forbids is arriving at nothing by resizing, which is a thing a person did.
 
 ## The stations
 
-Four entries that must be reachable from any state: Project, Sandbox,
-Requirements, Design. `stations_are_constant` is stated over *every* state
+Eight entries that must be reachable from any state: Project, Trace, Sandbox,
+Design, History, Findings, Definitions, Proof. `stations_are_constant` is stated over *every* state
 because the failure it prevents is the interesting one — a station produced from
 "the current project" is unreachable exactly when no project is open, which is
 when a person most needs the one that opens a project.

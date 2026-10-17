@@ -112,10 +112,20 @@ fn main() {
                 })
                 .collect()
         };
-        let source = trace::material::shown_source(
-            &read(trace::annotation::Role::Models),
-            &read(trace::annotation::Role::Specifies),
-        );
+        let models = read(trace::annotation::Role::Models);
+        // Nothing models it: what checks it is a test reading the tree.
+        let source = match models.is_empty() {
+            true => trace::material::structural_source(
+                &trace::material::structural_checks(&index, &req_id, clause.as_deref())
+                    .into_iter()
+                    .map(|at| {
+                        let text = read_lines(&root.join(&at.file), at.start_line, at.end_line);
+                        (at, text)
+                    })
+                    .collect::<Vec<_>>(),
+            ),
+            false => trace::material::shown_source(&models, &read(trace::annotation::Role::Specifies)),
+        };
         let assembled =
             trace::material::assemble(&index, &req_id, clause.as_deref(), source, None);
         let (material, model_at) = match assembled {

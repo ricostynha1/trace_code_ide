@@ -434,3 +434,34 @@ fn interactive(root: std::path::PathBuf, fresh: bool) {
     let _ = execute!(stdout, terminal::EnableLineWrap, terminal::LeaveAlternateScreen);
     let _ = terminal::disable_raw_mode();
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Every key the terminal names is named as the keymap names it — the
+    /// space bar included — and a key the keymap has no name for is left out.
+    ///
+    /// @tests REQ-MYTH.actions_reachable
+    #[test]
+    fn every_key_is_named_as_the_keymap_names_it() {
+        let named = |code| name_of(KeyEvent::new(code, KeyModifiers::NONE));
+        let codes = [
+            KeyCode::Esc,
+            KeyCode::Enter,
+            KeyCode::Backspace,
+            KeyCode::Tab,
+            KeyCode::Up,
+            KeyCode::Down,
+            KeyCode::Left,
+            KeyCode::Right,
+            KeyCode::Char(' '),
+        ];
+        for code in codes {
+            let name = named(code).expect("a key the keymap names");
+            assert!(keymap::NAMED.contains(&name.as_str()), "`{name}` is no name the keymap uses");
+        }
+        assert_eq!(named(KeyCode::Char('a')).as_deref(), Some("a"));
+        assert_eq!(named(KeyCode::F(5)), None);
+    }
+}

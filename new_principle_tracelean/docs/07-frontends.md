@@ -1,7 +1,7 @@
 ---
 describes: [REQ-DRT-TS]
 described_hash:
-  REQ-DRT-TS: dcb4028876793f50
+  REQ-DRT-TS: 5cb34a563ec4ffe9
 ---
 
 # Two frontends, both checked
@@ -76,13 +76,10 @@ the run.
 Argument order still comes from the implementation's signature (`tsParameters`,
 modelled and differentially tested), so a binding cannot silently reorder them.
 
-**The TypeScript carries no annotations.** There is no TypeScript grammar here,
-so no claim inside one of those files can be *placed* — and ADR-0008 rejects
-recovering that by reading text. The claims live where they can be checked: the
-binding file names `web/src/view.ts::plainText` and its neighbours, and the
-suites drive them. Each file says in prose what it realises and why the claim is
-not in it. The stage-2 fixpoint caught this: stage 0 was reading those comments
-as links and this kernel was not.
+**The TypeScript is annotated like the Rust.** `tree-sitter-typescript` places
+a claim on its declaration (`web/src/render.ts::render`), so each file says with
+`@implements` what it realises, and the binding file names
+`web/src/view.ts::plainText` and its neighbours as second implementations.
 
 ## Driving them (`REQ-DRIVE`)
 

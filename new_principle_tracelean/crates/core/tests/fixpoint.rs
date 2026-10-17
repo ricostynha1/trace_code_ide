@@ -1,8 +1,5 @@
 //! Stage-2 acceptance: the ported kernel and the bootstrap kernel must agree
 //! about this tree, except where the port deliberately fixes a defect.
-//!
-//! @tests ARCH-SELFHOST.fixpoint
-//! @structural ARCH-SELFHOST.fixpoint reason="the claim is about two whole programs agreeing on this repository; there is no argument to generate"
 
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
@@ -54,15 +51,16 @@ fn links_from(output: &str) -> Vec<String> {
     links
 }
 
+/// @tests ARCH-SELFHOST.fixpoint
+/// @structural ARCH-SELFHOST.fixpoint reason="the claim is about two whole programs agreeing on this repository; there is no argument to generate"
 #[test]
 #[ignore = "runs the stage-0 driver; run with --ignored"]
 fn the_two_kernels_agree_about_this_tree() {
     let root = project_root();
     let stage0 = root.join("tools/stage0-trace/target/release/stage0-trace");
-    if !stage0.exists() {
-        eprintln!("stage-0 driver not built; skipping");
-        return;
-    }
+    // A comparison that could not be made has not been passed
+    // (`ARCH-HONEST.absence_is_not_pass`).
+    assert!(stage0.exists(), "the stage-0 driver is not built: cargo build --release in tools/stage0-trace");
 
     let old = Command::new(&stage0).arg(&root).output().expect("stage-0 runs");
     let old_links: Vec<String> = links_from(&String::from_utf8_lossy(&old.stdout))

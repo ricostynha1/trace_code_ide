@@ -82,6 +82,7 @@ structure Shown where
   status : String
   refines : List String
   refinedBy : List String
+  body : String
   clauses : List ClauseShown
   width : Nat
   lines : Option Covered
@@ -111,16 +112,22 @@ def isPinned (c : ClauseShown) : Bool :=
   | some p => p.1 == "pinned"
   | none => false
 
-/-- How many clauses each kind of claim reaches, in the claims' colours. -/
+/-- How many clauses each kind of claim reaches, in the claims' colours, in the
+order the marks line keeps: implements, proves, models, tests, strong, drt. -/
 def evidenceLine (out : Lines) (clauses : List ClauseShown) : Lines :=
-  let kinds : List TraceLean.Annotation.Role := [.implements, .tests, .models, .proves, .drt]
-  let counted := kinds.map fun kind =>
-    let reached := (clauses.filter fun c =>
+  let reaching := fun (kind : TraceLean.Annotation.Role) =>
+    (clauses.filter fun c =>
       c.claims.any (·.role == roleWord kind) || (kind == .drt && c.tested)).length
-    (kind, roleWord kind ++ " " ++ toString reached ++ "/" ++ toString clauses.length)
-  -- And how many clauses Lean has said their specification pins.
+  let of_ := toString clauses.length
   let pinned := (clauses.filter isPinned).length
-  let counted := counted ++ [(.pins, "pins " ++ toString pinned ++ "/" ++ toString clauses.length)]
+  let counted : List (TraceLean.Annotation.Role × String) :=
+    [(.implements, "implements " ++ toString (reaching .implements) ++ "/" ++ of_),
+     (.proves, "proves " ++ toString (reaching .proves) ++ "/" ++ of_),
+     (.models, "models " ++ toString (reaching .models) ++ "/" ++ of_),
+     (.tests, "tests " ++ toString (reaching .tests) ++ "/" ++ of_),
+     -- How many clauses Lean has said their specification pins: strong.
+     (.pins, "strong " ++ toString pinned ++ "/" ++ of_),
+     (.drt, "drt " ++ toString (reaching .drt) ++ "/" ++ of_)]
   let pieces := counted.enum.bind fun (pair : Nat × (TraceLean.Annotation.Role × String)) =>
     (if pair.1 > 0 then [(" ", Role.plain, ([] : List String))] else []) ++
       [(pair.2.2, Role.claim pair.2.1, [])]
@@ -160,6 +167,24 @@ def notMeasured : String := "not measured: run `tracelean-trace . --coverage`"
 /-- Whether code claims the clause. -/
 def implemented (c : ClauseShown) : Bool := c.claims.any (·.role == "implements")
 
+/-- How many clauses hold each kind of evidence, one letter each and in the
+order the evidence line names them, each in the colour of its claim. A count is
+out of the clauses a model can answer, `I·` where none can. -/
+def marksLine (out : Lines) (clauses : List ClauseShown) : Lines :=
+  let modelled := clauses.filter (fun c => !c.marks.structural)
+  let count := fun (held : ClauseShown → Bool) => (modelled.filter held).length
+  let counts : List (String × Nat × Role) :=
+    [("I", count implemented, Role.claim TraceLean.Annotation.Role.implements),
+     ("P", count (·.marks.proved), Role.claim TraceLean.Annotation.Role.proves),
+     ("M", count (·.claims.any (·.role == "models")), Role.claim TraceLean.Annotation.Role.models),
+     ("T", count (·.marks.tested), Role.claim TraceLean.Annotation.Role.tests),
+     ("S", count isPinned, Role.claim TraceLean.Annotation.Role.pins),
+     ("D", count (·.tested), Role.claim TraceLean.Annotation.Role.drt)]
+  let said := counts.map fun (c : String × Nat × Role) =>
+    if modelled.length == 0 then (c.1 ++ "·", Role.plain, ([] : List String))
+    else (c.1 ++ toString c.2.1 ++ "/" ++ toString modelled.length, c.2.2, ([] : List String))
+  line out (("marks      ", Role.plain, []) :: said.intersperse (" ", Role.plain, []))
+
 /-- The requirement or clause, which opens the lines behind the count, then
 the count: whole in green, short in red. Nothing measured says so when code
 claims it (`claimed`), so an absent count is not read as nothing to count. -/
@@ -185,16 +210,21 @@ def judgedLines (out : Lines) : Option Judged → Lines
 
 /-- Each position of the marks as a piece of a line: a letter or a dash, with
 the role saying which mark it is and whether it is held. -/
-def markPieces : List (Mark × Bool × Char) → List (String × Role × List String)
+def markPiecesOf (m : Marks) : List (Mark × Bool × Char) → List (String × Role × List String)
   | [] => []
   | (mark, held, c) :: rest =>
-    (String.singleton (letter held c), Role.mark mark held, ["trace.rollup"]) :: markPieces rest
+    (if m.applies mark then
+      (String.singleton (letter held c), Role.mark mark held, ["trace.rollup"])
+    else ("·", Role.plain, [])) :: markPiecesOf m rest
+
+/-- The marks as pieces of a line; one that cannot be held is plain. -/
+def markPieces (m : Marks) : List (String × Role × List String) := markPiecesOf m m.each
 
 /-- One clause: its marks and key, its text and narrowings, what can be done
 with it, and every claim on it. -/
 def clauseLines (id : String) (out : Lines) (clause : ClauseShown) : Lines :=
   let key := clause.key.getD "(the whole requirement)"
-  let out := line (blank out) (markPieces clause.marks.each ++ [("  ", Role.plain, []), (key, Role.heading, [])])
+  let out := line (blank out) (markPieces clause.marks ++ [("  ", Role.plain, []), (key, Role.heading, [])])
   let out := wrapped out "  " clause.text Role.plain []
   let out := clause.narrowings.foldl (fun (o : Lines) (pair : String × String) =>
     wrapped o "    " (pair.1 ++ ": " ++ pair.2) Role.plain []) out
@@ -227,9 +257,16 @@ def requirementView (view : Shown) : Buffer :=
       line out [(status, Role.plain, []), ("  ", Role.plain, []), ("[ Approve ]", Role.added, ["trace.approve"])]
     else line out [(status, Role.plain, [])]
   let out := namesLine (namesLine out "refines    " view.refines) "refined by " view.refinedBy
+  -- What the document says: opening a requirement shows its text.
+  let out :=
+    if view.body.isEmpty then out
+    else
+      blank ((view.body.splitOn "\n").foldl (fun (o : Lines) (paragraph : String) =>
+        wrapped o "" paragraph Role.plain []) (blank out))
   let out := line out [("for agent  ", Role.plain, []), (view.id, Role.requirement, ["trace.context"]),
                        ("  context to copy", Role.plain, [])]
-  let out := coveredLine "covered    " view.id (view.clauses.any implemented) (evidenceLine out view.clauses) view.lines
+  let out := coveredLine "covered    " view.id (view.clauses.any implemented)
+    (marksLine (evidenceLine out view.clauses) view.clauses) view.lines
   finish (view.clauses.foldl (clauseLines view.id) out) ("requirement " ++ view.id)
 
 /-- Over two items that share a line of one file: that line counted once, the
@@ -249,8 +286,8 @@ def linked (b : Buffer) : List (String × List String) :=
 
 /-- A requirement of one clause, implemented and tested. -/
 def oneClause : Shown :=
-  ⟨"REQ-A", "A thing", "reqs/REQ-A.md", "draft", [], [],
-   [⟨some "one", "It shall.", [], ⟨true, false, true, false⟩,
+  ⟨"REQ-A", "A thing", "reqs/REQ-A.md", "draft", [], [], "",
+   [⟨some "one", "It shall.", [], ⟨true, false, true, false, false⟩,
      [⟨"implements", "src/a.rs", 4, some "f"⟩, ⟨"tests", "tests/a.rs", 9, none⟩], none, true, none, none⟩],
    60, none⟩
 

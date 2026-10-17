@@ -74,7 +74,7 @@ fn check(clause: &str, function: &str, entry: &str, arguments: &[&str], fields: 
     };
     let implementation = harness::rust_runner_with_params("REQ-STRENGTH", clause, entry, params, &scratch);
     let model = harness::lean_runner("TraceLean.Pinning", function, &op, arguments, &scratch);
-    let result = run(&op, &Schema::Struct { fields }, &model, &implementation, RunOptions { seed, cases: 2_000, shrink_rounds: 100 })
+    let result = run(&op, &Schema::Struct { fields }, &model, &implementation, RunOptions { seed, cases: 2_000 })
         .expect("both runners answer");
     support::agreed(&result);
     let _ = std::fs::remove_dir_all(&scratch);

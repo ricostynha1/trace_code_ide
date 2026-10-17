@@ -8,13 +8,8 @@
 // A richer medium than a terminal, so it draws more: a span with an action
 // becomes a button. What it may not do is draw text the buffer does not carry
 // or offer an action no span declares, and neither is possible here — the text
-// comes from `plainText` and the actions from `actionsAt`.
-//
-// Realises REQ-VIEW.text_is_the_content and REQ-VIEW.frontend_adds_nothing.
-// Written out rather than annotated: TraceLean has no TypeScript grammar, so it
-// cannot place a claim inside this file, and a claim that cannot be placed is
-// worse than one made where it is checked (ADR-0008). What checks this file is
-// `crates/core/tests/frontend_conformance_web.rs`.
+// comes from `plainText` and the actions from `actionsAt`. What checks this
+// file is `crates/core/tests/frontend_conformance_web.rs`.
 
 import {
   accessible,
@@ -66,7 +61,7 @@ function characters(text: string): string[] {
 // A piece boundary falls wherever the set of actions changes, so a frontend can
 // draw one button per region without deciding where the regions are.
 //
-// Realises REQ-VIEW.structure_over_text.
+// @implements REQ-VIEW.structure_over_text
 export function pieces(buffer: Buffer): Piece[][] {
   const all = characters(buffer.text);
   const lines: Piece[][] = [];
@@ -115,7 +110,9 @@ function sameActions(a: string[], b: string[]): boolean {
 // The lines are the buffer's own, and an action is offered at the start of
 // every piece that carries one — which is where the button goes.
 //
-// Realises REQ-VIEW.frontend_is_checkable.
+// @implements REQ-VIEW.frontend_is_checkable
+// @implements REQ-VIEW.text_is_the_content
+// @implements REQ-VIEW.frontend_adds_nothing
 export function render(buffer: Buffer): Rendering {
   const offered: [number, string][] = [];
   const seen = new Set<number>();
@@ -141,13 +138,16 @@ export function render(buffer: Buffer): Rendering {
 // An action not named here has no emblem and is drawn as its text, which is
 // `rendering_is_total` for this medium.
 //
-// Realises REQ-VIEW.presentation_may_be_symbolic.
+// @implements REQ-VIEW.presentation_may_be_symbolic
 const EMBLEMS: Record<string, string> = {
   "screen.station.project": "📁",
   "screen.station.trace": "🔗",
   "screen.station.sandbox": "🧪",
   "screen.station.design": "🕸",
   "screen.station.history": "🌳",
+  "screen.station.findings": "🔍",
+  "screen.station.definitions": "⚙",
+  "screen.station.proof": "∴",
 };
 
 export function symbolFor(actions: string[]): string | null {
@@ -181,7 +181,7 @@ export interface Shown {
 // the glyph it painted rather than after the text it stands for. It exists so
 // that the harness can be seen catching it.
 //
-// Realises REQ-VIEW.presentation_may_be_symbolic.
+// @implements REQ-VIEW.presentation_may_be_symbolic
 export function shown(buffer: Buffer, mislabel = false): Shown[][] {
   return pieces(buffer).map((line) =>
     line.map((piece) => {
@@ -200,7 +200,7 @@ export function presented(buffer: Buffer, mislabel = false): Presented[][] {
 //
 // This is what the capture harness compares against the buffer.
 //
-// Realises REQ-VIEW.screen_is_readable.
+// @implements REQ-VIEW.screen_is_readable
 export function screenText(buffer: Buffer, mislabel = false): string {
   return presented(buffer, mislabel).map(accessible).join("\n");
 }

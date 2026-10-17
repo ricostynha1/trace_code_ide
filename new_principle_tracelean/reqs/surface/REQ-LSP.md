@@ -14,6 +14,7 @@ clauses:
   edits_become_commands: A workspace edit received from a server shall be lowered into commands.
   edits_ordered: Lowered edits shall be applied so that earlier edits do not invalidate the positions of later ones.
   overlap_refused: Overlapping edits in one workspace edit shall be refused rather than applied in an arbitrary order.
+  proof_state_shown: The goals Lean's own server reports at the cursor of a Lean file shall be shown beside the file and follow the cursor and the edits, a server that cannot be started shall be named, and asking shall never make a key wait for the answer.
   absent_server_named: The absence of a running server shall be reported as such and shall not be presented as an empty result.
 ---
 

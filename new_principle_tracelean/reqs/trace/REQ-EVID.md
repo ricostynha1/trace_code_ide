@@ -11,6 +11,7 @@ clauses:
   absent_is_unset: A bond with no evidence record shall leave its mark unset.
   monotone: Adding an evidence record shall never clear a mark.
   marks_written: Marks shall be written in fixed positions, A J T P, with a dash for each mark not held, so that a gap names what is missing.
+  structural_not_applicable: A clause checked only by reading the tree shall hold neither the tested nor the proved mark, shall write both as not applicable rather than missing, and shall leave both marks of anything it is aggregated with as they are.
   judgement_caps: A judgement shall contribute at most the second level and shall never promote a link to tested or proved.
   record_reproducible: An evidence record shall carry what is needed to reproduce it, and shall not be expressible without it.
 ---

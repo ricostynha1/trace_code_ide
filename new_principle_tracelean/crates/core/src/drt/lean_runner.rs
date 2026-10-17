@@ -30,8 +30,15 @@ pub fn package_dir(root: &Path) -> PathBuf {
 ///
 /// @implements REQ-DRT-LEAN.toolchain_explained
 pub fn toolchain() -> Result<(), String> {
+    toolchain_on(&std::env::var_os("PATH").unwrap_or_default())
+}
+
+/// As `toolchain`, looking only in the directories `path` lists.
+///
+/// @implements REQ-DRT-LEAN.toolchain_explained
+pub fn toolchain_on(path: &std::ffi::OsStr) -> Result<(), String> {
     for tool in ["lean", "lake"] {
-        if which(tool).is_none() {
+        if which(path, tool).is_none() {
             return Err(format!(
                 "no `{tool}` on PATH. Install elan (https://github.com/leanprover/elan) \
                  so the model runner can be built."
@@ -41,11 +48,8 @@ pub fn toolchain() -> Result<(), String> {
     Ok(())
 }
 
-fn which(name: &str) -> Option<PathBuf> {
-    let path = std::env::var_os("PATH")?;
-    std::env::split_paths(&path)
-        .map(|dir| dir.join(name))
-        .find(|candidate| candidate.is_file())
+fn which(path: &std::ffi::OsStr, name: &str) -> Option<PathBuf> {
+    std::env::split_paths(path).map(|dir| dir.join(name)).find(|candidate| candidate.is_file())
 }
 
 /// The generated package's lakefile, requiring the project's Lean package by

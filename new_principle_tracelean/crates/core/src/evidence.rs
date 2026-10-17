@@ -68,6 +68,10 @@ pub struct Marks {
     pub judged: bool,
     pub tested: bool,
     pub proved: bool,
+    /// Checked by reading the tree rather than against a model (ADR-0012), so
+    /// there is nothing to test or prove: those two are written `·`, not `-`,
+    /// because nothing is missing. Never held alongside them.
+    pub structural: bool,
 }
 
 /// Which of the four marks a position of `AJTP` is.
@@ -92,9 +96,23 @@ impl Marks {
     }
 
     /// No mark at all.
-    pub const NONE: Marks = Marks { annotated: false, judged: false, tested: false, proved: false };
+    pub const NONE: Marks =
+        Marks { annotated: false, judged: false, tested: false, proved: false, structural: false };
 
-    /// Every mark `floor` asks for is held here.
+    /// What withholds nothing from what it is joined with: `x.and(NEUTRAL)` is
+    /// `x`, with a test or proof that cannot apply dropped. Never a clause's
+    /// own marks, only where a join starts.
+    pub const NEUTRAL: Marks =
+        Marks { annotated: true, judged: true, tested: false, proved: false, structural: true };
+
+    /// Whether a mark can be held at all: testing and proving need a model,
+    /// which a structural clause has none of.
+    pub fn applies(&self, mark: Mark) -> bool {
+        !(self.structural && matches!(mark, Mark::Tested | Mark::Proved))
+    }
+
+    /// Every mark `floor` asks for is held here. One that does not apply is
+    /// not held: a structural clause never meets a floor asking for a test.
     pub fn holds(&self, floor: Marks) -> bool {
         (self.annotated || !floor.annotated)
             && (self.judged || !floor.judged)
@@ -102,13 +120,18 @@ impl Marks {
             && (self.proved || !floor.proved)
     }
 
-    /// The marks both hold.
+    /// The marks both hold. A mark that does not apply to one side leaves the
+    /// other's standing, so a structural clause neither grants nor withholds
+    /// a test; one that applies to neither side applies to neither together.
     pub fn and(self, other: Marks) -> Marks {
+        let structural = self.structural && other.structural;
+        let met = |a: bool, b: bool| !structural && (a || self.structural) && (b || other.structural);
         Marks {
             annotated: self.annotated && other.annotated,
             judged: self.judged && other.judged,
-            tested: self.tested && other.tested,
-            proved: self.proved && other.proved,
+            tested: met(self.tested, other.tested),
+            proved: met(self.proved, other.proved),
+            structural,
         }
     }
 
@@ -134,16 +157,37 @@ pub fn marks(records: Vec<Record>, annotated: bool) -> Marks {
         judged: bond_level(&records, Bond::RequirementModel) >= Level::L2,
         tested: bond_level(&records, Bond::ModelImpl) >= Level::L3,
         proved: bond_level(&records, Bond::ModelProof) >= Level::L4,
+        structural: false,
+    }
+}
+
+/// A structural clause's marks: whatever it holds, testing and proving do not
+/// apply to it.
+///
+/// @implements REQ-EVID.structural_not_applicable
+/// @drt REQ-EVID.structural_not_applicable
+pub fn structural(marks: Marks) -> Marks {
+    Marks { tested: false, proved: false, structural: true, ..marks }
+}
+
+/// One position of the written marks: its letter, a dash where it is not
+/// held, a dot where it cannot be.
+pub fn letter_of(marks: Marks, (mark, held, letter): (Mark, bool, char)) -> char {
+    match (marks.applies(mark), held) {
+        (false, _) => '·',
+        (true, true) => letter,
+        (true, false) => '-',
     }
 }
 
 /// Marks in fixed positions, a dash where one is not held, so a gap names
-/// what is missing: `AJTP`, `A-TP`, `A---`.
+/// what is missing: `AJTP`, `A-TP`, `A---`; a dot where one cannot be held,
+/// `AJ··`.
 ///
 /// @implements REQ-EVID.marks_written
 /// @drt REQ-EVID.marks_written
 pub fn written(marks: Marks) -> String {
-    marks.each().iter().map(|&(_, held, letter)| if held { letter } else { '-' }).collect()
+    marks.each().iter().map(|&each| letter_of(marks, each)).collect()
 }
 
 #[cfg(test)]
@@ -191,11 +235,37 @@ mod tests {
     #[test]
     fn marks_are_written_in_fixed_positions() {
         assert_eq!(written(Marks::NONE), "----");
-        assert_eq!(written(Marks { annotated: true, judged: false, tested: true, proved: true }), "A-TP");
+        assert_eq!(written(Marks { annotated: true, tested: true, proved: true, ..Marks::NONE }), "A-TP");
         assert_eq!(
-            written(Marks { annotated: true, judged: true, tested: true, proved: true }),
+            written(Marks { annotated: true, judged: true, tested: true, proved: true, structural: false }),
             "AJTP"
         );
+        assert_eq!(written(structural(Marks { annotated: true, ..Marks::NONE })), "A-··");
+    }
+
+    /// A structural clause can hold neither a test nor a proof, whatever its
+    /// records say, and joined with a modelled clause it leaves that clause's
+    /// test and proof standing: it neither grants them nor withholds them.
+    ///
+    /// @tests REQ-EVID.structural_not_applicable
+    #[test]
+    fn testing_and_proving_do_not_apply_to_a_structural_clause() {
+        let full = marks(
+            vec![
+                r(Bond::RequirementModel, Level::L2),
+                r(Bond::ModelImpl, Level::L3),
+                r(Bond::ModelProof, Level::L4),
+            ],
+            true,
+        );
+        let read = structural(full);
+        assert_eq!(read.text(), "AJ··");
+        assert!(!read.holds(Marks { tested: true, ..Marks::NONE }));
+        let tested = marks(vec![r(Bond::ModelImpl, Level::L3)], true);
+        assert_eq!(read.and(tested).text(), "A-T-");
+        assert_eq!(tested.and(read).text(), "A-T-");
+        assert_eq!(read.and(read).text(), "AJ··");
+        assert_eq!(read.and(marks(vec![], true)).text(), "A---");
     }
 
     /// Adding a record never clears a mark.

@@ -158,6 +158,7 @@ pub fn offers(buffer: &Buffer, offset: usize, keymap: &Keymap) -> Vec<Offer> {
             "design.expand_all" => format!("Unfold everything under {name}"),
             "design.expand_everything" => "Unfold all of the design".into(),
             "design.fold_all" => "Fold the design to its roots".into(),
+            "design.open_only" => "Show only what is still to do, or everything".into(),
             "file.open" => format!("Open {name}"),
             "screen.show" => format!("Show {name}"),
             "observe.diff" => format!("Review the change to {name}"),
@@ -281,6 +282,14 @@ pub fn offers(buffer: &Buffer, offset: usize, keymap: &Keymap) -> Vec<Offer> {
             out.push(offer(
                 keymap,
                 "file",
+                "Show only what is still to do, or everything".into(),
+                "design.open_only",
+                None,
+                None,
+            ));
+            out.push(offer(
+                keymap,
+                "file",
                 "New requirement…".into(),
                 "trace.new_requirement",
                 None,
@@ -400,6 +409,60 @@ mod tests {
                 assert!(known.contains(&o.action), "{} is not an action", o.action);
             }
         }
+    }
+
+    /// A span's action is offered in words about what it is on, and each kind
+    /// of record or review offers what can be done with it: a sandbox the
+    /// sandbox's actions, a review the agent's change and that file alone.
+    ///
+    /// @tests REQ-ACT.everything_is_offered
+    #[test]
+    fn every_action_and_every_kind_of_buffer_is_offered_in_words() {
+        use crate::surface::view::{Role, Span};
+        let actions = [
+            ("trace.requirement", "Open REQ-X"),
+            ("trace.context", "Context for an agent to change REQ-X"),
+            ("context.toggle", "Include or leave out REQ-X"),
+            ("context.copy", "Copy the context for an agent"),
+            ("history.filter", "Show REQ-X in the history"),
+            ("trace.evidence", "Evidence recorded for REQ-X"),
+            ("trace.findings", "What the checker found"),
+            ("trace.check", "Check the tree"),
+            ("trace.rollup", "Coverage, requirement by requirement"),
+            ("observe.accept", "Accept the agent's change"),
+            ("observe.reject", "Reject the agent's change"),
+            ("observe.accept_file", "Accept this file"),
+            ("observe.reject_file", "Reject this file"),
+            // Any other action is described as the keymap describes it.
+            ("file.save", "Save"),
+        ];
+        let buffer = |kind: BufferKind, action: &str| Buffer {
+            id: "b".into(),
+            kind,
+            text: "REQ-X".into(),
+            spans: vec![Span { start: 0, stop: 5, role: Role::Requirement, actions: vec![action.to_string()] }],
+        };
+        let record = |title: &str| BufferKind::Record { title: title.into() };
+        for (action, words) in actions {
+            let offered = offers(&buffer(record("x"), action), 0, &keymap());
+            let here = offered.iter().find(|o| o.group == "here").expect("the span's action");
+            assert!(here.label.starts_with(words), "{action}: `{}`", here.label);
+        }
+
+        let file_actions = |kind: BufferKind| -> Vec<String> {
+            offers(&buffer(kind, "trace.check"), 0, &keymap())
+                .into_iter()
+                .filter(|o| o.group == "file")
+                .map(|o| o.action)
+                .collect()
+        };
+        let sandbox = file_actions(record("sandbox"));
+        for action in ["sandbox.new", "sandbox.copy", "observe.start", "observe.accept", "observe.reject", "sandbox.end"] {
+            assert!(sandbox.iter().any(|a| a == action), "a sandbox offers no {action}");
+        }
+        let review = file_actions(BufferKind::Review { target: "a.rs".into() });
+        assert!(review.iter().any(|a| a == "observe.accept_file") && review.iter().any(|a| a == "observe.reject_file"));
+        assert!(!file_actions(BufferKind::Menu { title: "keys".into() }).iter().any(|a| a == "trace.new_requirement"));
     }
 
     #[test]

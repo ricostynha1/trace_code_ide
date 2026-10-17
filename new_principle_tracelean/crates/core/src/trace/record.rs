@@ -365,6 +365,29 @@ mod tests {
         inputs.iter().map(|(a, b)| (a.to_string(), b.to_string())).collect()
     }
 
+    /// Every record comes back once, unchanged, on the side it belongs: one
+    /// still current, one whose input changed, one whose link moved.
+    ///
+    /// @tests REQ-STALE.scanner_never_writes
+    /// @tests REQ-STALE.stale_is_visible
+    #[test]
+    fn a_sweep_returns_every_record_on_its_side() {
+        let input = |link: &str, hash: &str| StalenessInput { link_hash: link.into(), inputs: now(&[("model", hash)]) };
+        let swept = sweep(
+            vec![input("l1", "h1"), input("l1", "old"), input("gone", "h1")],
+            vec!["l1".into()],
+            now(&[("model", "h1")]),
+        );
+        assert_eq!(swept.valid, vec![input("l1", "h1")]);
+        assert_eq!(
+            swept.stale,
+            vec![
+                (input("l1", "old"), Staleness::InputChanged { name: "model".into() }),
+                (input("gone", "h1"), Staleness::LinkRetargeted),
+            ]
+        );
+    }
+
     /// @tests REQ-STALE.change_invalidates
     #[test]
     fn a_changed_input_invalidates() {

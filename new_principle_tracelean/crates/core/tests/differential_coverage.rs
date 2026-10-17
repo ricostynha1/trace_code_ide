@@ -96,7 +96,7 @@ fn model_and_implementation_agree_on_what_a_run_covered() {
         &verdict_input(),
         &model,
         &implementation,
-        RunOptions { seed: 97, cases: 2_000, shrink_rounds: 100 },
+        RunOptions { seed: 97, cases: 2_000 },
     )
     .expect("both runners answer");
 
@@ -159,7 +159,7 @@ fn model_and_implementation_agree_that_an_uncovered_run_is_not_evidence() {
         &schema,
         &model,
         &implementation,
-        RunOptions { seed: 101, cases: 1_000, shrink_rounds: 100 },
+        RunOptions { seed: 101, cases: 1_000 },
     )
     .expect("both runners answer");
 
@@ -231,7 +231,7 @@ fn model_and_implementation_agree_on_which_waivers_are_unused() {
         &verdict_input(),
         &model,
         &implementation,
-        RunOptions { seed: 131, cases: 2_000, shrink_rounds: 100 },
+        RunOptions { seed: 131, cases: 2_000 },
     )
     .expect("both runners answer");
     support::agreed(&result);
@@ -292,7 +292,7 @@ fn model_and_implementation_agree_on_how_often_each_line_ran() {
         &schema,
         &model,
         &implementation,
-        RunOptions { seed: 137, cases: 2_000, shrink_rounds: 100 },
+        RunOptions { seed: 137, cases: 2_000 },
     )
     .expect("both runners answer");
     support::agreed(&result);
@@ -331,7 +331,7 @@ fn model_and_implementation_agree_on_which_classes_a_stream_reaches() {
         &schema,
         &model,
         &implementation,
-        RunOptions { seed: 139, cases: 1_000, shrink_rounds: 100 },
+        RunOptions { seed: 139, cases: 1_000 },
     )
     .expect("both runners answer");
     support::agreed(&result);

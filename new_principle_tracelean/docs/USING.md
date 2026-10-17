@@ -36,7 +36,10 @@ The icons on the left are **stations**, always there:
 | 📁 | the project's files |
 | 🔗 | the trace of the file you are reading: each claim it makes, the clause's text, and every other claim on that clause (its tests, its model, the code it tests) — it follows you from file to file. On a requirement's own document it lists each clause and everything that claims it, flagging clauses nothing claims |
 | 🧪 | the sandbox: run an AI agent on a copy of the tree, then review its changes |
-| 🕸 | the design: the requirements as their refinement graph, opening on the roots. Click ▸ to unfold one level; with the cursor on it, the bar (or `Space g a`) unfolds everything under it; **[ expand all ]** and **[ fold all ]** at the top do the whole graph |
+| 🕸 | the design: the requirements as their refinement graph, opening on the roots. Click ▸ to unfold one level; with the cursor on it, the bar (or `Space g a`) unfolds everything under it; **[ expand all ]** and **[ fold all ]** at the top do the whole graph; **[ open only ]** (`Space g u`) hides every requirement with nothing left to do and nothing open under it |
+| 🔍 | the findings: what the checker found, each message saying what to create (`Space w t f`) |
+| ⚙ | the definitions: every theme colour with its value; `Space f e` on a row (or a click) changes it and it is saved and shown at once (`Space w t c`) |
+| ∴ | the proof: the goals Lean reports at the cursor of a Lean file, following the cursor and the edits (`Space w t g`) |
 | 🌳 | the undo tree: every state the project has been in, each branch in its own column; `#0` is the tree as it was opened. Click a node to go there, rest on it to see the change it made; **All / File / Saved** at the top show everything, only the open file's changes, or only where you saved (`Space h f`) |
 
 ## Finding your way between requirements and code
@@ -70,15 +73,21 @@ The icons on the left are **stations**, always there:
   opened requirement lists every clause with its evidence marks (`AJTP`) and
   every claim as a `path:line` link — click to jump there. A clause nothing
   claims says so in red.
-- **🕸 Design** shows how they refine each other, each with its marks and a
-  bar of how many clauses something implements (`███░░ 3/5`).
+- **🕸 Design** shows how they refine each other. Each row reads
+  `A-TP  REQ-X  I3/4 A4/4 J2/4 T3/4 P3/4  lines 95%  +children 88%`: its
+  marks, then how many clauses are implemented and hold each mark, each in
+  its mark's colour, then the lines of its code tests ran, and — when the
+  requirements refining it left lines unrun — the share over it and all of
+  them. An opened requirement shows the same counts on its `marks` line.
 
 Evidence marks, in fixed positions, a dash for each one missing: **A**
 annotated, **J** judged by a person, **T** differentially tested, **P** proved.
 Each is read from its own bond — something claims it; requirement↔model;
 model↔code; model↔proof — and none needs another, so a proved and tested model
 nobody judged reads `A-TP`. A requirement holds a mark only when every one of its
-clauses does.
+clauses does. A clause checked only by a test that reads the repository
+(`@structural`) has no model to test or prove: its T and P read `·`, not
+applicable, and it is done at `AJ··`.
 
 A proof says the model has a property, not that the property leaves one
 answer. Model a clause twice — a specification `def P (x y : Int) : Prop` and
@@ -128,7 +137,8 @@ The usual editor keys work: `Ctrl+S` save, `Ctrl+Z`/`Ctrl+Y` undo/redo,
 `Ctrl+F` find (`F3` next), `Ctrl+H` replace, `Ctrl+P` open a file by name,
 `Ctrl+Shift+P` any action by name, `Ctrl+Shift+F` search all files, `F12` or
 Ctrl+click go to definition, `Alt+Left` back, `Ctrl+W` close tab, `Ctrl+/`
-comment.
+comment. Definitions and uses are found by reading the files, with no language
+server; a project reopens with the tabs it had ([REQ-NAV](../reqs/surface/REQ-NAV.md)).
 
 The editor is modal, like Vim: `i` to type, `Escape` to stop. Outside typing,
 **Space** opens the leader menu at the bottom (Emacs which-key style):
@@ -141,7 +151,7 @@ The editor is modal, like Vim: `i` to type, `Escape` to stop. Outside typing,
 | `Space c` | context for an agent: `o` open it for the requirement here, `t` include/leave out a part, `y` copy |
 | `Space a` | agent: `n` new sandbox, `c` copy its command, `d` review diff, `a`/`x` accept/reject |
 | `Space d` | differential testing: `r` run, `b` bindings, `c` coverage |
-| `Space w` | panes: `h j k l` move focus, `v`/`s` split, `q` close, `t` stations (`p` files, `l` trace, `r` requirements, `d` graph, `s` sandbox, `h` history) |
+| `Space w` | panes: `h j k l` move focus, `v`/`s` split, `q` close, `t` stations (`p` files, `l` trace, `r`/`d` graph, `s` sandbox, `h` history, `f` findings, `c` definitions, `g` proof) |
 
 ## Working with an AI agent
 
