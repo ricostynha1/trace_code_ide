@@ -32,7 +32,7 @@ pub fn frame(message: &Value) -> Vec<u8> {
 
 /// A file's address as a server names it.
 pub fn file_uri(path: &Path) -> String {
-    let absolute = std::fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf());
+    let absolute = std::path::absolute(path).unwrap_or_else(|_| path.to_path_buf());
     format!("file://{}", absolute.display().to_string().replace(' ', "%20"))
 }
 

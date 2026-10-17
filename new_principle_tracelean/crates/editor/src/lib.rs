@@ -1754,6 +1754,12 @@ impl Editor {
     ///
     /// Answers whether it asked.
     fn start_asking(&mut self, action: &str) -> bool {
+        // Only the actions that cannot act without the name. `file.open` also
+        // has an entry that asks (for another folder), and on a row of the
+        // listing the key opens that row: asking there would be a different action.
+        if !matches!(action, "file.rename" | "file.new" | "trace.new_requirement") {
+            return false;
+        }
         let pane = self.screen.focus.clone();
         let at = self.window_offset(&pane, self.offset);
         let Some(offer) = self.offers_at(&pane, at).into_iter().find(|o| o.action == action && o.asks.is_some())
@@ -3691,17 +3697,7 @@ impl Editor {
         if !matches!(hex.len(), 3 | 4 | 6 | 8) || !hex.chars().all(|c| c.is_ascii_hexdigit()) {
             return self.say("refused", &format!("`{value}` is not a colour like #1e90ff; nothing changed"));
         }
-        let path = self.root.join(theme::OVERRIDE);
-        let mut over: serde_json::Value = std::fs::read_to_string(&path)
-            .ok()
-            .and_then(|text| serde_json::from_str(&text).ok())
-            .filter(serde_json::Value::is_object)
-            .unwrap_or_else(|| serde_json::json!({}));
-        over[section][key] = serde_json::Value::String(value.to_string());
-        let written = path
-            .parent()
-            .map_or(Ok(()), std::fs::create_dir_all)
-            .and_then(|()| std::fs::write(&path, serde_json::to_string_pretty(&over).unwrap_or_default() + "\n"));
+        let written = theme::write_setting(&self.root, section, key, value);
         match written {
             Ok(()) => {
                 self.show(self.definitions_buffer());

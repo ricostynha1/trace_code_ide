@@ -48,6 +48,27 @@ fn merge(base: &mut Value, over: Value) {
     }
 }
 
+/// Write one setting into the project's override file, keeping what else is
+/// in it, and make the file if there is none. The one place the editor writes
+/// the theme, so that changing a colour is a change to the file and nothing
+/// else.
+///
+/// @implements REQ-LOOK.setting_edited_in_place
+pub fn write_setting(root: &Path, section: &str, key: &str, value: &str) -> Result<(), String> {
+    let path = root.join(OVERRIDE);
+    let mut over: Value = std::fs::read_to_string(&path)
+        .ok()
+        .and_then(|text| serde_json::from_str(&text).ok())
+        .filter(Value::is_object)
+        .unwrap_or_else(|| serde_json::json!({}));
+    over[section][key] = Value::String(value.to_string());
+    if let Some(folder) = path.parent() {
+        std::fs::create_dir_all(folder).map_err(|error| error.to_string())?;
+    }
+    let text = serde_json::to_string_pretty(&over).map_err(|error| error.to_string())?;
+    std::fs::write(&path, text + "\n").map_err(|error| error.to_string())
+}
+
 /// A colour from one section of the theme, as `#rrggbb`.
 pub fn colour<'a>(theme: &'a Value, section: &str, key: &str) -> Option<&'a str> {
     theme.get(section)?.get(key)?.as_str()

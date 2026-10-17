@@ -585,11 +585,16 @@ fn resize_at(pane: &str, amount: i64, layout: Layout) -> Layout {
             Some(index) => {
                 let nested = matches!(&parts[index].1, Layout::Split { axis: inner, .. } if *inner == axis);
                 if nested {
+                    // Only the part that holds it, the first when a name is
+                    // held twice: every other part keeps its weights.
                     Layout::Split {
                         axis,
                         parts: parts
                             .into_iter()
-                            .map(|(weight, inner)| (weight, resize_at(pane, amount, inner)))
+                            .enumerate()
+                            .map(|(at, (weight, inner))| {
+                                (weight, if at == index { resize_at(pane, amount, inner) } else { inner })
+                            })
                             .collect(),
                     }
                 } else if index + 1 < parts.len() {

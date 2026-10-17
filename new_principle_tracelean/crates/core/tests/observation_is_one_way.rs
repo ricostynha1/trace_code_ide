@@ -95,6 +95,12 @@ fn nothing_writes_towards_the_tool() {
         if file.contains("/drt/") {
             continue;
         }
+        // Lean's own language server, asked what the proof state is: Lean's
+        // toolchain, started for a question, not a tool being instructed. The
+        // one module, named, and no other.
+        if file.ends_with("src/lean_server.rs") {
+            continue;
+        }
         for (line_no, line) in text.lines().enumerate() {
             let line = line.trim();
             if line.starts_with("//") || line.starts_with("///") {

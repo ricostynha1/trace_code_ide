@@ -309,13 +309,17 @@ fn weights_of(layout: &Layout) -> Vec<u64> {
 /// than exported: a counting helper that called the code under test would count
 /// what that code believes rather than what the value is.
 fn enclosing(pane: &str, layout: &Layout) -> Option<(usize, Vec<u64>)> {
-    let Layout::Split { parts, .. } = layout else { return None };
+    let Layout::Split { axis, parts } = layout else { return None };
     let at = parts.iter().position(|(_, inner)| pane_ids(inner).iter().any(|id| id == pane));
     match at {
         None => None,
         Some(index) => {
             let inner = &parts[index].1;
-            if matches!(inner, Layout::Split { .. }) && parts.len() == 1 {
+            // A part that is itself a split along the same axis answers first
+            // — the pane is one of its parts, and its divider is that split's —
+            // and so does the only part there is.
+            let nested = matches!(inner, Layout::Split { axis: inner_axis, .. } if inner_axis == axis);
+            if matches!(inner, Layout::Split { .. }) && (nested || parts.len() == 1) {
                 enclosing(pane, inner)
             } else {
                 Some((index, parts.iter().map(|(weight, _)| *weight).collect()))

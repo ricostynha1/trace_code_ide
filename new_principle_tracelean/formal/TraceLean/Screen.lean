@@ -615,7 +615,7 @@ mutual
           | Axis.down, some (_, Layout.split Axis.down _) => true
           | _, _ => false
         if nested then
-          Layout.split axis (resizeAtParts pane amount parts)
+          Layout.split axis (resizeAtOnly pane amount index 0 parts)
         else if index + 1 < parts.length then
           Layout.split axis (shiftAt index amount parts)
         else if index = 0 then
@@ -624,6 +624,14 @@ mutual
           Layout.split axis (resizeAtParts pane amount parts)
         else
           Layout.split axis (shiftAt (index - 1) (-amount) parts)
+
+  /-- Only the part at `target` answers; every other part is as it was. -/
+  private def resizeAtOnly (pane : String) (amount : Int) (target : Nat) :
+      Nat → List (Nat × Layout) → List (Nat × Layout)
+    | _, [] => []
+    | at_, (weight, layout) :: rest =>
+      (weight, if at_ == target then resizeAt pane amount layout else layout) ::
+        resizeAtOnly pane amount target (at_ + 1) rest
 
   private def resizeAtParts (pane : String) (amount : Int) :
       List (Nat × Layout) → List (Nat × Layout)
