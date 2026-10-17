@@ -11,7 +11,7 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+      "note": "ricostynha, this session: \"perform you the judgements\". stationKind gives each of the eight stations the kind of buffer it stands for and none for any other name; every_station_produces proves each listed station produces one."
     }
   },
   "linkHash": "41b41ef0c2e83404",
@@ -22,7 +22,7 @@
     ],
     [
       "model",
-      "8a0556c0e7289548"
+      "cba74144dff1da0d"
     ]
   ]
 }

@@ -11,7 +11,7 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "requirementView shows each clause with its marks (a dot where a mark cannot apply), a marks line of counts, and every claim as a link to its file and line."
+      "note": "ricostynha, this session: \"perform you the judgements\". Each clause is shown with its marks and each claim as a path:line link that opens the file. Beyond the clause: the document body and the evidence and marks summary lines; the per-clause rows keep the A J T P letters while the summary uses I P M T S D."
     }
   },
   "linkHash": "6cfca4316b773547",
@@ -22,7 +22,7 @@
     ],
     [
       "model",
-      "bde0d4dd498bf9a4"
+      "24238bce88ec348d"
     ]
   ]
 }

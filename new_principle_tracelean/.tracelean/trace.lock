@@ -43718,6 +43718,34 @@
     {
       "key": {
         "reqId": "REQ-OBS",
+        "clause": "no_instruction_channel",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "ricostynha, this session: \"perform you the judgements\". The model is the structural scan for any write towards a process outside the differential toolchain; the clause is about the agent tool, and the scan is stricter than that. Caveat: the scan now exempts one named module, crates/core/src/lean_server.rs (Lean's own server, not the observed tool). The clause text does not mention it, and the same session wrote that exemption, so a person should confirm it."
+        }
+      },
+      "linkHash": "e2ec44675be7a413",
+      "inputs": [
+        [
+          "requirement",
+          "66a1f78c615521bb"
+        ],
+        [
+          "model",
+          "c8056f39e7388583"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-OBS",
         "clause": "only_what_the_tool_changed",
         "bond": "requirementModel"
       },
@@ -46613,9 +46641,9 @@
       "level": "L3",
       "detail": {
         "drt": {
-          "seed": 13,
+          "seed": 53,
           "cases": 2000,
-          "op": "REQ-SBX.classification_total"
+          "op": "REQ-OBS.workspace_is_a_copy"
         }
       },
       "linkHash": "cd95fe45786ad4d7",
@@ -48135,6 +48163,34 @@
         [
           "toolchain",
           "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-SCREEN",
+        "clause": "station_produces_a_buffer",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "ricostynha, this session: \"perform you the judgements\". stationKind gives each of the eight stations the kind of buffer it stands for and none for any other name; every_station_produces proves each listed station produces one."
+        }
+      },
+      "linkHash": "41b41ef0c2e83404",
+      "inputs": [
+        [
+          "requirement",
+          "8e70358f44206d98"
+        ],
+        [
+          "model",
+          "cba74144dff1da0d"
         ]
       ]
     },
@@ -50306,6 +50362,34 @@
         [
           "toolchain",
           "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-SHOW",
+        "clause": "requirement_opened",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "ricostynha, this session: \"perform you the judgements\". Each clause is shown with its marks and each claim as a path:line link that opens the file. Beyond the clause: the document body and the evidence and marks summary lines; the per-clause rows keep the A J T P letters while the summary uses I P M T S D."
+        }
+      },
+      "linkHash": "6cfca4316b773547",
+      "inputs": [
+        [
+          "requirement",
+          "56b664e251de23cf"
+        ],
+        [
+          "model",
+          "24238bce88ec348d"
         ]
       ]
     },
@@ -53574,6 +53658,34 @@
         [
           "toolchain",
           "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-UNDO",
+        "clause": "tree_is_shown",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "ricostynha, this session: \"perform you the judgements\". Every row is named (#n) and jumps there, and the current node is marked. Caveat: under the File and Saved filters only the kept nodes are shown, so the clause holds for the All view."
+        }
+      },
+      "linkHash": "84b61d4f08809565",
+      "inputs": [
+        [
+          "requirement",
+          "8c27c6edfa27ff8c"
+        ],
+        [
+          "model",
+          "f98b27ad79de4f53"
         ]
       ]
     },

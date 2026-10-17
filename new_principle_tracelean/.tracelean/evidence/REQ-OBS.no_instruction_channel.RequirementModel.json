@@ -11,7 +11,7 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "Nothing flows back to the tool."
+      "note": "ricostynha, this session: \"perform you the judgements\". The model is the structural scan for any write towards a process outside the differential toolchain; the clause is about the agent tool, and the scan is stricter than that. Caveat: the scan now exempts one named module, crates/core/src/lean_server.rs (Lean's own server, not the observed tool). The clause text does not mention it, and the same session wrote that exemption, so a person should confirm it."
     }
   },
   "linkHash": "e2ec44675be7a413",
@@ -22,7 +22,7 @@
     ],
     [
       "model",
-      "e546e4029c4ff172"
+      "c8056f39e7388583"
     ]
   ]
 }
