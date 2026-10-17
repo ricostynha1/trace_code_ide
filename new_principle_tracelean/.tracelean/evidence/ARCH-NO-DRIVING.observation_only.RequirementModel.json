@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "ARCH-NO-DRIVING",
+    "clause": "observation_only",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "Information flows from transcript and tree into the editor, never back; read off the tree."
+    }
+  },
+  "linkHash": "0469bfd3aef8e007",
+  "inputs": [
+    [
+      "requirement",
+      "70f369a01f85fe64"
+    ],
+    [
+      "model",
+      "ac1a404c3a1e74c3"
+    ]
+  ]
+}

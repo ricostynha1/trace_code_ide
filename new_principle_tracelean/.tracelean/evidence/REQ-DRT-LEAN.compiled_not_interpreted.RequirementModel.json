@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-DRT-LEAN",
+    "clause": "compiled_not_interpreted",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "The generated package declares a lean_exe."
+    }
+  },
+  "linkHash": "d48f8370b02f1502",
+  "inputs": [
+    [
+      "requirement",
+      "b992b3a8ffd3068a"
+    ],
+    [
+      "model",
+      "524ca791d92d75e5"
+    ]
+  ]
+}

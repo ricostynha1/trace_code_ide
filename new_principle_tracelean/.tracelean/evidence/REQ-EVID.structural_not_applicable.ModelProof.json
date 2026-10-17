@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-EVID",
+    "clause": "structural_not_applicable",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Evidence::testing_and_proving_do_not_apply_by_reading",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "1d5689d2559407f9",
+  "inputs": [
+    [
+      "model",
+      "e135a3eff2ec6e64"
+    ],
+    [
+      "requirement",
+      "6eda17e62987d88f"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

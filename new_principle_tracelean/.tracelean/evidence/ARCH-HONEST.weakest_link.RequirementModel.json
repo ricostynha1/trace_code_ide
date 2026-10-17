@@ -11,7 +11,7 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "combine ANDs each mark over the parts; no averaging or majority exists in the model."
+      "note": "combine folds both from neutral: a mark is held only when every part holds it; a structural part, which cannot hold T or P, leaves the others' T and P as they are (REQ-EVID.structural_not_applicable), and never raises them."
     }
   },
   "linkHash": "673b93f13a696d06",
@@ -22,7 +22,7 @@
     ],
     [
       "model",
-      "9d57426604aad65f"
+      "f59ac700b6197593"
     ]
   ]
 }

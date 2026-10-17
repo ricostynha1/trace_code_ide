@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "ARCH-HONEST",
+    "clause": "untraced_visible",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "The scan keeps every scanned file, so untraced ones are counted in the denominator."
+    }
+  },
+  "linkHash": "40379609657497c9",
+  "inputs": [
+    [
+      "requirement",
+      "5573c66d6a906dd0"
+    ],
+    [
+      "model",
+      "fbb4d48e9cc6e339"
+    ]
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-EVID",
+    "clause": "structural_not_applicable",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "structural clears tested and proved and sets structural; letterOf writes a dot for a mark that does not apply; both leaves the other part's T and P when one part is structural."
+    }
+  },
+  "linkHash": "a393fa574ac42e3b",
+  "inputs": [
+    [
+      "requirement",
+      "6eda17e62987d88f"
+    ],
+    [
+      "model",
+      "e135a3eff2ec6e64"
+    ]
+  ]
+}

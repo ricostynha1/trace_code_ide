@@ -2,6 +2,7 @@
 //! layer.
 
 pub mod act;
+pub mod ask;
 pub mod cells;
 pub mod chips;
 pub mod context;
@@ -24,5 +25,6 @@ pub mod reopen;
 pub mod requirement_view;
 pub mod sandbox_view;
 pub mod screen;
+pub mod setting;
 pub mod view;
 pub mod welcome;

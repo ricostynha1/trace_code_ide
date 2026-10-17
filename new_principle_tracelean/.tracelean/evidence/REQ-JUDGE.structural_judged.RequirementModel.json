@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-JUDGE",
+    "clause": "structural_judged",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "restsOn rests a clause with no model on its structural checks' hashes, sorted and once each; the material labels the test as a structural check, and a changed test changes the hash."
+    }
+  },
+  "linkHash": "1a06c686d63fd413",
+  "inputs": [
+    [
+      "requirement",
+      "e45b0a4f4366afa8"
+    ],
+    [
+      "model",
+      "735e0b5aea4aaa7f"
+    ]
+  ]
+}

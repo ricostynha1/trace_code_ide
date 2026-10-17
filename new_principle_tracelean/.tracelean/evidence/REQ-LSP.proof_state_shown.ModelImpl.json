@@ -1,0 +1,30 @@
+{
+  "key": {
+    "reqId": "REQ-LSP",
+    "clause": "proof_state_shown",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 109,
+      "cases": 2000,
+      "op": "REQ-LSP.proof_state_shown"
+    }
+  },
+  "linkHash": "2ea0e46e9abb9254",
+  "inputs": [
+    [
+      "implementation",
+      "18eaeeebd53ae99c"
+    ],
+    [
+      "model",
+      "9c6f2d0e5df500d8"
+    ],
+    [
+      "requirement",
+      "46a45432011a5930"
+    ]
+  ]
+}

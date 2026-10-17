@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-OBS",
+    "clause": "undoable",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "An observed change is undone like any other."
+    }
+  },
+  "linkHash": "d3731c38008ce13c",
+  "inputs": [
+    [
+      "requirement",
+      "dd8be90945dc1a10"
+    ],
+    [
+      "model",
+      "348b05903eeb3884"
+    ]
+  ]
+}

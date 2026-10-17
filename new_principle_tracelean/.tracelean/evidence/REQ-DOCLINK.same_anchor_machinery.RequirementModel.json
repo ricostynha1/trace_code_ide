@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-DOCLINK",
+    "clause": "same_anchor_machinery",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "A document target resolves through the annotation anchor code."
+    }
+  },
+  "linkHash": "9b00885d921219b7",
+  "inputs": [
+    [
+      "requirement",
+      "693172eff61d2d1c"
+    ],
+    [
+      "model",
+      "6dd3b99f73bffb2d"
+    ]
+  ]
+}

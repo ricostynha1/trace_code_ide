@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-CONTEXT",
+    "clause": "copied_not_sent",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "The context is put on the clipboard or printed; nothing sends it."
+    }
+  },
+  "linkHash": "49cab8be04dff89e",
+  "inputs": [
+    [
+      "requirement",
+      "3a8cf60320ea975c"
+    ],
+    [
+      "model",
+      "c7b4ba7108b35f40"
+    ]
+  ]
+}

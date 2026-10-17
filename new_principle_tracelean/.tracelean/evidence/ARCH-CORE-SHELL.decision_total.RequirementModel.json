@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "ARCH-CORE-SHELL",
+    "clause": "decision_total",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "Three checks together: no file IO outside declared shells, no clock or unseeded randomness, no state kept between calls outside one listed compile cache; each rejects a counter-example."
+    }
+  },
+  "linkHash": "a28156ba14f09681",
+  "inputs": [
+    [
+      "requirement",
+      "6cd23571fa602b28"
+    ],
+    [
+      "model",
+      "c6350cfc5113d151+fbb4d48e9cc6e339"
+    ]
+  ]
+}

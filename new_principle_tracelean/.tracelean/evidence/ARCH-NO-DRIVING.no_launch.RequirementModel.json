@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "ARCH-NO-DRIVING",
+    "clause": "no_launch",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "No process spawn of an agent anywhere in the source; the check lists launch sites."
+    }
+  },
+  "linkHash": "730f70e0560173b1",
+  "inputs": [
+    [
+      "requirement",
+      "bf3477cd815bc416"
+    ],
+    [
+      "model",
+      "c5b1fedc3bbe403c"
+    ]
+  ]
+}

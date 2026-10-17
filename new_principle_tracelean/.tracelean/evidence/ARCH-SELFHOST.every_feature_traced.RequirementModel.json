@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "ARCH-SELFHOST",
+    "clause": "every_feature_traced",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "Every .rs and .ts file that ships, now including the web frontend via the TypeScript grammar, is claimed by an annotation; the check rejects an unclaimed file."
+    }
+  },
+  "linkHash": "a779c16bf17b4475",
+  "inputs": [
+    [
+      "requirement",
+      "436b867d186cebff"
+    ],
+    [
+      "model",
+      "6d8d2fa66cffe009"
+    ]
+  ]
+}

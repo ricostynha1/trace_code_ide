@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "ARCH-SELFHOST",
+    "clause": "docs_checked",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "Every document's links are resolved against the index, and drift is reported as in-review."
+    }
+  },
+  "linkHash": "e33f8c50b3a97205",
+  "inputs": [
+    [
+      "requirement",
+      "08491b097319627b"
+    ],
+    [
+      "model",
+      "20046175f529eb76"
+    ]
+  ]
+}

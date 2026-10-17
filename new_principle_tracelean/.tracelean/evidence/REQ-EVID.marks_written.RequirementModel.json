@@ -11,7 +11,7 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "written emits A J T P in fixed positions, a dash for each unheld mark."
+      "note": "written gives A J T P in fixed positions with a dash for a mark not held; a dot only where the mark cannot apply, per structural_not_applicable."
     }
   },
   "linkHash": "1a6ddbe9285b244a",
@@ -22,7 +22,7 @@
     ],
     [
       "model",
-      "9687c753fed48a43"
+      "f108eb4624751126"
     ]
   ]
 }

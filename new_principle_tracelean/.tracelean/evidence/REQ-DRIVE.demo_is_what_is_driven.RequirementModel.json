@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-DRIVE",
+    "clause": "demo_is_what_is_driven",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "The driving suite opens the demo the person would."
+    }
+  },
+  "linkHash": "4ccd40779f06b6a9",
+  "inputs": [
+    [
+      "requirement",
+      "fbdafe0e8343c76e"
+    ],
+    [
+      "model",
+      "8ac56fee967cde1d"
+    ]
+  ]
+}

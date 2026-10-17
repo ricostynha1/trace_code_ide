@@ -1,0 +1,30 @@
+{
+  "key": {
+    "reqId": "REQ-NAV",
+    "clause": "definitions_found",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 83,
+      "cases": 4000,
+      "op": "REQ-NAV.definitions_found"
+    }
+  },
+  "linkHash": "56c79d5f801b2bff",
+  "inputs": [
+    [
+      "implementation",
+      "94a54e9098207386"
+    ],
+    [
+      "model",
+      "28e8cb8d937d7122"
+    ],
+    [
+      "requirement",
+      "acd429a8c8b23ccb"
+    ]
+  ]
+}

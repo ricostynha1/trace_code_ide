@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-ANNOT",
+    "clause": "literals_protected",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "Literal ranges are recorded and excluded from annotation parsing in every grammar."
+    }
+  },
+  "linkHash": "34734cf5f4098258",
+  "inputs": [
+    [
+      "requirement",
+      "56d27ab602a06310"
+    ],
+    [
+      "model",
+      "0928ef09a67102ac"
+    ]
+  ]
+}

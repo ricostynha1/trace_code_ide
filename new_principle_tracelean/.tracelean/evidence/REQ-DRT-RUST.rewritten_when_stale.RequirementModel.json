@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-DRT-RUST",
+    "clause": "rewritten_when_stale",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "A tampered runner is rewritten."
+    }
+  },
+  "linkHash": "ed35a1d15b35784b",
+  "inputs": [
+    [
+      "requirement",
+      "2875c22d5128ebb5"
+    ],
+    [
+      "model",
+      "31b243300834fbe9"
+    ]
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "ARCH-EFFECT-LAW",
+    "clause": "law_stated",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "Every opaque constant is accompanied by a law or documents its claim in its type."
+    }
+  },
+  "linkHash": "5bf5b376cf59fbf9",
+  "inputs": [
+    [
+      "requirement",
+      "f0d9386513d88581"
+    ],
+    [
+      "model",
+      "144654390a25b589"
+    ]
+  ]
+}

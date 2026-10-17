@@ -1,0 +1,30 @@
+{
+  "key": {
+    "reqId": "REQ-VIEW",
+    "clause": "everything_is_a_buffer",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 37,
+      "cases": 2000,
+      "op": "REQ-VIEW.structure_has_one_type"
+    }
+  },
+  "linkHash": "6d56598490652bc8",
+  "inputs": [
+    [
+      "implementation",
+      "1316a77ef517bbe5+4e51ed5c840c7596+631807e04b5753ba"
+    ],
+    [
+      "model",
+      "1893cd03055540ab"
+    ],
+    [
+      "requirement",
+      "6281c6c32117943f"
+    ]
+  ]
+}

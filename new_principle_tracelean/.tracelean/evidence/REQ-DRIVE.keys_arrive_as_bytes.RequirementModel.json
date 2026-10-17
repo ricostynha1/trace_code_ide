@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-DRIVE",
+    "clause": "keys_arrive_as_bytes",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "Keys reach the terminal as bytes over a pseudo-terminal; no names are supplied."
+    }
+  },
+  "linkHash": "aca2502ee75ad8c0",
+  "inputs": [
+    [
+      "requirement",
+      "15663aad5a030c52"
+    ],
+    [
+      "model",
+      "cd02321d3b203200"
+    ]
+  ]
+}

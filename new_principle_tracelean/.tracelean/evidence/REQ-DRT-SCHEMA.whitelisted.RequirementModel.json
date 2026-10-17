@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-DRT-SCHEMA",
+    "clause": "whitelisted",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "The schema grammar is a closed enum."
+    }
+  },
+  "linkHash": "3819d1a4d66bfb96",
+  "inputs": [
+    [
+      "requirement",
+      "0d1a478808af9896"
+    ],
+    [
+      "model",
+      "a7e67f6d3abcd22b"
+    ]
+  ]
+}

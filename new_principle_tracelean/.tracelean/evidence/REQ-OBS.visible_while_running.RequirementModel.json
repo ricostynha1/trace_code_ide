@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-OBS",
+    "clause": "visible_while_running",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "Changes appear while the tool runs."
+    }
+  },
+  "linkHash": "4f0033716de7eb25",
+  "inputs": [
+    [
+      "requirement",
+      "87a2e08c0f07c24c"
+    ],
+    [
+      "model",
+      "c358546e3e27a927"
+    ]
+  ]
+}

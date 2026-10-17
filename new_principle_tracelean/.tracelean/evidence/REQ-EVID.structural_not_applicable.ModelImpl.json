@@ -1,0 +1,30 @@
+{
+  "key": {
+    "reqId": "REQ-EVID",
+    "clause": "structural_not_applicable",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 31,
+      "cases": 1000,
+      "op": "REQ-EVID.structural_not_applicable"
+    }
+  },
+  "linkHash": "7604425099bd79cd",
+  "inputs": [
+    [
+      "implementation",
+      "11494694f5a6ef9e+eea13452fdf31a4d+fe9fc79dd58ccba7"
+    ],
+    [
+      "model",
+      "e135a3eff2ec6e64"
+    ],
+    [
+      "requirement",
+      "6eda17e62987d88f"
+    ]
+  ]
+}

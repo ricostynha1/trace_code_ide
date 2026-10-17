@@ -11,7 +11,7 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "bondLevel is a max fold; each mark is a threshold on it, so an added record can only set marks."
+      "note": "Adding a record can only set a mark; the structural flag comes from links and no record clears it."
     }
   },
   "linkHash": "b6a903e0747472c0",
@@ -22,7 +22,7 @@
     ],
     [
       "model",
-      "a1cef9e4de9c1212"
+      "1272c4a23358fb47"
     ]
   ]
 }

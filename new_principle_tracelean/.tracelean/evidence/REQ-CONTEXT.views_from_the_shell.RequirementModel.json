@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-CONTEXT",
+    "clause": "views_from_the_shell",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "tracelean-view calls editor.view and builds no buffer; the check reads the shell's source and rejects one that builds its own; every view prints what the editor shows and keeps nothing."
+    }
+  },
+  "linkHash": "275211609d87e49c",
+  "inputs": [
+    [
+      "requirement",
+      "340a311ad0c7fa8c"
+    ],
+    [
+      "model",
+      "0d5c92a92f2d4624"
+    ]
+  ]
+}

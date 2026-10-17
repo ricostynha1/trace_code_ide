@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-JUDGE",
+    "clause": "no_call",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "Recording a judgement calls nothing; read off the tree."
+    }
+  },
+  "linkHash": "27c0bd8df6e4776e",
+  "inputs": [
+    [
+      "requirement",
+      "c173ed9f176a4f83"
+    ],
+    [
+      "model",
+      "c5b1fedc3bbe403c"
+    ]
+  ]
+}

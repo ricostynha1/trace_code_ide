@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-TRANSCRIPT",
+    "clause": "read_only",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "The modules that open a transcript contain no write, truncation, removal or rename; the check rejects one that writes."
+    }
+  },
+  "linkHash": "c22c88133faa7b43",
+  "inputs": [
+    [
+      "requirement",
+      "9d5d21eb01616326"
+    ],
+    [
+      "model",
+      "780708fc067c11e8"
+    ]
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "ARCH-SELFHOST",
+    "clause": "no_convention",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "Moving a file changes no claim it makes; the comparison is shown sensitive to what is claimed."
+    }
+  },
+  "linkHash": "7278835b8efa4c40",
+  "inputs": [
+    [
+      "requirement",
+      "a5e0c1c9c932d1bc"
+    ],
+    [
+      "model",
+      "952d3176938caf15"
+    ]
+  ]
+}

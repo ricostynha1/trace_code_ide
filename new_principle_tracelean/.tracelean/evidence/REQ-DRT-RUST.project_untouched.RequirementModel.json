@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-DRT-RUST",
+    "clause": "project_untouched",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "Generation writes only under the cache."
+    }
+  },
+  "linkHash": "f92472aa618e9d0f",
+  "inputs": [
+    [
+      "requirement",
+      "532dcbc3c14f8f3c"
+    ],
+    [
+      "model",
+      "31b243300834fbe9"
+    ]
+  ]
+}

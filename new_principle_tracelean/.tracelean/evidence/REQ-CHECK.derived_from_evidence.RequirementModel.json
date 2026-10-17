@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-CHECK",
+    "clause": "derived_from_evidence",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "Checker findings are computed from the index and records only."
+    }
+  },
+  "linkHash": "1b91fac4b26b5839",
+  "inputs": [
+    [
+      "requirement",
+      "80fcfa23ee1f40d4"
+    ],
+    [
+      "model",
+      "1c945de34e1f7af9"
+    ]
+  ]
+}

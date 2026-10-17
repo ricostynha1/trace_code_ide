@@ -11,7 +11,7 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "marks reads judged from RM>=L2, tested from MI>=L3, proved from MP>=L4 and annotated from its argument only."
+      "note": "marks reads each mark from its own bond's records only; structural is set from the links, not from any record."
     }
   },
   "linkHash": "eac2caae256dee44",
@@ -22,7 +22,7 @@
     ],
     [
       "model",
-      "a1cef9e4de9c1212"
+      "1272c4a23358fb47"
     ]
   ]
 }

@@ -773,7 +773,11 @@
         },
         {
           "situation": "every mark held",
-          "atLeast": 30
+          "atLeast": 20
+        },
+        {
+          "situation": "testing and proving not applicable",
+          "atLeast": 460
         }
       ],
       "model": {
@@ -786,6 +790,54 @@
       "implementation": {
         "language": "rust",
         "entry": "crates/core/src/evidence.rs::written"
+      }
+    },
+    {
+      "req_id": "REQ-EVID",
+      "clause": "structural_not_applicable",
+      "floors": [
+        {
+          "situation": "a test or proof held, and dropped",
+          "atLeast": 600
+        },
+        {
+          "situation": "neither held",
+          "atLeast": 150
+        },
+        {
+          "situation": "judged",
+          "atLeast": 400
+        }
+      ],
+      "model": {
+        "import": "TraceLean.Evidence",
+        "function": "TraceLean.Evidence.structural",
+        "arguments": [
+          "marks"
+        ]
+      },
+      "implementation": {
+        "language": "rust",
+        "entry": "crates/core/src/evidence.rs::structural"
+      }
+    },
+    {
+      "req_id": "REQ-JUDGE",
+      "clause": "structural_judged",
+      "floors": [
+        { "situation": "checked only structurally", "atLeast": 180 },
+        { "situation": "modelled", "atLeast": 660 },
+        { "situation": "neither", "atLeast": 50 },
+        { "situation": "a hash named twice", "atLeast": 300 }
+      ],
+      "model": {
+        "import": "TraceLean.Judge",
+        "function": "TraceLean.Judge.restsOn",
+        "arguments": ["models", "checks"]
+      },
+      "implementation": {
+        "language": "rust",
+        "entry": "crates/core/src/trace/material.rs::rests_on"
       }
     },
     {
@@ -1584,6 +1636,10 @@
         {
           "situation": "nothing to aggregate",
           "atLeast": 1
+        },
+        {
+          "situation": "a structural part beside one with a model",
+          "atLeast": 900
         }
       ],
       "model": {
@@ -2542,6 +2598,7 @@
     {
       "req_id": "REQ-VIEW",
       "clause": "structure_has_one_type",
+      "also_checks": ["everything_is_a_buffer"],
       "model": {
         "import": "TraceLean.View",
         "function": "TraceLean.View.directoryBuffer",
@@ -2691,40 +2748,56 @@
     {
       "req_id": "REQ-SHOW",
       "clause": "index_from_requirements",
+      "also_checks": [
+        "children_lines"
+      ],
       "floors": [
         { "situation": "no requirements at all", "atLeast": 400 },
-        { "situation": "a requirement holding no mark", "atLeast": 360 },
-        { "situation": "a requirement holding every mark", "atLeast": 370 },
-        { "situation": "two requirements or more", "atLeast": 1290 }
+        { "situation": "a requirement holding no mark", "atLeast": 150 },
+        { "situation": "a requirement holding every mark", "atLeast": 175 },
+        { "situation": "two requirements or more", "atLeast": 1290 },
+        { "situation": "a structural requirement", "atLeast": 1650 },
+        { "situation": "a row saying what its children left unrun", "atLeast": 560 },
+        { "situation": "only what is open, something finished hidden", "atLeast": 630 }
       ],
       "model": {
         "import": "TraceLean.Produce",
         "function": "TraceLean.Produce.requirementsBuffer",
-        "arguments": ["nodes"]
+        "arguments": ["nodes", "openOnly"]
       },
       "implementation": {
         "language": "rust",
-        "entry": "crates/core/src/surface/produce.rs::requirements_buffer"
+        "entry": "crates/core/src/surface/produce.rs::requirements_buffer",
+        "params": {
+          "openOnly": "open_only"
+        }
       }
     },
     {
       "req_id": "REQ-SHOW",
       "clause": "graph_from_refinement",
+      "also_checks": [
+        "open_filtered"
+      ],
       "floors": [
         { "situation": "nothing to draw", "atLeast": 1080 },
         { "situation": "a root with something under it", "atLeast": 530 },
         { "situation": "a requirement refining two others, drawn under each", "atLeast": 490 },
         { "situation": "a requirement no root reaches, drawn nowhere", "atLeast": 970 },
-        { "situation": "a cycle in refines", "atLeast": 150 }
+        { "situation": "a cycle in refines", "atLeast": 150 },
+        { "situation": "a finished requirement kept for what is open under it", "atLeast": 80 }
       ],
       "model": {
         "import": "TraceLean.Produce",
         "function": "TraceLean.Produce.designBuffer",
-        "arguments": ["nodes", "opened"]
+        "arguments": ["nodes", "opened", "openOnly"]
       },
       "implementation": {
         "language": "rust",
-        "entry": "crates/core/src/surface/produce.rs::design_buffer"
+        "entry": "crates/core/src/surface/produce.rs::design_buffer",
+        "params": {
+          "openOnly": "open_only"
+        }
       }
     },
     {
@@ -3955,6 +4028,199 @@
         "language": "rust",
         "entry": "crates/core/src/trace/lines.rs::span_coverage",
         "params": { "stop": "end" }
+      }
+    },
+    {
+      "req_id": "REQ-NAV",
+      "clause": "declaration_line",
+      "floors": [
+        { "situation": "declares a name", "atLeast": 135 },
+        { "situation": "after modifiers", "atLeast": 175 },
+        { "situation": "a path", "atLeast": 60 },
+        { "situation": "declares nothing", "atLeast": 530 }
+      ],
+      "model": {
+        "import": "TraceLean.Nav",
+        "function": "TraceLean.Nav.declaredOn",
+        "arguments": ["line"]
+      },
+      "implementation": {
+        "language": "rust",
+        "entry": "crates/core/src/surface/definition.rs::declared_on"
+      }
+    },
+    {
+      "req_id": "REQ-NAV",
+      "clause": "quick_open",
+      "floors": [
+        { "situation": "no letters", "atLeast": 180 },
+        { "situation": "nothing matches", "atLeast": 445 },
+        { "situation": "several ranked", "atLeast": 40 },
+        { "situation": "more than kept", "atLeast": 190 }
+      ],
+      "model": {
+        "import": "TraceLean.Nav",
+        "function": "TraceLean.Nav.quickOpen",
+        "arguments": ["files", "query", "limit"]
+      },
+      "implementation": {
+        "language": "rust",
+        "entry": "crates/core/src/surface/quick.rs::matches"
+      }
+    },
+    {
+      "req_id": "REQ-NAV",
+      "clause": "session_recalled",
+      "floors": [
+        { "situation": "a tab removed since", "atLeast": 530 },
+        { "situation": "the front file kept", "atLeast": 330 },
+        { "situation": "the front file removed", "atLeast": 380 }
+      ],
+      "model": {
+        "import": "TraceLean.Nav",
+        "function": "TraceLean.Nav.reopened",
+        "arguments": ["files", "shown", "existing"]
+      },
+      "implementation": {
+        "language": "rust",
+        "entry": "crates/core/src/surface/reopen.rs::reopened"
+      }
+    },
+    {
+      "req_id": "REQ-NAV",
+      "clause": "definitions_found",
+      "floors": [
+        { "situation": "declared once", "atLeast": 300 },
+        { "situation": "declared several times", "atLeast": 50 },
+        { "situation": "by its last part", "atLeast": 50 },
+        { "situation": "declared nowhere", "atLeast": 3200 }
+      ],
+      "model": {
+        "import": "TraceLean.Nav",
+        "function": "TraceLean.Nav.declarations",
+        "arguments": ["files", "name"]
+      },
+      "implementation": {
+        "language": "rust",
+        "entry": "crates/core/src/surface/definition.rs::declarations"
+      }
+    },
+    {
+      "req_id": "REQ-NAV",
+      "clause": "uses_found",
+      "floors": [
+        { "situation": "a name's uses", "atLeast": 95 },
+        { "situation": "a search", "atLeast": 240 },
+        { "situation": "cut at the limit", "atLeast": 400 },
+        { "situation": "found nowhere", "atLeast": 3200 }
+      ],
+      "model": {
+        "import": "TraceLean.Nav",
+        "function": "TraceLean.Nav.occurrences",
+        "arguments": ["files", "needle", "whole", "limit"]
+      },
+      "implementation": {
+        "language": "rust",
+        "entry": "crates/core/src/surface/definition.rs::occurrences"
+      }
+    },
+    {
+      "req_id": "REQ-NAV",
+      "clause": "find_by_glob",
+      "floors": [
+        { "situation": "a match", "atLeast": 100 },
+        { "situation": "no match", "atLeast": 100 },
+        { "situation": "several matches", "atLeast": 50 },
+        { "situation": "a star that matched", "atLeast": 50 },
+        { "situation": "a question mark that matched", "atLeast": 20 },
+        { "situation": "an empty pattern", "atLeast": 20 },
+        { "situation": "a match in a text of several lines", "atLeast": 50 }
+      ],
+      "model": {
+        "import": "TraceLean.Find",
+        "function": "TraceLean.Find.globMatches",
+        "arguments": ["text", "pattern"]
+      },
+      "implementation": {
+        "language": "rust",
+        "entry": "crates/core/src/surface/find.rs::glob_matches"
+      }
+    },
+    {
+      "req_id": "REQ-NAV",
+      "clause": "find_lists_lines",
+      "floors": [
+        { "situation": "some lines match", "atLeast": 50 },
+        { "situation": "no line matches", "atLeast": 100 },
+        { "situation": "every line matches", "atLeast": 20 }
+      ],
+      "model": {
+        "import": "TraceLean.Find",
+        "function": "TraceLean.Find.matchingLines",
+        "arguments": ["text", "pattern"]
+      },
+      "implementation": {
+        "language": "rust",
+        "entry": "crates/core/src/surface/find.rs::matching_lines"
+      }
+    },
+    {
+      "req_id": "REQ-NAV",
+      "clause": "name_is_asked_for",
+      "floors": [
+        { "situation": "a character typed", "atLeast": 50 },
+        { "situation": "a space typed", "atLeast": 20 },
+        { "situation": "backspace", "atLeast": 20 },
+        { "situation": "enter with an answer", "atLeast": 20 },
+        { "situation": "enter with none", "atLeast": 20 },
+        { "situation": "escape", "atLeast": 20 },
+        { "situation": "a key that is not text", "atLeast": 20 }
+      ],
+      "model": {
+        "import": "TraceLean.Ask",
+        "function": "TraceLean.Ask.askStep",
+        "arguments": ["answer", "key"]
+      },
+      "implementation": {
+        "language": "rust",
+        "entry": "crates/core/src/surface/ask.rs::ask_step"
+      }
+    },
+    {
+      "req_id": "REQ-LOOK",
+      "clause": "setting_edited_in_place",
+      "floors": [
+        { "situation": "a colour", "atLeast": 100 },
+        { "situation": "not a colour", "atLeast": 100 }
+      ],
+      "model": {
+        "import": "TraceLean.Setting",
+        "function": "TraceLean.Setting.isColour",
+        "arguments": ["value"]
+      },
+      "implementation": {
+        "language": "rust",
+        "entry": "crates/core/src/surface/setting.rs::is_colour"
+      }
+    },
+    {
+      "req_id": "REQ-LSP",
+      "clause": "proof_state_shown",
+      "floors": [
+        { "situation": "no result", "atLeast": 100 },
+        { "situation": "a result with no list of goals", "atLeast": 50 },
+        { "situation": "an empty list of goals", "atLeast": 50 },
+        { "situation": "several goals", "atLeast": 50 },
+        { "situation": "the server's own rendering", "atLeast": 20 }
+      ],
+      "model": {
+        "import": "TraceLean.ProofState",
+        "function": "TraceLean.ProofState.goalsShown",
+        "arguments": ["answered", "goals", "rendered"]
+      },
+      "implementation": {
+        "language": "rust",
+        "entry": "crates/core/src/lean_server.rs::goals_shown"
       }
     }
   ]

@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-DRT-RUST",
+    "clause": "generated",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "The runner is a generated crate."
+    }
+  },
+  "linkHash": "18638a15f6070347",
+  "inputs": [
+    [
+      "requirement",
+      "efe21d6f9c058619"
+    ],
+    [
+      "model",
+      "31b243300834fbe9"
+    ]
+  ]
+}

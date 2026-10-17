@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "ARCH-NO-DRIVING",
+    "clause": "user_runs_it",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "Nothing starts a coding tool; the person does."
+    }
+  },
+  "linkHash": "899e1f0090785230",
+  "inputs": [
+    [
+      "requirement",
+      "15aa47781c304e23"
+    ],
+    [
+      "model",
+      "ac1a404c3a1e74c3"
+    ]
+  ]
+}

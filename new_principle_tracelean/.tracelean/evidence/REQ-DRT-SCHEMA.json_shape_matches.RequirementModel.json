@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-DRT-SCHEMA",
+    "clause": "json_shape_matches",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "Wire helpers (pairs) give maps the shape Lean derives; every suite exercises the encodings."
+    }
+  },
+  "linkHash": "3c92e6441ad7acc5",
+  "inputs": [
+    [
+      "requirement",
+      "8291d74aa491cd84"
+    ],
+    [
+      "model",
+      "9a9775a21224bbe4"
+    ]
+  ]
+}

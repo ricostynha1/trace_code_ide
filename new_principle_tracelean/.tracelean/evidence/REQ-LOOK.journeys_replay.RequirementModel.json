@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-LOOK",
+    "clause": "journeys_replay",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "tests/journeys.json replays in the terminal and in the page."
+    }
+  },
+  "linkHash": "4e18f0a1479b79b7",
+  "inputs": [
+    [
+      "requirement",
+      "b7d153d99bbe64e9"
+    ],
+    [
+      "model",
+      "cabda2de164d40c8"
+    ]
+  ]
+}

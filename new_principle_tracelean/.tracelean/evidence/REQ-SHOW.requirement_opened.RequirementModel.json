@@ -11,7 +11,7 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "Each clause row leads with its marks as spans; claims remain path:line links."
+      "note": "requirementView shows each clause with its marks (a dot where a mark cannot apply), a marks line of counts, and every claim as a link to its file and line."
     }
   },
   "linkHash": "6cfca4316b773547",
@@ -22,7 +22,7 @@
     ],
     [
       "model",
-      "9fc505ffe2567ff4"
+      "bde0d4dd498bf9a4"
     ]
   ]
 }

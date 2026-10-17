@@ -1,0 +1,30 @@
+{
+  "key": {
+    "reqId": "REQ-LOOK",
+    "clause": "setting_edited_in_place",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 107,
+      "cases": 2000,
+      "op": "REQ-LOOK.setting_edited_in_place"
+    }
+  },
+  "linkHash": "285ce54a54d7f63c",
+  "inputs": [
+    [
+      "implementation",
+      "fb789a33b7a52705"
+    ],
+    [
+      "model",
+      "b3d3ff1d832d3fab"
+    ],
+    [
+      "requirement",
+      "b0058f0bf0bdab4a"
+    ]
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-DRT-BIND",
+    "clause": "rename_only",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "params only rename arguments."
+    }
+  },
+  "linkHash": "cfd77d3cd50fbf27",
+  "inputs": [
+    [
+      "requirement",
+      "4b21882d0bf303e3"
+    ],
+    [
+      "model",
+      "47fc82d6f1738981"
+    ]
+  ]
+}

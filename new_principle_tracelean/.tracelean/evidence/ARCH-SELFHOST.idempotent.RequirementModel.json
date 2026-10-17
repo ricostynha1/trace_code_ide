@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "ARCH-SELFHOST",
+    "clause": "idempotent",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "Locking twice gives the same bytes."
+    }
+  },
+  "linkHash": "2a838c71a147aa08",
+  "inputs": [
+    [
+      "requirement",
+      "7c7430649ec25282"
+    ],
+    [
+      "model",
+      "9f255d72b4e53e51"
+    ]
+  ]
+}

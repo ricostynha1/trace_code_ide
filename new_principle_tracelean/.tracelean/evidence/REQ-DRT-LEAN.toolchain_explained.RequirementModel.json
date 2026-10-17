@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-DRT-LEAN",
+    "clause": "toolchain_explained",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "Asked of an empty PATH the answer names lean and elan; a missing toolchain is an Err, not a model failure."
+    }
+  },
+  "linkHash": "952a2fc1218a7d6c",
+  "inputs": [
+    [
+      "requirement",
+      "40c39da133c23406"
+    ],
+    [
+      "model",
+      "524ca791d92d75e5"
+    ]
+  ]
+}

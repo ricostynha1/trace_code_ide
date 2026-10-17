@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-CHECK",
+    "clause": "structural_rejects",
+    "bond": "requirementModel"
+  },
+  "level": "L1",
+  "detail": {
+    "judge": {
+      "verdict": "drift",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "Tree-scanning checks in architecture.rs and structural.rs each have a rejecting twin, but nothing requires one: about 60 other @structural tests (frontend, runner, observation suites) have no twin and no check says they must."
+    }
+  },
+  "linkHash": "d2b7fd9afb95f59a",
+  "inputs": [
+    [
+      "requirement",
+      "1a7a7f1c7ce01ac8"
+    ],
+    [
+      "model",
+      "a7258e7683760681"
+    ]
+  ]
+}

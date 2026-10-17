@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-LOOK",
+    "clause": "accessible_structure",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "The page's accessibility tree, read in Chrome, names each region and control."
+    }
+  },
+  "linkHash": "f1e85346d5ee24a4",
+  "inputs": [
+    [
+      "requirement",
+      "50a6fea4ce331a65"
+    ],
+    [
+      "model",
+      "4a3b8c19be59eb57"
+    ]
+  ]
+}

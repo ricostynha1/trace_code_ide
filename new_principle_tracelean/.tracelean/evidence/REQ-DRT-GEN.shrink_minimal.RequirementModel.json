@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-DRT-GEN",
+    "clause": "shrink_minimal",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "The round cap is gone: reduction runs until no candidate diverges, and a test shows a divergence reduced from a large number to 1."
+    }
+  },
+  "linkHash": "7c9c2c40e0e8ba91",
+  "inputs": [
+    [
+      "requirement",
+      "2ca3bb14987381db"
+    ],
+    [
+      "model",
+      "611229207fb65dd0"
+    ]
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "key": {
+    "reqId": "REQ-NAV",
+    "clause": "find_lists_lines",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 101,
+      "cases": 4000,
+      "op": "REQ-NAV.find_lists_lines"
+    }
+  },
+  "linkHash": "99be54f8f176e9d2",
+  "inputs": [
+    [
+      "implementation",
+      "ea2d66ea93c6d061+eb27b4dd6e8525ab"
+    ],
+    [
+      "model",
+      "bef923383ef8f7aa"
+    ],
+    [
+      "requirement",
+      "5920d6f9af08f51b"
+    ]
+  ]
+}

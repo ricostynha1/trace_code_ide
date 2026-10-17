@@ -1,0 +1,30 @@
+{
+  "key": {
+    "reqId": "REQ-NAV",
+    "clause": "find_by_glob",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 97,
+      "cases": 4000,
+      "op": "REQ-NAV.find_by_glob"
+    }
+  },
+  "linkHash": "170a5058552774fc",
+  "inputs": [
+    [
+      "implementation",
+      "73dcc2a5c7971a35"
+    ],
+    [
+      "model",
+      "d9434d01696da7e5"
+    ],
+    [
+      "requirement",
+      "82fe2c0edcd10f1a"
+    ]
+  ]
+}

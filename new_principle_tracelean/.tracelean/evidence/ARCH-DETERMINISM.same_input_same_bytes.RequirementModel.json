@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "ARCH-DETERMINISM",
+    "clause": "same_input_same_bytes",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "Rendering the same index twice gives the same bytes, and the lock is rewritten byte-identically."
+    }
+  },
+  "linkHash": "31f21ce35da4f7fe",
+  "inputs": [
+    [
+      "requirement",
+      "5163122fdab09115"
+    ],
+    [
+      "model",
+      "9f255d72b4e53e51"
+    ]
+  ]
+}

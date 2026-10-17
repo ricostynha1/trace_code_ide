@@ -1,0 +1,30 @@
+{
+  "key": {
+    "reqId": "REQ-NAV",
+    "clause": "session_recalled",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 79,
+      "cases": 1000,
+      "op": "REQ-NAV.session_recalled"
+    }
+  },
+  "linkHash": "4067047fa9da53f0",
+  "inputs": [
+    [
+      "implementation",
+      "6397744d1b260a15+ade1216147563d43+c2712c461c7ff3e1"
+    ],
+    [
+      "model",
+      "64c56ae5ef19c11c"
+    ],
+    [
+      "requirement",
+      "8e6a6469db2c226a"
+    ]
+  ]
+}

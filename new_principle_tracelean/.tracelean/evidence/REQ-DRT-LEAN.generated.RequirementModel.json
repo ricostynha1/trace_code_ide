@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-DRT-LEAN",
+    "clause": "generated",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "A package is generated under the cache and built."
+    }
+  },
+  "linkHash": "72ce21b67950702d",
+  "inputs": [
+    [
+      "requirement",
+      "45e9d4caa942f8b2"
+    ],
+    [
+      "model",
+      "524ca791d92d75e5"
+    ]
+  ]
+}

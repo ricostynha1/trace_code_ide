@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-DRT-BIND",
+    "clause": "call_only",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "A binding serialises to a call and nothing more."
+    }
+  },
+  "linkHash": "4db951004e4b5661",
+  "inputs": [
+    [
+      "requirement",
+      "2cafd7a99969c180"
+    ],
+    [
+      "model",
+      "47fc82d6f1738981"
+    ]
+  ]
+}

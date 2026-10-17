@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-OBS",
+    "clause": "effects_become_commands",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "Observed changes become ordinary commands in the history."
+    }
+  },
+  "linkHash": "31a5e3e8b9c52903",
+  "inputs": [
+    [
+      "requirement",
+      "cb92481e5ab8347c"
+    ],
+    [
+      "model",
+      "348b05903eeb3884"
+    ]
+  ]
+}

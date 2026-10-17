@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-LOCK",
+    "clause": "pure_render",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "Rendering takes an index and writes nothing."
+    }
+  },
+  "linkHash": "9977468572842b7c",
+  "inputs": [
+    [
+      "requirement",
+      "6084d613360dc2b6"
+    ],
+    [
+      "model",
+      "f08eac392109e319"
+    ]
+  ]
+}

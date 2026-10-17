@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "ARCH-DETERMINISM",
+    "clause": "no_ambient_time",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "No clock or unseeded randomness named in the source outside fixtures; Runner::drop waits by count, not time."
+    }
+  },
+  "linkHash": "d1cb950e9518d1b7",
+  "inputs": [
+    [
+      "requirement",
+      "fafc4d04da1f770e"
+    ],
+    [
+      "model",
+      "db7dcdeb5d93ea29"
+    ]
+  ]
+}

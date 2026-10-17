@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-DRT-LEAN",
+    "clause": "encoding_declared",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "ToJson/FromJson throughout the generated dispatch."
+    }
+  },
+  "linkHash": "a868f36bf69a5ca6",
+  "inputs": [
+    [
+      "requirement",
+      "ba6017c651ff6c06"
+    ],
+    [
+      "model",
+      "524ca791d92d75e5"
+    ]
+  ]
+}

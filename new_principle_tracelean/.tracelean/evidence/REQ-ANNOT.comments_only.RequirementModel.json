@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-ANNOT",
+    "clause": "comments_only",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "Annotations are read only from comment nodes: one in a string, a macro's tokens or a TypeScript template is not a link."
+    }
+  },
+  "linkHash": "6c51361b2b9baf5e",
+  "inputs": [
+    [
+      "requirement",
+      "1ffdce7d35fa8796"
+    ],
+    [
+      "model",
+      "fcacc195820fc2f7"
+    ]
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-DRT-RUST",
+    "clause": "path_dependency",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "The generated crate depends on the project by path."
+    }
+  },
+  "linkHash": "461f498cb747189b",
+  "inputs": [
+    [
+      "requirement",
+      "4f2311d1b42e74f3"
+    ],
+    [
+      "model",
+      "31b243300834fbe9"
+    ]
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-DRIVE",
+    "clause": "screen_answers_for_the_frontend",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "Assertions read the painted cells, not the frontend's account."
+    }
+  },
+  "linkHash": "6559094aefa2a3e0",
+  "inputs": [
+    [
+      "requirement",
+      "47cc25a976989518"
+    ],
+    [
+      "model",
+      "cd02321d3b203200"
+    ]
+  ]
+}

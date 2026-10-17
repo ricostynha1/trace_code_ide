@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-DRT-SCHEMA",
+    "clause": "declared_not_reflected",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "No Lean reflection vocabulary in the machinery or the runner it generates; schemas are declared in tests or derived from both signatures."
+    }
+  },
+  "linkHash": "805d522098e94983",
+  "inputs": [
+    [
+      "requirement",
+      "840bbfc9aa8da612"
+    ],
+    [
+      "model",
+      "c038aa0c28687b5c+cffbcd3d5f065f83"
+    ]
+  ]
+}

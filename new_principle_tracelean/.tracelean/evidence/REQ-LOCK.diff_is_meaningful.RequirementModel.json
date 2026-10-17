@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-LOCK",
+    "clause": "diff_is_meaningful",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "A dropped link changes the bytes."
+    }
+  },
+  "linkHash": "969a1b801dbbe725",
+  "inputs": [
+    [
+      "requirement",
+      "13845ee23e2d217b"
+    ],
+    [
+      "model",
+      "6a7c7ef7fb175faa"
+    ]
+  ]
+}

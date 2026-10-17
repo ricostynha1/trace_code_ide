@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-NAV",
+    "clause": "session_recalled",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Nav::everything_reopened_exists",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "c7d3f32a1436fe4b",
+  "inputs": [
+    [
+      "model",
+      "64c56ae5ef19c11c"
+    ],
+    [
+      "requirement",
+      "8e6a6469db2c226a"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

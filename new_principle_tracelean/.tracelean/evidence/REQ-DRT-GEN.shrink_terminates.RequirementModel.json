@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-DRT-GEN",
+    "clause": "shrink_terminates",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "Every reduction step is strictly smaller; checked over each schema kind, and wide characters shrink by character."
+    }
+  },
+  "linkHash": "3945a75497058e64",
+  "inputs": [
+    [
+      "requirement",
+      "86cdfb5b1664366f"
+    ],
+    [
+      "model",
+      "966ae1100ce34729"
+    ]
+  ]
+}

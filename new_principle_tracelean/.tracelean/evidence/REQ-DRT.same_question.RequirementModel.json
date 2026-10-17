@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-DRT",
+    "clause": "same_question",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "Two recording runners show both sides were sent the same lines, numbered one up, in the same order."
+    }
+  },
+  "linkHash": "5005b15379144506",
+  "inputs": [
+    [
+      "requirement",
+      "6ff2b95026474c99"
+    ],
+    [
+      "model",
+      "ca863aef7bfc44b4"
+    ]
+  ]
+}

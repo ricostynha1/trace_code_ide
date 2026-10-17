@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-DRT",
+    "clause": "divergence_reported",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "A divergence comes back with its reduced case; the reduction test shows it reduced to the smallest."
+    }
+  },
+  "linkHash": "b72bcd4a27dc8396",
+  "inputs": [
+    [
+      "requirement",
+      "070b7a01d93a2540"
+    ],
+    [
+      "model",
+      "0d257b986eccec20"
+    ]
+  ]
+}

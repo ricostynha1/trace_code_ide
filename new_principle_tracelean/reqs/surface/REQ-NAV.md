@@ -9,7 +9,7 @@ clauses:
   definitions_found: Going to a name's definition shall offer every line of the workspace declaring it, by path then line, and a dotted name shall also be looked for by its last part.
   uses_found: Finding a name's uses shall list every line holding it as a whole word, and a search every line holding the text in any case, by path then line, at most the number asked.
   quick_open: Quick open shall list the files whose paths hold the typed letters in order, best first — letters in the file's own name before letters in its folders, letters together before letters apart, then the shorter name, then the shorter path — and every file, shortest first, for no letters.
-  find_by_glob: Finding shall take `*` as any run of characters and `?` as any one, within a line and in any case, and a text with neither as itself; a match shall never be empty.
+  find_by_glob: Finding shall take `*` as any run of characters and `?` as any one, within a line and with the letters a to z in either case, and a text with neither as itself; a match shall never be empty.
   find_lists_lines: Listing matches shall give every line of the buffer that holds one, by line number, and the line itself.
   name_is_asked_for: An action that needs a name nobody pointed at shall ask for it on the status line, take the keys typed as the answer, perform the action on Enter and nothing on Escape.
   session_recalled: Opening a project shall bring back the tabs, the open folders and the file in front it had when last closed, leaving out what no longer exists.

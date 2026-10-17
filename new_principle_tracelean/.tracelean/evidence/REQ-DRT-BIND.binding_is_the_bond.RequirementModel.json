@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-DRT-BIND",
+    "clause": "binding_is_the_bond",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "Every @drt annotation has a binding and every binding an annotation, also_checks included."
+    }
+  },
+  "linkHash": "5de881de83c5430d",
+  "inputs": [
+    [
+      "requirement",
+      "6622bf75aa404c6d"
+    ],
+    [
+      "model",
+      "47fc82d6f1738981+9101784553c5d5c4"
+    ]
+  ]
+}

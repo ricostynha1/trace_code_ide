@@ -52,8 +52,6 @@ fn merge(base: &mut Value, over: Value) {
 /// in it, and make the file if there is none. The one place the editor writes
 /// the theme, so that changing a colour is a change to the file and nothing
 /// else.
-///
-/// @implements REQ-LOOK.setting_edited_in_place
 pub fn write_setting(root: &Path, section: &str, key: &str, value: &str) -> Result<(), String> {
     let path = root.join(OVERRIDE);
     let mut over: Value = std::fs::read_to_string(&path)

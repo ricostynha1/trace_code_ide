@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-PERSIST",
+    "clause": "portable",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "The journal is plain JSON lines with no machine-specific paths."
+    }
+  },
+  "linkHash": "97ce84fd4fa432a3",
+  "inputs": [
+    [
+      "requirement",
+      "eab856fb841daf86"
+    ],
+    [
+      "model",
+      "f4fcc14b2b712e28"
+    ]
+  ]
+}

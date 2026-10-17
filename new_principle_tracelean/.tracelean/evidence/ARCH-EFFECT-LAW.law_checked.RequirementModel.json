@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "ARCH-EFFECT-LAW",
+    "clause": "law_checked",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "Each law is a computable function the effects suite runs against the sandbox."
+    }
+  },
+  "linkHash": "c9abe96122eeaf3c",
+  "inputs": [
+    [
+      "requirement",
+      "042364abb7746c1d"
+    ],
+    [
+      "model",
+      "bd67151f049c78d7"
+    ]
+  ]
+}

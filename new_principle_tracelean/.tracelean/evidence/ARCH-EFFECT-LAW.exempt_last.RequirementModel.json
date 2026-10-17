@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "ARCH-EFFECT-LAW",
+    "clause": "exempt_last",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "Exemptions are counted and each is signed with a reason; the check rejects an unsigned one."
+    }
+  },
+  "linkHash": "05a4e33afda2feb7",
+  "inputs": [
+    [
+      "requirement",
+      "87a4e1b3efb40ff8"
+    ],
+    [
+      "model",
+      "2d86341ee34f70e3"
+    ]
+  ]
+}

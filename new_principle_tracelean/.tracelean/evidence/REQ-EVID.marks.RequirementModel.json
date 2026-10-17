@@ -11,7 +11,7 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "Marks is four independent Bools; every_combination_is_reachable shows all sixteen occur."
+      "note": "Marks carry A J T P each independently; the added structural field says T and P do not apply and is no fifth mark."
     }
   },
   "linkHash": "f9ad64f1cb5668dd",
@@ -22,7 +22,7 @@
     ],
     [
       "model",
-      "db2758d1b5fa8a3a"
+      "3bd29cdfa957e905"
     ]
   ]
 }

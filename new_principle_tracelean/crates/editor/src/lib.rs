@@ -36,9 +36,24 @@ use tracelean_core::surface::screen::{
 use tracelean_core::surface::view::{actions_at, Buffer, BufferKind};
 use tracelean_core::trace::anchor::Lang;
 
+/// What an answer is for once it is given. Carried with the question rather
+/// than read back off an action's name, which only `dispatch` resolves.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Then {
+    /// Go to the next match of it.
+    Find,
+    /// List the lines that match it.
+    FindLines,
+    /// Write it as the new value of the setting.
+    SetSetting,
+    /// Hand it to the action that asked, as `choose` does for a pointer.
+    Choose,
+}
+
 /// A question waiting for its answer: see `Editor::asking`.
 #[derive(Debug, Clone)]
 struct Asking {
+    then: Then,
     action: String,
     target: Option<String>,
     question: String,
@@ -1768,7 +1783,7 @@ impl Editor {
         };
         let question = offer.asks.clone().unwrap_or_default();
         let answer = offer.target.clone().unwrap_or_default();
-        self.asking = Some(Asking { action: offer.action, target: offer.target, question, pane, at, answer });
+        self.asking = Some(Asking { then: Then::Choose, action: offer.action, target: offer.target, question, pane, at, answer });
         self.show_question();
         true
     }
@@ -1783,17 +1798,16 @@ impl Editor {
     /// Ask what to look for: `Space f f` goes to the next match, `Space f /`
     /// lists the lines that hold one. The text may hold `*` and `?`.
     ///
-    /// @implements REQ-NAV.name_is_asked_for
     fn ask_to_find(&mut self, title: &str) {
-        let (action, question) = if title == "find" {
-            ("file.find", "Find (* and ? match)")
+        let (then, question) = if title == "find" {
+            (Then::Find, "Find (* and ? match)")
         } else {
-            ("file.find_lines", "List the lines matching (* and ? match)")
+            (Then::FindLines, "List the lines matching (* and ? match)")
         };
         let pane = self.screen.focus.clone();
         let at = self.window_offset(&pane, self.offset);
         let answer = self.last_find.clone().unwrap_or_default();
-        self.asking = Some(Asking { action: action.into(), target: None, question: question.into(), pane, at, answer });
+        self.asking = Some(Asking { then, action: String::new(), target: None, question: question.into(), pane, at, answer });
         self.show_question();
     }
 
@@ -1814,41 +1828,30 @@ impl Editor {
         self.say("found", &format!("{count} lines match {wanted}"));
     }
 
-    /// A key while an argument is being asked for: text goes into the answer,
-    /// Enter gives it to the action, Escape drops the question.
+    /// A key while an argument is being asked for: the keys make the answer
+    /// (`surface::ask::ask_step`), Enter gives it to the action, Escape drops it.
     fn answer(&mut self, key: &str) {
         let Some(mut asking) = self.asking.take() else { return };
-        match key {
-            tracelean_core::surface::keymap::LEAVE => {
-                self.say("left", "nothing was changed");
-                return;
-            }
-            "Enter" => {
-                let answer = asking.answer.trim().to_string();
-                if answer.is_empty() {
-                    self.say("left", "no answer, nothing was changed");
-                } else if asking.action == "file.find" {
-                    self.find(&answer, true);
-                } else if asking.action == "file.find_lines" {
-                    self.list_matching_lines(&answer);
-                } else if asking.action == "definitions.edit" {
+        let (outcome, said) =
+            tracelean_core::surface::ask::ask_step(asking.answer.clone(), key.to_string());
+        match outcome.as_str() {
+            "cancelled" => self.say("left", "nothing was changed"),
+            "done" => match asking.then {
+                Then::Find => self.find(&said, true),
+                Then::FindLines => self.list_matching_lines(&said),
+                Then::SetSetting => {
                     if let Some(name) = asking.target {
-                        self.set_setting(&name, &answer);
+                        self.set_setting(&name, &said);
                     }
-                } else {
-                    self.choose(&asking.pane, asking.at, &asking.action, asking.target, Some(answer));
                 }
-                return;
+                Then::Choose => self.choose(&asking.pane, asking.at, &asking.action, asking.target, Some(said)),
+            },
+            _ => {
+                asking.answer = said;
+                self.asking = Some(asking);
+                self.show_question();
             }
-            "Backspace" => {
-                asking.answer.pop();
-            }
-            tracelean_core::surface::keymap::SPACE => asking.answer.push(' '),
-            other if other.chars().count() == 1 => asking.answer.push_str(other),
-            _ => {}
         }
-        self.asking = Some(asking);
-        self.show_question();
     }
 
     /// The key pressed while `.`'s list is up.
@@ -3356,7 +3359,6 @@ impl Editor {
     ///
     /// Answers whether the panel changed.
     ///
-    /// @implements REQ-LSP.proof_state_shown
     fn follow_proof(&mut self) -> bool {
         if !self.screen.opened.iter().any(|held| held.id == "record:proof") {
             return false;
@@ -3626,7 +3628,6 @@ impl Editor {
     /// A buffer like any other, produced from data; what is different is only
     /// that its rows' actions write the project's override file.
     ///
-    /// @implements REQ-LOOK.setting_edited_in_place
     fn definitions_buffer(&self) -> Buffer {
         use tracelean_core::surface::view::{Role, Span};
         let theme = theme::load(&self.root);
@@ -3674,7 +3675,8 @@ impl Editor {
         let pane = self.screen.focus.clone();
         let at = self.window_offset(&pane, self.offset);
         self.asking = Some(Asking {
-            action: "definitions.edit".into(),
+            then: Then::SetSetting,
+            action: String::new(),
             target: Some(name.to_string()),
             question: format!("New value for {name} (#rrggbb)"),
             pane,
@@ -3688,13 +3690,11 @@ impl Editor {
     /// The window reads the theme on every draw it is told changed, so the
     /// change is on screen without a restart.
     ///
-    /// @implements REQ-LOOK.setting_edited_in_place
     pub fn set_setting(&mut self, name: &str, value: &str) {
         let Some((section, key)) = name.split_once('.') else {
             return self.say("not a setting", name);
         };
-        let hex = value.strip_prefix('#').unwrap_or("");
-        if !matches!(hex.len(), 3 | 4 | 6 | 8) || !hex.chars().all(|c| c.is_ascii_hexdigit()) {
+        if !tracelean_core::surface::setting::is_colour(value.to_string()) {
             return self.say("refused", &format!("`{value}` is not a colour like #1e90ff; nothing changed"));
         }
         let written = theme::write_setting(&self.root, section, key, value);

@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "ARCH-CORE-SHELL",
+    "clause": "shell_thin",
+    "bond": "requirementModel"
+  },
+  "level": "L1",
+  "detail": {
+    "judge": {
+      "verdict": "drift",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "The check is a proxy: file IO confined to listed shells and a ceiling of 40 branches in each. The editor crate's dispatch decides a great deal and is no listed shell, so it is not held to the ceiling; nothing checks that a branch in a shell could not have been a decision."
+    }
+  },
+  "linkHash": "caeba4813a29b62d",
+  "inputs": [
+    [
+      "requirement",
+      "a336d3b70d847229"
+    ],
+    [
+      "model",
+      "0e399f717c42f7f3"
+    ]
+  ]
+}

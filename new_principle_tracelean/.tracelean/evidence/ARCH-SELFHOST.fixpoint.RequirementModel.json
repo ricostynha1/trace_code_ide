@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "ARCH-SELFHOST",
+    "clause": "fixpoint",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "The stage-0 kernel and this one agree about this tree; the test fails if the stage-0 driver is missing rather than skipping."
+    }
+  },
+  "linkHash": "243cc0ec0bb73ab3",
+  "inputs": [
+    [
+      "requirement",
+      "ee395f8c3c3e8583"
+    ],
+    [
+      "model",
+      "876c28d455162dcb"
+    ]
+  ]
+}

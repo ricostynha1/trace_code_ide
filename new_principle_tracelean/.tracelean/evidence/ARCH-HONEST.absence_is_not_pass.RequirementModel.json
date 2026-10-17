@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "ARCH-HONEST",
+    "clause": "absence_is_not_pass",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "Every reporting path carries an unsure answer as its own field; the check asserts the fields reach the artefact."
+    }
+  },
+  "linkHash": "a1bc4d93503bf992",
+  "inputs": [
+    [
+      "requirement",
+      "13d3f735a5729044"
+    ],
+    [
+      "model",
+      "bfb0480fe2619822"
+    ]
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-DRT-TS",
+    "clause": "failure_is_an_answer",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "A binding that throws becomes that case's error."
+    }
+  },
+  "linkHash": "0c6918eeb31ba388",
+  "inputs": [
+    [
+      "requirement",
+      "5218a5602744eb63"
+    ],
+    [
+      "model",
+      "bc3779733ba392b8"
+    ]
+  ]
+}

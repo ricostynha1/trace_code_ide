@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-NAV",
+    "clause": "definitions_found",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "declarations: every line declaring the name or its last part, by path then line, stably."
+    }
+  },
+  "linkHash": "4a5167d48992bb92",
+  "inputs": [
+    [
+      "requirement",
+      "acd429a8c8b23ccb"
+    ],
+    [
+      "model",
+      "28e8cb8d937d7122"
+    ]
+  ]
+}

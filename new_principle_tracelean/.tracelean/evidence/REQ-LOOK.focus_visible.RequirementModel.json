@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-LOOK",
+    "clause": "focus_visible",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "Each of three panes focused in turn, including the last across with no divider of its own, has its edges in a style no other edge has; checked in the terminal's cells and in the page."
+    }
+  },
+  "linkHash": "9b363bca1a52127a",
+  "inputs": [
+    [
+      "requirement",
+      "812a6b265d31a1f5"
+    ],
+    [
+      "model",
+      "d63b1b5d7c995309"
+    ]
+  ]
+}

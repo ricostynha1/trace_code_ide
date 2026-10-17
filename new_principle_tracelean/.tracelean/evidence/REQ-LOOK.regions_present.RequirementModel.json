@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-LOOK",
+    "clause": "regions_present",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "Each place is drawn in its own rectangle."
+    }
+  },
+  "linkHash": "6c23bf656c8e215e",
+  "inputs": [
+    [
+      "requirement",
+      "69544f27e77723f1"
+    ],
+    [
+      "model",
+      "68e2efea4fa67d6c"
+    ]
+  ]
+}

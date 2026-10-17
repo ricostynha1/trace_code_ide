@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "ARCH-CORE-SHELL",
+    "clause": "no_hidden_input",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "Bound entries take their inputs as arguments; the check reads each binding's entry and its parameters."
+    }
+  },
+  "linkHash": "e47773d1ad1748d4",
+  "inputs": [
+    [
+      "requirement",
+      "04246ef7d9686da7"
+    ],
+    [
+      "model",
+      "31eee8c528db1b55"
+    ]
+  ]
+}

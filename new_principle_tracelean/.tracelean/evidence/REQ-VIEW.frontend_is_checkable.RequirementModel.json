@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-VIEW",
+    "clause": "frontend_is_checkable",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "Each frontend answers with what it drew; wrong-on-purpose frontends are caught."
+    }
+  },
+  "linkHash": "94404755ef967cb9",
+  "inputs": [
+    [
+      "requirement",
+      "ad99e5ce1f15d088"
+    ],
+    [
+      "model",
+      "14a085aeeff137c1+81917b36ba4d6ab1"
+    ]
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-TRANSCRIPT",
+    "clause": "no_interpretation",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "The reader's output is events and usage; there is nowhere for a command to come out."
+    }
+  },
+  "linkHash": "90b871a3b1120bd9",
+  "inputs": [
+    [
+      "requirement",
+      "40921bbe83e3326f"
+    ],
+    [
+      "model",
+      "0cd20c58e609e391"
+    ]
+  ]
+}

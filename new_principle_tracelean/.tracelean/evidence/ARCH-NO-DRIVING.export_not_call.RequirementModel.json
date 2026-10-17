@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "ARCH-NO-DRIVING",
+    "clause": "export_not_call",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "The judge exports a prompt; no transport is linked; the check rejects a tree that can send."
+    }
+  },
+  "linkHash": "52169cf7a846df4a",
+  "inputs": [
+    [
+      "requirement",
+      "3bf8fe793ab71c7f"
+    ],
+    [
+      "model",
+      "7cdd67d94c16827e"
+    ]
+  ]
+}

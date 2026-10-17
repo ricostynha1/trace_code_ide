@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-SHOW",
+    "clause": "open_filtered",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "isOpen is a count short of its denominator or an unrun line; the index keeps open rows, the graph keeps a row with an open one at or under it, which is the path down to it."
+    }
+  },
+  "linkHash": "8c44a11f28717bd6",
+  "inputs": [
+    [
+      "requirement",
+      "aa988992db31ff51"
+    ],
+    [
+      "model",
+      "25441622715767d1"
+    ]
+  ]
+}

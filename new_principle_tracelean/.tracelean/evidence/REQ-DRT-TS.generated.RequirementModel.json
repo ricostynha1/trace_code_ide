@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-DRT-TS",
+    "clause": "generated",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "The TypeScript runner is generated."
+    }
+  },
+  "linkHash": "0be5d6fef05b448f",
+  "inputs": [
+    [
+      "requirement",
+      "5c16852867ab6d50"
+    ],
+    [
+      "model",
+      "3a502f5b8ed31c76"
+    ]
+  ]
+}

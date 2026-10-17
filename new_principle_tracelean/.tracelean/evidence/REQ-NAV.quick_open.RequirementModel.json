@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-NAV",
+    "clause": "quick_open",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "quickOpen scores letters in order from the path start and from the name, keeps the better, ranks by score then path, and lists every file shortest first for no letters."
+    }
+  },
+  "linkHash": "1c2609fd7c218821",
+  "inputs": [
+    [
+      "requirement",
+      "767e8eb4beadb71e"
+    ],
+    [
+      "model",
+      "3ac728cd357e1b1c"
+    ]
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-DRT-GEN",
+    "clause": "shrink_preserves",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "Only candidates that still diverge are accepted."
+    }
+  },
+  "linkHash": "60b5dda41af75a66",
+  "inputs": [
+    [
+      "requirement",
+      "cf794689b2f52cc6"
+    ],
+    [
+      "model",
+      "0d257b986eccec20"
+    ]
+  ]
+}

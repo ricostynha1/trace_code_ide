@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-OBS",
+    "clause": "no_instruction_channel",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "Nothing flows back to the tool."
+    }
+  },
+  "linkHash": "e2ec44675be7a413",
+  "inputs": [
+    [
+      "requirement",
+      "66a1f78c615521bb"
+    ],
+    [
+      "model",
+      "e546e4029c4ff172"
+    ]
+  ]
+}

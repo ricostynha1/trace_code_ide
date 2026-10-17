@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "ARCH-EFFECT-LAW",
+    "clause": "axiomatised",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "Effects are opaque constants in the one effects module, each with its law; the check reads that module."
+    }
+  },
+  "linkHash": "be30d760e7dc7529",
+  "inputs": [
+    [
+      "requirement",
+      "46bd65faf99ca23e"
+    ],
+    [
+      "model",
+      "144654390a25b589"
+    ]
+  ]
+}

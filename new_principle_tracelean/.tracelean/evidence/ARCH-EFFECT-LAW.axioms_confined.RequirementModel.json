@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "ARCH-EFFECT-LAW",
+    "clause": "axioms_confined",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "Axioms appear in one file only; the check reads every model file."
+    }
+  },
+  "linkHash": "b1fa5d51d14891db",
+  "inputs": [
+    [
+      "requirement",
+      "e290248e6e5e583a"
+    ],
+    [
+      "model",
+      "144654390a25b589"
+    ]
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-DRT",
+    "clause": "case_count_stated",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "Reworded to what is built: the record names seed and cases, which fix the cases; halves compose only once the coverage half (floors met) is in under the current stamp."
+    }
+  },
+  "linkHash": "618ee707271b8a49",
+  "inputs": [
+    [
+      "requirement",
+      "ca822497cdb22f70"
+    ],
+    [
+      "model",
+      "033ddb2c7332be2b"
+    ]
+  ]
+}

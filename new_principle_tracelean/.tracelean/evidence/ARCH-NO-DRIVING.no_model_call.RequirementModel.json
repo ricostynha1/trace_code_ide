@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "ARCH-NO-DRIVING",
+    "clause": "no_model_call",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "No model API or network client in the source; read off the tree."
+    }
+  },
+  "linkHash": "f1f07f1ca112ff5c",
+  "inputs": [
+    [
+      "requirement",
+      "e7729900146a8001"
+    ],
+    [
+      "model",
+      "c5b1fedc3bbe403c"
+    ]
+  ]
+}

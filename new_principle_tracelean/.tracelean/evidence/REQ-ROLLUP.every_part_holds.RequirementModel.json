@@ -11,7 +11,7 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "combine of [] is empty; otherwise the per-mark AND over every part."
+      "note": "combine is NONE for no parts, else the fold of both from neutral, normalising a single part; the spec covers structural, tested and proved and is pinned."
     }
   },
   "linkHash": "7c889a6e706c7ac6",
@@ -22,7 +22,7 @@
     ],
     [
       "model",
-      "9d57426604aad65f"
+      "f59ac700b6197593"
     ]
   ]
 }

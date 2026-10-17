@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "ARCH-HONEST",
+    "clause": "named_findings",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "Findings are a closed enum, each rendered with its name; the check renders one of each."
+    }
+  },
+  "linkHash": "f6040440726815ec",
+  "inputs": [
+    [
+      "requirement",
+      "9489a667332c469a"
+    ],
+    [
+      "model",
+      "7cedcd033a6fdf0a"
+    ]
+  ]
+}

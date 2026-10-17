@@ -1,0 +1,30 @@
+{
+  "key": {
+    "reqId": "REQ-NAV",
+    "clause": "quick_open",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 73,
+      "cases": 1000,
+      "op": "REQ-NAV.quick_open"
+    }
+  },
+  "linkHash": "2073603fc6c85b60",
+  "inputs": [
+    [
+      "implementation",
+      "5c47a12735424bee"
+    ],
+    [
+      "model",
+      "3ac728cd357e1b1c"
+    ],
+    [
+      "requirement",
+      "767e8eb4beadb71e"
+    ]
+  ]
+}

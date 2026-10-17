@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-DRT-TS",
+    "clause": "second_implementation_same_oracle",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "The TypeScript is compared with the Lean model, not with the Rust."
+    }
+  },
+  "linkHash": "5f5dda106a7f9c1d",
+  "inputs": [
+    [
+      "requirement",
+      "4c1bffdc024e124f"
+    ],
+    [
+      "model",
+      "6233666a751643b7"
+    ]
+  ]
+}

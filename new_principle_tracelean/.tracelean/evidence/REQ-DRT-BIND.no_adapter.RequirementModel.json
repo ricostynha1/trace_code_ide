@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-DRT-BIND",
+    "clause": "no_adapter",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "Bindings name the implementation itself; the runner calls it directly."
+    }
+  },
+  "linkHash": "4293323875b51df9",
+  "inputs": [
+    [
+      "requirement",
+      "15eec7b5f7d0b6db"
+    ],
+    [
+      "model",
+      "47fc82d6f1738981"
+    ]
+  ]
+}

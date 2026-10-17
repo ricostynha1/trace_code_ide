@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-STALE",
+    "clause": "listed_for_a_script",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "--stale prints one line per link for a script."
+    }
+  },
+  "linkHash": "02858f1acbfb24ae",
+  "inputs": [
+    [
+      "requirement",
+      "acf2616931a4d987"
+    ],
+    [
+      "model",
+      "b75a28c2fad0aa87"
+    ]
+  ]
+}

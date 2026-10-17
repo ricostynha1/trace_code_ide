@@ -4,10 +4,11 @@
 //! and a search of a file tree, of the requirements or of the findings — all of
 //! them buffers — is the same search as one of a file.
 
-/// One character folded for matching, one for one so that offsets stay
-/// offsets of the text itself.
+/// One character folded for matching: the letters a to z only, so that a
+/// character is one character on both sides and offsets stay offsets of the
+/// text itself.
 fn fold(c: char) -> char {
-    c.to_lowercase().next().unwrap_or(c)
+    c.to_ascii_lowercase()
 }
 
 /// How many characters of `text` the shortest match of `pattern` at its start
@@ -29,7 +30,7 @@ fn shortest(pattern: &[char], text: &[char]) -> Option<usize> {
 
 /// Every place `pattern` matches in `text`, as character offsets of its start
 /// and its end, left to right and without overlap. `*` is any run of
-/// characters and `?` any one, within a line; case is ignored. A match is
+/// characters and `?` any one, within a line; the case of a to z is ignored. A match is
 /// never empty, so `*` alone finds nothing rather than everywhere.
 ///
 /// @implements REQ-NAV.find_by_glob

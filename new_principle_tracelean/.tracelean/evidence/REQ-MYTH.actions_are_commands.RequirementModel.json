@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-MYTH",
+    "clause": "actions_are_commands",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "Every action goes through the keymap's command names."
+    }
+  },
+  "linkHash": "a35b1ac16f249b48",
+  "inputs": [
+    [
+      "requirement",
+      "9069c2107de06055"
+    ],
+    [
+      "model",
+      "aa71527907a21579"
+    ]
+  ]
+}

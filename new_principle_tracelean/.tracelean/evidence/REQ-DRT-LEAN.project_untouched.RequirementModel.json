@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-DRT-LEAN",
+    "clause": "project_untouched",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "Nothing under formal/ is written by generation."
+    }
+  },
+  "linkHash": "e06c1d5473b04365",
+  "inputs": [
+    [
+      "requirement",
+      "b464843dc945d5c4"
+    ],
+    [
+      "model",
+      "524ca791d92d75e5"
+    ]
+  ]
+}

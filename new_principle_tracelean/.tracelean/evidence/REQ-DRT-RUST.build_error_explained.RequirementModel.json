@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-DRT-RUST",
+    "clause": "build_error_explained",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "A failed build carries the compiler's message."
+    }
+  },
+  "linkHash": "5b571c8cf6282f8a",
+  "inputs": [
+    [
+      "requirement",
+      "57406e9ccb9db442"
+    ],
+    [
+      "model",
+      "611229207fb65dd0"
+    ]
+  ]
+}

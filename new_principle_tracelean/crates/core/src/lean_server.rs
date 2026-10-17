@@ -12,7 +12,7 @@
 //! than a frozen window. What is pure — the framing, the position, the reading
 //! of an answer — is separate from what starts a process, and tested without one.
 //!
-//! @implements REQ-LSP.proof_state_shown
+//! Its pure reading of an answer, `goals_shown`, is what clause `REQ-LSP.proof_state_shown` models.
 
 use std::collections::BTreeMap;
 use std::io::{BufRead, BufReader, Read, Write};
@@ -42,22 +42,40 @@ pub fn utf16_column(line: &str, column: usize) -> u32 {
     line.chars().take(column).map(|c| c.len_utf16() as u32).sum()
 }
 
-/// What a `plainGoal` answer says, as lines to show: each goal, a blank line
-/// between them, or that there is none where the cursor is.
+/// What the panel says of what the server answered: each goal, a blank line
+/// between them; that there is none where the cursor is; or, when the server
+/// gave no list of goals, its own rendering. `answered` is whether the server
+/// gave a result at all.
+///
+/// @implements REQ-LSP.proof_state_shown
+pub fn goals_shown(answered: bool, goals: Option<Vec<String>>, rendered: Option<String>) -> String {
+    if !answered {
+        return "no goals here".to_string();
+    }
+    match goals {
+        Some(goals) if goals.is_empty() => "no goals".to_string(),
+        Some(goals) => goals.join("\n\n"),
+        None => rendered.unwrap_or_else(|| "no goals here".to_string()),
+    }
+}
+
+/// What a `plainGoal` answer says, as lines to show: the server's error, or the
+/// goals it reported as `goals_shown` has them.
 pub fn goal_text(answer: &Value) -> String {
     if let Some(error) = answer.get("error") {
         let said = error.get("message").and_then(Value::as_str).unwrap_or("the server refused");
         return format!("the Lean server said: {said}");
     }
     match answer.get("result") {
-        None | Some(Value::Null) => "no goals here".to_string(),
-        Some(result) => match result.get("goals").and_then(Value::as_array) {
-            Some(goals) if !goals.is_empty() => {
-                goals.iter().filter_map(Value::as_str).collect::<Vec<_>>().join("\n\n")
-            }
-            Some(_) => "no goals".to_string(),
-            None => result.get("rendered").and_then(Value::as_str).unwrap_or("no goals here").to_string(),
-        },
+        None | Some(Value::Null) => goals_shown(false, None, None),
+        Some(result) => goals_shown(
+            true,
+            result
+                .get("goals")
+                .and_then(Value::as_array)
+                .map(|goals| goals.iter().filter_map(Value::as_str).map(str::to_string).collect()),
+            result.get("rendered").and_then(Value::as_str).map(str::to_string),
+        ),
     }
 }
 

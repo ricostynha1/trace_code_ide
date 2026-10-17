@@ -11,18 +11,18 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "Each row carries its four marks as spans, then the id, bar and title."
+      "note": "requirementsBuffer gives one row a requirement: id, marks, and I/A/J/T/P counts each as a piece in its mark's role; T and P counted out of the clauses they apply to."
     }
   },
   "linkHash": "a85d576ce63e64b8",
   "inputs": [
     [
       "requirement",
-      "fec0d6ade0d1ab48"
+      "a6fc27a721f29831"
     ],
     [
       "model",
-      "52ba70bac2e13a4f"
+      "3124866956145259"
     ]
   ]
 }
