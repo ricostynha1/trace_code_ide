@@ -1090,6 +1090,19 @@ impl Editor {
         };
     }
 
+    /// Move the cursor `delta` lines (up when negative) in one go, keeping the
+    /// column where it can: what a drag of the scrollbar asks for, which is
+    /// hundreds of lines at once.
+    fn step_lines(&mut self, delta: i64) {
+        let lines: Vec<String> = tracelean_core::surface::view::plain_text(self.buffer());
+        let (line, column) = self.line_and_column();
+        let last = lines.len().saturating_sub(1) as i64;
+        let target = (line as i64 + delta).clamp(0, last) as usize;
+        let width = lines.get(target).map_or(0, |l| l.chars().count());
+        let at: usize = lines.iter().take(target).map(|before| before.chars().count() + 1).sum();
+        self.offset = at + column.min(width);
+    }
+
     /// Move the cursor one line, keeping the column where it can.
     pub fn step_line(&mut self, down: bool) {
         let lines: Vec<String> =
@@ -1682,10 +1695,7 @@ impl Editor {
     pub fn scroll(&mut self, pane: &str, lines: i64) {
         self.focus_pane(pane);
         let count = self.buffer().text.split('\n').count();
-        let down = lines > 0;
-        for _ in 0..lines.unsigned_abs() {
-            self.step_line(down);
-        }
+        self.step_lines(lines);
         let top = self.top as i64 + lines;
         self.top = top.clamp(0, count.saturating_sub(1) as i64) as usize;
     }

@@ -380,3 +380,25 @@ fn the_proof_panel_names_why_a_lean_file_has_no_goals() {
     assert!(text(&editor).contains("no Lean project"), "{}", text(&editor));
     let _ = std::fs::remove_dir_all(&root);
 }
+
+/// A scroll of many lines at once moves the cursor and the window by exactly
+/// that many, as the scrollbar's drag asks for, and stops at the ends.
+///
+/// @tests REQ-ACT.one_path
+#[test]
+fn scrolling_many_lines_at_once_lands_where_asked() {
+    let root = project();
+    let long: String = (0..50).map(|n| format!("line {n}\n")).collect();
+    std::fs::write(root.join("src/long.rs"), &long).unwrap();
+    let mut editor = Editor::open(root.clone(), keymap());
+    editor.perform(Intent::Display { what: BufferKind::File { path: "src/long.rs".into() } });
+    editor.scroll("document", 20);
+    assert_eq!(editor.line_and_column().0, 20);
+    editor.scroll("document", -5);
+    assert_eq!(editor.line_and_column().0, 15);
+    editor.scroll("document", 1000);
+    assert_eq!(editor.line_and_column().0, 50, "past the last line stops on it");
+    editor.scroll("document", -1000);
+    assert_eq!(editor.line_and_column().0, 0);
+    let _ = std::fs::remove_dir_all(&root);
+}

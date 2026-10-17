@@ -312,8 +312,10 @@ function drawScrollbar(box: HTMLElement, pane: Pane) {
   thumb.addEventListener("mousedown", (event) => {
     event.preventDefault();
     event.stopPropagation();
-    const [from, startedAt] = [event.clientY, at];
-    const move = (moved: MouseEvent) => scrollTo(startedAt + ((moved.clientY - from) / room()) * total);
+    // The track's height now: the pane is drawn anew on every scroll, which
+    // detaches this bar, and a detached one has no height to ask.
+    const [from, startedAt, height] = [event.clientY, at, room()];
+    const move = (moved: MouseEvent) => scrollTo(startedAt + ((moved.clientY - from) / height) * total);
     const release = () => {
       document.removeEventListener("mousemove", move);
       document.removeEventListener("mouseup", release);
