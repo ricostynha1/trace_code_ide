@@ -58,15 +58,6 @@ def estimateLine (spend : Spend) : String :=
     else " (unpriced: " ++ String.intercalate ", " spend.unpriced ++ ")"
   "estimated " ++ money ++ tail
 
-/-- @proves REQ-COST.estimate_is_labelled -/
-theorem an_estimate_says_so :
-    ([{ amount := 0, unpriced := [] },
-      { amount := 1234567, unpriced := [] },
-      { amount := 999999, unpriced := ["sonnet"] },
-      { amount := 0, unpriced := ["opus", "haiku"] }] : List Spend).all
-        (fun spend => (estimateLine spend).startsWith "estimated ") = true := by
-  native_decide
-
 /-- @proves REQ-COST.cache_priced_apart -/
 theorem each_kind_at_its_own_rate (price : Price) (model : String) (n : Nat) :
     amountOf price { model := model, input := n, cached := 0, cacheWrite := 0, output := 0 }

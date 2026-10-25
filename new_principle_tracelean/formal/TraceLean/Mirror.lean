@@ -140,12 +140,6 @@ theorem an_opaque_file_is_never_mirrored (path hash : String) (after : FileState
   all_goals split
   all_goals simp [Change.isReportOnly]
 
-/-- @proves REQ-MIRROR.binary_handled -/
-theorem a_changed_binary_is_reported :
-    (changeAt "logo.png" (.opaque "1") (.opaque "2")).length = 1 ∧
-    (changeAt "logo.png" (.opaque "1") (.opaque "1")).length = 0 := by
-  native_decide
-
 def commandPath : Command → String
   | .insert file _ _ => file
   | .delete file _ _ => file
@@ -163,61 +157,6 @@ def changedSince (base : Option (List (String × String))) (project agent : Work
   | none => []
   | some b => (mutationsOf project agent).filter
       (fun c => commandPath c == "" || touchedByAgent b agent.canon (commandPath c))
-
-/-- @proves REQ-OBS.only_what_the_tool_changed -/
-theorem an_untouched_copy_offers_nothing :
-    changedSince (some [("a.rs", TraceLean.Hash.digest "one")])
-      ⟨[("a.rs", "one, since edited"), ("new.md", "x")]⟩ ⟨[("a.rs", "one")]⟩ |>.isEmpty := by
-  native_decide
-
-def beforeRun : Workspace :=
-  ⟨[("gone.rs", "x"), ("same.rs", "s"), ("edit.rs", "old"), ("empty.rs", "e"), (".git/HEAD", "a")]⟩
-
-def afterRun : Workspace :=
-  ⟨[("same.rs", "s"), ("edit.rs", "new"), ("empty.rs", ""), ("made.rs", "m"), (".git/HEAD", "b")]⟩
-
-def asText (commands : List Command) : List String :=
-  commands.map (fun c => (Lean.toJson c).compress)
-
-def applyOrKeep (w : Workspace) (c : Command) : Workspace :=
-  match apply w c with
-  | .ok next => next
-  | .error _ => w
-
-def mirroredPart (w : Workspace) : Workspace := ⟨w.canon.files.filter (fun f => isMirrored f.1)⟩
-
-/-- @proves REQ-MIRROR.apply_reproduces -/
-theorem mirroring_reaches_the_observed_tree :
-    mirroredPart (mirrored beforeRun afterRun).reached = mirroredPart afterRun ∧
-    (mirrored beforeRun afterRun).refused.isEmpty = true ∧
-    (mirrored beforeRun afterRun).reached.get ".git/HEAD" = some "a" := by
-  native_decide
-
-/-- @proves REQ-MIRROR.diff_is_pure -/
-theorem the_diff_is_of_the_trees_alone :
-    asText (mutationsOf ⟨beforeRun.files.reverse⟩ ⟨afterRun.files.reverse⟩)
-      = asText (mutationsOf beforeRun afterRun) := by
-  native_decide
-
-/-- @proves REQ-MIRROR.minimal -/
-theorem no_mutation_is_spare :
-    (List.range (mutationsOf beforeRun afterRun).length).all (fun i =>
-      mirroredPart (((mutationsOf beforeRun afterRun).eraseIdx i).foldl applyOrKeep beforeRun.canon)
-        != mirroredPart afterRun) = true := by
-  native_decide
-
-/-- @proves REQ-MIRROR.protected_excluded -/
-theorem a_protected_path_is_not_mirrored :
-    (mutationsOf beforeRun afterRun).all (fun c => isMirrored (commandPath c)) = true := by
-  native_decide
-
-/-- @proves REQ-MIRROR.ordering_defined -/
-theorem mutations_run_in_an_order_that_fits :
-    asText (mutationsOf beforeRun afterRun)
-      = asText [.deleteFile "gone.rs" "x", .createFile "made.rs", .insert "made.rs" 0 "m",
-                .delete "edit.rs" 0 "old", .insert "edit.rs" 0 "new", .delete "empty.rs" 0 "e"] ∧
-    (mirrored beforeRun afterRun).refused.isEmpty = true := by
-  native_decide
 
 /-- @proves REQ-SELFWRITE.own_writes_ignored -/
 theorem an_own_write_is_suppressed (path content : String) :

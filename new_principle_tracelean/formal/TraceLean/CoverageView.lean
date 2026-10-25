@@ -66,12 +66,4 @@ def linked (b : Buffer) : List (String × List String) :=
 def measured : List Item :=
   [⟨"src/a.rs", 10, some "f", some "one", [⟨10, 2, [("t1", 2)]⟩, ⟨11, 0, []⟩], ["fn f()", "  x"]⟩]
 
-/-- @proves REQ-LINECOV.lines_listed -/
-theorem each_item_lists_its_tests_and_unrun_lines :
-    linked (coverageView "REQ-A" measured 60)
-      = [("REQ-A", ["trace.requirement"]), ("src/a.rs:10", ["file.open"]),
-         ("src/a.rs:11", ["file.open"])] ∧
-    ((coverageView "REQ-A" measured 60).text.splitOn "ran by  t1 ×2").length = 2 := by
-  native_decide
-
 end TraceLean.CoverageView

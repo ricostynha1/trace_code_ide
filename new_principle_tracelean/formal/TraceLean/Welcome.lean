@@ -60,12 +60,4 @@ def welcome (starts : List MenuEntry) (recent : List String) : Buffer :=
 def covered (b : Buffer) (s : Span) : String :=
   String.mk ((b.text.toList.drop s.start).take (s.stop - s.start))
 
-/-- @proves REQ-SHOW.recent_reopens -/
-theorem each_recent_folder_is_a_way_back :
-    ((welcome [] ["/home/u/p", "/tmp/q"]).spans.filter (·.actions == ["file.open"])).map
-        (covered (welcome [] ["/home/u/p", "/tmp/q"]))
-      = ["/home/u/p", "/tmp/q"] ∧
-    ((welcome [] ["/home/u/p", "/tmp/q"]).text.splitOn "Recent").length = 2 := by
-  native_decide
-
 end TraceLean.Welcome

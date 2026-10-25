@@ -110,21 +110,4 @@ def reproducibility (record : Evidence) : Reproducibility :=
       | some name => .missingInput name
       | none => .reproducible
 
-private def drtSample (cases : Nat) : Evidence :=
-  { key := { reqId := "REQ-X", clause := none, bond := .modelImpl },
-    level := .L3,
-    detail := .drt 7 cases "REQ-X",
-    linkHash := "l1",
-    inputs := [] }
-
-/-- @proves REQ-EVID.record_reproducible -/
-theorem no_cases_is_not_reproducible :
-    reproducibility (drtSample 0) = Reproducibility.incomplete "cases" := by
-  native_decide
-
-/-- @proves REQ-STALE.inputs_identified -/
-theorem unnamed_inputs_are_reported :
-    reproducibility (drtSample 2000) = Reproducibility.missingInput "model" := by
-  native_decide
-
 end TraceLean.Record

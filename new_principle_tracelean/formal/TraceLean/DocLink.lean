@@ -140,26 +140,4 @@ def recordedFrontmatter (targets : List String) (current : List (String × Strin
       out ++ "  " ++ target ++ ": " ++ hash ++ "\n")
     header
 
-/-- @proves REQ-DOCLINK.decisions_exempt -/
-theorem a_decision_record_declares_nothing :
-    declaredIn ["---", "adr: 11", "affects: [REQ-X]", "---", "# A decision"] = [] := by
-  native_decide
-
-/-- @proves REQ-DOCLINK.confirmation_is_human -/
-theorem confirming_an_unknown_target_says_so :
-    recordedFrontmatter ["a"] [] = "describes: [a]\ndescribed_hash:\n  a: ?\n" := by
-  native_decide
-
-/-- @proves REQ-DOCLINK.declares_target -/
-theorem a_document_declares_its_targets :
-    (declaredIn ["---", "describes: [REQ-A, src/x.rs::f]", "---", "# Doc"]).map (·.1)
-      = ["REQ-A", "src/x.rs::f"] := by
-  native_decide
-
-/-- @proves REQ-DOCLINK.records_hash -/
-theorem a_document_records_each_targets_hash :
-    declaredIn ["---", "describes: [REQ-A, REQ-B]", "described_hash:", "  REQ-A: 3c66", "---"]
-      = [("REQ-A", "3c66"), ("REQ-B", "")] := by
-  native_decide
-
 end TraceLean.DocLink

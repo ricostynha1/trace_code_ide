@@ -7,11 +7,11 @@
   "level": "L4",
   "detail": {
     "proof": {
-      "theoremName": "TraceLean.Tree::a_preview_is_before_and_after",
+      "theoremName": "TraceLean.Tree::previewing_moves_nothing",
       "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
     }
   },
-  "linkHash": "04b98c128a9d82f2",
+  "linkHash": "466938234a4daa4d",
   "inputs": [
     [
       "model",

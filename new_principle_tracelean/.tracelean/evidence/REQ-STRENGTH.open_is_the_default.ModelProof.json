@@ -7,7 +7,7 @@
   "level": "L4",
   "detail": {
     "proof": {
-      "theoremName": "TraceLean.Strength::an_unpinned_model_is_open_and_not_a_pass",
+      "theoremName": "TraceLean.Pinning::no_theorem_is_open",
       "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
     }
   },

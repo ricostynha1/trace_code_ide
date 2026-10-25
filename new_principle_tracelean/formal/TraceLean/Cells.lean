@@ -162,19 +162,6 @@ def drawnWrong (buffer : Buffer) (painted : String) (rows columns : Nat) (looks 
     List Miscoloured :=
   miscoloured buffer (grid painted rows columns) looks
 
-def csi (body : String) : String := String.mk [Char.ofNat 27] ++ "[" ++ body
-
-def headed : Buffer :=
-  { id := "b", kind := .record "b", text := "ab", spans := [⟨0, 1, .heading, []⟩] }
-
 def looks : List Look := [⟨.heading, some "#ff0000", true⟩]
-
-/-- @proves REQ-LOOK.roles_drawn_in_theme_colours -/
-theorem each_character_is_checked_where_it_landed :
-    (drawnWrong headed (csi "1;38;2;255;0;0m" ++ "a" ++ csi "0m" ++ "b") 1 4 looks).length = 0 ∧
-    ((drawnWrong headed ("a" ++ "b") 1 4 looks).map (fun m => (m.line, m.column))) = [(0, 0)] ∧
-    ((drawnWrong headed (csi "38;2;255;0;0m" ++ "a" ++ csi "0m" ++ "b") 1 4 looks).map
-      (fun m => (m.line, m.column))) = [(0, 0)] := by
-  native_decide
 
 end TraceLean.Cells

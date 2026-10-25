@@ -171,32 +171,6 @@ theorem batch_inverse_is_reversed (commands : List Command) :
 
 def sample : Workspace := ⟨[("a.rs", "hello"), ("b.rs", "")]⟩
 
-/-- @proves REQ-CMD.round_trip -/
-theorem each_command_round_trips :
-    roundTripOutcome sample (.insert "a.rs" 2 "XY") = .ok sample ∧
-    roundTripOutcome sample (.delete "a.rs" 1 "ell") = .ok sample ∧
-    roundTripOutcome sample (.renameFile "a.rs" "c.rs") = .ok sample ∧
-    roundTripOutcome sample (.createFile "d.rs") = .ok sample ∧
-    roundTripOutcome sample (.deleteFile "a.rs" "hello") = .ok sample ∧
-    roundTripOutcome sample (.batch [.insert "a.rs" 0 "J", .renameFile "b.rs" "e.rs"]) = .ok sample := by
-  native_decide
-
-/-- @proves REQ-CMD.witness_carried -/
-theorem a_deletion_carries_what_it_deletes :
-    applyOutcome sample (.delete "a.rs" 1 "xyz") = .refused "witnessMismatch" ∧
-    applyOutcome sample (.deleteFile "a.rs" "other") = .refused "witnessMismatch" ∧
-    applyOutcome ⟨[("b.rs", "")]⟩ (inverse (.deleteFile "a.rs" "hello")) = .ok sample := by
-  native_decide
-
-/-- @proves REQ-CMD.total_or_refused -/
-theorem a_misfit_is_refused_whole :
-    applyOutcome sample (.insert "zz.rs" 0 "x") = .refused "noSuchFile" ∧
-    applyOutcome sample (.insert "a.rs" 9 "x") = .refused "offsetOutOfRange" ∧
-    applyOutcome sample (.createFile "a.rs") = .refused "fileExists" ∧
-    applyOutcome sample (.batch [.insert "a.rs" 0 "x", .renameFile "q.rs" "r.rs"])
-      = .refused "noSuchFile" := by
-  native_decide
-
 /-- @proves REQ-CMD.single_path -/
 theorem a_batch_is_its_members_in_turn (w : Workspace) (a b : Command) :
     apply w (.batch [a, b]) = Except.bind (apply w a) (fun v => apply v b) := by

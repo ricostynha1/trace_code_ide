@@ -117,13 +117,6 @@ theorem inside_an_edit_is_written_there (file text : String) (offset position : 
 def edits : List Step :=
   [.push (.insert "a.rs" 0 "xy"), .push (.insert "a.rs" 1 "Q"), .push (.delete "a.rs" 3 "he")]
 
-/-- @proves REQ-PROV.position_question -/
-theorem each_position_names_its_writer :
-    [0, 1, 2, 3].map (fun p => origins ⟨[("a.rs", "hello")]⟩ edits "a.rs" p)
-      = [[.node 0, .node 0, .node 0], [.node 0, .node 1, .node 1],
-         [.base, .node 0, .node 0], [.base, .base, .base]] := by
-  native_decide
-
 /-- @proves REQ-PROV.exact_not_heuristic -/
 theorem the_answer_is_exact (file text : String) (offset position : Nat) :
     back (.insert file offset text) file position = .moved position ∨

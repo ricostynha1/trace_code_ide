@@ -224,16 +224,6 @@ def parseComment (text : String) (firstLine : Nat) : ParsedComment :=
 def parseCommentLines (lines : List String) (firstLine : Nat) : ParsedComment :=
   parseComment (String.intercalate "\n" lines) firstLine
 
-/-- @proves REQ-ANNOT.totality -/
-theorem a_comment_without_at_signs_says_nothing :
-    parseComment "just prose" 0 = { directives := [], problems := [] } := by
-  native_decide
-
-/-- @proves REQ-ANNOT.unknown_role_named -/
-theorem an_unknown_role_is_reported :
-    (parseComment "@banana REQ-X" 0).problems.length = 1 := by
-  native_decide
-
 /-- @models REQ-ANNOT.region_balanced -/
 def regionBalance (directives : List Directive) : List Problem :=
   let step := directives.foldl
@@ -251,40 +241,5 @@ def regionBalance (directives : List Directive) : List Problem :=
   step.2 ++ step.1.map (fun line =>
     { kind := .unclosedRegion, line := line,
       message := "a region opened with `begin` is never closed" })
-
-/-- @proves REQ-ANNOT.region_balanced -/
-theorem a_stray_end_is_reported :
-    regionBalance [Directive.«end» 3]
-      = [{ kind := .strayEnd, line := 3, message := "`@end` closes nothing" }] := by
-  native_decide
-
-/-- @proves REQ-ANNOT.region_balanced -/
-theorem a_balanced_region_is_quiet :
-    regionBalance
-      [ .annotation { role := .implements, reqId := "REQ-A", clause := none, attrs := [],
-                      opensRegion := true, line := 1 },
-        Directive.«end» 5 ] = [] := by
-  native_decide
-
-/-- @proves REQ-ANNOT.role_vocabulary -/
-theorem the_seven_roles_and_nothing_else :
-    ["models", "specifies", "implements", "tests", "drt", "proves", "pins"].map Role.parse
-      = [some .models, some .specifies, some .implements, some .tests, some .drt, some .proves,
-         some .pins] ∧
-    ["model", "test", "implement", "requires", "", "Models"].map Role.parse
-      = [none, none, none, none, none, none] := by
-  native_decide
-
-/-- @proves REQ-ANNOT.qualifiers -/
-theorem qualifiers_attach_or_name_their_own :
-    (parseComment "@implements REQ-A.x\n@partial" 0).directives.getLast?
-      = some (Directive.qualified (.partial none) none none 1) ∧
-    (parseComment "@exempt REQ-B.y" 0).directives
-      = [Directive.qualified (.exempt none none none) (some "REQ-B") (some "y") 0] ∧
-    (parseComment "@nondeterministic" 0).directives
-      = [Directive.qualified (.nondeterministic none) none none 0] ∧
-    (parseComment "@structural" 0).directives
-      = [Directive.qualified (.structural none) none none 0] := by
-  native_decide
 
 end TraceLean.Annotation

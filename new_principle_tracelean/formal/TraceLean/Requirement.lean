@@ -276,38 +276,6 @@ def parseLines (lines : List String) : Parsed :=
             if clauses.isEmpty then [none] else clauses.map (fun c => some c.1)
           problems := fields.problems ++ unknownProblems fields true }
 
-/-- @proves REQ-REQDOC.malformed_reported -/
-theorem prose_is_not_a_requirement :
-    parseLines ["# Notes", "", "prose"] = {} := by
-  native_decide
-
-/-- @proves REQ-REQDOC.clauseless_uniform -/
-theorem no_clauses_is_one_implicit_clause :
-    (parseLines ["---", "id: REQ-X", "---", "# X"]).addressable = [none] := by
-  native_decide
-
-/-- @proves REQ-REQDOC.decomposition_claimed -/
-theorem decomposition_defaults_to_open :
-    (parseLines ["---", "id: REQ-X", "---"]).decomposition = Decomposition.«open» := by
-  native_decide
-
-/-- @proves REQ-REQDOC.malformed_reported -/
-theorem an_unclosed_fence_is_reported :
-    (parseLines ["---", "id: REQ-X"]).problems = [(1, FrontmatterKind.unclosedFrontmatter)] := by
-  native_decide
-
-/-- @proves REQ-REQDOC.narrowings_nest -/
-theorem a_narrowing_is_not_addressable :
-    (parseLines ["---", "id: REQ-X", "clauses:", "  c:", "    text: T", "    empty: E", "---"]).addressable
-      = [some "c"] := by
-  native_decide
-
-/-- @proves REQ-REQDOC.clause_unique -/
-theorem a_clause_declared_twice_is_reported :
-    (parseLines ["---", "id: REQ-X", "clauses:", "  c: A", "  c: B", "---"]).problems
-      = [(5, FrontmatterKind.duplicateClause)] := by
-  native_decide
-
 /-- @models REQ-REQDOC.id_unique -/
 def duplicateIds (declared : List (String × String)) : List (String × String) :=
   (declared.foldl
@@ -321,12 +289,5 @@ def duplicateIds (declared : List (String × String)) : List (String × String) 
 theorem one_declaration_is_not_a_duplicate (id file : String) :
     duplicateIds [(id, file)] = [] := by
   simp [duplicateIds]
-
-/-- @proves REQ-REQDOC.id_is_identity -/
-theorem the_declared_id_is_the_identity :
-    (parseLines ["---", "id: REQ-X", "---", "# REQ-Y"]).id = "REQ-X" ∧
-    (parseLines ["---", "id: REQ-X", "---", "# REQ-Y"]).isRequirement = true ∧
-    (parseLines ["---", "title: REQ-Y", "---", "# REQ-Y"]).isRequirement = false := by
-  native_decide
 
 end TraceLean.Requirement

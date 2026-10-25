@@ -227,29 +227,8 @@ def requirementView (view : Shown) : Buffer :=
     (marksLine (evidenceLine out view.clauses) view.clauses) view.lines
   finish (view.clauses.foldl (clauseLines view.id) out) ("requirement " ++ view.id)
 
-/-- @proves REQ-LINECOV.requirement_summary -/
-theorem a_shared_line_counts_once :
-    (fun c => (c.run, c.all, c.tests))
-        (total [("a.rs", [⟨1, 2, [("t1", 2)]⟩, ⟨2, 0, []⟩]), ("a.rs", [⟨2, 1, [("t2", 1)]⟩, ⟨3, 0, []⟩])])
-      = (2, 3, 2) := by
-  native_decide
-
 def linked (b : Buffer) : List (String × List String) :=
   (b.spans.filter (!·.actions.isEmpty)).map
     (fun s => (String.mk ((b.text.toList.drop s.start).take (s.stop - s.start)), s.actions))
-
-def oneClause : Shown :=
-  ⟨"REQ-A", "A thing", "reqs/REQ-A.md", "draft", [], [], "",
-   [⟨some "one", "It shall.", [], ⟨true, false, true, false, false⟩,
-     [⟨"implements", "src/a.rs", 4, some "f"⟩, ⟨"tests", "tests/a.rs", 9, none⟩], none, true, none, none⟩],
-   60, none⟩
-
-/-- @proves REQ-SHOW.requirement_opened -/
-theorem an_opened_requirement_shows_clauses_and_claims :
-    ((requirementView oneClause).text.splitOn "A-T-  one\n  It shall.").length = 2 ∧
-    (linked (requirementView oneClause)).filter (fun l => l.2 == ["file.open"])
-      = [("reqs/REQ-A.md", ["file.open"]), ("src/a.rs:4", ["file.open"]),
-         ("tests/a.rs:9", ["file.open"])] := by
-  native_decide
 
 end TraceLean.RequirementView

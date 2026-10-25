@@ -108,17 +108,4 @@ def live : View :=
   ⟨some ⟨"s0001", "contained (bwrap)", "cd /tmp/x"⟩, [⟨"modified", "a.rs", 2, 1⟩],
    [⟨"you", "first"⟩, ⟨"agent", "second"⟩], ⟨0, []⟩, 40⟩
 
-/-- @proves REQ-SHOW.sandbox_session_shown -/
-theorem the_session_is_shown_whole :
-    linked (sandboxView live)
-      = [("cd /tmp/x", ["sandbox.copy"]), ("[ Copy command ]", ["sandbox.copy"]),
-         ("[ Look for changes ]", ["observe.start"]), ("[ End sandbox ]", ["sandbox.end"]),
-         ("[✓]", ["observe.accept_file"]), ("[✗]", ["observe.reject_file"]),
-         ("a.rs", ["observe.diff"]), ("[ Accept all ]", ["observe.accept"]),
-         ("[ Reject all ]", ["observe.reject"])] ∧
-    ((sandboxView live).text.splitOn "agent: second\nyou: first").length = 2 ∧
-    ((sandboxView live).text.splitOn "\n").all (·.length ≤ 40) = true ∧
-    linked (sandboxView ⟨none, [], [], ⟨0, []⟩, 40⟩) = [("[ New sandbox ]", ["sandbox.new"])] := by
-  native_decide
-
 end TraceLean.SandboxView

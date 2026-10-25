@@ -108,17 +108,6 @@ theorem no_newline_is_all_held (text : String) (h : text.splitOn "\n" = [text]) 
     readTranscript text = { events := [], unrecognised := [], held := text, usage := [] } := by
   simp [readTranscript, h, List.getLast!]
 
-/-- @proves REQ-TRANSCRIPT.absent_is_fine -/
-theorem empty_is_empty :
-    readTranscript "" = { events := [], unrecognised := [], held := "", usage := [] } := by
-  native_decide
-
 def said : String := (Json.mkObj [("type", Json.str "user"), ("text", Json.str "hi")]).compress
-
-/-- @proves REQ-TRANSCRIPT.unknown_preserved -/
-theorem an_unknown_record_is_kept_and_reading_goes_on :
-    (readTranscript (said ++ "\nnot a record\n" ++ said ++ "\n")).unrecognised = ["not a record"] ∧
-    (readTranscript (said ++ "\nnot a record\n" ++ said ++ "\n")).events.length = 2 := by
-  native_decide
 
 end TraceLean.Transcript

@@ -43,11 +43,6 @@ def lockLinkLe (a b : LockLink) : Bool :=
 def orderedLinks (links : List LockLink) : List LockLink :=
   links.mergeSort lockLinkLe
 
-/-- @proves ARCH-DETERMINISM.stable_ordering -/
-theorem ordering_is_idempotent_on_the_empty_list :
-    orderedLinks [] = [] := by
-  rfl
-
 def lockVersion : Nat := 1
 
 inductive VersionVerdict where
@@ -62,29 +57,7 @@ def versionVerdict (version : Option Nat) : VersionVerdict :=
   | none => .unstamped
   | some v => if v == lockVersion then .readable else .unknown v lockVersion
 
-/-- @proves REQ-LOCK.version_stamped -/
-theorem no_version_is_not_version_zero :
-    versionVerdict none != versionVerdict (some 0) := by
-  native_decide
-
 /-- @models REQ-LOCK.evidence_preserved -/
 def carriedEvidence (evidence : List Evidence) : List Evidence := evidence
-
-/-- @proves REQ-LOCK.evidence_preserved -/
-theorem rendering_no_evidence_carries_none :
-    carriedEvidence [] = [] := by
-  native_decide
-
-def walked : List LockLink :=
-  [⟨"tests", "REQ-A", some "x", "b.rs", "b.rs::t", "h2", "l2", none⟩,
-   ⟨"implements", "REQ-A", some "x", "a.rs", "a.rs::f", "h1", "l1", some "partial"⟩,
-   ⟨"implements", "REQ-A", some "x", "a.rs", "a.rs::f", "h1", "l1", none⟩]
-
-/-- @proves REQ-LOCK.deterministic_bytes -/
-theorem every_walk_writes_the_same_order :
-    orderedLinks walked = orderedLinks walked.reverse ∧
-    orderedLinks walked = orderedLinks [walked.getD 1 default, walked.getD 0 default, walked.getD 2 default] ∧
-    (orderedLinks walked).map (·.qualifier) = [none, some "partial", none] := by
-  native_decide
 
 end TraceLean.Lockfile

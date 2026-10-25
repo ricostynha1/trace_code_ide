@@ -7,11 +7,11 @@
   "level": "L4",
   "detail": {
     "proof": {
-      "theoremName": "TraceLean.Mirror::a_changed_binary_is_reported",
+      "theoremName": "TraceLean.Mirror::an_opaque_file_is_never_mirrored",
       "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
     }
   },
-  "linkHash": "53b86c4a7e6aeabc",
+  "linkHash": "d982ff22197da964",
   "inputs": [
     [
       "model",

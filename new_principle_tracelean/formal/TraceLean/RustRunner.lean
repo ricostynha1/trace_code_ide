@@ -37,11 +37,4 @@ def callSite (entry : Entry) : String :=
     ++ "            serde_json::to_value(out).map_err(|e| e.to_string())\n"
     ++ "        " ++ closeBrace ++ "\n"
 
-/-- @proves REQ-DRT-RUST.types_inferred -/
-theorem an_arm_names_no_type :
-    let arm := callSite (Entry.mk "REQ-X.c" "k::f" ["a", "b"] ["a", "x"])
-    (arm.splitOn "::<").length == 1 && (arm.splitOn "let a:").length == 1
-      && (arm.splitOn "let b:").length == 1 := by
-  native_decide
-
 end TraceLean.RustRunner

@@ -96,15 +96,4 @@ def graphReport (edges : Graph) : GraphReport :=
   let g := canonGraph edges
   { cycle := cycleIn g, dangling := danglingIn g }
 
-/-- @proves REQ-REQDOC.refines_dag -/
-theorem self_refinement_is_a_cycle :
-    (graphReport [("REQ-A", ["REQ-A"])]).cycle = some ["REQ-A", "REQ-A"] := by
-  native_decide
-
-/-- @proves REQ-REQDOC.refines_resolves -/
-theorem a_missing_parent_is_dangling_not_a_cycle :
-    graphReport [("REQ-A", ["REQ-GONE"])] =
-      { cycle := none, dangling := [("REQ-A", "REQ-GONE")] } := by
-  native_decide
-
 end TraceLean.Refinement

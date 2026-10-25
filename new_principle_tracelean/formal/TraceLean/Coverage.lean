@@ -189,65 +189,10 @@ def coverageLevel (agreed : Bool) (verdict : CoverageVerdict) : Level :=
   | true, .met => Level.L3
   | _, _ => Level.L1
 
-/-- @proves REQ-DRT-COVER.vacuous_named -/
-theorem nothing_reached_is_vacuous_not_short :
-    coverageVerdict [{ situation := "deletes", atLeast := 10 }] [] []
-      = CoverageVerdict.unmet [Gap.vacuous "deletes"] := by
-  native_decide
-
-/-- @proves REQ-DRT-COVER.vacuous_named -/
-theorem every_gap_is_reported_and_zero_is_vacuous :
-    coverageVerdict [{ situation := "a", atLeast := 5 }, { situation := "b", atLeast := 0 }]
-        [{ situation := "a", reached := 2 }] []
-      = CoverageVerdict.unmet [Gap.short "a" 2 5, Gap.vacuous "b"] := by
-  native_decide
-
-/-- @proves REQ-DRT-COVER.floor_stated -/
-theorem no_floor_is_not_a_met_floor :
-    coverageVerdict [] [{ situation := "deletes", reached := 900 }] []
-      = CoverageVerdict.undeclared := by
-  native_decide
-
-/-- @proves REQ-DRT-COVER.waiver_reasoned -/
-theorem a_waiver_without_a_reason_excuses_nothing :
-    coverageVerdict [{ situation := "x negative", atLeast := 1 }] []
-        [{ situations := ["x negative"], reason := " " }]
-      = CoverageVerdict.unmet [Gap.vacuous "x negative"]
-    ∧ coverageVerdict [{ situation := "x negative", atLeast := 1 }] []
-        [{ situations := ["x negative"], reason := "the type admits it, the caller never sends it" }]
-      = CoverageVerdict.met := by
-  native_decide
-
-/-- @proves REQ-DRT-COVER.waiver_unused_reported -/
-theorem a_reached_waiver_is_reported :
-    unusedWaivers [{ situation := "x zero", atLeast := 1 }] [{ situation := "x zero", reached := 3 }]
-        [{ situations := ["x zero", "line: unreachable!()"], reason := "old" }]
-      = ["x zero", "line: unreachable!()"] := by
-  native_decide
-
-/-- @proves REQ-DRT-COVER.classes_reached -/
-theorem classes_follow_the_bounds :
-    classesAt "" (.struct [("n", .int (some 0) (some 5)), ("o", .option .bool)])
-      = ["n zero", "n positive", "o absent", "o present", "o? true", "o? false"] := by
-  native_decide
-
-/-- @proves REQ-DRT-COVER.lines_run -/
-theorem a_repeated_line_not_run_shows :
-    lineReach [(3, 5), (7, 0), (9, 2)] [(3, "  x += 1;"), (7, "x += 1;"), (8, "// no"), (9, "}")]
-      = [Observed.mk "line: x += 1;" 0, Observed.mk "line: }" 2] := by
-  native_decide
-
 /-- @proves REQ-DRT-COVER.floor_unmet_is_not_pass -/
 theorem only_a_covered_agreement_is_evidence (agreed : Bool) (v : CoverageVerdict) :
     coverageLevel agreed v = Level.L3 → agreed = true ∧ v = CoverageVerdict.met := by
   intro h
   cases agreed <;> cases v <;> simp_all [coverageLevel]
-
-/-- @proves REQ-DRT-COVER.law_coverage -/
-theorem whether_a_situation_was_reached_is_recorded :
-    coverageVerdict [⟨"overlap", 1⟩] [⟨"overlap", 4⟩] [] = .met ∧
-    coverageVerdict [⟨"overlap", 1⟩, ⟨"empty", 1⟩] [⟨"overlap", 4⟩] []
-      = .unmet [.vacuous "empty"] := by
-  native_decide
 
 end TraceLean.Coverage

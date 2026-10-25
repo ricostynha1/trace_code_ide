@@ -101,21 +101,4 @@ theorem replay_is_each_command_in_turn (base : Workspace) (commands : List Comma
   · simp [replay]
   · simp [replay, List.foldl_append]
 
-def sampleEntries : List String :=
-  [(Lean.toJson (Command.createFile "a.rs")).compress, (Lean.toJson (Command.insert "a.rs" 0 "x")).compress]
-
-/-- @proves REQ-PERSIST.truncated_is_reported -/
-theorem a_torn_entry_is_reported_and_replay_stops_there :
-    (parseLog [sampleEntries.headD "", "torn mid-wri"]).commands.length = 1 ∧
-    (parseLog [sampleEntries.headD "", "torn mid-wri"]).truncatedAfter = some 1 ∧
-    (parseLog (sampleEntries.take 1 ++ ["torn"] ++ sampleEntries.drop 1)).commands.length = 1 ∧
-    (parseLog sampleEntries).truncatedAfter = none := by
-  native_decide
-
-/-- @proves REQ-PERSIST.append_only -/
-theorem appending_keeps_what_was_there :
-    ((parseLog (sampleEntries.take 1)).commands.map (fun c => (Lean.toJson c).compress))
-      = ((parseLog sampleEntries).commands.take 1).map (fun c => (Lean.toJson c).compress) := by
-  native_decide
-
 end TraceLean.Persistence

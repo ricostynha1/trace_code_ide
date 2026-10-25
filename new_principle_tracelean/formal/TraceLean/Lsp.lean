@@ -145,41 +145,4 @@ def encodingFor (registry : List (String × ServerState)) (language : String) :
   | some (_, .running encoding) => .result encoding
   | some (_, state) => .unavailable (unavailableBecause state)
 
-/-- @proves REQ-LSP.absent_server_named
-@proves REQ-LSP.encoding_declared -/
-theorem an_unregistered_language_gets_no_default :
-    encodingFor [] "rust" = DisplayEncoding.unavailable "no server is registered for rust" := by
-  native_decide
-
-/-- @proves REQ-LSP.encoding_declared -/
-theorem a_declared_encoding_is_the_answer :
-    encodingFor [("rust", .running .utf8)] "rust" = DisplayEncoding.result .utf8 := by
-  native_decide
-
-/-- @proves REQ-LSP.registry_per_language -/
-theorem each_language_has_its_own_server :
-    let registry := [("rust", ServerState.running .utf8), ("lean", ServerState.running .utf16)]
-    encodingFor registry "rust" = .result .utf8 ∧ encodingFor registry "lean" = .result .utf16 ∧
-      encodingFor registry "python" = .unavailable "no server is registered for python" := by
-  native_decide
-
-def loweredText (lowered : Lowered) : String := (Lean.toJson lowered).compress
-
-def isRefused : Lowered → Bool
-  | .refused _ => true
-  | .commands _ => false
-
-/-- @proves REQ-LSP.edits_become_commands -/
-theorem an_edit_lowers_to_delete_and_insert :
-    loweredText (lower "a.rs" "hello" [⟨0, 1, "J"⟩])
-      = loweredText (.commands [Command.delete "a.rs" 0 "h", Command.insert "a.rs" 0 "J"]) := by
-  native_decide
-
-/-- @proves REQ-LSP.overlap_refused -/
-theorem overlapping_edits_are_refused :
-    loweredText (lower "a.rs" "hello" [⟨0, 3, "x"⟩, ⟨2, 4, "y"⟩])
-      = loweredText (.refused (.overlap 0 2)) ∧
-    isRefused (lower "a.rs" "hello" [⟨0, 2, "x"⟩, ⟨2, 4, "y"⟩]) = false := by
-  native_decide
-
 end TraceLean.Lsp

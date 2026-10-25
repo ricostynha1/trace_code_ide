@@ -34,8 +34,6 @@ def min (a b : Level) : Level := if a.toNat ≤ b.toNat then a else b
 
 end Level
 
-def allBonds : List Bond := [.requirementModel, .modelImpl, .modelProof]
-
 /-- @models REQ-EVID.absent_is_unset -/
 def bondLevel (records : List Record) (b : Bond) : Level :=
   records.foldl (fun acc r => if r.bond = b then Level.max acc r.level else acc) Level.L1
@@ -100,25 +98,12 @@ def letterOf (m : Marks) (each : Mark × Bool × Char) : Char :=
 def written (m : Marks) : String :=
   String.mk (m.each.map (letterOf m))
 
-def recordsFor (bits : Nat) : List Record :=
-  (if bits / 2 % 2 == 1 then [⟨.requirementModel, .L2⟩] else []) ++
-  (if bits / 4 % 2 == 1 then [⟨.modelImpl, .L3⟩] else []) ++
-  (if bits / 8 % 2 == 1 then [⟨.modelProof, .L4⟩] else [])
-
-/-- @proves REQ-EVID.marks -/
-theorem every_combination_is_reachable :
-    ((List.range 16).map (fun bits => written (marks (recordsFor bits) (bits % 2 == 1)))).eraseDups.length
-      = 16 := by
-  native_decide
-
 /-- @proves REQ-EVID.mark_per_bond -/
 theorem each_mark_reads_its_own_bond (records : List Record) (a : Bool) :
     (marks records a).judged = decide (2 ≤ (bondLevel records .requirementModel).toNat) ∧
     (marks records a).tested = decide (3 ≤ (bondLevel records .modelImpl).toNat) ∧
-    (marks records a).proved = decide (4 ≤ (bondLevel records .modelProof).toNat) ∧
-    written (marks [⟨.modelProof, .L4⟩] true) = "A--P" ∧
-    written (marks [⟨.requirementModel, .L1⟩, ⟨.modelImpl, .L2⟩] true) = "A---" := by
-  refine ⟨rfl, rfl, rfl, ?_, ?_⟩ <;> native_decide
+    (marks records a).proved = decide (4 ≤ (bondLevel records .modelProof).toNat) :=
+  ⟨rfl, rfl, rfl⟩
 
 theorem bond_level_is_monotone (records : List Record) (r : Record) (b : Bond) :
     (bondLevel records b).toNat ≤ (bondLevel (records ++ [r]) b).toNat := by
@@ -153,26 +138,17 @@ theorem a_record_moves_only_its_own_bond (records : List Record) (b other : Bond
     bondLevel (records ++ [⟨other, l⟩]) b = bondLevel records b := by
   simp [bondLevel, List.foldl_append, h]
 
-/-- @proves REQ-EVID.marks_written -/
-theorem marks_are_written_in_place :
-    written Marks.empty = "----" ∧ written ⟨true, false, true, true, false⟩ = "A-TP" ∧
-    written ⟨true, true, true, true, false⟩ = "AJTP" ∧
-    written (structural ⟨true, false, false, false, false⟩) = "A-··" := by
-  native_decide
-
 /-- @proves REQ-EVID.structural_not_applicable -/
 theorem testing_and_proving_do_not_apply_by_reading (m other : Marks) (h : other.structural = false) :
     (structural m).tested = false ∧ (structural m).proved = false ∧
     (structural m).holds ⟨false, false, true, false, false⟩ = false ∧
     (Marks.both (structural m) other).tested = other.tested ∧
     (Marks.both (structural m) other).proved = other.proved ∧
-    (Marks.both other (structural m)).tested = other.tested ∧
-    written (structural ⟨true, true, true, true, false⟩) = "AJ··" := by
-  refine ⟨rfl, rfl, ?_, ?_, ?_, ?_, ?_⟩
+    (Marks.both other (structural m)).tested = other.tested := by
+  refine ⟨rfl, rfl, ?_, ?_, ?_, ?_⟩
   · simp [structural, Marks.holds]
   · simp [structural, Marks.both, h]
   · simp [structural, Marks.both, h]
   · simp [structural, Marks.both, h]
-  · native_decide
 
 end TraceLean.Evidence

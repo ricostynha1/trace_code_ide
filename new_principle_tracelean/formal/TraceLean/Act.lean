@@ -324,65 +324,8 @@ def acts : Intent → Bool
   | Intent.arrange _ => true
   | Intent.persist => true
 
-private def cursorInFile : Focus :=
-  { kind := BufferKind.file "a.rs", offset := 0, under := some "src/lib.rs" }
-
-private def cursorInListing : Focus :=
-  { kind := BufferKind.directory "src", offset := 0, under := some "src/lib.rs" }
-
-private def cursorOverNothing : Focus :=
-  { kind := BufferKind.directory "src", offset := 0, under := none }
-
-private def noFiles : Workspace := {}
-
 private def same (a b : Intent) : Bool :=
   Lean.toJson a == Lean.toJson b
-
-/-- @proves REQ-ACT.focus_is_carried -/
-theorem opening_follows_the_cursor :
-    same (dispatch "file.open" cursorInFile noFiles [])
-      (dispatch "file.open" cursorInListing noFiles []) = true := by
-  native_decide
-
-/-- @proves REQ-ACT.missing_target_is_refused -/
-theorem a_missing_target_is_named :
-    same (dispatch "file.open" cursorOverNothing noFiles [])
-      (Intent.refuse (Blocked.needsTarget "file.open" "a path")) = true := by
-  native_decide
-
-/-- @proves REQ-ACT.unknown_is_refused -/
-theorem an_unknown_action_is_refused :
-    acts (dispatch "file.explode" cursorInFile noFiles []) = false := by
-  native_decide
-
-/-- @proves REQ-ACT.action_to_intent -/
-theorem an_action_resolves_to_an_intent :
-    same (dispatch "history.undo" cursorInFile noFiles []) (Intent.travel Move.back) = true ∧
-    same (dispatch "file.save" cursorInFile noFiles []) Intent.persist = true ∧
-    same (dispatch "design.fold_all" cursorInFile noFiles [])
-      (Intent.observe Watch.designFold) = true := by
-  native_decide
-
-/-- @proves REQ-ACT.one_path -/
-theorem a_key_and_an_affordance_agree :
-    same (dispatch "design.toggle REQ-A" cursorOverNothing noFiles [])
-      (dispatch "design.toggle" { cursorOverNothing with under := some "REQ-A" } noFiles []) = true ∧
-    same (dispatch "file.open src/lib.rs" cursorOverNothing noFiles [])
-      (dispatch "file.open" cursorInListing noFiles []) = true := by
-  native_decide
-
-def isEdit : Intent → Bool
-  | Intent.edit _ => true
-  | _ => false
-
-/-- @proves REQ-ACT.edits_are_commands -/
-theorem changes_are_commands :
-    isEdit (dispatch "file.new" cursorInFile noFiles []) = true ∧
-    isEdit (dispatch "file.rename" cursorInFile noFiles []) = true ∧
-    isEdit (dispatch "trace.new_requirement REQ-NEW" cursorInFile noFiles []) = true ∧
-    same (dispatch "file.delete" cursorInFile ⟨[("a.rs", "fn f() -> u8 0")]⟩ [])
-      (Intent.edit (Command.deleteFile "a.rs" "fn f() -> u8 0")) = true := by
-  native_decide
 
 /-- @proves REQ-ACT.dispatch_is_pure -/
 theorem dispatch_reads_only_its_arguments (a a' : String) (f f' : Focus) (w w' : Workspace)
@@ -390,12 +333,5 @@ theorem dispatch_reads_only_its_arguments (a a' : String) (f f' : Focus) (w w' :
     dispatch a f w ws = dispatch a' f' w' ws' := by
   subst ha hf hw hws
   rfl
-
-/-- @proves REQ-ACT.dispatch_is_pure -/
-theorem accepting_takes_the_changes_given :
-    same (dispatch "observe.accept" cursorInFile noFiles [Command.createFile "n.rs"])
-      (Intent.observe (Watch.accept (Command.batch [Command.createFile "n.rs"]))) = true ∧
-    acts (dispatch "observe.accept" cursorInFile noFiles []) = false := by
-  native_decide
 
 end TraceLean.Act

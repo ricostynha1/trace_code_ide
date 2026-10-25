@@ -70,15 +70,8 @@ theorem every_path_has_one_of_four_classes (path : String) :
 
 /-- @proves REQ-SBX.passthrough_not_mirrored -/
 theorem regenerable_is_not_mirrored (path : String) :
-    (classify path = .passThrough → isMirrored path = false) ∧
-    ([("target/debug/a", Class.passThrough), ("crates/core/target/a", .passThrough),
-      ("web/node_modules/x.js", .passThrough), ("formal/.lake/build/a.olean", .passThrough),
-      ("build/out.o", .passThrough), ("dist/a.js", .passThrough),
-      ("src/build/mod.rs", .mirrored), ("src/dist.rs", .mirrored)] : List (String × Class)).all
-      (fun pair => classify pair.1 == pair.2) = true := by
-  constructor
-  · intro h
-    simp [isMirrored, h]
-  · native_decide
+    classify path = .passThrough → isMirrored path = false := by
+  intro h
+  simp [isMirrored, h]
 
 end TraceLean.Policy

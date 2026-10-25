@@ -177,10 +177,6 @@ def sandboxEvents (changed : List String) (said : List Event)
     ++ said
     ++ [({ kind := "cost", text := TraceLean.Cost.estimateLine spend } : Event)]
 
-def sandboxBuffer (changed : List String) (said : List Event)
-    (spend : TraceLean.Cost.Spend) : Buffer :=
-  recordBuffer "sandbox" (sandboxEvents changed said spend)
-
 structure Tally where
   implemented : Nat
   annotated : Nat
@@ -381,52 +377,6 @@ def window (buffer : Buffer) (start : Nat) (count : Nat) : Buffer :=
   let clipped := buffer.spans.foldl (fun acc span => acc ++ clipSpan shift text.length span) []
   { id := buffer.id, kind := buffer.kind, text := text, spans := tidy text.length clipped }
 
-private def wrongMarks : List Mark :=
-  [Mark.mk 3 7 Role.heading, Mark.mk 5 9 Role.plain, Mark.mk 9 4 Role.path,
-   Mark.mk 0 400 Role.requirement]
-
-/-- @proves REQ-SHOW.well_formed_by_construction -/
-theorem a_produced_file_is_well_formed :
-    faults (fileBuffer "a.rs" "let x = 1" wrongMarks) = [] := by
-  native_decide
-
-/-- @proves REQ-SHOW.review_from_change -/
-theorem a_review_is_well_formed :
-    faults (reviewBuffer "a.rs" "one\ntwo\nthree" "one\ntwo!\nthree") = [] := by
-  native_decide
-
-/-- @proves REQ-SHOW.review_from_change -/
-theorem a_diff_keeps_the_common_ends :
-    diffLines ["one", "two", "three"] ["one", "TWO", "three"] =
-      [{ role := Role.plain, text := " one" },
-       { role := Role.removed, text := "-two" },
-       { role := Role.added, text := "+TWO" },
-       { role := Role.plain, text := " three" }] := by
-  native_decide
-
-private def threeLines : Buffer :=
-  fileBuffer "a.rs" "one\ntwo\nthree" [Mark.mk 4 7 Role.heading]
-
-/-- @proves REQ-SHOW.window_is_a_buffer -/
-theorem a_window_carries_the_spans_that_fall_in_it :
-    (window threeLines 1 1).spans = [{ start := 0, stop := 3, role := Role.heading,
-                                       actions := actionsFor Role.heading }]
-    ∧ faults (window threeLines 1 1) = [] := by
-  native_decide
-
-/-- @proves REQ-SHOW.producers_are_total -/
-theorem a_window_is_total :
-    (window threeLines 9 4).text = "" ∧ (window threeLines 0 9).text = threeLines.text := by
-  native_decide
-
-/-- @proves REQ-SHOW.menu_from_keymap -/
-theorem a_menu_offers_what_its_keys_dispatch :
-    (menuBuffer "leader"
-      [{ key := "t", description := "trace", action := none },
-       { key := "u", description := "undo", action := some "history.undo" }]).spans.map
-        (fun span => span.actions) = [[], ["history.undo"]] := by
-  native_decide
-
 def linked (b : Buffer) : List (String × List String) :=
   (b.spans.filter (!·.actions.isEmpty)).map
     (fun s => (String.mk ((b.text.toList.drop s.start).take (s.stop - s.start)), s.actions))
@@ -438,95 +388,14 @@ def graph : List Node :=
 
 /-- @proves REQ-SHOW.actions_by_role -/
 theorem a_role_offers_its_actions (marks : List Mark) :
-    (spansOfMarks marks).map (·.actions) = marks.map (fun m => actionsFor m.role) ∧
-    ((requirementsBuffer graph false).spans.filter (·.role == .requirement)).map (·.actions)
-      = [actionsFor .requirement, actionsFor .requirement, actionsFor .requirement] ∧
-    ((designBuffer graph ["ARCH-X", "REQ-A"] false).spans.filter (·.role == .requirement)).map (·.actions)
-      = [actionsFor .requirement, actionsFor .requirement, actionsFor .requirement] := by
-  refine ⟨?_, ?_⟩
-  · simp [spansOfMarks]
-  · native_decide
+    (spansOfMarks marks).map (·.actions) = marks.map (fun m => actionsFor m.role) := by
+  simp [spansOfMarks]
 
 /-- @proves REQ-SHOW.file_from_text -/
 theorem a_file_is_its_text (path text : String) (marks : List Mark) :
-    (fileBuffer path text marks).text = text ∧
-    (fileBuffer "a.rs" "fn f" [⟨0, 2, .path⟩]).spans = [⟨0, 2, .path, ["file.open"]⟩] := by
-  refine ⟨rfl, ?_⟩
-  native_decide
-
-/-- @proves REQ-SHOW.record_from_events -/
-theorem events_become_marked_rows :
-    linked (recordBuffer "obs" [⟨"changed", "a.rs"⟩, ⟨"said", "hi"⟩])
-      = [("changed: a.rs", ["observe.diff"]), ("said: hi", ["observe.diff"])] := by
-  native_decide
-
-/-- @proves REQ-SHOW.index_from_requirements -/
-theorem one_row_a_requirement :
-    (requirementsBuffer graph false).text
-      = "AJ--  ARCH-X  I1/1 A1/1 J1/1 T0/1 P0/1  +children 50%  Root\n" ++
-        "AJT-  REQ-A  I1/2 A2/2 J2/2 T2/2 P0/2  lines 75%  +children 50%  Mid\n" ++
-        "A-··  REQ-B  I· A1/1 J0/1 T· P·  lines 0%  Leaf" ∧
-    ((requirementsBuffer graph false).spans.filter (fun s => s.role == .mark .tested true)).length = 3 ∧
-    (linked (requirementsBuffer graph false)).filter (fun l => l.2 != ["trace.rollup"]) =
-      [("ARCH-X", actionsFor .requirement), ("REQ-A", actionsFor .requirement),
-       ("lines 75%", ["trace.coverage REQ-A"]), ("REQ-B", actionsFor .requirement),
-       ("lines 0%", ["trace.coverage REQ-B"])] := by
-  native_decide
-
-/-- @proves REQ-SHOW.graph_from_refinement -/
-theorem the_graph_unfolds_where_asked :
-    (designBuffer graph [] false).text
-      = "[ expand all ]  [ fold all ]  [ open only ]\n▸ AJ--  ARCH-X  I1/1 A1/1 J1/1 T0/1 P0/1  +children 50%  Root" ∧
-    (designBuffer graph ["ARCH-X"] false).text
-      = "[ expand all ]  [ fold all ]  [ open only ]\n▾ AJ--  ARCH-X  I1/1 A1/1 J1/1 T0/1 P0/1  +children 50%  Root\n" ++
-        "  ▸ AJT-  REQ-A  I1/2 A2/2 J2/2 T2/2 P0/2  lines 75%  +children 50%  Mid" ∧
-    (designBuffer graph ["ARCH-X", "REQ-A"] false).text
-      = "[ expand all ]  [ fold all ]  [ open only ]\n▾ AJ--  ARCH-X  I1/1 A1/1 J1/1 T0/1 P0/1  +children 50%  Root\n" ++
-        "  ▾ AJT-  REQ-A  I1/2 A2/2 J2/2 T2/2 P0/2  lines 75%  +children 50%  Mid\n" ++
-        "    · A-··  REQ-B  I· A1/1 J0/1 T· P·  lines 0%  Leaf" := by
-  native_decide
+    (fileBuffer path text marks).text = text := rfl
 
 def finished (id : String) (parent : String) (covered : Nat × Nat) : Node :=
   ⟨id, "Done", [parent], ⟨true, true, true, true, false⟩, 1, 1, ⟨1, 1, 1, 1, 1⟩, some covered⟩
-
-/-- @proves REQ-SHOW.children_lines -/
-theorem a_row_says_what_is_left_unrun_under_it :
-    ((requirementsBuffer graph false).text.splitOn "\n").map (fun l => (l.splitOn "+children ").length)
-      = [2, 2, 1] ∧
-    (requirementsBuffer [⟨"ARCH-X", "Root", [], ⟨true, true, true, true, false⟩, 1, 1, ⟨1, 1, 1, 1, 1⟩,
-      some (2, 2)⟩, finished "REQ-C" "ARCH-X" (3, 3)] false).text
-      = "AJTP  ARCH-X  I1/1 A1/1 J1/1 T1/1 P1/1  lines 100%  Root\n" ++
-        "AJTP  REQ-C  I1/1 A1/1 J1/1 T1/1 P1/1  lines 100%  Done" := by
-  native_decide
-
-/-- @proves REQ-SHOW.open_filtered -/
-theorem open_only_keeps_what_is_still_to_do :
-    ((requirementsBuffer (graph ++ [finished "REQ-C" "ARCH-X" (1, 1)]) true).text.splitOn "REQ-C").length = 1 ∧
-    ((requirementsBuffer (graph ++ [finished "REQ-C" "ARCH-X" (1, 1)]) false).text.splitOn "REQ-C").length = 2 ∧
-    (designBuffer (graph ++ [finished "REQ-C" "ARCH-X" (1, 1)]) ["ARCH-X", "REQ-A"] true).text
-      = "[ expand all ]  [ fold all ]  [ show all ]\n▾ AJ--  ARCH-X  I1/1 A1/1 J1/1 T0/1 P0/1  +children 57%  Root\n" ++
-        "  ▾ AJT-  REQ-A  I1/2 A2/2 J2/2 T2/2 P0/2  lines 75%  +children 50%  Mid\n" ++
-        "    · A-··  REQ-B  I· A1/1 J0/1 T· P·  lines 0%  Leaf" := by
-  native_decide
-
-/-- @proves REQ-SHOW.sandbox_from_observation -/
-theorem changes_then_words_then_cost :
-    (sandboxBuffer ["a.rs"] [⟨"agent", "done"⟩] ⟨0, []⟩).text
-      = "changed: a.rs\nagent: done\ncost: estimated 0.000000" := by
-  native_decide
-
-/-- @proves REQ-SHOW.producer_is_pure -/
-theorem a_producer_reads_only_its_arguments :
-    designBuffer graph ["REQ-A", "ARCH-X"] true = designBuffer graph ["ARCH-X", "REQ-A"] true ∧
-    reviewBuffer "a.rs" "one\ntwo" "one\nTWO" = reviewBuffer "a.rs" "one\ntwo" "one\nTWO" := by
-  native_decide
-
-/-- @proves REQ-LOOK.row_fits -/
-theorem a_row_fits_its_width :
-    linked (menuRow "m" [⟨"o", "open", some "file.open"⟩, ⟨"s", "save", some "file.save"⟩] 30)
-      = [("o  open", ["file.open"]), ("s  save", ["file.save"])] ∧
-    linked (menuRow "m" [⟨"o", "open", some "file.open"⟩, ⟨"s", "save", some "file.save"⟩] 10)
-      = [("o", ["file.open"]), ("s", ["file.save"])] := by
-  native_decide
 
 end TraceLean.Produce

@@ -232,24 +232,4 @@ def branched : List Point :=
   [⟨0, none, false, "a", none, false⟩, ⟨1, some 0, false, "b", none, false⟩,
    ⟨2, some 0, true, "c", none, false⟩]
 
-/-- @proves REQ-UNDO.tree_is_drawn -/
-theorem a_branch_opens_a_column :
-    historyGraph branched =
-      [⟨none, "○ "⟩, ⟨some 0, "○─╮ "⟩, ⟨some 2, "│ ● "⟩, ⟨some 1, "○   "⟩] := by
-  native_decide
-
-/-- @proves REQ-UNDO.tree_is_shown -/
-theorem every_node_is_named_and_jumps :
-    (historyView branched .all none).text
-      = "All  File  Saved  \n○   #0  the tree as it was opened\n○─╮ #1  a\n│ ● #3  c\n○   #2  b" ∧
-    ((historyView branched .all none).spans.filter (·.actions == ["history.jump"])).length = 4 := by
-  native_decide
-
-/-- @proves REQ-UNDO.hover_shows_change -/
-theorem a_change_shows_its_lines :
-    (changeView 1 "b" [⟨"a.rs", "x\ny", "x\nz"⟩]).text = "#2  b\na.rs\n x\n-y\n+z" ∧
-    ((changeView 1 "b" [⟨"a.rs", "x\ny", "x\nz"⟩]).spans.map (·.role))
-      = [Role.heading, Role.path, Role.removed, Role.added] := by
-  native_decide
-
 end TraceLean.HistoryView

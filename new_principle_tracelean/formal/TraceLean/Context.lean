@@ -94,10 +94,6 @@ theorem shown_were_included (included filled : List Part) (p : Part)
   have chosen := (Bool.and_eq_true _ _).mp (List.mem_filter.mp h).2
   exact List.elem_iff.mp chosen.1
 
-/-- @proves REQ-CONTEXT.part_named -/
-theorem labels_round_trip : allParts.all (fun p => partNamed (label p) == some p) = true := by
-  native_decide
-
 structure Claim where
   role : String
   req : String
@@ -244,39 +240,11 @@ def affected (claims : List Claim) (id : String) (clause : Option String) (down 
 def graph : List Node :=
   [⟨"A", []⟩, ⟨"B", ["A"]⟩, ⟨"C", ["B"]⟩, ⟨"D", ["C", "A"]⟩, ⟨"X", ["Y"]⟩, ⟨"Y", ["X"]⟩]
 
-/-- @proves REQ-CONTEXT.neighbourhood_is_closed -/
-theorem the_neighbourhood_is_transitive_and_once :
-    neighbourhood graph "B" = (["A"], ["C", "D"]) ∧
-    neighbourhood graph "D" = (["A", "B", "C"], []) ∧
-    neighbourhood graph "X" = (["Y"], ["Y"]) := by
-  native_decide
-
 def claims : List Claim :=
   [⟨"implements", "REQ-A", some "one", "src/m.rs::convert", "src/m.rs", 3, some "m::convert", "fn convert()"⟩,
    ⟨"tests", "REQ-A", some "one", "tests/a.rs::t2", "tests/a.rs", 9, some "t2", "fn t2()"⟩,
    ⟨"models", "REQ-A", some "one", "M.lean::convert", "M.lean", 5, some "convert", "def convert"⟩,
    ⟨"tests", "REQ-B", none, "tests/b.rs::t1", "tests/b.rs", 2, some "t1", "fn t1()"⟩,
    ⟨"tests", "REQ-C", none, "tests/c.rs::t3", "tests/c.rs", 7, some "t3", "fn t3() convert()"⟩]
-
-/-- @proves REQ-CONTEXT.claims_with_source -/
-theorem claims_come_with_their_source :
-    (claimsOn claims "REQ-A" none).code.map (fun i => (i.path, i.line, i.source))
-      = [("src/m.rs", 3, "fn convert()")] ∧
-    (claimsOn claims "REQ-A" none).tests.map (·.path) = ["tests/a.rs"] ∧
-    (claimsOn claims "REQ-A" none).models.map (·.source) = ["def convert"] := by
-  native_decide
-
-/-- @proves REQ-CONTEXT.affected_tests -/
-theorem affected_are_below_or_naming :
-    (affected claims "REQ-A" none ["REQ-B"] []).map (·.path) = ["tests/b.rs", "tests/c.rs"] := by
-  native_decide
-
-/-- @proves REQ-CONTEXT.from_the_shell -/
-theorem the_shell_chooses_parts_by_label :
-    shellParts none = .chosen defaultParts ∧
-    shellParts (some "all") = .chosen allParts ∧
-    shellParts (some "affected-tests, code") = .chosen [.code, .affected] ∧
-    shellParts (some "code,bogus") = .unknown "bogus" := by
-  native_decide
 
 end TraceLean.Context

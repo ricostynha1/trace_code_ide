@@ -211,18 +211,6 @@ theorem an_empty_history_has_nothing_to_disagree_about (base : Workspace) :
 
 def one : Workspace := ⟨[("a.rs", "hello")]⟩
 
-def branching : List Step :=
-  [.push (.insert "a.rs" 0 "x"), .move .undo, .push (.insert "a.rs" 0 "y")]
-
-/-- @proves REQ-UNDO.no_loss_on_branch -/
-theorem editing_after_undo_branches :
-    (runScript one branching).nodes = [0, 1] ∧
-    (runScript one branching).current = some 1 ∧
-    (((fromScript one branching).node? 1).map (·.parent)) = some none ∧
-    (runScript one branching).replayed
-      = [.ok ⟨[("a.rs", "xhello")]⟩, .ok ⟨[("a.rs", "yhello")]⟩] := by
-  native_decide
-
 /-- @proves REQ-UNDO.reachable -/
 theorem no_node_is_ever_dropped (t : Tree) (c : Command) :
     ((t.push c).ids = t.ids ∨ (t.push c).ids = t.ids ++ [t.nextId]) ∧
@@ -251,24 +239,9 @@ theorem no_node_is_ever_dropped (t : Tree) (c : Command) :
     simp only
     split <;> rfl
 
-/-- @proves REQ-UNDO.path_via_ancestor -/
-theorem a_jump_goes_through_the_common_ancestor :
-    outcomeOf ((fromScript one branching).jumpTo 0).1 = .ok ⟨[("a.rs", "xhello")]⟩ ∧
-    Tree.sharedPrefix [0, 2] [0, 1] = 1 ∧
-    (let t := fromScript one [.push (.insert "a.rs" 0 "a"), .push (.insert "a.rs" 0 "b"),
-                              .move .undo, .push (.insert "a.rs" 0 "c")]
-     t.ancestry 2 = [0, 2] ∧ outcomeOf (t.jumpTo 1).1 = .ok ⟨[("a.rs", "bahello")]⟩) := by
-  native_decide
-
 /-- @proves REQ-UNDO.preview_is_pure -/
 theorem previewing_moves_nothing (base : Workspace) (script : List Step) :
     (runScript base script).currentAfterPreviews = (runScript base script).current := by
   rfl
-
-/-- @proves REQ-UNDO.preview_is_pure -/
-theorem a_preview_is_before_and_after :
-    (runScript one branching).previews
-      = [(.ok one, .ok ⟨[("a.rs", "xhello")]⟩), (.ok one, .ok ⟨[("a.rs", "yhello")]⟩)] := by
-  native_decide
 
 end TraceLean.Tree

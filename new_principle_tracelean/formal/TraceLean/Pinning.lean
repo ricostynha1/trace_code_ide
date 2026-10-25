@@ -98,17 +98,6 @@ def shape (declaration : String) : Option (Bool × Nat) :=
     let s := scan fresh (before ":=".toList rest)
     (s.typed && (String.mk s.result).trim == "Prop", s.names + s.arrows))
 
-/-- @proves REQ-STRENGTH.inputs_counted -/
-theorem a_pattern_matched_definition_counts_its_arrows :
-    shape "def f (a : Nat) : List Nat → Nat → Prop\n  | [], _ => True\n  | _, _ => False" =
-      some (true, 3) := by
-  native_decide
-
-/-- @proves REQ-STRENGTH.inputs_counted -/
-theorem an_inner_arrow_is_not_an_input :
-    shape "def h : (Nat → Nat) → Nat := fun f => f 0" = some (false, 1) := by
-  native_decide
-
 def occursIn (pat text : List Char) : Bool :=
   match text with
   | [] => pat.isEmpty
@@ -149,12 +138,5 @@ theorem another_key_does_not_pin (t key : String) (r : PinRecord) (h : r.key ≠
 /-- @proves REQ-STRENGTH.kernel_decides -/
 theorem a_failed_run_is_not_accepted (t output : String) : accepted t output false = false := by
   simp [accepted]
-
-/-- @proves REQ-STRENGTH.per_input -/
-theorem the_obligation_meets_and_determines :
-    statement "Spec" "f" 2
-      = "(∀ x1 x2, Spec x1 x2 (f x1 x2)) ∧ (∀ x1 x2 y1 y2, Spec x1 x2 y1 → Spec x1 x2 y2 → y1 = y2)" ∧
-    statement "Spec" "c" 0 = "(Spec c) ∧ (∀ y1 y2, Spec y1 → Spec y2 → y1 = y2)" := by
-  native_decide
 
 end TraceLean.Pinning

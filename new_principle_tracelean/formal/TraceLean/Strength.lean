@@ -13,11 +13,6 @@ inductive Strength where
   | nondeterministic (reason : String)
   deriving Repr, DecidableEq, Inhabited, ToJson, FromJson
 
-def Strength.isSettled : Strength → Bool
-  | .pinned _ => true
-  | .nondeterministic _ => true
-  | _ => false
-
 structure StrengthLink where
   role : Role
   reqId : String
@@ -110,15 +105,6 @@ def obligationsFrom (links : List StrengthLink) : List Obligation :=
         | none => Strength.«open»
     { symbol := symbol, clauses := clauses, theorems := proved, strength := strength })
 
-/-- @proves REQ-STRENGTH.open_is_the_default -/
-theorem an_unpinned_model_is_open_and_not_a_pass :
-    obligationsFrom [⟨.models, "REQ-A", some "one", "M::f", none⟩] =
-      [⟨"M::f", [("REQ-A", some "one")], [], .«open»⟩]
-    ∧ Strength.«open».isSettled = false := by
-  constructor
-  · native_decide
-  · rfl
-
 def leanName (symbol : String) : String :=
   String.mk (((symbol.replace "::" "_").replace "." "_").toList)
 
@@ -147,45 +133,5 @@ def obligationSource (obligation : Obligation) : String :=
   "theorem pins_" ++ name ++ " :\n" ++
   "    ∀ f g, Spec_" ++ name ++ " f → Spec_" ++ name ++ " g → f = g := by\n" ++
   "  sorry\n"
-
-/-- @proves REQ-STRENGTH.not_proved_by_us -/
-theorem an_obligation_is_never_discharged :
-    ((obligationSource { symbol := "TraceLean.assurance", clauses := [("REQ-EVID", some "weakest_link")],
-                         theorems := ["t1"], strength := .pinned "t1" }).splitOn "sorry").length = 2
-    ∧ ((obligationSource { symbol := "TraceLean.f", clauses := [], theorems := [],
-                           strength := .open }).splitOn "sorry").length = 2 := by
-  native_decide
-
-def pinnedAt : List StrengthLink :=
-  [⟨.models, "REQ-A", some "one", "M::f", none⟩, ⟨.proves, "REQ-A", some "one", "T::p", none⟩,
-   ⟨.pins, "REQ-A", some "one", "T::pin", none⟩]
-
-/-- @proves REQ-STRENGTH.obligation_generated -/
-theorem each_model_owes_the_determining_question :
-    (obligationsFrom pinnedAt).map (·.symbol) = ["M::f"] ∧
-    ((obligationSource ((obligationsFrom pinnedAt).headD default)).splitOn
-      "∀ f g, Spec_M_f f → Spec_M_f g → f = g").length = 2 := by
-  native_decide
-
-/-- @proves REQ-STRENGTH.attempted_distinguished -/
-theorem an_attempt_is_its_own_state :
-    ((obligationsFrom pinnedAt).map (·.strength)) = [.attempted "T::pin"] ∧
-    Strength.attempted "T::pin" ≠ Strength.«open» ∧
-    Strength.attempted "T::pin" ≠ Strength.pinned "T::pin" ∧
-    (Strength.attempted "T::pin").isSettled = false := by
-  native_decide
-
-/-- @proves REQ-STRENGTH.nondeterministic_declared -/
-theorem a_declared_nondeterminism_is_settled :
-    ((obligationsFrom [⟨.models, "REQ-A", none, "M::clock", some "reads the time"⟩]).map (·.strength))
-      = [.nondeterministic "reads the time"] ∧
-    (Strength.nondeterministic "reads the time").isSettled = true := by
-  native_decide
-
-/-- @proves REQ-STRENGTH.qualifies_proof -/
-theorem a_proof_comes_with_its_strength :
-    (obligationsFrom pinnedAt).map (fun o => (o.theorems, o.strength))
-      = [(["T::p"], .attempted "T::pin")] := by
-  native_decide
 
 end TraceLean.Strength

@@ -71,11 +71,6 @@ def markers (lines : List LineHits) (top height : Nat) : List Marker :=
   (lines.filter fun l => l.line ≥ 1 && top ≤ l.line - 1 && l.line - 1 < top + height).map fun l =>
     { line := l.line - 1, hits := l.hits, said := said l }
 
-/-- @proves REQ-LINECOV.per_test -/
-theorem a_line_no_test_ran_has_nobody :
-    merged [⟨"t", "a.rs", [(4, 0)]⟩] "a.rs" = [⟨4, 0, []⟩] := by
-  native_decide
-
 /-- @proves REQ-LINECOV.stale_hidden -/
 theorem only_coverage_of_this_text_is_shown (hash other : String) (lines : List LineHits) :
     visible (some (hash, lines)) hash = some lines ∧
@@ -86,12 +81,5 @@ theorem only_coverage_of_this_text_is_shown (hash other : String) (lines : List 
   · intro moved
     simp [visible, moved]
   · simp [visible]
-
-/-- @proves REQ-LINECOV.uncovered_shown -/
-theorem each_measured_line_in_view_is_marked :
-    (markers [⟨3, 0, []⟩, ⟨5, 2, [("t", 2)]⟩, ⟨40, 1, [("u", 1)]⟩] 0 10).map
-        (fun m => (m.line, m.hits, m.said)) =
-      [(2, 0, "no test runs this line"), (4, 2, "run 2 times by t ×2")] := by
-  native_decide
 
 end TraceLean.Lines

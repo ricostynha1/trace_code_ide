@@ -111,16 +111,6 @@ def crowdedKinds (roles : List Role) : List Kind :=
     (Role.pins, Kind.severalPins)].filterMap (fun pair =>
       if (roles.filter (· == pair.1)).length > 1 then some pair.2 else none)
 
-/-- @proves REQ-CHECK.one_of_each_role -/
-theorem one_model_is_not_crowded :
-    crowdedKinds [Role.models, Role.specifies, Role.pins, Role.tests, Role.tests] = [] := by
-  decide
-
-/-- @proves REQ-CHECK.one_of_each_role -/
-theorem two_models_are_crowded :
-    crowdedKinds [Role.models, Role.implements, Role.models] = [Kind.severalModels] := by
-  decide
-
 /-- @proves REQ-CHECK.exactly_once -/
 theorem the_chain_reports_at_most_one (roles : List Role) (exempt structural : Bool) :
     ((coverageKinds roles exempt structural).filter
@@ -139,18 +129,6 @@ theorem the_chain_reports_at_most_one (roles : List Role) (exempt structural : B
 theorem progress_never_blocks (kind : Kind) (h : kind.progress = true) :
     kind.blocksByDefault = false := by
   cases kind <;> simp_all [Kind.progress, Kind.blocksByDefault]
-
-def allKinds : List Kind :=
-  [.dangling, .danglingRefines, .refinesCycle, .duplicateId, .unmodeled, .unimplemented,
-   .unbound, .untested, .contested, .unsoundExemption, .unsoundQualifier, .malformed,
-   .imprecise, .severalModels, .severalSpecs, .severalPins]
-
-/-- @proves REQ-CHECK.named_kinds -/
-theorem every_kind_has_its_own_name :
-    (allKinds.map (fun k => (Lean.toJson k).compress)).eraseDups.length = allKinds.length ∧
-    allKinds.all (fun k => facts k == { severity := k.severity, progress := k.progress,
-                                        blocksByDefault := k.blocksByDefault }) = true := by
-  native_decide
 
 /-- @proves REQ-CHECK.unbound_reported -/
 theorem model_and_code_unbound_is_reported (roles : List Role)

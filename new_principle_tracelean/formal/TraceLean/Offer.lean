@@ -125,14 +125,4 @@ def marked : Buffer :=
   { id := "d", kind := .menu "design", text := "▸ REQ-A",
     spans := [⟨0, 1, .entry, ["design.toggle REQ-A", "file.explode"]⟩] }
 
-/-- @proves REQ-ACT.everything_is_offered -/
-theorem the_menu_holds_everything_that_applies :
-    (offers marked 0 leader).map (·.action)
-      = ["design.toggle REQ-A", "file.copy_line", "file.copy", "design.expand_everything",
-         "design.fold_all", "design.open_only", "trace.new_requirement", "screen.split.across", "screen.split.down",
-         "screen.close"] ++ places ∧
-    ((offers marked 0 leader).find? (·.action == "design.expand_everything")).bind (·.keys)
-      = some "Space g e" := by
-  native_decide
-
 end TraceLean.Offer

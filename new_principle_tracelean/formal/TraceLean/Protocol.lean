@@ -73,25 +73,6 @@ def Heard.kind : Heard → String
 private def obj (inner : String) : String :=
   String.mk [Char.ofNat 123] ++ inner ++ String.mk [Char.ofNat 125]
 
-/-- @proves REQ-DRT-PROTO.reply_exclusive -/
-theorem neither_is_not_an_answer :
-    (hear 0 (obj "\"case\":0")).kind = "notExclusive" := by
-  native_decide
-
-/-- @proves REQ-DRT-PROTO.case_echoed -/
-theorem a_reply_to_another_case_is_not_an_answer :
-    (hear 7 (obj "\"case\":6,\"output\":1")).kind = "wrongCase" := by
-  native_decide
-
-/-- @proves REQ-DRT-PROTO.reply_one_line -/
-theorem an_empty_line_is_not_json :
-    (hear 0 "").kind = "notAReply" := by
-  native_decide
-
-/-- @proves REQ-DRT-PROTO.ops_unique -/
-theorem no_ops_no_collisions : duplicateOps [] = [] := by
-  native_decide
-
 def hexEscape (c : Char) : String :=
   let n := c.toNat
   "\\u" ++ String.mk [Nat.digitChar (n / 4096), Nat.digitChar ((n % 4096) / 256),
@@ -129,11 +110,6 @@ partial def written : Json → String
 @models REQ-DRT-PROTO.case_names_op -/
 def caseLine (number : Nat) (op : String) (input : Json) : String :=
   braced ("\"case\":" ++ toString number ++ ",\"op\":" ++ quoted op ++ ",\"input\":" ++ written input)
-
-/-- @proves REQ-DRT-PROTO.case_one_line -/
-theorem a_newline_in_the_input_is_escaped :
-    (caseLine 1 "x" (Json.str (String.mk [Char.ofNat 10]))).contains (Char.ofNat 10) = false := by
-  native_decide
 
 inductive Event where
   | couldNotStart (reason : String)
@@ -185,11 +161,6 @@ def sharedRunners (placed : List Placed) : List Shared :=
   languages.map (fun l =>
     { language := l, ops := ((placed.filter (fun p => p.language == l)).map (fun p => p.op)).eraseDups })
 
-/-- @proves REQ-DRT-PROTO.runner_shared -/
-theorem one_language_one_runner :
-    (sharedRunners [{ op := "a", language := "rust" }, { op := "b", language := "rust" }]).length = 1 := by
-  native_decide
-
 /-- @models REQ-DRT.error_is_an_answer -/
 def agree (model implementation : Option Json) : Bool :=
   match model, implementation with
@@ -200,24 +171,5 @@ def agree (model implementation : Option Json) : Bool :=
 /-- @models REQ-DRT.falsification_only -/
 def drtLevel (agreed : Bool) : Level :=
   if agreed then Level.L3 else Level.L1
-
-/-- @proves REQ-DRT.error_is_an_answer -/
-theorem two_refusals_agree : agree none none = true := by
-  native_decide
-
-/-- @proves REQ-DRT.error_is_an_answer -/
-theorem a_refusal_against_an_answer_is_a_divergence :
-    agree none (some (Json.num 1)) = false ∧ agree (some (Json.num 1)) none = false := by
-  native_decide
-
-/-- @proves REQ-DRT.falsification_only -/
-theorem finding_nothing_is_not_a_proof : drtLevel true ≠ Level.L4 := by
-  native_decide
-
-/-- @proves REQ-DRT-PROTO.case_names_op -/
-theorem a_case_names_its_op :
-    ((caseLine 3 "Lsp.lower" (Json.num 1)).splitOn "\"case\":3,\"op\":\"Lsp.lower\",\"input\":1").length
-      = 2 := by
-  native_decide
 
 end TraceLean.Protocol

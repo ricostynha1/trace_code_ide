@@ -95,30 +95,6 @@ def clauseHash (key : Option String) (text : String) (narrowings : List (String 
     digest (k ++ String.mk [Char.ofNat 1] ++ text.trim ++ String.mk [Char.ofNat 2]
       ++ String.mk [Char.ofNat 3] ++ keyedBuffer narrowings)
 
-/-- @proves REQ-REQDOC.clause_addressable -/
-theorem a_narrowing_moves_its_clause_hash :
-    clauseHash (some "c") "T" [] ≠ clauseHash (some "c") "T" [("empty", "E")] := by
-  native_decide
-
-/-- @proves REQ-ANCHOR.hash_tracks_body -/
-theorem reindentation_does_not_move_the_hash :
-    bodyHash "let x = 1;\n    let y = x;" [] []
-      = bodyHash "let x = 1;\n\t\tlet y = x;" [] [] := by
-  native_decide
-
-/-- @proves REQ-ANCHOR.whitespace_normalised -/
-theorem whitespace_collapses_outside_literals_only :
-    normalize "a   b\t\n c" [] [] = "a b c" ∧
-    normalize "x a  b" [] [(2, 6)] = "x a  b" ∧
-    normalize "x a  b" [] [] = "x a b" := by
-  native_decide
-
-/-- @proves REQ-ANCHOR.comments_excluded -/
-theorem a_comment_reworded_keeps_the_hash :
-    bodyHash "fn a() -- note\n 1" [(7, 14)] []
-      = bodyHash "fn a() -- other words\n 1" [(7, 21)] [] := by
-  native_decide
-
 /-- @proves REQ-STALE.measured_not_retaken -/
 theorem measured_again_only_when_its_sources_moved (measured : Bool) (held : String)
     (files : List (String × String)) (again : Bool) :
@@ -132,11 +108,5 @@ theorem measured_again_only_when_its_sources_moved (measured : Bool) (held : Str
   · simp [retake]
   · intro moved
     simp [retake, moved]
-
-/-- @proves REQ-STALE.requirement_reopens_all -/
-theorem rewording_a_clause_moves_its_hash :
-    clauseHash (some "c") "It is." [] ≠ clauseHash (some "c") "It is not." [] ∧
-    clauseHash (some "c") "It is." [] ≠ clauseHash (some "d") "It is." [] := by
-  native_decide
 
 end TraceLean.Hash

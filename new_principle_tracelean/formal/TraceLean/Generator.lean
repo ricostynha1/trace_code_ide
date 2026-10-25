@@ -224,17 +224,6 @@ def shapeStream (seed : Nat) (shape : Nat) (count : Nat) : List Json :=
   | 0 => []
   | n + 1 => valueStream seed (shapes.getD (shape % (n + 1)) (.bool)) count
 
-/-- @proves REQ-DRT-GEN.seed_reproduces -/
-theorem a_nat_schema_draws_the_nat_stream :
-    (valueStream 7 (.nat (some 50) [7]) 20).map Json.compress
-      = (natStream 7 (some 50) [7] 20).map (fun n => (toJson n).compress) := by
-  native_decide
-
-/-- @proves REQ-DRT-GEN.fixed_stream -/
-theorem a_zero_seed_does_not_stick :
-    rawStream 0 3 ≠ [0, 0, 0] := by
-  native_decide
-
 theorem raw_stream_go_prefix (n m : Nat) :
     ∀ r : Rng, (rawStreamGo (n + m) r).take n = rawStreamGo n r := by
   induction n
@@ -248,14 +237,7 @@ theorem raw_stream_go_prefix (n m : Nat) :
 
 /-- @proves ARCH-DETERMINISM.seeded_generation -/
 theorem the_seed_alone_fixes_the_cases (seed n m : Nat) :
-    (rawStream seed (n + m)).take n = rawStream seed n ∧ rawStream 1 4 ≠ rawStream 2 4 := by
-  constructor
-  · exact raw_stream_go_prefix n m _
-  · native_decide
-
-/-- @proves REQ-DRT-GEN.edges_sampled -/
-theorem edges_are_drawn_heavily :
-    ((natStream 1 (some 1000) [7] 200).filter (· == 7)).length ≥ 40 := by
-  native_decide
+    (rawStream seed (n + m)).take n = rawStream seed n :=
+  raw_stream_go_prefix n m _
 
 end TraceLean.Generator

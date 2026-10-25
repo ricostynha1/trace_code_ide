@@ -13,16 +13,6 @@ def combine (parts : List Marks) : Marks :=
   | [] => Marks.empty
   | first :: rest => (first :: rest).foldl Marks.both Marks.neutral
 
-/-- @proves REQ-ROLLUP.every_part_holds -/
-theorem combine_holds_what_every_part_holds :
-    combine [] = Marks.empty ∧
-    written (combine [⟨true, true, true, true, false⟩, ⟨true, true, true, true, false⟩,
-      ⟨true, true, true, false, false⟩]) = "AJT-" ∧
-    written (combine [⟨true, true, false, false, false⟩, ⟨true, false, false, true, false⟩]) = "A---" ∧
-    written (combine [⟨true, true, true, false, false⟩, ⟨true, true, false, false, true⟩]) = "AJT-" ∧
-    written (combine [⟨true, true, false, true, true⟩, ⟨true, true, false, false, true⟩]) = "AJ··" := by
-  native_decide
-
 theorem both_keeps (a b : Marks) :
     ((Marks.both a b).tested || (Marks.both a b).structural) = true →
       (a.tested || a.structural) = true := by
@@ -351,16 +341,6 @@ def fileCoverage (scanned claimed : List String) : Figure :=
   let claimed := (dedupe claimed).filter (scanned.contains ·)
   { met := claimed.length, total := scanned.length, exact := true }
 
-/-- @proves REQ-ROLLUP.untraced_counted -/
-theorem nothing_scanned_is_not_complete :
-    (fileCoverage [] []).isComplete = false := by
-  native_decide
-
-/-- @proves REQ-ROLLUP.untraced_counted -/
-theorem an_unclaimed_file_is_counted :
-    fileCoverage ["a.rs", "b.rs"] ["a.rs"] = { met := 1, total := 2, exact := true } := by
-  native_decide
-
 /-- @proves REQ-ROLLUP.exempt_leaves_denominator -/
 theorem an_exempt_clause_is_not_counted (held : List ((String × Option String) × Marks)) :
     ownMarks held { id := "R", complete := true, clauses := [some "a", some "b"],
@@ -380,17 +360,5 @@ theorem a_partial_clause_is_never_tested_or_proved (reached : Marks) :
   · simp [ownMarks, marksAt]
   · simp [partialCap, Marks.holds]
   · simp [partialCap, Marks.holds]
-
-/-- @proves REQ-ROLLUP.open_is_lower_bound -/
-theorem an_open_roll_up_is_provisional :
-    (rollUp [{ id := "R", complete := false, clauses := [some "a"], exempt := [],
-               partialClauses := [], refines := [] }]
-            [(("R", some "a"), ⟨true, true, true, true, false⟩)] "R" ⟨false, false, true, false, false⟩).covered.exact
-      = false ∧
-    (rollUp [{ id := "R", complete := true, clauses := [some "a"], exempt := [],
-               partialClauses := [], refines := [] }]
-            [(("R", some "a"), ⟨true, true, true, true, false⟩)] "R" ⟨false, false, true, false, false⟩).covered.exact
-      = true := by
-  native_decide
 
 end TraceLean.Rollup

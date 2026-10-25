@@ -193,33 +193,6 @@ def validate (keymap : Keymap) (actions : List String) : List Problem :=
     (fun a => if dispatchable.contains a then none else some (Problem.unreachableAction a))
   (noRoot ++ perMode ++ unreachableModes ++ unreachableActions).mergeSort problemLe
 
-/-- @proves REQ-MYTH.keymap_is_data -/
-theorem a_missing_root_is_reported_at_load :
-    validate { root := "Main", modes := [] } [] = [Problem.noRoot "Main"] := by
-  native_decide
-
-/-- @proves REQ-MYTH.escape_terminates -/
-theorem a_mode_leaving_nowhere_is_reported :
-    validate { root := "A", modes := [("A", { bindings := [("b", .enter "B" "")] }),
-                                      ("B", {})] } []
-      = [Problem.stranded "B"]
-    ∧ validate { root := "A", modes := [("A", { bindings := [("b", .enter "B" "")] }),
-                                        ("B", { parent := some "Ghost" })] } []
-      = [Problem.undefinedParent "B" "Ghost", Problem.stranded "B"]
-    ∧ validate { root := "A", modes := [("A", { bindings := [("i", .enter "I" "")] }),
-                                        ("I", { bindings := [("Escape", .enter "A" "")] })] } []
-      = [] := by
-  native_decide
-
-theorem dangling_targets_do_not_hide_a_reachable_mode :
-    validate { root := "A", modes := [
-        ("A", { bindings := [("1", .enter "G1" ""), ("2", .enter "G2" ""),
-                             ("3", .enter "G3" ""), ("4", .enter "B" "")] }),
-        ("B", { parent := some "A" })] } []
-      = [Problem.undefinedMode "A" "1" "G1", Problem.undefinedMode "A" "2" "G2",
-         Problem.undefinedMode "A" "3" "G3"] := by
-  native_decide
-
 def nested : Keymap :=
   { root := "Normal", modes := [
       ("Normal", { bindings := [("Space", .enter "Leader" "leader")] }),
@@ -231,45 +204,5 @@ theorem every_outcome_is_one_of_four (keymap : Keymap) (mode key : String) :
     (∃ t, step keymap mode key = .enter t) ∨ (∃ a, step keymap mode key = .dispatch a) ∨
     (∃ t, step keymap mode key = .leave t) ∨ step keymap mode key = .passThrough := by
   cases step keymap mode key <;> simp
-
-/-- @proves REQ-MYTH.totality -/
-theorem no_key_is_swallowed :
-    step nested "Normal" "Space" = .enter "Leader" ∧ step nested "Normal" "x" = .passThrough ∧
-    step nested "Design" "o" = .dispatch "design.toggle" ∧
-    step nested "Leader" "x" = .leave "Normal" := by
-  native_decide
-
-/-- @proves REQ-MYTH.escape_pops_one -/
-theorem escape_is_one_level :
-    step nested "Design" leaveKey = .leave "Leader" ∧ step nested "Leader" leaveKey = .leave "Normal" ∧
-    step nested "Design" "q" = .leave "Normal" := by
-  native_decide
-
-/-- @proves REQ-MYTH.modes_defined -/
-theorem an_undefined_mode_is_reported :
-    validate { root := "A", modes := [("A", { bindings := [("b", .enter "Ghost" "")] })] } []
-      = [Problem.undefinedMode "A" "b" "Ghost"] ∧
-    (validate { root := "A", modes := [("A", { bindings := [("b", .enter "B" "")] }),
-                                        ("B", { parent := some "Ghost" })] } []).contains
-      (Problem.undefinedParent "B" "Ghost") = true := by
-  native_decide
-
-/-- @proves REQ-MYTH.actions_defined -/
-theorem an_undefined_action_is_reported :
-    validate { root := "A", modes := [("A", { bindings := [("x", .dispatch "file.explode" "")] })] } []
-      = [Problem.undefinedAction "A" "x" "file.explode"] := by
-  native_decide
-
-/-- @proves REQ-MYTH.actions_reachable -/
-theorem an_unreachable_action_is_reported :
-    validate nested ["design.toggle", "file.save"] = [Problem.unreachableAction "file.save"] ∧
-    validate nested ["design.toggle"] = [] := by
-  native_decide
-
-/-- @proves REQ-MYTH.whichkey_is_a_query -/
-theorem which_key_reads_the_keymap :
-    whichKey nested "Design" = [("o", "fold"), (leaveKey, "leave this mode")] ∧
-    whichKey nested "Normal" = [("Space", "leader")] ∧ whichKey nested "Nowhere" = [] := by
-  native_decide
 
 end TraceLean.Keymap

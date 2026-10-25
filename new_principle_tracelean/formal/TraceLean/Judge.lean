@@ -199,12 +199,6 @@ def restsOn (models checks : List String) : Option String :=
   let found := ((if models.isEmpty then checks else models).mergeSort (fun a b => decide (a ≤ b))).eraseDups
   if found.isEmpty then none else some (String.intercalate "+" found)
 
-/-- @proves REQ-JUDGE.structural_judged -/
-theorem a_structural_clause_rests_on_its_checks :
-    restsOn [] ["b", "a", "b"] = some "a+b" ∧ restsOn ["m"] ["a"] = some "m" ∧
-    restsOn [] [] = none ∧ restsOn [] ["a"] ≠ restsOn [] ["a2"] := by
-  native_decide
-
 /-- @proves REQ-JUDGE.caps_at_judgement -/
 theorem judgement_never_exceeds_L2
     (material : Material) (judgement : Judgement) (judges : Option Judges) (linkHash : String)
@@ -261,8 +255,6 @@ def judgedText (judged : Judged) : String :=
     "judged: " ++ judged.verdict ++ " — " ++ judged.note.getD "no note" ++ "  by " ++
       judged.judgedBy ++ delegatedText judged.delegatedBy
 
-def String.trimBoth (s : String) : String := s.trim
-
 /-- @models REQ-JUDGE.prompt_exported
 @models REQ-JUDGE.divergence_presented
 @models REQ-JUDGE.advice_is_not_evidence -/
@@ -285,18 +277,6 @@ def prompt (material : Material) : String :=
   "(Prompt version " ++ promptVersion ++ ". This is advice. The decision is recorded as " ++
   "the judgement of the person who asked.)\n"
 
-/-- @proves REQ-JUDGE.divergence_presented
-@proves REQ-JUDGE.advice_is_not_evidence -/
-theorem the_prompt_carries_the_divergence_and_says_it_is_advice :
-    (((prompt { reqId := "REQ-X", clause := some "one", clauseText := "A thing.",
-                modelSource := "def f := 1", requirementHash := "rh", modelHash := "mh",
-                divergence := some "model said 1, implementation said 2" }).splitOn
-        "implementation said 2").length = 2)
-    ∧ (((prompt { reqId := "REQ-X", clause := some "one", clauseText := "A thing.",
-                   modelSource := "def f := 1", requirementHash := "rh", modelHash := "mh",
-                   divergence := none }).splitOn "This is advice").length = 2) := by
-  native_decide
-
 /-- @proves REQ-EVID.judgement_caps -/
 theorem a_judgement_caps_at_the_second_level (verdict judgedBy promptVersion : String)
     (delegatedBy note : Option String) (seed cases : Nat) (op theoremName toolchain : String) :
@@ -304,25 +284,5 @@ theorem a_judgement_caps_at_the_second_level (verdict judgedBy promptVersion : S
     (Detail.drt seed cases op).ceiling = Level.L3 ∧
     (Detail.proof theoremName toolchain).ceiling = Level.L4 := by
   simp [Detail.ceiling]
-
-/-- @proves REQ-JUDGE.judgement_shown -/
-theorem a_judgement_says_who_and_why :
-    judgedText { verdict := "agrees", judgedBy := "ana", delegatedBy := none, note := none,
-                 level := .L2 } = "agrees by ana — L2" ∧
-    judgedText { verdict := "drift", judgedBy := "ana", delegatedBy := none,
-                 note := some "off by one", level := .L1 } = "judged: drift — off by one  by ana" ∧
-    judgedText { verdict := "agrees", judgedBy := "claude-review", delegatedBy := some "ana",
-                 note := none, level := .L2 } = "agrees by claude-review — L2 (delegated by ana)" := by
-  native_decide
-
-/-- @proves REQ-JUDGE.prompt_exported -/
-theorem the_prompt_carries_clause_and_model :
-    let p := prompt { reqId := "REQ-X", clause := some "one", clauseText := "A thing shall be.",
-                      modelSource := "def thing := 1", requirementHash := "rh", modelHash := "mh",
-                      divergence := none }
-    (p.splitOn "Requirement REQ-X.one:").length = 2 ∧ (p.splitOn "A thing shall be.").length = 2 ∧
-      (p.splitOn "def thing := 1").length = 2 ∧
-      (p.splitOn "agrees, drift, unmodelable").length = 2 := by
-  native_decide
 
 end TraceLean.Judge

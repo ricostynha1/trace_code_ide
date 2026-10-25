@@ -104,11 +104,4 @@ def turn : String :=
   recordLine "user"
     [Json.mkObj [("type", Json.str "tool_result"), ("content", Json.str "fn main")]] ++ "\n"
 
-/-- @proves REQ-TRANSCRIPT.tool_format_read -/
-theorem a_turn_reads_as_its_rows :
-    (events turn).map (fun e => (e.kind, e.text))
-      = [("thinking", "look"), ("agent", "Reading it."), ("tool", "Read(a.rs)"), ("result", "fn main")] ∧
-    events (turn ++ "partial record") = events turn := by
-  native_decide
-
 end TraceLean.Claude

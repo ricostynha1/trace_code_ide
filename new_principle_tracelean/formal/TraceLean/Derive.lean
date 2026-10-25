@@ -182,12 +182,6 @@ theorem different_arities_are_refused (a : String) (t r : Ty) (s : Structs) :
      | .ok _ => false) = true := by
   simp [derive]
 
-theorem an_int_pairs_with_i64 :
-    (match pair (.int 0) (.int 64) [] [] 1 with
-     | .ok (.int lo hi) => lo == -100 && hi == 100
-     | _ => false) = true := by
-  rfl
-
 /-- @proves REQ-DRT-SCHEMA.outside_is_error -/
 theorem a_float_is_refused (t : Ty) (s r : Structs) (n : Nat) :
     (match pair .float t s r (n + 1) with

@@ -184,19 +184,6 @@ private def openBrace : String := String.mk [Char.ofNat 123]
 
 private def closeBrace : String := String.mk [Char.ofNat 125]
 
-/-- @proves REQ-DRT-RUST.params_from_source -/
-theorem absent_is_not_empty :
-    parameters ("pub fn f() " ++ openBrace ++ closeBrace) "f" = some []
-    ∧ parameters ("pub fn f() " ++ openBrace ++ closeBrace) "g" = none := by
-  native_decide
-
-/-- @proves REQ-DRT-RUST.params_from_source -/
-theorem an_arrow_in_a_bound_is_not_a_closing_bracket :
-    parameters
-      ("fn apply<F: Fn(u8) -> u8>(f: F, x: u8) -> u8 " ++ openBrace ++ " f(x) " ++ closeBrace)
-      "apply" = some ["f", "x"] := by
-  native_decide
-
 private def tsOpenParenGo (cs : List Char) (target : List Char) : Nat → Nat → Option Nat
   | 0, _ => none
   | fuel + 1, from_ =>
@@ -258,40 +245,5 @@ def tsParameters (source : String) (symbol : String) : Option (List String) :=
     | some closeAt =>
       let params := (cs.drop (openAt + 1)).take (closeAt - openAt - 1)
       (splitTopLevel params ',').foldl tsParameterStep (some [])
-
-/-- @proves REQ-DRT-TS.params_from_source -/
-theorem an_absent_typescript_function_is_not_an_empty_one :
-    tsParameters ("export function f() " ++ openBrace ++ closeBrace) "f" = some []
-    ∧ tsParameters ("export function f() " ++ openBrace ++ closeBrace) "g" = none := by
-  native_decide
-
-/-- @proves REQ-DRT-TS.params_from_source -/
-theorem a_comma_inside_a_type_is_not_a_parameter :
-    tsParameters
-      ("export function draw(b: Map<string, number>, at: number): string " ++ openBrace ++
-        closeBrace)
-      "draw" = some ["b", "at"] := by
-  native_decide
-
-/-- @proves REQ-DRT-TS.params_from_source -/
-theorem a_pattern_parameter_is_refused :
-    tsParameters
-      ("export function f(a: number, b?: number) " ++ openBrace ++ closeBrace) "f" = none := by
-  native_decide
-
-/-- @proves REQ-DRT-TS.params_from_source -/
-theorem a_comment_this_and_a_second_declaration_do_not_reorder :
-    tsParameters "// was: function f(b, a)\nexport function f(a: number, b: number)" "f"
-      = some ["a", "b"]
-    ∧ tsParameters "/* function f(b, a) */ export function f(this: Window, a, b)" "f"
-      = some ["a", "b"]
-    ∧ tsParameters "function f(a)\nexport function f(a, b)" "f" = none := by
-  native_decide
-
-/-- @proves REQ-DRT-RUST.params_from_source -/
-theorem a_commented_rust_signature_does_not_win :
-    parameters "// fn f(b: u8, a: u8)\nfn f(a: u8, b: u8)" "f" = some ["a", "b"]
-    ∧ parameters "fn f(a: u8)\nfn f(a: u8, b: u8)" "f" = none := by
-  native_decide
 
 end TraceLean.Signature

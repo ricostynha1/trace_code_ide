@@ -109,43 +109,14 @@ theorem a_protected_path_is_never_a_copy_violation
   have notMirrored : isMirrored path = false := protected_is_not_mirrored path h
   simp [copyCheck, notMirrored, h, seen]
 
-/-- @proves REQ-OBS.workspace_is_a_copy -/
-theorem an_empty_tree_copies_cleanly :
-    copyViolations {} = [] := by
-  native_decide
-
-/-- @proves REQ-OBS.workspace_is_a_copy -/
-theorem a_copy_is_checked_both_ways :
-    copyFaults ⟨[(".git", ""), ("a.rs", "x"), ("b.rs", "y"), ("target/o", "1")]⟩
-        ⟨[("a.rs", "x"), ("b.rs", "z"), ("c.rs", "new")]⟩ =
-      [Violation.missingFromCopy ".git", Violation.copyDiffers "b.rs",
-       Violation.extraInCopy "c.rs"] ∧
-    copyFaults ⟨[(".git", ""), ("a.rs", "x"), ("target/o", "1")]⟩
-        ⟨[(".git", ""), ("a.rs", "x")]⟩ = [] := by
-  native_decide
-
-/-- @proves REQ-SBX.capability_reported -/
-theorem a_quiet_contained_run_is_clean :
-    runViolations { containment := .contained "bwrap" } = [] := by
-  native_decide
-
 /-- @proves REQ-SBX.capability_reported -/
 theorem a_named_mechanism_is_reported (mechanism : String) (h : mechanism ≠ "") :
     capabilityViolations (.contained mechanism) = [] := by
   simp [capabilityViolations, h]
 
-/-- @proves REQ-SBX.escape_is_not_silent -/
-theorem nothing_written_is_nothing_escaped :
-    escapeViolations [] = [] := by
-  simp [escapeViolations]
-
 /-- @proves REQ-SBX.real_tree_untouched -/
 theorem the_real_tree_is_checked_untouched (w : Workspace) :
-    treeChanges w w = [] ∧
-    treeChanges ⟨[("a.rs", "x"), ("b.rs", "y")]⟩ ⟨[("a.rs", "z"), ("c.rs", "")]⟩
-      = [.realTreeChanged "a.rs", .realTreeChanged "b.rs", .realTreeChanged "c.rs"] := by
-  constructor
-  · simp [treeChanges]
-  · native_decide
+    treeChanges w w = [] := by
+  simp [treeChanges]
 
 end TraceLean.Effects

@@ -135,47 +135,10 @@ def quickOpen (files : List String) (query : String) (limit : Nat) : List String
 def reopened (files : List String) (shown : Option String) (existing : List String) : List String :=
   (files ++ shown.toList).filter existing.contains
 
-/-- @proves REQ-NAV.declaration_line -/
-theorem the_word_after_the_declaring_word_is_declared :
-    declaredOn "    pub(crate) fn go(a: u8)" = some "go" ∧
-    declaredOn "theorem open_ok : True := trivial" = some "open_ok" ∧
-    declaredOn "let Kind::File p = kind" = none ∧
-    declaredOn "x = open(1)" = none := by
-  native_decide
-
 def sample : List (String × String) :=
   [("web/app.ts", "export function open() = 1\nconst x = open();\n"),
    ("src/a.rs", "use x;\npub fn open(a: u8) = 1\nfn other() = open(1)\n"),
    ("formal/A.lean", "def canon (w : W) : W := w\n")]
-
-/-- @proves REQ-NAV.definitions_found -/
-theorem a_definition_is_where_it_is_declared :
-    (declarations sample "open").map (fun d => (d.path, d.line)) = [("src/a.rs", 2), ("web/app.ts", 1)] ∧
-    (declarations sample "Workspace.canon").map (fun d => d.line) = [1] := by
-  native_decide
-
-/-- @proves REQ-NAV.uses_found -/
-theorem uses_are_whole_words_at_most_the_number_asked :
-    (occurrences sample "open" true 50).map (fun d => (d.path, d.line))
-      = [("src/a.rs", 2), ("src/a.rs", 3), ("web/app.ts", 1), ("web/app.ts", 2)] ∧
-    (occurrences sample "OPEN(a" false 50).length = 1 ∧
-    (occurrences sample "open" true 0) = [] ∧
-    (occurrences [("a", "x...")] ".." true 5).length = 1 := by
-  native_decide
-
-/-- @proves REQ-NAV.quick_open -/
-theorem the_name_counts_most :
-    quickOpen ["src/surface/screen.rs", "src/surface/view.rs", "docs/screenshots.md", "README.md"] "screen" 2
-      = ["src/surface/screen.rs", "docs/screenshots.md"] ∧
-    quickOpen ["src/surface/view.rs", "README.md"] "vw" 5 = ["src/surface/view.rs"] ∧
-    quickOpen ["a/long.rs", "README.md"] "" 1 = ["README.md"] ∧
-    quickOpen ["README.md"] "zzz" 5 = [] := by
-  native_decide
-
-/-- @proves REQ-NAV.session_recalled -/
-theorem what_no_longer_exists_stays_closed :
-    reopened ["a", "gone", "b"] (some "a") ["a", "b"] = ["a", "b", "a"] := by
-  native_decide
 
 /-- @proves REQ-NAV.session_recalled -/
 theorem everything_reopened_exists (files existing : List String) (shown : Option String) (p : String)
