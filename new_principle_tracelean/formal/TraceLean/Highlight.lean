@@ -1,19 +1,8 @@
-/-!
-# Requirement names in a comment
-
-Models `REQ-SHOW.references_are_links`: where a comment names a requirement, so
-that the name can be marked and opened. A name is two or more capitals, then `-`
-and capitals or digits as many times as it likes, then optionally `.` and a
-lower-case clause key, and it runs into nothing alphanumeric.
--/
-
 namespace TraceLean.Highlight
 
-/-- The character at `i`; only asked below `stop`, which is never past the end. -/
 def charAt (cs : List Char) (i : Nat) : Char :=
   cs.getD i ' '
 
-/-- Past every character from `i` that `keep` accepts, before `stop`. -/
 def runWhile (cs : List Char) (stop : Nat) (keep : Char → Bool) : Nat → Nat → Nat
   | 0, i => i
   | fuel + 1, i => if i < stop && keep (charAt cs i) then runWhile cs stop keep fuel (i + 1) else i
@@ -22,8 +11,6 @@ def upperOrDigit (c : Char) : Bool := c.isUpper || c.isDigit
 
 def keyChar (c : Char) : Bool := c.isLower || c.isDigit || c == '_'
 
-/-- `-` and a group of capitals or digits, as many times as they follow:
-where they end, and how many there were. -/
 def groups (cs : List Char) (stop : Nat) : Nat → Nat × Nat → Nat × Nat
   | 0, state => state
   | fuel + 1, state =>
@@ -31,7 +18,6 @@ def groups (cs : List Char) (stop : Nat) : Nat → Nat × Nat → Nat × Nat
       groups cs stop fuel (runWhile cs stop upperOrDigit (stop + 1) (state.1 + 1), state.2 + 1)
     else state
 
-/-- Where a requirement's name starting at `start` ends, if one does. -/
 def referenceAt (cs : List Char) (start stop : Nat) : Option Nat :=
   let capitals := runWhile cs stop Char.isUpper (stop + 1) start
   if capitals - start < 2 then none
@@ -46,12 +32,9 @@ def referenceAt (cs : List Char) (start stop : Nat) : Option Nat :=
         else past
       if ended < stop && (charAt cs ended).isAlphanum then none else some ended
 
-/-- Whether a name may start at `place`: the range's start, or after a
-character that is not alphanumeric. -/
 def boundary (cs : List Char) (first place : Nat) : Bool :=
   place == first || !(charAt cs (place - 1)).isAlphanum
 
-/-- Every name from `place` on, before `stop`. -/
 def namesFrom (cs : List Char) (first stop : Nat) : Nat → Nat → List (Nat × Nat)
   | 0, _ => []
   | fuel + 1, place =>
@@ -61,20 +44,14 @@ def namesFrom (cs : List Char) (first stop : Nat) : Nat → Nat → List (Nat ×
       | none => namesFrom cs first stop fuel (place + 1)
     else []
 
-/-- Every requirement name in characters `start` to `stop` of `text`, as
-character ranges; a range past the end is cut at the end.
-
-@models REQ-SHOW.references_are_links -/
+/-- @models REQ-SHOW.references_are_links -/
 def requirementNames (text : String) (start stop : Nat) : List (Nat × Nat) :=
   let cs := text.toList
   let last := min stop cs.length
   let first := min start last
   namesFrom cs first last (last + 1) first
 
-/-- A requirement named in a comment is marked, clause and all; a word running
-into it, a single capital and a name without its dash are not names.
-
-@proves REQ-SHOW.references_are_links -/
+/-- @proves REQ-SHOW.references_are_links -/
 theorem a_named_requirement_is_marked :
     requirementNames "// see REQ-ABC.x and REQ-B, not lowREQ-C, R-1 or REQ" 0 60
       = [(7, 16), (21, 26)] := by

@@ -1,19 +1,9 @@
 import Lean
 
-/-!
-# Deriving a schema from two signatures
-
-Models `REQ-DRT-SCHEMA.derived_from_both`. Each argument's Lean type is paired
-with the Rust type in the same position; a pair both sides plainly agree on
-gives the generator its shape, and anything else is a named mismatch rather
-than a guessed generator.
--/
-
 namespace TraceLean.Derive
 
 open Lean (Json ToJson FromJson toJson)
 
-/-- A type, as far as pairing needs to know it. -/
 inductive Ty where
   | int (bits : Nat)
   | nat (bits : Nat)
@@ -26,8 +16,6 @@ inductive Ty where
   | other (text : String)
   deriving Repr, Inhabited, ToJson, FromJson
 
-/-- The generator shapes a pairing produces, encoded as the binding file
-spells a schema. -/
 inductive Schema where
   | nat (max : Nat) (edges : List Nat)
   | int (min max : Int)
@@ -50,7 +38,6 @@ partial def Schema.encode : Schema → Json
   | .struct fields =>
     Json.mkObj [("type", "struct"), ("fields", Json.mkObj (fields.map (fun f => (f.1, f.2.encode))))]
 
-/-- The schema a pair gives, or why there is none. -/
 inductive Paired where
   | ok (schema : Schema)
   | err (why : String)
@@ -61,10 +48,8 @@ instance : ToJson Paired where
     | .ok schema => Json.mkObj [("Ok", schema.encode)]
     | .err why => Json.mkObj [("Err", toJson why)]
 
-/-- A structure's fields as JSON spells them, in order. -/
 abbrev Structs := List (String × List (String × Ty))
 
-/-- How a type reads in a report. -/
 def spelled : Ty → String
   | .int 0 => "Int"
   | .int bits => "i" ++ toString bits
@@ -86,14 +71,10 @@ def isFloat : Ty → Bool
   | .float => true
   | _ => false
 
-/-- The fields of a structure, by name. -/
 def fieldsOf (structs : Structs) (name : String) : Option (List (String × Ty)) :=
   (structs.find? (fun s => s.1 == name)).map (fun s => s.2)
 
-/-- The schema for a Lean type against a Rust type. `fuel` bounds the walk
-through structures, which may refer to each other.
-
-@models REQ-DRT-SCHEMA.outside_is_error -/
+/-- @models REQ-DRT-SCHEMA.outside_is_error -/
 def pair (lean rust : Ty) (leanStructs rustStructs : Structs) (fuel : Nat) : Paired :=
   match fuel with
   | 0 => .err ("`" ++ spelled lean ++ "` nests too deeply to generate")
@@ -139,8 +120,6 @@ def pair (lean rust : Ty) (leanStructs rustStructs : Structs) (fuel : Nat) : Pai
       | _, _ => .err ("no structure `" ++ a ++ "` in the model, or `" ++ b ++ "` in the code, to pair")
     | _, _ => mismatch
 
-/-- What a derived test needs: the schema of its input, the model's argument
-names in order, and which Rust parameter reads which of them. -/
 structure Derived where
   schema : Schema
   arguments : List String
@@ -153,7 +132,6 @@ instance : ToJson Derived where
     ("arguments", toJson d.arguments),
     ("params", Json.mkObj (d.params.map (fun p => (p.1, toJson p.2))))]
 
-/-- A derived test, or every reason there is none. -/
 inductive Derivation where
   | ok (derived : Derived)
   | err (problems : List String)
@@ -164,36 +142,25 @@ instance : ToJson Derivation where
     | .ok d => Json.mkObj [("Ok", toJson d)]
     | .err problems => Json.mkObj [("Err", toJson problems)]
 
-/-- An argument pair's problem, if it has one. -/
 def argumentProblem (lean rust : Structs) (a : (String × Ty) × (String × Ty)) : List String :=
   match pair a.1.2 a.2.2 lean rust 6 with
   | .ok _ => []
   | .err why => ["argument `" ++ a.1.1 ++ "`: " ++ why]
 
-/-- An argument pair's schema, under the model's name, if it has one. -/
 def argumentField (lean rust : Structs) (a : (String × Ty) × (String × Ty)) : List (String × Schema) :=
   match pair a.1.2 a.2.2 lean rust 6 with
   | .ok s => [(a.1.1, s)]
   | .err _ => []
 
-/-- The Rust parameter a model argument is read into, where the names differ. -/
 def renamed (a : (String × Ty) × (String × Ty)) : List (String × String) :=
   if a.1.1 != a.2.1 then [(a.1.1, a.2.1)] else []
 
-/-- The result pair's problem, if it has one. -/
 def resultProblem (lean rust : Structs) (theirs ours : Ty) : List String :=
   match pair theirs ours lean rust 6 with
   | .ok _ => []
   | .err why => ["result: " ++ why]
 
-/-- Pair a model's signature with an implementation's, by position, or say
-every reason they cannot be paired.
-
-Different arities are refused before any type is looked at. Otherwise every
-argument and the result are paired, and every failing pair is reported, in
-order, the result last.
-
-@models REQ-DRT-SCHEMA.derived_from_both -/
+/-- @models REQ-DRT-SCHEMA.derived_from_both -/
 def derive (model implementation : List (String × Ty) × Ty) (lean rust : Structs) : Derivation :=
   let theirs := model.1
   let ours := implementation.1
@@ -208,26 +175,20 @@ def derive (model implementation : List (String × Ty) × Ty) (lean rust : Struc
       (theirs.map (fun a => a.1)) (pairs.bind renamed))
   else .err problems
 
-/-- Arities that differ are refused, whatever the types.
-
-@proves REQ-DRT-SCHEMA.derived_from_both -/
+/-- @proves REQ-DRT-SCHEMA.derived_from_both -/
 theorem different_arities_are_refused (a : String) (t r : Ty) (s : Structs) :
     (match derive ([(a, t), (a, t)], r) ([(a, t)], r) s s with
      | .err _ => true
      | .ok _ => false) = true := by
   simp [derive]
 
-/-- Lean's unbounded integers against any Rust integer give a bounded range
-around zero. -/
 theorem an_int_pairs_with_i64 :
     (match pair (.int 0) (.int 64) [] [] 1 with
      | .ok (.int lo hi) => lo == -100 && hi == 100
      | _ => false) = true := by
   rfl
 
-/-- A float on either side is refused, never approximated.
-
-@proves REQ-DRT-SCHEMA.outside_is_error -/
+/-- @proves REQ-DRT-SCHEMA.outside_is_error -/
 theorem a_float_is_refused (t : Ty) (s r : Structs) (n : Nat) :
     (match pair .float t s r (n + 1) with
      | .err _ => true

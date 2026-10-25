@@ -1,28 +1,17 @@
 import TraceLean.Nav
 import TraceLean.SpecRollup
 
-/-!
-# Specifications for a structural clause's marks and a reopened session
-
-Written from the clauses rather than from `structural` and `reopened`.
--/
-
 namespace TraceLean.SpecNav
 
 open TraceLean.Evidence
 open TraceLean.Nav
 
-/-- A structural clause keeps what was claimed and judged of it, holds no test
-and no proof, and says that neither applies.
-
-@specifies REQ-EVID.structural_not_applicable -/
+/-- @specifies REQ-EVID.structural_not_applicable -/
 def NotApplicable (m out : Marks) : Prop :=
   out.annotated = m.annotated ∧ out.judged = m.judged ∧ out.tested = false ∧ out.proved = false
     ∧ out.structural = true
 
-/-- `structural` meets the clause, and nothing else does.
-
-@pins REQ-EVID.structural_not_applicable -/
+/-- @pins REQ-EVID.structural_not_applicable -/
 theorem structural_not_applicable_pinned :
     (∀ x1, NotApplicable x1 (structural x1)) ∧
     (∀ x1 y1 y2, NotApplicable x1 y1 → NotApplicable x1 y2 → y1 = y2) := by
@@ -37,17 +26,12 @@ theorem structural_not_applicable_pinned :
     · rw [h1.2.2.2.1, h2.2.2.2.1]
     · rw [h1.2.2.2.2, h2.2.2.2.2]
 
-/-- What comes back: the tabs, then the file in front, in that order, keeping
-exactly those that still exist.
-
-@specifies REQ-NAV.session_recalled -/
+/-- @specifies REQ-NAV.session_recalled -/
 def ReopensWhatExists (files : List String) (shown : Option String) (existing : List String)
     (out : List String) : Prop :=
   out = (files ++ shown.toList).filter (fun p => existing.contains p)
 
-/-- `reopened` meets the clause, and nothing else does.
-
-@pins REQ-NAV.session_recalled -/
+/-- @pins REQ-NAV.session_recalled -/
 theorem session_recalled_pinned :
     (∀ x1 x2 x3, ReopensWhatExists x1 x2 x3 (reopened x1 x2 x3)) ∧
     (∀ x1 x2 x3 y1 y2, ReopensWhatExists x1 x2 x3 y1 → ReopensWhatExists x1 x2 x3 y2 → y1 = y2) := by

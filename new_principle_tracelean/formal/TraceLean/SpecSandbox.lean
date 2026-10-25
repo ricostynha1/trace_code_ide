@@ -1,43 +1,21 @@
 import TraceLean.Effects
 
-/-!
-# What the sandbox laws must answer
-
-Specifications for the checks in `TraceLean.Effects`, written from the
-requirement text rather than from the functions, and the proofs that each
-check meets its specification and is the only thing that does.
--/
-
 namespace TraceLean.SpecSandbox
 
 open TraceLean.Command
 open TraceLean.Policy
 open TraceLean.Effects
 
-/-- A capability report names its state: the mechanism in use, or the reason
-there is none. An empty name is no name. -/
 def StateNamed : Capability → Prop
   | .contained mechanism => mechanism ≠ ""
   | .unavailable reason => reason ≠ ""
 
-/-- `vs` is what the containment report `reported` owes: nothing when it names
-its state, and the one complaint that containment went unreported when it names
-nothing -- the silent fallback is never accepted.
-
-@specifies REQ-SBX.capability_reported -/
+/-- @specifies REQ-SBX.capability_reported -/
 def CapabilityReported (reported : Capability) (vs : List Violation) : Prop :=
   (StateNamed reported → vs = []) ∧
   (¬ StateNamed reported → vs = [Violation.containmentUnreported])
 
-/-- `r` is what one path says about whether the tool was given a copy of the
-project (`before`) in `workspace`.
-
-A mirrored path is in both with the same content, or in neither; otherwise it
-is named as missing from the copy, as differing, or as extra in the copy. A
-protected path the project has is named as missing when the tool cannot see it,
-and is otherwise not compared. Any other path is not compared.
-
-@specifies REQ-OBS.workspace_is_a_copy -/
+/-- @specifies REQ-OBS.workspace_is_a_copy -/
 def CopiedFaithfully (before workspace : Workspace) (path : String)
     (r : Option Violation) : Prop :=
   (classify path = Class.mirrored →
@@ -56,22 +34,15 @@ def CopiedFaithfully (before workspace : Workspace) (path : String)
     (∀ b, workspace.get path = some b → r = none)) ∧
   (classify path ≠ Class.mirrored → classify path ≠ Class.«protected» → r = none)
 
-/-- An option is empty or holds something: the split `cases o` gives, with the
-equation kept, which `cases h : o` would give outside the grammar's subset. -/
 theorem none_or_some {α : Type} (o : Option α) : o = none ∨ ∃ x, o = some x := by
   cases o
   case none => exact Or.inl rfl
   case some x => exact Or.inr ⟨x, rfl⟩
 
-/-- The containment check meets its specification, and nothing else does.
-
-@pins REQ-SBX.capability_reported -/
+/-- @pins REQ-SBX.capability_reported -/
 theorem capability_reported_pinned :
     (∀ x, CapabilityReported x (capabilityViolations x)) ∧
     (∀ x y1 y2, CapabilityReported x y1 → CapabilityReported x y2 → y1 = y2) := by
-  -- `cases` on `Classical.em` rather than `by_cases`, and `case` arms rather
-  -- than `with |`: the same splits, in the subset of Lean the annotation
-  -- grammar reads (ADR-0008).
   constructor
   · intro x
     cases x
@@ -94,7 +65,6 @@ theorem mirrored_not_protected (p : String) (m : classify p = Class.mirrored) :
   rw [m] at h
   cases h
 
-/-- The copy check meets its specification at every path. -/
 theorem copy_check_meets (b w : Workspace) (p : String) :
     CopiedFaithfully b w p (copyCheck b w p) := by
   cases Classical.em (classify p = Class.mirrored)
@@ -143,7 +113,6 @@ theorem copy_check_meets (b w : Workspace) (p : String) :
       · intro _ _
         simp [copyCheck, hm, pr]
 
-/-- Two answers meeting the specification at one path are the same answer. -/
 theorem copy_check_unique (b w : Workspace) (p : String) (y1 y2 : Option Violation)
     (h1 : CopiedFaithfully b w p y1) (h2 : CopiedFaithfully b w p y2) : y1 = y2 := by
   cases Classical.em (classify p = Class.mirrored)
@@ -184,9 +153,7 @@ theorem copy_check_unique (b w : Workspace) (p : String) (y1 y2 : Option Violati
           rw [c1.2.2 c g2, c2.2.2 c g2]
     case inr pr => rw [h1.2.2 m pr, h2.2.2 m pr]
 
-/-- The copy check meets its specification, and nothing else does.
-
-@pins REQ-OBS.workspace_is_a_copy -/
+/-- @pins REQ-OBS.workspace_is_a_copy -/
 theorem workspace_is_a_copy_pinned :
     (∀ x1 x2 x3, CopiedFaithfully x1 x2 x3 (copyCheck x1 x2 x3)) ∧
     (∀ x1 x2 x3 y1 y2, CopiedFaithfully x1 x2 x3 y1 → CopiedFaithfully x1 x2 x3 y2 → y1 = y2) := by

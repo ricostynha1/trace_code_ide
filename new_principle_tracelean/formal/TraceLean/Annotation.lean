@@ -1,38 +1,13 @@
 import Lean
 
-/-!
-# The annotation grammar
-
-Models `REQ-ANNOT`. Annotations are the only mechanism linking anything to
-anything in this system, which makes **totality** the load-bearing property:
-every `@word` yields either a directive or a named problem, and nothing is
-dropped. A scanner that can silently discard a link reports less coverage than
-the project has, and teaches people to distrust what it does report.
-
-The grammar is deliberately narrow in two places. An identifier must start with
-an upper-case letter, and a clause is word characters only -- because the
-alternative to refusing an odd identifier is resolving it to something the
-author did not mean. Both narrowings are visible here rather than buried in a
-scanner.
-
-Modelled over `List Char`. The implementation walks bytes, but every character
-the grammar distinguishes is ASCII, so the two agree: a `@` preceded by a
-multi-byte character is preceded by a byte that is not ASCII whitespace, and by
-a character that is not whitespace either.
--/
-
 namespace TraceLean.Annotation
 
 open Lean (ToJson FromJson)
 
-/-- What a link claims. `models` is the function computing what the clause
-talks about; `specifies` is the `Prop` saying which answers are right
-(ADR-0014). -/
 inductive Role where
   | models | specifies | implements | tests | drt | proves | pins
   deriving Repr, DecidableEq, Inhabited, ToJson, FromJson
 
-/-- Nothing outside the vocabulary parses as a role. -/
 def Role.parse (word : String) : Option Role :=
   match word with
   | "models" => some .models
@@ -44,22 +19,13 @@ def Role.parse (word : String) : Option Role :=
   | "pins" => some .pins
   | _ => none
 
-/-- Modifies the claim made by the nearest annotation. -/
 inductive Qualifier where
-  /-- Caps a clause's contribution below full, and suppresses nothing. -/
   | «partial» (reason : Option String)
-  /-- Removes a clause from the coverage denominator entirely. -/
   | exempt (reason judgedBy expires : Option String)
-  /-- This model cannot be pinned, and here is why. -/
   | nondeterministic (reason : Option String)
-  /-- This clause is a property of the tree rather than of a value, so there is
-  no data-to-data function to model and no pair of functions to compare. It is
-  still implemented and still tested; it stays in the denominator, which an
-  exemption would not. -/
   | «structural» (reason : Option String)
   deriving Repr, DecidableEq, Inhabited, ToJson, FromJson
 
-/-- One annotation, before anything is resolved. -/
 structure RawAnnotation where
   role : Role
   reqId : String
@@ -69,7 +35,6 @@ structure RawAnnotation where
   line : Nat
   deriving Repr, DecidableEq, Inhabited, ToJson, FromJson
 
-/-- One directive found in a comment. -/
 inductive Directive where
   | annotation (annotation : RawAnnotation)
   | qualified (qualifier : Qualifier) (reqId : Option String) (clause : Option String) (line : Nat)
@@ -90,40 +55,24 @@ structure Problem where
   message : String
   deriving Repr, DecidableEq, Inhabited, ToJson, FromJson
 
-/-- Everything one comment said. -/
 structure ParsedComment where
   directives : List Directive
   problems : List Problem
   deriving Repr, DecidableEq, Inhabited, ToJson, FromJson
 
-/-! ## Character classes
-
-Spelled out rather than taken from the standard library, so the grammar does not
-change underneath the model when a library definition widens. -/
-
 def isAsciiLower (c : Char) : Bool := 'a' ≤ c && c ≤ 'z'
 def isAsciiUpper (c : Char) : Bool := 'A' ≤ c && c ≤ 'Z'
 def isAsciiDigit (c : Char) : Bool := '0' ≤ c && c ≤ '9'
 def isAsciiAlnum (c : Char) : Bool := isAsciiLower c || isAsciiUpper c || isAsciiDigit c
--- Form feed by code point: the grammar that reads these annotations cannot read
--- a `\xNN` character literal (ADR-0008).
 def isSpace (c : Char) : Bool :=
   c == ' ' || c == '\t' || c == '\n' || c == '\r' || c == Char.ofNat 12
 
-/-- Characters of a word, and what follows. -/
 def takeWhileP (p : Char → Bool) : List Char → List Char × List Char
   | [] => ([], [])
   | c :: rest => if p c then let (w, r) := takeWhileP p rest; (c :: w, r) else ([], c :: rest)
 
 def asString (cs : List Char) : String := String.mk cs
 
-/-! ## Attributes -/
-
-/-- Insert into a sorted association list, later wins.
-
-The implementation uses an ordered map; this is that map's behaviour written
-out, because the order attributes come back in is part of what the two sides
-have to agree on. -/
 def insertAttr (attrs : List (String × String)) (key value : String) : List (String × String) :=
   match attrs with
   | [] => [(key, value)]
@@ -132,34 +81,16 @@ def insertAttr (attrs : List (String × String)) (key value : String) : List (St
     else if decide (key < k) then (key, value) :: (k, v) :: rest
     else (k, v) :: insertAttr rest key value
 
-/-- The key ending at this `=`, scanning backwards over the characters already
-passed. Returned in reverse, which is the order they were passed in. -/
 def keyBefore : List Char → List Char
   | [] => []
   | c :: rest => if isAsciiLower c || c == '_' then c :: keyBefore rest else []
 
-/-- Everything before the first occurrence of `target`, and everything after. -/
 def splitAtChar (target : Char) : List Char → Option (List Char × List Char)
   | [] => none
   | c :: rest =>
     if c == target then some ([], rest)
     else (splitAtChar target rest).map (fun p => (c :: p.1, p.2))
 
-/--
-`key="quoted value"` or `key=bare`, scanned left to right.
-
-`before` holds the characters already passed, most recent first, which is how a
-key is recovered without a second pass -- the same trick the implementation
-plays with a byte index walking backwards.
-
-`fuel` exists only to make the recursion structural: every step consumes at
-least one character, so the length of the input is always enough. Lean cannot
-see that through the quoted-value case, and an explicit bound is honest about
-where the difficulty is.
--/
--- Written with `match` where an `if` would bind a `let` in a branch: the same
--- conditions in the same order, in the subset of Lean the annotation grammar
--- reads (ADR-0008).
 def attrsFrom : Nat → List (String × String) → List Char → List Char → List (String × String)
   | 0, attrs, _, _ => attrs
   | _ + 1, attrs, _, [] => attrs
@@ -179,8 +110,6 @@ def attrsFrom : Nat → List (String × String) → List Char → List Char → 
             match splitAtChar '"' afterQuote with
             | some (value, after) =>
               attrsFrom fuel (insertAttr attrs (asString key) (asString value)) [] after
-            -- An unterminated quote takes the rest of the line rather than
-            -- discarding what the author wrote.
             | none => insertAttr attrs (asString key) (asString afterQuote)
           | false =>
             let taken := takeWhileP (fun ch => !isSpace ch) (q :: afterQuote)
@@ -189,7 +118,6 @@ def attrsFrom : Nat → List (String × String) → List Char → List Char → 
 def parseAttrs (text : List Char) : List (String × String) :=
   attrsFrom (text.length + 1) [] [] text
 
-/-- Whether some whitespace-delimited word of the input is exactly `target`. -/
 def hasWord : Nat → List Char → List Char → Bool
   | 0, _, _ => false
   | _ + 1, _, [] => false
@@ -200,13 +128,9 @@ def hasWord : Nat → List Char → List Char → Bool
       let taken := takeWhileP (fun c => !isSpace c) rest
       taken.1 == target || hasWord fuel target taken.2
 
-/-! ## Identifiers -/
-
-/-- Split a leading ` ID` or ` ID.clause` off, returning what follows. -/
 def splitIdentifier (tail : List Char) : Option String × Option String × List Char :=
   let trimmed := tail.dropWhile isSpace
   match trimmed.length == tail.length && !tail.isEmpty with
-  -- `@modelsREQ-X`: the word did not end where an identifier begins.
   | true => (none, none, tail)
   | false =>
     match trimmed with
@@ -225,9 +149,6 @@ def splitIdentifier (tail : List Char) : Option String × Option String × List 
           | false => (some id, some (asString clause.1), clause.2)
         | _ => (some id, none, taken.2)
 
-/-! ## The scan -/
-
-/-- Positions of every `@` that starts a word, with what follows each. -/
 def atSigns : List Char → List Char → List (List Char)
   | _, [] => []
   | before, c :: rest =>
@@ -235,7 +156,6 @@ def atSigns : List Char → List Char → List (List Char)
       if c == '@' && (before.isEmpty || isSpace (before.headD ' ')) then [rest] else []
     here ++ atSigns (c :: before) rest
 
-/-- The qualifier a word names, if it names one. -/
 private def qualifierOf (word : String) (attrs : List (String × String)) : Option Qualifier :=
   let get := fun k => (attrs.find? (·.1 == k)).map (·.2)
   match word with
@@ -245,11 +165,6 @@ private def qualifierOf (word : String) (attrs : List (String × String)) : Opti
   | "structural" => some (.structural (get "reason"))
   | _ => none
 
-/-- One `@word` of a comment, read into what has been read so far.
-
-A definition rather than a lambda with a typed binder, and `match` where an `if`
-would bind a `let` in a branch: the same reading, in the subset of Lean the
-annotation grammar reads (ADR-0008). -/
 private def parseLineStep (line : Nat) (acc : ParsedComment) (rest : List Char) : ParsedComment :=
   let taken := takeWhileP (fun c => isAsciiLower c || c == '_') rest
   match taken.1.isEmpty with
@@ -284,25 +199,16 @@ private def parseLineStep (line : Nat) (acc : ParsedComment) (rest : List Char) 
               [{ kind := .unknownRole, line := line,
                  message := s!"`@{word}` is not a role or a qualifier" }] }
 
-/-- Parse the directives on one line. -/
 def parseLine (line : Nat) (text : List Char) : ParsedComment :=
   (atSigns [] text).foldl (parseLineStep line) { directives := [], problems := [] }
 
-/-- A line as a line-oriented reader sees it. -/
 def stripCarriageReturn (line : String) : String :=
   if line.endsWith "\r" then line.dropRight 1 else line
 
-/--
-Parse the directives in one comment's text.
-
-`firstLine` is the 0-indexed line the comment starts on, so reported lines are
-file lines.
-
-@models REQ-ANNOT.totality
+/-- @models REQ-ANNOT.totality
 @models REQ-ANNOT.unknown_role_named
 @models REQ-ANNOT.role_vocabulary
-@models REQ-ANNOT.qualifiers
--/
+@models REQ-ANNOT.qualifiers -/
 def parseComment (text : String) (firstLine : Nat) : ParsedComment :=
   let parts := text.splitOn "\n"
   let lines := if parts.getLast! == "" then parts.dropLast else parts
@@ -315,46 +221,20 @@ def parseComment (text : String) (firstLine : Nat) : ParsedComment :=
         problems := acc.problems ++ parsed.problems })
     { directives := [], problems := [] }
 
-/-- `parseComment`, over the lines a comment is made of.
-
-Exists so a generator can compose comment bodies out of fragments: a flat string
-schema would never produce a newline, and multi-line comments are where line
-numbering can go wrong. -/
 def parseCommentLines (lines : List String) (firstLine : Nat) : ParsedComment :=
   parseComment (String.intercalate "\n" lines) firstLine
 
-/-- Nothing is dropped: a comment with no at-signs yields nothing, and a comment
-with one yields exactly one directive or one problem.
-
-@proves REQ-ANNOT.totality -/
+/-- @proves REQ-ANNOT.totality -/
 theorem a_comment_without_at_signs_says_nothing :
     parseComment "just prose" 0 = { directives := [], problems := [] } := by
   native_decide
 
-/-- A role-shaped token outside the vocabulary is named, not ignored.
-
-@proves REQ-ANNOT.unknown_role_named -/
+/-- @proves REQ-ANNOT.unknown_role_named -/
 theorem an_unknown_role_is_reported :
     (parseComment "@banana REQ-X" 0).problems.length = 1 := by
   native_decide
 
-/-! ## Regions
-
-`region_balanced`. A region is opened by an annotation carrying `begin` and
-closed by `@end`. Both halves of the balance are reported: an opened region
-nothing closes, and an `@end` that closes nothing.
-
-Reporting both matters because they are different mistakes. An unclosed region
-silently extends a claim over code nobody meant to claim; a stray `@end` means
-somebody thought they were closing something and were not.
--/
-
-/-- Region and `@end` balance across a sequence of directives.
-
-The question is about the sequence and nothing else -- not the file, not the
-parse, not what any directive names.
-
-@models REQ-ANNOT.region_balanced -/
+/-- @models REQ-ANNOT.region_balanced -/
 def regionBalance (directives : List Directive) : List Problem :=
   let step := directives.foldl
     (fun (acc : List Nat × List Problem) directive =>
@@ -372,17 +252,13 @@ def regionBalance (directives : List Directive) : List Problem :=
     { kind := .unclosedRegion, line := line,
       message := "a region opened with `begin` is never closed" })
 
-/-- An `@end` with nothing open is reported rather than ignored.
-
-@proves REQ-ANNOT.region_balanced -/
+/-- @proves REQ-ANNOT.region_balanced -/
 theorem a_stray_end_is_reported :
     regionBalance [Directive.«end» 3]
       = [{ kind := .strayEnd, line := 3, message := "`@end` closes nothing" }] := by
   native_decide
 
-/-- And a balanced pair is not.
-
-@proves REQ-ANNOT.region_balanced -/
+/-- @proves REQ-ANNOT.region_balanced -/
 theorem a_balanced_region_is_quiet :
     regionBalance
       [ .annotation { role := .implements, reqId := "REQ-A", clause := none, attrs := [],
@@ -390,9 +266,7 @@ theorem a_balanced_region_is_quiet :
         Directive.«end» 5 ] = [] := by
   native_decide
 
-/-- The seven roles parse, and a near miss does not.
-
-@proves REQ-ANNOT.role_vocabulary -/
+/-- @proves REQ-ANNOT.role_vocabulary -/
 theorem the_seven_roles_and_nothing_else :
     ["models", "specifies", "implements", "tests", "drt", "proves", "pins"].map Role.parse
       = [some .models, some .specifies, some .implements, some .tests, some .drt, some .proves,
@@ -401,10 +275,7 @@ theorem the_seven_roles_and_nothing_else :
       = [none, none, none, none, none, none] := by
   native_decide
 
-/-- A bare qualifier attaches to the annotation before it; one carrying an
-identifier names its own clause.
-
-@proves REQ-ANNOT.qualifiers -/
+/-- @proves REQ-ANNOT.qualifiers -/
 theorem qualifiers_attach_or_name_their_own :
     (parseComment "@implements REQ-A.x\n@partial" 0).directives.getLast?
       = some (Directive.qualified (.partial none) none none 1) ∧

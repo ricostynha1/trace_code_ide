@@ -1,43 +1,21 @@
 import TraceLean.HistoryView
 
-/-!
-# What a filtered history view must show
-
-A specification for `REQ-UNDO.filtered_view`, written from the clause rather
-than from `shownPoints`: the nodes the filter keeps, in order, each under its
-nearest kept ancestor, and the one nearest the workspace's position marked.
-
-"Nearest" is stated by walking parent links any number of steps, with no bound:
-the model bounds its walk by the number of points, and the proof below is what
-says that bound loses nothing.
-
-The proofs are written in the subset of Lean the annotation grammar reads
-(ADR-0008): `cases` on `Classical.em`, `Bool.eq_false_or_eq_true` or
-`none_or_some` rather than `by_cases h :` or `cases h : e`, and `case` arms
-rather than `with |`.
--/
-
 namespace TraceLean.SpecHistory
 
 open TraceLean.HistoryView
 
-/-- The point recorded for a node: the first one naming it. -/
 def pointOf (ps : List Point) (n : Nat) : Option Point :=
   ps.find? (fun p => p.node == n)
 
-/-- Whether the view keeps a point: every node, the nodes touching one file, or
-the nodes at which the work was saved. -/
 def Kept (f : Filter) (file : String) (p : Point) : Prop :=
   match f with
   | .all => True
   | .file => p.file = some file
   | .saved => p.saved = true
 
-/-- A node the view keeps. A node no point records is not one. -/
 def KeptNode (ps : List Point) (f : Filter) (file : String) (n : Nat) : Prop :=
   ∃ p, pointOf ps n = some p ∧ Kept f file p
 
-/-- One step up: the node a node was made after. -/
 def parentOf (ps : List Point) : Option Nat → Option Nat
   | none => none
   | some n =>
@@ -45,21 +23,15 @@ def parentOf (ps : List Point) : Option Nat → Option Nat
     | none => none
     | some p => p.parent
 
-/-- `k` steps up from `start`. -/
 def up (ps : List Point) : Nat → Option Nat → Option Nat
   | 0, start => start
   | k + 1, start => up ps k (parentOf ps start)
 
-/-- `r` is the nearest kept node from `start` up, `start` included: the first
-kept node the walk up meets, or nothing when it meets none. -/
 def NearestKept (ps : List Point) (f : Filter) (file : String) (start r : Option Nat) : Prop :=
   (∃ k n, up ps k start = some n ∧ KeptNode ps f file n ∧
     (∀ j m, j < k → up ps j start = some m → ¬ KeptNode ps f file m) ∧ r = some n) ∨
   ((∀ k n, up ps k start = some n → ¬ KeptNode ps f file n) ∧ r = none)
 
-/-- `ys` shows the points of `rest` the view keeps, in order: each as it is,
-under its nearest kept ancestor, and marked exactly when it is the kept node
-nearest the workspace's position `pos`. -/
 def ViewOf (ps : List Point) (f : Filter) (file : String) (pos : Option Nat) :
     List Point → List Point → Prop
   | [], ys => ys = []
@@ -71,23 +43,13 @@ def ViewOf (ps : List Point) (f : Filter) (file : String) (pos : Option Nat) :
       ViewOf ps f file pos rest qs) ∨
     (¬ Kept f file p ∧ ViewOf ps f file pos rest ys)
 
-/-- The node the workspace is at: the first point marked as here, or none when
-the workspace is at the tree as opened. -/
 def position (ps : List Point) : Option Nat :=
   (ps.find? (fun p => p.here)).map (fun p => p.node)
 
-/-- `y` is the history shown through `filter`: the kept nodes, in order, each
-under its nearest shown ancestor, and the one nearest the workspace's position
-marked.
-
-@specifies REQ-UNDO.filtered_view -/
+/-- @specifies REQ-UNDO.filtered_view -/
 def FilteredView (points : List Point) (filter : Filter) (file : String) (y : List Point) : Prop :=
   ViewOf points filter file (position points) points y
 
-/-! ## The walk up -/
-
-/-- An option is empty or holds something: the split `cases h : o` would give,
-with the equation kept. -/
 theorem none_or_some {α : Type} (o : Option α) : o = none ∨ ∃ x, o = some x := by
   cases o
   case none => exact Or.inl rfl
@@ -151,9 +113,6 @@ theorem nearest_unique (ps : List Point) (f : Filter) (file : String) (s r1 r2 :
       rcases missed2 with ⟨_, e2⟩
       rw [e1, e2]
 
-/-! The model's walk one step at a time, so the proofs below rewrite with an
-equation rather than simplifying a hypothesis. -/
-
 theorem walk_unrecorded (ps : List Point) (f : Filter) (file : String) (fuel s : Nat)
     (g : ps.find? (fun p => p.node == s) = none) :
     keptAncestor ps f file (fuel + 1) (some s) = none := by
@@ -169,7 +128,6 @@ theorem walk_skipped (ps : List Point) (f : Filter) (file : String) (fuel s : Na
     keptAncestor ps f file (fuel + 1) (some s) = keptAncestor ps f file fuel p.parent := by
   simp [keptAncestor, g, kp]
 
-/-- What the model's walk finds is the first kept node up. -/
 theorem kept_found (ps : List Point) (f : Filter) (file : String) :
     ∀ (fuel : Nat) (s : Option Nat) (n : Nat),
       keptAncestor ps f file fuel s = some n →
@@ -223,7 +181,6 @@ theorem kept_found (ps : List Point) (f : Filter) (file : String) :
                 exact uj
               exact m j m2 (by omega) uj2
 
-/-- When the model's walk finds nothing, nothing kept is met within its fuel. -/
 theorem kept_missed (ps : List Point) (f : Filter) (file : String) :
     ∀ (fuel : Nat) (s : Option Nat),
       keptAncestor ps f file fuel s = none →
@@ -280,14 +237,6 @@ theorem kept_missed (ps : List Point) (f : Filter) (file : String) :
             rw [step] at u2
             exact ih p.parent h k n (by omega) u2
 
-/-! ## The bound loses nothing
-
-A walk that meets a kept node meets one within as many steps as there are
-points: before that, two steps would land on the same node, and the walk from
-there repeats. -/
-
-/-- `k + 1` values, pairwise different, all found in `l`, need `l` to have at
-least `k + 1` entries. -/
 theorem distinct_fit (v : Nat → Option Nat) :
     ∀ (k : Nat) (l : List (Option Nat)),
       (∀ i j, i < j → j ≤ k → v i ≠ v j) →
@@ -313,7 +262,6 @@ theorem distinct_fit (v : Nat → Option Nat) :
         exact (List.mem_erase_of_ne ne).2 (inl i (by omega))
     omega
 
-/-- A node the walk reaches before its last step is a recorded point. -/
 theorem reached_is_recorded (ps : List Point) (s : Option Nat) (k : Nat) (n : Nat)
     (u : up ps k s = some n) :
     ∀ i, i < k → ∃ m p, up ps i s = some m ∧ pointOf ps m = some p := by
@@ -393,7 +341,6 @@ theorem kept_within (ps : List Point) (f : Filter) (file : String) (s : Option N
         simp at fit
         omega
 
-/-- The model's walk, with its fuel, answers the unbounded question. -/
 theorem kept_ancestor_nearest (ps : List Point) (f : Filter) (file : String) (s : Option Nat) :
     NearestKept ps f file s (keptAncestor ps f file (ps.length + 1) s) := by
   cases none_or_some (keptAncestor ps f file (ps.length + 1) s)
@@ -408,8 +355,6 @@ theorem kept_ancestor_nearest (ps : List Point) (f : Filter) (file : String) (s 
     intro k n u c
     rcases kept_within ps f file s k n u c with ⟨k2, n2, lt, u2, c2⟩
     exact kept_missed ps f file (ps.length + 1) s g k2 n2 (by omega) u2 c2
-
-/-! ## The view -/
 
 theorem view_meets (ps : List Point) (f : Filter) (file : String) (pos : Option Nat) :
     ∀ rest : List Point,
@@ -486,9 +431,7 @@ theorem view_unique (ps : List Point) (f : Filter) (file : String) (pos : Option
         rcases hidden2 with ⟨_, r2⟩
         exact ih ys1 ys2 r1 r2
 
-/-- The filtered view meets its specification, and nothing else does.
-
-@pins REQ-UNDO.filtered_view -/
+/-- @pins REQ-UNDO.filtered_view -/
 theorem filtered_view_pinned :
     (∀ x1 x2 x3, FilteredView x1 x2 x3 (shownPoints x1 x2 x3)) ∧
     (∀ x1 x2 x3 y1 y2, FilteredView x1 x2 x3 y1 → FilteredView x1 x2 x3 y2 → y1 = y2) := by

@@ -1,18 +1,3 @@
-// The window's pointer and keys, checked in a real browser.
-//
-// What a person does with a mouse is decided by the browser — which element
-// was under the pointer when it was pressed and released, where a text caret
-// falls, whether a right-click reaches the page — and none of that exists in a
-// test that calls functions. So this loads the built page (`web/dist`) into
-// headless Chrome, stands a recording bridge in for the editor, and sends real
-// input events through the DevTools protocol: a click on a file row, a click
-// into text, a right-click, a rename typed into the menu, Ctrl+S, a wheel.
-// It checks the command each one sent the editor. What the editor then does
-// with those commands is `crates/editor/tests/pointer.rs`.
-//
-// Run: node web/build.mjs && node web/test/pointer.mjs
-// Needs Chrome or Chromium on PATH (CHROME=/path/to/chrome to choose).
-
 import { spawn } from "node:child_process";
 import { createServer } from "node:http";
 import { readFileSync, mkdtempSync, rmSync } from "node:fs";
@@ -22,11 +7,8 @@ import { fileURLToPath } from "node:url";
 
 const dist = join(dirname(fileURLToPath(import.meta.url)), "..", "dist");
 
-// The shipped theme, so the page is checked in the colours a person sees: a
-// stand-in theme without the focus colour drew the focused pane unmarked.
 const THEME = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "..", "..", "assets", "theme.json"), "utf8");
 
-// The stand-in editor: canned answers, and a record of every call.
 const BRIDGE = `
 <script>
   const listing = "src/a.rs\\nsrc/b.rs";
@@ -86,9 +68,6 @@ function serve() {
           body = body.toString().replace("<script", BRIDGE + "\n<script");
         }
         const type = path.endsWith(".js") ? "text/javascript" : path.endsWith(".css") ? "text/css" : "text/html";
-        // The window's policy for styles (`tauri.conf.json`: `default-src
-        // 'self'`): a stylesheet the page writes at run time is refused there,
-        // and so it is here. Scripts stay open for the stand-in bridge.
         response.writeHead(200, { "content-type": type, "content-security-policy": "style-src 'self'" });
         response.end(body);
       } catch {
@@ -160,7 +139,6 @@ try {
 
   const evaluate = async (expression) =>
     (await cdp.send("Runtime.evaluate", { expression, returnByValue: true, awaitPromise: true })).result.value;
-  // The buffer's text only: a gutter's chips are drawn letters, not text.
   await evaluate(`window.textOnly = { acceptNode: (n) =>
     n.parentElement?.closest(".chips") ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT }`);
   const calls = async () => evaluate("window.__calls");
@@ -172,7 +150,6 @@ try {
     await cdp.send("Input.dispatchMouseEvent", { type: "mouseReleased", x, y, button, clickCount });
     await sleep(250);
   };
-  // The centre of a character of a pane's text, measured in the page.
   const charAt = (pane, offset) => evaluate(`(() => {
     const box = [...document.querySelectorAll(".pane")][${pane}];
     const walker = document.createTreeWalker(box, NodeFilter.SHOW_TEXT, textOnly);
@@ -195,7 +172,6 @@ try {
   check("the which-key bar is at the bottom from the start, with the keys for what can be done here",
     bar.shown && bar.text.includes("Ctrl+S") && bar.text.includes("Save x.rs") && bar.bottom < 40, JSON.stringify(bar));
 
-  // A click on the second row of the explorer opens that file, from that pane.
   await reset();
   const row = await evaluate(`(() => { const b = [...document.querySelectorAll(".pane")][0].querySelectorAll("button")[1].getBoundingClientRect(); return { x: b.left + 5, y: b.top + b.height / 2 }; })()`);
   await mouse(row.x, row.y);
@@ -205,8 +181,6 @@ try {
   check("the press itself does not redraw (which used to swallow the click)",
     !(await calls()).some(([c]) => c === "grab"), JSON.stringify(await calls()));
 
-  // Dragging a pane's edge sends the columns moved while the button is still
-  // held — the edge follows the pointer rather than jumping on release.
   await reset();
   const edge = await evaluate(`(() => { const d = [...document.querySelectorAll(".pane")][0].querySelector(".divider").getBoundingClientRect();
     return { x: d.left + d.width / 2, y: d.top + 20, ch: [...document.querySelectorAll(".pane")][0].getBoundingClientRect().width / 20 }; })()`);
@@ -220,14 +194,12 @@ try {
   check("dragging a pane's edge sends the columns moved before the release",
     held.length > 0 && held.every((a) => a.pane === "explorer") && held.reduce((s, a) => s + a.amount, 0) >= 3, JSON.stringify(held));
 
-  // A click into the document's text places the cursor where it was pressed.
   await reset();
   const w = await charAt(1, 6);  await mouse(w.x - 2, w.y);
   const placed = await last("place");
   check("clicking into text places the cursor at that character",
     placed && placed.pane === "document" && placed.offset === 6, JSON.stringify(await calls()));
 
-  // Past the end of the second line lands at that line's end.
   await reset();
   const end = await charAt(1, 13);
   await mouse(end.x + 300, end.y);
@@ -235,7 +207,6 @@ try {
   check("clicking past the end of a line places the cursor at its end",
     atEnd && atEnd.offset === "hello world\nsecond line".length, JSON.stringify(atEnd));
 
-  // A right-click on a row lists what can be done there.
   await reset();
   await mouse(row.x, row.y, "right");
   const asked = await last("offers");
@@ -250,7 +221,6 @@ try {
   check("the actions are laid along the bottom, as which-key lays them",
     docked && docked.left === 0 && docked.width === docked.page && docked.gap > 0 && docked.gap < 40, JSON.stringify(docked));
 
-  // Rename asks for the new name in the menu, and sends it.
   await reset();
   const rename = await evaluate(`(() => { const b = document.querySelectorAll("#context .context-entry")[1].getBoundingClientRect(); return { x: b.left + 10, y: b.top + b.height / 2 }; })()`);
   await mouse(rename.x, rename.y);
@@ -265,14 +235,11 @@ try {
     JSON.stringify(await calls()));
   check("the menu closes afterwards", !(await evaluate(`!!document.getElementById("context")`)), "still open");
 
-  // Ctrl+S saves.
   await reset();
   await cdp.send("Input.dispatchKeyEvent", { type: "keyDown", key: "s", code: "KeyS", modifiers: 2, windowsVirtualKeyCode: 83 });
   await sleep(250);
   check("Ctrl+S is sent as the save chord", (await last("chord"))?.chord === "C-s", JSON.stringify(await calls()));
 
-  // A selection drawn in a file is handed to the editor before the key that
-  // follows, which then acts on it there: typed over, indented, deleted.
   const drawSelection = () => evaluate(`(() => {
     const box = [...document.querySelectorAll(".pane")][1];
     const walker = document.createTreeWalker(box, NodeFilter.SHOW_TEXT, textOnly);
@@ -291,11 +258,9 @@ try {
     adopted.end === 5 && (await evaluate(`window.getSelection().isCollapsed`)), JSON.stringify(await calls()));
   check("and then the key goes to the editor", order.indexOf("press") > order.indexOf("select"), JSON.stringify(order));
 
-  // The editor's selection is drawn.
   const shownSelection = await evaluate(`document.querySelectorAll(".pane.focused .selection").length`);
   check("the editor's selection is drawn", shownSelection > 0, JSON.stringify(shownSelection));
 
-  // Shift with an arrow is the editor's to select with.
   await reset();
   await cdp.send("Input.dispatchKeyEvent", { type: "keyDown", key: "ArrowRight", code: "ArrowRight", modifiers: 8, windowsVirtualKeyCode: 39 });
   await cdp.send("Input.dispatchKeyEvent", { type: "keyDown", key: "End", code: "End", modifiers: 8, windowsVirtualKeyCode: 35 });
@@ -303,7 +268,6 @@ try {
   const extended = (await calls()).filter(([c]) => c === "chord").map(([, a]) => a.chord);
   check("Shift+Right and Shift+End select in the editor", extended.join() === "S-Right,S-End", JSON.stringify(extended));
 
-  // Ctrl+C and Ctrl+A in a file are the editor's.
   await reset();
   await cdp.send("Input.dispatchKeyEvent", { type: "keyDown", key: "a", code: "KeyA", modifiers: 2, windowsVirtualKeyCode: 65 });
   await cdp.send("Input.dispatchKeyEvent", { type: "keyDown", key: "c", code: "KeyC", modifiers: 2, windowsVirtualKeyCode: 67 });
@@ -311,7 +275,6 @@ try {
   const copying = (await calls()).filter(([c]) => c === "chord").map(([, a]) => a.chord);
   check("Ctrl+A and Ctrl+C in a file go to the editor", copying.join() === "C-a,C-c", JSON.stringify(copying));
 
-  // Ctrl+P lists matching files, and Enter opens the first.
   await reset();
   await cdp.send("Input.dispatchKeyEvent", { type: "keyDown", key: "p", code: "KeyP", modifiers: 2, windowsVirtualKeyCode: 80 });
   await sleep(250);
@@ -323,7 +286,6 @@ try {
   check("Enter opens the first match", opened && opened.action === "file.open" && opened.target === "src/b.rs",
     JSON.stringify(await calls()));
 
-  // Ctrl+Shift+P lists actions by name, and Enter does the first here.
   await reset();
   await cdp.send("Input.dispatchKeyEvent", { type: "keyDown", key: "P", code: "KeyP", modifiers: 10, windowsVirtualKeyCode: 80 });
   await sleep(250);
@@ -334,7 +296,6 @@ try {
   const done = await last("act_here");
   check("Enter does it where the cursor is", done && done.action === "history.tree", JSON.stringify(await calls()));
 
-  // Ctrl+Shift+O lists what the file declares, and Enter goes to it.
   await reset();
   await cdp.send("Input.dispatchKeyEvent", { type: "keyDown", key: "O", code: "KeyO", modifiers: 10, windowsVirtualKeyCode: 79 });
   await sleep(250);
@@ -345,7 +306,6 @@ try {
   const went = await last("choose");
   check("Enter goes to the name's line", went && went.action === "file.open" && went.target === "src/a.rs:3", JSON.stringify(await calls()));
 
-  // Ctrl+F asks what to find, and Enter sends it.
   await reset();
   await cdp.send("Input.dispatchKeyEvent", { type: "keyDown", key: "f", code: "KeyF", modifiers: 2, windowsVirtualKeyCode: 70 });
   await sleep(150);
@@ -358,8 +318,6 @@ try {
   const found = await last("find");
   check("Enter sends the text to find, forwards", found && found.text === "line" && found.forward === true,
     JSON.stringify(await calls()));
-  // The editor selects what it found ([6, 11] in the stand-in), and the
-  // selection is drawn over it.
   const matched = await charAt(1, 6);
   const marked = await evaluate(`(() => { const m = document.querySelector(".pane.focused .selection");
     if (!m) return null; const r = m.getBoundingClientRect(); return { left: r.left, right: r.right }; })()`);
@@ -368,7 +326,6 @@ try {
   await cdp.send("Input.dispatchKeyEvent", { type: "keyDown", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 });
   await sleep(100);
 
-  // Ctrl+H adds a field for the replacement; Enter there replaces.
   await reset();
   await cdp.send("Input.dispatchKeyEvent", { type: "keyDown", key: "h", code: "KeyH", modifiers: 2, windowsVirtualKeyCode: 72 });
   await sleep(150);
@@ -381,14 +338,11 @@ try {
   check("Enter in the second field replaces", replaced && replaced.text === "line" && replaced.with === "row",
     JSON.stringify(await calls()));
 
-  // A bracket beside the cursor and its match are both marked.
   const brackets = await evaluate(`document.querySelectorAll(".pane.focused .bracket").length`);
   check("the bracket by the cursor and its match are marked", brackets === 2, JSON.stringify(brackets));
   const occurring = await evaluate(`document.querySelectorAll(".pane.focused .occurrence").length`);
   check("each place the name under the cursor is written is marked", occurring === 2, JSON.stringify(occurring));
 
-  // The cursor's line and column show at the status line's end, and the word
-  // and comment chords go to the editor by name.
   const position = await evaluate(`document.getElementById("position")?.textContent`);
   check("the status line shows the findings, mode, line and column", position === "⚠ 3Ln 1, Col 7INSERT", JSON.stringify(position));
   const badge = await evaluate(`document.querySelector("#position .mode-badge.insert")?.textContent`);
@@ -408,7 +362,6 @@ try {
   check("Ctrl+Left, Ctrl+/, Alt+Down and Shift+Tab are sent as chords", sent.join() === "C-Left,C-/,A-Down,S-Tab",
     JSON.stringify(sent));
 
-  // A middle click on a tab shows it and closes it.
   await reset();
   const tab = await evaluate(`(() => { const t = document.querySelector("#strip button.item"); if (!t) return null;
     const r = t.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; })()`);
@@ -435,8 +388,6 @@ try {
     tabMenu.join() === "screen.show,offers" && await evaluate(`!!document.getElementById("context")`), JSON.stringify(tabMenu));
   await evaluate(`document.body.click()`);
 
-  // Alt+Left / Alt+Right and the mouse's back and forward buttons go back
-  // and forward.
   await reset();
   await cdp.send("Input.dispatchKeyEvent", { type: "keyDown", key: "ArrowLeft", code: "ArrowLeft", modifiers: 1, windowsVirtualKeyCode: 37 });
   await cdp.send("Input.dispatchKeyEvent", { type: "keyDown", key: "ArrowRight", code: "ArrowRight", modifiers: 1, windowsVirtualKeyCode: 39 });
@@ -449,7 +400,6 @@ try {
   check("Alt+arrows and the back/forward buttons go back and forward", going.join() === "A-Left,A-Right,A-Left,A-Right",
     JSON.stringify(going));
 
-  // Resting on a requirement's name shows what it says.
   const named = await evaluate(`(() => { const b = document.querySelector(".pane.kind-file .role-requirement");
     if (!b) return null; const r = b.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; })()`);
   if (named) {
@@ -459,8 +409,6 @@ try {
   const titled = await evaluate(`document.querySelector(".pane.kind-file .role-requirement")?.title ?? null`);
   check("a requirement's name says what it says when rested on", titled?.startsWith("line: what it says"), JSON.stringify(titled));
 
-  // A claim's chip sits in the gutter and opens its requirement, without
-  // placing the cursor; the letter is not text a selection copies.
   await reset();
   const chip = await evaluate(`(() => { const c = document.querySelector(".pane.kind-file .chip"); if (!c) return null;
     const r = c.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2, text: c.textContent }; })()`);
@@ -475,7 +423,6 @@ try {
     check("clicking a chip places no cursor", !(await last("place")), JSON.stringify(await calls()));
   }
 
-  // A click on a line's number selects the line.
   await reset();
   const numbered = await evaluate(`(() => { const r = document.querySelectorAll(".pane.kind-file .line")[1];
     const b = r.getBoundingClientRect(); return { x: b.left + 8, y: b.top + b.height / 2, start: Number(r.dataset.start), length: Number(r.dataset.length) }; })()`);
@@ -487,21 +434,15 @@ try {
     lined && lined.start === numbered.start && lined.end === numbered.start + numbered.length + 1 && !(await last("place")),
     JSON.stringify({ numbered, calls: await calls() }));
 
-  // A pane whose lines fit has nothing to scroll across, so no scrollbar.
   const overflowing = await evaluate(`[...document.querySelectorAll(".pane")]
     .filter(p => [...p.children].every(r => r.classList.contains("divider") || r.scrollWidth <= p.clientWidth))
     .filter(p => p.scrollWidth > p.clientWidth).map(p => p.dataset.pane)`);
   check("a pane whose lines fit has no scrollbar", overflowing.length === 0, JSON.stringify(overflowing));
 
-  // A keyword wears the theme's keyword colour, under the window's policy.
   const keyword = await evaluate(`(() => { const k = document.querySelector(".pane.kind-file .token-keyword");
     return k ? getComputedStyle(k).color : null; })()`);
   check("syntax is coloured from the theme in the window", keyword === "rgb(198, 120, 221)", JSON.stringify(keyword));
 
-  // Each place in a region of its own (`REQ-LOOK.regions_present`): the
-  // stations down the left, the strip above the panes, the panes side by side
-  // in the order and proportion the layout gives them (30 and 60 columns), the
-  // menu and status below, nothing overlapping.
   const regions = await evaluate(`(() => {
     const box = (e) => { const r = e.getBoundingClientRect(); return { name: e.id || e.dataset.pane, left: r.left, top: r.top, right: r.right, bottom: r.bottom }; };
     return { bars: ["stations", "strip"].map((id) => box(document.getElementById(id))),
@@ -522,8 +463,6 @@ try {
       && ratio > 1.8 && ratio < 2.2 && all.every((r) => r.left >= 0 && r.right <= regions.width + 0.5),
     JSON.stringify({ crossing, ratio, regions }));
 
-  // Which pane has the focus shows (`REQ-LOOK.focus_visible`): the focused
-  // pane is drawn with a mark the other is not.
   const marks = await evaluate(`[...document.querySelectorAll(".pane")].map((p) => {
     const s = getComputedStyle(p); return { focused: p.classList.contains("focused"), mark: s.boxShadow + "|" + s.outlineStyle + "|" + s.borderTopColor }; })`);
   const focusedMark = marks.filter((m) => m.focused).map((m) => m.mark);
@@ -531,9 +470,6 @@ try {
     focusedMark.length === 1 && marks.filter((m) => !m.focused).every((m) => m.mark !== focusedMark[0]),
     JSON.stringify(marks));
 
-  // What a screen reader is given (`REQ-LOOK.accessible_structure`), from
-  // Chrome's own accessibility tree: every region a named landmark, every
-  // control named. No scanner to install; the browser already computes this.
   await cdp.send("Accessibility.enable");
   const { nodes } = await cdp.send("Accessibility.getFullAXTree");
   const hasName = (n) => (n.name?.value ?? "").trim().length > 0;
@@ -546,7 +482,6 @@ try {
     landmarks.length >= 4 && unnamedLandmarks.length === 0 && controls.length > 0 && unnamedControls.length === 0,
     JSON.stringify({ landmarks: landmarks.map((n) => [role(n), n.name?.value]), unnamedLandmarks, unnamedControls }));
 
-  // A wheel over the document scrolls it.
   await reset();
   await cdp.send("Input.dispatchMouseEvent", { type: "mouseWheel", x: w.x, y: w.y, deltaX: 0, deltaY: 120 });
   await sleep(250);

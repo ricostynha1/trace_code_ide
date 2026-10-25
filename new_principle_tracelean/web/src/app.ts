@@ -1,24 +1,8 @@
-// The web frontend's page.
-//
-// It draws a buffer and sends actions back. It holds no state about what is
-// shown, keeps no view model, and builds no buffer: the editor answers with a
-// buffer, this renders it, a click names an action, and the editor answers with
-// the next buffer.
-//
-// The rendering comes from `render.ts`, which is the module the conformance
-// harness checks — so what a person sees here is what that harness verified.
-
 import { classOf, pieces, shown } from "./render.ts";
 import type { Buffer, Pane } from "./view.ts";
 
-// One text line's height, in pixels. It matches the stylesheet, and it has to:
-// the editor lays panes out in characters, so the page converts to pixels with
-// the same number the stylesheet uses or the boxes stop lining up with the rows.
 const LINE = 21;
 
-// How the page reaches the editor. In a Tauri window this is the bridge to the
-// Rust core; anywhere else there is no editor, and the page says so rather than
-// inventing one.
 type Invoke = (command: string, args: Record<string, unknown>) => Promise<unknown>;
 
 function bridge(): Invoke | null {
@@ -26,13 +10,6 @@ function bridge(): Invoke | null {
   return tauri?.core?.invoke ?? null;
 }
 
-// How big the page is, in characters. The editor lays the panes out in this
-// region and windows each buffer to its pane, so the page still draws
-// everything it is given.
-//
-// The width is measured rather than assumed: a monospace character's width
-// depends on the font the browser actually loaded, and a number guessed here
-// would put every pane's box a little out of step with the rows inside it.
 function region(into: HTMLElement): { width: number; height: number } {
   const ruler = document.createElement("span");
   ruler.style.position = "absolute";
@@ -48,16 +25,6 @@ function region(into: HTMLElement): { width: number; height: number } {
   };
 }
 
-// Draw a buffer into an element.
-//
-// One `<div>` a line, one `<span>` a piece, and a `<button>` wherever a piece
-// carries an action. The button's label is the piece's own text, because a
-// label this frontend made up would be text the buffer does not contain.
-//
-// Every line and piece records the offset it starts at, so a pointer anywhere
-// in the pane can be turned back into a position in the buffer — which is all
-// the editor needs to place a cursor or list what can be done there.
-//
 // @implements REQ-VIEW.one_representation
 // @implements REQ-SHOW.core_produces
 export function draw(into: HTMLElement, buffer: Buffer, act: (action: string, at: number) => void) {
@@ -71,8 +38,6 @@ export function draw(into: HTMLElement, buffer: Buffer, act: (action: string, at
     row.dataset.length = String(length);
     start += length + 1;
     if (line.length === 0) {
-      // An empty line is a line: a row with nothing in it still takes space,
-      // and dropping it would renumber everything below.
       row.appendChild(document.createTextNode(""));
     }
     for (const piece of line) {
@@ -81,7 +46,6 @@ export function draw(into: HTMLElement, buffer: Buffer, act: (action: string, at
         span.className = classOf(piece.role);
         span.dataset.at = String(piece.at);
         span.textContent = piece.text;
-        // A claim's letter, in the tree, says what it stands for when rested on.
         const role = piece.role;
         if (typeof role === "object" && "claim" in role && piece.text.trim().length === 1) {
           span.title = `something here ${role.claim.role} a requirement — 🔗 shows which`;
@@ -92,11 +56,9 @@ export function draw(into: HTMLElement, buffer: Buffer, act: (action: string, at
       const button = document.createElement("button");
       button.className = `${classOf(piece.role)} actionable`;
       button.dataset.at = String(piece.at);
-      // What it does, for the style sheet: a toggle is drawn as one.
       button.dataset.action = piece.actions[0];
       button.textContent = piece.text;
       button.title = `${piece.actions.map((a) => hover[a] ?? a).join(" · ")}  (right-click for more)`;
-      // A requirement's name says what the requirement says, when rested on.
       if (button.classList.contains("role-requirement")) {
         button.addEventListener("mouseenter", () => void sayRequirement(button, piece.text.trim()), { once: true });
       }
@@ -110,11 +72,6 @@ export function draw(into: HTMLElement, buffer: Buffer, act: (action: string, at
   }
 }
 
-// The position in a drawn buffer under a pointer, in characters.
-//
-// The browser says which text node and which UTF-16 index the pointer is over;
-// the piece it belongs to says where that piece starts. Past the end of a line,
-// or on an empty one, the position is the line's end.
 function offsetAt(event: MouseEvent): number | null {
   const doc = document as Document & {
     caretRangeFromPoint?: (x: number, y: number) => Range | null;
@@ -144,8 +101,6 @@ function offsetAt(event: MouseEvent): number | null {
   return null;
 }
 
-// A position in a drawn buffer, from a DOM position: the text node and index a
-// selection or a caret reports, turned into characters from the window's start.
 function positionOf(node: Node, index: number): number | null {
   const element = node.nodeType === Node.TEXT_NODE ? node.parentElement : (node as Element);
   const host = element?.closest("[data-at]");
@@ -154,12 +109,9 @@ function positionOf(node: Node, index: number): number | null {
   }
   const row = element?.closest(".line") as HTMLElement | null;
   if (!row) return null;
-  // An element boundary: before its first child is the line's start.
   return index === 0 ? Number(row.dataset.start) : Number(row.dataset.start) + Number(row.dataset.length);
 }
 
-// The pointer's selection inside one file pane, as positions there; `null`
-// when nothing is selected or the selection is not in a file.
 function selectedInFile(): { pane: string; start: number; end: number; text: string } | null {
   const selection = window.getSelection();
   if (!selection || selection.isCollapsed || !selection.anchorNode || !selection.focusNode) return null;
@@ -171,8 +123,6 @@ function selectedInFile(): { pane: string; start: number; end: number; text: str
   return { pane: box.dataset.pane ?? "", start: Math.min(a, b), end: Math.max(a, b), text: selection.toString() };
 }
 
-// The DOM position of a character offset in a drawn pane: the text node that
-// holds it and the index inside that node.
 function domAt(box: HTMLElement, offset: number): { node: Node; index: number } | null {
   for (const host of Array.from(box.querySelectorAll<HTMLElement>("[data-at]"))) {
     const start = Number(host.dataset.at);
@@ -186,9 +136,6 @@ function domAt(box: HTMLElement, offset: number): { node: Node; index: number } 
   return null;
 }
 
-// A selection the pointer drew in a file, handed to the editor, which keeps
-// it from then on — through scrolling, past what is on screen — and draws it.
-// Answers whether there was one.
 async function adoptSelection(): Promise<boolean> {
   const chosen = selectedInFile();
   if (!chosen || !ctx) return false;
@@ -197,23 +144,6 @@ async function adoptSelection(): Promise<boolean> {
   return true;
 }
 
-// Draw one pane: a box where the editor put it, with the buffer drawn inside.
-//
-// The box is positioned in characters and line heights, which are the units the
-// editor laid the pane out in. A window spends nothing on dividers — the border
-// is drawn in the box's own edge by the stylesheet — where a terminal has to
-// take a column from the pane, which is why the two frontends ask for different
-// amounts of room and draw the same buffers.
-//
-// The pointer does what it does in any editor: a click places the cursor (and
-// focuses the pane), a click on an affordance performs it, a right-click lists
-// everything that can be done there, a wheel scrolls, and a drag selects text
-// to copy. Nothing is redrawn on the press itself — a redraw between press and
-// release replaces the element under the pointer, and the browser then never
-// delivers the click.
-// The claims beside a file's lines, in its gutter: one letter a claim, which
-// opens the requirement it claims. Which lines and letters is the editor's
-// (`surface::chips`); the colour of each role is the theme's.
 const CLAIMED: Record<string, string> = { M: "models", I: "implements", T: "tests", D: "drt", P: "proves" };
 
 function drawChips(box: HTMLElement, pane: Pane) {
@@ -230,7 +160,6 @@ function drawChips(box: HTMLElement, pane: Pane) {
     chip.className = `chip chip-${CLAIMED[letter] ?? "other"}`;
     chip.textContent = letter;
     chip.title = `${CLAIMED[letter] ?? letter} ${requirement}`;
-    // Pointed at, it says what the clause it claims says.
     chip.addEventListener("mouseenter", () => void sayRequirement(chip, requirement), { once: true });
     chip.addEventListener("mousedown", (event) => event.stopPropagation());
     chip.addEventListener("click", (event) => {
@@ -241,8 +170,6 @@ function drawChips(box: HTMLElement, pane: Pane) {
   }
 }
 
-// Which lines tests ran: a mark in the gutter, red where none did, and what
-// pointing at the line number says — which tests, how often.
 function drawCoverage(box: HTMLElement, pane: Pane) {
   for (const [line, hits, said] of pane.coverage ?? []) {
     const row = box.children[line - (pane.top ?? 0)];
@@ -252,7 +179,6 @@ function drawCoverage(box: HTMLElement, pane: Pane) {
   }
 }
 
-// The change a history node made, in a box beside the pointer.
 async function showChange(pane: string, at: number, x: number, y: number) {
   if (!ctx) return;
   const change = (await ctx.invoke("history_preview", { pane, offset: at })) as Buffer | null;
@@ -271,15 +197,8 @@ function hideChange() {
   document.getElementById("change")?.remove();
 }
 
-// Whether the last press and release was a drag, so the click that follows
-// it is not taken as a click to place the cursor.
 let dragged = false;
 
-// A bar down the pane's right edge whose thumb is the window's share of the
-// buffer: dragging it, or clicking the track, scrolls to there. What it sends is
-// the editor's own `scroll`, a number of lines, so a drag, the wheel and a key
-// are one change with different amounts. Nothing is drawn when the whole buffer
-// fits, which is also what an editor that does not say how long it is gets.
 function drawScrollbar(box: HTMLElement, pane: Pane) {
   const total = pane.lines ?? 0;
   const shown = pane.at.height;
@@ -295,12 +214,10 @@ function drawScrollbar(box: HTMLElement, pane: Pane) {
   thumb.style.top = `${(Math.min(top, total - shown) / total) * 100}%`;
   track.appendChild(thumb);
   box.appendChild(track);
-  // The pane scrolls across for a long line; the bar stays at its edge.
   const keepAtEdge = () => (track.style.transform = `translateX(${box.scrollLeft}px)`);
   box.addEventListener("scroll", keepAtEdge);
   keepAtEdge();
 
-  // Scroll so the window starts at `wanted`, from where it is now.
   let at = top;
   const scrollTo = (wanted: number) => {
     const target = Math.round(Math.max(0, Math.min(total - 1, wanted)));
@@ -312,8 +229,6 @@ function drawScrollbar(box: HTMLElement, pane: Pane) {
   thumb.addEventListener("mousedown", (event) => {
     event.preventDefault();
     event.stopPropagation();
-    // The track's height now: the pane is drawn anew on every scroll, which
-    // detaches this bar, and a detached one has no height to ask.
     const [from, startedAt, height] = [event.clientY, at, room()];
     const move = (moved: MouseEvent) => scrollTo(startedAt + ((moved.clientY - from) / height) * total);
     const release = () => {
@@ -324,7 +239,6 @@ function drawScrollbar(box: HTMLElement, pane: Pane) {
     document.addEventListener("mousemove", move);
     document.addEventListener("mouseup", release);
   });
-  // A click on the track puts the middle of the thumb there.
   track.addEventListener("mousedown", (event) => {
     if (event.target !== track) return;
     event.preventDefault();
@@ -335,13 +249,7 @@ function drawScrollbar(box: HTMLElement, pane: Pane) {
   track.addEventListener("click", (event) => event.stopPropagation());
 }
 
-// What each drawn pane was drawn from. A pane whose value has not changed since
-// it was drawn is left as it is: a key that moves the cursor changes what is
-// drawn over one pane (the caret, a selection), not the pane, and drawing every
-// pane again for it is what made moving between lines lag. A pane is the
-// window's lines only, so the cost of one that did change is what is in view.
 const drawnFrom = new WeakMap<Element, string>();
-// The same for the two bars above the panes and the panel below them.
 let barsDrawn = "";
 let barDrawn = "";
 let barCursor = 0;
@@ -351,7 +259,6 @@ function syncPanes(into: HTMLElement, panes: Pane[]) {
     const value = JSON.stringify(pane);
     const held = into.children[index];
     if (held instanceof HTMLElement && drawnFrom.get(held) === value) {
-      // What is laid over it is drawn again by the caller, so it is taken off.
       for (const over of Array.from(held.querySelectorAll(".caret, .selection, .occurrence, .bracket"))) over.remove();
       for (const row of Array.from(held.querySelectorAll(".line.active"))) row.classList.remove("active");
       return;
@@ -367,9 +274,6 @@ function syncPanes(into: HTMLElement, panes: Pane[]) {
 
 function drawPane(into: HTMLElement, pane: Pane) {
   const box = document.createElement("div");
-  // The buffer's kind becomes a class, so a listing can look like a sidebar
-  // beside a file. It says what the pane holds, as a role does; the stylesheet
-  // decides what that looks like.
   const kind = Object.keys(pane.buffer.kind)[0] ?? "file";
   box.className = `pane kind-${kind}${pane.focused ? " focused" : ""}`;
   box.dataset.pane = pane.pane;
@@ -379,8 +283,6 @@ function drawPane(into: HTMLElement, pane: Pane) {
   box.style.width = `${pane.at.width}ch`;
   box.style.height = `${pane.at.height * LINE}px`;
   draw(box, pane.buffer, (action, at) => run("act", { pane: pane.pane, action, offset: at }));
-  // A file's lines are numbered in a gutter the stylesheet draws from this
-  // attribute: a number is where a line is, not text the buffer holds.
   if (kind === "file") {
     Array.from(box.children).forEach((row, index) => {
       if (row instanceof HTMLElement) row.dataset.number = String((pane.top ?? 0) + index + 1);
@@ -390,27 +292,22 @@ function drawPane(into: HTMLElement, pane: Pane) {
   }
   drawScrollbar(box, pane);
 
-  // A history node rested on shows the change it made, beside the pointer,
-  // as the editor draws it; nothing moves until it is clicked.
   for (const node of box.querySelectorAll<HTMLElement>('button[data-action="history.jump"]')) {
     node.addEventListener("mouseenter", (event) => void showChange(pane.pane, Number(node.dataset.at), event.clientX, event.clientY));
     node.addEventListener("mouseleave", hideChange);
   }
 
-  // A drag in a file ends as the editor's selection, drawn by it from then on.
   box.addEventListener("mouseup", () => {
     if (kind !== "file" || !selectedInFile()) return;
     dragged = true;
     void adoptSelection().then(() => ctx && show(ctx.invoke, ctx.into, ctx.status));
   });
   box.addEventListener("click", (event) => {
-    // A drag that selected text is a selection, not a click to place.
     const selection = window.getSelection();
     if (dragged || (selection && !selection.isCollapsed)) {
       dragged = false;
       return;
     }
-    // A click on a line's number selects the line.
     const line = event.target instanceof Element ? (event.target.closest(".line") as HTMLElement | null) : null;
     if (kind === "file" && line && event.clientX < line.getBoundingClientRect().left + parseFloat(getComputedStyle(line).paddingLeft)) {
       const start = Number(line.dataset.start);
@@ -418,7 +315,6 @@ function drawPane(into: HTMLElement, pane: Pane) {
       return;
     }
     const at = offsetAt(event);
-    // Ctrl+click: to where the name clicked is declared, as F12 goes.
     const definition = event.ctrlKey || event.metaKey;
     void run("place", { pane: pane.pane, offset: at ?? 0 }).then(() =>
       definition ? run("chord", { chord: "F12" }) : undefined
@@ -433,8 +329,6 @@ function drawPane(into: HTMLElement, pane: Pane) {
   box.addEventListener(
     "wheel",
     (event) => {
-      // Sideways (a trackpad, or Shift with the wheel) is the browser's: a
-      // line longer than the pane scrolls across where it is drawn.
       if (event.shiftKey || Math.abs(event.deltaX) > Math.abs(event.deltaY)) return;
       event.preventDefault();
       wheeling += event.deltaY;
@@ -446,18 +340,12 @@ function drawPane(into: HTMLElement, pane: Pane) {
     { passive: false },
   );
 
-  // The divider on the right edge, draggable. What it sends is a number of
-  // characters, so from the editor's side a drag and a keypress are the same
-  // change with different amounts.
   const handle = document.createElement("div");
   handle.className = "divider";
   handle.addEventListener("click", (event) => event.stopPropagation());
   handle.addEventListener("mousedown", (event) => {
     event.preventDefault();
     event.stopPropagation();
-    // Followed while held, a column at a time, so the edge goes where the
-    // pointer goes. The pane is redrawn under the pointer as it moves, which
-    // is why the listeners are on the document and not on this handle.
     let from = event.clientX;
     const character = box.getBoundingClientRect().width / Math.max(1, pane.at.width);
     let sending = false;
@@ -481,23 +369,6 @@ function drawPane(into: HTMLElement, pane: Pane) {
   into.appendChild(box);
 }
 
-// A bar's buffer, drawn as a row of items rather than a column of lines.
-//
-// The rows are the buffer's own and nothing is added between them. What this
-// frontend does that the terminal cannot is lay them along a row and let a
-// pointer press one, which is the same affordance the span already carried.
-//
-// A station is painted as its emblem *instead of* its name, which is what
-// `presentation_may_be_symbolic` allows and what makes a bar readable at a
-// glance. The name does not disappear: it becomes the item's accessible name,
-// which is what a screen reader announces and what the capture harness reads
-// off the page. The glyph is marked hidden so that nothing reads it twice.
-//
-// The decision is `shown`'s and not this function's: the same value the capture
-// harness reads through `screenText` says what to paint and what to name it, so
-// the page and the report cannot come apart. Which glyph is chosen from the
-// actions the core declared — never from the text. A frontend recognising its
-// own strings would be a second answer to what is on screen.
 function drawBar(
   into: HTMLElement | null,
   buffer: Buffer,
@@ -523,8 +394,6 @@ function drawBar(
       if (piece.actions.length) {
         item.title = presented.name.trim();
         item.addEventListener("click", () => act(station, piece.actions[0], piece.at));
-        // A middle click or the × closes a tab: shown, then closed, as
-        // Ctrl+W does.
         if (!station && piece.actions[0] === "screen.show") {
           const close = () =>
             void (ctx?.invoke("act_in_bar", { station, action: "screen.show", offset: piece.at }) ?? Promise.resolve())
@@ -534,7 +403,6 @@ function drawBar(
             event.preventDefault();
             close();
           });
-          // A right-click shows the tab, then lists what its pane offers.
           item.addEventListener("contextmenu", (event) => {
             event.preventDefault();
             event.stopPropagation();
@@ -561,7 +429,6 @@ function drawBar(
   }
 }
 
-// One entry of a context menu, as the core offers it.
 interface Offer {
   group: string;
   label: string;
@@ -571,8 +438,6 @@ interface Offer {
   keys: string | null;
 }
 
-// The headings of a context menu's groups. Chrome rather than content: the
-// entries themselves are the core's.
 const GROUPS: Record<string, string> = {
   here: "Here",
   file: "This buffer",
@@ -584,13 +449,6 @@ function closeContext() {
   document.getElementById("context")?.remove();
 }
 
-// Everything the core says can be done where the pointer is, laid along the
-// bottom of the window as which-key lays out what a prefix leads to: a column
-// per group, each entry its keys and then what it does, so the keys are learnt
-// by reading them.
-//
-// An entry that needs an argument — a new name, a new path — asks for it in the
-// menu itself, and the answer goes to the editor with the entry.
 async function openContext(pane: string, at: number, _x: number, _y: number) {
   closeContext();
   if (!ctx) return;
@@ -598,14 +456,9 @@ async function openContext(pane: string, at: number, _x: number, _y: number) {
   document.body.appendChild(overlay(offered, pane, at));
 }
 
-// Where an offer is about: a position, or something that says where the cursor
-// is now. The panel at the bottom is not redrawn when the cursor moves and the
-// offers are the same, so what it acts on is asked for when it is clicked.
 type Where = number | (() => number);
 const whereIs = (at: Where) => (typeof at === "function" ? at() : at);
 
-// The box laid over the bottom of the window: the offers, or a question one
-// of them asks.
 function overlay(offered: Offer[], pane: string, at: Where): HTMLElement {
   const menu = document.createElement("div");
   menu.id = "context";
@@ -615,9 +468,6 @@ function overlay(offered: Offer[], pane: string, at: Where): HTMLElement {
   return menu;
 }
 
-// Offers as which-key columns, one per group, keys first. A click chooses the
-// entry where it was offered; one that asks for a name asks in a box over the
-// bottom of the window.
 function whichKey(into: HTMLElement, offered: Offer[], pane: string, at: Where) {
   let group = "";
   let column: HTMLElement = into;
@@ -660,7 +510,6 @@ function whichKey(into: HTMLElement, offered: Offer[], pane: string, at: Where) 
   }
 }
 
-// Ask for an entry's argument inside the menu.
 function ask(menu: HTMLElement, offer: Offer, pane: string, at: Where) {
   menu.textContent = "";
   const question = document.createElement("div");
@@ -694,12 +543,7 @@ function ask(menu: HTMLElement, offer: Offer, pane: string, at: Where) {
   input.select();
 }
 
-// Lay a box of class `kind` over `length` characters of a drawn pane — the
-// selection, a bracket pair. Boxes over the text rather than a change to it,
-// so they go with the next redraw; a run past the window ends where it does.
 function mark(box: HTMLElement, start: number, length: number, kind: string) {
-  // Piece by piece of text, so a run over several lines marks the text and
-  // not the rows' whole boxes, gutter and all.
   const stop = start + length;
   const rects: DOMRect[] = [];
   for (const host of Array.from(box.querySelectorAll<HTMLElement>("[data-at]"))) {
@@ -726,11 +570,6 @@ function mark(box: HTMLElement, start: number, length: number, kind: string) {
   }
 }
 
-// Ctrl+F: a field at the top of the page. Enter finds the next match, Shift+
-// Enter the one before, Escape closes it. Ctrl+Shift+F: the same field, and
-// Enter lists every line of the project holding the text. Ctrl+H: a second
-// field under it, where Enter replaces every match in the file. The searching
-// and replacing are the editor's.
 function openFind(everywhere = false, replacing = false) {
   closeContext();
   const box = document.createElement("div");
@@ -748,7 +587,6 @@ function openFind(everywhere = false, replacing = false) {
       void run("search", { text });
       return;
     }
-    // The editor selects what it finds, and the selection is drawn.
     if (event.key === "Enter" && input.value) {
       void run("find", { text: input.value, forward: !event.shiftKey }).then(() => input.focus());
     }
@@ -774,7 +612,6 @@ function openFind(everywhere = false, replacing = false) {
   }
   document.body.appendChild(box);
   input.focus();
-  // What is selected on one line is what is looked for, to start with.
   void ctx?.invoke("selected", {}).then((text) => {
     if (typeof text !== "string" || !text || text.includes("\n") || input.value) return;
     input.value = text;
@@ -782,9 +619,6 @@ function openFind(everywhere = false, replacing = false) {
   });
 }
 
-// Ctrl+P: type a few letters of a file's path, pick from what matches. The
-// matching is the editor's; Enter opens the first (or the one moved to with
-// the arrows), a click opens the one clicked, Escape closes.
 function openQuick() {
   openChooser("Open a file by name — name:42 or :42 for a line", async (query) => {
     const found = ((await ctx?.invoke("quick", { query })) as string[] | null) ?? [];
@@ -795,8 +629,6 @@ function openQuick() {
   });
 }
 
-// Ctrl+Shift+P: every action by what it is called, the editor's matches for
-// what is typed; the one picked is done where the cursor is.
 function openPalette() {
   openChooser("Do something — type a few words of it", async (query) => {
     const found = ((await ctx?.invoke("palette", { query })) as [string, string][] | null) ?? [];
@@ -804,8 +636,6 @@ function openPalette() {
   });
 }
 
-// Ctrl+Shift+O: what the file declares, by a few letters of its name; the
-// one picked is gone to.
 function openSymbols() {
   openChooser("Go to a name this file declares", async (query) => {
     const found = ((await ctx?.invoke("symbols", { query })) as [string, string][] | null) ?? [];
@@ -816,8 +646,6 @@ function openSymbols() {
   });
 }
 
-// A field over a list: what is typed asks for the list again, the arrows
-// move through it, Enter or a click picks, Escape closes.
 function openChooser(placeholder: string, lookup: (query: string) => Promise<{ label: string; pick: () => Promise<void> }[]>) {
   closeContext();
   if (!ctx) return;
@@ -872,11 +700,8 @@ function openChooser(placeholder: string, lookup: (query: string) => Promise<{ l
   void ask();
 }
 
-// What each action is called and the keys that reach it, from the keymap,
-// for the text a pointer's hover shows.
 let hover: Record<string, string> = {};
 
-// What each requirement name says, asked of the editor once per name.
 const requirementTexts = new Map<string, string | null>();
 
 async function sayRequirement(button: HTMLElement, name: string) {
@@ -888,10 +713,8 @@ async function sayRequirement(button: HTMLElement, name: string) {
   if (said) button.title = `${said}\n\n${button.title}`;
 }
 
-// What the page needs to reach the editor and redraw, once it has started.
 let ctx: { invoke: Invoke; into: HTMLElement; status: HTMLElement } | null = null;
 
-// Send one command, show what the editor said, and draw the answer.
 async function run(command: string, args: Record<string, unknown>) {
   if (!ctx) return;
   const said = (await ctx.invoke(command, args)) as string;
@@ -901,9 +724,6 @@ async function run(command: string, args: Record<string, unknown>) {
   await show(ctx.invoke, ctx.into, ctx.status);
 }
 
-// Put on the clipboard whatever the editor asked to — the sandbox command.
-// The asynchronous clipboard first; where the web view refuses it, the older
-// copy of a selected text field, which every web view still honours.
 async function copyIfAsked(invoke: Invoke) {
   const text = (await invoke("take_clipboard", {})) as string | null;
   if (!text) return;
@@ -911,7 +731,6 @@ async function copyIfAsked(invoke: Invoke) {
     await navigator.clipboard.writeText(text);
     return;
   } catch {
-    // fall through
   }
   const field = document.createElement("textarea");
   field.value = text;
@@ -923,9 +742,6 @@ async function copyIfAsked(invoke: Invoke) {
   field.remove();
 }
 
-// While an agent may be working, look again every second and a half, and
-// redraw only when the editor says something changed. Not while a context
-// menu is open or text is being selected: a redraw would take either away.
 function poll() {
   setInterval(async () => {
     if (!ctx || document.getElementById("context")) return;
@@ -949,18 +765,14 @@ async function show(invoke: Invoke, into: HTMLElement, status: HTMLElement) {
     const box = into.children[panes.indexOf(focused)];
     if (box instanceof HTMLElement) {
       place(box, at[0], at[1]);
-      // What the editor has selected — by Shift, a drag, a find.
       const chosen = (await invoke("selection", {})) as [number, number] | null;
       if (Array.isArray(chosen)) mark(box, chosen[0], chosen[1] - chosen[0], "selection");
-      // Every place the name under the cursor is written, marked faintly.
       const named = (await invoke("occurrences", {})) as [number, number[]] | null;
       if (Array.isArray(named)) for (const start of named[1]) mark(box, start, named[0], "occurrence");
-      // The bracket beside the cursor and its match, both marked.
       const pair = (await invoke("brackets", {})) as [number, number] | null;
       if (Array.isArray(pair)) for (const offset of pair) mark(box, offset, 1, "bracket");
     }
   }
-  // Where the cursor is in a file, at the status line's right end.
   const position = document.getElementById("position");
   if (position) {
     const mode = (await invoke("mode", {})) as string | null;
@@ -968,7 +780,6 @@ async function show(invoke: Invoke, into: HTMLElement, status: HTMLElement) {
       ? `Ln ${(focused.top ?? 0) + at[0] + 1}, Col ${at[1] + 1}`
       : "";
     position.textContent = where;
-    // The mode as a badge in its own colour, as the first TraceLean wore it.
     if (typeof mode === "string" && mode) {
       const badge = document.createElement("span");
       const name = mode.toLowerCase();
@@ -976,8 +787,6 @@ async function show(invoke: Invoke, into: HTMLElement, status: HTMLElement) {
       badge.textContent = mode.toUpperCase();
       position.append(badge);
     }
-    // How many findings the checker has, once the editor has counted; a
-    // click lists them.
     const problems = (await invoke("problems", {})) as number | null;
     if (typeof problems === "number") {
       const count = document.createElement("button");
@@ -992,12 +801,9 @@ async function show(invoke: Invoke, into: HTMLElement, status: HTMLElement) {
     }
   }
 
-  // The two bars above the panes. Buffers, so the same function draws them,
-  // and their rows carry the actions a key dispatches.
   const [stations, strip] = (await invoke("bars", {})) as [Buffer, Buffer];
   const inBar = (station: boolean, action: string, at: number) =>
     void run("act_in_bar", { station, action, offset: at });
-  // Redrawn when what it says changed, as the panes are.
   const barsValue = JSON.stringify([stations, strip]);
   if (barsValue !== barsDrawn) {
     barsDrawn = barsValue;
@@ -1005,21 +811,10 @@ async function show(invoke: Invoke, into: HTMLElement, status: HTMLElement) {
     drawBar(document.getElementById("strip"), strip, false, inBar);
   }
 
-  // The menu the mode offers, beside the buffer rather than instead of it. It
-  // is a buffer, so it is drawn by the same function — and its rows carry
-  // actions, which is how a window offers what a terminal binds to a key. A row
-  // is about whatever the cursor is on, so it is performed where the cursor is.
-  //
-  // With no menu open it is the which-key bar, there from the start and never
-  // moving: what can be done where the cursor is, keys first, so the keys are
-  // learnt by reading them. One height either way, so the panes above it keep
-  // theirs.
   const bar = document.getElementById("menu");
   if (!bar) return;
   const offered = (await invoke("menu", {})) as Buffer | null;
   const here = offered ? null : ((await invoke("offers_here", {})) as [string, number, Offer[]] | null);
-  // The bottom panel is drawn again only when what it lists changed: moving
-  // between the elements of a text leaves the keys it offers as they were.
   barCursor = here ? here[1] : 0;
   const barValue = JSON.stringify([offered, here && [here[0], here[2]]]);
   if (barValue === barDrawn && !bar.hidden) return;
@@ -1035,11 +830,6 @@ async function show(invoke: Invoke, into: HTMLElement, status: HTMLElement) {
   if (here) whichKey(bar, here[2], here[0], () => barCursor);
 }
 
-// Put a caret where the editor says the cursor is.
-//
-// Drawn rather than described: a `<span>` with nothing in it, positioned by the
-// line and column the editor reports. It shows no text, so it cannot be text
-// the buffer does not contain.
 function place(into: HTMLElement, line: number, column: number) {
   const row = into.children[line];
   if (!(row instanceof HTMLElement)) return;
@@ -1049,16 +839,11 @@ function place(into: HTMLElement, line: number, column: number) {
   caret.dataset.column = String(column);
   row.classList.add("active");
   row.appendChild(caret);
-  // Past the pane's right edge, scroll across to it: the pane is drawn anew
-  // on every change, so this is what keeps a long line's cursor in view.
   if (caret.offsetLeft + 16 > into.clientWidth) {
     into.scrollLeft = caret.offsetLeft - into.clientWidth / 2;
   }
 }
 
-// Paint with the theme: every colour in it becomes a CSS variable, named by its
-// section and key — `--ui-accent`, `--roles-markTested`, `--syntax-keyword` — and
-// the stylesheet refers to nothing else. Changing a colour is editing JSON.
 async function paint(invoke: Invoke) {
   const theme = (await invoke("theme", {})) as Record<string, unknown>;
   const root = document.documentElement.style;
@@ -1070,10 +855,6 @@ async function paint(invoke: Invoke) {
       }
     }
   }
-  // The token rules are in the stylesheet, one per kind the core names: a
-  // stylesheet written here at run time is refused by the window's content
-  // policy, which left every file one colour in the window while a browser
-  // without that policy showed them coloured.
 }
 
 export async function start() {
@@ -1098,22 +879,10 @@ export async function start() {
   poll();
   status.textContent =
     "Click a file to open it · click into it to type · right-click anything for what you can do there";
-  // A theme edited while the window was in the background shows on return.
   window.addEventListener("focus", () => {
     void paint(invoke);
   });
 
-  // The keymap belongs to the editor, so a key is sent rather than interpreted.
-  // The names are the ones the editor uses; everything else is left alone.
-  //
-  // These are `keymap::NAMED` written in this language, because a browser
-  // spells its keys differently and something has to translate. What this may
-  // not do is invent a name: a name the keymap does not use is a binding that
-  // silently does nothing, which is what the space bar was here — the browser
-  // calls it `" "`, the keymap calls it `Space`, and nothing said so, so the
-  // leader menu could not be opened. What checks it is
-  // `crates/core/tests/shipped_keymap.rs`.
-  //
   // @implements REQ-MYTH.actions_reachable
   const named = new Set([
     "Backspace",
@@ -1126,9 +895,6 @@ export async function start() {
     "Tab",
     "Up",
   ]);
-  // The keys every editor has and a modal keymap does not spell. They are sent
-  // by name to the editor, which performs the same action or cursor move a key
-  // sequence would (`Editor::chord`); the page decides nothing about them.
   const chords: Record<string, string> = {
     "C-s": "C-s",
     "C-z": "C-z",
@@ -1206,20 +972,13 @@ export async function start() {
       openSymbols();
       return;
     }
-    // A selection drawn with the pointer in a file becomes the editor's
-    // first, so whatever the key does — type over it, delete it, indent it,
-    // copy it — it does to that.
     await adoptSelection();
-    // Shift with a movement selects, in the editor, which keeps the
-    // selection while the window scrolls past it.
     const moving = ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End", "PageUp", "PageDown"];
     if (event.shiftKey && !event.altKey && moving.includes(event.key)) {
       event.preventDefault();
       await run("chord", { chord: `${event.ctrlKey ? "C-" : ""}S-${event.key.replace("Arrow", "")}` });
       return;
     }
-    // Select all, copy and cut are the editor's in a file; in a listing or a
-    // record they stay the browser's.
     const inFile = document.querySelector(".pane.focused.kind-file") !== null;
     const browsing = !(window.getSelection()?.isCollapsed ?? true);
     if (inFile && !browsing && (chord === "C-a" || chord === "C-c" || chord === "C-x")) {
@@ -1232,7 +991,6 @@ export async function start() {
       await run("chord", { chord: chords[chord] });
       return;
     }
-    // Copy, cut, select-all and the rest stay the browser's.
     if (event.metaKey || event.ctrlKey || event.altKey) return;
     const pressed = event.key === " " ? "Space" : event.key;
     const key = pressed.startsWith("Arrow") ? pressed.slice(5) : pressed;
@@ -1240,36 +998,29 @@ export async function start() {
     event.preventDefault();
     const said = (await invoke("press", { key })) as string;
     status.textContent = said;
-    // A setting just written to the theme shows at once.
     if (said.startsWith("setting saved")) await paint(invoke);
     await show(invoke, into, status);
   });
 
-  // Pasting types the clipboard's text in one change.
   document.addEventListener("paste", (event) => {
     if (event.target instanceof HTMLInputElement) return;
     const text = event.clipboardData?.getData("text/plain") ?? "";
     event.preventDefault();
     void (async () => {
-      // Pasted over the selection, which the editor replaces.
       await adoptSelection();
       if (text) await run("paste", { text });
       else if (ctx) await show(ctx.invoke, ctx.into, ctx.status);
     })();
   });
 
-  // A click anywhere outside the context menu closes it.
   document.addEventListener("click", () => closeContext());
 
-  // A mouse's back and forward buttons go where Alt+Left and Alt+Right do.
   document.addEventListener("mouseup", (event) => {
     if (event.button !== 3 && event.button !== 4) return;
     event.preventDefault();
     void run("chord", { chord: event.button === 3 ? "A-Left" : "A-Right" });
   });
 
-  // A window that changed size shows a different number of lines, so the
-  // editor is asked again rather than the page guessing.
   window.addEventListener("resize", () => {
     void show(invoke, into, status);
   });

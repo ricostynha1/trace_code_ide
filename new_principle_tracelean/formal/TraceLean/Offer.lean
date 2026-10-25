@@ -2,25 +2,12 @@ import TraceLean.View
 import TraceLean.Keymap
 import TraceLean.Act
 
-/-!
-# What a pointer is offered
-
-Models `REQ-ACT.everything_is_offered`: the context menu at a position is every
-action a span declares there, the actions of the buffer it is in and the places
-always reachable, each with the keys that reach it from the root mode, less any
-the dispatcher does not know. What an
-entry reads as is wording and not modelled; what it does, what it is about and
-how to reach it by keys are.
--/
-
 namespace TraceLean.Offer
 
 open Lean (ToJson FromJson)
 open TraceLean.View
 open TraceLean.Keymap
 
-/-- One entry, as far as the clause is concerned: its part of the menu, the
-action, what it is about, and the keys that reach it. -/
 structure Offered where
   group : String
   action : String
@@ -28,8 +15,6 @@ structure Offered where
   keys : Option String
   deriving Repr, DecidableEq, Inhabited, ToJson, FromJson
 
-/-- One mode's bindings in order: the keys of the first that dispatches
-`action`, or else the modes it enters that were not seen yet. -/
 def scanBindings (action : String) (route : List String) :
     List (String × Binding) → List String × List (String × List String) →
       String ⊕ (List String × List (String × List String))
@@ -43,7 +28,6 @@ def scanBindings (action : String) (route : List String) :
       if seen.contains entered then scanBindings action route rest (seen, next)
       else scanBindings action route rest (seen ++ [entered], next ++ [(entered, route ++ [key])])
 
-/-- One level of the search: every mode in the frontier, in order. -/
 def scanLevel (keymap : Keymap) (action : String) :
     List (String × List String) → List String × List (String × List String) →
       String ⊕ (List String × List (String × List String))
@@ -66,14 +50,9 @@ def search (keymap : Keymap) (action : String) :
       | .inl keys => some keys
       | .inr (seen, next) => search keymap action fuel next seen
 
-/-- The keys that dispatch `action` from the root mode: breadth first, so the
-shortest sequence wins, and among equals the first in the keymap's order.
-Each level enters at least one mode not seen before, so there are no more
-levels than modes. -/
 def keysFor (keymap : Keymap) (action : String) : Option String :=
   search keymap action (keymap.modes.length + 1) [(keymap.root, [])] [keymap.root]
 
-/-- The text of the first span under `offset`. -/
 def under (buffer : Buffer) (offset : Nat) : Option String :=
   let cs := buffer.text.toList
   (buffer.spans.find? (fun span => span.start ≤ offset && offset < span.stop)).map fun span =>
@@ -83,8 +62,6 @@ def under (buffer : Buffer) (offset : Nat) : Option String :=
 def entry (keymap : Keymap) (group action : String) (target : Option String) : Offered :=
   { group := group, action := action, target := target, keys := keysFor keymap action }
 
-/-- What a span declares at the position, with an accept and a reject for one
-file beside a diff; a button's text is not what it is about. -/
 def pointedAt (keymap : Keymap) (here : Option String) : List String → List Offered
   | [] => []
   | action :: rest =>
@@ -95,7 +72,6 @@ def pointedAt (keymap : Keymap) (here : Option String) : List String → List Of
       else []
     entry keymap "here" action target :: extra ++ pointedAt keymap here rest
 
-/-- What the buffer as a whole offers. -/
 def ofBuffer (keymap : Keymap) (kind : BufferKind) : List Offered :=
   let e := entry keymap "file"
   [e "file.copy_line" none, e "file.copy" none] ++
@@ -117,25 +93,17 @@ def ofBuffer (keymap : Keymap) (kind : BufferKind) : List Offered :=
     (if title == "requirements" || title == "design" then
       [e "design.open_only" none, e "trace.new_requirement" none] else [])
 
-/-- The places always reachable, in the order the menu lists them. -/
 def places : List String :=
   ["screen.station.project", "screen.station.trace", "screen.station.design", "screen.station.sandbox", "observe.start", "trace.check",
    "trace.findings", "history.tree"]
 
-/-- Whether the dispatcher knows `action`: asked with nothing focused, it does
-not refuse it as unknown -- wanting a target is still knowing it. -/
 def known (action : String) : Bool :=
   match TraceLean.Act.dispatch action { kind := BufferKind.menu "", offset := 0, under := none } {} [] with
   | .refuse (.unknownAction _) => false
   | _ => true
 
-/-- Everything offered at `offset` in `buffer`: what was pointed at, a listing
-row's file operations, the buffer's own actions, the panes, and the places.
-
-@models REQ-ACT.everything_is_offered -/
+/-- @models REQ-ACT.everything_is_offered -/
 def offers (buffer : Buffer) (offset : Nat) (keymap : Keymap) : List Offered :=
-  -- A span may declare anything; what the dispatcher would refuse as unknown
-  -- is a button that does nothing, so it is not offered.
   let here := under buffer offset
   let declared := actionsAt buffer offset
   let row :=
@@ -148,23 +116,16 @@ def offers (buffer : Buffer) (offset : Nat) (keymap : Keymap) : List Offered :=
     ["screen.split.across", "screen.split.down", "screen.close"].map (fun a => entry keymap "panes" a none) ++
     places.map (fun a => entry keymap "go" a none)).filter (fun o => known o.action)
 
-/-- A leader that enters the design's mode, which unfolds everything. -/
 def leader : Keymap :=
   ⟨"Normal", [("Normal", ⟨none, [("Space", .enter "Leader" "leader")]⟩),
               ("Leader", ⟨some "Normal", [("g", .enter "Design" "design")]⟩),
               ("Design", ⟨some "Leader", [("e", .dispatch "design.expand_everything" "all")]⟩)]⟩
 
-/-- A design row whose mark declares an action the dispatcher knows and one it
-does not. -/
 def marked : Buffer :=
   { id := "d", kind := .menu "design", text := "▸ REQ-A",
     spans := [⟨0, 1, .entry, ["design.toggle REQ-A", "file.explode"]⟩] }
 
-/-- Pointing at the mark offers what it declares, the design's own actions,
-the panes and the places, each with the keys that reach it, and nothing the
-dispatcher would refuse as unknown.
-
-@proves REQ-ACT.everything_is_offered -/
+/-- @proves REQ-ACT.everything_is_offered -/
 theorem the_menu_holds_everything_that_applies :
     (offers marked 0 leader).map (·.action)
       = ["design.toggle REQ-A", "file.copy_line", "file.copy", "design.expand_everything",

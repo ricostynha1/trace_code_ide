@@ -2,20 +2,6 @@ import TraceLean.Lines
 import TraceLean.Protocol
 import TraceLean.Refinement
 
-/-!
-# Specifications for reported sets
-
-Three clauses ask for a set to be reported: the ops a project uses twice, the
-tests that ran a clause's lines, and the refinements naming nothing. Each
-specification says which members the set has, and that it is written each
-member once, in ascending order. The order is the one presentational choice in
-them: no requirement says it, and it is what makes the answer unique.
-
-The lemmas first: the order on strings is a strict total order, two strictly
-ascending lists with the same members are equal, and the project's own sorting
-helpers produce such lists.
--/
-
 namespace TraceLean.SpecSorted
 
 open TraceLean.Strength (insertSorted sortedUnique)
@@ -24,8 +10,6 @@ open TraceLean.Refinement
 
 theorem mem_iff_mem {α : Type} (a : α) (l : List α) : List.Mem a l ↔ Membership.mem l a :=
   Iff.rfl
-
-/-! ## The order on strings -/
 
 theorem char_lt_trans {a b c : Char} (h1 : a < b) (h2 : b < c) : a < c := by
   have e1 : a.toNat < b.toNat := h1
@@ -63,7 +47,6 @@ theorem str_lt_asymm {a b : String} (h : a < b) : ¬ b < a := by
   intro h2
   exact String.lt_irrefl a (str_lt_trans h h2)
 
-/-- `≤` on strings, as `¬ <`, is transitive. -/
 theorem str_le_trans {a b c : String} (h1 : ¬ b < a) (h2 : ¬ c < b) : ¬ c < a := by
   intro hca
   refine (Classical.em (c < b)).elim ?_ ?_
@@ -78,10 +61,6 @@ theorem str_le_trans {a b c : String} (h1 : ¬ b < a) (h2 : ¬ c < b) : ¬ c < a
       rw [e] at hca
       exact h1 hca
 
-/-! ## Strictly ascending lists -/
-
-/-- Two lists strictly ascending under the same strict order, with the same
-members, are equal. -/
 theorem ascending_unique {α : Type} (lt : α → α → Prop) (irrefl : ∀ a, ¬ lt a a)
     (trans : ∀ a b c, lt a b → lt b c → lt a c) (l1 : List α) :
     ∀ l2, List.Pairwise lt l1 → List.Pairwise lt l2 →
@@ -132,7 +111,6 @@ theorem ascending_unique {α : Type} (lt : α → α → Prop) (irrefl : ∀ a, 
             exact m
       rw [ht]
 
-/-- Each member once, in ascending order. -/
 def Ascending (l : List String) : Prop := List.Pairwise (fun a b => a < b) l
 
 theorem ascending_eq (l1 l2 : List String) (h1 : Ascending l1) (h2 : Ascending l2)
@@ -140,7 +118,6 @@ theorem ascending_eq (l1 l2 : List String) (h1 : Ascending l1) (h2 : Ascending l
   ascending_unique (fun a b => a < b) String.lt_irrefl
     (fun _ _ _ hab hbc => str_lt_trans hab hbc) l1 l2 h1 h2 h
 
-/-- A list sorted by the decided `≤` with no repeats is strictly ascending. -/
 theorem ascending_of_sorted (l : List String)
     (hs : List.Pairwise (fun a b => decide (a ≤ b) = true) l) (hn : l.Nodup) : Ascending l := by
   have hb := List.Pairwise.and hs hn
@@ -154,7 +131,6 @@ theorem ascending_of_sorted (l : List String)
   · intro h
     exact absurd (str_antisymm h hle) hab.2
 
-/-- Strings sorted by the decided `≤`, as `mergeSort` sorts them. -/
 theorem merge_sorted_strings (l : List String) :
     List.Pairwise (fun a b => decide (a ≤ b) = true) (l.mergeSort (fun a b => decide (a ≤ b))) := by
   apply List.mergeSort_sorted
@@ -171,8 +147,6 @@ theorem merge_sorted_strings (l : List String) :
     have h2 : b < a := Classical.not_not.1 h1
     have h3 := str_lt_asymm h2
     simpa using h3
-
-/-! ## The project's sorted insertion -/
 
 theorem insert_spec (x : String) (l : List String) (h : Ascending l) :
     Ascending (insertSorted (fun a b => decide (a ≤ b)) l x) ∧
@@ -343,7 +317,6 @@ theorem fold_insert_spec (xs : List String) :
           · rename_i my
             exact Or.inr my
 
-/-- What `sortedUnique` gives over strings: each member once, ascending. -/
 theorem sorted_unique_spec (xs : List String) :
     Ascending (sortedUnique (fun a b => decide (a ≤ b)) xs) ∧
       ∀ y, List.Mem y (sortedUnique (fun a b => decide (a ≤ b)) xs) ↔ List.Mem y xs := by
@@ -363,9 +336,6 @@ theorem sorted_unique_spec (xs : List String) :
     · intro hy
       exact Or.inr hy
 
-/-! ## Ops named twice -/
-
-/-- What the walk over the ops has seen so far, as the specification needs it. -/
 def SeenSoFar (p seen dupes : List String) : Prop :=
   (∀ o, List.Mem o seen ↔ 0 < p.count o) ∧ (∀ o, List.Mem o dupes ↔ 1 < p.count o) ∧ dupes.Nodup
 
@@ -554,10 +524,7 @@ theorem colliding_result (f : List String × List String → String → List Str
     rw [mem_iff_mem, List.Perm.mem_iff hperm, ← mem_iff_mem, inv.2.1 op]
     simp
 
-/-- The ops that more than one binding of a project names: each such op once,
-in ascending order. An op named once is unique, and is not among them.
-
-@specifies REQ-DRT-PROTO.ops_unique -/
+/-- @specifies REQ-DRT-PROTO.ops_unique -/
 def CollidingOps (ops : List String) (y : List String) : Prop :=
   Ascending y ∧ ∀ op, List.Mem op y ↔ 1 < ops.count op
 
@@ -584,13 +551,7 @@ theorem ops_unique_pinned :
     intro x
     rw [h1.2 x, h2.2 x]
 
-/-! ## A clause's line coverage -/
-
-/-- How much of the lines from `start` to `stop` ran: how many executable lines
-lie in the span, how many of those ran at all, and the tests that ran any of
-them, each named once, in ascending order.
-
-@specifies REQ-LINECOV.clause_summary -/
+/-- @specifies REQ-LINECOV.clause_summary -/
 def ClauseSummary (lines : List LineHits) (start stop : Nat) (r : Reach) : Prop :=
   r.all = lines.countP (fun l => decide (start ≤ l.line ∧ l.line ≤ stop)) ∧
   r.run = lines.countP (fun l => decide (start ≤ l.line ∧ l.line ≤ stop ∧ 0 < l.hits)) ∧
@@ -626,18 +587,11 @@ theorem clause_summary_pinned :
     simp only [Reach.mk.injEq]
     exact ⟨e2, e1, e3⟩
 
-/-- A clause's coverage counts the lines in its span, those of them that ran,
-and the tests that ran any, each once and in order: the summary the clause asks
-for, of whatever lines were measured.
-
-@proves REQ-LINECOV.clause_summary -/
+/-- @proves REQ-LINECOV.clause_summary -/
 theorem span_coverage_summarises (lines : List LineHits) (start stop : Nat) :
     ClauseSummary lines start stop (spanCoverage lines start stop) :=
   clause_summary_pinned.1 lines start stop
 
-/-! ## Refinements naming nothing -/
-
-/-- `a` comes strictly before `b`: by the first member, then by the second. -/
 def PairLt (a b : String × String) : Prop := a.1 < b.1 ∨ (a.1 = b.1 ∧ a.2 < b.2)
 
 theorem pair_lt_irrefl (a : String × String) : ¬ PairLt a a := by
@@ -670,11 +624,9 @@ theorem pair_lt_trans (a b c : String × String) (h1 : PairLt a b) (h2 : PairLt 
     · intro hbc
       exact Or.inr ⟨hab.1.trans hbc.1, str_lt_trans hab.2 hbc.2⟩
 
-/-- The comparator `danglingIn` sorts with. -/
 def pairCmp (a b : String × String) : Bool :=
   if a.1 != b.1 then decide (a.1 ≤ b.1) else decide (a.2 ≤ b.2)
 
-/-- That comparator, read as a proposition. -/
 theorem pair_cmp_iff (a b : String × String) :
     pairCmp a b = true ↔ (a.1 < b.1 ∨ (a.1 = b.1 ∧ ¬ b.2 < a.2)) := by
   unfold pairCmp
@@ -897,10 +849,7 @@ theorem any_false_iff (g : Graph) (q : String) :
       simpa using he.2
     exact h e he.1 eq
 
-/-- The refinements that name an identifier no requirement declares, as
-(requirement, missing parent) pairs: each such pair once, in ascending order.
-
-@specifies REQ-REQDOC.refines_resolves -/
+/-- @specifies REQ-REQDOC.refines_resolves -/
 def UnresolvedRefines (g : Graph) (y : List (String × String)) : Prop :=
   List.Pairwise PairLt y ∧
   ∀ child parent, List.Mem (child, parent) y ↔

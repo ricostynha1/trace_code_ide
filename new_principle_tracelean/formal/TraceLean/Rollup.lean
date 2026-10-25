@@ -2,36 +2,18 @@ import TraceLean.Evidence
 
 open Lean (Json ToJson FromJson toJson)
 
-/-!
-# Roll-up
-
-Models `REQ-ROLLUP`. Where a wrong number does the most damage, because a
-percentage is the one output people quote without reading what produced it.
--/
-
 namespace TraceLean.Rollup
 
 open TraceLean.Evidence
 
-/--
-Aggregate over children, mark by mark: held only when every part holds it.
-
-A majority invents evidence nothing established; requiring every part is a
-claim each of them makes. Nothing to aggregate holds nothing.
-
-@models REQ-ROLLUP.every_part_holds
-@models ARCH-HONEST.weakest_link
--/
+/-- @models REQ-ROLLUP.every_part_holds
+@models ARCH-HONEST.weakest_link -/
 def combine (parts : List Marks) : Marks :=
   match parts with
   | [] => Marks.empty
   | first :: rest => (first :: rest).foldl Marks.both Marks.neutral
 
-/-- Nothing to aggregate holds no mark, not every mark; a mark held by all but
-one part is not held; one held by all is; a structural part neither grants a
-test nor withholds one.
-
-@proves REQ-ROLLUP.every_part_holds -/
+/-- @proves REQ-ROLLUP.every_part_holds -/
 theorem combine_holds_what_every_part_holds :
     combine [] = Marks.empty ∧
     written (combine [⟨true, true, true, true, false⟩, ⟨true, true, true, true, false⟩,
@@ -41,8 +23,6 @@ theorem combine_holds_what_every_part_holds :
     written (combine [⟨true, true, false, true, true⟩, ⟨true, true, false, false, true⟩]) = "AJ··" := by
   native_decide
 
-/-- A join that holds a test, or to which none applies, was joined from one
-that did too. -/
 theorem both_keeps (a b : Marks) :
     ((Marks.both a b).tested || (Marks.both a b).structural) = true →
       (a.tested || a.structural) = true := by
@@ -56,8 +36,6 @@ theorem fold_keeps (rest : List Marks) : ∀ acc : Marks,
   | nil => intro acc h; simpa using h
   | cons x xs ih => intro acc h; exact both_keeps acc x (ih (Marks.both acc x) h)
 
-/-- An aggregate holds the tested mark only if its first part does or cannot:
-one part without a mark it can hold clears it for the whole. -/
 theorem a_part_without_a_mark_clears_it (first : Marks) (rest : List Marks) :
     (combine (first :: rest)).holds ⟨false, false, true, false, false⟩ = true →
       (first.tested || first.structural) = true := by
@@ -70,65 +48,35 @@ theorem a_part_without_a_mark_clears_it (first : Marks) (rest : List Marks) :
   rcases first with ⟨_, _, t, _, s⟩
   cases t <;> cases s <;> simp_all [Marks.both, Marks.neutral]
 
-/-! ## Rolling a declared graph up
-
-**A decomposition nobody claimed complete is provisional.** If two clauses of
-a requirement are written and both are met, "100%" is what has been written
-down; an unwritten clause has no evidence, so writing it can only bring the
-figure down. The figure is marked, never rendered bare.
-
-**An exemption leaves the denominator; a partial does not.** Exempting a clause
-is saying it does not apply, so counting it would permanently cap the figure.
-Marking one partial is saying it is half done, so it stays, never counted as
-tested or proved.
-
-**Each requirement's figures are over its own reachable set.** A set, not a
-walk: in a diamond (B and C refine A, D refines both) D is in B's set and in
-C's, once in A's, and nothing depends on which parent was visited first.
--/
-
-/-- A percentage is a rendering, so the figure itself is a fraction. Two
-languages rounding one number differently would be a divergence about nothing. -/
 structure Figure where
   met : Nat
   total : Nat
-  /-- The author claimed the clauses exhaust the requirement. -/
   exact : Bool
   deriving Repr, DecidableEq, Inhabited, ToJson, FromJson
 
-/-- A requirement whose decomposition is unclaimed can never read as done.
-
-@models REQ-ROLLUP.never_complete_when_open -/
+/-- @models REQ-ROLLUP.never_complete_when_open -/
 def Figure.isComplete (f : Figure) : Bool := f.exact && f.total > 0 && f.met == f.total
 
-/-- A figure as it is written down: an open one is marked provisional, with the
-direction it can move. `≤`, because an unwritten clause can only lower it.
-
-@models ARCH-HONEST.lower_bound_marked -/
+/-- @models ARCH-HONEST.lower_bound_marked -/
 def render (f : Figure) : String :=
   let percent := if f.total == 0 then 0 else (f.met * 200 + f.total) / (f.total * 2)
   if f.exact then s!"{percent}%" else s!"≤ {percent}% (provisional)"
 
-/-- An open figure is never written as an exact one.
-
-@proves ARCH-HONEST.lower_bound_marked -/
+/-- @proves ARCH-HONEST.lower_bound_marked -/
 theorem an_open_figure_is_marked (met total : Nat) :
     render { met := met, total := total, exact := false } =
       s!"≤ {if total == 0 then 0 else (met * 200 + total) / (total * 2)}% (provisional)" := by
   simp [render]
 
-/-- A requirement reduced to what a roll-up depends on. -/
 structure Node where
   id : String
   complete : Bool
   clauses : List (Option String)
   exempt : List (Option String)
-  /-- Clauses claimed only in part: counted, and capped. -/
   partialClauses : List (Option String)
   refines : List String
   deriving Repr, DecidableEq, Inhabited, ToJson, FromJson
 
-/-- The marks of one node, and of everything under it. -/
 inductive RollUp where
   | mk (id : String) (marks : Marks) (covered : Figure) (children : List RollUp)
   deriving Repr, Inhabited
@@ -139,8 +87,6 @@ def RollUp.marks : RollUp → Marks
 def RollUp.covered : RollUp → Figure
   | .mk _ _ f _ => f
 
-/-- Written by hand because a derived encoding for a recursive type would nest
-its own constructor name at every level, and the implementation's is flat. -/
 partial def RollUp.toJsonValue : RollUp → Json
   | .mk id marks covered children =>
     Json.mkObj [("id", Json.str id), ("marks", toJson marks),
@@ -153,18 +99,8 @@ def marksAt (held : List ((String × Option String) × Marks)) (key : String × 
     : Option Marks :=
   (held.find? (·.1 == key)).map (·.2)
 
-/-- What a clause claimed only in part contributes: never tested or proved. -/
 def partialCap (m : Marks) : Marks := { m with tested := false, proved := false }
 
-/-! ### A canonical graph
-
-The order requirements are declared in must not matter, so the graph is put
-in one order first: the last declaration of an identifier kept (as a map
-keeps it), sorted by identifier. Identifiers compare by code point, which is
-the order of their UTF-8 bytes, which is the order the implementation's map
-keeps. -/
-
-/-- Lexicographic order on code points. -/
 def codesLe : List Nat → List Nat → Bool
   | [], _ => true
   | _ :: _, [] => false
@@ -174,7 +110,6 @@ def codes (s : String) : List Nat := s.data.map Char.toNat
 
 def idLe (a b : Node) : Bool := codesLe (codes a.id) (codes b.id)
 
-/-- The last declaration of each identifier, in the order of those last ones. -/
 def dedupLast : List Node → List Node
   | [] => []
   | n :: rest => if rest.any (fun m => m.id == n.id) then dedupLast rest else n :: dedupLast rest
@@ -188,9 +123,6 @@ def canonHeld (held : List ((String × Option String) × Marks))
     (fun acc kv => if acc.any (·.1 == kv.1) then acc.map (fun p => if p.1 == kv.1 then kv else p)
                    else acc ++ [kv]) []
 
-/-! ### The reachable set -/
-
-/-- One step out: every requirement refining something already found. -/
 def grow (graph : List Node) (found : List String) : List String :=
   found ++ ((graph.filter (fun n =>
     !(found.contains n.id) && n.refines.any (fun p => found.contains p))).map (·.id))
@@ -199,25 +131,17 @@ def growFor (graph : List Node) : Nat → List String → List String
   | 0, found => found
   | k + 1, found => growFor graph k (grow graph found)
 
-/-- The requirements reachable from `root` by "is refined by", root included.
-Each step adds at least one identifier of the graph or changes nothing, so as
-many steps as the graph has nodes reach the fixpoint, cycles included. -/
 def reach (graph : List Node) (root : String) : List String :=
   growFor graph (graph.length + 1) [root]
 
-/-- The members of a requirement's set, each once: the graph is canonical, so
-each identifier appears in it once. -/
 def members (graph : List Node) (root : String) : List Node :=
   graph.filter (fun n => (reach graph root).contains n.id)
 
-/-- What one requirement contributes on its own: the marks of each clause that
-counts. Exempt clauses leave; partial ones stay, never tested or proved. -/
 def ownMarks (held : List ((String × Option String) × Marks)) (n : Node) : List Marks :=
   (n.clauses.filter (fun c => !(n.exempt.contains c))).map (fun c =>
     if n.partialClauses.contains c then partialCap ((marksAt held (n.id, c)).getD Marks.empty)
     else (marksAt held (n.id, c)).getD Marks.empty)
 
-/-- Every counted clause's marks over a requirement's reachable set. -/
 def reachMarks (graph : List Node) (held : List ((String × Option String) × Marks))
     (root : String) : List Marks :=
   (members graph root).bind (ownMarks held)
@@ -229,9 +153,6 @@ def figureOf (graph : List Node) (held : List ((String × Option String) × Mark
     total := all.length,
     exact := graph.any (·.id == root) && (members graph root).all (·.complete) }
 
-/-- The tree shown: every requirement under every parent it refines, sorted; a
-child already on the path is left out, so a cycle cannot loop. Each node's
-figures are over its own set, so where it is shown changes nothing. -/
 def rollUpTree (graph : List Node) (held : List ((String × Option String) × Marks))
     (floor : Marks) : Nat → List String → String → RollUp
   | 0, _, id => .mk id (combine (reachMarks graph held id)) (figureOf graph held floor id) []
@@ -240,38 +161,27 @@ def rollUpTree (graph : List Node) (held : List ((String × Option String) × Ma
       ((graph.filter (fun n => n.refines.contains id && !((path ++ [id]).contains n.id))).map
         (fun n => rollUpTree graph held floor fuel (path ++ [id]) n.id))
 
-/--
-Roll a declared graph up.
-
-@models REQ-ROLLUP.open_is_lower_bound
+/-- @models REQ-ROLLUP.open_is_lower_bound
 @models REQ-ROLLUP.exempt_leaves_denominator
 @models REQ-ROLLUP.partial_capped
 @models REQ-ROLLUP.deterministic_order
-@models REQ-ROLLUP.counted_once
--/
+@models REQ-ROLLUP.counted_once -/
 def rollUp (nodes : List Node) (held : List ((String × Option String) × Marks))
     (root : String) (floor : Marks) : RollUp :=
   let graph := canonNodes nodes
   rollUpTree graph (canonHeld held) floor (graph.length + 1) [] root
 
-/-- An unclaimed decomposition never renders as finished, whatever its figure.
-
-@proves REQ-ROLLUP.never_complete_when_open -/
+/-- @proves REQ-ROLLUP.never_complete_when_open -/
 theorem an_unclaimed_decomposition_is_never_complete (met total : Nat) :
     Figure.isComplete { met := met, total := total, exact := false } = false := by
   simp [Figure.isComplete]
 
-/-- A requirement's marks are the aggregate of every counted clause over its
-reachable set — the set, each member once, whatever path reaches it.
-
-@proves REQ-ROLLUP.counted_once -/
+/-- @proves REQ-ROLLUP.counted_once -/
 theorem marks_are_over_the_reachable_set (nodes : List Node)
     (held : List ((String × Option String) × Marks)) (root : String) (floor : Marks) :
     (rollUp nodes held root floor).marks =
       combine (reachMarks (canonNodes nodes) (canonHeld held) root) := by
   simp [rollUp, rollUpTree, RollUp.marks]
-
-/-! ### The order of declaration does not matter -/
 
 theorem codesLe_total (xs : List Nat) :
     ∀ ys, codesLe xs ys = true ∨ codesLe ys xs = true := by
@@ -366,7 +276,6 @@ theorem string_of_codes (a b : String) (h : codes a = codes b) : a = b := by
   cases b
   exact congrArg String.mk (chars_of_codes _ _ h)
 
-/-- Distinct identifiers name distinct nodes. -/
 theorem eq_of_same_id (l : List Node) (distinct : List.Pairwise (fun a b => Not (a.id = b.id)) l)
     (a b : Node) (ha : List.Mem a l) (hb : List.Mem b l) (same : a.id = b.id) : a = b := by
   induction l
@@ -399,17 +308,12 @@ theorem dedupLast_of_distinct (l : List Node)
 
 def idRel (a b : Node) : Prop := idLe a b = true
 
-/-- Two lists sorted by identifier holding the same nodes are one list. -/
 theorem sorted_eq (one two : List Node)
     (w : ∀ a b, List.Mem a one → List.Mem b two → idRel a b → idRel b a → a = b)
     (h1 : List.Pairwise idRel one) (h2 : List.Pairwise idRel two) (p : List.Perm one two) :
     one = two :=
   List.Perm.eq_of_sorted w h1 h2 p
 
-/-- Declaring the same requirements in another order gives the same graph.
-
-A graph declaring one identifier twice is a `DuplicateId` fault, and there the
-last declaration is the one kept, so the order is part of what was declared. -/
 theorem canonNodes_perm (l other : List Node) (p : List.Perm l other)
     (distinct : List.Pairwise (fun a b => Not (a.id = b.id)) l) :
     canonNodes l = canonNodes other := by
@@ -431,68 +335,40 @@ theorem canonNodes_perm (l other : List Node) (p : List.Perm l other)
   · exact List.mergeSort_sorted trans total other
   · exact (List.mergeSort_perm idLe l).trans (p.trans (List.mergeSort_perm idLe other).symm)
 
-/-- The roll-up does not depend on the order requirements are declared in.
-
-@proves REQ-ROLLUP.deterministic_order -/
+/-- @proves REQ-ROLLUP.deterministic_order -/
 theorem rollUp_perm (nodes other : List Node) (p : List.Perm nodes other)
     (distinct : List.Pairwise (fun a b => Not (a.id = b.id)) nodes)
     (held : List ((String × Option String) × Marks)) (root : String) (floor : Marks) :
     rollUp nodes held root floor = rollUp other held root floor := by
   simp only [rollUp, canonNodes_perm nodes other p distinct]
 
-/-! ## Coverage over files
-
-`untraced_counted`. A file nothing claims is in the denominator. The
-alternative — counting only annotated files — is the figure that rises when
-somebody deletes an annotation, and a coverage number that improves when you do
-less work is worse than no number at all.
-
-Exact, because the denominator is not a claim anybody made: it is the set of
-files that were scanned, which is known.
--/
-
 def dedupe (xs : List String) : List String :=
   xs.foldl (fun acc x => if acc.contains x then acc else acc ++ [x]) []
 
-/-- How many of the files scanned are claimed by at least one annotation.
-
-@models REQ-ROLLUP.untraced_counted -/
+/-- @models REQ-ROLLUP.untraced_counted -/
 def fileCoverage (scanned claimed : List String) : Figure :=
   let scanned := dedupe scanned
-  -- A claim about a file nothing scanned is not coverage of anything, so the
-  -- numerator is an intersection rather than a count of claims.
   let claimed := (dedupe claimed).filter (scanned.contains ·)
   { met := claimed.length, total := scanned.length, exact := true }
 
-/-- Scanning nothing covers nothing, and the figure says so rather than
-reporting a vacuous hundred per cent.
-
-@proves REQ-ROLLUP.untraced_counted -/
+/-- @proves REQ-ROLLUP.untraced_counted -/
 theorem nothing_scanned_is_not_complete :
     (fileCoverage [] []).isComplete = false := by
   native_decide
 
-/-- A file nothing claims lowers the figure, which is the whole point.
-
-@proves REQ-ROLLUP.untraced_counted -/
+/-- @proves REQ-ROLLUP.untraced_counted -/
 theorem an_unclaimed_file_is_counted :
     fileCoverage ["a.rs", "b.rs"] ["a.rs"] = { met := 1, total := 2, exact := true } := by
   native_decide
 
-/-- An exempt clause contributes nothing -- neither marks nor a place in the
-denominator -- while its sibling is still counted.
-
-@proves REQ-ROLLUP.exempt_leaves_denominator -/
+/-- @proves REQ-ROLLUP.exempt_leaves_denominator -/
 theorem an_exempt_clause_is_not_counted (held : List ((String × Option String) × Marks)) :
     ownMarks held { id := "R", complete := true, clauses := [some "a", some "b"],
                     exempt := [some "b"], partialClauses := [], refines := [] }
       = [(marksAt held ("R", some "a")).getD Marks.empty] := by
   simp [ownMarks]
 
-/-- A partial clause stays counted with what it holds, but never as tested or
-proved, so it never meets a floor asking for either.
-
-@proves REQ-ROLLUP.partial_capped -/
+/-- @proves REQ-ROLLUP.partial_capped -/
 theorem a_partial_clause_is_never_tested_or_proved (reached : Marks) :
     ownMarks [(("R", some "a"), reached)]
         { id := "R", complete := true, clauses := [some "a"], exempt := [],
@@ -505,10 +381,7 @@ theorem a_partial_clause_is_never_tested_or_proved (reached : Marks) :
   · simp [partialCap, Marks.holds]
   · simp [partialCap, Marks.holds]
 
-/-- A roll-up over a decomposition nobody claimed complete is not exact, so it
-renders marked provisional, as a figure that can only fall.
-
-@proves REQ-ROLLUP.open_is_lower_bound -/
+/-- @proves REQ-ROLLUP.open_is_lower_bound -/
 theorem an_open_roll_up_is_provisional :
     (rollUp [{ id := "R", complete := false, clauses := [some "a"], exempt := [],
                partialClauses := [], refines := [] }]

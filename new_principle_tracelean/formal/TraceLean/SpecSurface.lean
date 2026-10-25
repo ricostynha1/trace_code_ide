@@ -2,17 +2,6 @@ import TraceLean.Drive
 import TraceLean.View
 import TraceLean.Context
 
-/-!
-# Specifications that pin surface models
-
-A specification is a predicate saying which answers are right, read from a
-clause's text rather than from the function that models it. It *pins* the model
-when the model meets it and no input has two right answers. Each one here is
-stated without calling the model it pins.
-
-Written in the subset of Lean the annotation grammar reads (ADR-0008).
--/
-
 namespace TraceLean.SpecSurface
 
 open TraceLean.Keymap
@@ -20,26 +9,16 @@ open TraceLean.Drive
 open TraceLean.View
 open TraceLean.Context
 
-/-! ## A session -/
-
-/-- The mode the machine is in after `keys`, starting from `mode`: each key
-applied to the mode the one before it left. -/
 def modeAfter (keymap : Keymap) (mode : String) (keys : List String) : String :=
   keys.foldl (nextMode keymap) mode
 
-/-- What a session reports for the key at index `n` of `keys`: that key, the
-mode the machine is in once it is pressed, and the bar offered there. -/
 def reportFor (keymap : Keymap) (mode : String) (keys : List String) (n : Nat)
     (key : String) : Step :=
   { key := key,
     mode := modeAfter keymap mode (keys.take (n + 1)),
     menu := whichKey keymap (modeAfter keymap mode (keys.take (n + 1))) }
 
-/-- What a run of the editor from a keymap and a starting mode produces for a
-list of keys: at each index that key's report, and something at an index exactly
-when there is a key there.
-
-@specifies REQ-DRIVE.session_is_a_value -/
+/-- @specifies REQ-DRIVE.session_is_a_value -/
 def SessionOf (keymap : Keymap) (mode : String) (keys : List String) (steps : List Step) : Prop :=
   ∀ n, steps.get? n = (keys.get? n).map (reportFor keymap mode keys n)
 
@@ -63,9 +42,7 @@ theorem drive_reports (keymap : Keymap) (keys : List String) :
       simp at h
       simp [drive, later, h]
 
-/-- `drive` is a run of the editor, and there is one.
-
-@pins REQ-DRIVE.session_is_a_value -/
+/-- @pins REQ-DRIVE.session_is_a_value -/
 theorem session_pinned :
     (∀ x1 x2 x3, SessionOf x1 x2 x3 (drive x1 x2 x3)) ∧
     (∀ x1 x2 x3 y1 y2, SessionOf x1 x2 x3 y1 → SessionOf x1 x2 x3 y2 → y1 = y2) := by
@@ -77,12 +54,7 @@ theorem session_pinned :
     intro n
     rw [h1 n, h2 n]
 
-/-! ## Reading a symbolic row -/
-
-/-- What is read off a row is the names of its regions, one after another, and
-nothing of what was painted.
-
-@specifies REQ-VIEW.presentation_may_be_symbolic -/
+/-- @specifies REQ-VIEW.presentation_may_be_symbolic -/
 def ReadAsNames (row : List Presented) (read : String) : Prop :=
   read = String.join (row.map (fun piece => piece.name))
 
@@ -102,9 +74,7 @@ theorem join_cons (first : String) (rest : List String) :
   unfold String.join
   rw [List.foldl_cons, foldl_from rest ("" ++ first), String.empty_append]
 
-/-- `accessible` reads a row by its names, and that reading is the only one.
-
-@pins REQ-VIEW.presentation_may_be_symbolic -/
+/-- @pins REQ-VIEW.presentation_may_be_symbolic -/
 theorem read_as_names_pinned :
     (∀ x1, ReadAsNames x1 (accessible x1)) ∧
     (∀ x1 y1 y2, ReadAsNames x1 y1 → ReadAsNames x1 y2 → y1 = y2) := by
@@ -119,19 +89,11 @@ theorem read_as_names_pinned :
   · intro row y1 y2 h1 h2
     exact Eq.trans h1 (Eq.symm h2)
 
-/-! ## The parts of a context -/
-
-/-- The parts the copied text holds: a part is there exactly when the person
-included it and it has something in it, and the parts come in the one fixed
-order `allParts` lists them in.
-
-@specifies REQ-CONTEXT.person_chooses -/
+/-- @specifies REQ-CONTEXT.person_chooses -/
 def ChosenParts (included : List Part) (filled : List Part) (shown : List Part) : Prop :=
   (∀ p, List.Mem p shown ↔ (List.Mem p included ∧ List.Mem p filled)) ∧
     List.Sublist shown allParts
 
-/-- Two lists drawn in order from a list without repeats, holding the same
-things, are the same list. -/
 theorem sublists_agree {α : Type} (whole : List α) (nodup : List.Nodup whole) :
     ∀ (l1 l2 : List α), List.Sublist l1 whole → List.Sublist l2 whole →
       (∀ x, List.Mem x l1 ↔ List.Mem x l2) → l1 = l2 := by
@@ -181,10 +143,7 @@ theorem every_part_listed (p : Part) : List.Mem p allParts := by
   cases p
   all_goals exact (mem_iff_contains _ allParts).mpr rfl
 
-/-- `partsShown` holds exactly the included, filled parts in the fixed order,
-and nothing else does.
-
-@pins REQ-CONTEXT.person_chooses -/
+/-- @pins REQ-CONTEXT.person_chooses -/
 theorem chosen_parts_pinned :
     (∀ x1 x2, ChosenParts x1 x2 (partsShown x1 x2)) ∧
     (∀ x1 x2 y1 y2, ChosenParts x1 x2 y1 → ChosenParts x1 x2 y2 → y1 = y2) := by
@@ -212,10 +171,7 @@ theorem chosen_parts_pinned :
     intro x
     rw [h1.1 x, h2.1 x]
 
-/-- A name picks out the part whose label it is, and only that one: no part
-when it is no part's label.
-
-@specifies REQ-CONTEXT.part_named -/
+/-- @specifies REQ-CONTEXT.part_named -/
 def NamedPart (name : String) (answer : Option Part) : Prop :=
   ∀ p, answer = some p ↔ label p = name
 
@@ -257,9 +213,7 @@ theorem find_label (name : String) (p : Part) : ∀ (parts : List Part),
         next => exact absurd named here
         next later => exact And.intro later named
 
-/-- `partNamed` answers with the part a label names, and nothing else does.
-
-@pins REQ-CONTEXT.part_named -/
+/-- @pins REQ-CONTEXT.part_named -/
 theorem part_named_pinned :
     (∀ x1, NamedPart x1 (partNamed x1)) ∧
     (∀ x1 y1 y2, NamedPart x1 y1 → NamedPart x1 y2 → y1 = y2) := by

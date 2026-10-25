@@ -1,30 +1,4 @@
 #!/usr/bin/env bash
-# Run every differential suite, using the whole machine.
-#
-# `cargo test -- --ignored` runs the same tests and takes two and a half times
-# as long, because cargo runs test *binaries* one at a time. Inside a binary
-# libtest uses threads, so the parallelism a full run gets is bounded by the
-# tests in one suite — a mean of 2.9 here, measured at 487% of sixteen cores.
-#
-# There is nothing to fix in the project for that: it is how cargo runs targets.
-# So this builds the binaries with cargo and then runs them concurrently, which
-# is the same work in the same processes with the same arguments. Measured on a
-# sixteen-core machine, warm: 3m23 through cargo, 1m26 through this.
-#
-# Both shared runners are generated and built by the first suite that wants one
-# and reused by the rest, so a cold run pays for that once. See
-# docs/08-ideas.md §1.
-#
-# A differential suite every clause of which already has an agreed run against
-# inputs that hash as they do now is skipped: running it again could only say
-# the same (REQ-STALE.agreed_not_rerun; `tracelean-trace . --drt-due` lists
-# which). Suites claiming no clause always run. `--again` runs every one.
-#
-#   tools/differential-all.sh              # every suite something changed under
-#   tools/differential-all.sh 4            # four binaries at a time
-#   tools/differential-all.sh --again      # every suite
-#
-# Exits non-zero, naming the suite, if any of them fails.
 
 set -uo pipefail
 
@@ -34,19 +8,13 @@ cd "$root"
 again=""
 if [ "${1:-}" = "--again" ]; then again=1; shift; fi
 
-# Every core but one, so the machine stays usable (TRACELEAN_JOBS, or the first
-# argument, overrides).
 jobs="${1:-${TRACELEAN_JOBS:-$(( $(nproc) > 1 ? $(nproc) - 1 : 1 ))}}"
 
-# Measured: the Rust runner is built instrumented and each op's bound entry is
-# held to every line run or waived, which a Rust-bound op needs for L3
-# (docs/04-coverage.md). TRACELEAN_DRT_LINES= (empty) to skip it.
 export TRACELEAN_DRT_LINES="${TRACELEAN_DRT_LINES-1}"
 
 echo "building the test binaries"
 cargo test --workspace --no-run --quiet || exit 1
 
-# The suites whose every clause is current, by source path.
 current=""
 if [ -z "$again" ]; then
   current="$(cargo run -q -p tracelean-core --bin tracelean-trace -- . --drt-due 2>/dev/null | awk '$1 == "current" { print $2 }')"

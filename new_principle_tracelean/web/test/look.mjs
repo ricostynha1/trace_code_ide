@@ -1,15 +1,3 @@
-// A photograph of the window's page, drawn by a real editor, in headless
-// Chrome — for judging how it looks without opening a window on anybody's
-// desktop. The editor is `crates/editor/examples/look.rs`, answering the
-// window's commands a JSON line at a time; this serves the page, carries each
-// `invoke` to it, and takes the picture. Each step is a command the page
-// could send, run before the shot.
-//
-// Run: node web/build.mjs && node web/test/look.mjs out.png [tree] [step…]
-//   a step is `command` or `command={"json":"args"}`, e.g.
-//   'choose={"pane":"explorer","offset":0,"action":"file.open","target":"src/celsius.rs"}'
-// Needs Chrome on PATH (CHROME=/path/to/chrome to choose) and cargo.
-
 import { spawn } from "node:child_process";
 import { createServer } from "node:http";
 import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -25,17 +13,12 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const width = Number(process.env.WIDTH ?? 1400);
 const height = Number(process.env.HEIGHT ?? 800);
 
-// On a copy of the tree, named as it is, without what a person keeps there
-// (`.tracelean/`: their tabs, their sandboxes) or what a build leaves: the
-// steps are this script's, and must not become anybody's open tabs.
 const SKIP = new Set([".tracelean", ".git", "target", ".lake", "node_modules"]);
 const copy = join(mkdtempSync(join(tmpdir(), "tracelean-look-tree-")), basename(resolve(here, tree)));
 cpSync(resolve(here, tree), copy, { recursive: true, filter: (from) => !SKIP.has(basename(from)) });
 
-// The editor, one request a line.
 const editor = spawn("cargo", ["run", "-q", "-p", "tracelean-editor", "--example", "look", "--", copy],
   { cwd: here, stdio: ["pipe", "pipe", "inherit"] });
-// An editor that did not build, or died, answers nothing: stop rather than wait.
 editor.on("exit", (code) => {
   console.error(`the editor exited (${code}); nothing to photograph`);
   rmSync(dirname(copy), { recursive: true, force: true });
@@ -73,7 +56,6 @@ const server = createServer((request, response) => {
     let body = readFileSync(join(dist, path));
     if (path === "/index.html") body = body.toString().replace("<script", BRIDGE + "\n<script");
     const type = path.endsWith(".js") ? "text/javascript" : path.endsWith(".css") ? "text/css" : "text/html";
-    // The window's content policy, so what is photographed is what it allows.
     response.writeHead(200, { "content-type": type, "content-security-policy": "style-src 'self'" });
     response.end(body);
   } catch {

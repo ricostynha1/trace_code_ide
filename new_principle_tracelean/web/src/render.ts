@@ -1,16 +1,3 @@
-// Drawing a buffer in a web view.
-//
-// The counterpart of the terminal frontend's `draw` module, and the same rule:
-// this is the only place the web frontend decides what the screen says, so the
-// answer it gives a conformance harness and the pixels a person sees come from
-// one function.
-//
-// A richer medium than a terminal, so it draws more: a span with an action
-// becomes a button. What it may not do is draw text the buffer does not carry
-// or offer an action no span declares, and neither is possible here — the text
-// comes from `plainText` and the actions from `actionsAt`. What checks this
-// file is `crates/core/tests/frontend_conformance_web.rs`.
-
 import {
   accessible,
   actionsAt,
@@ -22,24 +9,13 @@ import {
   type Role,
 } from "./view.ts";
 
-// One piece of a line, and what it is.
 export interface Piece {
   text: string;
   role: Role;
-  // The character offset this piece starts at, which is what an action is
-  // dispatched with.
   at: number;
   actions: string[];
 }
 
-// A role becomes a class name. The role says what a region *is*; how it looks
-// is the stylesheet's business, which is the same division the terminal
-// frontend makes with colours.
-//
-// A mark gets two classes: one for being a mark at all, one for which mark it
-// is, or for being missing. So a stylesheet that has not been taught the marks
-// still colours them, and one that has tells a gap from a proof — which is
-// `rendering_is_total` applied to a role's payload rather than to the role.
 export function classOf(role: Role): string {
   if (typeof role === "string") return `role-${role}`;
   if ("token" in role) return `role-token token-${role.token.kind}`;
@@ -47,20 +23,10 @@ export function classOf(role: Role): string {
   return `role-mark role-mark-${role.mark.held ? role.mark.mark : "missing"}`;
 }
 
-// Characters, not code units: `text[i]` in JavaScript indexes UTF-16, so a
-// character outside the basic plane would be sliced in half and the halves
-// drawn as two replacement characters. The core counts characters, so this
-// does too.
 function characters(text: string): string[] {
   return Array.from(text);
 }
 
-// Split a buffer into lines of pieces, each piece carrying what can be done
-// where it starts.
-//
-// A piece boundary falls wherever the set of actions changes, so a frontend can
-// draw one button per region without deciding where the regions are.
-//
 // @implements REQ-VIEW.structure_over_text
 export function pieces(buffer: Buffer): Piece[][] {
   const all = characters(buffer.text);
@@ -105,11 +71,6 @@ function sameActions(a: string[], b: string[]): boolean {
   return a.length === b.length && a.every((name, i) => name === b[i]);
 }
 
-// What this frontend drew, in the form the conformance harness checks.
-//
-// The lines are the buffer's own, and an action is offered at the start of
-// every piece that carries one — which is where the button goes.
-//
 // @implements REQ-VIEW.frontend_is_checkable
 // @implements REQ-VIEW.text_is_the_content
 // @implements REQ-VIEW.frontend_adds_nothing
@@ -126,18 +87,6 @@ export function render(buffer: Buffer): Rendering {
   return { lines: plainText(buffer), offered };
 }
 
-// A region's emblem, chosen by an action the core declared.
-//
-// Keyed by action and never by text. An emblem picked by matching on strings
-// this frontend recognised would be the frontend deciding what exists, which is
-// the thing `one_representation` exists to prevent — and nothing could check
-// that it matched correctly. An action is a name the keymap dispatches, so a
-// window mapping it to a glyph is doing what the terminal does when it maps it
-// to a key.
-//
-// An action not named here has no emblem and is drawn as its text, which is
-// `rendering_is_total` for this medium.
-//
 // @implements REQ-VIEW.presentation_may_be_symbolic
 const EMBLEMS: Record<string, string> = {
   "screen.station.project": "📁",
@@ -158,29 +107,11 @@ export function symbolFor(actions: string[]): string | null {
   return null;
 }
 
-// A piece together with how this frontend presents it.
-//
-// One value, because the page and the harness must not be two decisions. The
-// page builds its DOM from this and the harness reads `screenText`, which is
-// this too — so a frontend cannot paint one thing and report another without
-// the two disagreeing about a value it computed once.
 export interface Shown {
   piece: Piece;
   presented: Presented;
 }
 
-// How this frontend presents a buffer: for each piece, what it paints and the
-// name that painting carries.
-//
-// The name is always the piece's own text. The painting may be an emblem, and
-// when it is, the DOM built from this puts the glyph on the page and the
-// piece's text in its accessible name — so a person using a screen reader and
-// the capture harness read the same thing, and both read the buffer.
-//
-// `mislabel` is the wrong-on-purpose mode: a frontend that names a region after
-// the glyph it painted rather than after the text it stands for. It exists so
-// that the harness can be seen catching it.
-//
 // @implements REQ-VIEW.presentation_may_be_symbolic
 export function shown(buffer: Buffer, mislabel = false): Shown[][] {
   return pieces(buffer).map((line) =>
@@ -195,11 +126,6 @@ export function presented(buffer: Buffer, mislabel = false): Presented[][] {
   return shown(buffer, mislabel).map((line) => line.map((each) => each.presented));
 }
 
-// The text a person would read off the page: the accessible name of every
-// presented piece, joined.
-//
-// This is what the capture harness compares against the buffer.
-//
 // @implements REQ-VIEW.screen_is_readable
 export function screenText(buffer: Buffer, mislabel = false): string {
   return presented(buffer, mislabel).map(accessible).join("\n");

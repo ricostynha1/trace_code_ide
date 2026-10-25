@@ -1,28 +1,12 @@
 import TraceLean.Rollup
 
-/-!
-# Specifications for the roll-up
-
-What `REQ-ROLLUP.every_part_holds` and `ARCH-HONEST.weakest_link` ask of an
-aggregate, written from the clauses rather than from `combine`, and the proof
-that they leave `combine` no freedom.
--/
-
 namespace TraceLean.SpecRollup
 
 open TraceLean.Evidence
 open TraceLean.Rollup
 
-/--
-`y` is the aggregate of `parts`: each mark held exactly when every part holds
-it. A majority or a mean would hold marks some part does not.
-
-With no parts there is nothing to hold a mark, so none is held; every mark
-held vacuously is the comfort `ARCH-HONEST` refuses.
-
-@specifies REQ-ROLLUP.every_part_holds
-@specifies ARCH-HONEST.weakest_link
--/
+/-- @specifies REQ-ROLLUP.every_part_holds
+@specifies ARCH-HONEST.weakest_link -/
 def EveryPartHolds (parts : List Marks) (y : Marks) : Prop :=
   (parts = [] → y = Marks.empty) ∧
   (Not (parts = []) →
@@ -31,7 +15,6 @@ def EveryPartHolds (parts : List Marks) (y : Marks) : Prop :=
     y.tested = (!parts.all (·.structural) && parts.all (fun m => m.tested || m.structural)) ∧
     y.proved = (!parts.all (·.structural) && parts.all (fun m => m.proved || m.structural)))
 
-/-- Marks where nothing that cannot apply is held. -/
 def Normal (m : Marks) : Prop := m.structural = true → m.tested = false ∧ m.proved = false
 
 theorem both_normal (a b : Marks) : Normal (Marks.both a b) := by
@@ -39,8 +22,6 @@ theorem both_normal (a b : Marks) : Normal (Marks.both a b) := by
   simp only [Marks.both] at h ⊢
   simp [h]
 
-/-- What a left fold of `Marks.both` from marks with nothing held that cannot
-apply comes to: each mark held exactly when every part it applies to holds it. -/
 theorem fold_both (rest : List Marks) : ∀ acc : Marks, Normal acc →
     (rest.foldl Marks.both acc).annotated = (acc.annotated && rest.all (·.annotated)) ∧
     (rest.foldl Marks.both acc).judged = (acc.judged && rest.all (·.judged)) ∧
@@ -73,7 +54,6 @@ theorem fold_both (rest : List Marks) : ∀ acc : Marks, Normal acc →
     cases a <;> cases j <;> cases t <;> cases p <;> cases s <;> cases xs' <;> cases xt <;> cases xp <;>
       simp
 
-/-- Two marks agreeing on every field are the same marks. -/
 theorem marks_ext (a b : Marks) (h1 : a.annotated = b.annotated) (h2 : a.judged = b.judged)
     (h3 : a.tested = b.tested) (h4 : a.proved = b.proved) (h5 : a.structural = b.structural) :
     a = b := by
@@ -82,7 +62,6 @@ theorem marks_ext (a b : Marks) (h1 : a.annotated = b.annotated) (h2 : a.judged 
   simp only at h1 h2 h3 h4 h5
   rw [h1, h2, h3, h4, h5]
 
-/-- `combine` meets the specification on a part and what follows it. -/
 theorem combine_cons (x : Marks) (rest : List Marks) :
     let y := combine (x :: rest)
     y.annotated = (x :: rest).all (·.annotated) ∧ y.judged = (x :: rest).all (·.judged) ∧
@@ -98,9 +77,7 @@ theorem combine_cons (x : Marks) (rest : List Marks) :
   simp only [Marks.both, Marks.neutral, List.all_cons]
   cases xs' <;> cases xt <;> cases xp <;> simp
 
-/-- The aggregate meets the clause, and nothing else does.
-
-@pins REQ-ROLLUP.every_part_holds
+/-- @pins REQ-ROLLUP.every_part_holds
 @pins ARCH-HONEST.weakest_link -/
 theorem every_part_holds_pinned :
     (∀ x1, EveryPartHolds x1 (combine x1)) ∧
@@ -135,10 +112,7 @@ theorem every_part_holds_pinned :
       · rw [m1.2.2.2.2, m2.2.2.2.2]
       · rw [m1.2.2.1, m2.2.2.1]
 
-/-- A requirement's marks are what every counted clause over its reachable set
-holds — whichever path reaches each.
-
-@proves REQ-ROLLUP.counted_once
+/-- @proves REQ-ROLLUP.counted_once
 @proves ARCH-HONEST.weakest_link -/
 theorem rollUp_holds_what_every_clause_holds (nodes : List Node)
     (held : List ((String × Option String) × Marks)) (root : String) (floor : Marks) :

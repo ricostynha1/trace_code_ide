@@ -1,45 +1,22 @@
 import TraceLean.Lsp
 
-/-!
-# What a column is, in each encoding
-
-`REQ-LSP.column_to_offset` and `REQ-LSP.offset_to_column` are the two
-directions of converting a position between the editor's encoding and the
-protocol's; what makes each exact, and the pair round-trip, is what a column
-*means*. A column in an
-encoding is the number of that encoding's units before the position, so column
-`n` is the byte offset where a prefix of the line spanning exactly `n` units
-ends -- and there is no such offset when `n` falls inside a character or past
-the end of the line.
--/
-
 namespace TraceLean.SpecLsp
 
 open TraceLean.Lsp
 
-/-- How many units of `encoding` one character takes: its UTF-8 bytes, its
-UTF-16 code units (two for a character beyond the basic multilingual plane),
-or one code point. -/
 def unitsOf (encoding : Encoding) (c : Char) : Nat :=
   match encoding with
   | .utf8 => c.utf8Size
   | .utf16 => if c.toNat ≤ 0xFFFF then 1 else 2
   | .utf32 => 1
 
-/-- The columns a run of characters spans. -/
 def columnsOf (encoding : Encoding) (cs : List Char) : Nat :=
   (cs.map (unitsOf encoding)).foldr (· + ·) 0
 
-/-- The bytes a run of characters takes in UTF-8. -/
 def bytesOf (cs : List Char) : Nat :=
   (cs.map Char.utf8Size).foldr (· + ·) 0
 
-/-- Column `character`, counted in `encoding`, is byte `b` of the line exactly
-when some prefix of the line spans that many columns and that many bytes; a
-column no prefix ends at -- inside a character, or past the end -- has no byte
-offset.
-
-@specifies REQ-LSP.column_to_offset -/
+/-- @specifies REQ-LSP.column_to_offset -/
 def ByteOffsetAt (lineText : String) (character : Nat) (encoding : Encoding) (y : Option Nat) : Prop :=
   ∀ b, y = some b ↔
     ∃ pre post, lineText.toList = pre ++ post ∧ columnsOf encoding pre = character ∧ bytesOf pre = b
@@ -94,7 +71,6 @@ theorem columns_zero (encoding : Encoding) (pre : List Char) (h : columnsOf enco
     have hp := units_pos encoding c
     omega
 
-/-- The model's walk finds the offset exactly where a prefix spans the column. -/
 theorem go_spec (character : Nat) (encoding : Encoding) (cs : List Char) :
     ∀ counted offset b, toByteOffset.go character encoding cs counted offset = some b ↔
       ∃ pre post, cs = pre ++ post ∧ counted + columnsOf encoding pre = character ∧
@@ -280,19 +256,7 @@ theorem column_to_offset_pinned :
     case some b =>
       exact ((h2 b).2 ((h1 b).1 rfl)).symm
 
-/-! ## The other direction, on the same prefixes
-
-A byte offset is column `n` exactly when the prefix of the line ending at that
-byte spans `n` units. Both conversions are read off one relation between a
-prefix's bytes and its columns, so each undoes the other wherever either
-answers. -/
-
-/-- Byte `offset` of the line is column `y` in `encoding` exactly when some
-prefix of the line takes that many bytes and spans that many columns; an
-offset no prefix ends at -- inside a character, or past the end -- has no
-column.
-
-@specifies REQ-LSP.offset_to_column -/
+/-- @specifies REQ-LSP.offset_to_column -/
 def ColumnAt (lineText : String) (offset : Nat) (encoding : Encoding) (y : Option Nat) : Prop :=
   ∀ n, y = some n ↔
     ∃ pre post, lineText.toList = pre ++ post ∧ bytesOf pre = offset ∧ columnsOf encoding pre = n
@@ -305,7 +269,6 @@ theorem bytes_zero (pre : List Char) (h : bytesOf pre = 0) : pre = [] := by
     have hp := Char.utf8Size_pos c
     omega
 
-/-- The model's walk finds the column exactly where a prefix ends at the byte. -/
 theorem go_character_spec (offset : Nat) (encoding : Encoding) (cs : List Char) :
     ∀ seen counted n, toCharacter.go offset encoding cs seen counted = some n ↔
       ∃ pre post, cs = pre ++ post ∧ seen + bytesOf pre = offset ∧
@@ -491,9 +454,7 @@ theorem offset_to_column_pinned :
     case some n =>
       exact ((h2 n).2 ((h1 n).1 rfl)).symm
 
-/-- Converting a byte offset to a column and back returns the offset.
-
-@proves REQ-LSP.offset_to_column -/
+/-- @proves REQ-LSP.offset_to_column -/
 theorem offset_round_trip (lineText : String) (offset : Nat) (encoding : Encoding) (n : Nat)
     (h : toCharacter lineText offset encoding = some n) :
     toByteOffset lineText n encoding = some offset := by
@@ -505,9 +466,7 @@ theorem offset_round_trip (lineText : String) (offset : Nat) (encoding : Encodin
   intro post hc
   exact ⟨pre, post, hc.1, hc.2.2, hc.2.1⟩
 
-/-- Converting a column to a byte offset and back returns the column.
-
-@proves REQ-LSP.column_to_offset -/
+/-- @proves REQ-LSP.column_to_offset -/
 theorem column_round_trip (lineText : String) (character : Nat) (encoding : Encoding) (b : Nat)
     (h : toByteOffset lineText character encoding = some b) :
     toCharacter lineText b encoding = some character := by

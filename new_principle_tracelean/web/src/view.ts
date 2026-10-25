@@ -1,32 +1,5 @@
-// The web frontend's reading of a buffer.
-//
-// A frontend has to split a buffer's text into lines to draw it, and it has to
-// know what can be done at a position to offer it. Those are the same two
-// questions the core answers, so this is a second implementation of them — and
-// a second implementation is exactly the thing that drifts.
-//
-// So it is not trusted. Every function here is compared against the Lean model,
-// case for case, by the same differential machinery that checks the Rust core
-// (`REQ-DRT-TS`). It is not compared against the Rust: two implementations
-// agree perfectly when both are wrong.
-//
-// What is deliberately absent is any producer. Building a buffer here would
-// make this a second answer to what is on screen, which is the failure
-// `REQ-SHOW.core_produces` exists to prevent. Buffers arrive from the core.
-//
-// `.tracelean/drt.json` names `web/src/view.ts::plainText` and its neighbours
-// as implementations of `REQ-VIEW`, and
-// `crates/core/tests/differential_typescript.rs` is what drives them.
-
-// One of the four evidence marks, as the core spells it.
 export type EvidenceMark = "annotated" | "judged" | "tested" | "proved";
 
-// What a region of text *is*. Never how it looks.
-//
-// `mark` carries which mark a position of `AJTP` is and whether it is held, so
-// a frontend colours a gap apart from a mark without reading the characters — a
-// frontend that parsed the text to decide how to draw it would be computing its
-// own view of the buffer.
 export type Role =
   | "plain"
   | "path"
@@ -39,9 +12,6 @@ export type Role =
   | { token: { kind: string } }
   | { claim: { role: string } };
 
-// Whether two roles are the same. Written out because two of them are objects
-// and `===` on objects compares identity, which would make every character of a
-// mark or a token its own region.
 export function sameRole(a: Role, b: Role): boolean {
   if (typeof a === "string" || typeof b === "string") return a === b;
   if ("mark" in a && "mark" in b) return a.mark.mark === b.mark.mark && a.mark.held === b.mark.held;
@@ -76,9 +46,6 @@ export interface Rendering {
   offered: [number, string][];
 }
 
-// A region of the screen, in characters. The page reports its size in these,
-// because only it knows what its font does, and the core answers in the same
-// unit — so a pane's box and the pane the core laid out are the same rectangle.
 export interface Rect {
   left: number;
   top: number;
@@ -86,23 +53,14 @@ export interface Rect {
   height: number;
 }
 
-// One pane, as the editor hands it over.
 export interface Pane {
   pane: string;
   at: Rect;
   buffer: Buffer;
   focused: boolean;
-  // The buffer line the window starts at; a gutter numbers from it. Absent
-  // from an editor that predates it, which numbers from the top.
   top?: number;
-  // How many lines the whole buffer has, for the scrollbar. Absent from an
-  // editor that predates it, which draws none.
   lines?: number;
-  // The claims marked beside the window's lines: buffer line, the role's
-  // letter, the requirement it opens.
   chips?: [number, string, string][];
-  // The measured lines in the window: buffer line, how often tests ran it,
-  // and what pointing at it says.
   coverage?: [number, number, string][];
 }
 
@@ -113,24 +71,11 @@ export type Breach =
   | { actionInvented: { offset: number; action: string } }
   | { actionDropped: { offset: number; action: string } };
 
-// The rendering every frontend has to agree with: the buffer's text, as lines.
-//
-// A frontend with a richer medium draws more than this. What it may not do is
-// show something else.
-//
 // @implements REQ-VIEW.rendering_is_total
 export function plainText(buffer: Buffer): string[] {
   return buffer.text.split("\n");
 }
 
-// What can be done at a position: the actions of every span covering it, in
-// span order, without repeats.
-//
-// Offsets are characters and not code units. A `String.length` here would put
-// the frontend a position out of step with the core the moment anything is
-// outside the basic plane, which is the kind of disagreement that shows up as
-// one wrong button and no error.
-//
 // @implements REQ-VIEW.affordances_named
 export function actionsAt(buffer: Buffer, offset: number): string[] {
   const seen: string[] = [];
@@ -144,8 +89,6 @@ export function actionsAt(buffer: Buffer, offset: number): string[] {
   return seen;
 }
 
-// Every action any span of a buffer names, sorted and without repeats.
-//
 // @implements REQ-VIEW.frontend_adds_nothing
 export function declaredActions(buffer: Buffer): string[] {
   const seen: string[] = [];
@@ -154,25 +97,14 @@ export function declaredActions(buffer: Buffer): string[] {
       if (!seen.includes(action)) seen.push(action);
     }
   }
-  // The model sorts by code point, which is what a plain comparison gives.
   return seen.sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
 }
 
-// A region as this frontend put it on the screen: the glyphs it painted, and
-// the name those glyphs carry.
-//
-// The name is what a screen reader announces and what the capture harness
-// reads off the page. Painting is this medium's freedom; the name is its
-// obligation.
 export interface Presented {
   painted: string;
   name: string;
 }
 
-// What a row of presented regions reads as: the names, in order.
-//
-// The glyphs are not consulted, which is the whole content of the clause.
-//
 // @implements REQ-VIEW.presentation_may_be_symbolic
 export function accessible(row: Presented[]): string {
   return row.map((piece) => piece.name).join("");
@@ -193,12 +125,6 @@ function lineBreaches(shown: string[], expected: string[]): Breach[] {
   return out;
 }
 
-// Everything a frontend got wrong about a buffer.
-//
-// The frontend carries this so that it can check itself in a browser, where no
-// harness reaches. The same function checked against the same model is the
-// reason its answer means anything.
-//
 // @implements REQ-VIEW.frontend_adds_nothing
 export function conformance(buffer: Buffer, rendering: Rendering): Breach[] {
   const out: Breach[] = lineBreaches(rendering.lines, plainText(buffer));

@@ -3,19 +3,6 @@ import TraceLean.Protocol
 import TraceLean.Pinning
 import TraceLean.DocLink
 
-/-!
-# Specifications that pin trace-side models
-
-Each clause below is modelled twice: by a specification, a predicate read off
-the requirement saying which answers are right, and by the model the
-implementation is tested against. The `@pins` theorem says the model meets the
-specification and that no input has two answers the specification accepts.
-
-No specification here mentions its model. Where one needs a notion the model
-also needs -- a substring, a lookup -- it states it in its own terms and a lemma
-shows the model's helper agrees.
--/
-
 namespace TraceLean.SpecTrace
 
 open TraceLean.Evidence
@@ -24,12 +11,7 @@ open TraceLean.Pinning
 open TraceLean.DocLink
 open Lean (Json)
 
-/-! ## A reply carries one of an output and an error -/
-
-/-- A reply is exclusive when it carries an output and no error, or an error
-and no output.
-
-@specifies REQ-DRT-PROTO.reply_exclusive -/
+/-- @specifies REQ-DRT-PROTO.reply_exclusive -/
 def ReplyExclusive (output : Option Json) (error : Option String) (y : Bool) : Prop :=
   y = true ↔ ((output ≠ none ∧ error = none) ∨ (output = none ∧ error ≠ none))
 
@@ -58,14 +40,7 @@ theorem reply_exclusive_pinned :
         cases h3
       · rfl
 
-/-! ## An imprecise anchor caps its links -/
-
-/-- What a link through an anchor may reach: whatever it claims through an
-anchor the grammar found, and only the lowest level of the ladder -- the level
-at or below every other -- through one that names the whole file because no
-grammar was available.
-
-@specifies REQ-ANCHOR.imprecise_capped -/
+/-- @specifies REQ-ANCHOR.imprecise_capped -/
 def CappedLevel (precise : Bool) (claimed : Level) (y : Level) : Prop :=
   (precise = true → y = claimed) ∧ (precise = false → ∀ l : Level, y ≤ l)
 
@@ -99,19 +74,10 @@ theorem imprecise_capped_pinned :
       all_goals decide
     · exact (h1.1 rfl).trans (h2.1 rfl).symm
 
-/-! ## A verdict holds only for what it was given -/
-
-/-- A kept verdict that Lean accepted exactly this theorem, about exactly these
-declarations. -/
 def VerdictFor (record : Option PinRecord) (t key : String) : Prop :=
   ∃ r, record = some r ∧ r.pinned = true ∧ r.theoremName = t ∧ r.key = key
 
-/-- Where a clause stands. With no pinning theorem it is open. With one, it is
-pinned only when the verdict kept is Lean's acceptance of that theorem for the
-declarations as they now are; a verdict about anything else leaves it
-attempted.
-
-@specifies REQ-STRENGTH.verdict_kept -/
+/-- @specifies REQ-STRENGTH.verdict_kept -/
 def VerdictStanding (theoremName : Option String) (record : Option PinRecord) (key : String)
     (s : Strength) : Prop :=
   (theoremName = none → s = Strength.«open») ∧
@@ -168,13 +134,9 @@ theorem verdict_kept_pinned :
       · intro hv
         exact (a1.2 hv).trans (a2.2 hv).symm
 
-/-! ## Only the kernel decides -/
-
-/-- `pat` appears somewhere in `text`. -/
 def Contains (text pat : String) : Prop :=
   ∃ pre post, text.data = pre ++ pat.data ++ post
 
-/-- `text` begins with `pat`. -/
 def StartsWith (text pat : String) : Prop :=
   ∃ post, text.data = pat.data ++ post
 
@@ -266,11 +228,7 @@ theorem starts_iff (line pat : String) :
     intro post hp
     exact ⟨post, hp.symm⟩
 
-/-- Whether Lean accepted a pinning check: it exited cleanly, reported no
-error, and some line of what it printed lists the axioms of exactly this one
-theorem, without `sorryAx` among them.
-
-@specifies REQ-STRENGTH.kernel_decides -/
+/-- @specifies REQ-STRENGTH.kernel_decides -/
 def KernelAccepted (theoremName output : String) (exitedOk : Bool) (y : Bool) : Prop :=
   y = true ↔
     (exitedOk = true ∧ ¬ Contains output ": error" ∧
@@ -337,19 +295,10 @@ theorem kernel_decides_pinned :
         cases h3
       · rfl
 
-/-! ## A document goes into review, or dangles -/
-
-/-- `hash` is what `current` records for `target` now: its first entry for the
-target, since a later one for the same target is shadowed by it. -/
 def HashedNow (current : List (String × String)) (target hash : String) : Prop :=
   ∃ pre post, current = pre ++ (target, hash) :: post ∧ ∀ p, List.Mem p pre → p.1 ≠ target
 
-/-- Where a document stands. Its target gone, it is dangling. Its target there
-and hashing as the document recorded, it is current. Its target there and
-hashing to anything else, it is in review, saying what was recorded and what
-the target hashes to now.
-
-@specifies REQ-DOCLINK.hash_moves_review
+/-- @specifies REQ-DOCLINK.hash_moves_review
 @specifies REQ-DOCLINK.dangling_reported -/
 def DocStanding (link : DocLink) (current : List (String × String)) (y : DocState) : Prop :=
   ((∀ p, List.Mem p current → p.1 ≠ link.target) → y = DocState.dangling) ∧
@@ -509,10 +458,7 @@ theorem doc_standing_pinned :
       · intro he
         exact (a1.2 he).trans (a2.2 he).symm
 
-/-- A document link to nothing that exists is dangling, and one to something
-that does is current or in review by whether its recorded hash still matches.
-
-@proves REQ-DOCLINK.dangling_reported -/
+/-- @proves REQ-DOCLINK.dangling_reported -/
 theorem a_link_to_nothing_is_dangling (link : DocLink) (current : List (String × String)) :
     DocStanding link current (docState link current) :=
   doc_standing_pinned.1 link current

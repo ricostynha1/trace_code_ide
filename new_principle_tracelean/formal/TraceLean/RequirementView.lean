@@ -2,14 +2,6 @@ import TraceLean.Layout
 import TraceLean.Judge
 import TraceLean.Lines
 
-/-!
-# One requirement, opened
-
-Models `REQ-SHOW.requirement_opened`: a requirement as a buffer showing each of
-its clauses with the evidence marks it holds and every annotation that
-claims it, each claim a `path:line` link that opens the claiming file there.
--/
-
 namespace TraceLean.RequirementView
 
 open Lean (ToJson FromJson Json)
@@ -25,8 +17,6 @@ structure Claim where
   symbol : Option String
   deriving Repr, Inhabited, ToJson, FromJson
 
-/-- How much of a clause's implementing items tests run: lines run, lines,
-and tests. Read as the three-element array the implementation writes. -/
 structure Covered where
   run : Nat
   all : Nat
@@ -43,18 +33,13 @@ instance : FromJson Covered where
 instance : ToJson Covered where
   toJson c := Json.arr #[ToJson.toJson c.run, ToJson.toJson c.all, ToJson.toJson c.tests]
 
-/-- Each path once, in the order first seen. -/
 def firstSeen {α : Type} [BEq α] (xs : List α) : List α :=
   xs.foldl (fun acc x => if acc.contains x then acc else acc ++ [x]) []
 
-/-- One measured line of an item: where it is, and whether a test ran it. -/
 def ranAt (path : String) (l : TraceLean.Lines.LineHits) : (String × Nat) × Bool :=
   ((path, l.line), l.hits > 0)
 
-/-- Lines run, executable lines and tests over items (each a path and its
-measured lines), a line of a file counted once however many items span it.
-
-@models REQ-LINECOV.requirement_summary -/
+/-- @models REQ-LINECOV.requirement_summary -/
 def total (items : List (String × List TraceLean.Lines.LineHits)) : Covered :=
   let marked := items.bind (fun (i : String × List TraceLean.Lines.LineHits) => i.2.map (ranAt i.1))
   let keys := firstSeen (marked.map (·.1))
@@ -97,7 +82,6 @@ def roleWord : TraceLean.Annotation.Role → String
   | .proves => "proves"
   | .pins => "pins"
 
-/-- `word` and the names, each opening its requirement; nothing for none. -/
 def namesLine (out : Lines) (word : String) (names : List String) : Lines :=
   if names.isEmpty then out
   else
@@ -106,14 +90,11 @@ def namesLine (out : Lines) (word : String) (names : List String) : Lines :=
         [(pair.2, Role.requirement, ["trace.requirement"])]
     line out ((word, Role.plain, []) :: pieces)
 
-/-- Whether Lean said the clause's specification pins its model. -/
 def isPinned (c : ClauseShown) : Bool :=
   match c.pins with
   | some p => p.1 == "pinned"
   | none => false
 
-/-- How many clauses each kind of claim reaches, in the claims' colours, in the
-order the marks line keeps: implements, proves, models, tests, strong, drt. -/
 def evidenceLine (out : Lines) (clauses : List ClauseShown) : Lines :=
   let reaching := fun (kind : TraceLean.Annotation.Role) =>
     (clauses.filter fun c =>
@@ -125,7 +106,6 @@ def evidenceLine (out : Lines) (clauses : List ClauseShown) : Lines :=
      (.proves, "proves " ++ toString (reaching .proves) ++ "/" ++ of_),
      (.models, "models " ++ toString (reaching .models) ++ "/" ++ of_),
      (.tests, "tests " ++ toString (reaching .tests) ++ "/" ++ of_),
-     -- How many clauses Lean has said their specification pins: strong.
      (.pins, "strong " ++ toString pinned ++ "/" ++ of_),
      (.drt, "drt " ++ toString (reaching .drt) ++ "/" ++ of_)]
   let pieces := counted.enum.bind fun (pair : Nat × (TraceLean.Annotation.Role × String)) =>
@@ -133,7 +113,6 @@ def evidenceLine (out : Lines) (clauses : List ClauseShown) : Lines :=
       [(pair.2.2, Role.claim pair.2.1, [])]
   line out (("evidence   ", Role.plain, []) :: pieces)
 
-/-- A claim: its kind in its chip's colour, the link, and the item it sits on. -/
 def claimLine (out : Lines) (claim : Claim) : Lines :=
   let role :=
     match TraceLean.Annotation.Role.parse claim.role with
@@ -146,30 +125,20 @@ def claimLine (out : Lines) (claim : Claim) : Lines :=
   line out ([("  ", Role.plain, []), (padRight claim.role 10, role, []), (" ", Role.plain, []),
              (claim.path ++ ":" ++ toString claim.line, Role.path, ["file.open"])] ++ symbol)
 
-/-- What it says when the measured code has no line a test could run: neither
-covered nor not. -/
 def noLines : String := "no line a test could run"
 
-/-- `3/4 lines run (75%), by 2 tests`; nothing to run is not all of it. -/
 def coveredText (c : Covered) : String :=
   if c.all == 0 then noLines else
   toString c.run ++ "/" ++ toString c.all ++ " lines run (" ++ toString (c.run * 100 / c.all) ++ "%), by " ++
     toString c.tests ++ " test" ++ (if c.tests == 1 then "" else "s")
 
-/-- A count's colour: whole in green, short in red, nothing to run in neither. -/
 def coveredRole (c : Covered) : Role :=
   if c.all == 0 then Role.plain else if c.run == c.all then Role.added else Role.removed
 
-/-- What a coverage line says when code claims the clause and no measurement
-of that code as it is now exists. -/
 def notMeasured : String := "not measured: run `tracelean-trace . --coverage`"
 
-/-- Whether code claims the clause. -/
 def implemented (c : ClauseShown) : Bool := c.claims.any (·.role == "implements")
 
-/-- How many clauses hold each kind of evidence, one letter each and in the
-order the evidence line names them, each in the colour of its claim. A count is
-out of the clauses a model can answer, `I·` where none can. -/
 def marksLine (out : Lines) (clauses : List ClauseShown) : Lines :=
   let modelled := clauses.filter (fun c => !c.marks.structural)
   let count := fun (held : ClauseShown → Bool) => (modelled.filter held).length
@@ -185,9 +154,6 @@ def marksLine (out : Lines) (clauses : List ClauseShown) : Lines :=
     else (c.1 ++ toString c.2.1 ++ "/" ++ toString modelled.length, c.2.2, ([] : List String))
   line out (("marks      ", Role.plain, []) :: said.intersperse (" ", Role.plain, []))
 
-/-- The requirement or clause, which opens the lines behind the count, then
-the count: whole in green, short in red. Nothing measured says so when code
-claims it (`claimed`), so an absent count is not read as nothing to count. -/
 def coveredLine (lead name : String) (claimed : Bool) (out : Lines) : Option Covered → Lines
   | none => if claimed then line out [(lead, Role.plain, []), (notMeasured, Role.removed, [])] else out
   | some c =>
@@ -208,8 +174,6 @@ def judgedLines (out : Lines) : Option Judged → Lines
     if judged.verdict == "agrees" then line out [("  judged      ", Role.plain, []), (said, Role.plain, [])]
     else wrapped out "  " said Role.removed []
 
-/-- Each position of the marks as a piece of a line: a letter or a dash, with
-the role saying which mark it is and whether it is held. -/
 def markPiecesOf (m : Marks) : List (Mark × Bool × Char) → List (String × Role × List String)
   | [] => []
   | (mark, held, c) :: rest =>
@@ -217,11 +181,8 @@ def markPiecesOf (m : Marks) : List (Mark × Bool × Char) → List (String × R
       (String.singleton (letter held c), Role.mark mark held, ["trace.rollup"])
     else ("·", Role.plain, [])) :: markPiecesOf m rest
 
-/-- The marks as pieces of a line; one that cannot be held is plain. -/
 def markPieces (m : Marks) : List (String × Role × List String) := markPiecesOf m m.each
 
-/-- One clause: its marks and key, its text and narrowings, what can be done
-with it, and every claim on it. -/
 def clauseLines (id : String) (out : Lines) (clause : ClauseShown) : Lines :=
   let key := clause.key.getD "(the whole requirement)"
   let out := line (blank out) (markPieces clause.marks ++ [("  ", Role.plain, []), (key, Role.heading, [])])
@@ -244,9 +205,7 @@ def clauseLines (id : String) (out : Lines) (clause : ClauseShown) : Lines :=
     else out
   clause.claims.foldl claimLine (judgedLines out clause.judged)
 
-/-- The requirement as a buffer, titled `requirement <id>`.
-
-@models REQ-SHOW.requirement_opened -/
+/-- @models REQ-SHOW.requirement_opened -/
 def requirementView (view : Shown) : Buffer :=
   let out := line (start view.width) [(view.id, Role.requirement, [])]
   let out := wrapped out "" view.title Role.heading []
@@ -257,7 +216,6 @@ def requirementView (view : Shown) : Buffer :=
       line out [(status, Role.plain, []), ("  ", Role.plain, []), ("[ Approve ]", Role.added, ["trace.approve"])]
     else line out [(status, Role.plain, [])]
   let out := namesLine (namesLine out "refines    " view.refines) "refined by " view.refinedBy
-  -- What the document says: opening a requirement shows its text.
   let out :=
     if view.body.isEmpty then out
     else
@@ -269,32 +227,24 @@ def requirementView (view : Shown) : Buffer :=
     (marksLine (evidenceLine out view.clauses) view.clauses) view.lines
   finish (view.clauses.foldl (clauseLines view.id) out) ("requirement " ++ view.id)
 
-/-- Over two items that share a line of one file: that line counted once, the
-lines run among the three, and each test once.
-
-@proves REQ-LINECOV.requirement_summary -/
+/-- @proves REQ-LINECOV.requirement_summary -/
 theorem a_shared_line_counts_once :
     (fun c => (c.run, c.all, c.tests))
         (total [("a.rs", [⟨1, 2, [("t1", 2)]⟩, ⟨2, 0, []⟩]), ("a.rs", [⟨2, 1, [("t2", 1)]⟩, ⟨3, 0, []⟩])])
       = (2, 3, 2) := by
   native_decide
 
-/-- Each span that does something: the text it covers and what it does. -/
 def linked (b : Buffer) : List (String × List String) :=
   (b.spans.filter (!·.actions.isEmpty)).map
     (fun s => (String.mk ((b.text.toList.drop s.start).take (s.stop - s.start)), s.actions))
 
-/-- A requirement of one clause, implemented and tested. -/
 def oneClause : Shown :=
   ⟨"REQ-A", "A thing", "reqs/REQ-A.md", "draft", [], [], "",
    [⟨some "one", "It shall.", [], ⟨true, false, true, false, false⟩,
      [⟨"implements", "src/a.rs", 4, some "f"⟩, ⟨"tests", "tests/a.rs", 9, none⟩], none, true, none, none⟩],
    60, none⟩
 
-/-- An opened requirement shows each clause with the evidence marks it holds
-and every claim on it, each claim opening the claiming file at its line.
-
-@proves REQ-SHOW.requirement_opened -/
+/-- @proves REQ-SHOW.requirement_opened -/
 theorem an_opened_requirement_shows_clauses_and_claims :
     ((requirementView oneClause).text.splitOn "A-T-  one\n  It shall.").length = 2 ∧
     (linked (requirementView oneClause)).filter (fun l => l.2 == ["file.open"])

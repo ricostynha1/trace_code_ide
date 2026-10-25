@@ -1,12 +1,3 @@
-// Every journey in `tests/journeys.json`, replayed in the window's page in
-// headless Chrome, with a real editor behind it (`crates/editor/examples/
-// look.rs`, as `look.mjs` uses) on a fresh copy of the demo tree. The terminal
-// replays the same file (`crates/tui/tests/driving.rs`); a journey that passes
-// in one and fails in the other is the finding (`REQ-LOOK.journeys_replay`).
-//
-// Run: node web/build.mjs && node web/test/journeys.mjs
-// Needs Chrome on PATH (CHROME=/path/to/chrome to choose) and cargo.
-
 import { spawn } from "node:child_process";
 import { createServer } from "node:http";
 import { cpSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
@@ -28,12 +19,9 @@ const BRIDGE = `<script>
   } } };
 </script>`;
 
-// The editor once, built before any journey so no journey waits on cargo.
 const built = spawn("cargo", ["build", "-q", "-p", "tracelean-editor", "--example", "look"], { cwd: here, stdio: "inherit" });
 if ((await new Promise((r) => built.on("exit", r))) !== 0) process.exit(1);
 
-// One editor on a fresh copy of the demo, and a server carrying the page's
-// commands to it.
 async function session() {
   const copy = join(mkdtempSync(join(tmpdir(), "tracelean-journey-")), "demo");
   cpSync(join(here, "demo"), copy, { recursive: true, filter: (from) => !SKIP.has(basename(from)) });
@@ -108,7 +96,6 @@ try {
   });
   const visible = async () =>
     (await send("Runtime.evaluate", { expression: "document.body.innerText", returnByValue: true })).result.value;
-  // A key as the keymap names it, as a keyboard sends it to the page.
   const press = async (name) => {
     const ctrl = name.startsWith("C-");
     const key = ctrl ? name.slice(2) : name === "Space" ? " " : name;

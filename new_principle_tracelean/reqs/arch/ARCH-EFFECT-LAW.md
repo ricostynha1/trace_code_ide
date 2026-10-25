@@ -25,3 +25,7 @@ A wrong axiom is believed by the kernel, so they are confined to one module and
 kept few. Anything provable is proved instead.
 
 See [ADR-0002](../../docs/decisions/ADR-0002-axiomatised-effects.md).
+
+One exception: `readTranscript` has no law. Its type, `String → String`, already
+says a read changes nothing. A read that did change the file is caught by
+`REQ-TRANSCRIPT.absent_is_fine` and by the sandbox's `copyViolations`.

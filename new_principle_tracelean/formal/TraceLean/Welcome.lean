@@ -1,18 +1,10 @@
 import TraceLean.Produce
 
-/-!
-# The page a project opens on
-
-Models `REQ-SHOW.recent_reopens`: where to start, then the folders opened
-before, each a path that opens it as the project.
--/
-
 namespace TraceLean.Welcome
 
 open TraceLean.View
 open TraceLean.Produce
 
-/-- What the page says before its starts. -/
 def introLines : List String :=
   [ "TraceLean — an editor that knows why your code exists",
     "",
@@ -27,7 +19,6 @@ def introLines : List String :=
     "",
     "Start here" ]
 
-/-- A piece of text added at the end, marked when it has a role or actions. -/
 def pushPiece (acc : String × List Span) (piece : String) (role : Role)
     (actions : List String) : String × List Span :=
   let start := acc.1.length
@@ -38,22 +29,16 @@ def pushPiece (acc : String × List Span) (piece : String) (role : Role)
     else acc.2
   (acc.1 ++ piece, spans)
 
-/-- One recent folder: a path that opens it. -/
 def pushFolder (acc : String × List Span) (folder : String) : String × List Span :=
   pushPiece (pushPiece acc "\n  " Role.plain []) folder Role.path ["file.open"]
 
-/-- The `Recent` heading and a row a folder. -/
 def recentRows (acc : String × List Span) (recent : List String) : String × List Span :=
   recent.foldl pushFolder (pushPiece (pushPiece acc "\n\n" Role.plain []) "Recent" Role.heading [])
 
-/-- A menu span moved down past the introduction. -/
 def shifted (shift : Nat) (span : Span) : Span :=
   { span with start := span.start + shift, stop := span.stop + shift }
 
-/-- The starts as a menu, and under a `Recent` heading each folder in `recent`
-as a path that opens it.
-
-@models REQ-SHOW.recent_reopens -/
+/-- @models REQ-SHOW.recent_reopens -/
 def welcome (starts : List MenuEntry) (recent : List String) : Buffer :=
   let menu := menuBuffer "welcome" starts
   let intro := String.intercalate "\n" introLines ++ "\n"
@@ -72,14 +57,10 @@ def welcome (starts : List MenuEntry) (recent : List String) : Buffer :=
     let rows := recentRows (text, spans) recent
     { menu with text := rows.1, spans := tidy rows.1.length rows.2 }
 
-/-- The text a span covers. -/
 def covered (b : Buffer) (s : Span) : String :=
   String.mk ((b.text.toList.drop s.start).take (s.stop - s.start))
 
-/-- Each folder opened before is listed under `Recent`, and each is a link
-covering exactly its path, which opens it.
-
-@proves REQ-SHOW.recent_reopens -/
+/-- @proves REQ-SHOW.recent_reopens -/
 theorem each_recent_folder_is_a_way_back :
     ((welcome [] ["/home/u/p", "/tmp/q"]).spans.filter (·.actions == ["file.open"])).map
         (covered (welcome [] ["/home/u/p", "/tmp/q"]))

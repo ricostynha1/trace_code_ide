@@ -1,16 +1,3 @@
-// Turn the frontend's TypeScript into what a browser loads.
-//
-// Node strips the types itself, so this needs nothing installed: no bundler, no
-// package manager, no lockfile, and nothing between the source that was checked
-// and the file that ships. The only change made to a module is that its
-// `./x.ts` imports become `./x.js`, because a browser has no type stripper.
-//
-// Run: node web/build.mjs
-//
-// Realises REQ-DRT-TS.runs_the_shipped_source. Written out rather than
-// annotated: TraceLean has no grammar for this language and cannot place a
-// claim inside the file (ADR-0008).
-
 import { stripTypeScriptTypes } from "node:module";
 import { readdirSync, readFileSync, mkdirSync, writeFileSync, copyFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -22,8 +9,6 @@ const into = join(here, "dist");
 
 mkdirSync(into, { recursive: true });
 
-// The entry point the harness runs is not something a browser loads: it reads
-// standard input. Everything else is a module the page imports.
 const skip = new Set(["frontend.ts"]);
 
 let written = 0;

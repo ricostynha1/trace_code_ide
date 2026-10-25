@@ -422,11 +422,12 @@ fn axioms_live_in_one_file_and_each_one_states_a_law() {
         let Ok(text) = std::fs::read_to_string(&path) else { continue };
         models.push((path.file_name().unwrap().to_string_lossy().to_string(), text));
     }
-    let problems = axiom_problems(&models);
+    let requirement = std::fs::read_to_string(project_root().join("reqs/arch/ARCH-EFFECT-LAW.md")).unwrap();
+    let problems = axiom_problems(&models, &requirement);
     assert!(problems.is_empty(), "{problems:#?}");
 }
 
-fn axiom_problems(models: &[(String, String)]) -> Vec<String> {
+fn axiom_problems(models: &[(String, String)], requirement: &str) -> Vec<String> {
     let mut problems = Vec::new();
     let with_axioms: Vec<(&String, &String, usize)> = models
         .iter()
@@ -450,8 +451,8 @@ fn axiom_problems(models: &[(String, String)]) -> Vec<String> {
     if !(laws > 0 && *declared >= laws) {
         problems.push(format!("{declared} axioms and {laws} of them named as laws"));
     }
-    if !text.contains("No axiom accompanies this one, and the absence is the point") {
-        problems.push("an effect without a law must say why, in the module itself".to_string());
+    if !requirement.contains("has no law") {
+        problems.push("an effect without a law must say why, in its requirement".to_string());
     }
     for law in ["copyViolations", "capabilityViolations", "escapeViolations", "runViolations"] {
         if !text.contains(&format!("def {law}")) {
@@ -466,14 +467,15 @@ fn axiom_problems(models: &[(String, String)]) -> Vec<String> {
 fn the_axiom_check_rejects_a_tree_that_breaks_it() {
     let laws = "def copyViolations := 1\ndef capabilityViolations := 1\ndef escapeViolations := 1\ndef runViolations := 1\n";
     let good = format!(
-        "axiom copy_law : True\naxiom run_law : True\n-- No axiom accompanies this one, and the absence is the point\n{laws}"
+        "axiom copy_law : True\naxiom run_law : True\n{laws}"
     );
-    assert!(axiom_problems(&tree(&[("Effects.lean", &good)])).is_empty());
+    let why = "`readTranscript` has no law";
+    assert!(axiom_problems(&tree(&[("Effects.lean", &good)]), why).is_empty());
 
     let stray = tree(&[("Effects.lean", &good), ("Other.lean", "axiom sneaky_law : True\n")]);
-    assert_eq!(axiom_problems(&stray).len(), 1);
+    assert_eq!(axiom_problems(&stray, why).len(), 1);
     let bare = tree(&[("Effects.lean", "axiom copy_law : True\n")]);
-    assert!(axiom_problems(&bare).len() >= 2, "{:?}", axiom_problems(&bare));
+    assert!(axiom_problems(&bare, "").len() >= 2, "{:?}", axiom_problems(&bare, ""));
 }
 
 fn names_the_problem(rendered: &str) -> bool {

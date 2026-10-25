@@ -1,13 +1,5 @@
 import TraceLean.Layout
 
-/-!
-# The sandbox station
-
-Models `REQ-SHOW.sandbox_session_shown`: whether a session exists, the command
-that enters it, each change waiting with a way to review it, ways to accept and
-reject them, and the agent's conversation newest first, wrapped to the width.
--/
-
 namespace TraceLean.SandboxView
 
 open Lean (ToJson FromJson)
@@ -37,7 +29,6 @@ structure View where
   width : Nat
   deriving Repr, DecidableEq, Inhabited, ToJson, FromJson
 
-/-- The role a row of the conversation is drawn in. -/
 def roleOf (kind : String) : Role :=
   match kind with
   | "you" => Role.requirement
@@ -75,9 +66,7 @@ def noSession (view : View) : Buffer :=
     | none => out
   finish out "sandbox"
 
-/-- The sandbox panel.
-
-@models REQ-SHOW.sandbox_session_shown -/
+/-- @models REQ-SHOW.sandbox_session_shown -/
 def sandboxView (view : View) : Buffer :=
   match view.session with
   | none => noSession view
@@ -111,22 +100,15 @@ def sandboxView (view : View) : Buffer :=
       | none => out
     finish out "sandbox"
 
-/-- Each span that does something: the text it covers and what it does. -/
 def linked (b : Buffer) : List (String × List String) :=
   (b.spans.filter (!·.actions.isEmpty)).map
     (fun s => (String.mk ((b.text.toList.drop s.start).take (s.stop - s.start)), s.actions))
 
-/-- A session with one change waiting and two things said. -/
 def live : View :=
   ⟨some ⟨"s0001", "contained (bwrap)", "cd /tmp/x"⟩, [⟨"modified", "a.rs", 2, 1⟩],
    [⟨"you", "first"⟩, ⟨"agent", "second"⟩], ⟨0, []⟩, 40⟩
 
-/-- With a session: the command that enters it, the change waiting with ways to
-review, accept and reject it, ways to accept or reject everything, and the
-conversation newest first, every line within the width. Without one: a way to
-make one.
-
-@proves REQ-SHOW.sandbox_session_shown -/
+/-- @proves REQ-SHOW.sandbox_session_shown -/
 theorem the_session_is_shown_whole :
     linked (sandboxView live)
       = [("cd /tmp/x", ["sandbox.copy"]), ("[ Copy command ]", ["sandbox.copy"]),
