@@ -1,7 +1,3 @@
-//! An agent's context, checked against the model: the neighbourhood of a
-//! requirement in the refinement graph, which parts a person's choice puts in
-//! the copied text, and which part a label names.
-
 mod harness;
 
 use std::collections::BTreeMap;
@@ -13,8 +9,6 @@ use tracelean_core::surface::context::{ancestors, descendants, part_named, parts
 
 mod support;
 
-/// Four names, so chains, shared parents, cycles and a name declared twice
-/// all occur often enough to be tested rather than hoped for.
 fn name() -> Schema {
     Schema::Str { max_len: Some(0), examples: vec!["A".into(), "B".into(), "C".into(), "D".into()] }
 }
@@ -72,9 +66,6 @@ fn check(req: &str, op: &str, function: &str, entry: &str, arguments: &[&str], f
 #[test]
 #[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
 fn model_and_implementation_agree_on_a_requirements_neighbourhood() {
-    // Both directions in one call: what it refines and what refines it. Two
-    // suites once named `ancestors` and `descendants` under the one op, and
-    // the binding drove only the first.
     check(
         "REQ-CONTEXT",
         "REQ-CONTEXT.neighbourhood_is_closed",
@@ -118,8 +109,6 @@ fn model_and_implementation_agree_on_what_a_label_names() {
     );
 }
 
-/// What a shell may type for `--parts`: nothing, `all`, or a list of labels
-/// with dashes, stray blanks, repeats, and names that are no part.
 fn shell_choice() -> BTreeMap<String, Schema> {
     let mut examples: Vec<String> = ALL_PARTS.iter().map(|p| p.label().replace(' ', "-")).collect();
     examples.extend(
@@ -154,9 +143,6 @@ fn words(examples: &[&str]) -> Schema {
     Schema::Str { max_len: Some(0), examples: examples.iter().map(|s| s.to_string()).collect() }
 }
 
-/// A claim over two requirements, two clauses, a few anchors (so one item can
-/// carry several claims), test and non-test paths, and sources that name a
-/// symbol on its own, inside a longer word, or not at all.
 fn claim() -> Schema {
     let mut fields = BTreeMap::new();
     fields.insert(
@@ -190,9 +176,6 @@ fn claims_in() -> BTreeMap<String, Schema> {
     fields
 }
 
-/// Claims weighted towards implementing and testing, the two roles the tests
-/// a change may break are about, so an implementing item with a symbol and a
-/// test file nobody claimed meet often.
 fn affected_in() -> BTreeMap<String, Schema> {
     let mut fields = claims_in();
     let Schema::Struct { fields: mut one } = claim() else { unreachable!() };
@@ -244,8 +227,6 @@ fn model_and_implementation_agree_on_the_tests_a_change_may_break() {
     );
 }
 
-/// The generators reach what the clauses are about.
-///
 /// @tests REQ-DRT-COVER.law_coverage
 #[test]
 fn generation_reaches_chains_cycles_and_every_kind_of_choice() {
@@ -327,9 +308,6 @@ fn generation_reaches_chains_cycles_and_every_kind_of_choice() {
     );
 }
 
-/// The shell's choices, the claims on a target and the tests a change may
-/// break reach what their floors name.
-///
 /// @tests REQ-DRT-COVER.law_coverage
 #[test]
 fn generation_reaches_shell_lists_shared_items_and_unclaimed_uses() {

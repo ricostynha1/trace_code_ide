@@ -1,14 +1,3 @@
-//! The web frontend, checked against the buffers it is given.
-//!
-//! The same harness that checks the terminal one, pointed at a different
-//! process. Nothing in `drt::frontend` knows what a terminal or a web view is,
-//! which is the point of putting a frontend behind a line protocol: a second
-//! frontend costs a `RunnerSpec` and no new checking machinery.
-//!
-//! What this establishes and what it does not: the text the page shows and the
-//! actions it offers are the buffer's. Whether a button is where a person would
-//! look for it is a judgement, and the evidence ladder has a rung for that.
-
 use tracelean_core::drt::frontend::{capture, check, Screen, Verdict};
 use tracelean_core::drt::run::RunnerSpec;
 use tracelean_core::observe::transcript::Event;
@@ -37,12 +26,6 @@ fn frontend(flags: &[&str]) -> RunnerSpec {
     RunnerSpec { cmd, cwd: None }
 }
 
-/// A buffer with evidence marks in its spans.
-///
-/// The first line is two spans of the *same* mark, side by side, and that is
-/// the whole point: they are equal roles in two different span values. A
-/// frontend comparing roles by identity sees two regions where there is one,
-/// and the text it draws is identical either way.
 fn graded() -> Buffer {
     let tested = Role::Mark { mark: Kind::Tested, held: true };
     file_buffer(
@@ -56,8 +39,6 @@ fn graded() -> Buffer {
     )
 }
 
-/// Core-produced buffers of every kind, including the shapes that break a
-/// renderer written in a language whose strings are UTF-16.
 fn buffers() -> Vec<Buffer> {
     vec![
         directory_buffer("src".into(), vec![]),
@@ -75,8 +56,6 @@ fn buffers() -> Vec<Buffer> {
                 Mark { start: 12, stop: 23, role: Role::Heading },
             ],
         ),
-        // A character outside the basic plane: two UTF-16 code units, one
-        // character. A renderer slicing by code unit halves it.
         file_buffer(
             "score.txt".into(),
             "𝄞 clef\nsecond".into(),
@@ -99,10 +78,6 @@ fn buffers() -> Vec<Buffer> {
             vec![Event { kind: "wrote".into(), text: "a.rs".into() }],
         ),
         graded(),
-        // The stations. This is the buffer the window paints as emblems rather
-        // than as words, so it is the one that exercises
-        // `presentation_may_be_symbolic` — and what the harness reads back has
-        // to be these rows' own text.
         menu_buffer("stations".into(), station_entries()),
     ]
 }
@@ -120,15 +95,6 @@ fn the_web_frontend_draws_every_buffer_it_is_given() {
     }
 }
 
-/// And the text it puts on the page is the buffer's, read off the page rather
-/// than taken on the frontend's word.
-///
-/// The stations are among the buffers, and the window paints those as emblems
-/// rather than as words. What comes back is still `project`, `sandbox`,
-/// `requirements`, `design` — because what is read off a screen is the
-/// accessible name of each region and not the glyph, which is the amendment
-/// stated as a run.
-///
 /// @tests REQ-VIEW.screen_is_readable
 /// @tests REQ-VIEW.presentation_may_be_symbolic
 /// @structural REQ-VIEW.screen_is_readable reason="a claim about reading what a process rendered, which is not a value either side computes"
@@ -145,14 +111,6 @@ fn what_the_web_frontend_renders_is_the_buffer() {
     );
 }
 
-/// A frontend that names a region after the glyph it painted is caught.
-///
-/// Without this the symbolic permission would be unfalsifiable: a harness that
-/// has only ever read correct names would pass a frontend that returned the
-/// buffer's text no matter what it drew. `--mislabel` names each painted region
-/// after its own painting, which is exactly the mistake the amendment allows
-/// room for, and the capture must fail on it.
-///
 /// @tests REQ-VIEW.presentation_may_be_symbolic
 #[test]
 #[ignore = "runs the web frontend under node; run with --ignored"]
@@ -166,12 +124,6 @@ fn a_symbol_named_after_itself_is_caught() {
     );
 }
 
-/// The harness has teeth against this frontend too.
-///
-/// A suite that has only ever seen a correct frontend would pass against a
-/// check that returned nothing. So the web frontend draws wrongly on demand,
-/// and both ways of being wrong are caught and named apart.
-///
 /// @tests REQ-VIEW.frontend_adds_nothing
 /// @tests REQ-VIEW.text_is_the_content
 #[test]
@@ -198,17 +150,6 @@ fn a_web_frontend_that_embroiders_or_invents_is_caught() {
     }
 }
 
-/// A span is one region, however many characters it covers.
-///
-/// The one thing about this frontend that the text it draws cannot show. A role
-/// carries a payload now, and `===` on an object compares identity — so a
-/// frontend that compared roles the obvious way would cut every character of a
-/// graded span into its own region, draw exactly the same text, pass every
-/// other check in this file, and put one button under each letter.
-///
-/// Two lines, eleven characters of one grade each. Two regions, not
-/// twenty-two.
-///
 /// @tests REQ-VIEW.structure_over_text
 /// @structural REQ-VIEW.structure_over_text reason="a claim about how a second process divided a line, which is not a value either side computes"
 #[test]

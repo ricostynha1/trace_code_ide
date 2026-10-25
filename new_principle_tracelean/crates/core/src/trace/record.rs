@@ -1,14 +1,7 @@
-//! Evidence records and their invalidation.
-//!
-//! This is the soundness core. Everything else decides what a claim is worth;
-//! this decides when it stops being worth it, and getting it wrong is worse
-//! than having no tool — evidence would be displayed for code that has changed.
-
 use serde::{Deserialize, Serialize};
 
 use crate::evidence::{Bond, Level};
 
-/// What a record is about: one clause of one requirement, on one bond.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Key {
@@ -17,52 +10,27 @@ pub struct Key {
     pub bond: Bond,
 }
 
-/// Backend-specific detail, typed rather than free-form so a record cannot
-/// quietly omit what makes it reproducible.
-///
 /// @implements REQ-EVID.record_reproducible
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", rename_all_fields = "camelCase")]
 pub enum Detail {
-    /// A person, or a delegate a person authorised, judged requirement against
-    /// model: `agrees` at L2, `drift` or `unmodelable` at L1.
     Judge {
         verdict: String,
-        /// Who decided. A judgement is attributable or it is not a judgement.
-        ///
-        /// Spelled `judgedBy` rather than `by` because the model's language
-        /// reserves the word, and a name escaped there cannot be read by the
-        /// grammar this project parses Lean with (ADR-0008).
-        ///
         /// @implements REQ-JUDGE.human_decides
         judged_by: String,
-        /// The listed person who authorised `judged_by` to judge, when the
-        /// judge is not a person themselves (ADR-0015). Absent in records made
-        /// before delegation existed, which still load.
-        ///
         /// @implements REQ-JUDGE.human_decides
         #[serde(default, skip_serializing_if = "Option::is_none")]
         delegated_by: Option<String>,
         prompt_version: String,
-        /// Why, in the judge's words: what a drift differs on.
-        ///
         /// @implements REQ-JUDGE.drift_recorded
         #[serde(default, skip_serializing_if = "Option::is_none")]
         note: Option<String>,
     },
-    /// Differential testing ran and found no disagreement.
     Drt { seed: u64, cases: u64, op: String },
-    /// A Lean theorem discharged the property.
     Proof { theorem_name: String, toolchain: String },
 }
 
 impl Detail {
-    /// The highest level this kind of evidence can establish.
-    ///
-    /// A judgement is a reading, not an execution: it can never promote a link
-    /// past the level its method supports, which is what stops the most
-    /// fallible bond producing the most confident output.
-    ///
     /// @implements REQ-EVID.judgement_caps
     /// @implements REQ-JUDGE.caps_at_judgement
     pub fn ceiling(&self) -> Level {
@@ -74,38 +42,21 @@ impl Detail {
     }
 }
 
-/// `Detail::ceiling`, in the shape the conformance protocol exchanges.
-///
 /// @implements REQ-EVID.judgement_caps
-/// Named `detail_ceiling` rather than `ceiling` because `Detail` already has a
-/// `ceiling` method, and a binding resolves a symbol by name.
-///
 /// @drt REQ-EVID.judgement_caps
 pub fn detail_ceiling(detail: Detail) -> Level {
     detail.ceiling()
 }
 
-/// What is wrong with a record, if anything.
-///
 /// @implements ARCH-HONEST.named_findings
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", rename_all_fields = "camelCase")]
 pub enum Reproducibility {
     Reproducible,
-    /// A field the method needs is empty.
     Incomplete { field: String },
-    /// An input the method depends on is not named.
     MissingInput { name: String },
 }
 
-/// The inputs a record of this kind must name.
-///
-/// A judgement depends on the requirement text and the model; a differential
-/// run on the model and the implementation; a proof on the model and the
-/// toolchain that checked it. Each is something that can change underneath the
-/// record, and something that changes and is not named is a record that stays
-/// valid through a change it should not have survived.
-///
 /// @implements REQ-STALE.inputs_identified
 pub fn required_inputs(detail: &Detail) -> &'static [&'static str] {
     match detail {
@@ -115,16 +66,6 @@ pub fn required_inputs(detail: &Detail) -> &'static [&'static str] {
     }
 }
 
-/// Whether a record carries what is needed to reproduce and to invalidate it.
-///
-/// The type does most of the work — a differential record has nowhere to put a
-/// seed except the `seed` field — but a type cannot stop an empty string, and
-/// an empty theorem name is a record nobody can check.
-///
-/// The first fault is the one reported, checking the method's own fields before
-/// its inputs: a record whose method is not even complete is not worth asking
-/// about dependencies.
-///
 /// @implements REQ-EVID.record_reproducible
 /// @implements REQ-STALE.inputs_identified
 /// @drt REQ-EVID.record_reproducible
@@ -176,47 +117,31 @@ pub fn reproducibility(record: Evidence) -> Reproducibility {
     }
 }
 
-/// One piece of evidence, and everything it depended on.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Evidence {
     pub key: Key,
     pub level: Level,
     pub detail: Detail,
-    /// Identity of the link this was established for. Evidence keyed on it
-    /// cannot be inherited by a link that has been retargeted.
-    ///
     /// @implements REQ-STALE.retarget_invalidates
     pub link_hash: String,
-    /// Every input this depended on, as `(name, hash)`, sorted.
-    ///
     /// @implements REQ-STALE.inputs_identified
     pub inputs: Vec<(String, String)>,
 }
 
 impl Evidence {
-    /// The level this record actually establishes: never above what its backend
-    /// can support, whatever it claims.
     pub fn effective_level(&self) -> Level {
         self.level.min(self.detail.ceiling())
     }
 }
 
-/// Why a record no longer applies.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum Staleness {
-    /// An input changed.
     InputChanged { name: String },
-    /// The link it was established for is gone or points elsewhere.
     LinkRetargeted,
 }
 
-/// Whether a record still applies, given the current state of the world.
-///
-/// `current` maps input names to their hashes now. A missing input counts as
-/// changed: absence is not evidence that nothing moved.
-///
 /// @implements REQ-STALE.change_invalidates
 pub fn staleness(
     record: &Evidence,
@@ -235,10 +160,6 @@ pub fn staleness(
     None
 }
 
-/// What staleness depends on, and nothing else.
-///
-/// The model is about this shape rather than the full record: the rest of an
-/// evidence record is what it established, not what keeps it true.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct StalenessInput {
     #[serde(rename = "linkHash")]
@@ -246,8 +167,6 @@ pub struct StalenessInput {
     pub inputs: Vec<(String, String)>,
 }
 
-/// `staleness`, in the shape the conformance protocol exchanges.
-///
 /// @implements REQ-STALE.change_invalidates
 /// @implements REQ-STALE.retarget_invalidates
 /// @drt REQ-STALE.change_invalidates
@@ -269,22 +188,12 @@ pub fn staleness_of(
         .map(|(name, _)| Staleness::InputChanged { name: name.clone() })
 }
 
-/// The two sides of a sweep, in the order the records were given.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Sweep {
-    /// Records that still apply.
     pub valid: Vec<StalenessInput>,
-    /// Records that no longer apply, with why.
     pub stale: Vec<(StalenessInput, Staleness)>,
 }
 
-/// Partition records into those that still apply and those that do not.
-///
-/// Every record comes back, unchanged, on one side or the other. A scanner that
-/// could rewrite a record could write one that was never earned; a scanner that
-/// omitted stale records would leave a clause looking untested rather than
-/// looking like a claim that has expired, and those call for different actions.
-///
 /// @implements REQ-STALE.scanner_never_writes
 /// @implements REQ-STALE.stale_is_visible
 /// @drt REQ-STALE.scanner_never_writes
@@ -304,13 +213,6 @@ pub fn sweep(
     out
 }
 
-/// The records that replace stale ones: newly produced, never resurrected.
-///
-/// A stale record is not repaired, re-judged or quietly forgiven. The only
-/// thing that makes a key valid again is the backend that owns it producing a
-/// new record — which is why this is a filter over what was produced and never
-/// touches what was stale.
-///
 /// @implements REQ-STALE.no_silent_revalidation
 /// @drt REQ-STALE.no_silent_revalidation
 pub fn revalidated(
@@ -323,12 +225,6 @@ pub fn revalidated(
         .collect()
 }
 
-/// Records that still apply, in the order given.
-///
-/// The scanner marks records stale; it never rewrites, regenerates or deletes
-/// one. A scanner that could regenerate a record could regenerate one that was
-/// never earned.
-///
 /// @implements REQ-STALE.scanner_never_writes
 /// @implements REQ-STALE.stale_is_visible
 pub fn partition<'a>(
@@ -365,9 +261,6 @@ mod tests {
         inputs.iter().map(|(a, b)| (a.to_string(), b.to_string())).collect()
     }
 
-    /// Every record comes back once, unchanged, on the side it belongs: one
-    /// still current, one whose input changed, one whose link moved.
-    ///
     /// @tests REQ-STALE.scanner_never_writes
     /// @tests REQ-STALE.stale_is_visible
     #[test]
@@ -399,8 +292,6 @@ mod tests {
         );
     }
 
-    /// Absence is not evidence that nothing moved.
-    ///
     /// @tests REQ-STALE.change_invalidates
     #[test]
     fn a_missing_input_counts_as_changed() {

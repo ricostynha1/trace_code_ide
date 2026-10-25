@@ -1,48 +1,25 @@
-//! Documentation as a link.
-//!
-//! Documentation rots because nothing connects it to what it describes. The
-//! connection already exists here: a requirement carries a hash of its content,
-//! a model claims to model it, and when the text changes the hash moves and the
-//! bond drops back to needing review.
-//!
-//! A document gets the same treatment. It names what it describes, records what
-//! that hashed to, and when the hash moves the document is *in review*.
-
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
 use super::index::Index;
 
-/// What a document claims to describe, and what that hashed to when written.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DocLink {
     pub file: String,
-    /// An anchor identity, or a requirement identifier.
-    ///
     /// @implements REQ-DOCLINK.declares_target
     pub target: String,
     /// @implements REQ-DOCLINK.records_hash
     pub recorded_hash: String,
 }
 
-/// Where a document stands relative to what it describes.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum State {
-    /// The recorded hash matches. The document was written about this.
     Current,
-    /// The hash moved. The document may still be right; nobody has confirmed it
-    /// since the change.
-    ///
-    /// Not an error. Blocking on it would make people stop writing
-    /// documentation; hiding it would make the documentation worthless.
-    ///
     /// @implements REQ-DOCLINK.hash_moves_review
     /// @implements REQ-DOCLINK.review_is_not_error
     InReview { was: String, now: String },
-    /// The target no longer exists.
-    ///
     /// @implements REQ-DOCLINK.dangling_reported
     Dangling,
 }
@@ -53,28 +30,12 @@ impl State {
     }
 }
 
-/// Whether a document's state stops the build.
-///
-/// Only a dangling target does. Blocking on *in review* would make people stop
-/// writing documentation, which is the failure this requirement exists to
-/// prevent; treating it as current would make the mechanism pointless.
-///
 /// @implements REQ-DOCLINK.review_is_not_error
-/// Named `state_blocks` rather than `blocks` because the type already has a
-/// `blocks` method, and a binding resolves a symbol by name: two functions
-/// called `blocks` in one file would let the binding point at the wrong one.
-///
 /// @drt REQ-DOCLINK.review_is_not_error
 pub fn state_blocks(state: State) -> bool {
     state.blocks()
 }
 
-/// What every target in the project currently hashes to.
-///
-/// Requirements hash by content; code anchors hash by normalised body. Both are
-/// the same machinery the annotations already use — a document is resolved by
-/// the same mechanism as a link, not by one written for it.
-///
 /// @implements REQ-DOCLINK.same_anchor_machinery
 pub fn current_hashes(index: &Index) -> BTreeMap<String, String> {
     let mut out = BTreeMap::new();
@@ -87,12 +48,6 @@ pub fn current_hashes(index: &Index) -> BTreeMap<String, String> {
     out
 }
 
-/// Where one document stands.
-///
-/// `current` is an association list rather than a map because that is the
-/// shape the conformance protocol exchanges; the lookup is by first match, and
-/// a target that appears twice is a caller's problem, not this function's.
-///
 /// @implements REQ-DOCLINK.hash_moves_review
 /// @drt REQ-DOCLINK.hash_moves_review
 /// @drt REQ-DOCLINK.dangling_reported
@@ -104,15 +59,10 @@ pub fn state(link: DocLink, current: Vec<(String, String)>) -> State {
     }
 }
 
-/// The pairs `state` expects, from the map `current_hashes` produces.
 pub fn pairs(current: &BTreeMap<String, String>) -> Vec<(String, String)> {
     current.iter().map(|(k, v)| (k.clone(), v.clone())).collect()
 }
 
-/// Parse `describes:` and `described_hash:` out of a document's frontmatter.
-///
-/// A document may describe several things, so `describes` is a list and
-/// `described_hash` is a map keyed by target.
 pub fn links_in(file: &str, content: &str) -> Vec<DocLink> {
     let Some(frontmatter) = frontmatter(content) else { return Vec::new() };
 
@@ -128,8 +78,6 @@ pub fn links_in(file: &str, content: &str) -> Vec<DocLink> {
         let indented = line.starts_with(' ') || line.starts_with('\t');
         if indented {
             if in_hashes {
-                // Split from the right: an anchor target contains `::`, so
-                // splitting from the left would cut the target in half.
                 if let Some((target, hash)) = line.trim().rsplit_once(':') {
                     hashes.insert(target.trim().to_string(), hash.trim().to_string());
                 }
@@ -173,17 +121,6 @@ pub fn links_in(file: &str, content: &str) -> Vec<DocLink> {
         .collect()
 }
 
-/// What a document declares, given as lines.
-///
-/// Returns target and recorded hash, and nothing else: the file a declaration
-/// was found in is not part of what it says, and a model that agreed with an
-/// implementation which had started consulting the path would be impossible to
-/// write.
-///
-/// A document that declares nothing — a decision record, which describes a
-/// moment rather than a subsystem and names the requirements it affects —
-/// declares nothing here, rather than declaring an empty target.
-///
 /// @implements REQ-DOCLINK.declares_target
 /// @implements REQ-DOCLINK.records_hash
 /// @implements REQ-DOCLINK.decisions_exempt
@@ -198,8 +135,6 @@ pub fn declared_in(lines: Vec<String>) -> Vec<(String, String)> {
         .collect()
 }
 
-/// `recorded_frontmatter`, over owned arguments.
-///
 /// @implements REQ-DOCLINK.confirmation_is_human
 /// @drt REQ-DOCLINK.confirmation_is_human
 pub fn recorded_of(targets: Vec<String>, current: Vec<(String, String)>) -> String {
@@ -207,11 +142,6 @@ pub fn recorded_of(targets: Vec<String>, current: Vec<(String, String)>) -> Stri
     out.push_str(&targets.join(", "));
     out.push_str("]\ndescribed_hash:\n");
     for target in &targets {
-        // First match, the way `state` looks a target up. Collecting into a map
-        // here would make a repeated target resolve to the *last* entry while
-        // `state` resolved it to the first, so one function in this module
-        // would say a document is current and the other would write a different
-        // hash for it. Differential testing found exactly that.
         let hash = current
             .iter()
             .find(|(name, _)| name == target)
@@ -228,11 +158,6 @@ fn frontmatter(content: &str) -> Option<&str> {
     Some(&rest[..end])
 }
 
-/// The frontmatter a document should carry, given what its targets hash to now.
-///
-/// Confirming is a human act — read the document against the changed code, then
-/// re-record. This produces the text to record; it never records it.
-///
 /// @implements REQ-DOCLINK.confirmation_is_human
 pub fn recorded_frontmatter(targets: &[String], current: &BTreeMap<String, String>) -> String {
     let mut out = String::from("describes: [");
@@ -307,8 +232,6 @@ mod tests {
         assert!(links_in("docs/x.md", "# Just prose").is_empty());
     }
 
-    /// A target declared with no recorded hash is in review from the start:
-    /// nobody has confirmed the document against anything.
     #[test]
     fn an_unrecorded_hash_is_in_review_not_current() {
         let doc = "---\ndescribes: [REQ-EVID]\n---\nbody";
@@ -329,8 +252,6 @@ mod tests {
         assert!(text.contains("  REQ-EVID: h9"));
     }
 
-    /// A document's lines give each target with the hash it recorded.
-    ///
     /// @tests REQ-DOCLINK.declares_target
     /// @tests REQ-DOCLINK.records_hash
     #[test]

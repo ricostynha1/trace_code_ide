@@ -1,20 +1,7 @@
-//! The language-server layer.
-//!
-//! A model in one language beside an implementation in another is the premise
-//! of this project, so a registry keyed by language is the shape from the
-//! start. What lives here is the part that decides: converting a position,
-//! lowering an edit, and naming the state of a server.
-
 use serde::{Deserialize, Serialize};
 
 use crate::history::command::Command;
 
-/// How a server counts columns.
-///
-/// Taken from what the server declared, never assumed: every mismatch shows up
-/// as an off-by-some on exactly the lines containing non-ASCII text, reported
-/// as "hover is wrong sometimes" and nearly unfindable from that description.
-///
 /// @implements REQ-LSP.encoding_declared
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
@@ -24,19 +11,12 @@ pub enum Encoding {
     Utf32,
 }
 
-/// A position as the protocol states it: a line, and a column in the server's
-/// units.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Position {
     pub line: u32,
     pub character: u32,
 }
 
-/// Byte offset within `line_text` for a column in `encoding`.
-///
-/// `None` when the column falls inside a character, which is a position no
-/// buffer has and must not be rounded to a neighbouring one.
-///
 /// @implements REQ-LSP.column_to_offset
 /// @drt REQ-LSP.column_to_offset
 pub fn to_byte_offset(line_text: String, character: u32, encoding: Encoding) -> Option<usize> {
@@ -51,17 +31,12 @@ pub fn to_byte_offset(line_text: String, character: u32, encoding: Encoding) -> 
             Encoding::Utf32 => 1,
         };
         if counted > character {
-            // The column landed inside this character.
             return None;
         }
     }
     (counted == character).then_some(line_text.len())
 }
 
-/// Column in `encoding` for a byte offset within `line_text`.
-///
-/// `None` when the offset is past the end or inside a character.
-///
 /// @implements REQ-LSP.offset_to_column
 /// @drt REQ-LSP.offset_to_column
 pub fn to_character(line_text: String, offset: usize, encoding: Encoding) -> Option<usize> {
@@ -80,7 +55,6 @@ pub fn to_character(line_text: String, offset: usize, encoding: Encoding) -> Opt
     )
 }
 
-/// One edit a server asked for, in byte offsets.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Edit {
     pub start: usize,
@@ -91,20 +65,11 @@ pub struct Edit {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum LowerError {
-    /// Two edits in one request cover the same text.
     Overlap { first: usize, second: usize },
-    /// An edit's range is not inside the file, or splits a character.
     OutOfRange { start: usize, end: usize },
     Inverted { start: usize, end: usize },
 }
 
-/// Lower a server's edits into commands.
-///
-/// Applied from the end of the file backwards, so an earlier edit never
-/// invalidates the offsets of a later one. Overlapping edits are refused rather
-/// than applied in some order: the request describes a result, and two edits
-/// over the same text describe two different results.
-///
 /// @implements REQ-LSP.edits_become_commands
 /// @implements REQ-LSP.edits_ordered
 /// @implements REQ-LSP.overlap_refused
@@ -124,13 +89,11 @@ pub fn lower(file: String, content: String, edits: Vec<Edit>) -> Result<Vec<Comm
     let mut ordered: Vec<&Edit> = edits.iter().collect();
     ordered.sort_by_key(|edit| (edit.start, edit.end));
     for pair in ordered.windows(2) {
-        // Touching is not overlapping: two edits may meet at a boundary.
         if pair[1].start < pair[0].end {
             return Err(LowerError::Overlap { first: pair[0].start, second: pair[1].start });
         }
     }
 
-    // Back to front, so every remaining offset still refers to the same text.
     let mut commands = Vec::new();
     for edit in ordered.into_iter().rev() {
         if edit.end > edit.start {
@@ -151,7 +114,6 @@ pub fn lower(file: String, content: String, edits: Vec<Edit>) -> Result<Vec<Comm
     Ok(commands)
 }
 
-/// What lowering produced: commands, or the reason it produced none.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum Lowered {
@@ -159,8 +121,6 @@ pub enum Lowered {
     Refused { error: LowerError },
 }
 
-/// `lower`, in the shape the conformance protocol exchanges.
-///
 /// @implements REQ-LSP.edits_ordered
 /// @drt REQ-LSP.edits_ordered
 /// @drt REQ-LSP.edits_become_commands
@@ -172,13 +132,6 @@ pub fn lower_outcome(file: String, content: String, edits: Vec<Edit>) -> Lowered
     }
 }
 
-/// What is known about a server for a language.
-///
-/// The absence of a server is a named state. For a proof assistant this has a
-/// sharp instance: an empty list of goals means the proof is complete, so
-/// rendering "no server running" that way tells the user they have finished
-/// when they have not started.
-///
 /// @implements REQ-LSP.absent_server_named
 /// @implements REQ-LSP.registry_per_language
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -190,17 +143,13 @@ pub enum ServerState {
     Failed { reason: String },
 }
 
-/// What to show where a result would go.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", rename_all_fields = "camelCase")]
 pub enum Display<T> {
     Result { value: T },
-    /// No server, and why. Never an empty result.
     Unavailable { reason: String },
 }
 
-/// Present a server's answer, or say why there is none.
-///
 /// @implements REQ-LSP.absent_server_named
 pub fn present<T>(state: &ServerState, answer: Option<T>) -> Display<T> {
     match (state, answer) {
@@ -218,39 +167,18 @@ pub fn present<T>(state: &ServerState, answer: Option<T>) -> Display<T> {
     }
 }
 
-/// `present`, at the one type the conformance protocol can carry.
-///
-/// The function is generic because what a server answers with varies; a
-/// binding needs one concrete type, and the branch being checked is the same
-/// one for every `T`.
-///
 /// @implements REQ-LSP.absent_server_named
 /// @drt REQ-LSP.absent_server_named
 pub fn present_text(state: ServerState, answer: Option<String>) -> Display<String> {
     present(&state, answer)
 }
 
-/// The position encoding to use for a language, taken from what its server
-/// declared.
-///
-/// A server per language, and the encoding read off the running one. Assuming
-/// UTF-16 because the protocol's default is UTF-16 is the bug this exists to
-/// prevent: a server that declared UTF-8 would then be sent positions it
-/// cannot interpret, and the edits would land in the wrong place on exactly
-/// the lines with non-ASCII text.
-///
-/// A language with no entry is named as absent rather than answered with a
-/// default, because a default here is a wrong answer that looks like a right
-/// one.
-///
 /// @implements REQ-LSP.registry_per_language
 /// @implements REQ-LSP.encoding_declared
 /// @implements REQ-LSP.absent_server_named
 /// @drt REQ-LSP.registry_per_language
 /// @drt REQ-LSP.encoding_declared
 pub fn encoding_for(registry: Vec<(String, ServerState)>, language: String) -> Display<Encoding> {
-    // First match, so a registry that names a language twice resolves the way
-    // every other association list in this project does.
     match registry.into_iter().find(|(name, _)| *name == language) {
         None => Display::Unavailable {
             reason: format!("no server is registered for {language}"),
@@ -266,15 +194,12 @@ pub fn encoding_for(registry: Vec<(String, ServerState)>, language: String) -> D
 mod tests {
     use super::*;
 
-    /// The exchanged shape says commands or the refusal, never both.
-    ///
     /// @tests REQ-LSP.overlap_refused
     /// @tests REQ-LSP.edits_ordered
     #[test]
     fn a_lowering_is_commands_or_a_refusal() {
         let edit = |start, end| Edit { start, end, text: "x".into() };
         let lowered = lower_outcome("a.rs".into(), "abcd".into(), vec![edit(0, 1), edit(2, 3)]);
-        // Each replacement is a delete then an insert, the later edit first.
         let Lowered::Commands { commands } = lowered else { panic!("{lowered:?}") };
         let offsets: Vec<usize> = commands
             .iter()
@@ -288,9 +213,6 @@ mod tests {
         assert!(matches!(refused, Lowered::Refused { error: LowerError::Overlap { .. } }), "{refused:?}");
     }
 
-    /// The class of bug this closes: an off-by-some on exactly the lines with
-    /// non-ASCII text.
-    ///
     /// @tests REQ-LSP.offset_to_column
     /// @tests REQ-LSP.column_to_offset
     #[test]
@@ -310,7 +232,6 @@ mod tests {
         }
     }
 
-    /// The encodings genuinely differ, so taking the server's word matters.
     #[test]
     fn the_encodings_disagree_where_it_counts() {
         let line = "😀x".to_string();
@@ -319,7 +240,6 @@ mod tests {
         assert_eq!(to_character(line, 4, Encoding::Utf32), Some(1));
     }
 
-    /// A column inside a character is a position no buffer has.
     #[test]
     fn a_column_inside_a_character_is_refused() {
         assert_eq!(to_byte_offset("😀".into(), 1, Encoding::Utf16), None);
@@ -356,7 +276,6 @@ mod tests {
         ));
     }
 
-    /// Two edits meeting at a boundary describe one result, not two.
     #[test]
     fn touching_edits_are_allowed() {
         let edits = vec![
@@ -375,8 +294,6 @@ mod tests {
         ));
     }
 
-    /// For a proof assistant, an empty goal list means the proof is complete.
-    ///
     /// @tests REQ-LSP.absent_server_named
     #[test]
     fn no_server_is_never_rendered_as_an_empty_result() {
@@ -385,7 +302,6 @@ mod tests {
             present(&ServerState::NotStarted, Some(goals.clone())),
             Display::Unavailable { reason: "no server is running for this language".into() }
         );
-        // A running server with no goals is the real "proof complete".
         assert_eq!(
             present(&ServerState::Running { encoding: Encoding::Utf16 }, Some(goals.clone())),
             Display::Result { value: goals }

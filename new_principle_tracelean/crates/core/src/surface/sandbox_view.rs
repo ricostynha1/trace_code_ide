@@ -1,17 +1,3 @@
-//! The sandbox station: a session, the command that enters it, what the agent
-//! changed, and what it said.
-//!
-//! The first TraceLean's sandbox was usable because it put everything on one
-//! panel: a button to make a session, a command to copy, the changes as they
-//! landed, and the agent's conversation live beside them. This is that panel as
-//! a buffer. Every button is a span carrying the action a key would dispatch,
-//! so a click, a key and a right-click reach the same thing.
-//!
-//! The conversation and cost rows are `produce::sandbox_events`, the modelled
-//! producer, so what the agent said is still shown by the function the model
-//! checks. Lines are wrapped to the width the pane has: a conversation clipped
-//! at the pane's edge is a conversation nobody can read.
-//!
 //! @implements REQ-SHOW.sandbox_session_shown
 
 use serde::{Deserialize, Serialize};
@@ -21,31 +7,25 @@ use crate::observe::transcript::Event;
 use crate::surface::produce::{sandbox_events, tidy};
 use crate::surface::view::{Buffer, BufferKind, Role, Span};
 
-/// A change the agent made, waiting for a person.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Pending {
-    /// `created`, `modified` or `deleted`.
     pub kind: String,
     pub path: String,
-    /// Lines the change adds and removes, as its diff shows them.
     #[serde(default)]
     pub added: usize,
     #[serde(default)]
     pub removed: usize,
 }
 
-/// The session, as the panel shows it.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Shown {
     pub id: String,
-    /// The containment, said in words: `bubblewrap`, or why there is none.
     pub containment: String,
     pub command: String,
 }
 
-/// Everything the panel is produced from.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SandboxView {
@@ -53,12 +33,9 @@ pub struct SandboxView {
     pub pending: Vec<Pending>,
     pub said: Vec<Event>,
     pub spend: Spend,
-    /// The characters a line may take before it wraps.
     pub width: usize,
 }
 
-/// Text built a line at a time, each piece with its role and actions. Shared
-/// by the panels that are laid out rather than parsed.
 pub(crate) struct Lines {
     text: String,
     spans: Vec<Span>,
@@ -71,7 +48,6 @@ impl Lines {
         Lines { text: String::new(), spans: Vec::new(), at: 0, width: width.max(12) }
     }
 
-    /// One line of pieces. Not wrapped: buttons and headings are short.
     pub(crate) fn line(&mut self, pieces: &[(&str, Role, &[&str])]) {
         if !self.text.is_empty() {
             self.text.push('\n');
@@ -92,8 +68,6 @@ impl Lines {
         }
     }
 
-    /// A long text, wrapped to the width, every row with the same role and
-    /// actions — so any part of a wrapped command still copies the command.
     pub(crate) fn wrapped(&mut self, indent: &str, text: &str, role: Role, actions: &[&str]) {
         let room = self.width.saturating_sub(indent.chars().count()).max(8);
         let characters: Vec<char> = text.chars().collect();
@@ -106,8 +80,6 @@ impl Lines {
         }
     }
 
-    /// A block of text as it is, with `marks` placed in it (offsets within the
-    /// block) — each mark's role bringing what that role offers.
     pub(crate) fn marked(&mut self, text: &str, marks: Vec<crate::surface::produce::Mark>) {
         if !self.text.is_empty() {
             self.text.push('\n');
@@ -129,7 +101,6 @@ impl Lines {
         self.line(&[]);
     }
 
-    /// The lines as a record titled `title`.
     pub(crate) fn finish(self, title: &str) -> Buffer {
         let size = self.text.chars().count();
         Buffer {
@@ -141,9 +112,6 @@ impl Lines {
     }
 }
 
-/// Rows of at most `room` characters, broken after a space where the text has
-/// one in the row's second half and through a word otherwise; a line break in
-/// the text starts a row.
 fn break_words(text: &[char], room: usize) -> Vec<String> {
     let mut rows = Vec::new();
     for paragraph in text.split(|c| *c == '\n') {
@@ -154,8 +122,6 @@ fn break_words(text: &[char], room: usize) -> Vec<String> {
                 break;
             }
             let cut = match rest[..=room].iter().rposition(|c| *c == ' ') {
-                // A break that would leave most of the row empty is worse
-                // than a word broken: a path after a short word, say.
                 Some(space) if space >= room / 2 => space + 1,
                 _ => room,
             };
@@ -166,7 +132,6 @@ fn break_words(text: &[char], room: usize) -> Vec<String> {
     rows
 }
 
-/// What role a row of the conversation is drawn in.
 fn role_of(kind: &str) -> Role {
     match kind {
         "you" => Role::Requirement,
@@ -178,15 +143,11 @@ fn role_of(kind: &str) -> Role {
     }
 }
 
-/// The estimate under a heading that says what it estimates, in the price
-/// table's own unit.
 fn cost_lines(out: &mut Lines, estimate: &str) {
     out.line(&[("Agent cost (price table's unit)", role_of("cost"), &[])]);
     out.wrapped("  ", estimate, Role::Plain, &[]);
 }
 
-/// The sandbox panel.
-///
 /// @implements REQ-SHOW.sandbox_session_shown
 /// @implements REQ-SHOW.producer_is_pure
 /// @drt REQ-SHOW.sandbox_session_shown
@@ -203,8 +164,6 @@ pub fn sandbox_view(view: SandboxView) -> Buffer {
         );
         out.blank();
         out.line(&[("[ New sandbox ]", Role::Entry, &["sandbox.new"])]);
-        // The estimate is shown, and called one, even with nothing behind it
-        // (`REQ-COST.estimate_is_labelled`).
         if let Some(cost) = sandbox_events(Vec::new(), view.said, view.spend).last() {
             out.blank();
             cost_lines(&mut out, &cost.text);
@@ -237,8 +196,6 @@ pub fn sandbox_view(view: SandboxView) -> Buffer {
             "deleted" => Role::Removed,
             _ => Role::Requirement,
         };
-        // Accept and reject this file first, so they stay on screen however
-        // long the path is.
         let label = format!(" {:<9}", change.kind);
         let (added, removed) = (format!(" +{}", change.added), format!(" −{}", change.removed));
         out.line(&[
@@ -266,8 +223,6 @@ pub fn sandbox_view(view: SandboxView) -> Buffer {
     if rows.len() <= 1 {
         out.wrapped("  ", "Nothing yet. It appears here as the agent works.", Role::Plain, &[]);
     }
-    // The estimate is last in the modelled order and stays last here; the
-    // conversation above it is reversed so the newest is where a person looks.
     let (cost, said) = rows.split_last().map(|(c, s)| (Some(c), s)).unwrap_or((None, &[]));
     for event in said.iter().rev() {
         out.wrapped("", &format!("{}: {}", event.kind, event.text), role_of(&event.kind), &[]);
@@ -306,9 +261,6 @@ mod tests {
         buffer.text[..at].chars().count()
     }
 
-    /// Wrapping breaks between words, and through one only when it is longer
-    /// than a row.
-    ///
     /// @tests REQ-SHOW.sandbox_session_shown
     #[test]
     fn text_wraps_between_words() {

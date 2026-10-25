@@ -1,9 +1,3 @@
-//! Observing an external agent.
-//!
-//! The user runs a tool themselves, in a sandboxed copy of the project.
-//! TraceLean watches that copy and mirrors what it finds. It never launches,
-//! prompts, or drives the tool.
-
 pub mod claude;
 pub mod cost;
 pub mod effects;

@@ -1,6 +1,3 @@
-//! Everything that must be done again is listed by one command whose exit
-//! status says whether anything is (`REQ-STALE.listed_for_a_script`).
-
 use std::path::PathBuf;
 use std::process::Command;
 
@@ -21,10 +18,6 @@ fn stale(dir: &PathBuf) -> (i32, String) {
     (out.status.code().unwrap(), String::from_utf8_lossy(&out.stdout).to_string())
 }
 
-/// A record whose requirement hash no longer matches is listed, with what to
-/// do about it, and the exit status is non-zero; with nothing recorded it is
-/// zero.
-///
 /// @tests REQ-STALE.listed_for_a_script
 /// @structural REQ-STALE.listed_for_a_script reason="a claim about a command's process exit status, which is an effect of the shell rather than a value any function computes"
 #[test]

@@ -1,34 +1,16 @@
-//! The modal keymap.
-//!
-//! A mode machine is a total function from a mode and a key to one of four
-//! outcomes. Stating that as a law is the difference between an interface that
-//! occasionally swallows a key and one that cannot: "sometimes nothing happens"
-//! is `step` being partial, and "escape left me somewhere unexpected" is the
-//! parent relation not being a tree.
-
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
 
-/// What a key does.
-///
-/// Exactly four possibilities, closed: a fifth would be a case the which-key
-/// bar could not describe.
-///
 /// @implements REQ-MYTH.outcomes_closed
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum Outcome {
-    /// Move into a nested mode.
     Enter { mode: String },
-    /// Run an action.
     Dispatch { action: String },
-    /// Move one level towards the root.
     Leave { mode: String },
-    /// The surface handles it — ordinary typing.
     PassThrough,
 }
 
-/// What a binding does when its key is pressed.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum Binding {
@@ -48,15 +30,11 @@ impl Binding {
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Mode {
-    /// The mode one level closer to the root. `None` marks the root.
     #[serde(default)]
     pub parent: Option<String>,
-    /// Ordered pairs rather than a map, matching the model's encoding.
     pub bindings: Vec<(String, Binding)>,
 }
 
-/// The keymap: data a user can edit.
-///
 /// @implements REQ-MYTH.keymap_is_data
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Keymap {
@@ -64,38 +42,14 @@ pub struct Keymap {
     pub modes: Vec<(String, Mode)>,
 }
 
-/// The key that leaves a mode.
 pub const LEAVE: &str = "Escape";
 
-/// The key that opens a leader menu.
-///
-/// A keymap is JSON a person edits, and a binding written on `" "` there is a
-/// quoted space: indistinguishable from a typo and impossible to review. So the
-/// keymap spells the key, and a frontend that received one asks for the
-/// spelling rather than knowing it.
 pub const SPACE: &str = "Space";
 
-/// The keys a frontend reports by name rather than as the character typed.
-///
-/// Which of these a frontend can receive is its medium's business. What none of
-/// them may do is invent a name: a name the keymap does not use is a binding
-/// that silently does nothing, which is exactly what the space bar was — bound
-/// as `Space`, reported by both frontends as `" "`, so `step` answered
-/// `PassThrough` for a key the keymap bound and the leader menu was reachable
-/// from neither. `actions_reachable` is a claim about the keymap; it is only
-/// true of the running editor if the names on both sides of a key press are the
-/// same names, so they are kept here rather than once per frontend.
-///
 /// @implements REQ-MYTH.actions_reachable
 pub const NAMED: &[&str] =
     &["Backspace", "Down", "Enter", LEAVE, "Left", "Right", SPACE, "Tab", "Up"];
 
-/// The keymap's name for a character a frontend received.
-///
-/// Almost every character names itself, and the one that cannot is the space.
-/// A frontend deciding that for itself is a shell making a branch a function
-/// could have made, so this is the one place that knows it.
-///
 /// @implements REQ-MYTH.actions_reachable
 /// @implements ARCH-CORE-SHELL.shell_thin
 pub fn typed(character: char) -> String {
@@ -106,14 +60,6 @@ pub fn typed(character: char) -> String {
     }
 }
 
-/// Every action the surface dispatches.
-///
-/// The registry a keymap is checked against: a binding naming something that is
-/// not here is reported when the keymap loads, which is `actions_defined`, and
-/// an entry here that no key sequence reaches is reported too, which is
-/// `actions_reachable`. Keeping the list next to the mode machine is what makes
-/// both checkable without the keymap layer knowing what any action does.
-///
 /// @implements REQ-MYTH.actions_defined
 pub const ACTIONS: &[&str] = &[
     "context.copy",
@@ -190,29 +136,16 @@ pub const ACTIONS: &[&str] = &[
     "trace.stale",
 ];
 
-/// The registry as a set.
 pub fn actions() -> BTreeSet<String> {
     ACTIONS.iter().map(|name| name.to_string()).collect()
 }
 
-/// Why a keymap could not be loaded.
-///
-/// Unreadable text and a readable keymap that does not hold together are
-/// different failures: the first is a typo in a file, the second is a keymap
-/// that would work until somebody pressed the wrong key.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum LoadError {
-    /// The text is not a keymap at all.
     Unreadable { message: String },
-    /// It is a keymap, and it does not hold together.
     Invalid { problems: Vec<Problem> },
 }
 
-/// Read a keymap from text, refusing one that does not hold together.
-///
-/// Both failures are reported here rather than at the key that triggers them:
-/// a keymap that loads is one every key in it can be pressed against.
-///
 /// @implements REQ-MYTH.keymap_is_data
 pub fn load(text: &str, actions: &BTreeSet<String>) -> Result<Keymap, LoadError> {
     let keymap: Keymap = serde_json::from_str(text)
@@ -240,8 +173,6 @@ impl Mode {
         self.bindings.iter().find(|(k, _)| k == key).map(|(_, binding)| binding)
     }
 
-    /// Add or replace a binding, keeping the list ordered by key so that a
-    /// keymap is a function of its content and not of its edit history.
     pub fn bind(&mut self, key: &str, binding: Binding) {
         self.bindings.retain(|(k, _)| k != key);
         self.bindings.push((key.to_string(), binding));
@@ -253,12 +184,6 @@ impl Mode {
     }
 }
 
-/// What a key does in a mode.
-///
-/// Total: every key in every mode has an outcome, and no key is swallowed. An
-/// unbound key in the root mode is ordinary typing; an unbound key anywhere
-/// else leaves the mode, so a mistyped leader never strands the user.
-///
 /// @implements REQ-MYTH.totality
 /// @implements REQ-MYTH.escape_pops_one
 /// @implements REQ-MYTH.outcomes_closed
@@ -269,12 +194,8 @@ pub fn step(keymap: Keymap, mode: String, key: String) -> Outcome {
     step_in(&keymap, &mode, &key)
 }
 
-/// `step`, borrowing: the walk in `validate` asks it once per mode it passes.
 fn step_in(keymap: &Keymap, mode: &str, key: &str) -> Outcome {
     let Some(current) = keymap.mode(mode) else {
-        // A mode that does not exist cannot bind anything, and pretending it
-        // does would hide the misconfiguration. Falling back to the root is the
-        // behaviour a user can recover from.
         return Outcome::PassThrough;
     };
 
@@ -298,8 +219,6 @@ fn step_in(keymap: &Keymap, mode: &str, key: &str) -> Outcome {
     }
 }
 
-/// The mode a key leaves the machine in.
-///
 /// @implements REQ-MYTH.totality
 pub fn next_mode(keymap: Keymap, mode: String, key: String) -> String {
     let root = keymap.root.clone();
@@ -311,11 +230,6 @@ pub fn next_mode(keymap: Keymap, mode: String, key: String) -> String {
     }
 }
 
-/// Keys available in a mode, with what they do.
-///
-/// Computed from the same data that dispatches the key, so the bar cannot
-/// describe a binding that does not exist or omit one that does.
-///
 /// @implements REQ-MYTH.whichkey_is_a_query
 pub fn which_key(keymap: &Keymap, mode: &str) -> Vec<(String, String)> {
     let Some(current) = keymap.mode(mode) else { return Vec::new() };
@@ -330,38 +244,19 @@ pub fn which_key(keymap: &Keymap, mode: &str) -> Vec<(String, String)> {
     out
 }
 
-/// What is wrong with a keymap.
-///
-/// Ordered by variant and then by content, so the report is a function of the
-/// keymap. It was previously sorted by its own debug rendering, which made the
-/// order an accident of a formatting implementation.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", rename_all_fields = "camelCase")]
 pub enum Problem {
-    /// A binding enters a mode that does not exist.
     UndefinedMode { mode: String, key: String, target: String },
-    /// A binding names an action the registry does not have.
     UndefinedAction { mode: String, key: String, action: String },
-    /// Leaving would not terminate.
     ParentCycle { mode: String },
-    /// A mode no key sequence reaches from the root.
     UnreachableMode { mode: String },
-    /// An action no key sequence reaches from the root.
     UnreachableAction { action: String },
-    /// The declared root does not exist.
     NoRoot { root: String },
-    /// A mode's parent does not exist: leaving would land nowhere.
     UndefinedParent { mode: String, parent: String },
-    /// Repeated Escape from this mode stops short of the root, in a mode with
-    /// no parent that does not bind Escape, or in one that does not exist.
     Stranded { mode: String },
 }
 
-/// Check a keymap against the actions that exist.
-///
-/// Reported at load, not on the key that triggers it: a binding that fails when
-/// pressed is a keymap that works until the moment somebody needs it.
-///
 /// @implements REQ-MYTH.modes_defined
 /// @implements REQ-MYTH.actions_defined
 /// @implements REQ-MYTH.escape_terminates
@@ -395,7 +290,6 @@ pub fn validate(keymap: &Keymap, actions: &BTreeSet<String>) -> Vec<Problem> {
             }
         }
 
-        // A parent is a transition target too: `step` leaves to it.
         if let Some(parent) = &mode.parent {
             if !keymap.has_mode(parent) {
                 problems.push(Problem::UndefinedParent {
@@ -405,9 +299,6 @@ pub fn validate(keymap: &Keymap, actions: &BTreeSet<String>) -> Vec<Problem> {
             }
         }
 
-        // Repeated Escape must reach the root in finitely many steps. Followed
-        // through the machine itself, so a mode binding Escape (insert) is
-        // followed through its binding rather than its parent.
         let mut seen = BTreeSet::from([name.clone()]);
         let mut cursor = name.clone();
         loop {
@@ -429,7 +320,6 @@ pub fn validate(keymap: &Keymap, actions: &BTreeSet<String>) -> Vec<Problem> {
         }
     }
 
-    // Reachability from the root, over `Enter` edges.
     let mut reachable = BTreeSet::from([keymap.root.clone()]);
     let mut frontier = vec![keymap.root.clone()];
     while let Some(name) = frontier.pop() {
@@ -467,8 +357,6 @@ pub fn validate(keymap: &Keymap, actions: &BTreeSet<String>) -> Vec<Problem> {
     problems
 }
 
-/// `validate`, in the shape the conformance protocol exchanges.
-///
 /// @implements REQ-MYTH.modes_defined
 /// @implements REQ-MYTH.actions_defined
 /// @implements REQ-MYTH.escape_terminates
@@ -483,8 +371,6 @@ pub fn validate_of(keymap: Keymap, actions: Vec<String>) -> Vec<Problem> {
     validate(&keymap, &actions.into_iter().collect())
 }
 
-/// `which_key`, in the same shape.
-///
 /// @implements REQ-MYTH.whichkey_is_a_query
 /// @drt REQ-MYTH.whichkey_is_a_query
 pub fn which_key_of(keymap: Keymap, mode: String) -> Vec<(String, String)> {
@@ -528,8 +414,6 @@ mod tests {
         ["undo", "open_file"].iter().map(|a| a.to_string()).collect()
     }
 
-    /// No key is ever swallowed.
-    ///
     /// @tests REQ-MYTH.totality
     #[test]
     fn every_key_in_every_mode_has_an_outcome() {
@@ -537,8 +421,6 @@ mod tests {
         for (mode, _) in map.modes.clone() {
             for key in ["a", "z", "C-.", "u", "f", "o", "Escape", "F13", "€"] {
                 let outcome = step(map.clone(), mode.clone(), key.to_string());
-                // Exhaustive by construction — the point is that the call
-                // returns rather than that it returns anything in particular.
                 match outcome {
                     Outcome::Enter { .. }
                     | Outcome::Dispatch { .. }
@@ -561,7 +443,6 @@ Outcome::Leave { mode: "Options".into() }
             step(map.clone(), "Options".into(), LEAVE.into()),
 Outcome::Leave { mode: "Main".into() }
         );
-        // At the root there is nothing to leave, so the key is ordinary.
         assert_eq!(step(map, "Main".into(), LEAVE.into()), Outcome::PassThrough);
     }
 
@@ -576,7 +457,6 @@ Outcome::Leave { mode: "Main".into() }
         assert_eq!(mode, "Main");
     }
 
-    /// A mistyped leader must not strand the user in a mode.
     #[test]
     fn an_unbound_key_in_a_nested_mode_returns_to_the_root() {
         let map = keymap();
@@ -584,7 +464,6 @@ Outcome::Leave { mode: "Main".into() }
             step(map.clone(), "Options".into(), "q".into()),
 Outcome::Leave { mode: "Main".into() }
         );
-        // In the root, an unbound key is ordinary typing.
         assert_eq!(step(map, "Main".into(), "q".into()), Outcome::PassThrough);
     }
 
@@ -594,7 +473,6 @@ Outcome::Leave { mode: "Main".into() }
         let map = keymap();
         let keys: Vec<String> = which_key(&map, "Options").into_iter().map(|(k, _)| k).collect();
         assert_eq!(keys, vec!["f", "u", "Escape"]);
-        // And it cannot describe a binding that does not exist.
         assert!(which_key(&map, "Nowhere").is_empty());
     }
 
@@ -633,10 +511,6 @@ Outcome::Leave { mode: "Main".into() }
             .any(|p| matches!(p, Problem::ParentCycle { .. })));
     }
 
-    /// The two keymaps the first review found passing although Escape never
-    /// reached the root: before `Stranded`/`UndefinedParent`, both validated
-    /// clean. A parentless mode binding Escape back (insert) is fine.
-    ///
     /// @tests REQ-MYTH.escape_terminates
     /// @tests REQ-MYTH.modes_defined
     #[test]
@@ -665,7 +539,6 @@ Outcome::Leave { mode: "Main".into() }
     #[test]
     fn an_action_no_key_sequence_reaches_is_reported() {
         let mut map = keymap();
-        // Detach File from the graph: its action becomes unreachable.
         map.mode_mut("Options").unwrap().unbind("f");
         let problems = validate(&map, &actions());
         assert!(problems

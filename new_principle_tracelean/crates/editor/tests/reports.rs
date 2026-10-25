@@ -1,7 +1,3 @@
-//! The reports and the agent's changes, through the calls the window makes:
-//! what documents are stale, which lines tests ran, a folder's listing, and
-//! accepting a change that is not there.
-
 use std::path::{Path, PathBuf};
 
 use tracelean_core::history::command::Command;
@@ -43,10 +39,6 @@ fn said(editor: &Editor) -> String {
 
 const REQ: &str = "---\nid: REQ-A\ntitle: A\nclauses:\n  one: First.\n---\nbody\n";
 
-/// A document whose target is as it recorded is current, one whose target
-/// changed is in review, and one whose target is gone is dangling — each said
-/// as such; a project with no such document says so.
-///
 /// @tests REQ-DOCLINK.review_is_not_error
 #[test]
 fn every_document_is_reported_current_in_review_or_dangling() {
@@ -72,9 +64,6 @@ fn every_document_is_reported_current_in_review_or_dangling() {
     let _ = std::fs::remove_dir_all(&bare);
 }
 
-/// A requirement's coverage, and a clause's, open as reports; the lines tests
-/// ran are marked beside a file as it is shown, from the measured coverage.
-///
 /// @tests REQ-LINECOV.requirement_summary
 /// @tests REQ-LINECOV.clause_summary
 /// @tests REQ-LINECOV.uncovered_shown
@@ -99,18 +88,12 @@ fn coverage_opens_as_a_report_and_marks_the_lines_beside_a_file() {
     assert!(record(&mut editor, "coverage REQ-A.one").starts_with("Coverage of REQ-A.one"));
     let file = editor.view(BufferKind::File { path: "src/a.rs".into() });
     let marked = editor.coverage_shown(&file, 0, 10);
-    // The margin counts rows from zero; the measure counts lines from one.
     assert_eq!(marked.iter().map(|(row, hits, _)| (*row, *hits)).collect::<Vec<_>>(), vec![(1, 3), (2, 0)], "{marked:?}");
-    // A record is no file, and has no margin.
     let report = editor.view(BufferKind::Record { title: "findings".into() });
     assert!(editor.coverage_shown(&report, 0, 10).is_empty());
     let _ = std::fs::remove_dir_all(&root);
 }
 
-/// Each report names what produces it: the lock is written, a run is pointed
-/// elsewhere, a judgement is left to a person, and an unknown report, an empty
-/// graph and an unmodelled clause each say why there is nothing.
-///
 /// @tests REQ-LOCK.evidence_preserved
 /// @tests REQ-ROLLUP.open_is_lower_bound
 #[test]
@@ -139,9 +122,6 @@ fn every_report_says_what_it_holds_or_why_it_holds_nothing() {
     let _ = std::fs::remove_dir_all(&root);
 }
 
-/// A name nobody declared is answered by name: no context, no model to judge
-/// against; a refused intent says why; the uses of a word are listed.
-///
 /// @tests REQ-ACT.unknown_is_refused
 /// @tests REQ-NAV.uses_found
 #[test]
@@ -160,8 +140,6 @@ fn what_is_not_there_is_said_by_name() {
     let _ = std::fs::remove_dir_all(&root);
 }
 
-/// A folder other than the root lists only what is under it.
-///
 /// @tests REQ-SHOW.listing_from_entries
 #[test]
 fn a_folders_listing_holds_only_what_is_under_it() {
@@ -173,9 +151,6 @@ fn a_folders_listing_holds_only_what_is_under_it() {
     let _ = std::fs::remove_dir_all(&root);
 }
 
-/// Accepting a change that is not there says so, and so does accepting one
-/// the tree refuses; neither touches the project.
-///
 /// @tests REQ-ACT.edits_are_commands
 #[test]
 fn accepting_nothing_or_a_refused_change_says_why() {
@@ -199,9 +174,6 @@ fn accepting_nothing_or_a_refused_change_says_why() {
     let _ = std::fs::remove_dir_all(&root);
 }
 
-/// Escape inside a menu goes back one mode, and from the first menu back to
-/// none; typing where there is no file to type into says so.
-///
 /// @tests REQ-MYTH.modes_defined
 #[test]
 fn escape_goes_back_one_mode_and_typing_needs_a_file() {

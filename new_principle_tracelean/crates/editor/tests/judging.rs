@@ -1,6 +1,3 @@
-//! A requirement shows each clause's judgement: a drift as a drift, with its
-//! note, and a delegated agreement with the person who delegated it.
-
 use std::path::{Path, PathBuf};
 
 use tracelean_core::evidence::{Bond, Level};
@@ -13,7 +10,6 @@ use tracelean_editor::Editor;
 
 const KEYMAP: &str = include_str!("../../../assets/keymap.json");
 
-/// The demo's requirements, Lean and lock, in a scratch directory.
 fn demo(name: &str) -> PathBuf {
     let demo = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../demo");
     let dir = std::env::temp_dir().join(format!("tracelean-judging-{name}-{}", std::process::id()));
@@ -29,7 +25,6 @@ fn demo(name: &str) -> PathBuf {
     dir
 }
 
-/// Put one judgement in the lock, as `--verdict` leaves it.
 fn judged(root: &Path, clause: &str, verdict: &str, delegated_by: Option<&str>, note: Option<&str>) {
     let mut lock = lockfile::read(root).expect("the demo has a lock");
     lock.evidence.retain(|r| !(r.key.clause.as_deref() == Some(clause) && r.key.bond == Bond::RequirementModel));
@@ -66,7 +61,6 @@ fn a_judged_drift_is_shown_with_its_note() {
     let root = demo("drift");
     judged(&root, "to_celsius", "drift", Some("ricostynha"), Some("the model truncates"));
     let shown = requirement(&root);
-    // The line wraps at the pane's width; the words are what matter.
     let words: Vec<&str> = shown.split_whitespace().collect();
     let said = words.join(" ");
     assert!(

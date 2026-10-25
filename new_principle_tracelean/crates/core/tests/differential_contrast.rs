@@ -1,6 +1,3 @@
-//! Contrast between a theme's colours, checked against the model: the WCAG
-//! ratio, and what is found about each declared pair.
-
 mod harness;
 
 use std::collections::BTreeMap;
@@ -25,8 +22,6 @@ fn model_and_implementation_agree_on_what_contrast_finds() {
         harness::rust_runner("REQ-LOOK", "contrast_sufficient", "crates/core/src/surface/contrast.rs::findings", &scratch);
     let model = harness::lean_runner("TraceLean.Contrast", "TraceLean.Contrast.findings", op, &["pairs", "colours"], &scratch);
     let keys = ["a", "b", "c", "missing"];
-    // Colours at both ends, near the 4.5 and 3 thresholds, in capitals, with
-    // alpha, short and not colours at all.
     let colour = name(&[
         "#000000", "#ffffff", "#777777", "#767676", "#949494", "#959595", "#282c34", "#abb2bf", "#5C6370", "#00000088",
         "#fff", "red", "#gggggg", "",

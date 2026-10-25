@@ -1,18 +1,9 @@
-//! Running a Rust project's tests one at a time under coverage.
-//!
-//! The shell for `trace::lines`: build the tests with `-C instrument-coverage`
-//! into a target directory outside the project, list each test binary's tests,
-//! run each test alone with its own profile, and ask the toolchain's
-//! `llvm-cov` for its line counts. Slower than one run of everything, and the
-//! only way to know which test reached a line.
-
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use crate::trace::lines::{lcov, merged, Coverage, TestLines};
 
-/// The toolchain's own LLVM tools (`rustup component add llvm-tools`).
 fn llvm_tool(name: &str) -> Result<PathBuf, String> {
     let sysroot = Command::new("rustc").args(["--print", "sysroot"]).output().map_err(|e| e.to_string())?;
     let sysroot = PathBuf::from(String::from_utf8_lossy(&sysroot.stdout).trim());
@@ -26,8 +17,6 @@ fn llvm_tool(name: &str) -> Result<PathBuf, String> {
     Err(format!("no `{name}` in {}: run `rustup component add llvm-tools`", lib.display()))
 }
 
-/// The test executables `cargo test --no-run` built, with the package
-/// directory each runs from.
 fn test_binaries(root: &Path, target: &Path) -> Result<Vec<(PathBuf, PathBuf)>, String> {
     let built = Command::new("cargo")
         .args(["test", "--no-run", "--message-format=json", "--quiet"])
@@ -55,9 +44,6 @@ fn test_binaries(root: &Path, target: &Path) -> Result<Vec<(PathBuf, PathBuf)>, 
     Ok(out)
 }
 
-/// The line counts an instrumented `binary` left in `profiles` (every
-/// `.profraw` there, merged), per file of the project at `root`, by path
-/// relative to it.
 pub fn profiled_lines(root: &Path, binary: &Path, profiles: &Path) -> Result<Vec<(String, Vec<(u32, u64)>)>, String> {
     let (profdata, cov) = (llvm_tool("llvm-profdata")?, llvm_tool("llvm-cov")?);
     let raws: Vec<PathBuf> = std::fs::read_dir(profiles)
@@ -88,9 +74,6 @@ pub fn profiled_lines(root: &Path, binary: &Path, profiles: &Path) -> Result<Vec
         .collect())
 }
 
-/// Measure every test of the project at `root`, and the coverage of each of
-/// its files that a test reached or could have.
-///
 /// @implements REQ-LINECOV.per_test
 pub fn measure(root: &Path, files: &BTreeMap<String, String>) -> Result<(Coverage, usize), String> {
     let (profdata, cov) = (llvm_tool("llvm-profdata")?, llvm_tool("llvm-cov")?);
@@ -116,8 +99,6 @@ pub fn measure(root: &Path, files: &BTreeMap<String, String>) -> Result<(Coverag
         }
     }
 
-    // Each test alone in its own process, several processes at once, each
-    // leaving its profile under its own number.
     let numbered: Vec<(usize, &(PathBuf, PathBuf, String))> = tests.iter().enumerate().collect();
     let measured = super::run::par_map(&numbered, |(i, (binary, package, name))| -> Option<Vec<TestLines>> {
         let raw = profiles.join(format!("{i}.profraw"));
@@ -128,8 +109,6 @@ pub fn measure(root: &Path, files: &BTreeMap<String, String>) -> Result<(Coverag
             .current_dir(package)
             .output()
             .ok()?;
-        // A test that did not run left nothing to read; one that failed
-        // still ran the lines it ran.
         if !raw.is_file() || ran.stdout.windows(9).any(|w| w == b"1 ignored") {
             return None;
         }
@@ -171,7 +150,6 @@ pub fn measure(root: &Path, files: &BTreeMap<String, String>) -> Result<(Coverag
     Ok((coverage, count))
 }
 
-/// Where a project keeps its measured coverage.
 pub fn path_in(root: &Path) -> PathBuf {
     root.join(".tracelean").join("coverage.json")
 }
@@ -188,8 +166,6 @@ pub fn read(root: &Path) -> Coverage {
     std::fs::read_to_string(path_in(root)).ok().and_then(|t| serde_json::from_str(&t).ok()).unwrap_or_default()
 }
 
-/// The kept coverage, when it was written after `since`: what an editor asks
-/// each frame without reading the file each frame.
 pub fn read_if_newer(root: &Path, since: Option<std::time::SystemTime>) -> Option<(std::time::SystemTime, Coverage)> {
     let written = std::fs::metadata(path_in(root)).and_then(|m| m.modified()).ok()?;
     if since.is_some_and(|seen| seen >= written) {

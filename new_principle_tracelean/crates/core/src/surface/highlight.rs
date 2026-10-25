@@ -1,11 +1,3 @@
-//! Syntax highlighting: which tokens of a file are keywords, strings, comments.
-//!
-//! Done here, in the core, so that a frontend colours a token by the kind it
-//! is handed and never decides for itself what a keyword is
-//! (`REQ-VIEW.structure_over_text`). The queries are the first TraceLean's
-//! (`assets/languages/<lang>/highlights.scm`), so the two colour code alike;
-//! what colour a kind is belongs to `assets/theme.json`.
-//!
 //! @implements REQ-SHOW.file_from_text
 
 use tree_sitter::StreamingIterator;
@@ -22,9 +14,6 @@ fn query_source(lang: Lang) -> &'static str {
     }
 }
 
-/// What kind of token a capture name means. Names are the usual tree-sitter
-/// ones, read from the most specific part outwards; a name with no kind here
-/// (a variable, a bracket) is left as plain text.
 pub fn kind_of(capture: &str) -> Option<TokenKind> {
     Some(match capture {
         "string.escape" => TokenKind::Escape,
@@ -45,7 +34,6 @@ pub fn kind_of(capture: &str) -> Option<TokenKind> {
     })
 }
 
-// Each language's query, compiled once rather than on every key.
 thread_local! {
     static QUERIES: std::cell::RefCell<Vec<(Lang, std::rc::Rc<tree_sitter::Query>)>> =
         const { std::cell::RefCell::new(Vec::new()) };
@@ -62,10 +50,6 @@ fn query_for(lang: Lang, language: &tree_sitter::Language) -> Option<std::rc::Rc
     })
 }
 
-/// The tokens of `text`, in order and never overlapping, as marks a file
-/// buffer is produced from. A language without a grammar, or a query this
-/// grammar does not accept, gives no tokens: the file is then shown as text,
-/// which is what it is.
 pub fn tokens(text: &str, lang: Option<Lang>) -> Vec<Mark> {
     let Some(lang) = lang else { return Vec::new() };
     let language = lang.language();
@@ -85,12 +69,9 @@ pub fn tokens(text: &str, lang: Option<Lang>) -> Vec<Mark> {
             found.push((capture.node.start_byte(), capture.node.end_byte(), kind));
         }
     }
-    // The first capture of a region wins, and nothing may overlap: a span
-    // inside another is dropped, as a buffer's spans never overlap.
     found.sort_by_key(|(start, end, _)| (*start, std::cmp::Reverse(*end)));
     let mut marks = Vec::new();
     let mut reached = 0usize;
-    // Byte offsets from the parser, character offsets in a buffer.
     let mut chars = 0usize;
     let mut byte = 0usize;
     let mut to_chars = |target: usize| -> usize {
@@ -114,14 +95,6 @@ pub fn tokens(text: &str, lang: Option<Lang>) -> Vec<Mark> {
     marks.into_iter().flat_map(|mark| references(&chars, mark)).collect()
 }
 
-/// A comment, with every requirement it names cut out of it as a requirement
-/// span — so the requirement an annotation in a doc comment names opens when
-/// it is clicked.
-///
-/// A name is two or more capitals, then `-` and capitals or digits as many
-/// times as it likes (`REQ-DRT-PROTO`, `ARCH-NO-DRIVING`), then optionally
-/// `.` and a lower-case clause key.
-///
 /// @implements REQ-SHOW.references_are_links
 fn references(text: &[char], mark: Mark) -> Vec<Mark> {
     if mark.role != (Role::Token { kind: TokenKind::Comment }) {
@@ -142,10 +115,6 @@ fn references(text: &[char], mark: Mark) -> Vec<Mark> {
     out
 }
 
-/// A Markdown document's marks: headings, inline code, the keys of a leading
-/// `---` frontmatter block, and every requirement name outside code — so a
-/// requirement document reads as one, and `refines: [REQ-VIEW]` opens what it
-/// refines. No grammar: Markdown is read a line at a time.
 pub fn markdown(text: &str) -> Vec<Mark> {
     let chars: Vec<char> = text.chars().collect();
     let mut marks = Vec::new();
@@ -166,8 +135,6 @@ pub fn markdown(text: &str) -> Vec<Mark> {
                 marks.push(Mark { start, stop, role: Role::Token { kind: TokenKind::String } });
             }
         } else if trimmed.starts_with('#') && !in_front {
-            // A token rather than a heading role: a heading role carries the
-            // trace actions, and a click into a title is for typing.
             marks.push(Mark { start, stop, role: Role::Token { kind: TokenKind::Heading } });
         } else {
             let mut from = start;
@@ -180,8 +147,6 @@ pub fn markdown(text: &str) -> Vec<Mark> {
                     from = start + colon;
                 }
             }
-            // Inline code, bold, italic and links, then names in what is none
-            // of those.
             let mut at = from;
             let mut plain = from;
             while at < stop {
@@ -201,9 +166,6 @@ pub fn markdown(text: &str) -> Vec<Mark> {
     marks
 }
 
-/// The inline Markdown that opens at `at` — `` `code` ``, `**bold**`,
-/// `*italic*` or `_italic_`, `[text](target)` — as where it ends and what it
-/// is; nothing when what opens there is never closed on the line.
 fn inline(chars: &[char], at: usize, stop: usize) -> Option<(usize, TokenKind)> {
     let find = |from: usize, c: char| (from..stop).find(|i| chars[*i] == c);
     match chars[at] {
@@ -211,7 +173,6 @@ fn inline(chars: &[char], at: usize, stop: usize) -> Option<(usize, TokenKind)> 
         '*' if at + 1 < stop && chars[at + 1] == '*' => (at + 2..stop.saturating_sub(1))
             .find(|i| chars[*i] == '*' && chars[*i + 1] == '*' && *i > at + 2)
             .map(|close| (close + 2, TokenKind::Bold)),
-        // An italic opens on a word, so `a * b` and `snake_case` stay text.
         '*' | '_' if at + 1 < stop && !chars[at + 1].is_whitespace() && (at == 0 || !chars[at - 1].is_alphanumeric()) => {
             let mark = chars[at];
             find(at + 1, mark)
@@ -230,10 +191,6 @@ fn inline(chars: &[char], at: usize, stop: usize) -> Option<(usize, TokenKind)> 
     }
 }
 
-/// Every requirement name in characters `start` to `stop` of `text`, as
-/// character ranges: `names` taking what it reads by value, as a generated
-/// runner calls it (ADR-0010). A range past the end is cut at the end.
-///
 /// @implements REQ-SHOW.references_are_links
 /// @drt REQ-SHOW.references_are_links
 pub fn requirement_names(text: String, start: usize, stop: usize) -> Vec<(usize, usize)> {
@@ -242,7 +199,6 @@ pub fn requirement_names(text: String, start: usize, stop: usize) -> Vec<(usize,
     names(&chars, start.min(stop), stop)
 }
 
-/// Every requirement name between `start` and `stop`, as character ranges.
 pub(crate) fn names(text: &[char], start: usize, stop: usize) -> Vec<(usize, usize)> {
     let mut out = Vec::new();
     let mut at = start;
@@ -259,7 +215,6 @@ pub(crate) fn names(text: &[char], start: usize, stop: usize) -> Vec<(usize, usi
     out
 }
 
-/// Where a requirement's name starting at `at` ends, if one does.
 fn reference_at(text: &[char], at: usize, stop: usize) -> Option<usize> {
     let upper = |i: usize| i < stop && text[i].is_ascii_uppercase();
     let mut i = at;
@@ -286,7 +241,6 @@ fn reference_at(text: &[char], at: usize, stop: usize) -> Option<usize> {
             i += 1;
         }
     }
-    // A name runs into nothing: `REQ-Xyz` is not one.
     if i < stop && text[i].is_ascii_alphanumeric() {
         return None;
     }
@@ -297,9 +251,6 @@ fn reference_at(text: &[char], at: usize, stop: usize) -> Option<usize> {
 mod tests {
     use super::*;
 
-    /// Names are found by character, a window past the end is cut at the end,
-    /// and a name inside a longer word is none.
-    ///
     /// @tests REQ-SHOW.references_are_links
     #[test]
     fn requirement_names_are_found_in_a_window_of_characters() {
@@ -367,8 +318,6 @@ mod tests {
         assert_eq!(references(&plain, comment.clone()), vec![comment]);
     }
 
-    /// A requirement document reads as one: its keys, its headings, its code,
-    /// and the requirements it names, each a span of its own.
     #[test]
     fn markdown_marks_headings_keys_code_and_requirements() {
         let text = "---\nid: REQ-X\nrefines: [REQ-VIEW]\n---\n\n# Title\n\nSee `x` and ARCH-NO-DRIVING.";
@@ -384,8 +333,6 @@ mod tests {
         assert!(marks.windows(2).all(|w| w[0].stop <= w[1].start));
     }
 
-    /// Prose marks as the first TraceLean coloured it: bold, italic and links
-    /// apart, and a `*` or `_` that is arithmetic or inside a name left alone.
     #[test]
     fn markdown_marks_bold_italic_and_links() {
         let text = "A **firm** and *soft* or _soft_ [docs](a.md), a * b, snake_case.";

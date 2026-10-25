@@ -1,14 +1,3 @@
-//! The editor's views, printed: what a person reads in a station or a report,
-//! for an agent in a shell. Every view is the buffer the window draws,
-//! produced by the same editor; this only picks one and prints its text.
-//!
-//! The tree is opened fresh and nothing is kept, so a person's open tabs are
-//! never touched, and no view that writes (`lock`) is offered.
-//!
-//! ```text
-//! tracelean-view [root] <view> [argument] [--json]
-//! ```
-
 use std::path::PathBuf;
 
 use tracelean_core::surface::act::Intent;
@@ -19,7 +8,6 @@ use tracelean_editor::Editor;
 
 const KEYMAP: &str = include_str!("../../../../assets/keymap.json");
 
-/// Each view: its name, whether it takes an argument, and what it shows.
 const VIEWS: &[(&str, Option<&str>, &str)] = &[
     ("requirements", None, "every requirement, its level, and how many clauses something claims"),
     ("design", None, "the same, indented along `refines`: what each requirement depends on"),
@@ -47,7 +35,6 @@ fn usage() -> String {
     out
 }
 
-/// The buffer kind a view names.
 fn kind(view: &str, argument: Option<&str>) -> Option<BufferKind> {
     let record = |title: String| Some(BufferKind::Record { title });
     match (view, argument) {
@@ -62,14 +49,11 @@ fn kind(view: &str, argument: Option<&str>) -> Option<BufferKind> {
     }
 }
 
-/// Pick the view the words name, have the editor produce it, print it.
-///
 /// @implements REQ-CONTEXT.views_from_the_shell
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let json = args.iter().any(|a| a == "--json");
     let words: Vec<&str> = args.iter().filter(|a| !a.starts_with("--")).map(String::as_str).collect();
-    // A first word that is a directory is the root; the rest name the view.
     let (root, words) = match words.split_first() {
         Some((first, rest)) if std::path::Path::new(first).is_dir() => (PathBuf::from(first), rest.to_vec()),
         _ => (PathBuf::from("."), words),
@@ -81,13 +65,10 @@ fn main() {
     };
     let keys = keymap::load(KEYMAP, &keymap::actions()).expect("the shipped keymap loads");
     let mut editor = Editor::open_fresh(root, keys);
-    // Wide and tall enough that nothing a view lays out to its pane is cut.
     editor.region = Rect { left: 0, top: 0, width: 200, height: 1000 };
-    // A file's trace is of the file the document shows.
     if let ("trace", Some(file)) = (view, argument) {
         editor.perform(Intent::Display { what: BufferKind::File { path: file.to_string() } });
     }
-    // Printed, the design is read whole: there is no mark to press.
     if view == "design" {
         use tracelean_core::surface::act::Watch;
         editor.perform(Intent::Observe { watch: Watch::DesignExpand { id: None } });

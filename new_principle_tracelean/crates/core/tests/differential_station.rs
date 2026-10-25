@@ -1,11 +1,3 @@
-//! What a station holds, checked against the model.
-//!
-//! Eight stations, three producers and a price table. The requirement index and
-//! the refinement graph are the same rows ordered differently; the sandbox is a
-//! record of what a tool changed, said and is estimated to have spent; and what
-//! a station stands for is itself a function, because a list of stations
-//! written once in the core and again in each frontend is a list that drifts.
-
 mod harness;
 
 use std::collections::BTreeMap;
@@ -15,9 +7,6 @@ use tracelean_core::drt::schema::Schema;
 
 mod support;
 
-/// Small alphabets, deliberately. Ids drawn from three names and refinements
-/// from the same three is what makes a cycle, a shared parent and a node no
-/// root reaches occur often enough to be tested rather than hoped for.
 fn node() -> Schema {
     let name = |examples: Vec<String>| Schema::Str { max_len: Some(0), examples };
     let mut fields = BTreeMap::new();
@@ -31,8 +20,6 @@ fn node() -> Schema {
         },
     );
     fields.insert("marks".to_string(), support::marks());
-    // Counts past each other too, so a count above what it counts of is
-    // written as it is rather than corrected.
     fields.insert("clauses".to_string(), Schema::Nat { max: Some(3), edges: vec![0, 4] });
     fields.insert("modelled".to_string(), Schema::Nat { max: Some(3), edges: vec![0, 4] });
     let mut held = BTreeMap::new();
@@ -40,7 +27,6 @@ fn node() -> Schema {
         held.insert(count.to_string(), Schema::Nat { max: Some(3), edges: vec![0, 7] });
     }
     fields.insert("held".to_string(), Schema::Struct { fields: held });
-    // Measured or not; every line run, some, none, or none to run.
     let count = || Schema::Nat { max: Some(3), edges: vec![0, 120] };
     fields.insert(
         "covered".to_string(),
@@ -60,8 +46,6 @@ fn one_node_list() -> Schema {
     Schema::Struct { fields }
 }
 
-/// A graph and which of its requirements are unfolded: none, some, a name
-/// that is not there, or all of them.
 fn folded_graph() -> Schema {
     let Schema::Struct { mut fields } = one_node_list() else { unreachable!() };
     let name = Schema::Str { max_len: Some(0), examples: vec!["A".into(), "B".into(), "C".into(), "Z".into()] };
@@ -69,8 +53,6 @@ fn folded_graph() -> Schema {
     Schema::Struct { fields }
 }
 
-/// A token count. The edges are a round million and nothing, so a run holds
-/// both totals that survive the division and totals that truncate away.
 fn tokens() -> Schema {
     Schema::Nat { max: Some(2), edges: vec![0, 1_000_000] }
 }
@@ -132,7 +114,6 @@ fn check(
 ) {
     let clause = op.split_once('.').expect("an op names a clause").1;
     let scratch = harness::scratch(&format!("station-{clause}"));
-    // The one argument the two sides spell differently.
     let params: &[(&str, &str)] = if arguments.contains(&"openOnly") { &[("openOnly", "open_only")] } else { &[] };
     let implementation = harness::rust_runner_with_params(req, clause, entry, params, &scratch);
     let model = harness::lean_runner(import, function, op, arguments, &scratch);
@@ -231,9 +212,6 @@ fn model_and_implementation_agree_on_what_the_sandbox_station_shows() {
     );
 }
 
-/// The panel itself: no session or one, changes waiting or none, and a
-/// conversation long enough to wrap at the narrowest widths.
-///
 /// @drt REQ-SHOW.sandbox_session_shown
 /// @tests REQ-SHOW.sandbox_session_shown
 #[test]
@@ -286,9 +264,6 @@ fn model_and_implementation_agree_on_the_sandbox_panel() {
     );
 }
 
-/// An opened requirement: clauses with and without claims, a key or none,
-/// narrowings, coverage, pins, judgements, and claims with unknown roles.
-///
 /// @drt REQ-SHOW.requirement_opened
 /// @tests REQ-SHOW.requirement_opened
 #[test]
@@ -333,7 +308,6 @@ fn model_and_implementation_agree_on_an_opened_requirement() {
         ("status", text(&["draft", "approved"])),
         ("refines", list(text(&["REQ-B", "REQ-C"]), 2)),
         ("refinedBy", list(text(&["REQ-D"]), 2)),
-        // The prose: empty, a line, and several lines with a blank between.
         ("body", text(&["", "It says something.", "One line.\n\nAnother, after a blank."])),
         ("clauses", list(clause, 2)),
         ("width", Schema::Nat { max: Some(40), edges: vec![0, 30, 100] }),
@@ -453,12 +427,6 @@ fn model_and_implementation_agree_on_how_an_estimate_reads() {
     );
 }
 
-/// The two stations' rows, and the shapes of graph that make the drawing hard.
-///
-/// A run of graphs that were all trees would agree about a walk that mishandled
-/// a cycle, and a run whose requirements all held the same marks would agree
-/// about a producer that ignored them entirely.
-///
 /// @tests REQ-SHOW.index_from_requirements
 /// @tests REQ-SHOW.graph_from_refinement
 /// @tests REQ-DRT-COVER.law_coverage
@@ -479,9 +447,6 @@ fn generation_reaches_the_graphs_that_are_hard_to_draw() {
         let value = gen::value(&schema, &mut rng);
         let set: Vec<Node> = serde_json::from_value(value).expect("the schema generates nodes");
 
-        // Whatever the graph, the index is a well-formed buffer and every row
-        // carries its own four marks and six counts — which is the clause,
-        // asked of the run rather than of an example.
         let index = requirements_buffer(set.clone(), false);
         assert_eq!(faults(index.clone()), vec![], "the index had a malformed span");
         let marked = index
@@ -497,8 +462,6 @@ fn generation_reaches_the_graphs_that_are_hard_to_draw() {
         if index.text.contains("+children") {
             children += 1;
         }
-        // Only what is open: a row hidden, and a row kept although finished,
-        // because something under it is not.
         let open = requirements_buffer(set.clone(), true);
         if open.text.lines().count() < set.len() {
             hidden += 1;
@@ -528,7 +491,6 @@ fn generation_reaches_the_graphs_that_are_hard_to_draw() {
             highest += 1;
         }
 
-        // Unfolded everywhere, the walk meets every shape the graph has.
         let rows = design_rows(set.clone(), set.iter().map(|node| node.id.clone()).collect());
         if rows.is_empty() {
             nothing += 1;
@@ -536,8 +498,6 @@ fn generation_reaches_the_graphs_that_are_hard_to_draw() {
         if rows.iter().any(|row| row.indent > 0) {
             under += 1;
         }
-        // One requirement refining two roots is drawn under both, which is the
-        // case a walk that marked nodes visited would get wrong.
         let drawn_twice = set.iter().any(|node| {
             rows.iter().filter(|row| row.node.id == node.id).count() > 1
         });
@@ -547,8 +507,6 @@ fn generation_reaches_the_graphs_that_are_hard_to_draw() {
         if set.iter().any(|node| !rows.iter().any(|row| row.node.id == node.id)) {
             unreached += 1;
         }
-        // A two-cycle: each names the other. The bound is what keeps the walk a
-        // function, and a run without one never exercises it.
         let cycle = set.iter().any(|a| {
             set.iter().any(|b| {
                 a.id != b.id && a.refines.contains(&b.id) && b.refines.contains(&a.id)
@@ -583,8 +541,6 @@ fn generation_reaches_the_graphs_that_are_hard_to_draw() {
     );
 }
 
-/// The sandbox station's rows, and the pricing behind the last of them.
-///
 /// @tests REQ-SHOW.sandbox_from_observation
 /// @tests REQ-COST.cost_from_usage
 /// @tests REQ-COST.cache_priced_apart
@@ -614,13 +570,10 @@ fn generation_reaches_unpriced_models_and_every_kind_of_token() {
         let records: Vec<Usage> = serde_json::from_value(value["usage"].clone()).unwrap();
 
         let spend = spend_of(table.clone(), records.clone());
-        // Named once each, however many records mentioned it: a list that
-        // repeated a model would read as several problems where there is one.
         let mut seen = spend.unpriced.clone();
         seen.sort();
         seen.dedup();
         assert_eq!(seen.len(), spend.unpriced.len(), "an unpriced model was named twice");
-        // Nothing the table does not price contributes to the total.
         for name in &spend.unpriced {
             assert!(
                 !table.iter().any(|price| &price.model == name),
@@ -685,7 +638,6 @@ fn generation_reaches_unpriced_models_and_every_kind_of_token() {
         ],
     );
 
-    // The estimate, and the rows it is the last of.
     let mut rng = gen::Rng::new(89);
     let schema = spend();
     let (mut nil, mut padded, mut one, mut many) = (0u64, 0u64, 0u64, 0u64);
@@ -695,7 +647,6 @@ fn generation_reaches_unpriced_models_and_every_kind_of_token() {
         let value = gen::value(&schema, &mut rng);
         let spend: Spend = serde_json::from_value(value).expect("the schema generates a spend");
         let line = estimate_line(spend.clone());
-        // The clause, over every generated spend: it reads as an estimate.
         assert!(line.starts_with("estimated "), "`{line}` does not say it is an estimate");
 
         if spend.amount == 0 {
@@ -710,8 +661,6 @@ fn generation_reaches_unpriced_models_and_every_kind_of_token() {
             _ => many += 1,
         }
 
-        // And the rows it belongs to. The estimate is always the last one, so a
-        // reader never has to look for it.
         let changed: Vec<String> =
             if at % 3 == 0 { vec![] } else { vec![format!("file{}.rs", at % 5)] };
         let said: Vec<Event> = if at % 2 == 0 {
@@ -754,8 +703,6 @@ fn generation_reaches_unpriced_models_and_every_kind_of_token() {
     );
 }
 
-/// Every station on the bar produces something, and nothing else does.
-///
 /// @tests REQ-SCREEN.station_produces_a_buffer
 /// @tests REQ-DRT-COVER.law_coverage
 #[test]
@@ -763,9 +710,6 @@ fn generation_reaches_every_station_and_a_name_that_is_none() {
     use tracelean_core::drt::gen;
     use tracelean_core::surface::screen::{station_entries, station_kind};
 
-    // The claim the bar rests on: every row drawn leads somewhere. A station
-    // that is on the screen and does nothing is the worse of the two failures
-    // available — the screen says it is there and pressing it is silence.
     for entry in station_entries() {
         assert!(
             station_kind(entry.key.clone()).is_some(),

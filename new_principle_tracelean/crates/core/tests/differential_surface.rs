@@ -1,9 +1,3 @@
-//! The keymap and staleness, checked against their models.
-//!
-//! Both are pure total functions over small data, which makes them cheap to
-//! model and cheap to check — and both are places where being subtly wrong is
-//! invisible until somebody is stuck.
-
 mod harness;
 
 use std::collections::BTreeMap;
@@ -23,8 +17,6 @@ fn names(examples: &[&str]) -> Schema {
         examples: examples.iter().map(|s| s.to_string()).collect(),
     }
 }
-
-// ─── Keymap ──────────────────────────────────────────────────────────────────
 
 fn binding() -> Schema {
     let mut variants: BTreeMap<String, Option<Box<Schema>>> = BTreeMap::new();
@@ -83,8 +75,6 @@ fn keymap_input() -> Schema {
     ])
 }
 
-/// No key in any mode is ever swallowed, and the model agrees about which.
-///
 /// @drt REQ-MYTH.totality
 /// @tests REQ-MYTH.totality
 /// @tests REQ-MYTH.outcomes_closed
@@ -121,8 +111,6 @@ fn model_and_implementation_agree_on_every_key() {
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
-/// All four outcomes must actually occur, or agreement says little.
-///
 /// @tests REQ-DRT-COVER.law_coverage
 #[test]
 fn generation_reaches_all_four_outcomes() {
@@ -152,8 +140,6 @@ fn generation_reaches_all_four_outcomes() {
         .collect();
     support::covered("REQ-MYTH.totality", &counts);
 }
-
-// ─── Staleness ───────────────────────────────────────────────────────────────
 
 fn staleness_input() -> Schema {
     let hash = names(&["h1", "h2", "h3"]);
@@ -189,8 +175,6 @@ fn staleness_input() -> Schema {
     ])
 }
 
-/// The soundness core: no evidence survives a change to any of its inputs.
-///
 /// @drt REQ-STALE.change_invalidates
 /// @tests REQ-STALE.change_invalidates
 #[test]
@@ -198,8 +182,6 @@ fn staleness_input() -> Schema {
 fn model_and_implementation_agree_on_staleness() {
     let scratch = harness::scratch("staleness");
     let op = "REQ-STALE.change_invalidates";
-    // The model spells the field `liveLinkHashes`; the implementation's
-    // parameter is `live_link_hashes`. A binding renames, and only renames.
     let implementation = harness::rust_runner_with_params(
         "REQ-STALE",
         "change_invalidates",
@@ -229,9 +211,6 @@ fn model_and_implementation_agree_on_staleness() {
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
-/// Whether `--drt` runs a clause again: held runs of this op or another,
-/// agreed or not, still valid or stale, and asked again or not.
-///
 /// @drt REQ-STALE.agreed_not_rerun
 /// @tests REQ-STALE.agreed_not_rerun
 #[test]
@@ -261,8 +240,6 @@ fn model_and_implementation_agree_on_running_a_clause_again() {
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
-/// Both reasons for staleness, and the valid case, must all be reached.
-///
 /// @tests REQ-DRT-COVER.law_coverage
 #[test]
 fn generation_reaches_valid_retargeted_and_changed() {
@@ -293,8 +270,6 @@ fn generation_reaches_valid_retargeted_and_changed() {
     support::covered("REQ-STALE.change_invalidates", &counts);
 }
 
-// ─── Position encoding ───────────────────────────────────────────────────────
-
 fn encoding_input() -> Schema {
     let mut variants: BTreeMap<String, Option<Box<Schema>>> = BTreeMap::new();
     for name in ["utf8", "utf16", "utf32"] {
@@ -308,8 +283,6 @@ fn encoding_input() -> Schema {
                 examples: vec![
                     "".into(),
                     "plain".into(),
-                    // Non-ASCII is the whole point: the encodings agree on
-                    // everything else, so a run of only ASCII proves nothing.
                     "héllo".into(),
                     "日本語".into(),
                     "😀x".into(),
@@ -358,9 +331,6 @@ fn model_and_implementation_agree_on_position_encoding() {
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
-/// The encodings only differ on non-ASCII text, so a run that never generated
-/// any would agree about nothing worth agreeing about.
-///
 /// @tests REQ-DRT-COVER.law_coverage
 #[test]
 fn generation_reaches_positions_where_the_encodings_differ() {
@@ -392,7 +362,6 @@ fn generation_reaches_positions_where_the_encodings_differ() {
     );
 }
 
-/// The same lines, read the other way: a byte offset in, a column out.
 fn offset_input() -> Schema {
     let Schema::Struct { mut fields } = encoding_input() else { unreachable!() };
     fields.remove("character");
@@ -436,10 +405,6 @@ fn model_and_implementation_agree_on_columns_for_offsets() {
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
-/// An offset inside a character is the case a careless conversion rounds, and
-/// one past the end the case it clamps; both must be reached, and wherever a
-/// column comes back, converting it back must return the offset.
-///
 /// @tests REQ-LSP.offset_to_column
 /// @tests REQ-DRT-COVER.law_coverage
 #[test]
@@ -478,9 +443,6 @@ fn generation_reaches_offsets_inside_characters_and_they_round_trip() {
     );
 }
 
-
-// ─── Lowering a server's edits ───────────────────────────────────────────────
-
 fn edit() -> Schema {
     strukt(&[
         ("start", Schema::Nat { max: Some(9), edges: vec![0] }),
@@ -492,9 +454,6 @@ fn edit() -> Schema {
 fn lower_input() -> Schema {
     strukt(&[
         ("file", Schema::Str { max_len: None, examples: vec!["a.rs".into()] }),
-        // Short, and deliberately including a multi-byte character: an offset
-        // that splits it is a position the file does not have, and the two
-        // sides have to refuse it for the same reason.
         (
             "content",
             Schema::Str {
@@ -506,9 +465,6 @@ fn lower_input() -> Schema {
     ])
 }
 
-/// Edits applied in the wrong order corrupt a file quietly, and the wrong
-/// implementation passes every single-edit test.
-///
 /// @drt REQ-LSP.edits_ordered
 /// @tests REQ-LSP.edits_ordered
 /// @tests REQ-LSP.overlap_refused
@@ -545,9 +501,6 @@ fn model_and_implementation_agree_on_lowering_edits() {
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
-/// Every refusal the requirement names must occur, and so must a success with
-/// more than one edit — the case the ordering property is about.
-///
 /// @tests REQ-DRT-COVER.law_coverage
 #[test]
 fn generation_reaches_every_lowering_outcome() {
@@ -592,14 +545,6 @@ fn generation_reaches_every_lowering_outcome() {
     support::covered("REQ-LSP.edits_ordered", &counts);
 }
 
-/// A sweep must account for every record it was given: nothing rewritten,
-/// nothing dropped.
-///
-/// The single-record law says *whether* a record is stale. This says what the
-/// scanner then does with a whole set of them, which is where omission would
-/// hide — a stale record that vanished would leave its clause looking untested
-/// rather than looking like a claim that has expired.
-///
 /// @drt REQ-STALE.scanner_never_writes
 /// @tests REQ-STALE.scanner_never_writes
 /// @tests REQ-STALE.stale_is_visible
@@ -647,13 +592,6 @@ fn model_and_implementation_agree_on_a_whole_sweep() {
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
-/// Nothing comes back that was not produced.
-///
-/// A stale record is not repaired, re-judged or forgiven. Stated here as the
-/// property of `revalidated` that matters: its answer is always a subset of
-/// what the backend produced, and an empty production revalidates nothing
-/// however stale the records are.
-///
 /// @drt REQ-STALE.no_silent_revalidation
 /// @tests REQ-STALE.no_silent_revalidation
 #[test]
@@ -683,8 +621,6 @@ fn a_stale_record_never_revives_itself() {
     );
 }
 
-/// Which records replace stale ones, checked against the model.
-///
 /// @tests REQ-STALE.no_silent_revalidation
 #[test]
 #[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
@@ -726,8 +662,6 @@ fn model_and_implementation_agree_on_what_comes_back() {
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
-// ─── Which server, and what it declared ──────────────────────────────────────
-
 fn server_state() -> Schema {
     let mut variants: BTreeMap<String, Option<Box<Schema>>> = BTreeMap::new();
     variants.insert("notStarted".into(), None);
@@ -752,8 +686,6 @@ fn server_state() -> Schema {
     Schema::Enum { variants }
 }
 
-/// The absence of a server is named, never rendered as an empty result.
-///
 /// @drt REQ-LSP.absent_server_named
 /// @tests REQ-LSP.absent_server_named
 #[test]
@@ -802,8 +734,6 @@ fn model_and_implementation_agree_on_what_to_show_without_a_server() {
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
-/// One server per language, and the encoding read off the running one.
-///
 /// @drt REQ-LSP.registry_per_language
 /// @tests REQ-LSP.registry_per_language
 /// @tests REQ-LSP.encoding_declared
@@ -855,10 +785,6 @@ fn model_and_implementation_agree_on_which_encoding_a_language_uses() {
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
-/// Every server state, and both the registered and unregistered case, must
-/// occur — a run that only ever asked about a running server would say nothing
-/// about the clause that exists for the others.
-///
 /// @tests REQ-DRT-COVER.law_coverage
 #[test]
 fn generation_reaches_every_server_state_and_both_lookups() {

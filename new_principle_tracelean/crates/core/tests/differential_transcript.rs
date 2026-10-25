@@ -1,11 +1,3 @@
-//! Reading a transcript that is still being written, checked against the model.
-//!
-//! The case that matters is the one that is hard to write by hand: a stream of
-//! records where the last one is cut off mid-write, sometimes after a complete
-//! JSON object, sometimes in the middle of a string literal, sometimes after
-//! nothing at all. Generating them from fragments produces all three without
-//! anyone having to think of them.
-
 mod harness;
 
 use tracelean_core::drt::run::{run, RunOptions};
@@ -17,9 +9,6 @@ fn strukt(fields: &[(&str, Schema)]) -> Schema {
     Schema::Struct { fields: fields.iter().map(|(k, v)| (k.to_string(), v.clone())).collect() }
 }
 
-/// Fragments a transcript gets joined out of: complete records, records of a
-/// shape nothing recognises, text that is not JSON at all, blank lines, and
-/// records cut off part-way through.
 fn fragment() -> Schema {
     Schema::Str {
         max_len: Some(2),
@@ -83,10 +72,6 @@ fn model_and_implementation_agree_on_what_is_complete() {
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
-/// Records in Claude Code's own shape and near it: a prompt as a string, blocks
-/// of every kind, a harness's machinery, a meta record, a tool called with no
-/// argument a person recognises, a failed result, content that is neither a
-/// string nor a list, text with runs of white space and text past the cut.
 fn claude_record() -> Vec<&'static str> {
     vec![
         r#"{"type":"user","message":{"role":"user","content":"fix   the\tbug"}}"#,
@@ -120,8 +105,6 @@ fn model_and_implementation_agree_on_a_claude_code_transcript() {
         &scratch,
     );
     let model = harness::lean_runner("TraceLean.Claude", "TraceLean.Claude.events", op, &["text"], &scratch);
-    // Two records joined, with or without the newline that completes the
-    // last; and one record long enough to be cut.
     let records = claude_record();
     let long = format!(r#"{{"type":"assistant","message":{{"content":[{{"type":"text","text":"{}"}}]}}}}"#, "word ".repeat(60));
     let mut texts = vec![format!("{long}\n"), "\r\n".to_string()];
@@ -143,9 +126,6 @@ fn model_and_implementation_agree_on_a_claude_code_transcript() {
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
-/// Every outcome the requirement names must occur: a recognised record, an
-/// unrecognised one, and something held back.
-///
 /// @tests REQ-DRT-COVER.law_coverage
 #[test]
 fn generation_reaches_events_unrecognised_and_held() {

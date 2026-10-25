@@ -1,8 +1,3 @@
-//! Run this project's own trace kernel over a tree.
-//!
-//! Stage 2 of the bootstrap: what `tools/stage0-trace` does with the old
-//! kernel, this does with the ported one, so the two can be compared.
-
 use std::path::PathBuf;
 
 use tracelean_core::trace;
@@ -15,16 +10,10 @@ fn state_name(state: &trace::doclink::State) -> &'static str {
     }
 }
 
-/// The value after a flag, if it was given one.
 fn value_after(args: &[String], flag: &str) -> Option<String> {
     args.iter().position(|a| a == flag).and_then(|at| args.get(at + 1)).cloned()
 }
 
-/// The lines a declaration spans, as the judge should read them.
-///
-/// Inclusive of the last line, and one past it when the anchor's end is the
-/// declaration's own closing line: a model shown with its final line cut off is
-/// a model nobody can judge.
 fn read_lines(path: &std::path::Path, start: u32, end: u32) -> String {
     let Ok(text) = std::fs::read_to_string(path) else { return String::new() };
     text.lines()
@@ -35,7 +24,6 @@ fn read_lines(path: &std::path::Path, start: u32, end: u32) -> String {
 }
 
 fn main() {
-    // The first argument that is not a flag, nor a flag's value, is the root.
     let mut positional = Vec::new();
     let mut rest = std::env::args().skip(1);
     while let Some(arg) = rest.next() {
@@ -49,10 +37,6 @@ fn main() {
     let root = root.canonicalize().unwrap_or(root);
     let index = trace::index::build(&root);
 
-    // `--context REQ-X[.clause] [--parts code,tests,…|all]` prints what an
-    // agent needs to change it — the editor's context page, as Markdown, for
-    // an agent to gather itself.
-    //
     // @implements REQ-CONTEXT.from_the_shell
     let args: Vec<String> = std::env::args().collect();
     if let Some(target) = value_after(&args, "--context") {
@@ -68,8 +52,6 @@ fn main() {
         return;
     }
 
-    // `--hashes` prints what every target currently hashes to, which is what a
-    // document records when somebody confirms it against what it describes.
     if std::env::args().any(|a| a == "--hashes") {
         for (target, hash) in trace::doclink::current_hashes(&index) {
             println!("{target}\t{hash}");
@@ -77,12 +59,6 @@ fn main() {
         return;
     }
 
-    // `--judge REQ.clause` puts the clause and the model in front of a person.
-    //
-    // Without `--verdict` it prints the judging prompt and stops, which is
-    // `prompt_exported`: the person carries it to whatever tool they like. With
-    // `--verdict` it records *their* decision. Nothing here calls anything.
-    //
     // @implements REQ-JUDGE.human_decides
     // @implements REQ-JUDGE.prompt_exported
     // @implements REQ-JUDGE.no_call
@@ -101,8 +77,6 @@ fn main() {
             eprintln!("nothing models {target}, so there is nothing to judge it against");
             return;
         };
-        // The model and the specification, and every model while a clause
-        // still has several (ADR-0014).
         let read = |role| -> Vec<(trace::material::ModelAt, String)> {
             trace::material::declarations_of(&index, &req_id, clause.as_deref(), role)
                 .into_iter()
@@ -113,7 +87,6 @@ fn main() {
                 .collect()
         };
         let models = read(trace::annotation::Role::Models);
-        // Nothing models it: what checks it is a test reading the tree.
         let source = match models.is_empty() {
             true => trace::material::structural_source(
                 &trace::material::structural_checks(&index, &req_id, clause.as_deref())
@@ -162,8 +135,6 @@ fn main() {
             requirement_hash: material.requirement_hash.clone(),
             model_hash: material.model_hash.clone(),
         };
-        // Who may judge: `.tracelean/judges.json`. Without one, a name is taken
-        // at its word, and the person recording is told so.
         let judges = match std::fs::read_to_string(root.join(".tracelean").join("judges.json")) {
             Ok(text) => match tracelean_core::judge::parse_judges(&text) {
                 Ok(judges) => Some(judges),
@@ -178,9 +149,6 @@ fn main() {
             }
         };
         use tracelean_core::judge::Outcome;
-        // Every verdict goes in the clause's one judgement slot, so a drift
-        // replaces an agreement recorded before, in the store and — once the
-        // lock is collected again below — in the lock.
         let (evidence, said) = match tracelean_core::judge::record(material, judgement, judges, model_at.link_hash) {
             Outcome::Refused { reason } => {
                 eprintln!("refused: {reason}");
@@ -213,9 +181,6 @@ fn main() {
         return;
     }
 
-    // `--drt-due` says, for each differential suite, whether a clause it claims
-    // has no current agreed run (`due`) or none does (`current`): what
-    // `tools/differential-all.sh` runs, and what it skips.
     if std::env::args().any(|a| a == "--drt-due") {
         for (file, due) in tracelean_core::drt::auto::suites_due(&root, &index) {
             match due.is_empty() {
@@ -226,9 +191,6 @@ fn main() {
         return;
     }
 
-    // `--drt` tests every clause a Lean function models and a Rust function
-    // implements against each other, without a binding, records L3 where it
-    // was earned, and refreshes the lock so the editor sees it.
     if std::env::args().any(|a| a == "--drt") {
         use tracelean_core::drt::auto::{run_all, Outcome};
         let files = tracelean_core::observe::workspace::snapshot(&root).files;
@@ -269,11 +231,6 @@ fn main() {
         return;
     }
 
-    // `--stale` lists everything that must be approved, tested, proved or
-    // measured again because something it rests on changed — evidence, pinning
-    // verdicts, documents, coverage — with what to run for each. Exit status 1
-    // when anything is listed, so a script or an agent can check it.
-    //
     // @implements REQ-STALE.listed_for_a_script
     if std::env::args().any(|a| a == "--stale") {
         use trace::record::Staleness;
@@ -339,9 +296,6 @@ fn main() {
         std::process::exit(if found > 0 { 1 } else { 0 });
     }
 
-    // `--coverage` runs each Rust test alone under coverage and keeps, per
-    // file, which tests ran each line and how often.
-    // Not again while every Rust source hashes as it did (`--again` does).
     if std::env::args().any(|a| a == "--coverage") {
         use tracelean_core::drt::lines_run;
         let files = tracelean_core::observe::workspace::snapshot(&root).files;
@@ -371,8 +325,6 @@ fn main() {
         return;
     }
 
-    // `--pins` asks Lean whether each `@pins` theorem pins its clause, keeps the
-    // verdict under `.tracelean/pins`, and says what an unpinned clause owes.
     if std::env::args().any(|a| a == "--pins") {
         use trace::pinning::{plans, statement};
         let files = tracelean_core::observe::workspace::snapshot(&root).files;
@@ -401,9 +353,6 @@ fn main() {
         return;
     }
 
-    // `--strength` lists what each modelled declaration owes, and where it
-    // stands. Nothing here confirms a pinning proof: only a build can say the
-    // kernel accepted it, and this command builds nothing.
     if std::env::args().any(|a| a == "--strength") {
         let obligations = trace::strength::obligations(&index);
         let mut counts: std::collections::BTreeMap<&str, usize> = Default::default();
@@ -424,8 +373,6 @@ fn main() {
                 );
             }
         }
-        // `--strength <symbol>` prints the obligation somebody would have to
-        // prove, which is the whole of what this system does about L4 strength.
         if let Some(at) = std::env::args().position(|a| a == "--strength") {
             if let Some(wanted) = std::env::args().nth(at + 1) {
                 if let Some(obligation) = obligations.iter().find(|o| o.symbol.contains(&wanted)) {
@@ -436,10 +383,6 @@ fn main() {
         return;
     }
 
-    // `--lock` writes the committed index, carrying through whatever evidence
-    // the existing lock records. Nothing here earns evidence: rendering is a
-    // function of the tree, and a backend is the only thing that may add a
-    // record.
     if std::env::args().any(|a| a == "--lock") {
         let held = trace::lockfile::read(&root).map(|l| l.evidence).unwrap_or_default();
         let earned = trace::store::read_all(&root);
@@ -455,8 +398,6 @@ fn main() {
                     rendered.evidence.len()
                 );
                 for record in &collected.dropped {
-                    // Named, because a record that went stale and a record that
-                    // was never earned look the same in a shorter lock file.
                     println!(
                         "  stale: {}{} {:?}",
                         record.key.req_id,
@@ -470,9 +411,6 @@ fn main() {
         return;
     }
 
-    // `--unparsed <file>` prints the regions of one file the grammar could not
-    // read, with the lines around them. `Imprecise` says a claim is capped; this
-    // says where to look to lift the cap.
     if let Some(at) = std::env::args().position(|a| a == "--unparsed") {
         let Some(name) = std::env::args().nth(at + 1) else {
             eprintln!("--unparsed needs a file");
@@ -493,9 +431,6 @@ fn main() {
             let text = content[*start..*end].lines().next().unwrap_or_default();
             println!("{name}:{line}  {text}");
         }
-        // A declaration can fail to parse inside a comment or a literal, which
-        // the ranges above do not reach. Naming the declaration is what the
-        // person fixing it needs either way.
         for decl in scan.declarations.iter().filter(|d| !d.precise) {
             println!("{name}:{}  declaration `{}` did not parse", decl.start_line + 1, decl.symbol_path);
         }
@@ -550,8 +485,6 @@ fn main() {
         println!("  {file} -> {target}: {}", state_name(state));
     }
 
-    // Exemptions are judged expired only against a date given here (`--today
-    // 2026-10-11`, as a CI job would pass it): the check reads no clock.
     let policy = trace::checker::Policy { today: value_after(&args, "--today"), ..Default::default() };
     let findings = trace::checker::check(&index, &policy);
     let mut by_kind: std::collections::BTreeMap<String, usize> = Default::default();
@@ -563,8 +496,6 @@ fn main() {
         println!("  {kind:<18} {n}");
     }
 
-    // `--show <Kind>` lists one kind in full. A summary count is what a project
-    // is graded on; the list is what somebody fixing it needs.
     let args: Vec<String> = std::env::args().collect();
     if let Some(at) = args.iter().position(|a| a == "--show") {
         if let Some(wanted) = args.get(at + 1) {

@@ -1,16 +1,3 @@
-//! Differential tests nobody had to write: `tracelean-trace . --drt`.
-//!
-//! For every clause a Lean `def` models and a Rust `fn` implements, and that
-//! no binding in `.tracelean/drt.json` already covers: read both signatures,
-//! pair them (`derive`), generate a runner for each side in a scratch
-//! directory, ask both the same generated cases, and — when they agree and the
-//! generator reached every class of every argument — record L3 for the bond.
-//!
-//! Works on any project: the Lean side requires the nearest Lake package by
-//! path, or packages the model's directory when there is none; the Rust side
-//! depends on the enclosing library crate, or includes the file as a module
-//! when there is none.
-
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -26,51 +13,33 @@ use crate::trace::anchor::AnchorKind;
 use crate::trace::annotation::Role;
 use crate::trace::index::Index;
 
-/// How many cases, from which seed. Fixed, so a run is reproducible from the
-/// record it leaves.
 const SEED: u64 = 1;
 const CASES: u64 = 2_000;
 
-/// One clause that can be tested.
 #[derive(Debug, Clone)]
 pub struct Candidate {
     pub op: String,
     pub req_id: String,
     pub clause: Option<String>,
-    /// The model's file, and its Lean name.
     pub model: (String, String),
-    /// The implementation's file, and its function name.
     pub implementation: (String, String),
     pub derived: Result<Derived, Vec<String>>,
 }
 
-/// What became of one clause.
 #[derive(Debug, Clone)]
 pub enum Outcome {
-    /// Agreed on every case and reached every class: L3 was recorded.
     Agreed { cases: u64 },
-    /// Agreed, but some class of some argument was never generated.
     Uncovered { missing: Vec<String> },
     Diverged { input: String, model: String, implementation: String },
-    /// The signatures do not pair.
     Mismatch(Vec<String>),
-    /// A runner did not build or did not answer.
     Failed(String),
-    /// Agreed before, and the model, implementation and requirement it ran
-    /// against hash as they did: nothing was run.
     Cached,
 }
 
-/// The runs `held` keeps for this candidate's clause, as `rerun` reads them.
 fn held_runs(index: &Index, held: &[crate::trace::record::Evidence], c: &Candidate) -> Vec<HeldRun> {
     held_for(index, held, &c.req_id, &c.clause)
 }
 
-/// Each file holding a `@drt` claim — a differential suite — with the clauses
-/// it establishes that no current agreed run holds: a suite with none due need
-/// not run (`tools/differential-all.sh`). A claim on a binding's op establishes
-/// every clause the binding also checks, so those count too; and the op is the
-/// one the held record names, since such a clause is recorded under it.
 pub fn suites_due(root: &Path, index: &Index) -> BTreeMap<String, Vec<String>> {
     let held = crate::trace::earn::merge(
         crate::trace::lockfile::read(root).map(|l| l.evidence).unwrap_or_default(),
@@ -125,9 +94,6 @@ fn declaration(files: &BTreeMap<String, String>, file: &str, start: u32, end: u3
         .unwrap_or_default()
 }
 
-/// Every clause with a Lean function modelling it and a Rust function
-/// implementing it, minus those a binding already declares.
-///
 /// @implements REQ-DRT-SCHEMA.derived_from_both
 pub fn candidates(root: &Path, index: &Index, files: &BTreeMap<String, String>) -> Vec<Candidate> {
     let bound: Vec<String> = super::config::read(root).unwrap_or_default().iter().map(|b| b.op()).collect();
@@ -146,7 +112,6 @@ pub fn candidates(root: &Path, index: &Index, files: &BTreeMap<String, String>) 
             let AnchorKind::Decl { symbol_path } = &l.anchor.kind else { return None };
             let text = declaration(files, &l.anchor.file, l.anchor.start_line, l.anchor.end_line);
             let signature = derive::lean_signature(&text)?;
-            // A specification is a predicate, not something to run.
             (signature.1 != derive::Ty::Named { name: "Prop".into() })
                 .then(|| (l.anchor.file.clone(), symbol_path.replace("::", "."), signature))
         });
@@ -173,7 +138,6 @@ pub fn candidates(root: &Path, index: &Index, files: &BTreeMap<String, String>) 
     out
 }
 
-/// The nearest directory at or above `file`'s, within `root`, with a lakefile.
 fn lake_root(root: &Path, file: &Path) -> Option<PathBuf> {
     let mut at = file.parent();
     while let Some(dir) = at {
@@ -188,7 +152,6 @@ fn lake_root(root: &Path, file: &Path) -> Option<PathBuf> {
     None
 }
 
-/// A Lake package's name, from its lakefile.
 fn package_name(dir: &Path) -> Option<String> {
     if let Ok(text) = std::fs::read_to_string(dir.join("lakefile.lean")) {
         let line = text.lines().find_map(|l| l.trim().strip_prefix("package "))?;
@@ -203,7 +166,6 @@ fn module_of(rel: &Path) -> String {
     rel.with_extension("").iter().filter_map(|c| c.to_str()).collect::<Vec<_>>().join(".")
 }
 
-/// Every `.lean` file under `dir`, relative to it.
 fn lean_files(dir: &Path, under: &Path, out: &mut Vec<PathBuf>) {
     let Ok(entries) = std::fs::read_dir(dir) else { return };
     for entry in entries.flatten() {
@@ -218,7 +180,6 @@ fn lean_files(dir: &Path, under: &Path, out: &mut Vec<PathBuf>) {
     }
 }
 
-/// Build the Lean runner for `candidates`, all of whose models share one home.
 fn lean_side(root: &Path, scratch: &Path, chosen: &[&Candidate]) -> Result<RunnerSpec, String> {
     lean_runner::toolchain()?;
     let first = root.join(&chosen[0].model.0);
@@ -232,7 +193,6 @@ fn lean_side(root: &Path, scratch: &Path, chosen: &[&Candidate]) -> Result<Runne
             (name, dir, imports)
         }
         None => {
-            // No package: make one of the model's directory, copied.
             let home = first.parent().ok_or("a model with no directory")?.to_path_buf();
             let model = scratch.join("model");
             let mut files = Vec::new();
@@ -272,7 +232,6 @@ fn lean_side(root: &Path, scratch: &Path, chosen: &[&Candidate]) -> Result<Runne
     Ok(RunnerSpec { cmd: vec![dir.join(".lake/build/bin/drtRunner").display().to_string()], cwd: None })
 }
 
-/// A crate's package name, from its `Cargo.toml`.
 fn crate_name(dir: &Path) -> Option<String> {
     let text = std::fs::read_to_string(dir.join("Cargo.toml")).ok()?;
     let mut in_package = false;
@@ -288,7 +247,6 @@ fn crate_name(dir: &Path) -> Option<String> {
     None
 }
 
-/// Build the Rust runner for `candidates`.
 fn rust_side(root: &Path, scratch: &Path, chosen: &[&Candidate]) -> Result<RunnerSpec, String> {
     let mut deps = BTreeMap::new();
     let mut included = String::new();
@@ -296,8 +254,6 @@ fn rust_side(root: &Path, scratch: &Path, chosen: &[&Candidate]) -> Result<Runne
     for (n, c) in chosen.iter().enumerate() {
         let Ok(derived) = &c.derived else { continue };
         let rel = Path::new(&c.implementation.0);
-        // A library crate holding the file is depended on; anything else is
-        // included as a module of the runner.
         let components: Vec<&str> = rel.iter().filter_map(|p| p.to_str()).collect();
         let crate_dir = components.iter().rposition(|p| *p == "src").map(|at| root.join(components[..at].iter().collect::<PathBuf>()));
         let call_path = match (crate_dir, rust_runner::module_path(root, rel)) {
@@ -330,7 +286,6 @@ fn rust_side(root: &Path, scratch: &Path, chosen: &[&Candidate]) -> Result<Runne
     Ok(RunnerSpec { cmd: vec![dir.join("target/release/tracelean-drt-runner").display().to_string()], cwd: None })
 }
 
-/// Run one candidate against built runners.
 fn exercise(c: &Candidate, model: &RunnerSpec, implementation: &RunnerSpec) -> Outcome {
     let Ok(derived) = &c.derived else { return Outcome::Mismatch(c.derived.clone().err().unwrap_or_default()) };
     let result = match run(&c.op, &derived.schema, model, implementation, RunOptions { seed: SEED, cases: CASES }) {
@@ -345,8 +300,6 @@ fn exercise(c: &Candidate, model: &RunnerSpec, implementation: &RunnerSpec) -> O
         };
         return Outcome::Diverged { input: d.input.to_string(), model: said(&d.model), implementation: said(&d.implementation) };
     }
-    // The same stream the run drew, counted by class: every class of every
-    // argument must be reached (REQ-DRT-COVER.classes_reached).
     let observed: Vec<Observed> = classes::reached(derived.schema.clone(), SEED, result.cases);
     let floors: Vec<Floor> =
         observed.iter().map(|o| Floor { situation: o.situation.clone(), at_least: 1 }).collect();
@@ -360,12 +313,6 @@ fn exercise(c: &Candidate, model: &RunnerSpec, implementation: &RunnerSpec) -> O
     Outcome::Agreed { cases: result.cases }
 }
 
-/// Test every candidate; record L3 where it was earned; say what happened.
-///
-/// A candidate already agreed against inputs that hash as they do now is not
-/// run again (`Cached`), and no runner is built when none is left; `again`
-/// runs every one regardless.
-///
 /// @implements REQ-DRT-SCHEMA.derived_from_both
 pub fn run_all(root: &Path, index: &Index, files: &BTreeMap<String, String>, again: bool) -> Vec<(Candidate, Outcome)> {
     let found = candidates(root, index, files);
@@ -381,7 +328,6 @@ pub fn run_all(root: &Path, index: &Index, files: &BTreeMap<String, String>, aga
     let runners = if ready.is_empty() {
         Err(String::new())
     } else {
-        // Lake and cargo build side by side; neither reads the other's output.
         let (model, implementation) =
             std::thread::scope(|s| {
                 let lean = s.spawn(|| lean_side(root, &scratch, &ready));
@@ -390,7 +336,6 @@ pub fn run_all(root: &Path, index: &Index, files: &BTreeMap<String, String>, aga
             });
         model.and_then(|m| implementation.map(|i| (m, i)))
     };
-    // Each run starts runners of its own, so clauses run side by side.
     let outcomes = super::run::par_map(&found, |c| match (&c.derived, &runners) {
         _ if cached(c) => Outcome::Cached,
         (Err(problems), _) => Outcome::Mismatch(problems.clone()),

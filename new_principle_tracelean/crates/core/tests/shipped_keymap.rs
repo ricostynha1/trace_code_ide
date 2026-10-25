@@ -1,10 +1,3 @@
-//! The keymap the project ships, checked as data rather than as a fixture.
-//!
-//! `REQ-MYTH` is about a keymap a user edits. Laws that only ever run against
-//! fixtures written next to them are laws about the fixtures, so the file in
-//! `assets/keymap.json` is loaded here and put through the same validation a
-//! user's own edit would go through.
-
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 
@@ -28,10 +21,6 @@ fn shipped() -> (String, Keymap) {
     (text, keymap)
 }
 
-/// The shipped keymap loads, which means it satisfies every law at once: every
-/// mode it enters exists, every action it names is in the registry, every
-/// action in the registry is reachable, and leaving terminates.
-///
 /// @tests REQ-MYTH.keymap_is_data
 /// @tests REQ-MYTH.modes_defined
 /// @tests REQ-MYTH.actions_defined
@@ -43,9 +32,6 @@ fn the_keymap_the_project_ships_holds_together() {
     assert_eq!(keymap.root, "Normal");
     assert!(keymap.modes.len() > 5, "the shipped keymap is barely a keymap");
 
-    // Every action the registry declares is dispatched by some binding, and
-    // nothing else is dispatched. `validate` already refuses both, so this says
-    // what the file is rather than re-checking it.
     let mut dispatched = BTreeSet::new();
     for (_, mode) in &keymap.modes {
         for (_, binding) in &mode.bindings {
@@ -56,8 +42,6 @@ fn the_keymap_the_project_ships_holds_together() {
     }
     assert_eq!(dispatched, keymap::actions());
 
-    // Every binding says what it does, because the which-key bar has nothing
-    // else to show.
     for (name, mode) in &keymap.modes {
         for (key, binding) in &mode.bindings {
             assert!(
@@ -68,9 +52,6 @@ fn the_keymap_the_project_ships_holds_together() {
     }
 }
 
-/// Pressing keys against the shipped keymap: every key in every mode has an
-/// outcome, and escape walks back to the root.
-///
 /// @tests REQ-MYTH.totality
 /// @tests REQ-MYTH.escape_pops_one
 /// @tests REQ-MYTH.escape_terminates
@@ -94,13 +75,6 @@ fn every_key_in_the_shipped_keymap_does_something() {
                 Outcome::Dispatch { action } => {
                     assert!(keymap::actions().contains(action), "{name}/{key} -> {action}")
                 }
-                // Only a mode with no parent passes a key through. A mode that
-                // has one was reached from a menu, and an unbound key there
-                // goes back rather than disappearing, so a mistyped leader
-                // never strands anyone. The parentless modes are the ones where
-                // a key nothing binds still means something to the editor: the
-                // root, where it is refused out loud, and `Insert`, where it is
-                // text.
                 Outcome::PassThrough => assert!(
                     keymap.mode(name).and_then(|m| m.parent.clone()).is_none(),
                     "{name}/{key} vanished"
@@ -108,15 +82,11 @@ fn every_key_in_the_shipped_keymap_does_something() {
             }
         }
 
-        // Escape reaches the root, one level at a time.
         let mut mode = name.clone();
         let mut steps = 0;
         while mode != keymap.root {
             let parent = keymap.mode(&mode).and_then(|m| m.parent.clone());
             let towards = parent.clone().unwrap_or_else(|| keymap.root.clone());
-            // Either the mode has a parent and escape leaves to it, or it has
-            // none and binds escape itself. A parentless mode must bind it: the
-            // alternative is escape being typed as text and no way out.
             let stepped = keymap::step(keymap.clone(), mode.clone(), LEAVE.to_string());
             assert!(
                 stepped == Outcome::Leave { mode: towards.clone() }
@@ -130,15 +100,12 @@ fn every_key_in_the_shipped_keymap_does_something() {
     }
 }
 
-/// The which-key bar for the shipped keymap is computed from it.
-///
 /// @tests REQ-MYTH.whichkey_is_a_query
 #[test]
 fn the_which_key_bar_is_the_shipped_keymap_read_back() {
     let (_, keymap) = shipped();
     for (name, mode) in &keymap.modes {
         let shown = keymap::which_key(&keymap, name);
-        // Every binding, plus the way out of a mode that has one.
         let expected = mode.bindings.len() + usize::from(mode.parent.is_some());
         assert_eq!(shown.len(), expected, "{name}");
         if mode.parent.is_some() {
@@ -153,9 +120,6 @@ fn the_which_key_bar_is_the_shipped_keymap_read_back() {
     }
 }
 
-/// An edited keymap that does not hold together is refused at load, and text
-/// that is not a keymap at all is a different failure.
-///
 /// @tests REQ-MYTH.keymap_is_data
 /// @tests REQ-MYTH.actions_defined
 #[test]
@@ -177,26 +141,11 @@ fn an_edit_that_breaks_the_keymap_is_refused_when_it_is_read() {
     }
 }
 
-/// Every key the shipped keymap binds is a name a frontend can produce.
-///
-/// `actions_reachable` is a claim about the keymap: from the root, some key
-/// sequence reaches every action. That claim is true of the data and says
-/// nothing about the editor, because the editor only reaches an action if the
-/// frontend hands `step` the same string the file was written with. The space
-/// bar is where the two came apart — `assets/keymap.json` spelled it `Space`,
-/// both frontends handed over `" "`, `step` answered `PassThrough` for a bound
-/// key, and the leader menu was unreachable while every law above still held.
-///
-/// So the name a frontend produces is a value too, and `keymap::typed` and
-/// `keymap::NAMED` are where it is produced. A key in the shipped file that is
-/// neither is a binding nobody can press.
-///
 /// @tests REQ-MYTH.actions_reachable
 #[test]
 fn every_key_the_shipped_keymap_binds_is_one_a_frontend_can_name() {
     let (_, keymap) = shipped();
 
-    // The space is the character that cannot name itself, and the only one.
     assert_eq!(keymap::typed(' '), keymap::SPACE);
     for other in ['a', 'Z', '0', 'é', '→'] {
         assert_eq!(keymap::typed(other), other.to_string(), "{other} was renamed");
@@ -227,25 +176,12 @@ fn every_key_the_shipped_keymap_binds_is_one_a_frontend_can_name() {
     assert!(bound > 10, "only {bound} bindings were read; the walk is wrong");
 }
 
-/// Neither frontend names a key of its own.
-///
-/// Read rather than run: a key name is a string literal in a frontend, and the
-/// failure is that it is not the keymap's string — which no value the frontend
-/// computes can reveal, because the frontend and the keymap never meet except
-/// at a key press a person makes. So the literals are read back and held to
-/// `keymap::NAMED`, and the terminal frontend is required to get its characters
-/// from `keymap::typed` rather than spelling them itself.
-///
-/// The web frontend is in a language TraceLean has no grammar for (ADR-0008),
-/// so its claim is annotated here rather than in it.
-///
 /// @tests REQ-MYTH.actions_reachable
 #[test]
 fn no_frontend_names_a_key_of_its_own() {
     let root = project_root();
     let known: BTreeSet<&str> = keymap::NAMED.iter().copied().collect();
 
-    // The terminal frontend: every literal in the function that names a key.
     let tui = std::fs::read_to_string(root.join("crates/tui/src/main.rs")).expect("the terminal");
     let body = between(&tui, "fn name_of(", "\n}").expect("the terminal frontend names keys");
     assert!(
@@ -259,7 +195,6 @@ fn no_frontend_names_a_key_of_its_own() {
         );
     }
 
-    // The web frontend: the set it filters key presses through.
     let web = std::fs::read_to_string(root.join("web/src/app.ts")).expect("the page");
     let set = between(&web, "const named = new Set([", "]);").expect("the page names keys");
     let named: BTreeSet<String> = literals(set).into_iter().collect();
@@ -275,16 +210,12 @@ fn no_frontend_names_a_key_of_its_own() {
     );
 }
 
-/// The text between two markers, exclusive — enough to read one function or one
-/// list back out of a source file.
 fn between<'a>(source: &'a str, from: &str, to: &str) -> Option<&'a str> {
     let start = source.find(from)? + from.len();
     let rest = &source[start..];
     Some(&rest[..rest.find(to)?])
 }
 
-/// Every double-quoted literal in a fragment of source, in order. Both
-/// languages quote a key name the same way, which is why one reader does.
 fn literals(source: &str) -> Vec<String> {
     let mut out = Vec::new();
     let mut rest = source;

@@ -1,10 +1,3 @@
-//! Findings: what is claimed, what is missing, and what has gone stale.
-//!
-//! Naming is the feature. "Traceability error" is not actionable in a diff;
-//! *this clause is missing a DRT binding between its model and its implementation* is a
-//! task. Most findings are progress rather than faults, and a tool that reports
-//! progress as failure gets its checks disabled in week one.
-
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -24,48 +17,25 @@ pub enum Severity {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum Kind {
-    /// An annotation names a requirement or clause that does not exist.
     Dangling,
-    /// `refines:` names a requirement that does not exist.
     DanglingRefines,
-    /// The refinement graph contains a cycle.
     RefinesCycle,
-    /// Two documents declare the same identifier.
     DuplicateId,
-    /// A clause has no model and is not exempt.
     Unmodeled,
-    /// Modelled, but nothing claims to implement it.
     Unimplemented,
-    /// Model and implementation both exist, and nothing binds them.
     Unbound,
-    /// Implemented, but no test.
     Untested,
-    /// Two links exclusively claim the same clause.
     Contested,
-    /// An exemption without a reason or an approver.
     UnsoundExemption,
-    /// A partial or nondeterministic qualifier without a reason.
     UnsoundQualifier,
-    /// Something wrong in a document or an annotation.
     Malformed,
-    /// A source file did not parse cleanly, so its annotations anchor to the
-    /// whole file and are capped at the lowest evidence level.
-    ///
-    /// Not an error: the claims are still recorded, just not precisely placed.
-    /// Blocking on it would make an unsupported language construct fail a build
-    /// that is otherwise fine.
     Imprecise,
-    /// A clause with more than one `@models` (ADR-0014).
     SeveralModels,
-    /// A clause with more than one `@specifies`.
     SeveralSpecs,
-    /// A clause with more than one `@pins`.
     SeveralPins,
 }
 
 impl Kind {
-    /// Whether this names something broken, or work not yet done.
-    ///
     /// @implements REQ-CHECK.progress_not_fault
     pub fn is_progress(self) -> bool {
         matches!(self, Kind::Unmodeled | Kind::Unimplemented | Kind::Untested)
@@ -75,8 +45,6 @@ impl Kind {
         match self {
             Kind::Unmodeled | Kind::Unimplemented | Kind::Untested => Severity::Info,
             Kind::Unbound | Kind::UnsoundQualifier | Kind::Imprecise => Severity::Warn,
-            // A clause has one model, one specification and one pin
-            // (ADR-0014): several is a fault, and blocks.
             Kind::SeveralModels
             | Kind::SeveralSpecs
             | Kind::SeveralPins
@@ -91,15 +59,10 @@ impl Kind {
     }
 }
 
-/// Which kinds fail a build. Deliberately small: a requirement with no model
-/// yet is where the work is, not a broken build.
-///
 /// @implements REQ-CHECK.severity_policy
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Policy {
     pub block_on: BTreeSet<Kind>,
-    /// The date exemptions are judged expired against, as `YYYY-MM-DD`; none
-    /// judges none expired (`REQ-CHECK.qualifier_soundness`).
     #[serde(default)]
     pub today: Option<String>,
 }
@@ -135,8 +98,6 @@ pub struct Finding {
     pub line: u32,
     pub req_id: Option<String>,
     pub clause: Option<String>,
-    /// Carried rather than recomputed, so a report and a build gate can never
-    /// answer slightly different questions about what an error is.
     pub blocking: bool,
 }
 
@@ -161,24 +122,14 @@ impl Finding {
     }
 }
 
-/// What is known about a kind, in one place.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct KindFacts {
     pub severity: Severity,
-    /// Work not yet done, rather than something broken.
     pub progress: bool,
-    /// Whether the default policy fails a build on it.
     pub blocks_by_default: bool,
 }
 
-/// Severity, progress and the default gate for one kind.
-///
-/// Together in one function because the requirement is that they agree: a kind
-/// that describes progress must not be in the default blocking set, and a
-/// reader must not have to check two places to find out whether something is a
-/// fault.
-///
 /// @implements REQ-CHECK.named_kinds
 /// @implements REQ-CHECK.progress_not_fault
 /// @implements REQ-CHECK.severity_policy
@@ -193,16 +144,6 @@ pub fn facts(kind: Kind) -> KindFacts {
     }
 }
 
-/// What a clause's claimed roles imply, in the order the findings are pushed.
-///
-/// This is the coverage decision on its own, over nothing but the roles: a
-/// clause is unmodelled, or modelled and unimplemented, or both and unbound —
-/// exactly one of the three, which is what `exactly_once` demands — and,
-/// separately, implemented without a test.
-///
-/// An exempt clause yields nothing at all. That is the point of an exemption,
-/// and why one has to carry a reason and an approver.
-///
 /// @implements REQ-CHECK.exactly_once
 /// @implements REQ-CHECK.unbound_reported
 /// @implements REQ-CHECK.structural_is_not_exempt
@@ -220,12 +161,6 @@ pub fn coverage_kinds(roles: Vec<Role>, exempt: bool, structural: bool) -> Vec<K
     let tested = have.contains(&Role::Tests);
 
     let mut out = Vec::new();
-    // A structural clause is a property of the tree, so there is no
-    // data-to-data function to model, no second implementation to compare
-    // against, and nothing to point an `@implements` at — the tree realises it
-    // by being the shape it is. What there is, and what is required, is a test
-    // that reads the repository and says what it found. The clause stays in the
-    // denominator, which an exemption would not.
     if structural {
         if !tested {
             out.push(Kind::Untested);
@@ -245,15 +180,6 @@ pub fn coverage_kinds(roles: Vec<Role>, exempt: bool, structural: bool) -> Vec<K
     out
 }
 
-/// What a qualifier on a link implies about the link itself.
-///
-/// An exemption removes a clause from the denominator, so an exemption without
-/// a reason and an approver is a hole nobody signed for. A partial or
-/// nondeterministic qualifier that says nothing is the same failure, one
-/// severity down. An exemption past its `until` is one nobody renewed — but
-/// only against a date the check was given (`today`, an ISO date), since a
-/// check that read a clock would answer differently for the same tree.
-///
 /// @implements REQ-CHECK.qualifier_soundness
 /// @drt REQ-CHECK.qualifier_soundness
 pub fn qualifier_kinds(qualifier: Option<Qualifier>, today: Option<String>) -> Vec<Kind> {
@@ -267,20 +193,11 @@ pub fn qualifier_kinds(qualifier: Option<Qualifier>, today: Option<String>) -> V
         }
         Some(Qualifier::Partial { reason: None })
         | Some(Qualifier::Nondeterministic { reason: None })
-        // A structural clause that does not say why there is no law to state is
-        // indistinguishable from one nobody got round to modelling.
         | Some(Qualifier::Structural { reason: None }) => vec![Kind::UnsoundQualifier],
         _ => Vec::new(),
     }
 }
 
-/// Which roles a clause carries more than one of, as the kinds that report it.
-///
-/// A clause has one model (the function computing what it talks about), at
-/// most one specification and at most one pinning theorem (ADR-0014). A second
-/// of any of them leaves which one is meant to be guessed — by position, as
-/// pinning once did — so it is named instead.
-///
 /// @implements REQ-CHECK.one_of_each_role
 /// @drt REQ-CHECK.one_of_each_role
 pub fn crowded_kinds(roles: Vec<Role>) -> Vec<Kind> {
@@ -292,8 +209,6 @@ pub fn crowded_kinds(roles: Vec<Role>) -> Vec<Kind> {
         .collect()
 }
 
-/// Check an index.
-///
 /// @implements REQ-CHECK.exactly_once
 /// @implements ARCH-DETERMINISM.stable_ordering
 pub fn check(index: &Index, policy: &Policy) -> Vec<Finding> {
@@ -333,7 +248,6 @@ pub fn check(index: &Index, policy: &Policy) -> Vec<Finding> {
         ));
     }
 
-    // Links whose requirement or clause does not exist.
     for link in &index.links {
         let known = match index.requirements.get(&link.req_id) {
             None => false,
@@ -371,7 +285,6 @@ pub fn check(index: &Index, policy: &Policy) -> Vec<Finding> {
         }
     }
 
-    // Per clause: what roles claim it.
     let mut roles: BTreeMap<(String, Option<String>), BTreeSet<Role>> = BTreeMap::new();
     let mut exempt: BTreeSet<(String, Option<String>)> = BTreeSet::new();
     let mut structural: BTreeSet<(String, Option<String>)> = BTreeSet::new();
@@ -386,8 +299,6 @@ pub fn check(index: &Index, policy: &Policy) -> Vec<Finding> {
         }
     }
 
-    // Per clause: each declaration claiming it as its model, specification or
-    // pin, once per declaration, with where it is.
     let mut declared: BTreeMap<(String, Option<String>), BTreeMap<(Role, String), (String, u32)>> = BTreeMap::new();
     for link in index.links.iter().filter(|l| matches!(l.role, Role::Models | Role::Specifies | Role::Pins)) {
         declared
@@ -438,8 +349,6 @@ pub fn check(index: &Index, policy: &Policy) -> Vec<Finding> {
                 let message = match kind {
                     Kind::Unmodeled => format!("{what}: missing a model — write a Lean function and mark it `@models {what}`"),
                     Kind::Unimplemented => format!("{what}: missing an implementation — write the code and mark it `@implements {what}`"),
-                    // The most important finding: the formal work was done, the
-                    // code was written, and nothing compares them.
                     Kind::Unbound => {
                         format!("{what}: missing a DRT binding — bind the model and the implementation so generated inputs are compared")
                     }
@@ -461,13 +370,10 @@ pub fn check(index: &Index, policy: &Policy) -> Vec<Finding> {
     findings
 }
 
-/// Whether a set of findings fails the gate.
 pub fn blocks(findings: &[Finding]) -> bool {
     findings.iter().any(|f| f.blocking)
 }
 
-/// Clauses a requirement is answerable for, excluding exempted ones.
-///
 /// @implements REQ-ROLLUP.exempt_leaves_denominator
 pub fn denominator(index: &Index, id: &str) -> usize {
     let Some(req) = index.requirements.get(id) else { return 0 };
@@ -480,8 +386,6 @@ pub fn denominator(index: &Index, id: &str) -> usize {
     req.clause_keys().into_iter().filter(|c| !exempt.contains(c)).count()
 }
 
-/// Whether a requirement's figures may be presented as exact.
-///
 /// @implements REQ-ROLLUP.open_is_lower_bound
 /// @implements REQ-ROLLUP.never_complete_when_open
 pub fn is_exact(index: &Index, id: &str) -> bool {
@@ -509,7 +413,6 @@ mod tests {
         (dir, index)
     }
 
-    /// A minimal scratch directory, removed on drop.
     mod tempdir {
         use std::path::{Path, PathBuf};
         pub struct Dir(PathBuf);
@@ -540,9 +443,6 @@ mod tests {
 
     const REQ: &str = "---\nid: REQ-A\ndecomposition: complete\nclauses:\n  one: First.\n---\nbody";
 
-    /// An exemption past its `until` is reported against the date the check is
-    /// given, and against no date is not: the check reads no clock.
-    ///
     /// @tests REQ-CHECK.qualifier_soundness
     #[test]
     fn an_exemption_past_the_date_given_is_reported_and_without_one_is_not() {
@@ -560,10 +460,6 @@ mod tests {
         assert!(qualifier_kinds(exempt("2026-01-01"), None).is_empty());
     }
 
-    /// A `refines` naming nothing, a cycle of `refines`, a link to a missing
-    /// requirement, and a qualifier that does not say why are each one finding;
-    /// a link to a whole requirement that exists is none.
-    ///
     /// @tests REQ-CHECK.exactly_once
     /// @tests REQ-CHECK.qualifier_soundness
     #[test]
@@ -607,9 +503,6 @@ mod tests {
         assert_eq!(unbound[0].clause.as_deref(), Some("one"));
     }
 
-    /// Two models of one clause are named, each by where it is, and do not
-    /// block while the clauses carrying them are sorted out.
-    ///
     /// @tests REQ-CHECK.one_of_each_role
     #[test]
     fn a_second_model_spec_or_pin_is_named_with_every_declaration() {
@@ -648,8 +541,6 @@ mod tests {
         let findings = check(&index, &Policy::default());
         let unmodeled: Vec<_> = findings.iter().filter(|f| f.kind == Kind::Unmodeled).collect();
         assert_eq!(unmodeled.len(), 1);
-        // Unmodeled and Unimplemented are mutually exclusive: a clause with no
-        // model is not also reported as modelled-but-unimplemented.
         assert!(!findings.iter().any(|f| f.kind == Kind::Unimplemented));
     }
 

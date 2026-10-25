@@ -1,14 +1,3 @@
-//! The refinement graph, checked against the model.
-//!
-//! Two questions that must not be confused. A parent that does not exist is a
-//! typo; a cycle is a contradiction in what the project claims. Report the
-//! first as the second and a spelling mistake fails the build; report the
-//! second as the first and a requirement is allowed to justify itself.
-//!
-//! The cycle returned is also part of the answer, not just its existence: it is
-//! shown to a person, so it has to be the same cycle on every run. Generated
-//! graphs with several cycles are what check that.
-
 mod harness;
 
 use tracelean_core::drt::run::{run, RunOptions};
@@ -20,8 +9,6 @@ fn strukt(fields: &[(&str, Schema)]) -> Schema {
     Schema::Struct { fields: fields.iter().map(|(k, v)| (k.to_string(), v.clone())).collect() }
 }
 
-/// A four-identifier alphabet, one of which nothing ever declares. Small
-/// enough that cycles occur by chance rather than by construction.
 fn id() -> Schema {
     Schema::Str {
         max_len: Some(0),
@@ -79,16 +66,11 @@ fn model_and_implementation_agree_on_the_refinement_graph() {
     )
     .expect("both runners answer");
 
-    // The agreeing half of what this binding needs; the coverage half comes
-    // from the generation test, and whichever lands second writes the record.
     support::agreed(&result);
 
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
-/// Cycles, dangling parents and clean graphs must all occur — and a reported
-/// cycle must really be one.
-///
 /// @tests REQ-REQDOC.refines_dag
 /// @tests REQ-DRT-COVER.law_coverage
 #[test]
@@ -109,8 +91,6 @@ fn generation_reaches_cycles_dangling_parents_and_clean_graphs() {
         match (&report.cycle, report.dangling.is_empty()) {
             (Some(cycle), _) => {
                 cyclic += 1;
-                // Every step of a reported cycle must be a real edge, and it
-                // must close.
                 assert!(cycle.len() >= 2, "a cycle of one node: {cycle:?}");
                 assert_eq!(cycle.first(), cycle.last(), "the reported cycle does not close");
                 for pair in cycle.windows(2) {

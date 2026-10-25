@@ -1,28 +1,15 @@
-//! The checker's findings, each a way to the place it is about.
-//!
-//! A finding names a file and a line, and usually a requirement. Shown as one
-//! undifferentiated row, neither could be followed; here the location is a
-//! `path:line` link (`file.open`, which the shell opens at that line) and every
-//! requirement named in the message opens that requirement. The text is the
-//! same `kind: path:line message` a report has always read.
-
 use crate::surface::highlight::names;
 use crate::surface::produce::tidy;
 use crate::surface::view::{Buffer, BufferKind, Role, Span};
 
-/// One finding, as the view needs it.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct Found {
-    /// What kind of finding, in lower case: `unmodeled`, `imprecise`, …
     pub kind: String,
     pub file: String,
-    /// One-based.
     pub line: u32,
     pub message: String,
 }
 
-/// The findings as a record titled `title`, one row a finding.
-///
 /// @implements REQ-SHOW.findings_lead_somewhere
 pub fn findings_view(title: &str, found: &[Found]) -> Buffer {
     let mut text = String::new();
@@ -46,8 +33,6 @@ pub fn findings_view(title: &str, found: &[Found]) -> Buffer {
                     });
                 }
             } else {
-                // Every piece but the message has a role of its own; the
-                // message is last and read for names above.
                 spans.push(Span {
                     start: at,
                     stop: at + length,
@@ -93,9 +78,6 @@ mod tests {
     use super::*;
     use crate::surface::view::{actions_at, faults};
 
-    /// A finding's place opens the file there, and the requirement it names
-    /// opens the requirement.
-    ///
     /// @tests REQ-SHOW.findings_lead_somewhere
     #[test]
     fn a_finding_links_to_its_place_and_its_requirement() {

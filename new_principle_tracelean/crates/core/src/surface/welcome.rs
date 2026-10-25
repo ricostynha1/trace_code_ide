@@ -1,11 +1,6 @@
-//! The page a project opens on: where to start, then the folders opened
-//! before, each opening as the project when clicked.
-
 use crate::surface::produce::{menu_buffer, tidy, MenuEntry};
 use crate::surface::view::{Buffer, Role, Span};
 
-/// What the page says before its starts: what this editor is, and where to
-/// look first.
 pub const INTRO: &[&str] = &[
     "TraceLean — an editor that knows why your code exists",
     "",
@@ -21,13 +16,9 @@ pub const INTRO: &[&str] = &[
     "Start here",
 ];
 
-/// The starts as a menu, and under a `Recent` heading each folder in
-/// `recent` as a path that opens it.
-///
 /// @implements REQ-SHOW.recent_reopens
 pub fn welcome(starts: Vec<MenuEntry>, recent: &[String]) -> Buffer {
     let menu = menu_buffer("welcome".into(), starts);
-    // The introduction first, the starts' spans moved down past it.
     let intro = INTRO.join("\n") + "\n";
     let shift = intro.chars().count();
     let title = INTRO[0].chars().count();
@@ -65,9 +56,6 @@ pub fn welcome(starts: Vec<MenuEntry>, recent: &[String]) -> Buffer {
     buffer
 }
 
-/// `welcome`, taking what it reads by value, as a generated runner calls it
-/// (ADR-0010).
-///
 /// @drt REQ-SHOW.recent_reopens
 pub fn welcome_owned(starts: Vec<MenuEntry>, recent: Vec<String>) -> Buffer {
     welcome(starts, &recent)
@@ -96,8 +84,6 @@ mod tests {
         assert_eq!(opens, vec!["/home/u/one", "/home/u/two"]);
     }
 
-    /// With nothing recent it is the introduction and the starts, each start
-    /// still doing what it did.
     #[test]
     fn with_nothing_recent_it_is_the_introduction_and_the_starts() {
         let start = MenuEntry { key: "a".into(), description: "Start".into(), action: Some("sandbox.new".into()) };

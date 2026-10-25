@@ -1,6 +1,3 @@
-//! The trace station follows the file the document shows: opened after one
-//! file it is that file's trace, after another the other's.
-
 use std::path::PathBuf;
 
 use tracelean_core::surface::act::Intent;

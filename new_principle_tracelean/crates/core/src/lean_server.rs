@@ -1,19 +1,3 @@
-//! Lean's own language server, asked what the proof state is at a position.
-//!
-//! Reading a proof is watching its goals change as the cursor moves, which only
-//! the Lean server can say. This is the project's own toolchain, the way the
-//! differential runners are — `lake env lean --server` in the Lean project the
-//! file belongs to — and never an agent: it is started to be asked one question
-//! and says nothing the person did not ask for.
-//!
-//! Asking never waits. A request is sent and the answer is picked up by a later
-//! `poll`, so the editor stays as quick as the keys, and a server that is slow
-//! (Lean elaborates the file before it answers) costs a stale panel rather
-//! than a frozen window. What is pure — the framing, the position, the reading
-//! of an answer — is separate from what starts a process, and tested without one.
-//!
-//! Its pure reading of an answer, `goals_shown`, is what clause `REQ-LSP.proof_state_shown` models.
-
 use std::collections::BTreeMap;
 use std::io::{BufRead, BufReader, Read, Write};
 use std::path::{Path, PathBuf};
@@ -22,7 +6,6 @@ use std::sync::mpsc::{channel, Receiver, Sender};
 
 use serde_json::{json, Value};
 
-/// One message as the language-server protocol frames it.
 pub fn frame(message: &Value) -> Vec<u8> {
     let body = message.to_string();
     let mut out = format!("Content-Length: {}\r\n\r\n", body.len()).into_bytes();
@@ -30,23 +13,15 @@ pub fn frame(message: &Value) -> Vec<u8> {
     out
 }
 
-/// A file's address as a server names it.
 pub fn file_uri(path: &Path) -> String {
     let absolute = std::path::absolute(path).unwrap_or_else(|_| path.to_path_buf());
     format!("file://{}", absolute.display().to_string().replace(' ', "%20"))
 }
 
-/// A character column as the server counts it: in UTF-16 units, so a line with
-/// `𝔸` before the cursor is one unit further on than it looks.
 pub fn utf16_column(line: &str, column: usize) -> u32 {
     line.chars().take(column).map(|c| c.len_utf16() as u32).sum()
 }
 
-/// What the panel says of what the server answered: each goal, a blank line
-/// between them; that there is none where the cursor is; or, when the server
-/// gave no list of goals, its own rendering. `answered` is whether the server
-/// gave a result at all.
-///
 /// @implements REQ-LSP.proof_state_shown
 pub fn goals_shown(answered: bool, goals: Option<Vec<String>>, rendered: Option<String>) -> String {
     if !answered {
@@ -59,8 +34,6 @@ pub fn goals_shown(answered: bool, goals: Option<Vec<String>>, rendered: Option<
     }
 }
 
-/// What a `plainGoal` answer says, as lines to show: the server's error, or the
-/// goals it reported as `goals_shown` has them.
 pub fn goal_text(answer: &Value) -> String {
     if let Some(error) = answer.get("error") {
         let said = error.get("message").and_then(Value::as_str).unwrap_or("the server refused");
@@ -79,8 +52,6 @@ pub fn goal_text(answer: &Value) -> String {
     }
 }
 
-/// The Lean project a file belongs to: the nearest folder at or above it, and
-/// no higher than `root`, that has a `lean-toolchain` or a lakefile.
 pub fn project_of(file: &Path, root: &Path) -> Option<PathBuf> {
     let mut at = file.parent();
     while let Some(dir) = at {
@@ -127,20 +98,16 @@ fn read_frames(source: impl Read, replies: Sender<Value>) {
     }
 }
 
-/// A running Lean server and the one question it is being asked.
 pub struct LeanServer {
     child: Child,
     stdin: ChildStdin,
     replies: Receiver<Value>,
     next: u64,
-    /// The version of each file the server was last told, so a change is told as one.
     versions: BTreeMap<String, i64>,
-    /// The request whose answer is wanted; an older one's is ignored.
     waiting: Option<u64>,
 }
 
 impl LeanServer {
-    /// Start the server in `project`, or say why it cannot be.
     pub fn start(project: &Path) -> Result<Self, String> {
         let mut child = Command::new("lake")
             .args(["env", "lean", "--server"])
@@ -177,8 +144,6 @@ impl LeanServer {
             .map_err(|error| format!("the Lean server is gone ({error})"))
     }
 
-    /// Ask for the goals at `line` and `column` (characters, from 0) of `text`,
-    /// the file's contents now. The answer comes from `poll`.
     pub fn ask(&mut self, file: &Path, text: &str, line: usize, column: usize) -> Result<(), String> {
         let uri = file_uri(file);
         let version = self.versions.get(&uri).copied().map_or(1, |v| v + 1);
@@ -207,8 +172,6 @@ impl LeanServer {
         }))
     }
 
-    /// The answer to the last question, if it has come: what to show. Anything
-    /// else the server says (diagnostics, progress) is not what was asked.
     pub fn poll(&mut self) -> Option<String> {
         while let Ok(message) = self.replies.try_recv() {
             if message.get("id").and_then(Value::as_u64) == self.waiting && self.waiting.is_some() {

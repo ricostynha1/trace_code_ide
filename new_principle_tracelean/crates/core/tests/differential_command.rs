@@ -1,8 +1,3 @@
-//! The round-trip law, checked against the model.
-//!
-//! A pure state machine, a trivial model, and random command sequences: if this
-//! holds for every variant, undo cannot corrupt a buffer.
-
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
@@ -35,7 +30,6 @@ fn offset() -> Schema {
     Schema::Nat { max: Some(8), edges: vec![0] }
 }
 
-/// Commands that do not contain other commands.
 fn simple_command() -> Schema {
     let mut variants: BTreeMap<String, Option<Box<Schema>>> = BTreeMap::new();
     variants.insert(
@@ -62,12 +56,6 @@ fn simple_command() -> Schema {
     Schema::Enum { variants }
 }
 
-/// Commands including one level of batching.
-///
-/// The schema grammar has no recursion, so batches are one deep. That is enough
-/// to exercise `batch_reverses` — the property is about the order members are
-/// inverted in, which a two-member batch already distinguishes — and the limit
-/// is stated rather than left to be discovered.
 fn command() -> Schema {
     let Schema::Enum { mut variants } = simple_command() else { unreachable!() };
     variants.insert(
@@ -94,8 +82,6 @@ fn input_schema() -> Schema {
     strukt(&[("workspace", workspace()), ("command", command())])
 }
 
-/// The shared runner, as every other suite has it — which is also the one a
-/// measured run builds instrumented, so these ops' lines are counted too.
 fn rust_runner_for(entry_path: &str, op_clause: &str, scratch: &Path) -> RunnerSpec {
     harness::rust_runner("REQ-CMD", op_clause, entry_path, scratch)
 }
@@ -118,8 +104,6 @@ fn lean_runner_for(function: &str, op: &str, arguments: &[&str], scratch: &Path)
     .expect("generated");
 
     let dir = lean_runner::package_dir(scratch);
-    // Under the shared guard, retried while another build holds Lake's lock:
-    // the suites build their runners at once, and Lake allows one at a time.
     let built = harness::lake_build(&root.join("formal"), &dir);
     assert!(
         built.status.success(),
@@ -164,9 +148,6 @@ fn model_and_implementation_agree_on_the_round_trip() {
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
-/// Applying is checked separately from round-tripping: a model that refused
-/// everything would round-trip perfectly and be useless.
-///
 /// @drt REQ-CMD.total_or_refused
 /// @tests REQ-CMD.total_or_refused
 #[test]
@@ -192,17 +173,11 @@ fn model_and_implementation_agree_on_applying() {
     )
     .expect("both runners answer");
 
-    // Reports the agreeing half of what this binding needs; the coverage half
-    // comes from the generation test below, and whichever lands second writes
-    // the L3 record.
     support::agreed(&result);
 
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
-/// The generator must reach the cases that matter: a run of only refusals would
-/// agree vacuously.
-///
 /// @tests REQ-DRT-COVER.floor_stated
 #[test]
 fn generation_reaches_successful_applications() {
@@ -229,14 +204,6 @@ fn generation_reaches_successful_applications() {
     );
 }
 
-/// A round trip only says something where the command applied.
-///
-/// `round_trip` applies a command and then its inverse. Where the command was
-/// refused the whole thing is a refusal, and a run made of refusals would agree
-/// with any model at all — including one whose inverse was wrong. So the floor
-/// is on round trips that actually returned to the state they started from, and
-/// separately on batches, which are where a wrong inverse hides.
-///
 /// @tests REQ-CMD.round_trip
 /// @tests REQ-DRT-COVER.law_coverage
 #[test]
@@ -254,8 +221,6 @@ fn generation_reaches_round_trips_that_actually_returned() {
 
         match round_trip(workspace.clone(), command.clone()) {
             Ok(back) => {
-                // The law itself: applying a command and then its inverse is
-                // the identity on the states where the command applied.
                 assert_eq!(back, workspace, "a round trip did not return to where it started");
                 returned += 1;
                 if matches!(command, Command::Batch { .. }) {
@@ -263,10 +228,6 @@ fn generation_reaches_round_trips_that_actually_returned() {
                 }
             }
             Err(_) => {
-                // A round trip is two applications, so a refusal must come
-                // from one of them. The second is the interesting one: it
-                // means a command applied and its inverse would not, which is
-                // a broken inverse rather than a command that did not fit.
                 assert!(
                     apply(&workspace, &command).is_err(),
                     "a command applied and its own inverse was refused: {command:?}"
@@ -285,13 +246,6 @@ fn generation_reaches_round_trips_that_actually_returned() {
     );
 }
 
-/// Inverting a batch reverses it.
-///
-/// Worth a differential test rather than a unit test because the wrong version
-/// — mapping `inverse` over the members and keeping their order — passes every
-/// single-command case and every batch whose members commute. Random batches
-/// find it immediately.
-///
 /// @drt REQ-CMD.batch_reverses
 /// @tests REQ-CMD.batch_reverses
 #[test]
@@ -319,15 +273,6 @@ fn model_and_implementation_agree_on_inverses() {
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
-/// The batches that can tell the right inverse from the wrong one.
-///
-/// Mapping `inverse` over a batch without reversing it passes every single
-/// command and every batch of one. It also passes a batch whose members
-/// commute. So the floor is on batches of more than one member, and separately
-/// on batches whose members do *not* commute — those are the only cases in
-/// which the law has any content, and a run made of the others would agree and
-/// mean nothing.
-///
 /// @tests REQ-CMD.batch_reverses
 /// @tests REQ-DRT-COVER.law_coverage
 #[test]
@@ -347,15 +292,11 @@ fn generation_reaches_batches_that_would_catch_a_wrong_inverse() {
             (Command::Batch { commands }, Command::Batch { commands: back }) => {
                 assert_eq!(back.len(), commands.len(), "inverting a batch changed its length");
                 batch += 1;
-                // The law, stated directly: each member comes back inverted, in
-                // the opposite order.
                 let expected: Vec<Command> =
                     commands.iter().rev().cloned().map(inverse_of).collect();
                 assert_eq!(*back, expected, "the inverse of a batch is not its members reversed");
                 if commands.len() > 1 {
                     long += 1;
-                    // A batch whose members are all alike cannot show the
-                    // reversal, so count separately the ones where it is visible.
                     if commands.iter().any(|member| *member != commands[0]) {
                         ordered += 1;
                     }

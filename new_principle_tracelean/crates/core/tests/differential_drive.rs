@@ -1,16 +1,3 @@
-//! A session: what a sequence of keys does to the editor.
-//!
-//! The keymap suite asks one question at a time — this mode, this key, what
-//! outcome. A person does not. They press Space, then `t`, then `f`, and each
-//! key lands on wherever the last one left them. That fold is the arrow nothing
-//! stated, and the editor was unusable for a reason that lived exactly there
-//! (`REQ-DRIVE`).
-//!
-//! What is generated is a keymap and a sequence of keys, so the cases include
-//! the ones that matter: a key that opens a menu, a key that closes one, a key
-//! the mode does not bind at all, and a sequence long enough for a walk to
-//! diverge in the middle rather than at the first press.
-
 mod harness;
 
 use std::collections::BTreeMap;
@@ -32,9 +19,6 @@ fn mode_name() -> Schema {
     name(&["Normal", "Leader", "File"])
 }
 
-/// The keys a session presses. `Space` and `Escape` are in here for the same
-/// reason: both are keys a keymap spells rather than keys that spell
-/// themselves, and both were wrong in a frontend at some point.
 fn key_name() -> Schema {
     name(&["Space", "Escape", "f", "t", " "])
 }
@@ -123,15 +107,6 @@ fn model_and_implementation_agree_on_what_a_sequence_of_keys_does() {
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
-/// Generation reaches every kind of key a session can contain, and the two laws
-/// that are not about agreement are stated here directly.
-///
-/// A session of keys that all pass through agrees with an implementation that
-/// never moves, so the floors are on each of the four things a key can do —
-/// and separately on a session long enough for the *second* key to be applied
-/// to where the first one landed, because a walk that ignores its own history
-/// is right about every one-key session.
-///
 /// @tests REQ-DRIVE.walk_follows_the_machine
 /// @tests REQ-DRIVE.menu_is_the_bar_there
 /// @tests REQ-DRT-COVER.law_coverage
@@ -155,9 +130,6 @@ fn generation_reaches_every_kind_of_key_and_the_walk_is_the_machine() {
 
         let steps = drive_of(keymap.clone(), start.clone(), keys.clone());
 
-        // `walk_follows_the_machine`: each key is applied to where the previous
-        // one landed. Re-walked here by hand, which is the only way to say that
-        // the fold is a fold rather than three answers to the same question.
         let mut at = start.clone();
         assert_eq!(steps.len(), keys.len(), "a session answered a different number of times");
         for (index, key) in keys.iter().enumerate() {
@@ -171,8 +143,6 @@ fn generation_reaches_every_kind_of_key_and_the_walk_is_the_machine() {
             assert_eq!(steps[index].mode, at, "step {index} is not where the machine goes");
             assert_eq!(steps[index].key, *key, "step {index} reports the wrong key");
 
-            // `menu_is_the_bar_there`: the bar of the mode the key reached, not
-            // of the mode it was pressed in.
             let bar = which_key(&keymap, &at);
             assert_eq!(steps[index].menu, bar, "step {index} shows another mode's menu");
             if !bar.is_empty() {

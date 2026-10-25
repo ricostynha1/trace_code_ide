@@ -1,6 +1,3 @@
-//! A requirement shows whether each clause's specification pins its model, as
-//! Lean last said — and stops saying so the moment a declaration changes.
-
 use std::path::{Path, PathBuf};
 
 use tracelean_core::surface::keymap;
@@ -10,7 +7,6 @@ use tracelean_editor::Editor;
 
 const KEYMAP: &str = include_str!("../../../assets/keymap.json");
 
-/// Parts of the demo, in a scratch directory.
 fn copy_of(name: &str, parts: &[&str]) -> PathBuf {
     let demo = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../demo");
     let dir = std::env::temp_dir().join(format!("tracelean-{name}-{}", std::process::id()));
@@ -26,15 +22,10 @@ fn copy_of(name: &str, parts: &[&str]) -> PathBuf {
     dir
 }
 
-/// The demo's requirements and Lean.
 fn thermo() -> PathBuf {
     copy_of("pinning", &["reqs", "specs"])
 }
 
-/// The demo as committed — its code, and the evidence `tracelean-trace --drt`
-/// left — counts both conversions as differentially tested, though nothing in
-/// it says `@drt`.
-///
 /// @tests REQ-DRT-SCHEMA.derived_from_both
 #[test]
 fn a_derived_test_counts_as_differential_testing() {
@@ -73,8 +64,6 @@ fn a_clause_is_pinned_once_lean_accepts_its_theorem_and_until_it_changes() {
     assert!(shown.contains("pinned\n    Thermo.to_fahrenheit_pinned"), "{shown}");
     assert!(shown.contains("pinned\n    Thermo.to_celsius_pinned"), "{shown}");
 
-    // The specification loosened: the verdict was about the old one. And with
-    // no `@pins` theorem, the clause says what it owes.
     let spec = root.join("specs/Thermo.lean");
     let text = std::fs::read_to_string(&spec)
         .unwrap()

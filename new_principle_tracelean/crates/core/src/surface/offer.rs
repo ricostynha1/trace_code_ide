@@ -1,17 +1,3 @@
-//! What can be done here: the list a pointer's context menu shows.
-//!
-//! Every action this editor has is reachable by keys, but a key sequence is
-//! something a person has to already know. A context menu is the same set
-//! offered where the person is pointing, so it is computed here, from the
-//! buffer, the position and the keymap — not by a frontend deciding what a
-//! file row "should" allow. Each offer carries the keys that reach it, so the
-//! menu also teaches the keyboard.
-//!
-//! An offer names an action the dispatcher already knows. What it adds is the
-//! *target* — the path that was pointed at — and, when the action needs one,
-//! the question to ask for its argument (a new name, a new path). Building the
-//! focus from those is the shell's job, as it is for a click on a bar.
-//!
 //! @implements REQ-ACT.everything_is_offered
 
 use serde::{Deserialize, Serialize};
@@ -19,29 +5,17 @@ use serde::{Deserialize, Serialize};
 use crate::surface::keymap::{Binding, Keymap};
 use crate::surface::view::{actions_at, Buffer, BufferKind};
 
-/// One entry of a context menu.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Offer {
-    /// Which part of the menu it belongs to: what was pointed at, the buffer,
-    /// the panes, or somewhere to go.
     pub group: String,
-    /// What a person reads.
     pub label: String,
-    /// The action the dispatcher performs.
     pub action: String,
-    /// What the action is about, when that is something other than where the
-    /// cursor is — the path of a row in a listing.
     pub target: Option<String>,
-    /// The question to ask before performing it, when it needs an argument
-    /// nobody pointed at. `None` performs it at once.
     pub asks: Option<String>,
-    /// The keys that reach it from the root mode, written as a person types
-    /// them: `Space f s`.
     pub keys: Option<String>,
 }
 
-/// The text of the span under a position, which is what the position is about.
 fn under(buffer: &Buffer, offset: usize) -> Option<String> {
     let text: Vec<char> = buffer.text.chars().collect();
     buffer
@@ -51,10 +25,6 @@ fn under(buffer: &Buffer, offset: usize) -> Option<String> {
         .map(|span| text[span.start.min(text.len())..span.stop.min(text.len())].iter().collect())
 }
 
-/// The keys that dispatch `action`, found by walking the keymap from its root.
-///
-/// The shortest sequence wins, so an action bound twice is offered by its
-/// quicker binding.
 pub fn keys_for(keymap: &Keymap, action: &str) -> Option<String> {
     let mut frontier: Vec<(String, Vec<String>)> = vec![(keymap.root.clone(), Vec::new())];
     let mut seen = vec![keymap.root.clone()];
@@ -84,9 +54,6 @@ pub fn keys_for(keymap: &Keymap, action: &str) -> Option<String> {
     None
 }
 
-/// What every bound action is called and the keys that reach it, as a
-/// pointer's hover says it: `open — Space f o`. From the keymap's own
-/// descriptions, so a tooltip and the which-key menu use the same words.
 pub fn described(keymap: &Keymap) -> std::collections::BTreeMap<String, String> {
     let mut out = std::collections::BTreeMap::new();
     for (_, mode) in &keymap.modes {
@@ -106,8 +73,6 @@ pub fn described(keymap: &Keymap) -> std::collections::BTreeMap<String, String> 
     out
 }
 
-/// What the keymap calls an action, capitalised as a menu entry reads — for
-/// an action no entry names more particularly.
 fn description_of(keymap: &Keymap, action: &str) -> Option<String> {
     keymap.modes.iter().flat_map(|(_, mode)| mode.bindings.iter()).find_map(|(_, binding)| match binding {
         Binding::Dispatch { action: named, description } if named == action => {
@@ -136,22 +101,12 @@ fn offer(
     }
 }
 
-/// Everything that can be done at `offset` in `buffer`.
-///
-/// Three parts, in this order: what the span under the position offers, what
-/// the buffer as a whole offers, and the places that are always reachable. No
-/// action appears that the dispatcher does not know, and every action a span
-/// declares at the position appears — so the menu is never less than what a
-/// key on that position could do.
-///
 /// @implements REQ-ACT.everything_is_offered
 pub fn offers(buffer: &Buffer, offset: usize, keymap: &Keymap) -> Vec<Offer> {
     let mut out = Vec::new();
     let here = under(buffer, offset);
 
-    // What was pointed at.
     for action in actions_at(buffer.clone(), offset) {
-        // An action that names its target is about that, not the text under it.
         let name = crate::surface::view::action_target(&action).map(str::to_string).or(here.clone()).unwrap_or_default();
         let label = match crate::surface::view::action_name(&action) {
             "design.toggle" => format!("Unfold or fold {name}"),
@@ -177,8 +132,6 @@ pub fn offers(buffer: &Buffer, offset: usize, keymap: &Keymap) -> Vec<Offer> {
             "observe.reject_file" => "Reject this file".into(),
             other => description_of(keymap, other).unwrap_or_else(|| other.to_string()),
         };
-        // A button's text is not what it is about; the row it is on is, and
-        // that is the shell's to resolve.
         let target = match action.as_str() {
             "observe.accept_file" | "observe.reject_file" => None,
             _ => here.clone(),
@@ -189,8 +142,6 @@ pub fn offers(buffer: &Buffer, offset: usize, keymap: &Keymap) -> Vec<Offer> {
             out.push(offer(keymap, "here", format!("Reject {name} only"), "observe.reject_file", here.clone(), None));
         }
     }
-    // A row of a listing is a file to rename or delete; the listing's title
-    // above the rows is not.
     let a_row = actions_at(buffer.clone(), offset).iter().any(|a| a == "file.open");
     if let (BufferKind::Directory { .. }, Some(path), true) = (&buffer.kind, &here, a_row) {
         out.push(offer(
@@ -205,7 +156,6 @@ pub fn offers(buffer: &Buffer, offset: usize, keymap: &Keymap) -> Vec<Offer> {
         out.push(offer(keymap, "here", "Copy the path".into(), "file.copy_path", Some(path.clone()), None));
     }
 
-    // What the buffer offers.
     out.push(offer(keymap, "file", "Copy this line".into(), "file.copy_line", None, None));
     out.push(offer(keymap, "file", "Copy all of it".into(), "file.copy", None, None));
     match &buffer.kind {
@@ -243,8 +193,6 @@ pub fn offers(buffer: &Buffer, offset: usize, keymap: &Keymap) -> Vec<Offer> {
                 None,
                 Some("Path of the new file".into()),
             ));
-            // Another project: `file.open` on a folder's absolute path, which
-            // the shell opens as the tree it works on.
             out.push(offer(
                 keymap,
                 "file",
@@ -299,12 +247,10 @@ pub fn offers(buffer: &Buffer, offset: usize, keymap: &Keymap) -> Vec<Offer> {
         BufferKind::Menu { .. } => {}
     }
 
-    // The panes.
     out.push(offer(keymap, "panes", "Split right".into(), "screen.split.across", None, None));
     out.push(offer(keymap, "panes", "Split down".into(), "screen.split.down", None, None));
     out.push(offer(keymap, "panes", "Close this buffer".into(), "screen.close", None, None));
 
-    // Places that are always reachable.
     for (action, label) in [
         ("screen.station.project", "Project files"),
         ("screen.station.trace", "What this file claims"),
@@ -317,14 +263,10 @@ pub fn offers(buffer: &Buffer, offset: usize, keymap: &Keymap) -> Vec<Offer> {
     ] {
         out.push(offer(keymap, "go", label.into(), action, None, None));
     }
-    // A span may declare anything; what the dispatcher would refuse as unknown
-    // is a button that does nothing, so it is not offered.
     out.retain(|o| known(&o.action));
     out
 }
 
-/// Whether the dispatcher knows `action`: asked, with nothing focused, it does
-/// not refuse it as unknown — wanting a target is still knowing it.
 pub fn known(action: &str) -> bool {
     use crate::surface::act::{dispatch, Blocked, Focus, Intent};
     let nowhere = Focus { kind: BufferKind::Menu { title: String::new() }, offset: 0, under: None };
@@ -334,9 +276,6 @@ pub fn known(action: &str) -> bool {
     )
 }
 
-/// An offer as far as `REQ-ACT.everything_is_offered` is about it: its part of
-/// the menu, what it does, what it is about and the keys that reach it. The
-/// wording is left out, as the model leaves it out.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct Offered {
     pub group: String,
@@ -392,9 +331,6 @@ mod tests {
         assert!(offered.iter().any(|o| o.action == "file.new" && o.asks.is_some()));
     }
 
-    /// Every action a span declares at the position is offered, and every
-    /// offer is one the dispatcher knows.
-    ///
     /// @tests REQ-ACT.everything_is_offered
     #[test]
     fn nothing_declared_is_missing_and_nothing_offered_is_unknown() {
@@ -411,10 +347,6 @@ mod tests {
         }
     }
 
-    /// A span's action is offered in words about what it is on, and each kind
-    /// of record or review offers what can be done with it: a sandbox the
-    /// sandbox's actions, a review the agent's change and that file alone.
-    ///
     /// @tests REQ-ACT.everything_is_offered
     #[test]
     fn every_action_and_every_kind_of_buffer_is_offered_in_words() {
@@ -433,7 +365,6 @@ mod tests {
             ("observe.reject", "Reject the agent's change"),
             ("observe.accept_file", "Accept this file"),
             ("observe.reject_file", "Reject this file"),
-            // Any other action is described as the keymap describes it.
             ("file.save", "Save"),
         ];
         let buffer = |kind: BufferKind, action: &str| Buffer {

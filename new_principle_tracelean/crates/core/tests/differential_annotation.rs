@@ -1,12 +1,3 @@
-//! The annotation grammar, checked against its model.
-//!
-//! Totality is the property that matters: every `@word` must yield a directive
-//! or a named problem. It is also the property a hand-written test suite is
-//! worst at, because the cases that get dropped are the ones nobody thought of
-//! — a bare `@`, an email address, an unterminated quote, an identifier
-//! starting with a digit, a qualifier with no annotation above it. Generating
-//! comment lines out of fragments produces those without anyone naming them.
-
 mod harness;
 mod support;
 
@@ -17,8 +8,6 @@ fn strukt(fields: &[(&str, Schema)]) -> Schema {
     Schema::Struct { fields: fields.iter().map(|(k, v)| (k.to_string(), v.clone())).collect() }
 }
 
-/// Fragments a comment body is joined out of. Every one of them is a case
-/// somebody would have to think to write down.
 fn line() -> Schema {
     Schema::Str {
         max_len: Some(3),
@@ -33,20 +22,16 @@ fn line() -> Schema {
             "@partial reason=\"only the happy path\"".into(),
             "@exempt REQ-A.b reason=platform by=ana until=2027".into(),
             "@nondeterministic".into(),
-            // Things that must be named rather than dropped.
             "@banana REQ-X".into(),
             "@implements".into(),
             "@implements lowercase".into(),
             "@implementsREQ-X".into(),
-            // Things that must not parse as directives at all.
             "write to a@example.com".into(),
             "an @ on its own".into(),
             "email@ REQ-X".into(),
-            // Attribute edge cases.
             "@implements REQ-A.b reason=\"unterminated".into(),
             "@implements REQ-A.b =novalue key= k=v".into(),
             "@implements REQ-A.b b=2 a=1".into(),
-            // Identifier edge cases.
             "@implements 9REQ".into(),
             "@implements REQ-A.".into(),
             "@implements REQ_A_B.c_d".into(),
@@ -101,9 +86,6 @@ fn model_and_implementation_agree_on_the_grammar() {
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
-/// Totality, asserted directly: an `@` that starts a word either becomes a
-/// directive or becomes a problem, and never vanishes.
-///
 /// @tests REQ-ANNOT.totality
 /// @tests REQ-DRT-COVER.law_coverage
 #[test]
@@ -120,7 +102,6 @@ fn every_directive_shaped_token_is_accounted_for() {
         let lines: Vec<String> = serde_json::from_value(v["lines"].clone()).unwrap();
         let first = v["firstLine"].as_u64().unwrap() as u32;
 
-        // Every at-sign that starts a word must be answered by something.
         let expected: usize = lines
             .iter()
             .map(|line| {
@@ -165,14 +146,6 @@ fn every_directive_shaped_token_is_accounted_for() {
     }
 }
 
-/// Region balance, checked against the model.
-///
-/// Both halves are reported, and they are different mistakes: an unclosed
-/// region silently extends a claim over code nobody meant to claim, while a
-/// stray `@end` means somebody thought they were closing something and were
-/// not. A generator drawing `begin` and `@end` independently produces the
-/// nesting no test author would think to write.
-///
 /// @drt REQ-ANNOT.region_balanced
 /// @tests REQ-ANNOT.region_balanced
 #[test]
@@ -229,7 +202,6 @@ fn model_and_implementation_agree_on_region_balance() {
                         max_len: Some(0),
                     },
                 ),
-                // The whole question: half the annotations open a region.
                 ("opensRegion", Schema::Bool),
                 ("line", line_no.clone()),
             ]),

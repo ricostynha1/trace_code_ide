@@ -1,10 +1,3 @@
-//! The generated Rust call site, checked against the model.
-//!
-//! The failure this guards is a generator that starts naming types — a
-//! turbofish, an ascription on a local — so that a binding's argument could be
-//! read as a type the function does not take, or a literal written so that the
-//! op or a field name the runner dispatches on is not the one the binding said.
-
 mod harness;
 mod support;
 
@@ -17,7 +10,6 @@ fn names() -> Schema {
     Schema::Str { max_len: Some(0), examples: vec!["a".into(), "b".into(), "src".into()] }
 }
 
-/// Ops and field names, including ones a literal has to escape.
 fn text() -> Schema {
     Schema::Str {
         max_len: Some(3),
@@ -81,10 +73,6 @@ fn model_and_implementation_agree_on_the_generated_call_site() {
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
-/// The generator reaches entries taking nothing and several arguments, fields
-/// read under another name, and literals that need an escape — and no arm it
-/// generates names a type.
-///
 /// @tests REQ-DRT-COVER.law_coverage
 /// @tests REQ-DRT-RUST.types_inferred
 #[test]

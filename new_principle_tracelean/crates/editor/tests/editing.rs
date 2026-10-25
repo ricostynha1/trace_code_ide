@@ -1,9 +1,3 @@
-//! Typing, moving and undoing — the path a person is on the whole time.
-//!
-//! Driven through `key`, which is the function both frontends call, so what is
-//! checked here is what a keystroke does in the terminal and in the window
-//! alike rather than what either of them does on its own.
-
 use std::path::PathBuf;
 
 use tracelean_core::surface::act::Intent;
@@ -42,7 +36,6 @@ fn text(editor: &Editor) -> String {
     plain_text(editor.buffer()).join("\n")
 }
 
-/// `i` makes a key text, Escape makes it a command again.
 #[test]
 fn insert_mode_is_entered_and_left() {
     let (root, mut editor) = opened();
@@ -54,10 +47,6 @@ fn insert_mode_is_entered_and_left() {
     let _ = std::fs::remove_dir_all(&root);
 }
 
-/// Typing goes into the file, at the cursor, and comes back out with undo.
-///
-/// Through the history tree, which is why undo is not a special case: the
-/// keystroke and an agent's change are the same kind of thing.
 #[test]
 fn what_is_typed_can_be_undone() {
     let (root, mut editor) = opened();
@@ -77,13 +66,11 @@ fn what_is_typed_can_be_undone() {
     let undone = editor.workspace().files.get("src/i.rs").cloned().expect("the file");
     assert_eq!(undone, "one\ntwo\nthree\n", "undo did not put the file back");
 
-    // And the buffer still reads as a buffer afterwards.
     editor.perform(Intent::Display { what: BufferKind::File { path: "src/i.rs".into() } });
     assert_eq!(text(&editor), before, "the buffer did not come back with the file");
     let _ = std::fs::remove_dir_all(&root);
 }
 
-/// Backspace removes what is behind the cursor, carrying what it removed.
 #[test]
 fn backspace_removes_the_character_before_the_cursor() {
     let (root, mut editor) = opened();
@@ -101,7 +88,6 @@ fn backspace_removes_the_character_before_the_cursor() {
     let _ = std::fs::remove_dir_all(&root);
 }
 
-/// Moving down a line moves the cursor a line, not a character.
 #[test]
 fn the_cursor_moves_by_lines_and_by_characters() {
     let (root, mut editor) = opened();
@@ -115,10 +101,6 @@ fn the_cursor_moves_by_lines_and_by_characters() {
     let _ = std::fs::remove_dir_all(&root);
 }
 
-/// A window shows the lines it has room for, and the cursor follows into it.
-///
-/// The window is produced by the core, so a frontend still draws everything it
-/// is given — this checks the editor asks for the right one.
 #[test]
 fn the_window_follows_the_cursor() {
     let root = project();
@@ -145,21 +127,14 @@ fn the_window_follows_the_cursor() {
     let _ = std::fs::remove_dir_all(&root);
 }
 
-/// The path a person actually takes: land on a file in the listing, open it.
-///
-/// Through keys only — `Down` to reach the entry, then the leader sequence —
-/// because that is the path a frontend offers and the one that has to work.
 #[test]
 fn a_file_is_opened_from_the_listing_by_keys() {
     let root = project();
     let mut editor = Editor::open(root.clone(), keymap());
 
-    // The first line names the project; under it, a small project's folders
-    // are open, so the file is in reach.
     assert_eq!(editor.focus().under, None, "{}", text(&editor));
     editor.key("Down");
     assert_eq!(editor.focus().under.as_deref(), Some("src"), "{}", text(&editor));
-    // Walk down the listing until the cursor is on the file.
     let mut found = false;
     for _ in 0..20 {
         if editor.focus().under.as_deref() == Some("src/i.rs") {
@@ -171,8 +146,6 @@ fn a_file_is_opened_from_the_listing_by_keys() {
     assert!(found, "the listing never put the cursor on the file:\n{}", text(&editor));
 
     editor.key("Space");
-    // The menu is offered beside the buffer, not instead of it — otherwise the
-    // next key would be about a menu row rather than about the file.
     assert!(editor.menu.is_some(), "the leader offered no menu");
     assert_eq!(
         editor.focus().under.as_deref(),
@@ -192,7 +165,6 @@ fn a_file_is_opened_from_the_listing_by_keys() {
     let _ = std::fs::remove_dir_all(&root);
 }
 
-/// A key nothing binds says so rather than doing nothing.
 #[test]
 fn an_unbound_key_says_nothing_happened() {
     let (root, mut editor) = opened();
@@ -202,10 +174,6 @@ fn an_unbound_key_says_nothing_happened() {
     let _ = std::fs::remove_dir_all(&root);
 }
 
-/// The space bar types a space in insert mode. The window sends it by the
-/// keymap's name for it, `Space`, and that name is five characters long, so it
-/// was refused as "not text" until the editor read it as the character it names.
-///
 /// @tests REQ-ACT.one_path
 #[test]
 fn the_space_bar_types_a_space_in_insert_mode() {
@@ -222,10 +190,6 @@ fn the_space_bar_types_a_space_in_insert_mode() {
     let _ = std::fs::remove_dir_all(&root);
 }
 
-/// The cursor counts characters and a file is bytes; a file with `∀` and `→`
-/// before the cursor took what was typed to a place earlier by the width of
-/// each, which is what made typing in a Lean file go "to a random place".
-///
 /// @tests REQ-ACT.edits_are_commands
 #[test]
 fn typing_after_multibyte_characters_lands_at_the_cursor() {
@@ -240,25 +204,18 @@ fn typing_after_multibyte_characters_lands_at_the_cursor() {
     }
     let file = |editor: &Editor| editor.workspace().files.get("src/m.lean").cloned().expect("the file");
     assert_eq!(file(&editor), "theorem a : ∀ x, x → x := by\n  intro x\n  zexact x\n-- λ end\nlast\n");
-    // Two lines further down, past a line with `λ` in it.
     for key in ["Down", "Down", "y"] {
         editor.key(key);
     }
     assert_eq!(file(&editor), "theorem a : ∀ x, x → x := by\n  intro x\n  zexact x\n-- λ end\nlasyt\n");
-    // Backspace takes back the character before the cursor.
     editor.key("Backspace");
     assert_eq!(file(&editor), "theorem a : ∀ x, x → x := by\n  intro x\n  zexact x\n-- λ end\nlast\n");
-    // Undo restores the `y` and puts the cursor just after it.
     editor.perform(Intent::Travel { move_: tracelean_core::surface::act::Move::Back });
     editor.key("q");
     assert_eq!(file(&editor), "theorem a : ∀ x, x → x := by\n  intro x\n  zexact x\n-- λ end\nlasyqt\n");
     let _ = std::fs::remove_dir_all(&root);
 }
 
-/// A file deleted while its buffer is open does not leave the buffer behind:
-/// the buffer would be edited against a path the workspace no longer has, and
-/// closing it was refused with `NoSuchFile`.
-///
 /// @tests REQ-ACT.edits_are_commands
 #[test]
 fn deleting_a_file_closes_its_buffer() {
@@ -276,11 +233,6 @@ fn deleting_a_file_closes_its_buffer() {
     let _ = std::fs::remove_dir_all(&root);
 }
 
-/// A key sequence that needs a name asks for it on the status line, takes the
-/// keys typed as the answer, and Enter performs it: `Space f r` renames the
-/// file under the cursor. Before, it said "nothing happened" and there was
-/// nowhere to type the new name.
-///
 /// @tests REQ-ACT.one_path
 #[test]
 fn rename_by_keys_asks_for_the_name_and_renames() {
@@ -290,7 +242,6 @@ fn rename_by_keys_asks_for_the_name_and_renames() {
     }
     let said = text_of_status(&editor);
     assert!(said.contains("New name for src/i.rs"), "the rename did not ask: {said}");
-    // The answer starts as the path; take it back and type another.
     for _ in 0.."src/i.rs".len() {
         editor.key("Backspace");
     }
@@ -307,9 +258,6 @@ fn text_of_status(editor: &Editor) -> String {
     plain_text(editor.status.clone()).join("\n")
 }
 
-/// `Space f f` asks what to look for on the status line and goes to the next
-/// match, the text taking `*` and `?`; `Space f /` lists the lines that match.
-///
 /// @tests REQ-NAV.name_is_asked_for
 /// @tests REQ-NAV.find_by_glob
 /// @tests REQ-NAV.find_lists_lines
@@ -328,7 +276,6 @@ fn find_asks_on_the_status_line_and_takes_a_pattern() {
     for key in ["Space", "f", "/"] {
         editor.key(key);
     }
-    // The last text is offered again; Backspace takes it back.
     for _ in 0..3 {
         editor.key("Backspace");
     }
@@ -340,10 +287,6 @@ fn find_asks_on_the_status_line_and_takes_a_pattern() {
     let _ = std::fs::remove_dir_all(&root);
 }
 
-/// A setting is changed by asking for its value: it is written to the
-/// project's override file at once, a value that is no colour is refused, and
-/// the theme read back has the change.
-///
 /// @tests REQ-LOOK.setting_edited_in_place
 #[test]
 fn a_setting_is_written_to_the_override_and_a_bad_value_is_refused() {
@@ -357,16 +300,11 @@ fn a_setting_is_written_to_the_override_and_a_bad_value_is_refused() {
     assert_eq!(tracelean_editor::theme::load(&root)["ui"]["accent"], "#ff0000", "a bad value changed the file");
     assert!(text_of_status(&editor).contains("not a colour"), "{}", text_of_status(&editor));
 
-    // The list shows the value now.
     editor.perform(Intent::Display { what: BufferKind::Record { title: "definitions".into() } });
     assert!(text(&editor).contains("ui.accent  #ff0000"), "{}", text(&editor));
     let _ = std::fs::remove_dir_all(&root);
 }
 
-/// The proof panel follows a Lean file in the document, and says why when it
-/// has nothing to show: a file in no Lean project has no server to ask, and the
-/// panel names that instead of staying blank. (Nothing is spawned here.)
-///
 /// @tests REQ-LSP.proof_state_shown
 #[test]
 fn the_proof_panel_names_why_a_lean_file_has_no_goals() {
@@ -381,9 +319,6 @@ fn the_proof_panel_names_why_a_lean_file_has_no_goals() {
     let _ = std::fs::remove_dir_all(&root);
 }
 
-/// A scroll of many lines at once moves the cursor and the window by exactly
-/// that many, as the scrollbar's drag asks for, and stops at the ends.
-///
 /// @tests REQ-ACT.one_path
 #[test]
 fn scrolling_many_lines_at_once_lands_where_asked() {

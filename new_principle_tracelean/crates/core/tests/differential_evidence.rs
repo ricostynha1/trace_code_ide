@@ -1,9 +1,3 @@
-//! The first full vertical slice: a requirement clause, a Lean model, a Rust
-//! implementation, and a differential test between them.
-//!
-//! This is the shape everything else in the port is patterned on. It is also
-//! the first thing in this tree that could be marked tested.
-
 mod harness;
 
 use std::collections::BTreeMap;
@@ -25,7 +19,6 @@ fn project_root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap().parent().unwrap().to_path_buf()
 }
 
-/// The declared input shape, matching `.tracelean/drt.json`.
 fn input_schema() -> Schema {
     let mut record = BTreeMap::new();
     record.insert(
@@ -54,8 +47,6 @@ fn build_lean_runner(root: &Path, scratch: &Path) -> RunnerSpec {
         function: "TraceLean.Evidence.written".to_string(),
         arguments: vec!["marks".to_string()],
     }];
-    // The generated package sits at <scratch>/.tracelean/drt-lean, so the model
-    // package is reached by an absolute path rather than a fragile relative one.
     let model_path = root.join("formal");
     lean_runner::materialize(
         scratch,
@@ -67,7 +58,6 @@ fn build_lean_runner(root: &Path, scratch: &Path) -> RunnerSpec {
     .expect("generated");
 
     let dir = lean_runner::package_dir(scratch);
-    // Under the shared guard, retried while another build holds Lake's lock.
     let built = harness::lake_build(&model_path, &dir);
     assert!(
         built.status.success(),
@@ -113,10 +103,6 @@ fn model_and_implementation_agree_on_the_marks() {
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
-/// A divergence must actually be reported when one exists — otherwise a clean
-/// run says nothing. The model writes marks as text and the implementation
-/// bound here caps them instead, so the two disagree on every input.
-///
 /// @tests REQ-DRT.divergence_reported
 /// @structural REQ-DRT.divergence_reported reason="a claim about what the harness loop does with a disagreement, checked by producing a real one"
 /// @tests REQ-DRT-GEN.shrink_preserves
@@ -139,7 +125,6 @@ fn a_real_disagreement_is_found_and_reduced() {
         model: None,
         implementation: CallSpec {
             language: "rust".into(),
-            // Deliberately the wrong function: same argument, another answer.
             entry: "crates/core/src/trace/rollup.rs::partial_cap".into(),
             params: BTreeMap::new(),
         },
@@ -176,8 +161,6 @@ fn a_real_disagreement_is_found_and_reduced() {
     .expect("both runners answer");
 
     let divergence = result.divergence.expect("a disagreement is found");
-    // Reduced to the smallest input that still disagrees: no mark held, which
-    // the model writes as four dashes and the cap hands back unchanged.
     let none = serde_json::json!({
         "annotated": false, "judged": false, "tested": false, "proved": false, "structural": false
     });
@@ -188,10 +171,6 @@ fn a_real_disagreement_is_found_and_reduced() {
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
-/// The generator must actually reach the cases that matter: a run in which no
-/// case had records for all three bonds, or none held a mark without the one
-/// before it, would agree without ever asking whether the marks are separate.
-///
 /// @tests REQ-DRT-COVER.floor_stated
 /// @tests REQ-EVID.marks
 #[test]
@@ -226,8 +205,6 @@ fn written_input() -> Schema {
     Schema::Struct { fields }
 }
 
-/// The written marks, not only the marks.
-///
 /// @drt REQ-EVID.marks_written
 /// @tests REQ-EVID.marks_written
 #[test]
@@ -253,8 +230,6 @@ fn model_and_implementation_agree_on_writing_the_marks() {
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
-/// What a clause checked only by reading the tree holds.
-///
 /// @drt REQ-EVID.structural_not_applicable
 /// @tests REQ-EVID.structural_not_applicable
 #[test]
@@ -285,9 +260,6 @@ fn model_and_implementation_agree_on_a_structural_clause() {
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
-/// A structural clause has to be asked with a test and a proof already
-/// recorded, which is what it must drop, and with neither.
-///
 /// @tests REQ-EVID.structural_not_applicable
 /// @tests REQ-DRT-COVER.law_coverage
 #[test]
@@ -321,9 +293,6 @@ fn generation_reaches_structural_clauses_holding_what_cannot_apply() {
     );
 }
 
-/// The writing has to be asked where a gap sits between two marks, which is
-/// where a ladder and fixed positions disagree, as well as at both ends.
-///
 /// @tests REQ-EVID.marks_written
 /// @tests REQ-DRT-COVER.law_coverage
 #[test]
@@ -347,8 +316,6 @@ fn generation_reaches_gaps_between_marks() {
         if text == "AJTP" {
             all += 1;
         }
-        // A test or proof held where neither applies is still written as not
-        // applicable: the dot says nothing can be held there.
         if text.ends_with("··") {
             assert!(marks.structural);
             neither += 1;

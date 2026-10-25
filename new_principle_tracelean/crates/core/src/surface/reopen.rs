@@ -1,11 +1,3 @@
-//! What a project opens again: the tabs it had, less what no longer exists.
-//!
-//! The editor's `recall` reads and writes the names; which of them come back
-//! is decided here, from the names and the files there are now.
-
-/// The files to open again, in the order their tabs were opened, then the one
-/// that was in front, so it is in front again — each only if it still exists.
-///
 /// @implements REQ-NAV.session_recalled
 /// @drt REQ-NAV.session_recalled
 pub fn reopened(files: Vec<String>, shown: Option<String>, existing: Vec<String>) -> Vec<String> {

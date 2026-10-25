@@ -1,6 +1,3 @@
-//! The marks beside a requirement's clauses, checked against the model: which
-//! lines are clauses, and which letters each carries.
-
 mod harness;
 
 use std::collections::BTreeMap;
@@ -14,9 +11,6 @@ fn name(examples: &[&str]) -> Schema {
     Schema::Str { max_len: Some(0), examples: examples.iter().map(|s| s.to_string()).collect() }
 }
 
-/// Documents with clauses, lines that look like clauses but are not (indented
-/// deeper, two words, past the frontmatter), carriage returns and no final
-/// newline.
 fn document() -> Schema {
     name(&[
         "---\nid: REQ-A\nclauses:\n  one: It does.\n  two: It also does.\n---\n  three: not a clause\n",

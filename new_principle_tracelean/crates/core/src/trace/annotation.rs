@@ -1,21 +1,6 @@
-//! The annotation grammar.
-//!
-//! Annotations are the only mechanism linking anything to anything here, which
-//! makes totality the load-bearing property: every candidate either parses or
-//! is named as a problem. A scanner that can silently drop a link reports less
-//! coverage than the project has, and trains people to distrust it.
-//!
-//! This module is pure. Finding the comments is the shell's job; deciding what
-//! a comment says is this.
-
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
-/// What a link claims.
-///
-/// `Models` is exactly the function that computes what the clause talks about,
-/// and `Specifies` the `Prop` that says which answers are right (ADR-0014).
-///
 /// @implements REQ-ANNOT.role_vocabulary
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -56,35 +41,13 @@ impl Role {
     }
 }
 
-/// Modifies the claim made by the nearest annotation.
-///
 /// @implements REQ-ANNOT.qualifiers
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", rename_all_fields = "camelCase")]
 pub enum Qualifier {
-    /// Caps a clause's contribution below full, and suppresses nothing.
     Partial { reason: Option<String> },
-    /// Removes a clause from the coverage denominator entirely — which is why
-    /// it must carry a reason and an approver.
-    /// `judgedBy` and `expires` rather than `by` and `until`: the model's
-    /// language reserves both words, and a name escaped there cannot be read by
-    /// the grammar this project parses Lean with (ADR-0008). The attributes in
-    /// the annotation text are still spelled `by=` and `until=`.
     Exempt { reason: Option<String>, judged_by: Option<String>, expires: Option<String> },
-    /// This model cannot be pinned, and here is why.
     Nondeterministic { reason: Option<String> },
-    /// This clause is a property of the tree rather than of a value, so there
-    /// is no data-to-data function to model and no pair of functions to compare.
-    ///
-    /// It still has to be implemented and still has to be tested — by a test
-    /// that reads the repository and says what it found. What it cannot reach
-    /// is L3: a structural check is a check of this tree, not a check of a law
-    /// over all inputs.
-    ///
-    /// Unlike an exemption this does not leave the denominator. A structural
-    /// clause is answered, just answered differently, and a project that
-    /// quietly dropped its architectural constraints out of its own coverage
-    /// figures would be flattering itself.
     Structural { reason: Option<String> },
 }
 
@@ -114,13 +77,11 @@ impl Qualifier {
     }
 }
 
-/// One directive found in a comment, before anything is resolved.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", rename_all_fields = "camelCase")]
 pub enum Directive {
     Annotation { annotation: RawAnnotation },
     Qualified { qualifier: Qualifier, req_id: Option<String>, clause: Option<String>, line: u32 },
-    /// Closes the nearest open region.
     End { line: u32 },
 }
 
@@ -130,11 +91,8 @@ pub struct RawAnnotation {
     pub role: Role,
     pub req_id: String,
     pub clause: Option<String>,
-    /// Sorted pairs on the wire: the model's association list, and the order
-    /// attributes come back in is part of what the two sides agree on.
     #[serde(with = "crate::wire::pairs")]
     pub attrs: BTreeMap<String, String>,
-    /// `@role ID begin` opens a region ended by `@end`.
     pub opens_region: bool,
     pub line: u32,
 }
@@ -143,9 +101,7 @@ pub struct RawAnnotation {
 #[serde(rename_all = "camelCase")]
 pub enum ProblemKind {
     UnknownRole,
-    /// A role with no requirement identifier after it.
     MissingId,
-    /// A qualifier with neither a preceding annotation nor its own identifier.
     OrphanQualifier,
     UnclosedRegion,
     StrayEnd,
@@ -158,20 +114,12 @@ pub struct Problem {
     pub message: String,
 }
 
-/// Everything one comment said.
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct ParsedComment {
     pub directives: Vec<Directive>,
     pub problems: Vec<Problem>,
 }
 
-/// Parse the directives in one comment's text.
-///
-/// `first_line` is the 0-indexed line the comment starts on, so that reported
-/// lines are file lines.
-///
-/// Every `@word` yields a directive or a problem. Nothing is dropped.
-///
 /// @implements REQ-ANNOT.totality
 /// @implements REQ-ANNOT.unknown_role_named
 pub fn parse_comment(text: &str, first_line: u32) -> ParsedComment {
@@ -179,9 +127,6 @@ pub fn parse_comment(text: &str, first_line: u32) -> ParsedComment {
 
     for (offset, raw) in text.lines().enumerate() {
         let line = first_line + offset as u32;
-        // Every at-sign on the line is considered, and only those starting a
-        // word: `a@example.com` in prose is an address, not a directive, while
-        // a directive is always preceded by a space or the line start.
         for (at, _) in raw.match_indices('@') {
             if at > 0 && !raw.as_bytes()[at - 1].is_ascii_whitespace() {
                 continue;
@@ -193,7 +138,6 @@ pub fn parse_comment(text: &str, first_line: u32) -> ParsedComment {
                 .take_while(|(_, c)| c.is_ascii_lowercase() || *c == '_')
                 .count();
             if word_len == 0 {
-                // A bare `@` in prose is not a directive and not a problem.
                 continue;
             }
             let word = &rest[..word_len];
@@ -243,13 +187,6 @@ pub fn parse_comment(text: &str, first_line: u32) -> ParsedComment {
     out
 }
 
-/// `parse_comment`, over the lines a comment is made of.
-///
-/// The conformance protocol exchanges structured values, and a generator that
-/// could only produce a flat string would never produce a newline — so the
-/// multi-line comments, where line numbering is what can go wrong, would never
-/// be generated. The function under test is still `parse_comment`.
-///
 /// @implements REQ-ANNOT.totality
 /// @drt REQ-ANNOT.totality
 /// @drt REQ-ANNOT.role_vocabulary
@@ -259,16 +196,10 @@ pub fn parse_comment_lines(lines: Vec<String>, first_line: u32) -> ParsedComment
     parse_comment(&lines.join("\n"), first_line)
 }
 
-/// Split a leading ` ID` or ` ID.clause` off, returning what follows.
-///
-/// An identifier starts with an upper-case letter; a clause is word characters
-/// only. Both are deliberately narrow, because the alternative to refusing an
-/// odd identifier is resolving it to something the author did not mean.
 fn split_identifier(tail: &str) -> (Option<String>, Option<String>, &str) {
     let trimmed = tail.trim_start();
     let skipped = tail.len() - trimmed.len();
     if skipped == 0 && !tail.is_empty() {
-        // `@modelsREQ-X` — the word did not end where an identifier begins.
         return (None, None, tail);
     }
 
@@ -296,7 +227,6 @@ fn split_identifier(tail: &str) -> (Option<String>, Option<String>, &str) {
     (Some(id), None, after)
 }
 
-/// `key="quoted value"` or `key=bare`.
 fn parse_attrs(text: &str) -> BTreeMap<String, String> {
     let mut attrs = BTreeMap::new();
     let bytes = text.as_bytes();
@@ -307,7 +237,6 @@ fn parse_attrs(text: &str) -> BTreeMap<String, String> {
             i += 1;
             continue;
         }
-        // Walk back over the key.
         let mut key_start = i;
         while key_start > 0 {
             let c = bytes[key_start - 1];
@@ -333,8 +262,6 @@ fn parse_attrs(text: &str) -> BTreeMap<String, String> {
                     attrs.insert(key, text[value_start + 1..value_start + 1 + end].to_string());
                     i = value_start + end + 2;
                 }
-                // An unterminated quote takes the rest of the line rather than
-                // discarding what the author wrote.
                 None => {
                     attrs.insert(key, text[value_start + 1..].to_string());
                     i = bytes.len();
@@ -375,8 +302,6 @@ mod tests {
         }
     }
 
-    /// A specification is its own role, not a second model.
-    ///
     /// @tests REQ-ANNOT.role_vocabulary
     #[test]
     fn a_specification_is_its_own_role() {
@@ -389,9 +314,6 @@ mod tests {
         assert_eq!(Role::Specifies.as_str(), "specifies");
     }
 
-    /// A hyphen is legal in an identifier and not in a clause, so the clause
-    /// stops at it. Stated as a test because the silent version of this is the
-    /// worst kind of bug: the annotation resolves, to the wrong clause.
     #[test]
     fn a_clause_stops_at_a_hyphen() {
         let parsed = one("@models REQ-X.a-b");
@@ -416,8 +338,6 @@ mod tests {
         assert_eq!(parsed.problems[0].kind, ProblemKind::MissingId);
     }
 
-    /// Prose containing an at-sign is neither a directive nor a problem.
-    ///
     /// @tests REQ-ANNOT.totality
     #[test]
     fn prose_is_left_alone() {
@@ -462,8 +382,6 @@ mod tests {
         }
     }
 
-    /// An unterminated quote keeps what the author wrote rather than dropping
-    /// the attribute.
     #[test]
     fn an_unterminated_quote_is_not_discarded() {
         let parsed = one("@partial reason=\"half of it");
@@ -475,8 +393,6 @@ mod tests {
         }
     }
 
-    /// Every directive-shaped token produces exactly one outcome.
-    ///
     /// @tests REQ-ANNOT.totality
     #[test]
     fn nothing_is_silently_dropped() {

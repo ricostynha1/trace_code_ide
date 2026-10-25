@@ -1,10 +1,3 @@
-//! Producing buffers, checked against the model.
-//!
-//! Seven bindings: the normaliser every producer ends with, and one producer per
-//! kind of thing the editor shows. `tidy` is the one that matters most — every
-//! other binding rests on it, and it is the only place where a mark a parser got
-//! wrong is turned into something a renderer can draw.
-
 mod harness;
 
 use std::collections::BTreeMap;
@@ -18,8 +11,6 @@ fn role() -> Schema {
     support::role()
 }
 
-/// Every role, tokens too: the affordance table has a row for them that the
-/// shared roles never asked about (found by measuring lines).
 fn any_role() -> Schema {
     let Schema::Enum { mut variants } = support::role() else { unreachable!() };
     let mut kind = BTreeMap::new();
@@ -28,8 +19,6 @@ fn any_role() -> Schema {
     Schema::Enum { variants }
 }
 
-/// Deliberately generous: offsets past any plausible text, so the clamping in
-/// `tidy` is exercised rather than assumed.
 fn offset() -> Schema {
     Schema::Nat { max: Some(14), edges: vec![0, 1, 9] }
 }
@@ -60,8 +49,6 @@ fn mark() -> Schema {
     Schema::Struct { fields }
 }
 
-/// Texts rather than letters: a file is lines, and a generator drawing
-/// characters would almost never produce one.
 fn text() -> Schema {
     Schema::Str {
         max_len: None,
@@ -94,9 +81,6 @@ fn check(op: &str, function: &str, entry: &str, arguments: &[&str], schema: Sche
     check_in("TraceLean.Produce", op, function, entry, arguments, schema, seed)
 }
 
-/// Most producers live in `Produce`; the listing lives beside the
-/// representation, because it is also how `REQ-VIEW` shows that one span type
-/// has two producers.
 fn check_in(
     import: &str,
     op: &str,
@@ -125,8 +109,6 @@ fn check_in(
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
-/// The normaliser every producer ends with.
-///
 /// @drt REQ-SHOW.well_formed_by_construction
 /// @drt REQ-SHOW.producers_are_total
 /// @tests REQ-SHOW.well_formed_by_construction
@@ -147,8 +129,6 @@ fn model_and_implementation_agree_on_tidying_spans() {
     );
 }
 
-/// The role-to-affordance policy, which both sides must read the same way.
-///
 /// @drt REQ-SHOW.actions_by_role
 /// @tests REQ-SHOW.actions_by_role
 #[test]
@@ -166,10 +146,6 @@ fn model_and_implementation_agree_on_what_a_role_affords() {
     );
 }
 
-/// Affordances come from the core, so every role the representation has must be
-/// asked — a role the run never generated is a row of the table nobody checked,
-/// and the one role that affords *nothing* is the arm most easily written wrong.
-///
 /// @tests REQ-SHOW.actions_by_role
 /// @tests REQ-DRT-COVER.law_coverage
 #[test]
@@ -191,8 +167,6 @@ fn generation_reaches_every_role_and_the_one_that_affords_nothing() {
         let actions = actions_for(role);
         roles.insert(format!("{role:?}"));
 
-        // An affordance is a name a frontend dispatches, so an empty one would
-        // be a button that does nothing.
         assert!(actions.iter().all(|name| !name.is_empty()), "a role affords an unnamed action");
 
         match actions.len() {
@@ -204,10 +178,6 @@ fn generation_reaches_every_role_and_the_one_that_affords_nothing() {
             }
         }
     }
-    // Twenty-three and not eight: `mark` carries which of four and whether it
-    // is held, so there are eight of it, `claim` its kind, six, and `token` two
-    // kinds; a run that reached only one of them would say nothing about a
-    // frontend that colours a gap and a proof the same.
     assert_eq!(roles.len(), 23, "only {roles:?} of the twenty-three roles were generated");
     support::covered(
         "REQ-SHOW.actions_by_role",
@@ -219,10 +189,6 @@ fn generation_reaches_every_role_and_the_one_that_affords_nothing() {
     );
 }
 
-/// The producer for a directory. It lives beside the representation because it
-/// is also how `REQ-VIEW` shows that one span type has two producers; this is
-/// the same function under this requirement's own claim.
-///
 /// @drt REQ-SHOW.listing_from_entries
 /// @tests REQ-SHOW.listing_from_entries
 #[test]
@@ -260,11 +226,6 @@ fn listing_input() -> Schema {
     Schema::Struct { fields }
 }
 
-/// A listing is indentation and one span per entry, so the cases worth reaching
-/// are the empty directory, a nested entry, and a name whose characters are not
-/// bytes — the last because the spans are offsets into the joined text and a
-/// producer counting bytes would put them in the wrong place.
-///
 /// @tests REQ-SHOW.listing_from_entries
 /// @tests REQ-DRT-COVER.law_coverage
 #[test]
@@ -336,11 +297,6 @@ fn file_input() -> Schema {
     Schema::Struct { fields }
 }
 
-/// A file buffer has to be asked about the texts a file actually takes: empty,
-/// several lines, one ending in a newline, and one whose characters are not
-/// bytes. Marks reaching past the text matter too — the producer clamps them,
-/// and a run whose marks all fit would never make it do so.
-///
 /// @tests REQ-SHOW.file_from_text
 /// @tests REQ-DRT-COVER.law_coverage
 #[test]
@@ -360,8 +316,6 @@ fn generation_reaches_the_texts_a_file_buffer_has_to_survive() {
         let marks: Vec<Mark> = serde_json::from_value(v["marks"].clone()).unwrap();
 
         let buffer = file_buffer(path.clone(), text.clone(), marks.clone());
-        // Well formed by construction: a producer never emits a buffer the
-        // representation would report a fault in.
         assert_eq!(faults(buffer.clone()), vec![], "a file buffer came out faulty");
         assert!(
             matches!(buffer.kind, BufferKind::File { .. }),
@@ -437,12 +391,6 @@ fn review_input() -> Schema {
     Schema::Struct { fields }
 }
 
-/// Purity is a claim about *every* call, so the run has to make the same call
-/// twice and compare — and it has to do so on inputs where the producer has
-/// something to decide. Two identical texts and two unrelated ones are the ends;
-/// the middle, where the texts share a prefix, is where a producer that cached
-/// something would go wrong.
-///
 /// @tests REQ-SHOW.producer_is_pure
 /// @tests REQ-DRT-COVER.law_coverage
 #[test]
@@ -508,9 +456,6 @@ fn model_and_implementation_agree_on_a_menu() {
     );
 }
 
-/// A menu on one row: widths around the menu's full length, so it fits with
-/// its descriptions, just fails to, and falls back to the keys.
-///
 /// @drt REQ-LOOK.row_fits
 /// @tests REQ-LOOK.row_fits
 #[test]
@@ -544,10 +489,6 @@ fn menu_row_input() -> Schema {
     Schema::Struct { fields }
 }
 
-/// The welcome page: the starts as a menu, then each recent folder as a path
-/// that opens it — none, one, several, and folders whose characters are not
-/// bytes, so a span offset counted in bytes would show.
-///
 /// @drt REQ-SHOW.recent_reopens
 /// @tests REQ-SHOW.recent_reopens
 #[test]
@@ -605,10 +546,6 @@ fn menu_input() -> Schema {
     Schema::Struct { fields }
 }
 
-/// A menu row carries its entry's action, and a row for an entry that has none
-/// carries nothing. Both must occur: a run of rows that all dispatch would
-/// agree about a producer that invented an action for the ones that do not.
-///
 /// @tests REQ-SHOW.menu_from_keymap
 /// @tests REQ-DRT-COVER.law_coverage
 #[test]
@@ -628,7 +565,6 @@ fn generation_reaches_menu_rows_with_and_without_an_action() {
         let buffer = menu_buffer(title, entries.clone());
         assert_eq!(faults(buffer.clone()), vec![], "a menu came out faulty");
         assert_eq!(buffer.spans.len(), entries.len(), "a menu does not have one row per entry");
-        // A row offers exactly what its entry declared, and never more.
         for (span, entry) in buffer.spans.iter().zip(&entries) {
             assert_eq!(
                 span.actions,
@@ -661,8 +597,6 @@ fn generation_reaches_menu_rows_with_and_without_an_action() {
     );
 }
 
-/// Scrolling, which is a producer like any other.
-///
 /// @drt REQ-SHOW.window_is_a_buffer
 /// @tests REQ-SHOW.window_is_a_buffer
 #[test]
@@ -694,18 +628,11 @@ fn window_input() -> Schema {
 
     let mut fields = BTreeMap::new();
     fields.insert("buffer".to_string(), Schema::Struct { fields: buffer });
-    // Past the end as well as inside it: a window that falls off is the case a
-    // frontend reaches by scrolling one line too far.
     fields.insert("start".to_string(), Schema::Nat { max: Some(5), edges: vec![0, 1] });
     fields.insert("count".to_string(), Schema::Nat { max: Some(5), edges: vec![0, 1, 2] });
     Schema::Struct { fields }
 }
 
-/// A window is where scrolling goes wrong, so the run has to scroll off both
-/// ends. A window entirely past the text and a window of no lines are the two a
-/// frontend reaches by scrolling one line too far, and they are the two that
-/// would produce a buffer whose spans point at nothing.
-///
 /// @tests REQ-SHOW.window_is_a_buffer
 /// @tests REQ-DRT-COVER.law_coverage
 #[test]
@@ -723,13 +650,8 @@ fn generation_reaches_windows_that_fall_off_the_text() {
         let start = v["start"].as_u64().unwrap() as usize;
         let count = v["count"].as_u64().unwrap() as usize;
 
-        // The same count `window` itself scrolls over, so a situation never
-        // claims a window fell off text it was in fact inside.
         let lines = plain_text(buffer.clone()).len();
         let shown = window(buffer.clone(), start, count);
-        // Scrolling is a producer like any other, so what comes back is a
-        // buffer the representation accepts — including when the window fell
-        // off the end and there is nothing to show.
         assert_eq!(faults(shown.clone()), vec![], "a window came out faulty");
         assert_eq!(shown.kind, buffer.kind, "a window changed what kind of thing it shows");
 
@@ -788,12 +710,6 @@ fn record_input() -> Schema {
     Schema::Struct { fields }
 }
 
-/// A record is what a sandboxed agent's transcript looks like on screen: one
-/// row per event, each offering the diff. An empty record has to occur — a
-/// session that did nothing is the ordinary case at the start — and so does a
-/// text whose characters are not bytes, because the row offsets are character
-/// offsets and a producer counting bytes would place them wrong.
-///
 /// @tests REQ-SHOW.record_from_events
 /// @tests REQ-DRT-COVER.law_coverage
 #[test]
@@ -814,8 +730,6 @@ fn generation_reaches_records_from_nothing_to_a_full_session() {
         let buffer = record_buffer(title, events.clone());
         assert_eq!(faults(buffer.clone()), vec![], "a record came out faulty");
         assert_eq!(buffer.spans.len(), events.len(), "a record does not have one row per event");
-        // Every row offers the same thing, because every row is the same kind
-        // of thing: an event whose change a person can look at.
         for span in &buffer.spans {
             assert_eq!(span.actions, vec!["observe.diff".to_string()]);
         }
@@ -840,11 +754,6 @@ fn generation_reaches_records_from_nothing_to_a_full_session() {
     );
 }
 
-/// The laws must be asked where they have content. A run in which `tidy` never
-/// dropped anything would agree without establishing that it drops the right
-/// things, and a diff of two unrelated texts never shows that common ends are
-/// kept.
-///
 /// @tests REQ-DRT-COVER.law_coverage
 #[test]
 fn generation_reaches_marks_worth_tidying_and_diffs_worth_reading() {
@@ -900,22 +809,14 @@ fn generation_reaches_marks_worth_tidying_and_diffs_worth_reading() {
         }
     }
 
-    // A mark is a span without actions; the two travel the same path through
-    // `tidy`, so reaching the shapes above reaches them for marks too.
     let _ = Mark { start: 0, stop: 1, role: Role::Plain };
 
-    // Two bindings, two calls: `tidy` and `diff_lines` are separate ops, and a
-    // count reported against the wrong one would say a law was exercised where
-    // it never ran.
     support::covered(
         "REQ-SHOW.well_formed_by_construction",
         &[
             ("a span reaching past the text", clamped),
             ("a span that runs backwards", backwards),
             ("a span dropped for overlapping", overlapped),
-            // The rarest of these: four spans that are each non-empty, in order
-            // and disjoint over six characters is a narrow target for a
-            // generator drawing offsets freely.
             ("spans that all survive", kept_all),
             ("spans of which none survive", emptied),
         ],
@@ -923,8 +824,6 @@ fn generation_reaches_marks_worth_tidying_and_diffs_worth_reading() {
     support::covered(
         "REQ-SHOW.review_from_change",
         &[
-            // Context needs two random line lists to share an end, which is
-            // rarer than either of them differing.
             ("a diff that keeps context", context),
             ("a diff with a removal", removed),
             ("a diff with an addition", added),

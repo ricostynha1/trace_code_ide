@@ -1,10 +1,3 @@
-//! Roll-up, checked against the model.
-//!
-//! The rule is that an aggregate holds a mark only when every part holds it,
-//! never by average or majority. A mean would report evidence nothing
-//! established, and this is the one output people quote without reading what
-//! produced it.
-
 mod harness;
 mod support;
 
@@ -53,10 +46,6 @@ fn model_and_implementation_agree_on_aggregation() {
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
-/// The property that rules out an average or a majority: a mark is held
-/// exactly when every part holds it. Checked directly, because it is the whole
-/// content of the rule.
-///
 /// @tests ARCH-HONEST.weakest_link
 #[test]
 fn a_mark_is_held_only_when_every_part_holds_it() {
@@ -76,8 +65,6 @@ fn a_mark_is_held_only_when_every_part_holds_it() {
             empty += 1;
             continue;
         }
-        // Testing and proving apply to the whole unless to no part; where
-        // they apply, every part they apply to holds them.
         assert_eq!(result.structural, parts.iter().all(|p| p.structural), "{result:?} from {parts:?}");
         for (i, &(mark, held, _)) in result.each().iter().enumerate() {
             let every = parts.iter().filter(|p| p.applies(mark)).all(|p| p.each()[i].1);
@@ -92,9 +79,6 @@ fn a_mark_is_held_only_when_every_part_holds_it() {
             beside += 1;
         }
     }
-    // Mixed parts are the cases with content: a run where every part was the
-    // same cannot tell an all from a majority, or from returning the first
-    // thing it was given.
     support::covered(
         OP,
         &[
@@ -106,14 +90,10 @@ fn a_mark_is_held_only_when_every_part_holds_it() {
     );
 }
 
-// ─── Rolling a declared graph up ─────────────────────────────────────────────
-
 fn strukt2(fields: &[(&str, Schema)]) -> Schema {
     Schema::Struct { fields: fields.iter().map(|(k, v)| (k.to_string(), v.clone())).collect() }
 }
 
-/// Four names, so a diamond (B and C refine A, D refines both) fits in a graph
-/// of four nodes.
 fn req_id() -> Schema {
     Schema::Str {
         max_len: Some(0),
@@ -206,9 +186,6 @@ fn figure_input() -> Schema {
     )])
 }
 
-/// How a figure is written, checked against the model: an open one is marked
-/// provisional, with the direction it can move.
-///
 /// @drt ARCH-HONEST.lower_bound_marked
 /// @tests ARCH-HONEST.lower_bound_marked
 #[test]
@@ -236,8 +213,6 @@ fn model_and_implementation_agree_on_writing_a_figure() {
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
-/// An open figure is never written bare, and an exact one never carries the mark.
-///
 /// @tests ARCH-HONEST.lower_bound_marked
 #[test]
 fn an_open_figure_is_always_marked() {
@@ -267,12 +242,6 @@ fn an_open_figure_is_always_marked() {
     );
 }
 
-/// The properties stated directly against the implementation: an unclaimed
-/// decomposition never reads as finished, an exemption leaves the denominator,
-/// a partial clause never meets a floor above its cap, the denominator is the
-/// reachable set's (each requirement once, through diamonds and cycles), and
-/// the result does not depend on the order nodes arrive in.
-///
 /// @tests REQ-ROLLUP.never_complete_when_open
 /// @tests REQ-ROLLUP.exempt_leaves_denominator
 /// @tests REQ-ROLLUP.partial_capped
@@ -289,9 +258,6 @@ fn the_roll_up_is_a_function_of_the_graph_and_never_flatters_it() {
     let mut rng = gen::Rng::new(91);
     let (mut inexact, mut exempted, mut partial, mut deep, mut diamond, mut cycle) =
         (0u64, 0u64, 0u64, 0u64, 0u64, 0u64);
-    // As many as the differential run, which draws the same values: a diamond
-    // needs four named nodes, and only about one draw in a hundred and fifty
-    // makes one.
     for _ in 0..10_000 {
         let v = gen::value(&schema, &mut rng);
         let nodes: Vec<Node> = serde_json::from_value(v["nodes"].clone()).unwrap();
@@ -302,10 +268,6 @@ fn the_roll_up_is_a_function_of_the_graph_and_never_flatters_it() {
 
         let rolled = roll_up(nodes.clone(), held.clone(), root.clone(), floor);
 
-        // Order independence, where the graph is well formed. Two nodes
-        // declaring the same identifier is a `DuplicateId` fault reported by
-        // the checker; here the later one wins, so reversing the list is a
-        // different graph rather than the same one shuffled.
         let unique: BTreeSet<&String> = nodes.iter().map(|n| &n.id).collect();
         if unique.len() == nodes.len() {
             let mut reversed = nodes.clone();
@@ -322,9 +284,6 @@ fn the_roll_up_is_a_function_of_the_graph_and_never_flatters_it() {
             inexact += 1;
         }
 
-        // The denominator is the counted clauses of the reachable set, each
-        // requirement once: computed here by brute force over paths, not by
-        // the implementation's own set.
         let graph: BTreeMap<String, Node> =
             nodes.iter().map(|n| (n.id.clone(), n.clone())).collect();
         let (reached, paths) = by_paths(&graph, &root);
@@ -369,8 +328,6 @@ fn the_roll_up_is_a_function_of_the_graph_and_never_flatters_it() {
     );
 }
 
-/// Every requirement reachable from `root`, and how many distinct simple paths
-/// reach each: a diamond is a requirement two paths reach.
 fn by_paths(
     graph: &BTreeMap<String, tracelean_core::trace::rollup::Node>,
     root: &str,
@@ -395,7 +352,6 @@ fn by_paths(
     (paths.keys().cloned().collect(), paths)
 }
 
-/// Whether some requirement below `root` refines one of its own descendants.
 fn cyclic(graph: &BTreeMap<String, tracelean_core::trace::rollup::Node>, root: &str) -> bool {
     let (reached, _) = by_paths(graph, root);
     reached.iter().any(|id| {
@@ -404,8 +360,6 @@ fn cyclic(graph: &BTreeMap<String, tracelean_core::trace::rollup::Node>, root: &
     })
 }
 
-/// A four-name alphabet, so a claim about an unscanned file and a repeated file
-/// are both common rather than coincidental.
 fn file_coverage_input() -> Schema {
     let file = Schema::Str {
         max_len: Some(0),
@@ -424,13 +378,6 @@ fn file_coverage_input() -> Schema {
     }
 }
 
-/// Coverage over files, checked against the model.
-///
-/// The failure this pins is the one that looks like progress: a figure that
-/// counts only annotated files rises when somebody deletes an annotation. A
-/// coverage number that improves when you do less work is worse than no number
-/// at all.
-///
 /// @drt REQ-ROLLUP.untraced_counted
 /// @tests REQ-ROLLUP.untraced_counted
 #[test]
@@ -466,10 +413,6 @@ fn model_and_implementation_agree_on_coverage_over_files() {
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
-/// The four file shapes the rule distinguishes, and the property that gives the
-/// rule its name: a claim about a file nothing scanned must not raise the
-/// figure.
-///
 /// @tests REQ-ROLLUP.untraced_counted
 /// @tests REQ-DRT-COVER.law_coverage
 #[test]
@@ -489,9 +432,6 @@ fn a_claim_about_an_unscanned_file_never_raises_coverage() {
         assert!(figure.met <= figure.total, "more files claimed than were scanned");
         assert!(figure.exact, "the denominator is the set of files scanned, which is known");
 
-        // Adding a claim about a file nothing scanned cannot move the figure.
-        // This is the whole content of the rule: the numerator is an
-        // intersection, not a count of claims.
         let mut inflated = claimed.clone();
         inflated.push("never-scanned.rs".to_string());
         assert_eq!(

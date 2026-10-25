@@ -1,31 +1,15 @@
-//! The conformance protocol: line-delimited JSON over stdin and stdout.
-//!
-//! This is the entire coupling between TraceLean and the code it checks, which
-//! is what lets one side be a compiled Lean binary and the other a compiled
-//! Rust binary without anything above noticing.
-
 use std::collections::BTreeSet;
 
 use serde::{Deserialize, Serialize};
 
-/// One generated case, sent to both sides.
-///
 /// @implements REQ-DRT-PROTO.case_names_op
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Case {
     pub case: u64,
-    /// Which entry point to exercise. Unique project-wide, so that a shared
-    /// runner's dispatch cannot have two arms with the same name.
     pub op: String,
     pub input: serde_json::Value,
 }
 
-/// What a runner answered.
-///
-/// Exactly one of `output` and `error` is present. An error on one side against
-/// an output on the other is a divergence, not a failed run: both sides
-/// rejecting an input is agreement.
-///
 /// @implements REQ-DRT-PROTO.reply_exclusive
 /// @implements REQ-DRT-PROTO.case_echoed
 /// @implements REQ-DRT.error_is_an_answer
@@ -39,15 +23,6 @@ pub struct Reply {
 }
 
 impl Reply {
-    /// Read a reply from a parsed line.
-    ///
-    /// Written by hand rather than derived because a derived `Option` cannot
-    /// tell an absent field from a present `null`, and `null` is a perfectly
-    /// ordinary answer — a model returning `none` produces exactly that. The
-    /// derived version reported such a reply as carrying neither an output nor
-    /// an error, which is the protocol's one invariant, so a legitimate answer
-    /// looked like a runner that could not speak.
-    ///
     /// @implements REQ-DRT-PROTO.reply_exclusive
     pub fn from_json(value: &serde_json::Value) -> Result<Reply, String> {
         let object = value.as_object().ok_or("a reply must be a JSON object")?;
@@ -72,87 +47,43 @@ impl Reply {
         Self { case, output: None, error: Some(error.into()) }
     }
 
-    /// Whether this reply is well-formed: exactly one of output and error.
-    ///
-    /// A reply carrying both, or neither, is not a weaker answer — it is a
-    /// runner that is not speaking the protocol, and the comparison above must
-    /// not treat it as data.
-    ///
     /// @implements REQ-DRT-PROTO.reply_exclusive
     pub fn is_well_formed(&self) -> bool {
         self.output.is_some() != self.error.is_some()
     }
 }
 
-/// Why a line is not a reply.
-///
-/// Named rather than a message: two implementations cannot be expected to
-/// phrase a JSON error the same way, and a report saying `notAnObject` is more
-/// use than one saying `expected value at line 1 column 1`.
-///
 /// @implements ARCH-HONEST.named_findings
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum NotAReply {
-    /// The line is not JSON at all.
     NotJson,
-    /// It parsed, but into something other than an object.
     NotAnObject,
-    /// No `case` field, or one that is not a number.
     NoCaseNumber,
-    /// An `error` field that is not a string.
     ErrorNotAString,
 }
 
-/// What reading one line from a runner concluded.
-///
-/// `WrongCase` is the conclusion the first version of this could not reach: it
-/// never compared the number it got back with the number it asked, so a runner
-/// one reply behind was read as answering the current case.
-///
-/// Serialised with every field present — including `null` for an absent output
-/// — because that is what the model's derived encoding produces, and the two
-/// have to be the same value for a differential test to mean anything.
-///
 /// @implements REQ-DRT-PROTO.case_echoed
 /// @implements REQ-DRT-PROTO.failure_named
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", rename_all_fields = "camelCase")]
 pub enum Heard {
-    /// A well-formed reply to the case that was asked.
     Answered {
-        /// Spelled `caseNumber` rather than `case` because the model's language
-        /// reserves the word, and a name escaped there is a name the grammar
-        /// this project parses Lean with cannot read (ADR-0008).
         case_number: u64,
         output: Option<serde_json::Value>,
         error: Option<String>,
     },
-    /// A well-formed reply to a different case.
     WrongCase { expected: u64, got: u64 },
-    /// Not a reply.
     NotAReply { reason: NotAReply },
-    /// Both an output and an error, or neither.
     NotExclusive { case_number: u64 },
 }
 
-/// Whether a reply carries exactly one of an output and an error.
-///
-/// `null` is an ordinary answer — a model returning `None` produces exactly
-/// that — so presence is about the field being there, not about it being
-/// non-null.
-///
-/// Owned rather than borrowed so that a generated runner can call it directly
-/// (ADR-0010).
-///
 /// @implements REQ-DRT-PROTO.reply_exclusive
 /// @drt REQ-DRT-PROTO.reply_exclusive
 pub fn is_exclusive(output: Option<serde_json::Value>, error: Option<String>) -> bool {
     output.is_some() != error.is_some()
 }
 
-/// Read one line of a runner's output, given the case that was asked.
-///
 /// @implements REQ-DRT-PROTO.reply_one_line
 /// @implements REQ-DRT-PROTO.case_echoed
 /// @implements REQ-DRT-PROTO.reply_exclusive
@@ -186,12 +117,6 @@ pub fn hear(expected: u64, line: String) -> Heard {
     }
 }
 
-/// The ops that appear more than once, sorted and without repeats.
-///
-/// One runner process serves every binding of its language, so its dispatch is
-/// a table keyed by op. Two bindings with the same op means the first arm wins
-/// and the second requirement is silently answered by the wrong function.
-///
 /// @implements REQ-DRT-PROTO.ops_unique
 /// @drt REQ-DRT-PROTO.ops_unique
 pub fn duplicate_ops(ops: Vec<String>) -> Vec<String> {
@@ -205,15 +130,6 @@ pub fn duplicate_ops(ops: Vec<String>) -> Vec<String> {
     dupes.into_iter().collect()
 }
 
-/// The line a case is written as: one JSON object, naming the op it exercises,
-/// with no newline inside it.
-///
-/// Spelled out rather than left to a `json!` map, so that the key order —
-/// `case`, `op`, `input`, the order the protocol is documented in — does not
-/// depend on whether some crate in the build turned on `preserve_order`. A
-/// newline inside a string is escaped by the JSON writer, which is what keeps
-/// the case on one line; `Runner::ask` adds the one that ends it.
-///
 /// @implements REQ-DRT-PROTO.case_one_line
 /// @implements REQ-DRT-PROTO.case_names_op
 /// @drt REQ-DRT-PROTO.case_one_line
@@ -222,48 +138,26 @@ pub fn case_line(number: u64, op: String, input: serde_json::Value) -> String {
     format!("{{\"case\":{number},\"op\":{},\"input\":{input}}}", serde_json::Value::from(op))
 }
 
-/// What happened when a runner was asked a case, before anything is concluded
-/// from it.
-///
-/// The process-level half of the protocol: a runner that never started, one
-/// that said nothing in time, one whose pipe broke, and one that produced a
-/// line (or `None`: the end of its output, which is how a process that exited
-/// looks from the reading side).
-///
 /// @implements REQ-DRT-PROTO.failure_named
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", rename_all_fields = "camelCase")]
 pub enum Event {
     CouldNotStart { reason: String },
     NoReplyInTime,
-    /// Writing the case, or reading the reply, failed at the pipe.
     PipeBroke { reason: String },
     Read { expected: u64, got: Option<String> },
 }
 
-/// What one asked case came to: an answer, or one of the named ways a runner
-/// fails to give one.
-///
 /// @implements REQ-DRT-PROTO.failure_named
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", rename_all_fields = "camelCase")]
 pub enum Outcome {
-    /// The command could not be started at all.
     CannotStart { reason: String },
-    /// No line within the per-case timeout.
     TimedOut,
-    /// The process exited, or its pipe broke.
     Died { reason: String },
-    /// A line came back; what it says, which may still be a non-reply.
     Heard { conclusion: Heard },
 }
 
-/// Conclude what an event means.
-///
-/// A runner that answered is `Heard { Answered }`; every other result names
-/// which way it failed, so a timeout is never read as a crash and neither is
-/// read as a disagreement about a value.
-///
 /// @implements REQ-DRT-PROTO.failure_named
 /// @drt REQ-DRT-PROTO.failure_named
 pub fn outcome(event: Event) -> Outcome {
@@ -276,9 +170,6 @@ pub fn outcome(event: Event) -> Outcome {
     }
 }
 
-/// An outcome as the runner's result: a reply, or the error naming the failure.
-///
-/// A projection, deciding nothing: `outcome` decided.
 pub fn into_reply(outcome: Outcome, line: &str) -> Result<Reply, RunnerError> {
     match outcome {
         Outcome::CannotStart { reason } => Err(RunnerError::Spawn(reason)),
@@ -299,27 +190,18 @@ pub fn into_reply(outcome: Outcome, line: &str) -> Result<Reply, RunnerError> {
     }
 }
 
-/// One binding's implementation, by op and the language it is written in.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Placed {
     pub op: String,
     pub language: String,
 }
 
-/// One runner process: its language and every op it answers.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Shared {
     pub language: String,
     pub ops: Vec<String>,
 }
 
-/// The runner processes a project needs: one per language, in language order,
-/// each answering every op of that language once, in the order the bindings
-/// declare them.
-///
-/// The plan rather than the processes: the harness builds one runner per entry
-/// of it, so "one process per language" is a property of this value.
-///
 /// @implements REQ-DRT-PROTO.runner_shared
 /// @drt REQ-DRT-PROTO.runner_shared
 pub fn shared_runners(placed: Vec<Placed>) -> Vec<Shared> {
@@ -333,16 +215,6 @@ pub fn shared_runners(placed: Vec<Placed>) -> Vec<Shared> {
     by_language.into_iter().map(|(language, ops)| Shared { language, ops }).collect()
 }
 
-/// Two replies agree when they are the same answer.
-///
-/// An error on one side against an output on the other is a divergence, not an
-/// aborted run. Both sides rejecting an input is *agreement*: the model
-/// refusing what the implementation also refuses is the two behaving alike, and
-/// treating it as a failed run would make every partial function untestable.
-///
-/// The error text is not compared. Two implementations cannot be expected to
-/// phrase a refusal the same way, and the phrasing is not the behaviour.
-///
 /// @implements REQ-DRT.error_is_an_answer
 /// @drt REQ-DRT.error_is_an_answer
 pub fn agree(
@@ -356,13 +228,6 @@ pub fn agree(
     }
 }
 
-/// The level a differential run establishes.
-///
-/// A run that found no disagreement is evidence at L3 and never higher. It has
-/// failed to falsify, which is not the same as having proved: the next case
-/// might have disagreed, and the ladder has a separate rung for a proof
-/// precisely so that the difference stays visible.
-///
 /// @implements REQ-DRT.falsification_only
 /// @drt REQ-DRT.falsification_only
 pub fn drt_level(agreed: bool) -> crate::evidence::Level {
@@ -373,21 +238,12 @@ pub fn drt_level(agreed: bool) -> crate::evidence::Level {
     }
 }
 
-/// Why a runner could not answer.
-///
-/// The four ways mean different things — a missing toolchain is not a timeout,
-/// and neither is a crash on a particular input, which is a result.
-///
 /// @implements REQ-DRT-PROTO.failure_named
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum RunnerError {
-    /// The command could not be started at all.
     Spawn(String),
-    /// No reply within the per-case timeout.
     Timeout,
-    /// The process exited or closed its pipe.
     Died(String),
-    /// A line came back that is not a reply.
     Protocol(String),
 }
 
@@ -406,9 +262,6 @@ impl std::fmt::Display for RunnerError {
 mod tests {
     use super::*;
 
-    /// Agreement over the cases tried is the testing rung, not the proving one;
-    /// disagreement leaves only the annotation.
-    ///
     /// @tests REQ-DRT.falsification_only
     #[test]
     fn agreement_earns_testing_and_never_proof() {
@@ -416,8 +269,6 @@ mod tests {
         assert_eq!(drt_level(false), crate::evidence::Level::L1);
     }
 
-    /// A model returning `none` answers `null`, which is an answer.
-    ///
     /// @tests REQ-DRT-PROTO.reply_exclusive
     #[test]
     fn a_null_output_is_an_output() {
@@ -442,9 +293,6 @@ mod tests {
         assert!(Reply::from_json(&serde_json::json!({"output": 1})).is_err());
     }
 
-    /// A case is one line even when its input carries line breaks, and it
-    /// names its op.
-    ///
     /// @tests REQ-DRT-PROTO.case_one_line
     /// @tests REQ-DRT-PROTO.case_names_op
     #[test]
@@ -457,8 +305,6 @@ mod tests {
         assert_eq!(read.input, serde_json::json!({"t": "a\nb\r\n\t"}));
     }
 
-    /// The four failures are four outcomes, and none of them is an answer.
-    ///
     /// @tests REQ-DRT-PROTO.failure_named
     #[test]
     fn each_failure_is_named_and_none_is_an_answer() {

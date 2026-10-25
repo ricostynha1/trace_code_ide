@@ -1,17 +1,3 @@
-//! The history tree, drawn as a tree a pointer can go back through.
-//!
-//! Every change is a node; the row names it by number (`#12`) and says what it
-//! did. The number carries `history.jump`, so a click goes straight to that
-//! point the way undo and redo go one step — through the tree's own path via
-//! the nearest common ancestor.
-//!
-//! Drawn as the first TraceLean drew it: a change made after a node continues
-//! straight down from it, and a change made after undoing back to a node opens
-//! a branch in a column of its own, joined to that node by `─╮`. `●` is where
-//! the workspace is, `○` every other state. Above it, the view chooses what to
-//! show — every node, those touching the open file, or those at which the work
-//! was saved — and pointing at a node shows the change it made.
-//!
 //! @implements REQ-UNDO.tree_is_shown
 
 use serde::{Deserialize, Serialize};
@@ -19,38 +5,26 @@ use serde::{Deserialize, Serialize};
 use crate::surface::produce::{diff_lines, tidy};
 use crate::surface::view::{Buffer, BufferKind, Role, Span};
 
-/// How a point of the history is named: the tree as it was opened is `#0`,
-/// and node `n` — the history's own count, from 0 — is `#n+1`, so the base is
-/// named and clicked the way every other point is.
 pub fn point_name(node: Option<u64>) -> String {
     format!("#{}", node.map_or(0, |n| n + 1))
 }
 
-/// The node a name is, `Some(None)` for the base, `None` for no name at all.
 pub fn named_point(name: &str) -> Option<Option<u64>> {
     let k: u64 = name.strip_prefix('#')?.parse().ok()?;
     Some(k.checked_sub(1))
 }
 
-/// One node as the view shows it.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Point {
     pub node: u64,
-    /// The node it was made after; `None` for one made on the tree as opened.
     pub parent: Option<u64>,
-    /// Whether the workspace is here.
     pub here: bool,
-    /// What the change did, in words.
     pub said: String,
-    /// The file it touched, when it touched one.
     pub file: Option<String>,
-    /// Whether the work was saved at this node.
     pub saved: bool,
 }
 
-/// A row of the drawing: the node it is (`None` for the tree as opened) and
-/// its graph cells, two to a column.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct GraphRow {
@@ -58,7 +32,6 @@ pub struct GraphRow {
     pub cells: String,
 }
 
-/// Which nodes the view shows.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum Filter {
@@ -69,7 +42,6 @@ pub enum Filter {
 
 const FILTERS: [(Filter, &str); 3] = [(Filter::All, "All"), (Filter::File, "File"), (Filter::Saved, "Saved")];
 
-/// The filter a switch's label names.
 pub fn filter_named(name: &str) -> Option<Filter> {
     FILTERS.iter().find(|(_, label)| *label == name).map(|(f, _)| *f)
 }
@@ -81,11 +53,6 @@ fn is_here(points: &[Point], node: Option<u64>) -> bool {
     }
 }
 
-/// Whether a node is on the branch the workspace is on: the base, where every
-/// branch starts, or the node the workspace is at, or one it was made after.
-/// Followed up from the node the workspace is at, a step at most once per
-/// point, so a history whose parents name each other still ends. Over the whole
-/// history, not what a filter shows: a hidden ancestor must not break the chain.
 fn on_current_branch(points: &[Point], node: Option<u64>) -> bool {
     let Some(target) = node else { return true };
     let mut at = points.iter().find(|p| p.here).map(|p| p.node);
@@ -99,8 +66,6 @@ fn on_current_branch(points: &[Point], node: Option<u64>) -> bool {
     false
 }
 
-/// The first column from `from` on that no line runs through and no branch
-/// of this row has taken.
 fn free_column(open: &[bool], taken: &[usize], from: usize) -> usize {
     let mut c = from;
     while open.get(c).copied().unwrap_or(false) || taken.contains(&c) {
@@ -109,15 +74,6 @@ fn free_column(open: &[bool], taken: &[usize], from: usize) -> usize {
     c
 }
 
-/// The tree as rows, top to bottom: the tree as opened, then each node under
-/// what it was made after, each once.
-///
-/// What is still to draw is a stack, so a node's branches come before the run
-/// that continues its column, and each row says which columns carry a line
-/// past it. A node already drawn is not drawn again, and there is at most a
-/// row a node and one for the start — so a history whose parents name each
-/// other, or a node twice, still draws in finite rows.
-///
 /// @implements REQ-UNDO.tree_is_drawn
 /// @drt REQ-UNDO.tree_is_drawn
 pub fn history_graph(points: Vec<Point>) -> Vec<GraphRow> {
@@ -181,7 +137,6 @@ fn keep(filter: Filter, file: &str, p: &Point) -> bool {
     }
 }
 
-/// The nearest node from `start` up, `start` included, that the filter keeps.
 fn kept_ancestor(points: &[Point], filter: Filter, file: &str, start: Option<u64>) -> Option<u64> {
     let mut at = start;
     for _ in 0..points.len() + 1 {
@@ -195,9 +150,6 @@ fn kept_ancestor(points: &[Point], filter: Filter, file: &str, start: Option<u64
     None
 }
 
-/// The nodes `filter` keeps, each under its nearest kept ancestor, and the
-/// one nearest the workspace's position marked as where it is.
-///
 /// @implements REQ-UNDO.filtered_view
 /// @drt REQ-UNDO.filtered_view
 pub fn shown_points(points: Vec<Point>, filter: Filter, file: String) -> Vec<Point> {
@@ -214,15 +166,11 @@ pub fn shown_points(points: Vec<Point>, filter: Filter, file: String) -> Vec<Poi
         .collect()
 }
 
-/// The history as a record titled `history`: the filter switches, then the
-/// tree as `filter` shows it. `file` is the file the document shows, which
-/// the `File` switch keeps to.
 pub fn history_view(points: &[Point], filter: Filter, file: Option<&str>) -> Buffer {
     let shown = shown_points(points.to_vec(), filter, file.unwrap_or_default().to_string());
     let drawn = history_graph(shown.clone());
     let mut text = String::new();
     let mut spans = Vec::new();
-    // The switches, the chosen one marked.
     for (f, label) in FILTERS {
         let at = text.chars().count();
         let role = if f == filter { Role::Heading } else { Role::Entry };
@@ -233,8 +181,6 @@ pub fn history_view(points: &[Point], filter: Filter, file: Option<&str>) -> Buf
     if let (Filter::File, Some(file)) = (filter, file) {
         text.push_str(file);
     }
-    // Every column is a glyph and a space; the last column's space is the gap
-    // before the name, written once below.
     let graph = drawn.iter().map(|r| r.cells.chars().count()).max().unwrap_or(1).saturating_sub(1);
     for row in &drawn {
         text.push('\n');
@@ -247,8 +193,6 @@ pub fn history_view(points: &[Point], filter: Filter, file: Option<&str>) -> Buf
             Some(n) => (point_name(Some(n)), shown.iter().find(|p| p.node == n).map(|p| p.said.clone()).unwrap_or_default()),
         };
         let from = at + graph + 1;
-        // The current node stands out; the rest of its branch is another colour
-        // than the branches it left, which stay as they were.
         let role = if here {
             Role::Heading
         } else if on_current_branch(points, row.node) {
@@ -256,7 +200,6 @@ pub fn history_view(points: &[Point], filter: Filter, file: Option<&str>) -> Buf
         } else {
             Role::Entry
         };
-        // The base is jumped to by its number, as every node is.
         let actions = vec!["history.jump".to_string()];
         spans.push(Span { start: from, stop: from + name.chars().count(), role, actions });
         text.push_str(&format!("{cells} {name}  {said}"));
@@ -275,8 +218,6 @@ pub fn history_view_owned(points: Vec<Point>, filter: Filter, file: Option<Strin
     history_view(&points, filter, file.as_deref())
 }
 
-/// A file a change touched, as the model takes it: its path, its text before
-/// and after.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Changed {
     pub path: String,
@@ -290,11 +231,6 @@ pub fn change_view_owned(node: u64, said: String, changed: Vec<Changed>) -> Buff
     change_view(node, &said, &changed)
 }
 
-/// The change a node made, as a record a pointer resting on the node shows:
-/// what it did, then for each file it touched the lines it added and removed
-/// with two lines either side. `changed` is each file's path, text before and
-/// text after.
-///
 /// @implements REQ-UNDO.hover_shows_change
 pub fn change_view(node: u64, said: &str, changed: &[(String, String, String)]) -> Buffer {
     let name = point_name(Some(node));
@@ -353,13 +289,9 @@ mod tests {
         shown.text.split_once('\n').map(|(_, t)| t.to_string()).unwrap_or_default()
     }
 
-    /// The branch the workspace is on is a colour of its own, from the base to
-    /// the current node; a branch it left keeps the colour of any other node.
-    ///
     /// @tests REQ-UNDO.tree_is_shown
     #[test]
     fn the_current_branch_has_its_own_colour() {
-        // 0 -> 1 -> 2 (here), and 0 -> 3 on another branch.
         let points = [point(0, None, false), point(1, Some(0), false), point(2, Some(1), true), point(3, Some(0), false)];
         let shown = history_view(&points, Filter::All, None);
         let role_of = |name: &str| {
@@ -372,9 +304,6 @@ mod tests {
         assert_eq!(role_of("#4"), Role::Entry, "a node on the branch left behind");
     }
 
-    /// Each point is named by its number, which goes there; the one the
-    /// workspace is at is marked; a straight run of changes is one column.
-    ///
     /// @tests REQ-UNDO.tree_is_shown
     #[test]
     fn each_point_goes_to_itself_and_the_current_one_is_marked() {
@@ -389,13 +318,9 @@ mod tests {
         assert_eq!(actions_at(shown, 0), vec!["history.filter".to_string()]);
     }
 
-    /// A change made after undoing opens a branch beside the run it left,
-    /// joined to the node it was made after.
-    ///
     /// @tests REQ-UNDO.tree_is_drawn
     #[test]
     fn an_undone_run_and_the_new_change_are_two_branches() {
-        // #0 → #1 → #2, then undo to #0 and type again: #3.
         let shown = history_view(&[point(0, None, false), point(1, Some(0), false), point(2, None, true)], Filter::All, None);
         assert_eq!(
             tree_of(&shown),
@@ -404,8 +329,6 @@ mod tests {
         assert!(faults(shown).is_empty());
     }
 
-    /// Parents that name each other, or a node itself, still draw each node
-    /// once, in finite rows.
     #[test]
     fn a_history_that_loops_is_drawn_once() {
         let rows = history_graph(vec![point(0, Some(0), false), point(1, None, false), point(1, Some(1), true)]);
@@ -413,9 +336,6 @@ mod tests {
         assert!(rows.len() <= 4);
     }
 
-    /// Kept to the saved points, each hangs under its nearest saved ancestor,
-    /// and the one nearest where the workspace is stands for it.
-    ///
     /// @tests REQ-UNDO.filtered_view
     #[test]
     fn a_filter_keeps_its_nodes_under_their_nearest_kept_ancestor() {
@@ -429,8 +349,6 @@ mod tests {
         assert_eq!(only_b.iter().map(|p| (p.node, p.parent, p.here)).collect::<Vec<_>>(), vec![(1, None, true)]);
     }
 
-    /// Pointing at a node shows the lines it changed, near them only.
-    ///
     /// @tests REQ-UNDO.hover_shows_change
     #[test]
     fn a_change_shows_its_lines_and_little_else() {
@@ -443,7 +361,6 @@ mod tests {
         assert!(shown.text.starts_with("#5  typed"), "node 4 is the fifth point: {}", shown.text);
     }
 
-    /// The base is `#0`, and every name read back is the point it was made from.
     #[test]
     fn a_point_name_reads_back_as_its_point() {
         assert_eq!(point_name(None), "#0");

@@ -1,16 +1,6 @@
-//! Requirement documents, identified by a frontmatter `id` — never by filename
-//! or directory. Any markdown carrying an `id:` is a requirement; markdown
-//! without one is ordinary markdown.
-
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
 
-/// Whether a requirement's clauses are claimed to exhaust it.
-///
-/// This is the denominator of every percentage shown about the requirement.
-/// Defaulting to `Open` means an author has to *claim* completeness before a
-/// number is presented as exact.
-///
 /// @implements REQ-REQDOC.decomposition_claimed
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -36,8 +26,6 @@ impl Decomposition {
     }
 }
 
-/// Workflow state. Orthogonal to evidence: a requirement can be approved with
-/// no evidence at all, or draft and fully conformant.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Status {
@@ -69,40 +57,24 @@ impl Status {
 pub struct Requirement {
     pub id: String,
     pub title: String,
-    /// Path relative to the project root. Carries no meaning — identity is `id`.
     pub file: String,
     pub refines: Vec<String>,
     pub decomposition: Decomposition,
-    /// Clause key -> clause text, ordered so hashes and output are stable.
-    /// For a clause written as a block this is its `text:`.
     pub clauses: BTreeMap<String, String>,
-    /// Clause key -> its narrowings (key -> text). Only clauses that have any
-    /// appear. A narrowing fixes which answer its clause allows; it is part of
-    /// the clause, never a clause of its own (ADR-0016).
     #[serde(default)]
     pub narrowings: BTreeMap<String, BTreeMap<String, String>>,
     pub status: Status,
     pub body: String,
-    /// Hash of the whole document — clauses, narrowings and prose — which is
-    /// what a document describing the requirement is reviewed against.
-    /// Evidence rests on `clause_hash` instead.
     pub content_hash: String,
 }
 
 impl Requirement {
-    /// What evidence about one clause rests on: that clause's key, text and
-    /// narrowings, and nothing else — rewording a sibling clause or the prose
-    /// leaves it standing. A requirement without clauses is one implicit
-    /// clause whose text is the body. `None` for a clause it does not declare.
-    ///
     /// @implements REQ-REQDOC.clause_addressable
     /// @implements REQ-STALE.requirement_reopens_all
     pub fn clause_hash(&self, clause: Option<&str>) -> Option<String> {
         let none = BTreeMap::new();
         match clause {
             None if self.clauses.is_empty() => Some(super::hash::clause(None, &self.body, &none)),
-            // A requirement-level record about a requirement that has clauses
-            // rests on all of it.
             None => Some(self.content_hash.clone()),
             Some(key) => self.clauses.get(key).map(|text| {
                 super::hash::clause(Some(key), text, self.narrowings.get(key).unwrap_or(&none))
@@ -110,9 +82,6 @@ impl Requirement {
         }
     }
 
-    /// A clause's text followed by its narrowings, one per line, as a reader
-    /// (a judge, a prompt) has to see it: the narrowings are part of what the
-    /// clause requires.
     pub fn clause_text_with_narrowings(&self, clause: &str) -> Option<String> {
         let text = self.clauses.get(clause)?;
         let mut out = text.clone();
@@ -122,9 +91,6 @@ impl Requirement {
         Some(out)
     }
 
-    /// Clause keys, or a single implicit clause when the document declares
-    /// none — so callers treat requirement-level links uniformly.
-    ///
     /// @implements REQ-REQDOC.clauseless_uniform
     pub fn clause_keys(&self) -> Vec<Option<String>> {
         if self.clauses.is_empty() {
@@ -139,45 +105,25 @@ impl Requirement {
     }
 }
 
-/// What is wrong with a line of frontmatter.
-///
-/// Named, so that a report can say which rule was broken and a differential
-/// test can compare conclusions rather than two implementations' phrasing of
-/// the same complaint.
-///
 /// @implements ARCH-HONEST.named_findings
 /// @implements REQ-REQDOC.malformed_reported
 /// @implements REQ-REQDOC.clause_unique
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum FrontmatterKind {
-    /// An indented entry with no map key above it.
     IndentedWithoutKey,
-    /// A line that is not `key: value`.
     NotAKeyValue,
-    /// `id:` is present and empty, so the document claims to be a requirement
-    /// and does not say which one.
     EmptyId,
-    /// The opening `---` is never closed, so nothing in the document is read.
     UnclosedFrontmatter,
-    /// A top-level key the format does not have — in a requirement, or one
-    /// that differs from a requirement key only in case (`iD:`).
     UnknownKey,
-    /// A clause key declared twice in one document.
     DuplicateClause,
-    /// A narrowing (or `text`) given twice in one clause's block.
     DuplicateNarrowing,
-    /// A clause written as a block with no (or an empty) `text:`.
     MissingText,
-    /// A clause or narrowing key with a character outside `[A-Za-z0-9_]`,
-    /// which an annotation could not name.
     InvalidKey,
 }
 
-/// The top-level keys of a requirement's frontmatter.
 const KEYS: [&str; 6] = ["id", "title", "refines", "status", "decomposition", "clauses"];
 
-/// Whether a clause or narrowing key can be named by an annotation.
 fn valid_key(key: &str) -> bool {
     !key.is_empty() && key.chars().all(|c| c.is_ascii_alphanumeric() || c == '_')
 }
@@ -192,22 +138,10 @@ pub struct FrontmatterProblem {
 
 pub enum ParseOutcome {
     Requirement(Box<Requirement>, Vec<FrontmatterProblem>),
-    /// Ordinary markdown — but whatever was wrong with its frontmatter is
-    /// carried out rather than dropped. A document that is malformed *and* not
-    /// a requirement is the case where silent skipping hides the reason the
-    /// requirement everybody expected is missing.
-    ///
     /// @implements REQ-REQDOC.malformed_reported
     NotARequirement(Vec<FrontmatterProblem>),
 }
 
-/// Parse a markdown document into a requirement, if it declares an `id`.
-///
-/// The supported frontmatter is deliberately tiny — `key: value`,
-/// `key: [a, b]`, one level of nesting under a map key, and under `clauses:`
-/// a clause written as a block of `text:` and narrowings (ADR-0016) — so
-/// there is no YAML dependency and the failure modes stay predictable.
-///
 /// @implements REQ-REQDOC.id_is_identity
 /// @implements REQ-REQDOC.malformed_reported
 /// @implements REQ-REQDOC.narrowings_nest
@@ -217,8 +151,6 @@ pub fn parse_markdown(file: &str, content: &str) -> ParseOutcome {
 
     let (frontmatter, body) = match split_frontmatter(content) {
         Fence::Absent => return ParseOutcome::NotARequirement(problems),
-        // A fence opened and never closed: everything after it would be read
-        // as nothing, which is the silent skip this clause forbids.
         Fence::Unclosed => {
             problems.push(FrontmatterProblem {
                 file: file.to_string(),
@@ -232,9 +164,6 @@ pub fn parse_markdown(file: &str, content: &str) -> ParseOutcome {
     };
     let fields = parse_frontmatter(frontmatter, file, &mut problems);
 
-    // An unknown key is reported in a requirement; in other markdown only
-    // when it is a requirement key misspelt in case, which is how a document
-    // stops being a requirement without anyone noticing.
     let is_requirement = fields.scalars.get("id").is_some_and(|id| !id.is_empty());
     for (line, key) in &fields.unknown {
         if is_requirement || KEYS.contains(&key.to_ascii_lowercase().as_str()) {
@@ -269,9 +198,6 @@ pub fn parse_markdown(file: &str, content: &str) -> ParseOutcome {
     let clauses = fields.maps.get("clauses").cloned().unwrap_or_default();
     let narrowings: BTreeMap<String, BTreeMap<String, String>> =
         fields.narrowings.into_iter().filter(|(_, n)| !n.is_empty()).collect();
-    // The whole document: a narrowing is written `clause.narrowing`, which no
-    // clause key can collide with, so a requirement without narrowings hashes
-    // as it always did.
     let mut whole = clauses.clone();
     for (clause, entries) in &narrowings {
         for (key, text) in entries {
@@ -301,11 +227,8 @@ pub fn parse_markdown(file: &str, content: &str) -> ParseOutcome {
     )
 }
 
-/// Where a document's frontmatter is, if it has one.
 enum Fence<'a> {
-    /// The document does not open with `---`: ordinary markdown.
     Absent,
-    /// It opens with `---` and nothing closes it.
     Unclosed,
     Split(&'a str, &'a str),
 }
@@ -329,16 +252,10 @@ struct Fields {
     scalars: BTreeMap<String, String>,
     lists: BTreeMap<String, Vec<String>>,
     maps: BTreeMap<String, BTreeMap<String, String>>,
-    /// Clause key -> narrowing key -> text.
     narrowings: BTreeMap<String, BTreeMap<String, String>>,
-    /// Top-level keys the format does not have, with their lines. Whether one
-    /// is reported depends on whether the document is a requirement, which is
-    /// known only once every line is read.
     unknown: Vec<(u32, String)>,
 }
 
-/// A clause being read as a block: its key, the indentation of its line, and
-/// that line, so a block missing its `text:` is reported where it starts.
 struct Block {
     clause: String,
     indent: usize,
@@ -350,7 +267,6 @@ fn problem(problems: &mut Vec<FrontmatterProblem>, file: &str, line: u32, kind: 
     problems.push(FrontmatterProblem { file: file.to_string(), line, kind, message });
 }
 
-/// End the block being read, reporting it if it never said what the clause is.
 fn close_block(fields: &Fields, block: &mut Option<Block>, file: &str, problems: &mut Vec<FrontmatterProblem>) {
     let Some(open) = block.take() else { return };
     let text = fields.maps.get("clauses").and_then(|m| m.get(&open.clause));
@@ -365,7 +281,6 @@ fn close_block(fields: &Fields, block: &mut Option<Block>, file: &str, problems:
     }
 }
 
-/// One line inside a clause's block: its `text:` or a narrowing.
 fn read_narrowing(
     fields: &mut Fields,
     open: &mut Block,
@@ -397,8 +312,6 @@ fn read_narrowing(
     entries.insert(key.to_string(), value.to_string());
 }
 
-/// One entry under a top-level map key. Under `clauses:` an entry with no
-/// value opens a block.
 #[allow(clippy::too_many_arguments)]
 fn read_entry(
     fields: &mut Fields,
@@ -426,7 +339,6 @@ fn read_entry(
     if clauses.contains_key(key) {
         problem(problems, file, line_no, FrontmatterKind::DuplicateClause, format!("the clause `{key}` is declared twice"));
     }
-    // The later declaration replaces the earlier one whole, narrowings too.
     clauses.insert(key.to_string(), value.to_string());
     fields.narrowings.remove(key);
     if value.is_empty() {
@@ -440,7 +352,7 @@ fn parse_frontmatter(text: &str, file: &str, problems: &mut Vec<FrontmatterProbl
     let mut block: Option<Block> = None;
 
     for (index, raw) in text.lines().enumerate() {
-        let line_no = index as u32 + 2; // +1 opening fence, +1 for 1-indexing
+        let line_no = index as u32 + 2;
         let line = raw.trim_end();
         if line.trim().is_empty() || line.trim_start().starts_with('#') {
             continue;
@@ -506,14 +418,6 @@ fn first_heading(body: &str) -> Option<String> {
         .map(|line| line[2..].trim().to_string())
 }
 
-/// Identifiers declared more than once, each with the file of the later
-/// declaration.
-///
-/// Identity is the declared `id`, so two documents declaring one are the same
-/// requirement said twice — a fault whichever file it is in. The later
-/// declaration is the one named, because the earlier one is the one the index
-/// kept and a reader needs to be sent to the other.
-///
 /// @implements REQ-REQDOC.id_unique
 /// @drt REQ-REQDOC.id_unique
 pub fn duplicate_ids(declared: Vec<(String, String)>) -> Vec<(String, String)> {
@@ -527,23 +431,11 @@ pub fn duplicate_ids(declared: Vec<(String, String)>) -> Vec<(String, String)> {
     out
 }
 
-/// The refinement graph, as identifiers and what they refine.
-///
-/// The graph questions are about identifiers and edges, and nothing else a
-/// requirement carries. Taking the graph rather than the documents is what lets
-/// them be checked on their own.
-///
 /// @implements ARCH-CORE-SHELL.decision_total
 pub fn refinement_graph(requirements: &BTreeMap<String, Requirement>) -> BTreeMap<String, Vec<String>> {
     requirements.iter().map(|(id, req)| (id.clone(), req.refines.clone())).collect()
 }
 
-/// Both graph questions at once: is there a cycle, and what does not resolve.
-///
-/// Together because a reader has to be able to trust that they answer about the
-/// same graph — a parent that does not exist is a dangling reference and *not*
-/// a cycle, and an implementation that treated it as one would report a
-/// blocking fault for a typo.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct GraphReport {
     pub cycle: Option<Vec<String>>,
@@ -555,8 +447,6 @@ pub struct GraphReport {
 /// @drt REQ-REQDOC.refines_dag
 /// @drt REQ-REQDOC.refines_resolves
 pub fn graph_report(edges: Vec<(String, Vec<String>)>) -> GraphReport {
-    // Through a map, so a repeated identifier resolves the way the index
-    // resolves it rather than the way a list happens to be ordered.
     let graph: BTreeMap<String, Vec<String>> = edges.into_iter().collect();
     GraphReport {
         cycle: cycle_in(&graph),
@@ -564,16 +454,12 @@ pub fn graph_report(edges: Vec<(String, Vec<String>)>) -> GraphReport {
     }
 }
 
-/// A cycle in the refinement graph, as the identifiers on it.
-///
 /// @implements REQ-REQDOC.refines_dag
 pub fn refinement_cycle(requirements: &BTreeMap<String, Requirement>) -> Option<Vec<String>> {
     cycle_in(&refinement_graph(requirements))
 }
 
 fn cycle_in(requirements: &BTreeMap<String, Vec<String>>) -> Option<Vec<String>> {
-    // Iterative depth-first search with an explicit stack, so a deep graph
-    // cannot overflow on a machine with a small stack.
     #[derive(Clone, Copy, PartialEq)]
     enum Mark {
         Open,
@@ -600,8 +486,6 @@ fn cycle_in(requirements: &BTreeMap<String, Vec<String>>) -> Option<Vec<String>>
             }
             *next.last_mut().expect("parallel stacks") += 1;
             let parent = parents[index].as_str();
-            // A parent that does not exist is a dangling reference, reported by
-            // the checker; it is not a cycle.
             if !requirements.contains_key(parent) {
                 continue;
             }
@@ -625,8 +509,6 @@ fn cycle_in(requirements: &BTreeMap<String, Vec<String>>) -> Option<Vec<String>>
     None
 }
 
-/// Identifiers named by `refines:` that no document declares.
-///
 /// @implements REQ-REQDOC.refines_resolves
 pub fn dangling_refines(requirements: &BTreeMap<String, Requirement>) -> BTreeSet<(String, String)> {
     dangling_in(&refinement_graph(requirements))
@@ -713,8 +595,6 @@ mod tests {
         }
     }
 
-    /// The hash is over content, so prose edits move it and the judgement that
-    /// was about the old pair stops applying.
     #[test]
     fn content_hash_tracks_clauses_and_prose() {
         let a = parse(DOC);
@@ -734,9 +614,6 @@ mod tests {
 
     const BLOCK: &str = "---\nid: REQ-R\nclauses:\n  weakest_link: The minimum over bonds.\n  min_not_mean:\n    text: The minimum of its parts.\n    empty: With no parts, L1.\n    order: Ascending id.\n---\nProse.\n";
 
-    /// A clause written as a block: its `text:` is the clause, every other key
-    /// a narrowing of it, and a narrowing is not something a link can name.
-    ///
     /// @tests REQ-REQDOC.narrowings_nest
     #[test]
     fn a_block_clause_carries_its_narrowings() {
@@ -762,7 +639,6 @@ mod tests {
     fn a_block_without_text_is_reported_where_it_starts() {
         let doc = "---\nid: REQ-R\nclauses:\n  one:\n    empty: With none, L1.\n  two: Fine.\n---\n";
         assert_eq!(kinds(doc), vec![(4, FrontmatterKind::MissingText)]);
-        // At the end of the frontmatter as well as before a sibling.
         let doc = "---\nid: REQ-R\nclauses:\n  one:\n---\n";
         assert_eq!(kinds(doc), vec![(4, FrontmatterKind::MissingText)]);
     }
@@ -779,9 +655,6 @@ mod tests {
         );
     }
 
-    /// The two silences the review found: a fence that never closes, and a key
-    /// misspelt so the document stops being a requirement.
-    ///
     /// @tests REQ-REQDOC.malformed_reported
     #[test]
     fn an_unclosed_fence_and_an_unknown_key_are_reported() {
@@ -789,13 +662,9 @@ mod tests {
             kinds("---\nid: REQ-X\nclauses:\n  one: t\n"),
             vec![(1, FrontmatterKind::UnclosedFrontmatter)]
         );
-        // Misspelt in case: not a requirement, and said so.
         assert_eq!(kinds("---\niD: REQ-X\n---\n"), vec![(2, FrontmatterKind::UnknownKey)]);
-        // In a requirement every key the format lacks is reported.
         assert_eq!(kinds("---\nid: REQ-X\nclauess:\n---\n"), vec![(3, FrontmatterKind::UnknownKey)]);
-        // Ordinary markdown keeps its own keys.
         assert_eq!(kinds("---\nadr: 3\ntitle: A decision\n---\n"), vec![]);
-        // Markdown without a fence is not unclosed.
         assert_eq!(kinds("# Notes\n---\n"), vec![]);
     }
 
@@ -809,10 +678,6 @@ mod tests {
         );
     }
 
-    /// Evidence rests on its own clause: rewording one clause moves that
-    /// clause's hash and no other, a narrowing is part of its clause, and the
-    /// prose is not part of any.
-    ///
     /// @tests REQ-REQDOC.clause_addressable
     /// @tests REQ-STALE.requirement_reopens_all
     #[test]
@@ -829,7 +694,6 @@ mod tests {
         assert_eq!(hash(&a, "weakest_link"), hash(&prose, "weakest_link"));
         assert_ne!(a.content_hash, prose.content_hash, "a document about it is reviewed against the prose");
         assert_eq!(a.clause_hash(Some("absent")), None);
-        // Without clauses, the body is the one implicit clause.
         let bare = parse("---\nid: REQ-X\n---\nbody");
         assert_eq!(bare.clause_hash(None), Some(bare.content_hash.clone()));
     }
@@ -857,7 +721,6 @@ mod tests {
 
     #[test]
     fn a_diamond_is_not_a_cycle() {
-        // A requirement may refine several, so a shared ancestor is ordinary.
         let g = graph(&[("A", &["B", "C"]), ("B", &["D"]), ("C", &["D"]), ("D", &[])]);
         assert_eq!(refinement_cycle(&g), None);
     }
@@ -880,18 +743,10 @@ mod tests {
     }
 }
 
-/// What parsing one document concluded, in a shape a model can be compared
-/// against.
-///
-/// The file path is deliberately absent. Identity is the declared `id`, and a
-/// projection that carried the path would let a model agree with an
-/// implementation that had quietly started using it.
-///
 /// @implements REQ-REQDOC.id_is_identity
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Parsed {
-    /// Whether the document declared itself a requirement at all.
     pub is_requirement: bool,
     pub id: String,
     pub title: String,
@@ -900,23 +755,11 @@ pub struct Parsed {
     pub status: Status,
     #[serde(with = "crate::wire::pairs")]
     pub clauses: BTreeMap<String, String>,
-    /// Each clause that has narrowings, with them, both sorted by key.
     pub narrowings: Vec<(String, Vec<(String, String)>)>,
-    /// The clauses a link may attach to: the declared keys, or one implicit
-    /// clause when there are none. Never a narrowing.
     pub addressable: Vec<Option<String>>,
-    /// Line and kind only. Two implementations cannot be expected to phrase a
-    /// complaint the same way, and the phrasing is not the claim.
     pub problems: Vec<(u32, FrontmatterKind)>,
 }
 
-/// Parse a document given as lines, and report what it concluded.
-///
-/// Lines rather than one string because that is what a generator can produce
-/// interesting cases of: a frontmatter fence in the wrong place, an indented
-/// line with nothing above it, a list that is not closed. Joined with `\n`,
-/// which is the only line ending this format has.
-///
 /// @implements REQ-REQDOC.id_is_identity
 /// @implements REQ-REQDOC.id_unique
 /// @implements REQ-REQDOC.clauseless_uniform
@@ -943,8 +786,6 @@ pub fn parse_lines(lines: Vec<String>) -> Parsed {
             clauses: BTreeMap::new(),
             narrowings: Vec::new(),
             addressable: Vec::new(),
-            // A document that is not a requirement is not silently skipped:
-            // whatever was wrong with its frontmatter is still reported.
             problems: problems.iter().map(|p| (p.line, p.kind)).collect(),
         },
         ParseOutcome::Requirement(req, problems) => Parsed {

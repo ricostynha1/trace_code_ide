@@ -1,50 +1,30 @@
-//! Deriving a differential test from the two signatures it is between.
-//!
-//! A clause with a Lean model (`@models`, a `def`) and a Rust implementation
-//! (`@implements`, a `fn`) can be tested without anybody writing a binding: the
-//! arguments pair by position, and each pair of types gives the generator its
-//! schema. Only types both sides plainly agree on are paired — integers,
-//! naturals, booleans, strings, lists, options and structures whose fields do
-//! too. Anything else is reported as the mismatch it is, never approximated:
-//! a guessed schema is a test of something nobody wrote.
-//!
-//! Pure: the shell reads the declarations and hands their text in.
-
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
 use super::schema::Schema;
 
-/// A type, as far as pairing needs to know it.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", rename_all_fields = "camelCase")]
 pub enum Ty {
-    /// A signed integer of `bits` bits; 0 is Lean's unbounded `Int`.
     Int { bits: u32 },
-    /// A natural number of `bits` bits; 0 is Lean's unbounded `Nat`.
     Nat { bits: u32 },
     Bool,
     Str,
     Float,
     List { inner: Box<Ty> },
     Option { inner: Box<Ty> },
-    /// A structure, by name, looked up in the side's own declarations.
     Named { name: String },
-    /// Anything else, as written.
     Other { text: String },
 }
 
-/// A structure's fields as JSON spells them, in order.
 pub type Structs = Vec<(String, Vec<(String, Ty)>)>;
 
-/// The schema a pair of types generates, or why there is none.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum Paired {
     Ok(Schema),
     Err(String),
 }
 
-/// How a type reads in a report.
 pub fn show(ty: &Ty) -> String {
     match ty {
         Ty::Int { bits: 0 } => "Int".into(),
@@ -61,9 +41,6 @@ pub fn show(ty: &Ty) -> String {
     }
 }
 
-/// Generation bounds: small enough that the arithmetic in a conversion cannot
-/// overflow the narrower side and that zero is drawn often, wide enough to
-/// cross the boundaries rounding cares about.
 fn int_bound(bits: u32) -> i64 {
     if bits == 8 {
         10
@@ -84,10 +61,6 @@ fn fields_of<'a>(structs: &'a Structs, name: &str) -> Option<&'a Vec<(String, Ty
     structs.iter().find(|(n, _)| n == name).map(|(_, f)| f)
 }
 
-/// The schema for a Lean type against a Rust type.
-///
-/// `fuel` bounds the walk through structures, which may refer to each other.
-///
 /// @implements REQ-DRT-SCHEMA.outside_is_error
 /// @drt REQ-DRT-SCHEMA.outside_is_error
 pub fn pair(lean: Ty, rust: Ty, lean_structs: Structs, rust_structs: Structs, fuel: u32) -> Paired {
@@ -145,7 +118,6 @@ pub fn pair(lean: Ty, rust: Ty, lean_structs: Structs, rust_structs: Structs, fu
     }
 }
 
-/// Split at commas not inside brackets.
 fn top_level(text: &str, separator: char) -> Vec<String> {
     let (mut depth, mut part, mut out) = (0i32, String::new(), Vec::new());
     for c in text.chars() {
@@ -166,7 +138,6 @@ fn top_level(text: &str, separator: char) -> Vec<String> {
     out
 }
 
-/// A Lean type as written.
 pub fn lean_type(text: &str) -> Ty {
     let text = text.trim();
     let text = text.strip_prefix('(').and_then(|t| t.strip_suffix(')')).unwrap_or(text).trim();
@@ -190,7 +161,6 @@ pub fn lean_type(text: &str) -> Ty {
     Ty::Other { text: text.to_string() }
 }
 
-/// A Rust type as written.
 pub fn rust_type(text: &str) -> Ty {
     let text = text.trim();
     if let Some(bits) = ["i8", "i16", "i32", "i64", "i128", "isize"].iter().position(|t| *t == text) {
@@ -217,7 +187,6 @@ pub fn rust_type(text: &str) -> Ty {
     Ty::Other { text: text.to_string() }
 }
 
-/// A Lean `def`'s explicit arguments and result, from its text.
 pub fn lean_signature(declaration: &str) -> Option<(Vec<(String, Ty)>, Ty)> {
     let at = declaration.find("def ")?;
     let header = &declaration[at + 4..];
@@ -256,7 +225,6 @@ pub fn lean_signature(declaration: &str) -> Option<(Vec<(String, Ty)>, Ty)> {
     Some((params, result?))
 }
 
-/// A Rust `fn`'s parameters and result, from the source holding it.
 pub fn rust_signature(source: &str, symbol: &str) -> Option<(Vec<(String, Ty)>, Ty)> {
     let at = source.find(&format!("fn {symbol}("))?;
     let rest = &source[at + symbol.len() + 4..];
@@ -291,7 +259,6 @@ pub fn rust_signature(source: &str, symbol: &str) -> Option<(Vec<(String, Ty)>, 
     Some((params, result))
 }
 
-/// `snake_case` as `camelCase`.
 fn camel(name: &str) -> String {
     let mut out = String::new();
     let mut upper = false;
@@ -308,7 +275,6 @@ fn camel(name: &str) -> String {
     out
 }
 
-/// Every `structure` in Lean text that derives its JSON encoding, with fields.
 pub fn lean_structs(text: &str) -> Structs {
     let mut out = Vec::new();
     let lines: Vec<&str> = text.lines().collect();
@@ -339,8 +305,6 @@ pub fn lean_structs(text: &str) -> Structs {
     out
 }
 
-/// Every `struct` in Rust source that derives `Serialize` and `Deserialize`,
-/// with its fields named as serde spells them.
 pub fn rust_structs(source: &str) -> Structs {
     let mut out = Vec::new();
     let lines: Vec<&str> = source.lines().collect();
@@ -375,22 +339,13 @@ pub fn rust_structs(source: &str) -> Structs {
     out
 }
 
-/// What a derived test needs: the schema of its input, the model's argument
-/// names in order, and which Rust parameter reads which of them.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct Derived {
     pub schema: Schema,
     pub arguments: Vec<String>,
-    /// Model argument name -> Rust parameter name, where they differ.
     pub params: BTreeMap<String, String>,
 }
 
-/// Pair a model with an implementation, or say every reason they cannot be.
-///
-/// Arguments pair by position. Different arities are refused before any type
-/// is looked at; otherwise every argument and the result are paired, and every
-/// pair that fails is reported, not only the first.
-///
 /// @implements REQ-DRT-SCHEMA.derived_from_both
 pub fn derive(
     model: (Vec<(String, Ty)>, Ty),
@@ -427,8 +382,6 @@ pub fn derive(
     Ok(Derived { schema: Schema::Struct { fields }, arguments: theirs.into_iter().map(|(n, _)| n).collect(), params })
 }
 
-/// `derive`, over owned arguments, for the differential runner (ADR-0010).
-///
 /// @implements REQ-DRT-SCHEMA.derived_from_both
 /// @drt REQ-DRT-SCHEMA.derived_from_both
 pub fn derive_of(
@@ -483,10 +436,6 @@ mod tests {
         assert!(problems[1].contains("Lean `Int` against Rust `u8`"), "{problems:?}");
     }
 
-    /// Arities that differ are refused before any type is paired; a borrowed
-    /// `&str` is read as something outside the grammar and refused, and every
-    /// failing pair is named, not only the first.
-    ///
     /// @tests REQ-DRT-SCHEMA.derived_from_both
     /// @tests REQ-DRT-SCHEMA.outside_is_error
     #[test]

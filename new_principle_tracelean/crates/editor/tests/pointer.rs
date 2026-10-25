@@ -1,11 +1,3 @@
-//! A pointer and the keys every editor has: what a person does with a window.
-//!
-//! Driven through the methods the window's commands call — `choose`, `place`,
-//! `offers_at`, `chord`, `scroll`, `paste` — so what is checked is what a click,
-//! a right-click or Ctrl+S does, on a real tree on disk. The window itself only
-//! turns a pointer into a pane and an offset, and is checked in a browser by
-//! `web/test/pointer.mjs`.
-
 use std::path::PathBuf;
 
 use tracelean_core::surface::keymap::{self, Keymap};
@@ -42,8 +34,6 @@ fn opened() -> (PathBuf, Editor) {
     (root, editor)
 }
 
-/// A pane's edge dragged a few columns moves exactly that many, both ways, and
-/// the panes still fill the window.
 #[test]
 fn a_dragged_edge_moves_by_the_columns_dragged() {
     let (root, mut editor) = opened();
@@ -60,13 +50,11 @@ fn a_dragged_edge_moves_by_the_columns_dragged() {
     let _ = std::fs::remove_dir_all(&root);
 }
 
-/// Where the row naming `name` starts in the explorer's tree, if it is shown.
 fn find_row(editor: &Editor, name: &str) -> Option<usize> {
     let listing = shown_in(editor, EXPLORER);
     let mut at = 0;
     for line in listing.split('\n') {
         let shown = line.trim_start().trim_start_matches(['▾', '▸']).trim_start();
-        // Without the mark after a name (`✎`, `●`).
         let (shown, mark) = shown.split_once("  ").map_or((shown, 0), |(name, mark)| (name, mark.chars().count() + 2));
         if shown == name {
             return Some(at + line.chars().count() - mark - name.chars().count());
@@ -76,8 +64,6 @@ fn find_row(editor: &Editor, name: &str) -> Option<usize> {
     None
 }
 
-/// Where a path's row starts in the explorer, opening the folders above it
-/// by clicking them, as a person would.
 fn row_of(editor: &mut Editor, path: &str) -> usize {
     let parts: Vec<&str> = path.split('/').collect();
     for folder in &parts[..parts.len() - 1] {
@@ -92,14 +78,10 @@ fn row_of(editor: &mut Editor, path: &str) -> usize {
         .unwrap_or_else(|| panic!("{path} is not in the listing:\n{}", shown_in(editor, EXPLORER)))
 }
 
-/// Folders open and close from their row, and the tree shows names under
-/// them; opening a file elsewhere opens the folders that hold it.
-///
 /// @tests REQ-SHOW.listing_is_a_tree
 #[test]
 fn folders_open_and_close_in_the_explorer() {
     let (root, mut editor) = opened();
-    // A project this small opens with its folders open.
     assert!(shown_in(&editor, EXPLORER).ends_with("\n▾ src\n    i.rs\n    long.rs"), "{}", shown_in(&editor, EXPLORER));
     let at = find_row(&editor, "src").unwrap();
     editor.choose(EXPLORER, at, "file.open", None, None);
@@ -125,9 +107,6 @@ fn shown_in(editor: &Editor, pane: &str) -> String {
     plain_text(found.buffer.clone()).join("\n")
 }
 
-/// Clicking a row of the explorer opens that file in the document, and the
-/// explorer is still there.
-///
 /// @tests REQ-SCREEN.buffer_goes_home
 /// @tests REQ-ACT.one_path
 #[test]
@@ -141,14 +120,11 @@ fn clicking_a_file_in_the_explorer_opens_it_beside_the_explorer() {
     let _ = std::fs::remove_dir_all(&root);
 }
 
-/// A click into a file puts the cursor where it was pressed and starts typing
-/// there.
 #[test]
 fn clicking_into_a_file_places_the_cursor_and_typing_goes_there() {
     let (root, mut editor) = opened();
     let at = row_of(&mut editor, "src/i.rs");
     editor.choose(EXPLORER, at, "file.open", None, None);
-    // "one\ntwo" — offset 5 is between `t` and `w`.
     editor.place(DOCUMENT, 5);
     assert_eq!(editor.mode, INSERT, "a click into a file did not start typing");
     editor.key("X");
@@ -156,9 +132,6 @@ fn clicking_into_a_file_places_the_cursor_and_typing_goes_there() {
     let _ = std::fs::remove_dir_all(&root);
 }
 
-/// Resting on a history node shows the change it made, and the history's
-/// switches keep it to the saved points or the open file.
-///
 /// @tests REQ-UNDO.hover_shows_change
 /// @tests REQ-UNDO.filtered_view
 #[test]
@@ -193,9 +166,6 @@ fn the_history_previews_a_change_and_filters_to_the_saved_points() {
     let _ = std::fs::remove_dir_all(&root);
 }
 
-/// The history opens on the file being read, and follows the document:
-/// opening another file shows that file's changes, not the last one's.
-///
 /// @tests REQ-UNDO.filtered_view
 #[test]
 fn the_history_of_this_file_follows_the_file_opened() {
@@ -221,9 +191,6 @@ fn the_history_of_this_file_follows_the_file_opened() {
     let _ = std::fs::remove_dir_all(&root);
 }
 
-/// Clicking `#0` goes back to the tree as it was opened, and from there a
-/// click on a node goes forward again.
-///
 /// @tests REQ-UNDO.reachable
 #[test]
 fn clicking_the_base_returns_to_the_tree_as_it_was_opened() {
@@ -256,8 +223,6 @@ fn clicking_the_base_returns_to_the_tree_as_it_was_opened() {
     let _ = std::fs::remove_dir_all(&root);
 }
 
-/// The page reports offsets in the window it was given. Once the pane is
-/// scrolled, offset 0 is the first *visible* line, not the first line.
 #[test]
 fn a_click_in_a_scrolled_pane_lands_on_the_line_that_was_clicked() {
     let (root, mut editor) = opened();
@@ -270,9 +235,6 @@ fn a_click_in_a_scrolled_pane_lands_on_the_line_that_was_clicked() {
     let _ = std::fs::remove_dir_all(&root);
 }
 
-/// Right-clicking a row offers what can be done to that file, and choosing
-/// one does it to that file — not to whatever the focus was on.
-///
 /// @tests REQ-ACT.everything_is_offered
 #[test]
 fn a_file_is_renamed_and_deleted_from_its_row() {
@@ -293,7 +255,6 @@ fn a_file_is_renamed_and_deleted_from_its_row() {
     let _ = std::fs::remove_dir_all(&root);
 }
 
-/// A new file, named in the menu, appears in the explorer.
 #[test]
 fn a_new_file_is_made_from_the_explorer() {
     let (root, mut editor) = opened();
@@ -302,8 +263,6 @@ fn a_new_file_is_made_from_the_explorer() {
     let _ = std::fs::remove_dir_all(&root);
 }
 
-/// Ctrl+S writes the file; Ctrl+Z takes the typing back and the document shows
-/// it, with the focus left where it was.
 #[test]
 fn save_and_undo_by_the_keys_every_editor_has() {
     let (root, mut editor) = opened();
@@ -323,7 +282,6 @@ fn save_and_undo_by_the_keys_every_editor_has() {
     let _ = std::fs::remove_dir_all(&root);
 }
 
-/// Home, End, Delete and pasting.
 #[test]
 fn moving_by_line_deleting_forwards_and_pasting() {
     let (root, mut editor) = opened();
@@ -340,10 +298,6 @@ fn moving_by_line_deleting_forwards_and_pasting() {
     let _ = std::fs::remove_dir_all(&root);
 }
 
-/// A tab names its buffer by title, and clicking it shows that buffer — the
-/// row's text is a number and a name, never the buffer's identity, so the
-/// click is resolved by row.
-///
 /// @tests REQ-SCREEN.strip_is_the_opened_set
 #[test]
 fn clicking_a_tab_shows_its_buffer() {
@@ -361,8 +315,6 @@ fn clicking_a_tab_shows_its_buffer() {
     let _ = std::fs::remove_dir_all(&root);
 }
 
-/// Enter keeps the line's indentation, one level deeper after a line that
-/// opens a block; Tab goes to the next level.
 #[test]
 fn enter_keeps_the_indentation() {
     let (root, mut editor) = opened();
@@ -380,8 +332,6 @@ fn enter_keeps_the_indentation() {
     let _ = std::fs::remove_dir_all(&root);
 }
 
-/// Ctrl+arrows move by word, Ctrl+Backspace deletes one, and Ctrl+/ comments
-/// the line out and back in.
 #[test]
 fn words_and_comments_by_the_usual_chords() {
     let (root, mut editor) = opened();
@@ -407,7 +357,6 @@ fn words_and_comments_by_the_usual_chords() {
     let _ = std::fs::remove_dir_all(&root);
 }
 
-/// Ctrl+Z takes back a word typed, not a letter; Ctrl+Y gives it back whole.
 #[test]
 fn undo_takes_back_a_word_at_a_time() {
     let (root, mut editor) = opened();
@@ -434,8 +383,6 @@ fn undo_takes_back_a_word_at_a_time() {
     let _ = std::fs::remove_dir_all(&root);
 }
 
-/// A file changed on disk by something else is shown as it now is, unless it
-/// was edited here too: then the edit is kept and the person is told.
 #[test]
 fn a_change_on_disk_is_followed() {
     let (root, mut editor) = opened();
@@ -463,8 +410,6 @@ fn a_change_on_disk_is_followed() {
     let _ = std::fs::remove_dir_all(&root);
 }
 
-/// Alt+arrows move a line, Shift+Alt+Down copies it, Ctrl+Shift+K removes it,
-/// Shift+Tab takes a level of indentation off it — the cursor going with it.
 #[test]
 fn lines_move_copy_and_go_by_the_usual_chords() {
     let (root, mut editor) = opened();
@@ -491,8 +436,6 @@ fn lines_move_copy_and_go_by_the_usual_chords() {
     let _ = std::fs::remove_dir_all(&root);
 }
 
-/// Tab, Shift+Tab and Ctrl+/ over a selection change every line it touches,
-/// as one change.
 #[test]
 fn a_selection_is_indented_and_commented_line_by_line() {
     let (root, mut editor) = opened();
@@ -512,9 +455,6 @@ fn a_selection_is_indented_and_commented_line_by_line() {
     let _ = std::fs::remove_dir_all(&root);
 }
 
-/// The welcome page lists the folders opened before, and clicking one opens
-/// it as the project.
-///
 /// @tests REQ-SHOW.recent_reopens
 #[test]
 fn a_recent_folder_reopens_from_the_welcome_page() {
@@ -535,9 +475,6 @@ fn a_recent_folder_reopens_from_the_welcome_page() {
     }
 }
 
-/// The selection is the editor's: Shift with a movement makes it, it reaches
-/// past the window, typing replaces it, Ctrl+C/X copy and cut it, Ctrl+A
-/// takes everything, a plain arrow lets it go.
 #[test]
 fn the_selection_is_kept_by_the_editor() {
     let (root, mut editor) = opened();
@@ -564,7 +501,6 @@ fn the_selection_is_kept_by_the_editor() {
     assert_eq!(editor.selected().map(|s| s.lines().count()), Some(30));
     editor.key("Right");
     assert_eq!(editor.selection(), None, "an arrow kept the selection");
-    // Drawn with the pointer, it is the same selection.
     editor.top = 0;
     editor.select(DOCUMENT, 2, 6);
     assert_eq!(editor.selected().as_deref(), Some("line"));
@@ -573,8 +509,6 @@ fn the_selection_is_kept_by_the_editor() {
     let _ = std::fs::remove_dir_all(&root);
 }
 
-/// An opening bracket brings its closer; typing the closer steps over it;
-/// Enter between them opens an indented line; Backspace removes both.
 #[test]
 fn brackets_come_in_pairs() {
     let (root, mut editor) = opened();
@@ -595,8 +529,6 @@ fn brackets_come_in_pairs() {
     editor.key("[");
     editor.key("Backspace");
     assert!(shown_in(&editor, DOCUMENT).starts_with("f(x){\n    \n}\none"), "{:?}", shown_in(&editor, DOCUMENT));
-    // Quotes too, in code: closed, stepped over, removed as a pair; after a
-    // word, a quote is just a quote.
     for key in ["\"", "a", "\""] {
         editor.key(key);
     }
@@ -610,7 +542,6 @@ fn brackets_come_in_pairs() {
     let _ = std::fs::remove_dir_all(&root);
 }
 
-/// Beside a bracket, the editor names it and its match for the window to mark.
 #[test]
 fn a_bracket_and_its_match_are_found() {
     let (root, mut editor) = opened();
@@ -630,8 +561,6 @@ fn a_bracket_and_its_match_are_found() {
     let _ = std::fs::remove_dir_all(&root);
 }
 
-/// A draft requirement opens with an Approve button, which makes its status
-/// approved as an edit Ctrl+Z takes back.
 #[test]
 fn a_draft_requirement_is_approved_from_its_view() {
     let root = project();
@@ -657,7 +586,6 @@ fn a_draft_requirement_is_approved_from_its_view() {
     let _ = std::fs::remove_dir_all(&root);
 }
 
-/// A tree row's right-click menu copies the row's full path.
 #[test]
 fn a_tree_row_copies_its_path() {
     let (root, mut editor) = opened();
@@ -672,7 +600,6 @@ fn a_tree_row_copies_its_path() {
     let _ = std::fs::remove_dir_all(&root);
 }
 
-/// Enter on a row does what a click there does: the explorer's opens the file.
 #[test]
 fn enter_opens_what_the_cursor_is_on() {
     let (root, mut editor) = opened();
@@ -685,8 +612,6 @@ fn enter_opens_what_the_cursor_is_on() {
     let _ = std::fs::remove_dir_all(&root);
 }
 
-/// Home goes to the first character that is not blank, then the line's
-/// start; Ctrl+L selects the line, and again the next one too.
 #[test]
 fn home_is_smart_and_ctrl_l_selects_lines() {
     let (root, mut editor) = opened();
@@ -709,7 +634,6 @@ fn home_is_smart_and_ctrl_l_selects_lines() {
     let _ = std::fs::remove_dir_all(&root);
 }
 
-/// Ctrl+D selects the word at the cursor, and again the next place holding it.
 #[test]
 fn ctrl_d_selects_the_word_then_the_next_one() {
     let (root, mut editor) = opened();
@@ -725,8 +649,6 @@ fn ctrl_d_selects_the_word_then_the_next_one() {
     let _ = std::fs::remove_dir_all(&root);
 }
 
-/// The explorer marks the file the document shows, whichever way it came
-/// to be shown — a tab, Ctrl+Tab.
 #[test]
 fn the_explorer_follows_the_shown_file() {
     let (root, mut editor) = opened();
@@ -748,7 +670,6 @@ fn the_explorer_follows_the_shown_file() {
     let _ = std::fs::remove_dir_all(&root);
 }
 
-/// A file with unsaved edits is marked in the explorer, and saving clears it.
 #[test]
 fn the_explorer_marks_unsaved_files() {
     let (root, mut editor) = opened();
@@ -763,7 +684,6 @@ fn the_explorer_marks_unsaved_files() {
     let _ = std::fs::remove_dir_all(&root);
 }
 
-/// The name under the cursor is found, whole, wherever the window shows it.
 #[test]
 fn the_name_under_the_cursor_is_found_in_the_window() {
     let (root, mut editor) = opened();
@@ -778,7 +698,6 @@ fn the_name_under_the_cursor_is_found_in_the_window() {
     let _ = std::fs::remove_dir_all(&root);
 }
 
-/// What a file declares is listed by name, and opening one goes to its line.
 #[test]
 fn a_symbol_of_the_file_is_found_and_gone_to() {
     let (root, mut editor) = opened();
@@ -795,8 +714,6 @@ fn a_symbol_of_the_file_is_found_and_gone_to() {
     let _ = std::fs::remove_dir_all(&root);
 }
 
-/// The palette finds an action by a few words of what it is called, and
-/// doing it from there does what its key does.
 #[test]
 fn the_palette_finds_an_action_by_its_words() {
     let (root, mut editor) = opened();
@@ -811,8 +728,6 @@ fn the_palette_finds_an_action_by_its_words() {
     let _ = std::fs::remove_dir_all(&root);
 }
 
-/// The checker's findings are counted between keys, and counted again once
-/// a save changed the tree.
 #[test]
 fn the_findings_are_counted_between_keys() {
     let (root, mut editor) = opened();
@@ -832,8 +747,6 @@ fn the_findings_are_counted_between_keys() {
     let _ = std::fs::remove_dir_all(&root);
 }
 
-/// Replace swaps every match in the file at once, and one undo takes it all
-/// back.
 #[test]
 fn replace_swaps_every_match_as_one_change() {
     let (root, mut editor) = opened();
@@ -850,8 +763,6 @@ fn replace_swaps_every_match_as_one_change() {
     let _ = std::fs::remove_dir_all(&root);
 }
 
-/// Alt+Left goes back to where the document was before a jump — another
-/// file, a line — and Alt+Right forward again.
 #[test]
 fn alt_left_goes_back_where_a_jump_left_from() {
     let (root, mut editor) = opened();
@@ -860,7 +771,6 @@ fn alt_left_goes_back_where_a_jump_left_from() {
     editor.chord("C-End");
     editor.chord("PageUp");
     let before = editor.line_and_column();
-    // A link to another file's line, as a requirement's claims are.
     editor.perform(tracelean_core::surface::act::Intent::Display { what: BufferKind::File { path: "src/i.rs:2".into() } });
     assert!(matches!(editor.buffer().kind, BufferKind::File { ref path } if path == "src/i.rs"));
     assert_eq!(editor.line_and_column().0, 1);
@@ -876,8 +786,6 @@ fn alt_left_goes_back_where_a_jump_left_from() {
     let _ = std::fs::remove_dir_all(&root);
 }
 
-/// Left and Right walk the explorer as a file tree: into a folder, back to
-/// it, closed, and on a top-level row every folder closes.
 #[test]
 fn left_and_right_walk_the_tree() {
     let (root, mut editor) = opened();
@@ -903,8 +811,6 @@ fn left_and_right_walk_the_tree() {
     let _ = std::fs::remove_dir_all(&root);
 }
 
-/// F1 lists every key — the chords and each bound action — where documents
-/// are read.
 #[test]
 fn f1_lists_every_key() {
     let (root, mut editor) = opened();
@@ -916,7 +822,6 @@ fn f1_lists_every_key() {
     let _ = std::fs::remove_dir_all(&root);
 }
 
-/// Ctrl+Tab and Ctrl+Shift+Tab go through the tabs of the pane being read.
 #[test]
 fn ctrl_tab_cycles_the_documents() {
     let (root, mut editor) = opened();
@@ -931,7 +836,6 @@ fn ctrl_tab_cycles_the_documents() {
     let _ = std::fs::remove_dir_all(&root);
 }
 
-/// Going back to a tab goes back to where the cursor was in it.
 #[test]
 fn a_tab_keeps_its_cursor() {
     let (root, mut editor) = opened();
@@ -950,9 +854,6 @@ fn a_tab_keeps_its_cursor() {
     let _ = std::fs::remove_dir_all(&root);
 }
 
-/// A requirement opens in the document with each clause and what claims it,
-/// and clicking a claim opens the claiming file at its line.
-///
 /// @tests REQ-SHOW.requirement_opened
 #[test]
 fn a_requirement_opens_and_its_claims_open_the_code() {
@@ -977,16 +878,12 @@ fn a_requirement_opens_and_its_claims_open_the_code() {
     editor.choose(DOCUMENT, at, "file.open", None, None);
     assert!(matches!(editor.buffer().kind, BufferKind::File { ref path } if path == "src/x.rs"));
     assert!(editor.line_and_column().0 >= 2, "the file did not open at the claim: {:?}", editor.line_and_column());
-    // What a name says, for a pointer resting on it.
     assert_eq!(editor.requirement_text("REQ-X.holds").as_deref(), Some("REQ-X.holds: It shall hold."));
     assert_eq!(editor.requirement_text("REQ-X").as_deref(), Some("REQ-X: Something holds"));
     assert_eq!(editor.requirement_text("REQ-NONE"), None);
     let _ = std::fs::remove_dir_all(&root);
 }
 
-/// A clause written as a block shows its text, and its narrowings indented
-/// under it — read from the document, not counted as clauses.
-///
 /// @tests REQ-REQDOC.narrowings_nest
 #[test]
 fn a_requirement_shows_narrowings_under_their_clause() {
@@ -1008,9 +905,6 @@ fn a_requirement_shows_narrowings_under_their_clause() {
     let _ = std::fs::remove_dir_all(&root);
 }
 
-/// A clause a model claims offers its judge's prompt, which opens as a buffer
-/// and is copied whole.
-///
 /// @tests REQ-JUDGE.prompt_exported
 #[test]
 fn a_modelled_clause_opens_its_judge_prompt_to_copy() {
@@ -1038,14 +932,11 @@ fn a_modelled_clause_opens_its_judge_prompt_to_copy() {
     let _ = std::fs::remove_dir_all(&root);
 }
 
-/// Ctrl+F finds forwards from the cursor and wraps; F3 finds the next one,
-/// Shift+F3 the one before.
 #[test]
 fn find_moves_the_cursor_to_each_match_in_turn() {
     let (root, mut editor) = opened();
     let at = row_of(&mut editor, "src/long.rs");
     editor.choose(EXPLORER, at, "file.open", None, None);
-    // Each match is selected, the cursor at its end, so typing replaces it.
     editor.find("line 2", true);
     assert_eq!(editor.line_and_column(), (1, 6), "the first match is line 2");
     assert_eq!(editor.selected().as_deref(), Some("line 2"));
@@ -1055,8 +946,6 @@ fn find_moves_the_cursor_to_each_match_in_turn() {
     assert_eq!(editor.line_and_column(), (1, 6), "back to line 2");
     editor.find("nowhere", true);
     assert_eq!(editor.line_and_column(), (1, 6), "a miss moved the cursor");
-    // What was found stays selected in the document; a folder clicked in
-    // the explorer still closes.
     editor.key("Escape");
     let at = find_row(&editor, "src").expect("src is shown");
     editor.choose(EXPLORER, at, "file.open", None, None);
@@ -1064,7 +953,6 @@ fn find_moves_the_cursor_to_each_match_in_turn() {
     let _ = std::fs::remove_dir_all(&root);
 }
 
-/// Another folder is opened from the explorer's menu, and becomes the tree.
 #[test]
 fn another_folder_is_opened_from_the_explorer() {
     let (root, mut editor) = opened();
@@ -1080,8 +968,6 @@ fn another_folder_is_opened_from_the_explorer() {
     let _ = std::fs::remove_dir_all(&other);
 }
 
-/// A requirement is made from the requirements panel's menu, from a template,
-/// and opens to be written.
 #[test]
 fn a_new_requirement_is_made_from_the_panel() {
     let (root, mut editor) = opened();
@@ -1098,8 +984,6 @@ fn a_new_requirement_is_made_from_the_panel() {
     let _ = std::fs::remove_dir_all(&root);
 }
 
-/// The history shows each change, and clicking one goes back to it.
-///
 /// @tests REQ-UNDO.tree_is_shown
 #[test]
 fn a_point_in_the_history_is_gone_back_to_by_clicking_it() {
@@ -1123,8 +1007,6 @@ fn a_point_in_the_history_is_gone_back_to_by_clicking_it() {
     let _ = std::fs::remove_dir_all(&root);
 }
 
-/// A selection is cut as one change: typing replaces it, and one undo brings
-/// it back.
 #[test]
 fn a_selection_is_cut_and_typed_over() {
     let (root, mut editor) = opened();
@@ -1139,7 +1021,6 @@ fn a_selection_is_cut_and_typed_over() {
     let _ = std::fs::remove_dir_all(&root);
 }
 
-/// A tab says when its file has changes not yet saved, until it is saved.
 #[test]
 fn an_unsaved_file_is_marked_on_its_tab() {
     let (root, mut editor) = opened();
@@ -1154,8 +1035,6 @@ fn an_unsaved_file_is_marked_on_its_tab() {
     let _ = std::fs::remove_dir_all(&root);
 }
 
-/// Closing with unsaved work is refused once, saying which files; asking again
-/// closes. With nothing unsaved it closes at once.
 #[test]
 fn closing_with_unsaved_work_is_refused_once() {
     let (root, mut editor) = opened();
@@ -1172,9 +1051,6 @@ fn closing_with_unsaved_work_is_refused_once() {
     let _ = std::fs::remove_dir_all(&root);
 }
 
-/// Reopening a project brings back its tabs, its open folders and the file in
-/// front; a file removed since is left out.
-///
 /// @tests REQ-NAV.session_recalled
 #[test]
 fn reopening_brings_back_what_was_open() {
@@ -1195,8 +1071,6 @@ fn reopening_brings_back_what_was_open() {
     let _ = std::fs::remove_dir_all(&root);
 }
 
-/// Ctrl+P's list is the project's files that match, and choosing one opens it.
-///
 /// @tests REQ-NAV.quick_open
 #[test]
 fn quick_open_finds_a_file_by_a_few_letters() {
@@ -1205,14 +1079,11 @@ fn quick_open_finds_a_file_by_a_few_letters() {
     assert_eq!(found.first().map(String::as_str), Some("src/long.rs"), "{found:?}");
     editor.choose(EXPLORER, 0, "file.open", Some(found[0].clone()), None);
     assert!(matches!(editor.buffer().kind, BufferKind::File { ref path } if path == "src/long.rs"));
-    // With nothing typed, the file just left comes first.
     editor.choose(EXPLORER, 0, "file.open", Some("src/i.rs".into()), None);
     assert_eq!(editor.quick_open(""), vec!["src/long.rs".to_string()]);
     let _ = std::fs::remove_dir_all(&root);
 }
 
-/// Ctrl+P takes a line too: `lng:5` opens the match at line 5, `:30` goes to
-/// line 30 of the file in front.
 #[test]
 fn quick_open_goes_to_a_line() {
     let (root, mut editor) = opened();
@@ -1227,7 +1098,6 @@ fn quick_open_goes_to_a_line() {
     let _ = std::fs::remove_dir_all(&root);
 }
 
-/// Ctrl+W closes the buffer the focused pane shows.
 #[test]
 fn ctrl_w_closes_the_focused_buffer() {
     let (root, mut editor) = opened();
@@ -1239,15 +1109,11 @@ fn ctrl_w_closes_the_focused_buffer() {
     let _ = std::fs::remove_dir_all(&root);
 }
 
-/// `.` lists what can be done where the cursor is — the keyboard's right-click
-/// — and a key picks from it.
-///
 /// @tests REQ-ACT.everything_is_offered
 #[test]
 fn dot_offers_what_can_be_done_here_and_a_key_picks() {
     let (root, mut editor) = opened();
     editor.focus_pane(EXPLORER);
-    // Down to `i.rs`, under the project's name and `src`.
     editor.key("Down");
     editor.key("Down");
     editor.key(".");
@@ -1259,7 +1125,6 @@ fn dot_offers_what_can_be_done_here_and_a_key_picks() {
     let _ = std::fs::remove_dir_all(&root);
 }
 
-/// A report that answers with a command offers to copy just that command.
 #[test]
 fn a_command_in_a_report_is_copied_by_its_line() {
     let (root, mut editor) = opened();
@@ -1275,8 +1140,6 @@ fn a_command_in_a_report_is_copied_by_its_line() {
     let _ = std::fs::remove_dir_all(&root);
 }
 
-/// F12 on a name goes to where it is declared.
-///
 /// @tests REQ-NAV.definitions_found
 #[test]
 fn f12_goes_to_the_definition() {
@@ -1294,8 +1157,6 @@ fn f12_goes_to_the_definition() {
     let _ = std::fs::remove_dir_all(&root);
 }
 
-/// Searching every file lists each line that holds the text, each a link.
-///
 /// @tests REQ-NAV.uses_found
 #[test]
 fn a_search_lists_every_line_that_holds_the_text() {
@@ -1311,12 +1172,6 @@ fn a_search_lists_every_line_that_holds_the_text() {
     let _ = std::fs::remove_dir_all(&root);
 }
 
-/// The page itself, in headless Chrome: what a click, a drag or a right-click
-/// sends, and how the page is laid out and marked — each place in a region of
-/// its own, the focused pane marked, every region and control named for a
-/// screen reader — under the shipped theme; then every journey of
-/// `tests/journeys.json` against a real editor, as the terminal replays them.
-///
 /// @tests REQ-LOOK.journeys_replay
 /// @tests REQ-LOOK.regions_present
 /// @tests REQ-LOOK.focus_visible

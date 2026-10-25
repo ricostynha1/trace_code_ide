@@ -1,12 +1,3 @@
-//! Properties that are about shapes and structures rather than about values.
-//!
-//! Most of what this project claims is checked by comparing two
-//! implementations. These are the clauses that cannot be: that the schema
-//! grammar is closed, that the protocol is line-delimited, that one runner
-//! serves every binding, that rendering the index touches no filesystem. They
-//! are checked here by exercising the thing itself, rather than being asserted
-//! in a doc comment nobody can fail.
-
 use std::collections::{BTreeMap, BTreeSet};
 
 use tracelean_core::drt::gen;
@@ -15,10 +6,6 @@ use tracelean_core::drt::run::{agree, DrtResult, RunOptions};
 use tracelean_core::drt::schema::Schema;
 use tracelean_core::drt::{qualified_op, Binding, CallSpec};
 
-// ─── The schema grammar ──────────────────────────────────────────────────────
-
-/// Every shape in the grammar, so a new one cannot be added without this list
-/// noticing.
 fn every_shape() -> Vec<Schema> {
     vec![
         Schema::Nat { max: Some(3), edges: vec![0] },
@@ -33,13 +20,6 @@ fn every_shape() -> Vec<Schema> {
     ]
 }
 
-/// The grammar is a closed whitelist: nine shapes, each of which generates.
-///
-/// A tenth shape added to the enum without a generator arm would fail to
-/// compile; a tenth added *with* one would fail this count. Both are the point:
-/// the alternative to a closed grammar is a generator that silently
-/// approximates a type it does not understand.
-///
 /// @tests REQ-DRT-SCHEMA.whitelisted
 /// @tests REQ-DRT-SCHEMA.outside_is_error
 /// @structural REQ-DRT-SCHEMA.whitelisted reason="a claim that the grammar is a closed enum, which is a fact about the type rather than a value it computes"
@@ -65,7 +45,6 @@ fn the_schema_grammar_is_closed_and_every_shape_generates() {
     }
 }
 
-/// Whether a generated value has the shape that asked for it.
 fn matches_shape(schema: &Schema, value: &serde_json::Value) -> bool {
     match (schema, value) {
         (Schema::Nat { .. }, v) => v.as_u64().is_some(),
@@ -84,9 +63,6 @@ fn matches_shape(schema: &Schema, value: &serde_json::Value) -> bool {
             items.len() == values.len()
                 && items.iter().zip(values).all(|(s, v)| matches_shape(s, v))
         }
-        // A nullary variant is the bare name; one with a payload is a
-        // single-key object. This is the shape Lean's derived encoding
-        // produces, which is the whole reason the grammar describes it.
         (Schema::Enum { variants }, serde_json::Value::String(name)) => {
             variants.get(name.as_str()).is_some_and(|p| p.is_none())
         }
@@ -102,12 +78,6 @@ fn matches_shape(schema: &Schema, value: &serde_json::Value) -> bool {
     }
 }
 
-/// The shape is declared in the binding, not extracted from the model.
-///
-/// A schema is data this project writes down; nothing reads a Lean declaration
-/// to produce one. The evidence is that `Binding` has no field for a model type
-/// and `CallSpec` may only rename, never compute.
-///
 /// @tests REQ-DRT-SCHEMA.declared_not_reflected
 /// @structural REQ-DRT-SCHEMA.declared_not_reflected reason="a claim that the shape comes from the binding file and never from the model, which is an absence of reflection in the source"
 /// @tests REQ-DRT-BIND.no_adapter
@@ -130,8 +100,6 @@ fn a_binding_declares_a_call_and_cannot_compute_anything() {
         },
     };
 
-    // Round-tripping through JSON is what a binding file is, and it must carry
-    // nothing but a call.
     let text = serde_json::to_string(&binding).expect("a binding serialises");
     let value: serde_json::Value = serde_json::from_str(&text).expect("readable");
     let keys: BTreeSet<&str> = value.as_object().unwrap().keys().map(|k| k.as_str()).collect();
@@ -149,8 +117,6 @@ fn a_binding_declares_a_call_and_cannot_compute_anything() {
         "a call spec gained a field; an adapter would be one of these"
     );
 
-    // `params` maps names onto names. A value that is not a plain name would be
-    // an adapter in disguise.
     for (from, to) in spec["params"].as_object().unwrap() {
         let to = to.as_str().expect("a rename is a name");
         for name in [from.as_str(), to] {
@@ -162,10 +128,6 @@ fn a_binding_declares_a_call_and_cannot_compute_anything() {
     }
 }
 
-// ─── The protocol ────────────────────────────────────────────────────────────
-
-/// A case is one JSON object on one line, and so is a reply.
-///
 /// @tests REQ-DRT-PROTO.case_one_line
 /// @tests REQ-DRT-PROTO.reply_one_line
 /// @tests REQ-DRT-PROTO.case_echoed
@@ -174,11 +136,8 @@ fn a_case_and_a_reply_are_each_one_line() {
     let case = Case {
         case: 7,
         op: "REQ-X.c".into(),
-        // Deliberately carrying the characters that would break a line-oriented
-        // protocol if they were not escaped.
         input: serde_json::json!({"text": "a\nb\r\nc", "n": 1}),
     };
-    // The line the runner actually writes, not a serialisation of the struct.
     let line = tracelean_core::drt::protocol::case_line(case.case, case.op.clone(), case.input.clone());
     assert!(!line.contains('\n'), "a case spanned more than one line: {line}");
     let read: Case = serde_json::from_str(&line).expect("a case line is a case");
@@ -192,8 +151,6 @@ fn a_case_and_a_reply_are_each_one_line() {
     assert_eq!(read.case, case.case, "a reply must echo the case it answers");
 }
 
-/// Exactly one of an output and an error, and `null` is an output.
-///
 /// @tests REQ-DRT-PROTO.reply_exclusive
 #[test]
 fn a_reply_carries_exactly_one_of_an_output_and_an_error() {
@@ -205,9 +162,6 @@ fn a_reply_carries_exactly_one_of_an_output_and_an_error() {
             .is_well_formed()
     );
 
-    // A model returning `none` answers `null`, which is an output and not an
-    // absence. Reading it as absence made a legitimate answer look like a
-    // runner that could not speak.
     let null_output = serde_json::json!({"case": 1, "output": null});
     let read = Reply::from_json(&null_output).expect("readable");
     assert_eq!(read.output, Some(serde_json::Value::Null));
@@ -216,15 +170,9 @@ fn a_reply_carries_exactly_one_of_an_output_and_an_error() {
     let neither = serde_json::json!({"case": 1});
     assert!(!Reply::from_json(&neither).expect("readable").is_well_formed());
 
-    // A reply with no case number is not a reply at all.
     assert!(Reply::from_json(&serde_json::json!({"output": 1})).is_err());
 }
 
-/// An op names one entry point, project-wide.
-///
-/// A shared runner dispatches on this name, so two bindings sharing one would
-/// answer one of them with the other's function and nothing would report it.
-///
 /// @tests REQ-DRT-PROTO.ops_unique
 #[test]
 fn every_op_in_this_project_is_unique() {
@@ -248,8 +196,6 @@ fn every_op_in_this_project_is_unique() {
     assert!(seen.len() > 20, "only {} ops; the file did not load", seen.len());
 }
 
-/// The four ways a runner can fail to answer mean different things.
-///
 /// @tests REQ-DRT-PROTO.failure_named
 #[test]
 fn a_runner_that_could_not_answer_is_distinguished_from_one_that_did() {
@@ -262,17 +208,11 @@ fn a_runner_that_could_not_answer_is_distinguished_from_one_that_did() {
     let rendered: BTreeSet<String> = failures.iter().map(|e| e.to_string()).collect();
     assert_eq!(rendered.len(), failures.len(), "two failures read the same");
 
-    // None of them is an answer: a reply that disagrees is data, a runner that
-    // did not speak is not.
     for failure in &failures {
         assert!(!format!("{failure}").is_empty());
     }
 }
 
-// ─── What a run establishes ──────────────────────────────────────────────────
-
-/// Both sides refusing an input is agreement; one refusing is a divergence.
-///
 /// @tests REQ-DRT.error_is_an_answer
 #[test]
 fn an_error_on_both_sides_is_agreement_and_on_one_side_is_not() {
@@ -287,7 +227,6 @@ fn an_error_on_both_sides_is_agreement_and_on_one_side_is_not() {
     assert!(!agree(&out, &err), "one answering and one refusing is a divergence");
 }
 
-/// A runner that writes down every line it is asked and answers `0`.
 fn recording_runner(log: &std::path::Path) -> tracelean_core::drt::run::RunnerSpec {
     let script = format!(
         "while IFS= read -r l; do printf '%s\\n' \"$l\" >> '{}'; n=${{l#*\\\"case\\\":}}; n=${{n%%,*}}; \
@@ -297,9 +236,6 @@ fn recording_runner(log: &std::path::Path) -> tracelean_core::drt::run::RunnerSp
     tracelean_core::drt::run::RunnerSpec { cmd: vec!["sh".into(), "-c".into(), script], cwd: None }
 }
 
-/// Both sides are asked the same cases, in the same order: each records what
-/// it was asked, and the two records are the same lines, numbered one up.
-///
 /// @tests REQ-DRT.same_question
 /// @tests REQ-DRT.case_count_stated
 /// @structural REQ-DRT.same_question reason="a claim about the order two processes are driven in, which lives in the harness loop rather than in any value; read off what each process was sent"
@@ -330,7 +266,6 @@ fn both_sides_are_asked_the_same_cases_in_the_same_order() {
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
-/// A runner answering the input it was asked (`echo`) or always `0`.
 fn answering_runner(echo: bool) -> tracelean_core::drt::run::RunnerSpec {
     let output = if echo { "\"$i\"" } else { "0" };
     let script = format!(
@@ -340,10 +275,6 @@ fn answering_runner(echo: bool) -> tracelean_core::drt::run::RunnerSpec {
     tracelean_core::drt::run::RunnerSpec { cmd: vec!["sh".into(), "-c".into(), script], cwd: None }
 }
 
-/// A divergence is reduced until no smaller one is in reach: a number the two
-/// sides disagree about whenever it is not `0` comes back as `1`, however far
-/// down that is — no round count stops it on the way.
-///
 /// @tests REQ-DRT-GEN.shrink_minimal
 /// @tests REQ-DRT.divergence_reported
 #[test]
@@ -361,8 +292,6 @@ fn a_divergence_is_reduced_all_the_way_down() {
     assert_eq!(divergence.input, serde_json::json!(1), "stopped before the smallest diverging case");
 }
 
-/// A clean run states how many cases it ran, and never claims more.
-///
 /// @tests REQ-DRT.case_count_stated
 /// @structural REQ-DRT.case_count_stated reason="a claim that an evidence record cannot be built without its seed and case count, which is enforced by the type rather than computed"
 /// @tests REQ-DRT.falsification_only
@@ -380,20 +309,10 @@ fn a_result_carries_the_seed_and_the_case_count_it_actually_reached() {
     assert!(clean.agreed());
     assert_eq!((clean.seed, clean.cases), (7, 2_000));
 
-    // The default is small enough to be a default and stated in one place.
     let options = RunOptions::default();
     assert!(options.cases > 0);
 }
 
-// ─── Generated runners ───────────────────────────────────────────────────────
-
-/// A runner is generated as a crate or a package and built, never shipped as a
-/// script — and generation writes only under the cache directory.
-///
-/// The second half matters more than it looks. Generation runs during a check,
-/// and a generator that could write into the project would make checking the
-/// project change it.
-///
 /// @tests REQ-DRT-LEAN.generated
 /// @tests REQ-DRT-LEAN.project_untouched
 /// @tests REQ-DRT-RUST.project_untouched
@@ -423,8 +342,6 @@ fn generation_writes_a_package_under_the_cache_and_nothing_else() {
         || lean_runner::lakefile("tracelean", "/models").contains("lean_exe");
     assert!(toolchain_pinned, "the package does not pin what builds it");
 
-    // Everything written lives under the cache directory, and the package is a
-    // build input rather than an interpreted file.
     let mut found = Vec::new();
     let mut stack = vec![scratch.clone()];
     while let Some(dir) = stack.pop() {
@@ -440,20 +357,16 @@ fn generation_writes_a_package_under_the_cache_and_nothing_else() {
     }
     assert!(found.len() >= 2, "generation wrote only {} files", found.len());
 
-    // The toolchain check names what is missing rather than failing opaquely.
     if let Err(message) = lean_runner::toolchain() {
         assert!(message.len() > 10, "an unexplained toolchain failure: {message}");
     }
 
-    // The generated main declares the encoding it exchanges rather than
-    // assuming one: the op, the function, and each argument by name.
     let main = lean_runner::main_lean(&["TraceLean.Evidence"], &entries);
     assert!(main.contains("TraceLean.Evidence.assurance"));
     assert!(main.contains("REQ-X.c"));
     assert!(main.contains("records"));
     assert!(main.contains("fromJson?") || main.contains("getObjVal?"));
 
-    // The same for Rust: a crate with a manifest and a path dependency.
     let manifest = rust_runner::cargo_toml(&BTreeMap::from([(
         "tracelean-core".to_string(),
         "/somewhere/core".to_string(),
@@ -464,12 +377,6 @@ fn generation_writes_a_package_under_the_cache_and_nothing_else() {
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
-/// The encoding a schema describes is the encoding both sides exchange.
-///
-/// A nullary variant is the bare name and one with a payload is a single-key
-/// object, because that is what Lean's derived encoding produces. A schema
-/// describing a different shape would generate cases neither side could read.
-///
 /// @tests REQ-DRT-SCHEMA.json_shape_matches
 /// @structural REQ-DRT-SCHEMA.json_shape_matches reason="a claim that two serialisers agree, which every differential suite in this tree exercises and none can state as a single function"
 #[test]
@@ -500,10 +407,6 @@ fn a_sum_type_generates_the_shape_the_model_encodes() {
     assert!(bare > 100 && wrapped > 100, "one of the two encodings never occurred");
 }
 
-// ─── Things the scanner and the judge must not do ────────────────────────────
-
-/// Producing a judging prompt exports text and nothing else.
-///
 /// @tests REQ-JUDGE.no_call
 /// @tests REQ-JUDGE.advice_is_not_evidence
 #[test]
@@ -525,8 +428,6 @@ fn a_judging_prompt_is_text_and_a_judgement_is_a_persons_own() {
     assert!(text.contains("REQ-EVID"), "the prompt does not say what it is about");
     assert!(text.contains("case 7"), "a known divergence is not presented to the judge");
 
-    // Whatever a tool says, what enters the record is a person's decision with
-    // their name on it, at the judgement level and no higher.
     let judgement = Judgement {
         verdict: Verdict::Agrees,
         judged_by: "ana".into(),
@@ -544,9 +445,6 @@ fn a_judging_prompt_is_text_and_a_judgement_is_a_persons_own() {
     }
 }
 
-/// A transcript is read and never interpreted: what the tool says it did does
-/// not decide anything.
-///
 /// @tests REQ-TRANSCRIPT.no_interpretation
 /// @structural REQ-TRANSCRIPT.no_interpretation reason="a claim that no code path turns a transcript event into a command, which is read off the tree"
 #[test]
@@ -557,26 +455,17 @@ fn a_transcript_produces_events_and_no_commands() {
     let result = read(text.to_string());
     assert_eq!(result.events.len(), 2);
 
-    // The reader's whole output is events, unrecognised lines, a remainder and
-    // what the tool said it used. There is nowhere for a command to come out,
-    // which is the point: the workspace diff is the truth about what happened,
-    // and usage is a number on a screen rather than an instruction.
     let json = serde_json::to_value(&result).expect("serialises");
     let keys: BTreeSet<&str> = json.as_object().unwrap().keys().map(|k| k.as_str()).collect();
     assert_eq!(keys, BTreeSet::from(["events", "unrecognised", "held", "usage"]));
 }
 
-/// Evidence carries what is needed to reproduce it, and cannot be written
-/// without it.
-///
 /// @tests REQ-EVID.record_reproducible
 /// @tests REQ-STALE.inputs_identified
 #[test]
 fn an_evidence_record_cannot_omit_what_would_reproduce_it() {
     use tracelean_core::trace::record::Detail;
 
-    // Each backend's detail is a distinct shape, and each names what a person
-    // would need to run it again.
     let details = [
         Detail::Judge {
             verdict: "agrees".into(),
@@ -602,8 +491,6 @@ fn an_evidence_record_cannot_omit_what_would_reproduce_it() {
         }
     }
 
-    // A record's inputs are named, so a change to any of them can invalidate
-    // it. An unnamed input is a dependency nothing can notice moving.
     let record = tracelean_core::trace::record::Evidence {
         key: tracelean_core::trace::record::Key {
             req_id: "REQ-X".into(),
@@ -621,15 +508,6 @@ fn an_evidence_record_cannot_omit_what_would_reproduce_it() {
     }
 }
 
-// ─── The index, the lockfile, and what a scan may do ─────────────────────────
-
-/// Rendering the index is a function of the index alone, carries evidence
-/// through unchanged, and never touches the filesystem.
-///
-/// The last part is why `render` takes an `&Index` rather than a path: a
-/// renderer that could read the tree could produce a lockfile that does not
-/// match the index it was given, and the diff would be about neither.
-///
 /// @tests REQ-LOCK.pure_render
 /// @tests REQ-LOCK.evidence_preserved
 /// @tests REQ-LOCK.diff_is_meaningful
@@ -659,12 +537,8 @@ fn rendering_the_index_reads_nothing_and_invents_nothing() {
     let rendered = render(&index, evidence.clone());
     assert_eq!(rendered.evidence, evidence, "evidence was not carried through unchanged");
 
-    // A function of its input: the same index renders the same bytes, and the
-    // scan is not consulted again.
     assert_eq!(to_bytes(&rendered), to_bytes(&render(&index, evidence.clone())));
 
-    // Untraced files are visible in the scan, so a coverage figure has an
-    // honest denominator.
     assert!(!index.scanned.is_empty(), "the scan remembered nothing");
     let annotated: BTreeSet<&String> = index.links.iter().map(|l| &l.anchor.file).collect();
     assert!(
@@ -672,22 +546,16 @@ fn rendering_the_index_reads_nothing_and_invents_nothing() {
         "every scanned file carried an annotation, which cannot be true of this tree"
     );
 
-    // A change to what the project claims changes the bytes.
     let mut fewer = rendered.clone();
     fewer.links.pop();
     assert_ne!(to_bytes(&rendered), to_bytes(&fewer), "dropping a link left the file identical");
 
-    // Nothing was written: the scan is read-only, and the lockfile on disk (if
-    // any) is untouched by rendering one in memory.
     let lock = root.join(".tracelean").join("trace.lock.json");
     let before = std::fs::read(&lock).ok();
     let _ = render(&index, evidence);
     assert_eq!(std::fs::read(&lock).ok(), before, "rendering wrote to the tree");
 }
 
-/// A document's target resolves through the same anchor mechanism as an
-/// annotation's, rather than through one written for documents.
-///
 /// @tests REQ-DOCLINK.same_anchor_machinery
 /// @structural REQ-DOCLINK.same_anchor_machinery reason="a claim that two callers reach the same function, which is about the call graph rather than about what the function returns"
 #[test]
@@ -699,8 +567,6 @@ fn a_document_resolves_its_target_the_way_an_annotation_does() {
     let index = build(root);
     let hashes = current_hashes(&index);
 
-    // Every requirement hashes by the same content hash the requirement itself
-    // carries, and every code anchor by the same body hash its link carries.
     for (id, req) in &index.requirements {
         assert_eq!(hashes.get(id), Some(&req.content_hash), "{id} hashes two different ways");
     }
@@ -714,11 +580,6 @@ fn a_document_resolves_its_target_the_way_an_annotation_does() {
     assert!(hashes.len() > 50, "only {} targets; the scan did not load", hashes.len());
 }
 
-/// Text inside a string literal is not scanned for annotations.
-///
-/// Without this, a test fixture containing an annotation as data would create a
-/// link the author did not write — and the link would point at the test.
-///
 /// @tests REQ-ANNOT.literals_protected
 /// @structural REQ-ANNOT.literals_protected reason="a claim about which byte ranges the scanner may look at, which needs the parser the model cannot run"
 #[test]
@@ -732,16 +593,10 @@ fn an_annotation_inside_a_string_literal_is_data_and_not_a_link() {
         "an annotation inside a literal became a directive"
     );
 
-    // The same text in a comment does become one, so the test is about the
-    // literal and not about the text.
     let commented = "// @implements REQ-GHOST.c\npub fn f() {}\n";
     assert!(!scan(commented, Some(Lang::Rust)).comments.directives.is_empty());
 }
 
-// ─── Closed vocabularies ─────────────────────────────────────────────────────
-
-/// Four outcomes, and a key that matches none of them is not a fifth.
-///
 /// @tests REQ-MYTH.outcomes_closed
 /// @tests REQ-CMD.inverse_exists
 #[test]
@@ -749,7 +604,6 @@ fn the_closed_vocabularies_stay_closed() {
     use tracelean_core::history::command::{inverse, Command};
     use tracelean_core::surface::keymap::Outcome;
 
-    // Every outcome is representable and distinct on the wire.
     let outcomes = [
         Outcome::Enter { mode: "File".into() },
         Outcome::Dispatch { action: "undo".into() },
@@ -765,7 +619,6 @@ fn the_closed_vocabularies_stay_closed() {
         .collect();
     assert_eq!(names.len(), 4, "two outcomes encode the same way");
 
-    // Every command has an inverse, including the one whose inverse is a batch.
     let commands = [
         Command::Insert { file: "a".into(), offset: 0, text: "x".into() },
         Command::Delete { file: "a".into(), offset: 0, deleted: "x".into() },
@@ -781,11 +634,6 @@ fn the_closed_vocabularies_stay_closed() {
             serde_json::to_value(command).unwrap(),
             "{command:?} is its own inverse, which no command that changes anything can be"
         );
-        // Inverting twice returns the original shape, except where a file is
-        // created or deleted: undoing a deletion has to restore the content,
-        // so it is a batch by construction and does not fold back into the
-        // single command it came from. That is a property of the vocabulary,
-        // not a defect, so it is named here rather than asserted away.
         let round = inverse(&back);
         if !rebuilds_a_file(command) {
             assert_eq!(
@@ -797,8 +645,6 @@ fn the_closed_vocabularies_stay_closed() {
     }
 }
 
-/// Whether undoing this command has to restore a file's content, which is the
-/// one case in which an inverse is a batch rather than a single command.
 fn rebuilds_a_file(command: &tracelean_core::history::command::Command) -> bool {
     use tracelean_core::history::command::Command;
     match command {
@@ -808,8 +654,6 @@ fn rebuilds_a_file(command: &tracelean_core::history::command::Command) -> bool 
     }
 }
 
-/// A server per language, with the encoding taken from what it declared.
-///
 /// @tests REQ-LSP.registry_per_language
 /// @tests REQ-LSP.encoding_declared
 /// @tests REQ-LSP.edits_become_commands
@@ -818,9 +662,6 @@ fn the_position_encoding_comes_from_the_server_that_declared_it() {
     use tracelean_core::history::command::Command;
     use tracelean_core::surface::lsp::{lower, present, Display, Edit, Encoding, ServerState};
 
-    // The absence of a server is a named state, not an empty result. For a
-    // proof assistant this is sharp: an empty goal list means the proof is
-    // finished.
     let answers: Vec<Display<Vec<String>>> = [
         ServerState::NotStarted,
         ServerState::Starting,
@@ -835,9 +676,6 @@ fn the_position_encoding_comes_from_the_server_that_declared_it() {
     );
     assert!(matches!(answers[2], Display::Result { .. }), "a running server's answer was hidden");
 
-    // Each state carries its own encoding rather than a global one. The state
-    // is externally tagged — that is what the model's derived encoding
-    // produces — so the encoding sits under the variant name.
     let running = ServerState::Running { encoding: Encoding::Utf8 };
     let json = serde_json::to_value(&running).unwrap();
     assert_eq!(
@@ -846,7 +684,6 @@ fn the_position_encoding_comes_from_the_server_that_declared_it() {
         "the encoding is not declared"
     );
 
-    // Edits become ordinary commands, the same kind a person's keystroke makes.
     let commands = lower(
         "a.rs".into(),
         "hello".into(),
@@ -856,13 +693,6 @@ fn the_position_encoding_comes_from_the_server_that_declared_it() {
     assert!(commands.iter().all(|c| matches!(c, Command::Insert { .. } | Command::Delete { .. })));
 }
 
-/// An annotation the parser cannot read must reach the report.
-///
-/// This is the failure that hides itself: a misspelt role produces no link, the
-/// clause it meant to cover reads as uncovered, and the person who wrote it has
-/// no way to tell a typo from an honest gap. The parser has always noticed;
-/// what this pins is that the index passes it on.
-///
 /// @tests REQ-ANNOT.unknown_role_named
 /// @tests REQ-ANNOT.totality
 #[test]
@@ -897,12 +727,6 @@ fn a_malformed_annotation_is_reported_and_not_dropped() {
     let _ = std::fs::remove_dir_all(&dir);
 }
 
-/// Two documents declaring the same identifier are reported, and the report
-/// names the identifier rather than the file that happened to lose.
-///
-/// Identity is the declared `id`, so the two documents are the same
-/// requirement said twice — which is a fault whichever file it is in.
-///
 /// @tests REQ-REQDOC.id_unique
 #[test]
 fn a_repeated_requirement_identifier_is_reported() {

@@ -1,7 +1,3 @@
-//! The undo tree's drawing and its filters, checked against the model: which
-//! row each node is drawn on and in which column, and which nodes a filter
-//! keeps under which ancestor.
-
 mod harness;
 
 use std::collections::BTreeMap;
@@ -13,8 +9,6 @@ use tracelean_core::surface::history_view::{history_graph, shown_points, Filter,
 
 mod support;
 
-/// Four node numbers, so branches, nodes named twice and parents that name
-/// each other all occur often enough to be tested rather than hoped for.
 fn number() -> Schema {
     Schema::Nat { max: Some(3), edges: vec![0, 1, 2, 3] }
 }
@@ -113,8 +107,6 @@ fn model_and_implementation_agree_on_the_history_a_person_reads() {
     );
 }
 
-/// Texts that differ at the front, the back, the middle and not at all, long
-/// enough that lines far from a change are left out.
 fn text() -> Schema {
     Schema::Str {
         max_len: Some(0),
@@ -155,8 +147,6 @@ fn model_and_implementation_agree_on_the_change_a_node_shows() {
     );
 }
 
-/// The generators reach what the clauses are about.
-///
 /// @tests REQ-DRT-COVER.law_coverage
 #[test]
 fn generation_reaches_branches_loops_and_hidden_positions() {

@@ -1,10 +1,3 @@
-//! Documentation drift, checked against the model.
-//!
-//! Three states and one lookup — small enough that a unit test looks like
-//! enough, which is exactly why it is worth generating: the interesting cases
-//! are a target absent from the map, a recorded hash that is empty, and a hash
-//! that matches by accident, and all three are easy to forget to write down.
-
 mod harness;
 
 use tracelean_core::drt::run::{run, RunOptions};
@@ -82,9 +75,6 @@ fn model_and_implementation_agree_on_document_state() {
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
-/// All three states must occur, or agreement says nothing about the ones that
-/// matter.
-///
 /// @tests REQ-DRT-COVER.law_coverage
 #[test]
 fn generation_reaches_all_three_states() {
@@ -113,11 +103,6 @@ fn generation_reaches_all_three_states() {
     support::covered("REQ-DOCLINK.hash_moves_review", &counts);
 }
 
-/// Only a dangling target blocks.
-///
-/// Two states out of three must not block, and the one that must is the one a
-/// tempting simplification would collapse into its neighbours.
-///
 /// @drt REQ-DOCLINK.review_is_not_error
 /// @tests REQ-DOCLINK.review_is_not_error
 #[test]
@@ -162,8 +147,6 @@ fn model_and_implementation_agree_on_what_blocks() {
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
-/// What a document declares, checked against the model.
-///
 /// @drt REQ-DOCLINK.declares_target
 /// @tests REQ-DOCLINK.declares_target
 /// @tests REQ-DOCLINK.records_hash
@@ -188,9 +171,6 @@ fn model_and_implementation_agree_on_what_a_document_declares() {
     );
 
     let line = Schema::Str {
-        // Whole documents, because the fence has to open and close for anything
-        // to be declared at all. Single lines drawn independently produce a
-        // well-formed document about once in a thousand draws.
         max_len: Some(0),
         examples: vec![
             "---\ndescribes: a.rs::f\ndescribed_hash: h1\n---".into(),
@@ -235,8 +215,6 @@ fn model_and_implementation_agree_on_what_a_document_declares() {
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
-/// The frontmatter a person would re-record, checked against the model.
-///
 /// @drt REQ-DOCLINK.confirmation_is_human
 /// @tests REQ-DOCLINK.confirmation_is_human
 #[test]
@@ -302,12 +280,6 @@ fn model_and_implementation_agree_on_what_confirming_would_write() {
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
-/// Only a dangling target blocks, and the run has to reach all three states to
-/// say so. Two of them not blocking is the whole content of the clause: a
-/// document in review is a document somebody has to re-read, not a build
-/// failure, and collapsing it into either neighbour would be invisible in a run
-/// that never produced it.
-///
 /// @tests REQ-DOCLINK.review_is_not_error
 /// @tests REQ-DRT-COVER.law_coverage
 #[test]
@@ -342,8 +314,6 @@ fn generation_reaches_every_state_and_only_one_of_them_blocks() {
             State::InReview { was, now } => {
                 assert!(!blocks, "a document in review blocked");
                 review += 1;
-                // The case worth separating: a review where the hash really
-                // moved, rather than one where both halves happen to be equal.
                 if was != now {
                     moved += 1;
                 }
@@ -361,15 +331,6 @@ fn generation_reaches_every_state_and_only_one_of_them_blocks() {
     );
 }
 
-/// The frontmatter a person would re-record, asked where recording is not
-/// trivial: several targets, a repeated one, and a target nothing currently
-/// hashes.
-///
-/// The repeat is the case that found a real bug — `state` resolved a repeated
-/// target to the first entry and an earlier `recorded_of` resolved it to the
-/// last, so one function called a document current while the other wrote a
-/// different hash for it.
-///
 /// @tests REQ-DOCLINK.confirmation_is_human
 /// @tests REQ-DRT-COVER.law_coverage
 #[test]
@@ -412,9 +373,6 @@ fn generation_reaches_frontmatter_worth_writing() {
         let current: Vec<(String, String)> = serde_json::from_value(v["current"].clone()).unwrap();
 
         let written = recorded_of(targets.clone(), current.clone());
-        // Every target reaches the frontmatter, whether or not anything
-        // currently hashes it: a target silently dropped here is a document
-        // that would read as describing less than it does.
         for target in &targets {
             assert!(written.contains(target), "`{target}` did not reach the frontmatter");
         }

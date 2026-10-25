@@ -1,37 +1,20 @@
-//! Persistence and replay.
-//!
-//! A history that does not reproduce its own state is a log, not a record. The
-//! decisions here are pure — parsing a log, replaying it, deciding what a
-//! truncated record means — and writing bytes is the shell's job.
-
 use serde::{Deserialize, Serialize};
 
 use super::command::{apply, Command, Outcome, Refusal, Workspace};
 
-/// A recorded history: a base state and the commands applied to it.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Checkpoint {
     pub workspace: Workspace,
-    /// How many log entries this checkpoint already accounts for.
     pub entries: usize,
 }
 
-/// What a log yielded, and what was wrong with it.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Log {
     pub commands: Vec<Command>,
-    /// Set when the record ends mid-entry — a process killed during a write.
-    ///
-    /// Replaying to the last complete entry and saying so is recoverable.
-    /// Refusing to open the project is not, and silently accepting a half entry
-    /// writes corruption over a good state.
-    ///
     /// @implements REQ-PERSIST.truncated_is_reported
     pub truncated_after: Option<usize>,
 }
 
-/// Parse an append-only log of one JSON command per line.
-///
 /// @implements REQ-PERSIST.append_only
 pub fn parse_log(text: &str) -> Log {
     let mut commands = Vec::new();
@@ -44,9 +27,6 @@ pub fn parse_log(text: &str) -> Log {
         match serde_json::from_str::<Command>(line) {
             Ok(command) => commands.push(command),
             Err(_) => {
-                // The first unreadable entry ends the history: everything after
-                // it was written after a failure and cannot be trusted to
-                // follow from what came before.
                 truncated_after = Some(index);
                 break;
             }
@@ -56,15 +36,12 @@ pub fn parse_log(text: &str) -> Log {
     Log { commands, truncated_after }
 }
 
-/// Serialise a command as one log entry.
 pub fn entry(command: &Command) -> String {
     let mut line = serde_json::to_string(command).unwrap_or_default();
     line.push('\n');
     line
 }
 
-/// Replay commands onto a base state.
-///
 /// @implements REQ-PERSIST.replay_exact
 pub fn replay(base: Workspace, commands: Vec<Command>) -> Result<Workspace, Refusal> {
     let mut workspace = base;
@@ -74,12 +51,6 @@ pub fn replay(base: Workspace, commands: Vec<Command>) -> Result<Workspace, Refu
     Ok(workspace)
 }
 
-/// Replay from a checkpoint, skipping the entries it already accounts for.
-///
-/// A checkpoint is a performance device, so it is specified as an equivalence
-/// to the unoptimised path rather than as a feature: replaying from it must
-/// reach the same state as replaying from the beginning.
-///
 /// @implements REQ-PERSIST.checkpoint_equivalent
 pub fn replay_from(
     checkpoint: &Checkpoint,
@@ -89,35 +60,20 @@ pub fn replay_from(
     replay(checkpoint.workspace.clone(), rest)
 }
 
-/// Take a checkpoint after `entries` commands.
 pub fn checkpoint(base: Workspace, commands: &[Command], entries: usize) -> Result<Checkpoint, Refusal> {
     let taken = commands.iter().take(entries).cloned().collect();
     Ok(Checkpoint { workspace: replay(base, taken)?, entries })
 }
 
-/// What replaying a log produced, both ways.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ReplayReport {
-    /// The commands the log yielded.
     pub commands: Vec<Command>,
     pub truncated_after: Option<usize>,
-    /// Replaying the whole log from the base.
     pub direct: Outcome,
-    /// Replaying from a checkpoint taken part-way through.
     pub via_checkpoint: Outcome,
 }
 
-/// Parse a log, then replay it twice: straight through, and from a checkpoint.
-///
-/// A checkpoint is a performance device, so the requirement states it as an
-/// equivalence rather than as a feature. Putting both answers in one report
-/// makes the equivalence a divergence when it fails, instead of something a
-/// reader has to notice.
-///
-/// `lines` are joined with newlines because a generator over a flat string
-/// would never produce a log at all, let alone one that ends mid-entry.
-///
 /// @implements REQ-PERSIST.replay_exact
 /// @implements ARCH-DETERMINISM.replay_exact
 /// @implements REQ-PERSIST.checkpoint_equivalent
@@ -170,7 +126,6 @@ mod tests {
     fn replay_reaches_the_state_it_was_recorded_from() {
         let (base, commands) = history();
         let direct = replay(base.clone(), commands.clone()).unwrap();
-        // The same commands, written out and read back.
         let text: String = commands.iter().map(entry).collect();
         let log = parse_log(&text);
         assert_eq!(log.truncated_after, None);
@@ -193,18 +148,14 @@ mod tests {
     fn a_truncated_log_replays_to_the_last_complete_entry_and_says_so() {
         let (base, commands) = history();
         let mut text: String = commands.iter().map(entry).collect();
-        // A process killed mid-write leaves half an entry.
         text.push_str("{\"command\":\"insert\",\"file\":\"a.r");
 
         let log = parse_log(&text);
         assert_eq!(log.truncated_after, Some(4));
         assert_eq!(log.commands.len(), 4);
-        // And what survived still replays.
         assert!(replay(base, log.commands).is_ok());
     }
 
-    /// Nothing after the first damaged entry is trusted: it was written after a
-    /// failure and does not follow from what came before.
     #[test]
     fn entries_after_the_damage_are_not_replayed() {
         let text = format!(

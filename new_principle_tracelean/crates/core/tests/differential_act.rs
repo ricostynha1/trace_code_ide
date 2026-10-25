@@ -1,10 +1,3 @@
-//! Dispatch, checked against the model.
-//!
-//! One binding carries most of it: `dispatch` is the whole middle of the editor,
-//! and a disagreement about what an action means is a key and a button doing
-//! different things. The generator draws action names from the registry *and*
-//! from outside it, so the refusal path is checked as hard as the rest.
-
 mod harness;
 
 use std::collections::BTreeMap;
@@ -40,9 +33,6 @@ fn focus() -> Schema {
         Schema::Option {
             inner: Box::new(Schema::Str {
                 max_len: None,
-                // A part's label, a history switch and history points — the
-                // base `#0` and changes after it — so what names its target is
-                // reached too.
                 examples: vec![
                     "a.rs".into(),
                     "src/lib.rs".into(),
@@ -59,18 +49,12 @@ fn focus() -> Schema {
     Schema::Struct { fields }
 }
 
-/// Names from the registry, and names that are not — a dispatch that only ever
-/// saw real actions would never establish that the rest are refused.
 fn action() -> Schema {
     let mut examples: Vec<String> =
         tracelean_core::surface::keymap::ACTIONS.iter().map(|a| a.to_string()).collect();
     examples.push("file.explode".into());
     examples.push("".into());
     examples.push("trace".into());
-    // Weighted towards the branches one name in seventy would leave unrun
-    // (measured with `TRACELEAN_DRT_LINES`): an action carrying its target,
-    // the history's base, a filter by name, a station that does not exist,
-    // and a rename reached with nothing to rename to.
     for _ in 0..2 {
         for weighted in [
             "file.rename",
@@ -90,8 +74,6 @@ fn action() -> Schema {
     Schema::Str { max_len: None, examples }
 }
 
-/// Changes an agent made and nobody has taken in yet: commands on the files the
-/// cursors name, so accepting one file finds its change and the rest do not.
 fn waiting() -> Schema {
     let file = Schema::Str { max_len: None, examples: vec!["a.rs".into(), "src/lib.rs".into()] };
     let text = Schema::Str { max_len: Some(2), examples: vec!["x".into()] };
@@ -221,12 +203,6 @@ fn model_and_implementation_agree_on_whether_anything_happens() {
     );
 }
 
-/// A key and a rendered affordance carrying the same action reach the same
-/// function with the same argument, so they cannot mean different things.
-///
-/// This is not a differential test but a structural one: the claim is about
-/// there being one call, which no pair of values expresses.
-///
 /// @tests REQ-ACT.one_path
 #[test]
 fn a_key_and_a_button_reach_the_same_dispatch() {
@@ -249,7 +225,6 @@ fn a_key_and_a_button_reach_the_same_dispatch() {
 
     let mut pairs = 0;
     for (mode_name, mode) in &keymap.modes {
-        // What a key in this mode dispatches.
         let mut entries = Vec::new();
         for (key, binding) in &mode.bindings {
             let action = match binding {
@@ -263,13 +238,11 @@ fn a_key_and_a_button_reach_the_same_dispatch() {
             });
             let Some(action) = action else { continue };
 
-            // The same mode as a buffer: what a click on that row would carry.
             let buffer = menu_buffer(mode_name.clone(), entries.clone());
             let row_start = buffer.spans.last().expect("the row just added").start;
             let offered = actions_at(buffer, row_start);
             assert_eq!(offered, vec![action.clone()], "the row does not carry what the key does");
 
-            // And pressing the key says the same name.
             match keymap::step(keymap.clone(), mode_name.clone(), key.clone()) {
                 Outcome::Dispatch { action: pressed } => {
                     assert_eq!(pressed, action, "key `{key}` in `{mode_name}`")
@@ -277,7 +250,6 @@ fn a_key_and_a_button_reach_the_same_dispatch() {
                 other => panic!("`{key}` in `{mode_name}` did not dispatch: {other:?}"),
             }
 
-            // One function, one answer, whichever of the two arrived.
             let focus = Focus {
                 kind: BufferKind::Menu { title: mode_name.clone() },
                 offset: row_start,

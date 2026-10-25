@@ -1,6 +1,3 @@
-//! The project's files as a tree, checked against the model: which rows a set
-//! of files makes with some folders open, in which order, at which depth.
-
 mod harness;
 
 use std::collections::BTreeMap;
@@ -29,9 +26,6 @@ fn model_and_implementation_agree_on_the_rows_of_the_tree() {
         &scratch,
     );
     let model = harness::lean_runner("TraceLean.Explorer", "TraceLean.Explorer.rows", op, &["files", "opened"], &scratch);
-    // Nested folders, a file and a folder sharing a name's start, a folder
-    // name sorting between files, a name past ASCII, and odd paths: a leading
-    // slash, a doubled one, a trailing one.
     let mut fields = BTreeMap::new();
     fields.insert(
         "files".to_string(),

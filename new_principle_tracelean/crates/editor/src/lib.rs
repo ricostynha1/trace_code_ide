@@ -1,17 +1,3 @@
-//! The editor's state, and what an intent does to it.
-//!
-//! This is a shell: it reads the working tree and writes it back. Every
-//! decision it could make instead belongs in the core, and the ones that are
-//! here are the ones that need the disk.
-//!
-//! It is a crate of its own because *both* frontends drive it. A terminal and a
-//! web view that each performed intents their own way would be two answers to
-//! what the editor does, which is the same failure one representation exists to
-//! prevent, one layer up. A frontend renders and sends keys; this decides.
-//!
-//! What it never does is build a buffer of its own. Every buffer on screen came
-//! from `surface::produce`, which is what `REQ-SHOW.core_produces` asks.
-//!
 //! @implements REQ-SHOW.core_produces
 //! @implements REQ-ACT.one_path
 
@@ -36,184 +22,83 @@ use tracelean_core::surface::screen::{
 use tracelean_core::surface::view::{actions_at, Buffer, BufferKind};
 use tracelean_core::trace::anchor::Lang;
 
-/// What an answer is for once it is given. Carried with the question rather
-/// than read back off an action's name, which only `dispatch` resolves.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Then {
-    /// Go to the next match of it.
     Find,
-    /// List the lines that match it.
     FindLines,
-    /// Write it as the new value of the setting.
     SetSetting,
-    /// Hand it to the action that asked, as `choose` does for a pointer.
     Choose,
 }
 
-/// A question waiting for its answer: see `Editor::asking`.
 #[derive(Debug, Clone)]
 struct Asking {
     then: Then,
     action: String,
     target: Option<String>,
     question: String,
-    /// Where the action was started, as `choose` takes it.
     pane: String,
     at: usize,
     answer: String,
 }
 
-/// Everything on screen, and everything behind it.
 pub struct Editor {
     pub root: PathBuf,
     pub keymap: Keymap,
-    /// The keymap mode the next key is read in.
     pub mode: String,
-    /// What is opened, what is placed, and which pane has focus.
-    ///
-    /// The single store of the buffers this session holds: `buffer()` reads the
-    /// focused pane's out of it rather than keeping a second copy beside it,
-    /// because two copies of one buffer is two answers to what it contains.
-    ///
     /// @implements REQ-SCREEN.screen_is_a_value
     pub screen: Screen,
-    /// The region a frontend last drew into.
-    ///
-    /// Moving the focus is a question about geometry and the screen holds none:
-    /// the same layout is arranged differently in a narrow terminal and a wide
-    /// window. A frontend says how big it is; the editor does not guess.
     pub region: Rect,
-    /// The cursor, as a character offset into the focused buffer's text.
     pub offset: usize,
-    /// Where a selection began, when there is one: it runs from here to the
-    /// cursor. Kept here rather than in a frontend, so it survives scrolling
-    /// and reaches past what is on screen.
     pub anchor: Option<usize>,
-    /// The status line, which is a buffer like everything else.
     pub status: Buffer,
-    /// The menu for the mode the editor is in, while it is in one.
-    ///
-    /// Beside the buffer rather than instead of it. A leader menu is something
-    /// offered *about* what is on screen, and replacing the screen with it would
-    /// move the cursor off the thing the next key is about — `Space f o` would
-    /// open the menu row the cursor landed on rather than the file.
-    ///
     /// @implements REQ-SHOW.menu_from_keymap
     pub menu: Option<Buffer>,
-    /// The first line shown in the focused pane. A frontend draws everything it
-    /// is given, so what it is given is the window starting here.
     pub top: usize,
-    /// Where the cursor and the first shown line were in each pane the focus
-    /// has left, so that coming back to a pane comes back to where you were.
-    ///
-    /// The focused pane's are `offset` and `top`; these are every other pane's.
     parked: BTreeMap<String, (usize, usize)>,
-    /// The same, per buffer a pane stopped showing: going back to a tab goes
-    /// back to where you were in it.
     places: BTreeMap<String, (usize, usize)>,
-    /// Where the document was before each jump (another file, a definition,
-    /// a line), newest last, and where going back left from: Alt+Left and
-    /// Alt+Right.
     back: Vec<(String, usize)>,
     forward: Vec<(String, usize)>,
-    /// Every change, so that undo is never a special case.
     pub tree: Tree,
-    /// The workspace at a point of the history, kept so that asking for it
-    /// does not replay the whole history from the base each time — which, on
-    /// every key, made typing slower the longer a session ran.
     held_state: std::cell::RefCell<Option<(Option<tracelean_core::history::tree::NodeId>, Workspace)>>,
-    /// Each drawn file's chips, with the text they were counted from.
     chips_held: std::cell::RefCell<BTreeMap<String, (String, Vec<tracelean_core::surface::chips::Chip>)>>,
-    /// The measured line coverage (`tracelean-trace --coverage`), and when the
-    /// file it came from was written.
     coverage_held: std::cell::RefCell<(Option<std::time::SystemTime>, tracelean_core::trace::lines::Coverage)>,
-    /// The workspace as it was last written out, for the review buffer.
     saved: Workspace,
-    /// Changes seen in the working tree that the editor has not taken in.
-    ///
-    /// This is how work done outside the editor arrives. Nothing here starts
-    /// it: an agent runs where a person started it, and the editor reads the
-    /// tree it left behind.
-    ///
     /// @implements ARCH-NO-DRIVING.no_model_call
     pending: Vec<Command>,
     pub running: bool,
-    /// The live sandbox, if there is one: a copy of the project an agent the
-    /// user started is working in.
     pub session: Option<tracelean_core::observe::sandbox::Session>,
-    /// The agent's copy as it was last read, so a change can be reviewed
-    /// against what the agent actually wrote.
     agent_tree: Option<Workspace>,
-    /// Text for the frontend to put on the clipboard, taken once.
     pub clipboard: Option<String>,
-    /// The explorer's open folders: the session's, not the workspace's.
     pub open_folders: BTreeSet<String>,
-    /// Which parts of an agent's context the person has chosen to copy.
     pub context_parts: BTreeSet<tracelean_core::surface::context::Part>,
-    /// The design's unfolded requirements; folded to its roots at first, so a
-    /// project of hundreds opens as a handful.
     pub design_open: BTreeSet<String>,
-    /// Both requirement stations show only what is still to do.
     pub open_only: bool,
-    /// The keys typed so far in a sequence — `Space`, `f` — to head its menu.
     typed: Vec<String>,
-    /// Which nodes the history shows: all, the open file's, or the saved.
     pub history_filter: tracelean_core::surface::history_view::Filter,
-    /// The history's nodes at which the work was saved.
     saved_at: BTreeSet<u64>,
-    /// What was last searched for, so the next match is one key away.
     pub last_find: Option<String>,
-    /// The list `.` offered, while it is up: the pane and position it is
-    /// about, and the offers in the order their keys name them.
     offering: Option<(String, usize, Vec<tracelean_core::surface::offer::Offer>)>,
-    /// An action waiting for its argument, which the keys typed next make up:
-    /// the status line is where it is asked for and answered, as the
-    /// minibuffer is in Emacs. The keys do what the context menu's box does.
     asking: Option<Asking>,
-    /// The Lean server asked for the proof state, once the panel is opened on
-    /// a Lean file; it is not started before.
     lean: Option<tracelean_core::lean_server::LeanServer>,
-    /// The Lean project the server above was started in, kept after it dies so
-    /// that a server that will not start is not started again on every key.
     lean_project: Option<PathBuf>,
-    /// Why there is no proof state, when there is none to show.
     lean_error: Option<String>,
-    /// What the panel says now.
     goal: String,
-    /// The file, its text and the cursor the server was last asked about.
     goal_asked: Option<(String, String, usize)>,
-    /// The trace index of the tree on disk, read once and kept until this
-    /// editor writes to the disk: reading it parses every file, which is
-    /// seconds on a real project, and a click should not wait for that.
     index_cache: std::cell::RefCell<Option<std::sync::Arc<tracelean_core::trace::index::Index>>>,
-    /// How many findings the checker has on the disk, counted between keys
-    /// (`tick`), and whether the disk changed since.
     problems: std::cell::Cell<Option<usize>>,
     problems_stale: std::cell::Cell<bool>,
-    /// Whether closing was refused once already for unsaved work.
     close_warned: bool,
-    /// What was last kept for next time (`recall`).
     remembered: Option<recall::Recalled>,
-    /// The folders opened before, when a frontend keeps them (`track_recent`).
     recent: Option<Vec<String>>,
 }
 
-/// The keys that pick from `.`'s list, in order.
 const OFFER_KEYS: [&str; 35] = [
     "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l",
     "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z",
 ];
 
-/// How many files a project can hold and still open with every folder open.
 const SMALL_PROJECT: usize = 40;
 
-/// What an action is about, at a position in a buffer.
-///
-/// Free of the editor because a frontend resolves actions against buffers that
-/// are not the focused pane: a click on a row of the strip or the stations is
-/// about *that* row, and resolving it against the pane would do something other
-/// than the thing clicked.
-///
 /// @implements REQ-ACT.focus_is_carried
 pub fn focus_in(buffer: &Buffer, offset: usize) -> Focus {
     let text: Vec<char> = buffer.text.chars().collect();
@@ -225,31 +110,17 @@ pub fn focus_in(buffer: &Buffer, offset: usize) -> Focus {
     Focus { kind: buffer.kind.clone(), offset, under }
 }
 
-/// One pane, ready to be drawn.
-///
-/// `buffer` is whole rather than windowed: see `Editor::laid_out`.
 #[derive(Debug, Clone)]
 pub struct Placed {
-    /// The pane's identity, which is what an action names.
     pub pane: String,
-    /// Where it sits in the region that was laid out.
     pub at: Rect,
-    /// What it shows.
     pub buffer: Buffer,
-    /// Its first shown line.
     pub top: usize,
-    /// Whether this is the pane a key goes to.
     pub focused: bool,
 }
 
-/// The mode in which a key is text rather than a command.
-///
-/// Named here because both the keymap and this file have to agree on it: the
-/// keymap says which key enters it, and this says what happens once inside.
 pub const INSERT: &str = "Insert";
 
-/// The chords `Editor::chord` and the frontends answer, as the keys list
-/// (F1) reads them.
 const CHORDS: &[(&str, &str)] = &[
     ("Ctrl+S", "save"),
     ("Ctrl+Z / Ctrl+Y", "undo / redo, a word at a time"),
@@ -282,10 +153,6 @@ const CHORDS: &[(&str, &str)] = &[
 ];
 
 impl Editor {
-    /// The measured lines in a window of a file buffer, as the buffer line,
-    /// how often tests ran it, and what pointing at it says — only while the
-    /// file's text is the text that was measured.
-    ///
     /// @implements REQ-LINECOV.uncovered_shown
     /// @implements REQ-LINECOV.stale_hidden
     pub fn coverage_shown(&self, buffer: &Buffer, top: usize, height: usize) -> Vec<(usize, u64, String)> {
@@ -300,9 +167,6 @@ impl Editor {
         markers(lines.clone(), top, height).into_iter().map(|m| (m.line, m.hits, m.said)).collect()
     }
 
-    /// Every item implementing `id` — one clause of it, or with `clause` None
-    /// all of them — that was measured against the text it has now: where it
-    /// is, its name, the clause, and its executable lines. Each item once.
     fn implementing_lines(
         &self,
         index: &tracelean_core::trace::index::Index,
@@ -339,29 +203,14 @@ impl Editor {
         items
     }
 
-    /// How much of a clause's implementing items tests run — or, with
-    /// `clause` None, of every item implementing the requirement, each line
-    /// once: executable lines run, executable lines, and how many tests. None
-    /// when nothing was measured against the text it has now.
-    ///
     /// @implements REQ-LINECOV.clause_summary
     fn clause_lines(&self, index: &tracelean_core::trace::index::Index, id: &str, clause: Option<&Option<String>>) -> Option<(u64, u64, u64)> {
         let items = self.implementing_lines(index, id, clause);
         (!items.is_empty()).then(|| tracelean_core::surface::coverage_view::total(&items))
     }
 
-    /// The claims to mark beside a window of a file buffer (`surface::chips`),
-    /// as the buffer line, the role's letter and the requirement each opens.
-    /// None for a buffer that is not a file.
-    ///
-    /// Finding them parses the whole file, which on a long one took longer
-    /// than the key that changed it; so they are counted when a file is first
-    /// drawn, kept while it is typed into, and counted again between keys
-    /// (`tick`).
     pub fn chips_shown(&self, buffer: &Buffer, top: usize, height: usize) -> Vec<(usize, char, String)> {
         let BufferKind::File { path } = &buffer.kind else { return Vec::new() };
-        // A requirement's own document: its clauses, marked with what claims
-        // them anywhere in the tree.
         let index = self.index();
         if let Some(requirement) = index.requirements.values().find(|r| r.file == *path) {
             let claims: Vec<(Option<String>, tracelean_core::trace::annotation::Role)> = index
@@ -387,8 +236,6 @@ impl Editor {
             .collect()
     }
 
-    /// Count again the chips of each file whose text moved on since; whether
-    /// any did.
     fn recount_chips(&self) -> bool {
         let workspace = self.workspace();
         let mut held = self.chips_held.borrow_mut();
@@ -404,13 +251,10 @@ impl Editor {
         moved
     }
 
-    /// Open a working tree, with what was open there last time.
     pub fn open(root: PathBuf, keymap: Keymap) -> Editor {
         Editor::open_as(root, keymap, true)
     }
 
-    /// Open a working tree as if for the first time, and keep nothing for
-    /// next time: what a suite driving a shared tree wants.
     pub fn open_fresh(root: PathBuf, keymap: Keymap) -> Editor {
         Editor::open_as(root, keymap, false)
     }
@@ -428,9 +272,6 @@ impl Editor {
                 focus: "pane0".into(),
                 next_pane: 1,
             },
-            // What a frontend that has not said its size yet is given. The
-            // first draw replaces it; until then a focus move has nowhere to
-            // go, which is the right answer for a screen of no size.
             region: Rect { left: 0, top: 0, width: 0, height: 0 },
             offset: 0,
             anchor: None,
@@ -455,8 +296,6 @@ impl Editor {
             context_parts: tracelean_core::surface::context::default_parts(),
             design_open: BTreeSet::new(),
             open_only: false,
-            // The file's own history first: the undo tree of what is being
-            // read is what a person opening it is looking for. `All` is a click.
             history_filter: tracelean_core::surface::history_view::Filter::File,
             typed: Vec::new(),
             saved_at: BTreeSet::new(),
@@ -475,10 +314,6 @@ impl Editor {
             remembered: None,
             recent: None,
         };
-        // A sandbox outlives the editor that made it: the agent may still be
-        // working in it when the window is reopened.
-        // A small project opens with every folder open, so all of it is seen
-        // at once; a large one opens closed, so the explorer stays readable.
         let files: Vec<String> = editor.workspace().files.keys().cloned().collect();
         if files.len() <= SMALL_PROJECT {
             editor.open_folders = files.iter().flat_map(|f| explorer::holders(f)).collect();
@@ -488,9 +323,6 @@ impl Editor {
             let host = tracelean_core::observe::workcopy::host(&editor.root);
             let _ = tracelean_core::observe::workcopy::write_launcher(live, &host);
         }
-        // The first TraceLean's arrangement: what you choose from on the left,
-        // what you read in the middle, what you consult on the right. Built by
-        // the core, so the terminal and the window open on the same screen.
         let listing = editor.listing();
         let side = editor.produce(BufferKind::Menu { title: "design".into() });
         let welcome = editor.welcome();
@@ -505,11 +337,6 @@ impl Editor {
         editor
     }
 
-    /// The buffer the focused pane shows.
-    ///
-    /// Read out of `screen.opened` rather than kept beside it. A second copy is
-    /// a second answer to what the buffer contains, and the two would drift the
-    /// first time one of them was edited.
     pub fn buffer(&self) -> Buffer {
         let shown = panes(&self.screen.layout)
             .into_iter()
@@ -527,10 +354,6 @@ impl Editor {
         }
     }
 
-    /// Replace the focused pane's buffer with this one, keeping its identity.
-    ///
-    /// Used where the editor changes what a buffer *contains* — re-reading a
-    /// file after an edit — rather than what a pane points at.
     fn replace_buffer(&mut self, buffer: Buffer) {
         let current = self.buffer().id;
         match self.screen.opened.iter_mut().find(|held| held.id == current) {
@@ -539,13 +362,10 @@ impl Editor {
         }
     }
 
-    /// What an agent changed and nobody has taken in: the commands `dispatch`
-    /// is given so that accepting is an intent carrying them.
     pub fn waiting(&self) -> Vec<Command> {
         self.pending.clone()
     }
 
-    /// The workspace as it is now: the base plus everything done to it.
     pub fn workspace(&self) -> Workspace {
         let here = self.tree.current();
         if let Some((at, state)) = self.held_state.borrow().as_ref() {
@@ -558,7 +378,6 @@ impl Editor {
         state
     }
 
-    /// Record a command from the state held, and hold the one after it.
     fn push(
         &mut self,
         command: Command,
@@ -569,7 +388,6 @@ impl Editor {
         Ok(id)
     }
 
-    /// One line of chrome, which is a record buffer so that it too is checkable.
     pub fn say(&mut self, kind: &str, text: &str) {
         self.status = make::record_buffer(
             "status".into(),
@@ -581,19 +399,15 @@ impl Editor {
         self.listing_of(".")
     }
 
-    /// The explorer's rows as they stand: the workspace's files, with the
-    /// folders that are open showing what they hold.
     fn tree_rows(&self) -> Vec<explorer::Row> {
         let files: Vec<String> = self.workspace().files.keys().cloned().collect();
         explorer::rows(&files, &self.open_folders)
     }
 
-    /// Whether a buffer is the explorer's tree rather than a flat listing.
     fn is_tree(&self, buffer: &Buffer) -> bool {
         matches!(&buffer.kind, BufferKind::Directory { path } if *path == self.root.display().to_string())
     }
 
-    /// The row of the tree a position is on.
     fn tree_row_at(&self, buffer: &Buffer, offset: usize) -> Option<explorer::Row> {
         if !self.is_tree(buffer) {
             return None;
@@ -601,8 +415,6 @@ impl Editor {
         explorer::path_at(&self.tree_rows(), &buffer.text, offset).cloned()
     }
 
-    /// Open a closed folder or close an open one, and redraw the tree where
-    /// it is.
     fn toggle_folder(&mut self, path: &str) {
         if !self.open_folders.remove(path) {
             self.open_folders.insert(path.to_string());
@@ -610,10 +422,6 @@ impl Editor {
         self.refresh_views();
     }
 
-    /// Left and Right on the explorer, as a file tree takes them: Right opens
-    /// a closed folder and enters an open one; Left closes an open folder,
-    /// else goes to the folder holding the row, and on a top-level row closes
-    /// every folder. Whether the cursor was on the tree.
     fn tree_step(&mut self, opening: bool) -> bool {
         let buffer = self.buffer();
         let Some(row) = self.tree_row_at(&buffer, self.offset) else { return false };
@@ -655,28 +463,16 @@ impl Editor {
         true
     }
 
-    /// Whether a path is a folder of the workspace: something holds files
-    /// under it, and it is not itself a file.
     fn is_folder(&self, path: &str) -> bool {
         let workspace = self.workspace();
         let inside = format!("{}/", path.trim_end_matches('/'));
         !workspace.files.contains_key(path) && workspace.files.keys().any(|f| f.starts_with(&inside))
     }
 
-    /// The files under a path, as a buffer.
-    ///
-    /// The path is honoured rather than ignored. It was ignored until the
-    /// requirements station opened and showed the whole tree: every directory
-    /// asked for produced the same listing, which is a producer that answers a
-    /// question it was not asked, and nothing could have noticed while only one
-    /// directory was ever asked for.
-    ///
     /// @implements REQ-SHOW.listing_from_entries
     fn listing_of(&self, path: &str) -> Buffer {
         let under = path.trim_end_matches('/');
         if under == "." {
-            // A file made and then written is still a file made: the first
-            // command on a path says what happened to it.
             let mut changed: BTreeMap<String, String> = BTreeMap::new();
             for command in &self.pending {
                 let kind = match command {
@@ -686,11 +482,9 @@ impl Editor {
                 };
                 changed.entry(touched(command)).or_insert_with(|| kind.to_string());
             }
-            // Edits here not yet written out, unless an agent's mark says more.
             for path in self.unsaved() {
                 changed.entry(path).or_insert_with(|| "unsaved".to_string());
             }
-            // The file the document pane shows.
             let current = self
                 .laid_out(self.region)
                 .into_iter()
@@ -699,7 +493,6 @@ impl Editor {
                     BufferKind::File { path } => Some(path),
                     _ => None,
                 });
-            // What each file claims, by kind: the letters after its name.
             let mut claimed: BTreeMap<String, BTreeSet<tracelean_core::trace::annotation::Role>> = BTreeMap::new();
             for link in &self.index().links {
                 claimed.entry(link.anchor.file.clone()).or_default().insert(link.role);
@@ -726,32 +519,21 @@ impl Editor {
         tracelean_core::surface::view::directory_buffer(title, entries)
     }
 
-    /// The text of the span under the cursor, which is how an action learns
-    /// what it is about.
-    ///
-    /// A row of the opened strip is about the buffer it lists, which its text
-    /// — a number and a title — does not spell; so there the target is the
-    /// opened buffer at that row.
     pub fn focus(&self) -> Focus {
         let buffer = self.buffer();
         let mut focus = focus_in(&buffer, self.offset);
         if buffer.id == "menu:opened" {
             focus.under = self.opened_at_row(&buffer, self.offset).map(|held| held.id);
         }
-        // A button on a row of waiting changes is about that row's file.
         if buffer.id == "record:sandbox" {
             let here = actions_at(buffer.clone(), self.offset);
             if here.iter().any(|a| a == "observe.accept_file" || a == "observe.reject_file") {
                 focus.under = changed_on_row(&buffer, self.offset);
             }
         }
-        // A row of the tree shows a name; what it is about is its whole path.
-        // Its first line names the project and is about nothing to open.
         if self.is_tree(&buffer) {
             focus.under = self.tree_row_at(&buffer, self.offset).map(|row| row.path);
         }
-        // A fold mark of the design is about its row's requirement, which its
-        // action carries; the mark's own text is a glyph.
         if matches!(&buffer.kind, BufferKind::Menu { title } if title == "design") {
             let carried = actions_at(buffer.clone(), self.offset)
                 .iter()
@@ -760,8 +542,6 @@ impl Editor {
                 focus.under = carried;
             }
         }
-        // An opened requirement's Approve button is about its document, the
-        // view's third line.
         let requirement = matches!(&buffer.kind, BufferKind::Record { title } if title.starts_with("requirement "));
         if requirement && actions_at(buffer.clone(), self.offset).iter().any(|a| a == "trace.approve") {
             focus.under = tracelean_core::surface::view::plain_text(buffer).get(2).cloned();
@@ -769,18 +549,11 @@ impl Editor {
         focus
     }
 
-    /// The opened buffer a row of a strip lists.
     fn opened_at_row(&self, strip: &Buffer, offset: usize) -> Option<Buffer> {
         let row = strip.text.chars().take(offset).filter(|c| *c == '\n').count();
         self.screen.opened.get(row).cloned()
     }
 
-    /// An action from a row of one of the two bars: the stations, or the strip
-    /// of what is opened.
-    ///
-    /// A strip row shows its buffer where that kind of buffer belongs, as a
-    /// tab does; anything else is dispatched with the bar's own row as the
-    /// focus, so a click on a station opens that station.
     pub fn act_in_bar(&mut self, station: bool, action: &str, offset: usize) {
         if !station && action == "screen.show" {
             let strip = self.strip();
@@ -800,8 +573,6 @@ impl Editor {
         self.perform(intent);
     }
 
-    /// Ctrl+Tab: show the next tab that opens where the focused pane is (the
-    /// previous one backwards), so cycling stays in the pane being read.
     fn cycle_tab(&mut self, forward: bool) {
         let here = self.buffer().id;
         let mates: Vec<Buffer> = self
@@ -820,27 +591,13 @@ impl Editor {
         }
     }
 
-    /// What the cursor can do where it is, which is what a rendered affordance
-    /// would carry at the same place.
     pub fn offered(&self) -> Vec<String> {
         actions_at(self.buffer(), self.offset)
     }
 
-    /// Open a buffer and show it in the focused pane, cursor at the start.
-    ///
-    /// A buffer already opened is replaced by the one just produced rather than
-    /// added beside it: they have the same identity, so two of them would be two
-    /// answers to what that identity holds.
-    ///
-    /// The focused pane is first moved to where a buffer of this kind belongs —
-    /// a file to the document, a listing to the explorer, a station to the side
-    /// panel — through the same arrangement a key or a pointer would make.
-    ///
     /// @implements REQ-SCREEN.buffer_goes_home
     fn show(&mut self, buffer: Buffer) {
         let home = destination(buffer.kind.clone(), self.screen.clone());
-        // The document leaving a file for anything else is a jump to come
-        // back from.
         if home == tracelean_core::surface::screen::DOCUMENT
             && self.document_place().is_some_and(|(path, _)| buffer.kind != BufferKind::File { path })
         {
@@ -861,8 +618,6 @@ impl Editor {
         self.screen = tracelean_core::surface::screen::show_buffer(id, self.screen.clone());
         self.offset = offset.min(length);
         self.top = top;
-        // The tree marks the file the document shows, and the trace, if it is
-        // open, follows it.
         if home == tracelean_core::surface::screen::DOCUMENT {
             let tree = self.listing_of(".");
             if let Some(held) = self.screen.opened.iter_mut().find(|held| held.id == tree.id) {
@@ -877,18 +632,11 @@ impl Editor {
         }
     }
 
-    /// The opened set, as a buffer.
-    ///
-    /// A rendering of what the session holds rather than a list kept beside it,
-    /// which is why it is the core's function and not a loop here.
-    ///
     /// @implements REQ-SCREEN.strip_is_the_opened_set
     pub fn strip(&self) -> Buffer {
         tracelean_core::surface::screen::strip_with_unsaved(self.screen.clone(), &self.unsaved())
     }
 
-    /// What to have back next time: the files in the tabs, the open folders,
-    /// and the file in the document pane.
     pub fn recall(&self) -> recall::Recalled {
         let file = |b: &Buffer| match &b.kind {
             BufferKind::File { path } => Some(path.clone()),
@@ -905,8 +653,6 @@ impl Editor {
         }
     }
 
-    /// Keep what `recall` says, when it changed since it was last kept — and
-    /// never for an editor opened fresh.
     pub fn remember(&mut self) {
         let Some(kept) = &self.remembered else { return };
         let now = self.recall();
@@ -916,8 +662,6 @@ impl Editor {
         }
     }
 
-    /// Open again what was open last time, leaving out what no longer exists.
-    ///
     /// @implements REQ-NAV.session_recalled
     fn restore(&mut self, kept: recall::Recalled) {
         let files = self.workspace().files;
@@ -928,8 +672,6 @@ impl Editor {
         }
     }
 
-    /// The files whose text here differs from the disk: changed, made or
-    /// removed and not yet saved.
     pub fn unsaved(&self) -> Vec<String> {
         let current = self.workspace();
         let mut paths: Vec<String> = current
@@ -943,9 +685,6 @@ impl Editor {
         paths
     }
 
-    /// Whether the window may close now. With unsaved work it may not, the
-    /// first time: the status line says what would be lost, and asking again
-    /// closes anyway — a person who has been told decides.
     pub fn may_close(&mut self) -> bool {
         let unsaved = self.unsaved();
         if unsaved.is_empty() || self.close_warned {
@@ -960,29 +699,11 @@ impl Editor {
         false
     }
 
-    /// The stations, as a buffer.
-    ///
-    /// The same for every state, so that the station which opens a project is
-    /// reachable when no project is open.
-    ///
     /// @implements REQ-SCREEN.stations_are_constant
     pub fn stations(&self) -> Buffer {
         tracelean_core::surface::screen::stations(self.screen.clone())
     }
 
-    /// Every pane, where it goes, what it shows, and where it is scrolled to.
-    ///
-    /// What a frontend draws. The buffer is whole: a frontend reserves some of
-    /// a pane for its own chrome — a terminal spends a column on a divider, a
-    /// window spends none — and only it knows how much, so it windows the
-    /// buffer to the room it has left by calling `produce::window`. The
-    /// windowing is still the core's function and the result is still a buffer,
-    /// which is what `window_is_a_buffer` asks; what the frontend supplies is
-    /// the one number it alone knows.
-    ///
-    /// Each pane keeps its own first line, so two panes on one buffer are not
-    /// locked together.
-    ///
     /// @implements REQ-SCREEN.layout_tiles_the_region
     pub fn laid_out(&self, rect: Rect) -> Vec<Placed> {
         let showing: BTreeMap<String, String> = panes(&self.screen.layout).into_iter().collect();
@@ -1005,42 +726,22 @@ impl Editor {
             .collect()
     }
 
-    /// A pane's edge dragged by `cells` columns (or rows): the pane is focused
-    /// and the divider beside it moved that many cells.
-    ///
-    /// A split's weights are proportions, often as coarse as 1 : 2 : 1, where
-    /// one unit is a fifth of the window — so a drag of a few columns was cut
-    /// to nothing by the floor of one. The weights are first restated as the
-    /// cells each part already occupies, which draws exactly the same picture,
-    /// and then a cell dragged is a unit moved.
     pub fn grab(&mut self, pane: &str, cells: i64) {
         self.perform(Intent::Arrange { how: Arrangement::FocusPane { pane: pane.to_string() } });
         if cells == 0 {
             return;
         }
-        // Before the frontend has said how big it is there are no cells to
-        // count, and the proportions are left as they are.
         if self.region.width > 0 && self.region.height > 0 {
             self.screen.layout = in_cells(self.region, self.screen.layout.clone());
         }
         self.perform(Intent::Arrange { how: Arrangement::Resize { amount: cells } });
     }
 
-    /// What a frontend draws: the part of the buffer that fits.
-    ///
-    /// A window is a buffer, so a frontend showing forty lines of a long file
-    /// is still drawing everything it was given — which is what keeps the
-    /// conformance check meaning what it says.
-    ///
     /// @implements REQ-SHOW.window_is_a_buffer
     pub fn visible(&self, height: usize) -> Buffer {
         make::window(self.buffer(), self.top, height)
     }
 
-    /// Where the cursor is in the window, as a line and a column.
-    ///
-    /// `None` when the cursor is not in the window at all, which a frontend
-    /// draws by simply not drawing a cursor.
     pub fn cursor_in(&self, height: usize) -> Option<(usize, usize)> {
         let (line, column) = self.line_and_column();
         if line < self.top || line >= self.top + height {
@@ -1049,7 +750,6 @@ impl Editor {
         Some((line - self.top, column))
     }
 
-    /// The cursor's line and column in the whole buffer.
     pub fn line_and_column(&self) -> (usize, usize) {
         let mut line = 0usize;
         let mut column = 0usize;
@@ -1067,7 +767,6 @@ impl Editor {
         (line, column)
     }
 
-    /// Scroll so that the cursor is on screen, and no further.
     pub fn follow_cursor(&mut self, height: usize) {
         if height == 0 {
             return;
@@ -1080,7 +779,6 @@ impl Editor {
         }
     }
 
-    /// Move the cursor one character.
     pub fn step(&mut self, forwards: bool) {
         let length = self.buffer().text.chars().count();
         self.offset = if forwards {
@@ -1090,9 +788,6 @@ impl Editor {
         };
     }
 
-    /// Move the cursor `delta` lines (up when negative) in one go, keeping the
-    /// column where it can: what a drag of the scrollbar asks for, which is
-    /// hundreds of lines at once.
     fn step_lines(&mut self, delta: i64) {
         let lines: Vec<String> = tracelean_core::surface::view::plain_text(self.buffer());
         let (line, column) = self.line_and_column();
@@ -1103,7 +798,6 @@ impl Editor {
         self.offset = at + column.min(width);
     }
 
-    /// Move the cursor one line, keeping the column where it can.
     pub fn step_line(&mut self, down: bool) {
         let lines: Vec<String> =
             tracelean_core::surface::view::plain_text(self.buffer());
@@ -1121,11 +815,6 @@ impl Editor {
         self.offset = at + column.min(width);
     }
 
-    /// The file the cursor is editing, if it is editing one.
-    ///
-    /// Only a file buffer is editable: a listing, a menu and a report are
-    /// produced from something else, and typing into one would be typing into a
-    /// picture of the state rather than into the state.
     fn editing(&self) -> Option<String> {
         match self.buffer().kind {
             BufferKind::File { path } => Some(path),
@@ -1133,11 +822,6 @@ impl Editor {
         }
     }
 
-    /// Type one character at the cursor.
-    ///
-    /// Through a command, like every other change, so that it has an inverse
-    /// and appears in the history.
-    ///
     /// @implements REQ-ACT.edits_are_commands
     pub fn insert(&mut self, text: &str) {
         let Some(file) = self.editing() else {
@@ -1149,11 +833,6 @@ impl Editor {
         self.offset = at + text.chars().count();
     }
 
-    /// Delete the character before the cursor.
-    ///
-    /// The command carries what it removed, which is what gives it an inverse
-    /// without going back to the workspace for it.
-    ///
     /// @implements REQ-ACT.edits_are_commands
     pub fn delete_back(&mut self) {
         let Some(file) = self.editing() else {
@@ -1163,7 +842,6 @@ impl Editor {
         if self.offset == 0 {
             return;
         }
-        // In a line's indentation it takes back one level, as Tab gave it.
         let (_, column) = self.line_and_column();
         let text: Vec<char> = self.buffer().text.chars().collect();
         let blank = column > 0 && text[self.offset - column..self.offset].iter().all(|c| *c == ' ');
@@ -1175,14 +853,6 @@ impl Editor {
         self.offset = at;
     }
 
-    /// Apply a change to the file being edited and redraw it, keeping the
-    /// cursor where the caller put it.
-    ///
-    /// The cursor counts characters and a command counts bytes (a file is a
-    /// `String`), so the offsets are converted here, once, against the text the
-    /// command is applied to. Anywhere else a character offset would land
-    /// early by the width of every multi-byte character before it, which in a
-    /// Lean file (`∀`, `→`, `λ`) is how typing went to the wrong place.
     fn change(&mut self, command: Command) {
         let Some(path) = self.editing() else { return };
         let before = self.workspace().files.get(&path).cloned().unwrap_or_default();
@@ -1193,11 +863,7 @@ impl Editor {
                 let text = self.workspace().files.get(&path).cloned().unwrap_or_default();
                 let marks = marks_in(&path, &text);
                 let saved = self.saved.files.get(&path) == Some(&text);
-                // In place: the buffer's identity is the file's path and that
-                // has not changed, so this is new content for the buffer the
-                // pane already points at, not a different buffer.
                 self.replace_buffer(make::file_buffer(path, text, marks));
-                // The explorer marks a file with unsaved edits.
                 if saved != was_saved {
                     self.refresh_views();
                 }
@@ -1206,23 +872,13 @@ impl Editor {
         }
     }
 
-    /// How many characters of `file` come before byte `offset`.
     fn chars_before(&self, file: &str, offset: usize) -> usize {
         let text = self.workspace().files.get(file).cloned().unwrap_or_default();
         text.get(..offset).map_or_else(|| text.chars().count(), |head| head.chars().count())
     }
 
-    /// Re-produce every opened listing and file from the workspace as it now
-    /// is, without moving the focus or rearranging anything.
-    ///
-    /// After an undo or a rename the explorer and the open file show the new
-    /// state where they already are; re-showing the listing used to pull the
-    /// focus into the explorer and leave the document showing the old text.
     fn refresh_views(&mut self) {
         let workspace = self.workspace();
-        // A file that is gone (deleted here, or on disk) is no longer a thing
-        // to hold open: its buffer would be edited against a path the
-        // workspace does not have, and every change to it is refused.
         let gone: Vec<String> = self
             .screen
             .opened
@@ -1238,14 +894,10 @@ impl Editor {
             .opened
             .iter()
             .map(|held| match &held.kind {
-                // The root listing is titled with the tree's own path rather
-                // than `.`, so that is what its kind carries.
                 BufferKind::Directory { path } if *path == self.root.display().to_string() => {
                     self.listing_of(".")
                 }
                 BufferKind::Directory { path } => self.listing_of(path),
-                // The history marks where the workspace is, which every
-                // change and every travel moves.
                 BufferKind::Record { title } if title == "history" => self.history_buffer(),
                 BufferKind::File { path } => match workspace.files.get(path) {
                     Some(text) => make::file_buffer(path.clone(), text.clone(), marks_in(path, text)),
@@ -1254,8 +906,6 @@ impl Editor {
                 _ => held.clone(),
             })
             .collect();
-        // A listing's identity is its title, which is the path it lists, so a
-        // fresh one replaces the old one rather than joining it.
         for (held, new) in self.screen.opened.iter_mut().zip(fresh) {
             if held.id == new.id {
                 *held = new;
@@ -1265,13 +915,11 @@ impl Editor {
         self.offset = self.offset.min(length);
     }
 
-    /// The buffer a pane shows, whole.
     fn buffer_in(&self, pane: &str) -> Option<Buffer> {
         let id = panes(&self.screen.layout).into_iter().find(|(p, _)| p == pane)?.1;
         self.screen.opened.iter().find(|held| held.id == id).cloned()
     }
 
-    /// The first line a pane shows.
     fn top_of(&self, pane: &str) -> usize {
         if pane == self.screen.focus {
             self.top
@@ -1280,9 +928,6 @@ impl Editor {
         }
     }
 
-    /// A position a frontend reported in the window it drew, as a position in
-    /// the whole buffer. A frontend is handed the visible lines only, so its
-    /// offsets start at the first visible line.
     fn absolute(&self, pane: &str, at: usize) -> usize {
         let Some(buffer) = self.buffer_in(pane) else { return at };
         let top = self.top_of(pane);
@@ -1291,16 +936,12 @@ impl Editor {
         (shift + at).min(buffer.text.chars().count())
     }
 
-    /// Move the focus to a pane, through the one arrangement path.
     pub fn focus_pane(&mut self, pane: &str) {
         if pane != self.screen.focus {
             self.rearrange(Arrangement::FocusPane { pane: pane.to_string() });
         }
     }
 
-    /// A pointer pressed at a position: focus that pane and put the cursor
-    /// there. Pressing into a file starts typing, as it does in any editor;
-    /// pressing into anything else leaves keys as commands.
     pub fn place(&mut self, pane: &str, at: usize) {
         let offset = self.absolute(pane, at);
         self.focus_pane(pane);
@@ -1315,14 +956,10 @@ impl Editor {
         }
     }
 
-    /// Everything that can be done at a position of a pane, for a context menu.
-    ///
     /// @implements REQ-ACT.everything_is_offered
     pub fn offers_at(&self, pane: &str, at: usize) -> Vec<tracelean_core::surface::offer::Offer> {
         let Some(buffer) = self.buffer_in(pane) else { return Vec::new() };
         let mut offset = self.absolute(pane, at);
-        // On the tree a row is about its name wherever on the row the cursor
-        // is — in its indentation, say, where a keyboard leaves it.
         if self.is_tree(&buffer) {
             let chars: Vec<char> = buffer.text.chars().collect();
             let start = chars[..offset.min(chars.len())].iter().rposition(|c| *c == '\n').map_or(0, |n| n + 1);
@@ -1334,8 +971,6 @@ impl Editor {
             }
         }
         let mut offered = tracelean_core::surface::offer::offers(&buffer, offset, &self.keymap);
-        // The core offers what a row's text names; on the tree that is a name,
-        // and the target is the whole path the row stands for.
         if let Some(row) = self.tree_row_at(&buffer, offset) {
             if row.folder {
                 offered.retain(|o| !matches!(o.action.as_str(), "file.rename" | "file.delete"));
@@ -1349,9 +984,6 @@ impl Editor {
                 }
             }
         }
-        // Anywhere inside an item that claims a clause, the clause it claims:
-        // a function's body is about its requirement as much as the
-        // annotation over it is.
         if let BufferKind::File { path } = &buffer.kind {
             let line = buffer.text.chars().take(offset).filter(|c| *c == '\n').count() as u32 + 1;
             let mut claimed: Vec<String> = self
@@ -1382,8 +1014,6 @@ impl Editor {
                         action: action.into(),
                         target: Some(clause.clone()),
                         asks: None,
-                        // Chosen, not typed: a key acts on the span under
-                        // the cursor, and here there is none naming it.
                         keys: None,
                     });
                 }
@@ -1393,10 +1023,6 @@ impl Editor {
         offered
     }
 
-    /// Everything that can be done where the cursor is, in the focused pane,
-    /// with that pane and the cursor's offset in its window — what the
-    /// which-key bar shows while no menu is open, and what an entry of it is
-    /// then chosen at.
     pub fn offers_here(&self) -> (String, usize, Vec<tracelean_core::surface::offer::Offer>) {
         let pane = self.screen.focus.clone();
         let at = self.offset.saturating_sub(self.absolute(&pane, 0));
@@ -1404,14 +1030,6 @@ impl Editor {
         (pane, at, offered)
     }
 
-    /// Perform an action chosen at a position of a pane — a click on an
-    /// affordance, or an entry of the context menu.
-    ///
-    /// The focus is built from what was pointed at, as `focus_in` builds it for
-    /// a key, and then the offer's target and the person's answer fill in what
-    /// a pointer knows and a cursor does not: which row of a listing was meant,
-    /// and the name typed for it. The dispatcher is the one every key goes
-    /// through (`REQ-ACT.one_path`).
     pub fn choose(
         &mut self,
         pane: &str,
@@ -1438,7 +1056,6 @@ impl Editor {
             }
             "file.new" | "trace.new_requirement" => focus.under = answer,
             _ => {
-                // What was typed, else what was pointed at.
                 if let Some(chosen) = answer.or(target) {
                     focus.under = Some(chosen);
                 }
@@ -1454,13 +1071,7 @@ impl Editor {
         self.menu = None;
     }
 
-    /// The keys every editor has and a modal keymap does not spell: save, undo,
-    /// redo, and moving by line and by page.
-    ///
-    /// Each is the same action or the same cursor move a key sequence makes;
-    /// this only gives it the name a person's hands already know.
     pub fn chord(&mut self, chord: &str) {
-        // Shift with a movement selects from where the cursor was.
         let moves = ["Left", "Right", "Up", "Down", "Home", "End", "PageUp", "PageDown", "C-Left", "C-Right"];
         if let Some(movement) = chord.strip_prefix("S-").filter(|m| moves.contains(m)) {
             let anchor = self.anchor.unwrap_or(self.offset);
@@ -1497,11 +1108,8 @@ impl Editor {
                 return;
             }
             "Delete" if self.take_selection() => return,
-            // From the match selected, to the next.
             "F3" | "C-g" => return self.find_again(true),
             "S-F3" | "C-S-g" => return self.find_again(false),
-            // The word at the cursor; again, the next place that holds what
-            // is selected (and F3 on from there).
             "C-d" => {
                 match self.selected().filter(|s| !s.is_empty()) {
                     Some(text) => self.find(&text, true),
@@ -1520,7 +1128,6 @@ impl Editor {
                 }
                 return;
             }
-            // The line, whole; again, the next one with it.
             "C-l" => {
                 let (line, column) = self.line_and_column();
                 let lines = tracelean_core::surface::view::plain_text(self.buffer());
@@ -1554,8 +1161,6 @@ impl Editor {
         }
         let page = (self.region.height as usize).saturating_sub(1).max(1);
         match chord {
-            // To the line's first character that is not blank, and from
-            // there to its very start.
             "Home" => {
                 let (line, column) = self.line_and_column();
                 let lines = tracelean_core::surface::view::plain_text(self.buffer());
@@ -1594,7 +1199,6 @@ impl Editor {
         }
     }
 
-    /// Replace every `wanted` in the focused file with `with`, as one change.
     pub fn replace_all(&mut self, wanted: &str, with: &str) {
         let Some(file) = self.editing() else {
             return self.say("nothing replaced", "replacing works in a file");
@@ -1614,8 +1218,6 @@ impl Editor {
         if hits.is_empty() {
             return self.say("not found", &format!("`{wanted}` is not in this buffer"));
         }
-        // From the last match back, so each offset still means what it did;
-        // one command, so one Ctrl+Z takes every replacement back.
         let mut commands = Vec::new();
         for &at in hits.iter().rev() {
             commands.push(Command::Delete { file: file.clone(), offset: at, deleted: wanted.to_string() });
@@ -1630,15 +1232,11 @@ impl Editor {
         self.say("replaced", &format!("{} × `{wanted}` with `{with}` (Ctrl+Z takes them back)", hits.len()));
     }
 
-    /// Move the cursor to the next place the focused buffer holds `wanted`,
-    /// after the cursor and round to the start; backwards when not `forward`.
     pub fn find(&mut self, wanted: &str, forward: bool) {
         if wanted.is_empty() {
             return;
         }
         self.last_find = Some(wanted.to_string());
-        // With `*` or `?` the text is a pattern, and each match has its own
-        // length; without, it is itself and every match is as long as it is.
         let spans: Vec<(usize, usize)> = if wanted.contains(['*', '?']) {
             tracelean_core::surface::find::glob_matches(self.buffer().text, wanted.to_string())
         } else {
@@ -1650,7 +1248,6 @@ impl Editor {
                 .collect()
         };
         let hits: Vec<usize> = spans.iter().map(|(start, _)| *start).collect();
-        // From the start of what is selected — the last match, after a find.
         let from = self.selection().map_or(self.offset, |(start, _)| start);
         let found = if forward {
             hits.iter().find(|at| **at > from).or(hits.first())
@@ -1661,7 +1258,6 @@ impl Editor {
             Some(at) => {
                 let at = *at;
                 let place = hits.iter().position(|h| *h == at).unwrap_or(0) + 1;
-                // The match is selected, so typing replaces it.
                 self.anchor = Some(at);
                 self.offset = spans.iter().find(|(start, _)| *start == at).map_or(at, |(_, end)| *end);
                 let height = (self.region.height as usize).max(1);
@@ -1679,8 +1275,6 @@ impl Editor {
         }
     }
 
-    /// Delete the character after the cursor.
-    ///
     /// @implements REQ-ACT.edits_are_commands
     pub fn delete_forward(&mut self) {
         let Some(file) = self.editing() else { return };
@@ -1690,8 +1284,6 @@ impl Editor {
         self.offset = at;
     }
 
-    /// A wheel turned over a pane: scroll it, and take the cursor along so the
-    /// next draw does not scroll straight back to it.
     pub fn scroll(&mut self, pane: &str, lines: i64) {
         self.focus_pane(pane);
         let count = self.buffer().text.split('\n').count();
@@ -1700,8 +1292,6 @@ impl Editor {
         self.top = top.clamp(0, count.saturating_sub(1) as i64) as usize;
     }
 
-    /// What the file being edited declares whose name holds each word typed,
-    /// in order, as (`path:line` to open, `name  :line`): Ctrl+Shift+O.
     pub fn symbols(&self, query: &str) -> Vec<(String, String)> {
         let Some(path) = self.editing() else { return Vec::new() };
         let words: Vec<String> = query.split_whitespace().map(str::to_lowercase).collect();
@@ -1720,9 +1310,6 @@ impl Editor {
             .collect()
     }
 
-    /// Every action the keymap binds whose group, words or keys hold each
-    /// word typed, as (action, `group: what it is called — its keys`): the
-    /// palette.
     pub fn palette(&self, query: &str) -> Vec<(String, String)> {
         let words: Vec<String> = query.split_whitespace().map(str::to_lowercase).collect();
         tracelean_core::surface::offer::described(&self.keymap)
@@ -1738,8 +1325,6 @@ impl Editor {
             .collect()
     }
 
-    /// An action from a row of the menu bar (or the palette), performed where
-    /// the cursor is; the menu, and any list `.` put up, goes away.
     pub fn act_here(&mut self, action: &str) {
         self.offering = None;
         let intent = dispatch(action.to_string(), self.focus(), self.workspace(), self.pending.clone());
@@ -1750,8 +1335,6 @@ impl Editor {
         }
     }
 
-    /// Offer what can be done where the cursor is, as a menu whose keys are
-    /// `1`–`9` then `a`–`z`: the terminal's right-click.
     fn offer_here(&mut self) {
         let pane = self.screen.focus.clone();
         let mut offered = self.offers_at(&pane, self.window_offset(&pane, self.offset));
@@ -1773,15 +1356,7 @@ impl Editor {
         self.say("here", "a key picks one; Escape closes the list");
     }
 
-    /// Ask for the argument of `action` on the status line, when it takes one
-    /// that nobody pointed at (a new name). The context menu asks in a box; a
-    /// key sequence asks here, with what is there already filled in.
-    ///
-    /// Answers whether it asked.
     fn start_asking(&mut self, action: &str) -> bool {
-        // Only the actions that cannot act without the name. `file.open` also
-        // has an entry that asks (for another folder), and on a row of the
-        // listing the key opens that row: asking there would be a different action.
         if !matches!(action, "file.rename" | "file.new" | "trace.new_requirement") {
             return false;
         }
@@ -1805,9 +1380,6 @@ impl Editor {
         }
     }
 
-    /// Ask what to look for: `Space f f` goes to the next match, `Space f /`
-    /// lists the lines that hold one. The text may hold `*` and `?`.
-    ///
     fn ask_to_find(&mut self, title: &str) {
         let (then, question) = if title == "find" {
             (Then::Find, "Find (* and ? match)")
@@ -1821,10 +1393,6 @@ impl Editor {
         self.show_question();
     }
 
-    /// The lines of the focused buffer that hold a match, as a list of their
-    /// numbers and their text: the way to search a file tree, the requirements
-    /// or the findings, where the lines are the information.
-    ///
     /// @implements REQ-NAV.find_lists_lines
     pub fn list_matching_lines(&mut self, wanted: &str) {
         self.last_find = Some(wanted.to_string());
@@ -1838,8 +1406,6 @@ impl Editor {
         self.say("found", &format!("{count} lines match {wanted}"));
     }
 
-    /// A key while an argument is being asked for: the keys make the answer
-    /// (`surface::ask::ask_step`), Enter gives it to the action, Escape drops it.
     fn answer(&mut self, key: &str) {
         let Some(mut asking) = self.asking.take() else { return };
         let (outcome, said) =
@@ -1864,7 +1430,6 @@ impl Editor {
         }
     }
 
-    /// The key pressed while `.`'s list is up.
     fn pick_offer(&mut self, key: &str) {
         let Some((pane, offset, offered)) = self.offering.take() else { return };
         self.menu = None;
@@ -1884,8 +1449,6 @@ impl Editor {
         self.choose(&pane, at, &offer.action, offer.target, None);
     }
 
-    /// A position in a pane's whole buffer as a position in what it shows —
-    /// the inverse of `absolute`.
     fn window_offset(&self, pane: &str, offset: usize) -> usize {
         let Some(buffer) = self.buffer_in(pane) else { return offset };
         let top = self.top_of(pane);
@@ -1894,9 +1457,6 @@ impl Editor {
         offset.saturating_sub(shift)
     }
 
-    /// Every line of the project holding `needle` — as a whole word when
-    /// `whole`, a name's uses; ignoring case otherwise, a search — shown as
-    /// links to each place.
     pub fn list_occurrences(&mut self, needle: &str, whole: bool) {
         use tracelean_core::surface::findings_view::{findings_view, Found};
         let workspace = self.workspace();
@@ -1912,12 +1472,8 @@ impl Editor {
         self.say("found", &format!("{count} lines{more} hold {needle}"));
     }
 
-    /// Go to where `name` — the name `dispatch` read under the cursor — is
-    /// declared.
     fn go_to_definition(&mut self, name: String) {
         use tracelean_core::surface::definition::declarations;
-        // A requirement name is defined where its document says it: at the
-        // clause's own line, or the top for the requirement.
         let buffer = self.buffer();
         let named = buffer
             .spans
@@ -1966,7 +1522,6 @@ impl Editor {
         }
     }
 
-    /// The trace index of the tree on disk, read once and kept.
     fn index(&self) -> std::sync::Arc<tracelean_core::trace::index::Index> {
         if let Some(held) = self.index_cache.borrow().as_ref() {
             return held.clone();
@@ -1976,19 +1531,15 @@ impl Editor {
         fresh
     }
 
-    /// The disk changed under the index: read it again next time.
     fn forget_index(&self) {
         *self.index_cache.borrow_mut() = None;
         self.problems_stale.set(true);
     }
 
-    /// How many findings the tree on disk has, once counted.
     pub fn problems(&self) -> Option<usize> {
         self.problems.get()
     }
 
-    /// Every key there is (F1): the chords every editor has, then each action
-    /// the keymap binds, with the keys that reach it.
     fn keys(&self) -> Vec<Event> {
         let row = |keys: &str, what: &str| Event { kind: keys.to_string(), text: what.to_string() };
         let mut rows: Vec<Event> = CHORDS.iter().map(|(keys, what)| row(keys, what)).collect();
@@ -2001,9 +1552,6 @@ impl Editor {
         rows
     }
 
-    /// The bracket beside the cursor and the one that matches it, as offsets
-    /// into the focused pane's window — for a frontend to mark both. None away
-    /// from a bracket, outside a file, or when the match is not shown.
     pub fn bracket_pair(&self) -> Option<(usize, usize)> {
         if self.editing().is_none() {
             return None;
@@ -2050,9 +1598,6 @@ impl Editor {
         (at >= shift && other >= shift).then(|| (at - shift, other - shift))
     }
 
-    /// What a requirement name says, for a pointer resting on it: the clause's
-    /// own sentence, or the requirement's title. None for a name no
-    /// requirement has.
     pub fn requirement_text(&self, name: &str) -> Option<String> {
         let (id, clause) = match name.split_once('.') {
             Some((id, clause)) => (id, Some(clause)),
@@ -2066,10 +1611,6 @@ impl Editor {
         })
     }
 
-    /// The files whose paths best match some typed letters, best first.
-    ///
-    /// `name:42` answers each match at line 42, and `:42` the file in front
-    /// at line 42 — `path:line` links, which open there.
     pub fn quick_open(&self, query: &str) -> Vec<String> {
         let (query, line) = match query.rsplit_once(':') {
             Some((name, n)) if n.parse::<usize>().is_ok() => (name, Some(n)),
@@ -2082,7 +1623,6 @@ impl Editor {
         if query.is_empty() && line.is_some() {
             return self.recall().shown.into_iter().map(at).collect();
         }
-        // Nothing typed: the files most recently left, then the other tabs.
         if query.is_empty() {
             let here = self.editing();
             let mut recent: Vec<String> = Vec::new();
@@ -2104,9 +1644,6 @@ impl Editor {
         tracelean_core::surface::quick::matches(files, query, 12).into_iter().map(at).collect()
     }
 
-    /// Delete what lies between two positions of a pane — a selection made
-    /// with the pointer — as one change, and leave the cursor where it began.
-    ///
     /// @implements REQ-ACT.edits_are_commands
     pub fn cut(&mut self, pane: &str, start: usize, end: usize) {
         let (from, to) = {
@@ -2127,8 +1664,6 @@ impl Editor {
         self.mode = INSERT.to_string();
     }
 
-    /// Tab, Shift+Tab or Ctrl+/ over a selection: indent, dedent, or comment
-    /// every line it touches, as one change. Blank lines are left alone.
     pub fn over_lines(&mut self, pane: &str, start: usize, end: usize, chord: &str) {
         let (from, to) = {
             let (a, b) = (self.absolute(pane, start), self.absolute(pane, end));
@@ -2138,8 +1673,6 @@ impl Editor {
         self.over_range(from, to, chord);
     }
 
-    /// `over_lines`, between two offsets of the focused buffer. A selection
-    /// over those lines stays selected.
     fn over_range(&mut self, from: usize, to: usize, chord: &str) {
         let Some(file) = self.editing() else {
             self.say("not a file", "only a file's lines can be indented");
@@ -2152,7 +1685,6 @@ impl Editor {
             return;
         }
         let marker = comment_marker(&file).unwrap_or("//");
-        // Each touched line: where it starts, and its text.
         let mut lines = Vec::new();
         let mut at = 0;
         for line in text.split('\n') {
@@ -2166,7 +1698,6 @@ impl Editor {
         let indent = |line: &str| line.chars().take_while(|c| *c == ' ').count();
         let all_commented = lines.iter().all(|(_, l)| l.trim_start().starts_with(marker));
         let least = lines.iter().map(|(_, l)| indent(l)).min().unwrap_or(0);
-        // Bottom up, so each command's offset is still where it was read.
         let mut commands = Vec::new();
         for (start, line) in lines.iter().rev() {
             let spaces = indent(line);
@@ -2189,8 +1720,6 @@ impl Editor {
             return;
         }
         let count = commands.len();
-        // How many line breaks lie between the first and last line changed,
-        // read before the change moves them.
         let first = lines.first().map(|(at, _)| *at).unwrap_or(0);
         let spanned = match lines.last() {
             Some((last, _)) => text.chars().skip(first).take(last - first).filter(|c| *c == '\n').count(),
@@ -2198,8 +1727,6 @@ impl Editor {
         };
         self.change(Command::Batch { commands });
         self.offset = self.offset.min(self.buffer().text.chars().count());
-        // A selection keeps covering the lines it covered: from the first
-        // one's start to the last one's end.
         if self.anchor.is_some() {
             let now: Vec<char> = self.buffer().text.chars().collect();
             let mut end = first;
@@ -2214,7 +1741,6 @@ impl Editor {
         self.say("changed", &format!("{count} line(s)"));
     }
 
-    /// Text from the clipboard, typed in one change.
     pub fn paste(&mut self, text: &str) {
         if text.is_empty() {
             return;
@@ -2223,7 +1749,6 @@ impl Editor {
         self.insert(text);
     }
 
-    /// What is selected, start before end, when anything is.
     pub fn selection(&self) -> Option<(usize, usize)> {
         let anchor = self.anchor?;
         let length = self.buffer().text.chars().count();
@@ -2231,14 +1756,11 @@ impl Editor {
         (a != b).then(|| (a.min(b), a.max(b)))
     }
 
-    /// The selected text.
     pub fn selected(&self) -> Option<String> {
         let (from, to) = self.selection()?;
         Some(self.buffer().text.chars().skip(from).take(to - from).collect())
     }
 
-    /// The selection as offsets into the focused pane's window, for a
-    /// frontend to mark; the part above the window is cut off.
     pub fn selection_shown(&self) -> Option<(usize, usize)> {
         let (from, to) = self.selection()?;
         let pane = self.screen.focus.clone();
@@ -2246,9 +1768,6 @@ impl Editor {
         (to > shift).then(|| (from.saturating_sub(shift), to - shift))
     }
 
-    /// Where the name under the cursor is written, whole, in the focused
-    /// file's window: its length and each start as an offset into the window.
-    /// Nothing while something is selected, or for a name of one letter.
     pub fn occurrences_shown(&self) -> Option<(usize, Vec<usize>)> {
         if self.selection().is_some() {
             return None;
@@ -2284,15 +1803,11 @@ impl Editor {
         Some((word.len(), found))
     }
 
-    /// Select between two positions of a pane — a drag with the pointer —
-    /// the cursor at `end`.
     pub fn select(&mut self, pane: &str, start: usize, end: usize) {
         self.place(pane, end);
         self.anchor = Some(self.absolute(pane, start));
     }
 
-    /// Remove what is selected from a file, as one change, leaving the cursor
-    /// where it began. Answers whether there was anything to remove.
     fn take_selection(&mut self) -> bool {
         let (Some((from, to)), Some(file)) = (self.selection(), self.editing()) else {
             self.anchor = None;
@@ -2305,9 +1820,6 @@ impl Editor {
         true
     }
 
-    /// The menu a mode offers, headed by the keys typed to reach it — `Space f`
-    /// — so the bar says where in the sequence the person is, and lists only
-    /// what can follow.
     fn mode_menu(&mut self, mode: String) -> Buffer {
         let menu = self.produce(BufferKind::Menu { title: mode });
         let head = self.typed.join(" ") + "  …";
@@ -2322,15 +1834,8 @@ impl Editor {
         Buffer { text: format!("{head}\n{}", menu.text), spans, ..menu }
     }
 
-    /// One key, interpreted.
-    ///
-    /// Here rather than in a frontend because a key means the same thing in a
-    /// terminal and in a window, and two implementations of that would be two
-    /// answers to what the editor does.
-    ///
     /// @implements REQ-ACT.one_path
     pub fn key(&mut self, key: &str) {
-        // A sequence starts from the root mode, however the last one ended.
         if self.mode == self.keymap.root {
             self.typed.clear();
         }
@@ -2348,9 +1853,6 @@ impl Editor {
             key.to_string(),
         ) {
             Outcome::Enter { mode } if mode == INSERT => {
-                // Insert mode has no parent, so an unbound key is text rather
-                // than a way back to the root. Escape is bound, which is how it
-                // is still possible to leave.
                 if self.editing().is_none() {
                     self.say("not a file", "there is nothing here to type into");
                 } else {
@@ -2360,17 +1862,12 @@ impl Editor {
                 }
             }
             Outcome::Enter { mode } if mode == self.keymap.root => {
-                // Back to where keys are commands. There is no menu for the
-                // root mode: the root mode is the editor, not a list.
                 self.mode = mode;
                 self.menu = None;
                 self.typed.clear();
                 self.say("normal", ". lists what can be done here, Space opens the leader menu");
             }
             Outcome::Enter { mode } => {
-                // Entering a mode offers what is in it, which is the menu the
-                // core produces for that mode — beside the buffer, so the next
-                // key is still about whatever the cursor was on.
                 self.mode = mode.clone();
                 self.typed.push(key.to_string());
                 self.menu = Some(self.mode_menu(mode));
@@ -2396,7 +1893,6 @@ impl Editor {
                 self.perform(intent);
                 self.mode = self.keymap.root.clone();
                 self.typed.clear();
-                // Unless what it did was put up a list to pick from.
                 if self.offering.is_none() {
                     self.menu = None;
                 }
@@ -2405,9 +1901,6 @@ impl Editor {
         }
     }
 
-    /// Where the word before (or after) the cursor begins (or ends): past any
-    /// spaces and punctuation first, then past the word — Ctrl+Left and
-    /// Ctrl+Right in every editor.
     fn word_edge(&self, forward: bool) -> usize {
         let text: Vec<char> = self.buffer().text.chars().collect();
         let word = |c: char| c.is_alphanumeric() || c == '_';
@@ -2430,7 +1923,6 @@ impl Editor {
         at
     }
 
-    /// Delete from the cursor to `edge`, either side of it, as one change.
     fn delete_to(&mut self, edge: usize) {
         let Some(file) = self.editing() else {
             self.say("not a file", "this buffer is a view of something else");
@@ -2445,8 +1937,6 @@ impl Editor {
         self.offset = from;
     }
 
-    /// The cursor's line: where it starts, and its text without the line
-    /// break. None outside a file.
     fn this_line(&mut self) -> Option<(String, usize, String)> {
         let Some(file) = self.editing() else {
             self.say("not a file", "this buffer is a view of something else");
@@ -2459,8 +1949,6 @@ impl Editor {
         Some((file, start, line))
     }
 
-    /// Alt+Up and Alt+Down: swap the cursor's line with the one above or
-    /// below, the cursor going with it.
     fn move_line(&mut self, down: bool) {
         let Some((file, start, line)) = self.this_line() else { return };
         let text: Vec<char> = self.buffer().text.chars().collect();
@@ -2489,8 +1977,6 @@ impl Editor {
         self.offset = if down { from + second.chars().count() + 1 + column } else { from + column };
     }
 
-    /// Shift+Alt+Down: a copy of the cursor's line under it, the cursor
-    /// going to the copy.
     fn duplicate_line(&mut self) {
         let Some((file, start, line)) = self.this_line() else { return };
         let end = start + line.chars().count();
@@ -2499,7 +1985,6 @@ impl Editor {
         self.offset += length + 1;
     }
 
-    /// Ctrl+Shift+K: remove the cursor's line.
     fn delete_line(&mut self) {
         let Some((file, start, line)) = self.this_line() else { return };
         let length = self.buffer().text.chars().count();
@@ -2518,7 +2003,6 @@ impl Editor {
         self.offset = from.min(self.buffer().text.chars().count());
     }
 
-    /// Shift+Tab: take one level of indentation off the cursor's line.
     fn dedent_line(&mut self) {
         let Some((file, start, line)) = self.this_line() else { return };
         let spaces = line.chars().take_while(|c| *c == ' ').count();
@@ -2531,8 +2015,6 @@ impl Editor {
         self.offset = self.offset.saturating_sub(width).max(start);
     }
 
-    /// Ctrl+/: comment the cursor's line out, or back in, with the file's own
-    /// line comment.
     fn toggle_comment(&mut self) {
         let Some(file) = self.editing() else {
             self.say("not a file", "this buffer is a view of something else");
@@ -2563,8 +2045,6 @@ impl Editor {
         }
     }
 
-    /// How deep one level of indentation is in the file being edited: Lean's
-    /// two spaces, four elsewhere.
     fn indent_step(&self) -> usize {
         match self.editing() {
             Some(path) if path.ends_with(".lean") => 2,
@@ -2572,7 +2052,6 @@ impl Editor {
         }
     }
 
-    /// The cursor's line up to the cursor.
     fn before_cursor(&self) -> String {
         let text: Vec<char> = self.buffer().text.chars().collect();
         let at = self.offset.min(text.len());
@@ -2580,29 +2059,22 @@ impl Editor {
         text[start..at].iter().collect()
     }
 
-    /// The indentation the cursor's line starts with.
     fn indent_here(&self) -> String {
         self.before_cursor().chars().take_while(|c| *c == ' ' || *c == '\t').collect()
     }
 
-    /// Whether the cursor sits between a bracket and its closer, `(|)`.
     fn inside_pair(&self) -> bool {
         let text: Vec<char> = self.buffer().text.chars().collect();
         let (before, after) = (self.offset.checked_sub(1).and_then(|i| text.get(i)), text.get(self.offset));
         matches!((before, after), (Some('('), Some(')')) | (Some('['), Some(']')) | (Some('{'), Some('}')))
     }
 
-    /// Whether the cursor is between two `"` with nothing between them.
     fn inside_quotes(&self) -> bool {
         let text: Vec<char> = self.buffer().text.chars().collect();
         let before = self.offset.checked_sub(1).and_then(|i| text.get(i));
         before == Some(&'"') && text.get(self.offset) == Some(&'"')
     }
 
-    /// One character typed. An opening bracket brings its closer when
-    /// nothing but space or another closer follows; a closer typed where the
-    /// same closer already is steps over it. In code (not prose), `"` does
-    /// the same, unless it ends a word.
     fn type_char(&mut self, typed: &str) {
         let c = typed.chars().next().unwrap_or(' ');
         let next = self.buffer().text.chars().nth(self.offset);
@@ -2640,9 +2112,6 @@ impl Editor {
         }
     }
 
-    /// What Enter types: a line break, then the indentation of the line it
-    /// breaks — one level deeper when that line opens a block (a bracket, `:`,
-    /// `:=`, `by`, `where`, `do`).
     fn line_break(&self) -> String {
         let before = self.before_cursor();
         let indent = self.indent_here();
@@ -2653,8 +2122,6 @@ impl Editor {
         format!("\n{indent}{deeper}")
     }
 
-    /// A key no binding claimed. In insert mode that is text; anywhere else it
-    /// is a key that does nothing, and saying so beats silence.
     fn typed(&mut self, key: &str) {
         if self.mode != INSERT {
             self.anchor = None;
@@ -2664,8 +2131,6 @@ impl Editor {
                 "Right" => self.step(true),
                 "Up" => self.step_line(false),
                 "Down" => self.step_line(true),
-                // What a click on the same place does: open the file, the
-                // folder, the link the cursor is on.
                 "Enter" => match self.offered().first() {
                     Some(action) => {
                         let pane = self.screen.focus.clone();
@@ -2678,8 +2143,6 @@ impl Editor {
             }
             return;
         }
-        // A selection: Tab indents the lines it spans, Backspace removes it,
-        // and what is typed replaces it; a plain arrow lets it go.
         if let Some((from, to)) = self.selection() {
             let text: String = self.buffer().text.chars().skip(from).take(to - from).collect();
             match key {
@@ -2697,8 +2160,6 @@ impl Editor {
         }
         match key {
             "Enter" => {
-                // Between a pair just opened, the closer goes a line further
-                // down and the cursor sits indented between them.
                 let broken = self.line_break();
                 if self.inside_pair() {
                     let closing = format!("\n{}", self.indent_here());
@@ -2724,26 +2185,20 @@ impl Editor {
             "Right" => self.step(true),
             "Up" => self.step_line(false),
             "Down" => self.step_line(true),
-            // The keymap's name for the space bar, which is what a window sends.
             tracelean_core::surface::keymap::SPACE => self.type_char(" "),
             other if other.chars().count() == 1 => self.type_char(other),
             other => self.say("nothing happened", &format!("`{other}` is not text")),
         }
     }
 
-    /// Carry out an intent. Every branch either shows a buffer the core made or
-    /// changes the workspace through a command.
-    ///
     /// @implements REQ-ACT.action_to_intent
     pub fn perform(&mut self, intent: Intent) {
         match intent {
-            // An absolute folder is another project: open it as the tree.
             Intent::Display { what: BufferKind::File { path } }
                 if Path::new(&path).is_absolute() && Path::new(&path).is_dir() =>
             {
                 self.reopen(PathBuf::from(path));
             }
-            // A `path:line` link opens the file at that line.
             Intent::Display { what: BufferKind::File { path } }
                 if !self.workspace().files.contains_key(&path)
                     && requirement_view::split_link(&path).1.is_some() =>
@@ -2754,16 +2209,12 @@ impl Editor {
                 self.perform(Intent::Display { what: BufferKind::File { path: file } });
                 self.go_to_line(line as usize);
             }
-            // A setting's new value is asked for on the status line.
             Intent::Display { what: BufferKind::Record { title } } if title.starts_with("edit ") => {
                 self.ask_to_edit_setting(&title["edit ".len()..]);
             }
-            // What to look for is asked for on the status line.
             Intent::Display { what: BufferKind::Record { title } } if title == "find" || title == "find lines" => {
                 self.ask_to_find(&title);
             }
-            // Where the name under the cursor is declared: there, when it is
-            // one place, else a list of the places.
             Intent::Display { what: BufferKind::Record { title } }
                 if title.starts_with("definition ") =>
             {
@@ -2774,17 +2225,13 @@ impl Editor {
             {
                 self.list_occurrences(&title["references ".len()..], true);
             }
-            // The list of what can be done here goes where a mode's menu goes,
-            // beside the buffer, and the next key picks from it.
             Intent::Display { what: BufferKind::Menu { title } } if title == "offers" => {
                 self.offer_here();
             }
-            // Opening a folder opens or closes it in the tree.
             Intent::Display { what: BufferKind::File { path } } if self.is_folder(&path) => {
                 self.toggle_folder(&path);
             }
             Intent::Display { what } => {
-                // A file shown is a file the tree can show: open what holds it.
                 if let BufferKind::File { path } = &what {
                     if self.workspace().files.contains_key(path) {
                         self.open_folders.extend(explorer::holders(path));
@@ -2797,8 +2244,6 @@ impl Editor {
                 }
             }
             Intent::Edit { command } => {
-                // A file made or renamed is shown where it now is, and a file
-                // just made is opened to be written.
                 let made = match &command {
                     Command::CreateFile { path } => Some(path.clone()),
                     Command::Batch { commands } => commands.iter().find_map(|c| match c {
@@ -2826,13 +2271,6 @@ impl Editor {
         }
     }
 
-    /// Change the arrangement, and keep each pane's cursor where it was.
-    ///
-    /// The change itself is the core's — one function, so a key and a pointer
-    /// make the same change (`REQ-SCREEN.one_arrangement_path`). What is left
-    /// here is the shell's part: the cursor and the first shown line belong to
-    /// the pane the focus is in, so leaving a pane parks them and arriving at
-    /// one takes them back out.
     fn rearrange(&mut self, how: Arrangement) {
         let was = self.screen.focus.clone();
         self.screen = arrange(how, self.region, self.screen.clone());
@@ -2842,26 +2280,18 @@ impl Editor {
             self.offset = offset;
             self.top = top;
         }
-        // Closing and showing both change what the focused pane holds, and a
-        // cursor past the end of the new buffer is a cursor nothing can draw.
         let length = self.buffer().text.chars().count();
         self.offset = self.offset.min(length);
-        // A pane the layout no longer places has no cursor to remember.
         let placed: Vec<String> =
             panes(&self.screen.layout).into_iter().map(|(pane, _)| pane).collect();
         self.parked.retain(|pane, _| placed.contains(pane));
     }
 
-    /// The buffer a kind names, as a pane would show it, shown nowhere: what
-    /// `tracelean-view` prints, so an agent in a shell reads the same views a
-    /// person reads in a window.
-    ///
     /// @implements REQ-CONTEXT.views_from_the_shell
     pub fn view(&mut self, what: BufferKind) -> Buffer {
         self.produce(what)
     }
 
-    /// Ask the core for the buffer a kind names. Nothing is built here.
     fn produce(&mut self, what: BufferKind) -> Buffer {
         match what {
             BufferKind::File { path } => {
@@ -2870,8 +2300,6 @@ impl Editor {
                 make::file_buffer(path, text, marks)
             }
             BufferKind::Directory { path } => self.listing_of(&path),
-            // A change an agent is proposing is reviewed against what the agent
-            // wrote; anything else against what was last saved.
             BufferKind::Review { target } => match &self.agent_tree {
                 Some(agent) if self.pending.iter().any(|c| touched(c) == target) => {
                     let before = self.workspace().files.get(&target).cloned().unwrap_or_default();
@@ -2884,19 +2312,10 @@ impl Editor {
                     make::review_buffer(target, before, after)
                 }
             },
-            // The opened set is a menu like any other, and it is the core that
-            // makes it: a strip built here would be a second answer to what the
-            // session holds, beside the one `screen.opened` already gives.
             BufferKind::Menu { title } if title == "opened" => self.strip(),
-            // The design station's content, and the flat index the shell's
-            // `tracelean-view` still lists. Menus rather than records because
-            // each row is somewhere to go, which is what a menu is here — the
-            // strip and the stations are menus for the same reason.
             BufferKind::Menu { title } if title == "requirements" || title == "design" => {
                 let nodes = self.nodes();
                 if nodes.is_empty() {
-                    // An empty index is the honest answer, and a blank panel
-                    // is a bad way to give it: say so, and say how to start.
                     return make::menu_buffer(
                         title,
                         vec![
@@ -2926,8 +2345,6 @@ impl Editor {
             BufferKind::Record { title } if title == "sandbox" => self.sandbox(),
             BufferKind::Record { title } if title == "history" => self.history_buffer(),
             BufferKind::Record { title } if title == "findings" || title == "check" => {
-                // Checking the tree is asking about the disk as it is now,
-                // edits made elsewhere included.
                 if title == "check" {
                     self.forget_index();
                 }
@@ -2956,8 +2373,6 @@ impl Editor {
         }
     }
 
-    /// Work on another tree: everything this editor holds is about one
-    /// project, so it starts again there, keeping only the window's size.
     fn reopen(&mut self, root: PathBuf) {
         if self.workspace() != self.saved {
             self.say("not opened", "save first (Ctrl+S): this project has changes not on disk");
@@ -2974,7 +2389,6 @@ impl Editor {
         self.say("opened", &shown);
     }
 
-    /// The file the document pane shows and where its cursor is.
     fn document_place(&self) -> Option<(String, usize)> {
         use tracelean_core::surface::screen::DOCUMENT;
         let id = panes(&self.screen.layout).into_iter().find(|(pane, _)| pane == DOCUMENT)?.1;
@@ -2988,7 +2402,6 @@ impl Editor {
         Some((path.clone(), offset))
     }
 
-    /// Note where the document is before a jump takes it elsewhere.
     fn mark_jump(&mut self) {
         let Some(place) = self.document_place() else { return };
         if self.back.last() != Some(&place) {
@@ -3000,8 +2413,6 @@ impl Editor {
         self.forward.clear();
     }
 
-    /// Back to where the document was before the last jump (Alt+Left), or
-    /// forward again (Alt+Right).
     fn go_back(&mut self, backwards: bool) {
         let taken = if backwards { self.back.pop() } else { self.forward.pop() };
         let Some((path, offset)) = taken else {
@@ -3016,7 +2427,6 @@ impl Editor {
         }
         self.open_folders.extend(explorer::holders(&path));
         let buffer = self.produce(BufferKind::File { path: path.clone() });
-        // Going back is not itself a jump to note.
         let kept = (std::mem::take(&mut self.back), std::mem::take(&mut self.forward));
         self.show(buffer);
         (self.back, self.forward) = kept;
@@ -3028,8 +2438,6 @@ impl Editor {
         self.say(if backwards { "back" } else { "forward" }, &format!("{path}:{}", line + 1));
     }
 
-    /// Put the cursor at the start of a one-based line of the focused buffer,
-    /// and scroll so a few lines above it show too.
     fn go_to_line(&mut self, line: usize) {
         let text = self.buffer().text;
         let wanted = line.saturating_sub(1);
@@ -3041,18 +2449,12 @@ impl Editor {
             offset += row.chars().count() + 1;
         }
         self.offset = offset.min(text.chars().count());
-        // Scrolled only when the line is out of sight, then with a few lines
-        // above it.
         let height = (self.region.height as usize).saturating_sub(1).max(1);
         if wanted < self.top || wanted >= self.top + height {
             self.top = wanted.saturating_sub(3);
         }
     }
 
-    /// One requirement, opened: its clauses, the level each reached, and every
-    /// annotation that claims it as a link to its line.
-    ///
-    /// A clause's own name (`REQ-X.clause`) opens the requirement it belongs to.
     fn requirement(&self, named: &str) -> Buffer {
         use tracelean_core::surface::requirement_view::{
             requirement_view, Claim, ClauseShown, RequirementShown,
@@ -3122,7 +2524,6 @@ impl Editor {
                 .filter(|other| other.refines.iter().any(|parent| parent == id))
                 .map(|other| other.id.clone())
                 .collect(),
-            // A requirement with no clauses has its body as its one clause.
             body: if requirement.clauses.is_empty() { String::new() } else { requirement.body.clone() },
             clauses,
             width: self.pane_width(tracelean_core::surface::screen::DOCUMENT),
@@ -3130,9 +2531,6 @@ impl Editor {
         })
     }
 
-    /// Which lines of the code implementing a requirement or one clause tests
-    /// run, item by item: by which tests, and every line none ran, each a link.
-    ///
     /// @implements REQ-LINECOV.lines_listed
     fn coverage(&self, named: &str) -> Buffer {
         let (id, clause) = match named.split_once('.') {
@@ -3149,10 +2547,6 @@ impl Editor {
         tracelean_core::surface::coverage_view::coverage_view(named, &items, self.pane_width(tracelean_core::surface::screen::DOCUMENT))
     }
 
-    /// The prompt for judging a clause against its model, to copy and carry to
-    /// a person. Nothing is called (`REQ-JUDGE.no_call`); recording the verdict
-    /// is `tracelean-trace --judge <clause> --verdict … --by …`.
-    ///
     /// @implements REQ-JUDGE.prompt_exported
     fn judge(&self, name: &str) -> Buffer {
         use tracelean_core::trace::material;
@@ -3167,7 +2561,6 @@ impl Editor {
         let Some(model_at) = material::model_of(&index, req_id, clause) else {
             return refuse(format!("nothing models {name}, so there is nothing to judge it against"));
         };
-        // The model's declaration, as the command line reads it.
         let source = self
             .workspace()
             .files
@@ -3188,8 +2581,6 @@ impl Editor {
         }
     }
 
-    /// How many characters a named pane has for a line, or the side panel's
-    /// when that pane is not on the screen.
     fn pane_width(&self, pane: &str) -> usize {
         self.laid_out(self.region)
             .iter()
@@ -3199,14 +2590,6 @@ impl Editor {
             .unwrap_or_else(|| self.side_width())
     }
 
-    /// Every requirement, with what its evidence reached.
-    ///
-    /// Read here and handed to a producer, rather than read by one: a producer
-    /// is a function of what it is given and reads no disk
-    /// ([ARCH-CORE-SHELL](../../reqs/arch/ARCH-CORE-SHELL.md)). The marks are a
-    /// requirement's own, held only where every clause holds them, as a
-    /// roll-up holds them everywhere — a set of obligations is met only as well
-    /// as the one least met.
     fn nodes(&self) -> Vec<make::Node> {
         let index = self.index();
         let lock = tracelean_core::trace::lockfile::read(&self.root);
@@ -3238,15 +2621,6 @@ impl Editor {
             .collect()
     }
 
-    /// The sandbox station: what the tree changed, what a tool said, and what
-    /// its usage is estimated to have cost.
-    ///
-    /// Nothing here starts anything. The changes are the ones already waiting
-    /// to be taken in, the transcript is read from wherever the tool wrote it,
-    /// and the price table is this project's own — all three are read by the
-    /// shell and handed to `sandbox_buffer`, which is the function that decides
-    /// what the buffer says.
-    ///
     /// @implements ARCH-NO-DRIVING.no_model_call
     fn sandbox(&self) -> Buffer {
         use tracelean_core::observe::{claude, cost, transcript, watch, workcopy as session};
@@ -3260,8 +2634,6 @@ impl Editor {
                 width: self.side_width(),
             });
         };
-        // The agent's own record: Claude Code's, filed under the project's
-        // name since the copy is mounted there; else the generic transcript.
         let text = watch::claude_transcript(&self.root, session::began(live));
         let (said, usage) = if text.is_empty() {
             let read = watch::transcript_of(&self.root);
@@ -3281,7 +2653,6 @@ impl Editor {
                 Command::DeleteFile { .. } => "deleted",
                 _ => "modified",
             };
-            // The size of the change, as its diff counts it.
             let lines = |files: Option<&String>| -> Vec<String> {
                 files.map(|t| t.lines().map(String::from).collect()).unwrap_or_default()
             };
@@ -3314,9 +2685,6 @@ impl Editor {
         })
     }
 
-    /// What the document pane shows before a file is opened: the places to
-    /// start, each a row to click, each with the keys that reach it — then the
-    /// other folders opened before, when the frontend keeps that list.
     fn welcome(&self) -> Buffer {
         let row = |action: &str, description: &str| make::MenuEntry {
             key: tracelean_core::surface::offer::keys_for(&self.keymap, action).unwrap_or_default(),
@@ -3338,9 +2706,6 @@ impl Editor {
         )
     }
 
-    /// Keep the list of folders opened before (`recall::note_recent`), this
-    /// one first, and show the others on the welcome page. A frontend asks
-    /// for this; an editor opened by a suite keeps no such list.
     pub fn track_recent(&mut self) {
         self.recent = Some(recall::note_recent(&self.root));
         let fresh = self.welcome();
@@ -3349,7 +2714,6 @@ impl Editor {
         }
     }
 
-    /// How wide the sandbox panel is: the pane showing it, else the side pane.
     fn side_width(&self) -> usize {
         let placed = self.laid_out(self.region);
         placed
@@ -3361,14 +2725,6 @@ impl Editor {
             .unwrap_or(60)
     }
 
-    /// Keep the proof panel in step with the document: when a Lean file is the
-    /// document and the panel is open, ask the Lean server what the goals are
-    /// at the cursor whenever the file or the cursor moved, and take in the
-    /// answer when it has come. Never waits: a slow server leaves the panel as
-    /// it was until it answers.
-    ///
-    /// Answers whether the panel changed.
-    ///
     fn follow_proof(&mut self) -> bool {
         if !self.screen.opened.iter().any(|held| held.id == "record:proof") {
             return false;
@@ -3392,7 +2748,6 @@ impl Editor {
             self.goal_asked = Some(asked);
             return self.refresh_proof(true);
         };
-        // One server per project: a file in another one is another question.
         if self.lean_project.as_ref() != Some(&project) {
             self.lean = None;
             self.lean_error = None;
@@ -3403,7 +2758,6 @@ impl Editor {
             self.lean_project = Some(project);
         }
         if self.lean.is_none() {
-            // Dead or never started: said once, not retried on every key.
             self.goal_asked = Some(asked);
             return self.refresh_proof(true);
         }
@@ -3413,8 +2767,6 @@ impl Editor {
         if let Some(server) = self.lean.as_mut() {
             self.lean_error = server.ask(&file, &text, line, column).err();
         }
-        // A server that cannot be written to is gone; the panel says so and
-        // the next project switch or restart starts another.
         if self.lean_error.is_some() {
             self.lean = None;
         }
@@ -3422,7 +2774,6 @@ impl Editor {
         self.refresh_proof(changed || self.lean_error.is_some())
     }
 
-    /// Put the panel's buffer back in place when what it says changed.
     fn refresh_proof(&mut self, changed: bool) -> bool {
         if !changed {
             return false;
@@ -3434,7 +2785,6 @@ impl Editor {
         true
     }
 
-    /// The proof panel: the goals at the cursor, or why there are none.
     fn proof_buffer(&self) -> Buffer {
         let text = match (&self.lean_error, self.goal.is_empty()) {
             (Some(why), _) => why.clone(),
@@ -3449,18 +2799,11 @@ impl Editor {
         }
     }
 
-    /// Look at the sandbox again, without anyone asking: what the agent has
-    /// changed and said since the last look. The panel is re-produced in place
-    /// when it is open, and nothing is focused or moved.
-    ///
-    /// Answers whether anything a person would see changed, so a frontend
-    /// polling this redraws only when there is something new.
     pub fn tick(&mut self) -> bool {
         self.remember();
         if self.follow_disk() {
             return true;
         }
-        // Counted here, between keys, rather than on one: it reads the tree.
         let mut recounted = self.recount_chips();
         recounted |= self.follow_proof();
         if self.problems_stale.replace(false) {
@@ -3469,18 +2812,13 @@ impl Editor {
         }
         let Some(live) = self.session.clone() else { return recounted };
         let agent = tracelean_core::observe::workspace::snapshot(std::path::Path::new(&live.work));
-        // Against what the copy started with, not the project now: a project
-        // edited since its copy was made is not the agent's work.
         let base = tracelean_core::observe::workcopy::base(&live);
         let pending = tracelean_core::observe::mirror::changed_since(base, self.workspace(), agent.clone());
         let moved = pending != self.pending;
         self.pending = pending;
         self.agent_tree = Some(agent);
         if moved {
-            // The explorer marks what is waiting, and the status line says so
-            // wherever the person is looking.
             self.refresh_views();
-            // Files, as the panel lists them; a changed file is two commands.
             let files: BTreeSet<String> = self.pending.iter().map(touched).collect();
             match files.len() {
                 0 => self.say("sandbox", "nothing is waiting"),
@@ -3502,12 +2840,6 @@ impl Editor {
         }
     }
 
-    /// Take in what something else changed on disk — `git checkout`, another
-    /// editor. A file not edited here is brought up to date, as a step the
-    /// history can undo; a file edited here too keeps the edit, and the status
-    /// line says that saving it overwrites the disk.
-    ///
-    /// Answers whether anything was taken in.
     pub fn follow_disk(&mut self) -> bool {
         let disk = tracelean_core::observe::workspace::snapshot(&self.root);
         if disk == self.saved {
@@ -3526,11 +2858,9 @@ impl Editor {
         }
         let moved: BTreeSet<String> = taken.iter().map(touched).collect();
         if moved.is_empty() && kept.is_empty() {
-            // Nothing a person edits differs; what does is not kept here.
             self.saved = disk;
             return false;
         }
-        // One step, so one Ctrl+Z takes all of it back.
         if !taken.is_empty() {
             if let Err(refusal) = self.push(Command::Batch { commands: taken }) {
                 self.say("could not follow the disk", &format!("{refusal:?}"));
@@ -3556,7 +2886,6 @@ impl Editor {
         true
     }
 
-    /// Make a sandbox and show it.
     fn create_session(&mut self) {
         match tracelean_core::observe::workcopy::create(&self.root, &self.workspace()) {
             Ok(made) => {
@@ -3572,7 +2901,6 @@ impl Editor {
         }
     }
 
-    /// Put the command that enters the sandbox where the frontend can copy it.
     fn copy_command(&mut self) {
         let Some(live) = &self.session else {
             self.say("no sandbox", "make one first");
@@ -3587,7 +2915,6 @@ impl Editor {
         self.say("copied", "paste it into your terminal, then start your agent inside it");
     }
 
-    /// Discard the sandbox and whatever was not accepted from it.
     fn end_session(&mut self) {
         let Some(live) = self.session.take() else {
             self.say("no sandbox", "there is nothing to end");
@@ -3602,7 +2929,6 @@ impl Editor {
         self.reproduce_sandbox();
     }
 
-    /// Re-produce the sandbox panel where it is, if it is open.
     fn reproduce_sandbox(&mut self) {
         if self.screen.opened.iter().any(|b| b.id == "record:sandbox") {
             let fresh = self.sandbox();
@@ -3630,14 +2956,6 @@ impl Editor {
             .collect()
     }
 
-    /// What can be configured, read from the JSON that configures it so the
-    /// list is never a second copy of it: every colour of the theme with its
-    /// value now, each a way to change it (`Space f e` on a row, or a click),
-    /// then where the keys and the languages live.
-    ///
-    /// A buffer like any other, produced from data; what is different is only
-    /// that its rows' actions write the project's override file.
-    ///
     fn definitions_buffer(&self) -> Buffer {
         use tracelean_core::surface::view::{Role, Span};
         let theme = theme::load(&self.root);
@@ -3675,7 +2993,6 @@ impl Editor {
         }
     }
 
-    /// Ask for a setting's new value, starting from the one it has.
     fn ask_to_edit_setting(&mut self, name: &str) {
         let current = theme::load(&self.root)
             .get(name.split('.').next().unwrap_or_default())
@@ -3696,10 +3013,6 @@ impl Editor {
         self.show_question();
     }
 
-    /// Write a setting to the project's override file, and show the list again.
-    /// The window reads the theme on every draw it is told changed, so the
-    /// change is on screen without a restart.
-    ///
     pub fn set_setting(&mut self, name: &str, value: &str) {
         let Some((section, key)) = name.split_once('.') else {
             return self.say("not a setting", name);
@@ -3717,13 +3030,6 @@ impl Editor {
         }
     }
 
-    /// What a report says.
-    ///
-    /// Every report here is a reading of this tree. The ones that would mean
-    /// *running* something — differential testing, shrinking, judging — are the
-    /// exception, and they answer with the command rather than with a result
-    /// nobody produced: this editor starts no processes.
-    ///
     /// @implements ARCH-NO-DRIVING.no_model_call
     fn report(&self, title: &str) -> Vec<Event> {
         match title {
@@ -3755,11 +3061,6 @@ impl Editor {
         }
     }
 
-    /// What each clause is claimed by, and what the lock says it is worth.
-    ///
-    /// The marks past the annotation come from the committed lock, never from
-    /// the tree: an annotation is a claim, and holds nothing more until a
-    /// backend earns it.
     fn evidence(&self) -> Vec<Event> {
         let index = self.index();
         let lock = tracelean_core::trace::lockfile::read(&self.root);
@@ -3789,17 +3090,12 @@ impl Editor {
                 let marks = held.get(&(id.clone(), clause.clone())).copied().unwrap_or(Marks::NONE);
                 let claimed =
                     if roles.is_empty() { "nothing claims it".into() } else { roles.join(" ") };
-                // Each mark in its place, so a proved model with an unchecked
-                // implementation reads A--P rather than vanishing into a minimum.
                 out.push(Event { kind: marks.text(), text: format!("{} — {claimed}", named(id, &clause)) });
             }
         }
         out
     }
 
-    /// Render the index into the lock file and write it where the project keeps
-    /// it, carrying the evidence already recorded through unchanged.
-    ///
     /// @implements REQ-LOCK.evidence_preserved
     fn lock(&self) -> Vec<Event> {
         use tracelean_core::trace::lockfile;
@@ -3832,20 +3128,12 @@ impl Editor {
         }
     }
 
-    /// Assurance and coverage over the refinement graph.
-    ///
-    /// One tree per requirement that refines nothing. Coverage of a requirement
-    /// whose decomposition is open is written marked provisional, because an
-    /// unwritten clause can only lower it.
-    ///
     /// @implements REQ-ROLLUP.open_is_lower_bound
     fn rollup(&self) -> Vec<Event> {
         use tracelean_core::trace::rollup;
         let index = self.index();
         let lock = tracelean_core::trace::lockfile::read(&self.root);
         let held = marks_of(&index, lock.as_ref().map(|l| &l.evidence[..]).unwrap_or(&[]));
-        // The floor is what a clause needs to count as covered: checked by
-        // something that runs, rather than asserted or read.
         let floor = Marks { tested: true, ..Marks::NONE };
 
         let roots: Vec<String> = index
@@ -3867,11 +3155,6 @@ impl Editor {
         out
     }
 
-    /// Which documents were written about what the tree still contains.
-    ///
-    /// *In review* is not an error — it is a document nobody has confirmed
-    /// since the thing it describes moved.
-    ///
     /// @implements REQ-DOCLINK.review_is_not_error
     fn stale(&self) -> Vec<Event> {
         use tracelean_core::trace::doclink::{self, State};
@@ -3903,7 +3186,6 @@ impl Editor {
             .collect()
     }
 
-    /// Which clauses are bound to a model and an implementation, and to what.
     fn bindings(&self) -> Vec<Event> {
         match tracelean_core::drt::config::read(&self.root) {
             Err(error) => vec![Event { kind: "unreadable".into(), text: error }],
@@ -3944,7 +3226,6 @@ impl Editor {
             .collect()
     }
 
-    /// What the checker finds in this tree.
     fn found(&self) -> Vec<tracelean_core::surface::findings_view::Found> {
         use tracelean_core::trace::checker::{check, Policy};
         let index = self.index();
@@ -3959,7 +3240,6 @@ impl Editor {
             .collect()
     }
 
-    /// Every node of the history, with what it was made after and what it did.
     fn points(&self) -> Vec<tracelean_core::surface::history_view::Point> {
         let here = self.tree.current();
         self.tree
@@ -3979,27 +3259,19 @@ impl Editor {
             .collect()
     }
 
-    /// The history as the person has chosen to see it: all of it, the file
-    /// the document shows, or where the work was saved.
     fn history_buffer(&self) -> Buffer {
         let file = self.document_place().map(|(path, _)| path);
         tracelean_core::surface::history_view::history_view(&self.points(), self.history_filter, file.as_deref())
     }
 
-    /// The change made by the node named at `at` in `pane`'s window, if a
-    /// node's name is there — what a pointer resting on it shows.
     pub fn history_preview_at(&self, pane: &str, at: usize) -> Option<Buffer> {
         let buffer = self.buffer_in(pane)?;
         let offset = self.absolute(pane, at);
         let span = buffer.spans.iter().find(|s| s.start <= offset && offset < s.stop && s.actions.iter().any(|a| a == "history.jump"))?;
         let name: String = buffer.text.chars().skip(span.start).take(span.stop - span.start).collect();
-        // The base made no change, so it has nothing to preview.
         self.history_preview(tracelean_core::surface::history_view::named_point(&name)??)
     }
 
-    /// The change node `#node` made, for a pointer resting on it: each file
-    /// it touched, before and after. Nothing moves.
-    ///
     /// @implements REQ-UNDO.hover_shows_change
     pub fn history_preview(&self, node: u64) -> Option<Buffer> {
         let id = tracelean_core::history::tree::NodeId(node);
@@ -4033,10 +3305,6 @@ impl Editor {
             .collect()
     }
 
-    /// What was seen in the working tree and not yet taken in.
-    ///
-    /// One line a change, naming the path, because the path is what a person
-    /// decides about.
     fn observed(&self) -> Vec<Event> {
         if self.pending.is_empty() {
             return vec![Event {
@@ -4069,14 +3337,8 @@ impl Editor {
     }
 
     fn travel(&mut self, move_: Move) {
-        // Whether the history moved is read off where it is, before and after.
-        // `undo` answers with the node it arrived at, and undoing the very first
-        // change arrives at no node at all — which is still a move, and was
-        // reported as "nowhere to go" while the text quietly changed.
         let before = self.tree.current();
         self.anchor = None;
-        // A run of typing is one step back and one forward, as in any editor;
-        // the history still holds each key, which the history panel shows.
         let command = |tree: &Tree, id: Option<tracelean_core::history::tree::NodeId>| {
             id.and_then(|id| tree.node(id)).map(|n| n.command.clone())
         };
@@ -4091,7 +3353,6 @@ impl Editor {
                     left = Some(here);
                     self.tree.undo();
                 }
-                // The cursor goes to where the change was taken back.
                 match left {
                     Some(Command::Insert { file, offset, .. }) if self.editing() == Some(file.clone()) => {
                         self.offset = self.chars_before(&file, offset);
@@ -4145,8 +3406,6 @@ impl Editor {
         }
     }
 
-    /// Move to the next sibling of where we are: another branch of the same
-    /// parent, which is what a tree has and a stack does not.
     fn branch(&mut self) -> bool {
         let Some(here) = self.tree.current() else { return false };
         let Some(node) = self.tree.node(here) else { return false };
@@ -4177,8 +3436,6 @@ impl Editor {
                     .get(line)
                     .cloned()
                     .unwrap_or_default();
-                // A report's row reads `kind: text`; what is worth copying is
-                // the text — a command, a path.
                 let text = match (self.buffer().kind, text.split_once(": ")) {
                     (BufferKind::Record { .. }, Some((_, rest))) => rest.to_string(),
                     _ => text,
@@ -4196,8 +3453,6 @@ impl Editor {
                 if !self.context_parts.remove(&part) {
                     self.context_parts.insert(part);
                 }
-                // Drawn again where it is, the cursor on the switch it was on,
-                // so several parts can be chosen in a row.
                 if let BufferKind::Record { title } = self.buffer().kind {
                     let at = self.offset;
                     self.perform(Intent::Display { what: BufferKind::Record { title } });
@@ -4244,8 +3499,6 @@ impl Editor {
             }
             Watch::DesignOpenOnly => {
                 self.open_only = !self.open_only;
-                // The index is filtered too; asked from there, it is redrawn
-                // where it is rather than replaced by the graph.
                 let index = BufferKind::Menu { title: "requirements".into() };
                 match self.buffer().kind == index {
                     true => self.perform(Intent::Display { what: index }),
@@ -4255,9 +3508,6 @@ impl Editor {
         }
     }
 
-    /// The design drawn again with what is unfolded now: in place when it is
-    /// what the cursor is in, the cursor on the row it was on — rows unfold
-    /// below it, never above — and shown when it was not.
     fn redraw_design(&mut self) {
         let design = BufferKind::Menu { title: "design".into() };
         let here = self.buffer().kind == design;
@@ -4268,8 +3518,6 @@ impl Editor {
         }
     }
 
-    /// The trace of the file the document shows: each claim it makes, and
-    /// everything else that claims the same clause.
     fn file_trace(&self) -> Buffer {
         use tracelean_core::surface::file_trace::{file_trace_view, Entry};
         use tracelean_core::surface::requirement_view::Claim;
@@ -4289,8 +3537,6 @@ impl Editor {
             line: link.line,
             symbol: symbol_of(&link.anchor),
         };
-        // A requirement's own document: each clause, and everything in the
-        // tree that claims it — where the requirement is met, read from it.
         if let Some(requirement) = index.requirements.values().find(|r| r.file == path) {
             let text = self
                 .screen
@@ -4356,9 +3602,6 @@ impl Editor {
         file_trace_view(&path, &entries, width)
     }
 
-    /// What an agent needs to change a requirement or clause, with the parts
-    /// the person has chosen marked.
-    ///
     /// @implements REQ-CONTEXT.copied_not_sent
     fn agent_context(&self, target: &str) -> Buffer {
         use tracelean_core::surface::context::{context_view, gather};
@@ -4371,20 +3614,9 @@ impl Editor {
         }
     }
 
-    /// Read the working tree and record how it differs from what the editor
-    /// holds.
-    ///
-    /// This is the whole of "watching": no agent is started, no process is
-    /// spawned, no model is called. Somebody else ran something, and this looks
-    /// at what it left. The difference is derived by the mirror, so protected
-    /// paths are excluded and the change list is the same one a differential
-    /// test checks.
-    ///
     /// @implements ARCH-NO-DRIVING.no_model_call
     /// @implements REQ-MIRROR.protected_excluded
     fn observe(&mut self) {
-        // With a sandbox, the agent's copy is what is looked at, and the panel
-        // that shows its changes is where they are listed.
         if self.session.is_some() {
             self.tick();
             let seen = self.pending.len();
@@ -4411,11 +3643,6 @@ impl Editor {
         self.perform(Intent::Display { what: BufferKind::Record { title: "observed".into() } });
     }
 
-    /// Take the observed changes into the history.
-    ///
-    /// Through `tree.push`, like every other change, so that accepting an
-    /// agent's work is undoable for the same reason typing is.
-    ///
     /// @implements REQ-ACT.edits_are_commands
     fn accept(&mut self, command: Command) {
         let taken = match command {
@@ -4426,7 +3653,6 @@ impl Editor {
             self.say("nothing to accept", "nothing has been observed");
             return;
         }
-        // The intent carried every waiting change, so none is left waiting.
         self.pending.clear();
         let count = taken.len();
         for command in taken {
@@ -4436,8 +3662,6 @@ impl Editor {
             }
         }
         if self.session.is_some() {
-            // The agent wrote into a copy, so the real tree has not got the
-            // change yet: accepting is what puts it there, deletions included.
             let workspace = self.workspace();
             if let Err(error) = tracelean_core::observe::workcopy::sync(&self.root, &workspace) {
                 self.say("could not write the accepted changes", &error.to_string());
@@ -4451,8 +3675,6 @@ impl Editor {
         self.reproduce_sandbox();
     }
 
-    /// Take in the waiting change to one file, and only that.
-    ///
     /// @implements REQ-ACT.edits_are_commands
     fn accept_file(&mut self, path: &str, command: Command) {
         let taken = match command {
@@ -4488,7 +3710,6 @@ impl Editor {
         self.reproduce_sandbox();
     }
 
-    /// Take the waiting change to one file back out of the sandbox.
     fn reject_file(&mut self, path: &str) {
         let before = self.pending.len();
         self.pending.retain(|c| touched(c) != path);
@@ -4507,19 +3728,11 @@ impl Editor {
         self.reproduce_sandbox();
     }
 
-    /// Make one file under `dir` what the editor holds: written, or removed
-    /// when the editor holds no such file.
     fn write_one(&self, dir: &Path, path: &str) -> std::io::Result<()> {
         let held = self.workspace().files.get(path).cloned();
         tracelean_core::observe::workcopy::put(dir, path, held.as_deref())
     }
 
-    /// Drop the observed changes without taking them in.
-    ///
-    /// It does not touch the working tree. Rejecting means the editor will not
-    /// carry the change, not that the file somebody else wrote is deleted —
-    /// deleting another process's work on a keystroke is not a decision this
-    /// editor makes for anybody.
     fn reject(&mut self) {
         if self.pending.is_empty() {
             self.say("nothing to reject", "nothing has been observed");
@@ -4527,9 +3740,6 @@ impl Editor {
         }
         let count = self.pending.len();
         self.pending.clear();
-        // In a sandbox the copy is the editor's to keep, so rejecting puts it
-        // back to what the editor holds — otherwise the next look would find
-        // the same changes again. The real tree was never touched.
         if let Some(live) = &self.session {
             let workspace = self.workspace();
             let work = std::path::PathBuf::from(&live.work);
@@ -4548,13 +3758,11 @@ impl Editor {
         );
     }
 
-    /// Write the workspace out, and remember what was written.
     fn persist(&mut self) {
         let workspace = self.workspace();
         match tracelean_core::observe::workspace::write_into(&workspace, &self.root) {
             Ok(()) => {
                 self.saved = workspace;
-                // The history's `Saved` view shows where this happened.
                 if let Some(here) = self.tree.current() {
                     self.saved_at.insert(here.0);
                 }
@@ -4575,12 +3783,6 @@ impl Editor {
     }
 }
 
-/// A report this editor will not produce, and the command that does.
-///
-/// Producing it would mean starting a process, and the one thing this editor
-/// never does is drive something. Naming the command is more use than a blank
-/// page and more honest than a result nobody computed.
-///
 /// @implements ARCH-HONEST.named_findings
 fn elsewhere(what: &str, command: &str) -> Vec<Event> {
     vec![
@@ -4592,8 +3794,6 @@ fn elsewhere(what: &str, command: &str) -> Vec<Event> {
     ]
 }
 
-/// The changed file a row of the sandbox panel lists: the text of the row's
-/// span that reviews it.
 fn changed_on_row(buffer: &Buffer, offset: usize) -> Option<String> {
     let chars: Vec<char> = buffer.text.chars().collect();
     let start = chars[..offset.min(chars.len())].iter().rposition(|c| *c == '\n').map_or(0, |n| n + 1);
@@ -4605,8 +3805,6 @@ fn changed_on_row(buffer: &Buffer, offset: usize) -> Option<String> {
         .map(|s| chars[s.start..s.stop].iter().collect())
 }
 
-/// How a line is commented out in a file of this kind; None for text with no
-/// line comment.
 fn comment_marker(path: &str) -> Option<&'static str> {
     match Path::new(path).extension().and_then(|e| e.to_str()).unwrap_or("") {
         "lean" | "sql" | "hs" => Some("--"),
@@ -4616,11 +3814,6 @@ fn comment_marker(path: &str) -> Option<&'static str> {
     }
 }
 
-/// `command` with its offsets turned from characters into bytes of `text`.
-///
-/// A batch is converted against the same text for every part, which is right
-/// for the batches the editor makes: each part's offset is at or before the
-/// edits that precede it, so the text in front of it is unchanged.
 fn in_bytes(text: &str, command: Command) -> Command {
     let bytes = |chars: usize| text.char_indices().nth(chars).map_or(text.len(), |(at, _)| at);
     match command {
@@ -4633,9 +3826,6 @@ fn in_bytes(text: &str, command: Command) -> Command {
     }
 }
 
-/// Whether `next` carries on the typing `prev` did, so undo takes both at
-/// once: a character typed right after the last one, up to the start of the
-/// next word or line, or a Backspace right before the last one.
 fn continues(prev: &Command, next: &Command) -> bool {
     match (prev, next) {
         (
@@ -4655,7 +3845,6 @@ fn continues(prev: &Command, next: &Command) -> bool {
     }
 }
 
-/// A clause, written the way a binding and a report both spell it.
 fn named(req_id: &str, clause: &Option<String>) -> String {
     match clause {
         Some(clause) => format!("{req_id}.{clause}"),
@@ -4663,8 +3852,6 @@ fn named(req_id: &str, clause: &Option<String>) -> String {
     }
 }
 
-/// `layout` with every split's weights restated as the cells each part takes
-/// in `rect` — the same panes in the same places, in units of one cell.
 fn in_cells(rect: Rect, layout: Layout) -> Layout {
     let Layout::Split { axis, parts } = layout else { return layout };
     let placed = place(rect, Layout::Split { axis, parts: parts.clone() });
@@ -4689,7 +3876,6 @@ fn in_cells(rect: Rect, layout: Layout) -> Layout {
     Layout::Split { axis, parts }
 }
 
-/// The one file a command touches, or `None` for a batch spanning several.
 fn file_of(command: &Command) -> Option<String> {
     match command {
         Command::Insert { file, .. } | Command::Delete { file, .. } => Some(file.clone()),
@@ -4705,7 +3891,6 @@ fn file_of(command: &Command) -> Option<String> {
     }
 }
 
-/// The item an annotation sits on, by name, when it sits on one.
 fn symbol_of(anchor: &tracelean_core::trace::anchor::Anchor) -> Option<String> {
     match &anchor.kind {
         tracelean_core::trace::anchor::AnchorKind::Decl { symbol_path } => Some(symbol_path.clone()),
@@ -4713,13 +3898,6 @@ fn symbol_of(anchor: &tracelean_core::trace::anchor::Anchor) -> Option<String> {
     }
 }
 
-/// The marks of every clause of every requirement: annotated when something in
-/// the tree claims it, the rest from the evidence the lock file carries.
-///
-/// A record can never count for more than its backend supports, so this goes
-/// through the same functions the rest of the project does rather than reading
-/// `level` directly.
-///
 /// @implements REQ-EVID.mark_per_bond
 /// @implements REQ-EVID.judgement_caps
 /// @implements REQ-EVID.structural_not_applicable
@@ -4743,8 +3921,6 @@ fn marks_of(
                 index.links.iter().filter(|link| link.req_id == key.0 && link.clause == key.1).collect();
             let records = collected.remove(&key).unwrap_or_default();
             let held = marks(records, !claims.is_empty());
-            // Checked only by reading the tree: there is no model to test the
-            // code against or to prove anything of.
             let by_reading = claims.iter().any(|link| link.is_structural())
                 && !claims.iter().any(|link| link.role == tracelean_core::trace::annotation::Role::Models);
             out.insert(key, if by_reading { tracelean_core::evidence::structural(held) } else { held });
@@ -4753,8 +3929,6 @@ fn marks_of(
     out
 }
 
-/// A roll-up tree, as lines. Depth is indentation, because a tree drawn as a
-/// tree is a tree the frontend would have to know about.
 fn flatten(node: &tracelean_core::trace::rollup::RollUp, depth: usize, out: &mut Vec<Event>) {
     out.push(Event {
         kind: node.marks.text(),
@@ -4770,15 +3944,6 @@ fn flatten(node: &tracelean_core::trace::rollup::RollUp, depth: usize, out: &mut
     }
 }
 
-/// Where the declarations are in a file, so that a reader can ask what evidence
-/// each one carries.
-///
-/// A file the grammar cannot read is marked nowhere rather than marked wrongly.
-/// The marks a file is shown with: its tokens, so it is syntax highlighted.
-///
-/// Declarations used to be marked whole, as headings — every function body one
-/// purple block — and a buffer's spans cannot overlap, so a mark that size left
-/// no room to say what was inside it.
 fn marks_in(path: &str, text: &str) -> Vec<make::Mark> {
     let extension = Path::new(path).extension().and_then(|e| e.to_str());
     if extension == Some("md") {

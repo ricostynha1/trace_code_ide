@@ -1,12 +1,3 @@
-//! The two conformance runners, checked by reading what the generator writes.
-//!
-//! None of these clauses is a function from data to data. "The runner is a
-//! compiled crate", "generation touches nothing the project owns", "the binding
-//! describes a call and nothing more" — each is a property of the tree and of
-//! the generator's output, so each is checked by generating into a scratch
-//! directory and reading the result. That is what `@structural` records
-//! (ADR-0012).
-
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
@@ -25,7 +16,6 @@ fn scratch(name: &str) -> PathBuf {
     path
 }
 
-/// Every file under a directory, relative to it.
 fn files_under(root: &Path) -> Vec<String> {
     let mut out = Vec::new();
     let mut stack = vec![root.to_path_buf()];
@@ -44,9 +34,6 @@ fn files_under(root: &Path) -> Vec<String> {
     out
 }
 
-/// The Rust side is a generated crate with a path dependency, written only
-/// under the cache directory.
-///
 /// @tests REQ-DRT-RUST.generated
 /// @tests REQ-DRT-RUST.project_untouched
 /// @tests REQ-DRT-RUST.path_dependency
@@ -83,7 +70,6 @@ fn the_rust_runner_is_a_generated_crate_under_the_cache() {
     );
     rust_runner::materialize(&out, &[entry.clone()], &deps).expect("generated");
 
-    // Everything written sits under the cache directory, and it is a crate.
     let written = files_under(&out);
     assert!(
         written.iter().all(|f| f.starts_with(".tracelean")),
@@ -92,8 +78,6 @@ fn the_rust_runner_is_a_generated_crate_under_the_cache() {
     assert!(written.iter().any(|f| f.ends_with("Cargo.toml")), "no manifest: {written:?}");
     assert!(written.iter().any(|f| f.ends_with("main.rs")), "no source: {written:?}");
 
-    // A path dependency, not a published one: the runner calls the library that
-    // is in the tree, which is the only thing a differential test can be about.
     let manifest =
         std::fs::read_to_string(rust_runner::package_dir(&out).join("Cargo.toml")).unwrap();
     assert!(
@@ -101,9 +85,6 @@ fn the_rust_runner_is_a_generated_crate_under_the_cache() {
         "the generated crate does not reach the implementation by path:\n{manifest}"
     );
 
-    // Generating again over the same directory reproduces it exactly. A stale
-    // runner answering with last week's implementation is the failure mode
-    // `rewritten_when_stale` exists for, and it is invisible: the run succeeds.
     let before = std::fs::read_to_string(rust_runner::package_dir(&out).join("src/main.rs")).unwrap();
     std::fs::write(rust_runner::package_dir(&out).join("src/main.rs"), "fn main() {}\n").unwrap();
     rust_runner::materialize(&out, &[entry], &deps).expect("regenerated");
@@ -113,9 +94,6 @@ fn the_rust_runner_is_a_generated_crate_under_the_cache() {
     let _ = std::fs::remove_dir_all(&out);
 }
 
-/// The Lean side is a generated package that is built, and a missing toolchain
-/// is its own explained state rather than a failure of the model.
-///
 /// @tests REQ-DRT-LEAN.generated
 /// @tests REQ-DRT-LEAN.project_untouched
 /// @tests REQ-DRT-LEAN.toolchain_explained
@@ -152,15 +130,11 @@ fn the_lean_runner_is_a_generated_package_that_is_compiled() {
     );
     assert!(written.iter().any(|f| f.ends_with("lakefile.lean")), "no package: {written:?}");
 
-    // The project's own package is untouched: nothing under `formal/` is in
-    // the list of files generation wrote.
     assert!(
         !written.iter().any(|f| f.contains("formal")),
         "generation wrote into the project's own Lean package: {written:?}"
     );
 
-    // Compiled rather than interpreted: the package declares an executable,
-    // which is what makes a case cost microseconds instead of milliseconds.
     let lakefile =
         std::fs::read_to_string(lean_runner::package_dir(&out).join("lakefile.lean")).unwrap();
     assert!(
@@ -172,16 +146,10 @@ fn the_lean_runner_is_a_generated_package_that_is_compiled() {
         "the generated package does not require the model package:\n{lakefile}"
     );
 
-    // One declared encoding convention, spoken by the generated dispatch:
-    // `ToJson`/`FromJson` throughout, which is what the schema grammar
-    // describes and what every other suite in this tree exercises.
     let main = std::fs::read_to_string(lean_runner::package_dir(&out).join("Main.lean")).unwrap();
     assert!(main.contains("toJson"), "the generated runner does not use the declared encoding");
     assert!(main.contains("fromJson?"), "the generated runner does not use the declared encoding");
 
-    // And a missing toolchain is a named state, explained, rather than a
-    // failure of the model: asked of a PATH with nothing on it, the answer
-    // names the tool and how to get it.
     let missing = lean_runner::toolchain_on(std::ffi::OsStr::new("")).expect_err("nothing on an empty PATH");
     assert!(missing.contains("`lean`") && missing.contains("elan"), "explains nothing: {missing}");
     let empty = scratch("no-lean");
@@ -192,13 +160,6 @@ fn the_lean_runner_is_a_generated_package_that_is_compiled() {
     let _ = std::fs::remove_dir_all(&out);
 }
 
-/// A binding names a call and nothing else.
-///
-/// The argument against an adapter is not duplication. It is that any code
-/// between the implementation and the comparator is code the differential test
-/// is testing instead of the implementation — and it is code nobody reviews,
-/// because it looks like plumbing.
-///
 /// @tests REQ-DRT-BIND.no_adapter
 /// @tests REQ-DRT-BIND.call_only
 /// @tests REQ-DRT-BIND.rename_only
@@ -213,8 +174,6 @@ fn a_binding_describes_a_call_and_nothing_more() {
     let text = std::fs::read_to_string(root.join(".tracelean/drt.json")).expect("drt.json");
     let config: serde_json::Value = serde_json::from_str(&text).expect("readable JSON");
 
-    // The vocabulary is closed. A binding that could carry a `transform`, a
-    // `before`, or a snippet of code would be an adapter with a nicer name.
     const BINDING_KEYS: &[&str] = &[
         "req_id",
         "clause",
@@ -223,13 +182,7 @@ fn a_binding_describes_a_call_and_nothing_more() {
         "model",
         "implementation",
         "also_implemented_by",
-        // Coverage floors qualify the run without touching it: a name and a
-        // number, never a predicate and never code. The predicate that decides
-        // whether a generated case reached a situation stays in the suite,
-        // where it can be read — this file only says how often it must.
         "floors",
-        // Waivers likewise: names of classes or lines a run is excused from
-        // reaching, each with the reason a person can argue with. Never code.
         "waive",
     ];
     const WAIVER_KEYS: &[&str] = &["situations", "reason"];
@@ -261,8 +214,6 @@ fn a_binding_describes_a_call_and_nothing_more() {
         for key in binding["model"].as_object().expect("a model").keys() {
             assert!(MODEL_KEYS.contains(&key.as_str()), "a model spec carries `{key}`");
         }
-        // A floor is a situation and a minimum, and a floor with no minimum is
-        // not a declaration — it is a situation somebody meant to think about.
         for floor in binding["floors"].as_array().unwrap_or(&Vec::new()) {
             let floor = floor.as_object().expect("a floor is an object");
             for key in floor.keys() {
@@ -274,8 +225,6 @@ fn a_binding_describes_a_call_and_nothing_more() {
             );
             assert!(floor.get("atLeast").and_then(|n| n.as_u64()).is_some(), "a floor has no minimum");
         }
-        // Every implementation of a clause is held to the same shape: the
-        // second one is not a looser kind of binding than the first.
         let mut implementations = vec![&binding["implementation"]];
         if let Some(more) = binding["also_implemented_by"].as_array() {
             implementations.extend(more.iter());
@@ -291,8 +240,6 @@ fn a_binding_describes_a_call_and_nothing_more() {
                 "`{language}` is not a language a runner can be generated for"
             );
 
-            // A parameter map renames. Both sides of every entry are bare
-            // identifiers, so there is nowhere for a computation to hide.
             let Some(params) = implementation.get("params").and_then(|p| p.as_object()) else {
                 continue;
             };
@@ -309,9 +256,6 @@ fn a_binding_describes_a_call_and_nothing_more() {
         }
     }
 
-    // And the generated dispatch calls the entry point directly: deserialise,
-    // call, serialise. Anything else between the two would be the adapter this
-    // clause forbids.
     let entry = rust_runner::resolve(
         &root,
         &Binding {
@@ -338,16 +282,6 @@ fn a_binding_describes_a_call_and_nothing_more() {
     );
 }
 
-/// Shrinking does not stop while a strictly smaller diverging case is reachable
-/// by its reduction steps, and a generated crate that fails to compile is
-/// reported with the compiler's own message.
-///
-/// Both are properties of a loop that drives something else, so neither is a
-/// function from data to data. What is checked is the loop's shape: every
-/// reduction step is strictly smaller, so the loop can neither stop while a
-/// smaller diverging case is still reachable nor run forever; and a build
-/// failure carries what the compiler said rather than a summary of it.
-///
 /// @tests REQ-DRT-GEN.shrink_minimal
 /// @tests REQ-DRT-RUST.build_error_explained
 /// @structural REQ-DRT-GEN.shrink_minimal reason="a property of the shrink loop, which stops only when no candidate diverges; the function under it is the reduction step, and what matters is that every step is strictly smaller"
@@ -357,9 +291,6 @@ fn shrinking_goes_all_the_way_down_and_a_failed_build_says_why() {
     use tracelean_core::drt::gen;
     use tracelean_core::drt::schema::Schema;
 
-    /// How much there is to shrink away. Nothing is reducible to `null`, an
-    /// element costs something even when it is empty, and `false` is below
-    /// `true` -- which is the order the reduction steps themselves follow.
     fn size(value: &serde_json::Value) -> usize {
         match value {
             serde_json::Value::Null => 0,
@@ -415,9 +346,6 @@ fn shrinking_goes_all_the_way_down_and_a_failed_build_says_why() {
     assert!(reductions > 1_000, "only {reductions} reduction steps were checked");
     assert!(dead_ends > 100, "only {dead_ends} values were already minimal");
 
-    // A generated crate that does not compile reports what the compiler said.
-    // The binding is what does not typecheck, and a summary of the error would
-    // leave the person with nothing to act on.
     let out = scratch("bad-build");
     let dir = rust_runner::materialize(&out, &[], &BTreeMap::new()).expect("generated");
     std::fs::write(dir.join("src").join("main.rs"), "fn main() { let _: u32 = \"no\"; }\n")

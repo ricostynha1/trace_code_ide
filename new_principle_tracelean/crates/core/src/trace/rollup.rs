@@ -1,8 +1,3 @@
-//! Roll-up: assurance and coverage aggregated over the refinement graph.
-//!
-//! Where a wrong number does the most damage, because a percentage is the one
-//! output people quote without reading what produced it.
-
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -11,50 +6,31 @@ use crate::evidence::Marks;
 use super::index::Index;
 use super::requirement::Decomposition;
 
-/// A figure, and whether it may be presented as exact.
-///
-/// A roll-up over an unclaimed decomposition is *provisional*: a clause not yet
-/// written carries no evidence, so writing it can only lower the figure. A
-/// caller cannot read the value without also reading whether it is exact.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Figure {
-    /// Clauses meeting the floor, and clauses counted. Kept as a fraction
-    /// rather than a number: a percentage is a rendering, and two languages
-    /// rounding one differently would be a divergence about nothing.
     pub met: u64,
     pub total: u64,
     pub exact: bool,
 }
 
 impl Figure {
-    /// How this should be written down. A provisional figure is never rendered bare.
     pub fn render(&self) -> String {
         render_figure(*self)
     }
 
-    /// A requirement whose decomposition is unclaimed can never read as done.
-    ///
     /// @implements REQ-ROLLUP.never_complete_when_open
     pub fn is_complete(&self) -> bool {
         self.exact && self.total > 0 && self.met == self.total
     }
 }
 
-/// A figure as it is written down.
-///
-/// An open figure is marked provisional, with the direction it can move: a
-/// clause nobody has written yet has no evidence, so it can only bring the
-/// figure down. `≤` says that; `≥` would say the opposite of the truth.
-///
 /// @implements ARCH-HONEST.lower_bound_marked
 /// @drt ARCH-HONEST.lower_bound_marked
 pub fn render_figure(figure: Figure) -> String {
     let percent = if figure.total == 0 {
         0
     } else {
-        // Rounded half away from zero, in integer arithmetic, so the
-        // rendering does not depend on a floating-point mode.
         (figure.met * 200 + figure.total) / (figure.total * 2)
     };
     if figure.exact {
@@ -64,7 +40,6 @@ pub fn render_figure(figure: Figure) -> String {
     }
 }
 
-/// The marks of one node, and of everything under it.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct RollUp {
     pub id: String,
@@ -73,13 +48,6 @@ pub struct RollUp {
     pub children: Vec<RollUp>,
 }
 
-/// Aggregate over children, mark by mark: held only when every part holds it.
-///
-/// A majority invents evidence nothing established; requiring every part is
-/// always a claim each of them makes. With nothing to aggregate, nothing is
-/// held: an empty set would hold every mark vacuously, which is the comfort
-/// `ARCH-HONEST` refuses.
-///
 /// @implements REQ-ROLLUP.every_part_holds
 /// @implements ARCH-HONEST.weakest_link
 /// @drt REQ-ROLLUP.every_part_holds
@@ -91,64 +59,32 @@ pub fn combine(parts: Vec<Marks>) -> Marks {
     }
 }
 
-/// Coverage over files: how many of the files scanned are claimed by at least
-/// one annotation.
-///
-/// A file nothing claims is in the denominator. The alternative — counting only
-/// annotated files — is the figure that rises when somebody deletes an
-/// annotation, and a coverage number that improves when you do less work is
-/// worse than no number at all. Counted per file: unclaimed code inside a
-/// claimed file is line coverage's question (`REQ-LINECOV`), not this one's.
-///
-/// Exact, because the denominator is not a claim anybody made: it is the set of
-/// files that were scanned, which is known.
-///
 /// @implements REQ-ROLLUP.untraced_counted
 /// @implements ARCH-HONEST.untraced_visible
 /// @drt REQ-ROLLUP.untraced_counted
 pub fn file_coverage(scanned: Vec<String>, claimed: Vec<String>) -> Figure {
     let scanned: BTreeSet<String> = scanned.into_iter().collect();
-    // A claim about a file nothing scanned is not coverage of anything, so the
-    // numerator is an intersection rather than a count of claims.
     let claimed: BTreeSet<String> = claimed.into_iter().filter(|f| scanned.contains(f)).collect();
     Figure { met: claimed.len() as u64, total: scanned.len() as u64, exact: true }
 }
 
-/// A requirement reduced to what a roll-up depends on.
-///
-/// The roll-up is a question about a declared graph: which clauses exist, which
-/// were exempted or marked partial, whether the decomposition was claimed
-/// complete, and what refines what. Nothing else a requirement carries changes
-/// the answer.
-///
 /// @implements ARCH-CORE-SHELL.decision_total
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Node {
     pub id: String,
-    /// The author claimed the clauses exhaust the requirement.
     pub complete: bool,
-    /// Clause keys, or one implicit clause when the document declares none.
     pub clauses: Vec<Option<String>>,
-    /// Clauses an exemption removed from the denominator.
     pub exempt: Vec<Option<String>>,
-    /// Clauses claimed only in part: counted, and capped.
     #[serde(default)]
     pub partial_clauses: Vec<Option<String>>,
     pub refines: Vec<String>,
 }
 
-/// What a clause claimed only in part contributes: never tested or proved, so
-/// half of a clause never counts as checked.
 pub fn partial_cap(marks: Marks) -> Marks {
     Marks { tested: false, proved: false, ..marks }
 }
 
-/// The requirements reachable from `root` by following "is refined by", root
-/// included, each once.
-///
-/// A set, not a walk: a requirement two paths reach is in it once, and a cycle
-/// ends when nothing new is found.
 pub fn reach(graph: &BTreeMap<String, Node>, root: &str) -> BTreeSet<String> {
     let mut found = BTreeSet::from([root.to_string()]);
     let mut frontier = vec![root.to_string()];
@@ -162,9 +98,6 @@ pub fn reach(graph: &BTreeMap<String, Node>, root: &str) -> BTreeSet<String> {
     found
 }
 
-/// What one requirement contributes on its own: the marks of each clause that
-/// counts (exempt clauses do not; partial ones are capped), and how many of
-/// them hold every mark the floor asks for.
 fn own(node: &Node, levels: &BTreeMap<(String, Option<String>), Marks>, floor: Marks) -> (Vec<Marks>, u64) {
     let counted: Vec<Marks> = node
         .clauses
@@ -183,15 +116,6 @@ fn own(node: &Node, levels: &BTreeMap<(String, Option<String>), Marks>, floor: M
     (counted, met)
 }
 
-/// Roll a declared graph up, over nothing but the graph.
-///
-/// Each requirement's figures are computed over its own reachable set, each
-/// member counted once: the marks every counted clause holds, and the fraction
-/// of them holding every mark the floor asks for. The figure is exact only when every member
-/// claimed its decomposition complete. Children are shown under every parent
-/// they refine, sorted; a child already on the path is left out, so a cycle
-/// cannot loop.
-///
 /// @implements REQ-ROLLUP.open_is_lower_bound
 /// @implements REQ-ROLLUP.exempt_leaves_denominator
 /// @implements REQ-ROLLUP.partial_capped
@@ -209,8 +133,6 @@ pub fn roll_up(
     root: String,
     floor: Marks,
 ) -> RollUp {
-    // Through maps, so a repeated identifier resolves the way the index
-    // resolves it rather than the way a list happens to be ordered.
     let graph: BTreeMap<String, Node> =
         nodes.into_iter().map(|n| (n.id.clone(), n)).collect();
     let held: BTreeMap<(String, Option<String>), Marks> = held.into_iter().collect();
@@ -234,7 +156,6 @@ pub fn roll_up(
                     exact &= node.complete;
                     all.extend(counted);
                 }
-                // A requirement nobody declared is not a claim anybody made.
                 None => exact = false,
             }
         }
@@ -259,7 +180,6 @@ pub fn roll_up(
     node_of(&graph, &root, &held, floor, &mut Vec::new())
 }
 
-/// The graph an index declares, as `roll_up` reads it.
 pub fn nodes(index: &Index) -> Vec<Node> {
     index
         .requirements
@@ -286,7 +206,6 @@ pub fn nodes(index: &Index) -> Vec<Node> {
         .collect()
 }
 
-/// Roll a requirement and its refinements up into a tree.
 pub fn tree(
     index: &Index,
     id: &str,
@@ -305,8 +224,6 @@ pub fn tree(
 mod tests {
     use super::*;
 
-    /// Marks written as text, for the tests: `AJTP` with dashes, `··` where
-    /// testing and proving do not apply.
     fn m(text: &str) -> Marks {
         let at: Vec<char> = text.chars().collect();
         let held = |i: usize| at[i] != '-' && at[i] != '·';
@@ -318,11 +235,9 @@ mod tests {
     fn aggregation_holds_what_every_part_holds() {
         assert_eq!(combine(vec![m("AJTP"), m("A-TP")]), m("A-TP"));
         assert_eq!(combine(vec![m("AJ--"), m("A--P")]), m("A---"));
-        // Nothing to aggregate holds nothing, not everything.
         assert_eq!(combine(vec![]), Marks::NONE);
     }
 
-    /// A majority would report a mark a part does not hold.
     #[test]
     fn a_mark_held_by_most_is_not_held() {
         let result = combine(vec![m("AJTP"), m("AJTP"), m("AJT-")]);
@@ -358,9 +273,6 @@ mod tests {
         ((id.into(), Some(clause.into())), m(marks))
     }
 
-    /// The diamond: B and C refine A, D refines both. A walk sharing one
-    /// visited set across siblings put D under B only, so C read tested while D was not.
-    ///
     /// @tests REQ-ROLLUP.counted_once
     /// @tests REQ-ROLLUP.deterministic_order
     /// @tests ARCH-HONEST.weakest_link
@@ -387,8 +299,6 @@ mod tests {
         }
     }
 
-    /// A cycle ends, and every member of it sees the others.
-    ///
     /// @tests REQ-ROLLUP.counted_once
     #[test]
     fn a_cycle_ends_and_counts_each_member_once() {
@@ -401,9 +311,6 @@ mod tests {
         assert!(rolled.children[0].children.is_empty(), "the walk went round the cycle");
     }
 
-    /// An exempt clause leaves both the denominator and the marks; a partial
-    /// one stays and never counts as tested or proved.
-    ///
     /// @tests REQ-ROLLUP.exempt_leaves_denominator
     /// @tests REQ-ROLLUP.partial_capped
     #[test]

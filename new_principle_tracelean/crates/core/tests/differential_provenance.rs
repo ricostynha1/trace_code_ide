@@ -1,13 +1,3 @@
-//! "Who wrote this?", checked against the model.
-//!
-//! The answer is computed by inverting the recorded edits, so it is exact —
-//! and being exact is the only reason to trust it. What makes this worth
-//! generating rather than writing by hand is that the interesting positions are
-//! boundaries: the byte just before an insertion, the last byte inside it, the
-//! first byte after it, and the same three across a batch and a rename. Those
-//! are precisely the ones a hand-written suite gets wrong in the same direction
-//! as the code.
-
 mod harness;
 
 use std::collections::BTreeMap;
@@ -55,8 +45,6 @@ fn simple_command() -> Schema {
     Schema::Enum { variants }
 }
 
-/// One level of batching — enough for the backward map's reverse reading and
-/// for a rename inside a batch, which is the case the flat map cannot reach.
 fn command() -> Schema {
     let Schema::Enum { mut variants } = simple_command() else { unreachable!() };
     variants.insert(
@@ -103,8 +91,6 @@ fn input_schema() -> Schema {
         ),
         ("script", Schema::List { inner: Box::new(step()), max_len: Some(8) }),
         ("file", path_name()),
-        // Small, so positions land on the boundaries that matter rather than
-        // always past the end of the text.
         ("position", Schema::Nat { max: Some(5), edges: vec![0] }),
     ])
 }
@@ -144,17 +130,11 @@ fn model_and_implementation_agree_on_where_text_came_from() {
     )
     .expect("both runners answer");
 
-    // The agreeing half of what this binding needs; the coverage half comes
-    // from the generation test, and whichever lands second writes the record.
     support::agreed(&result);
 
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
-/// Both answers must occur, or agreement says nothing: a run where every
-/// position came back `Base` would pass without exercising the backward map at
-/// all.
-///
 /// @tests REQ-DRT-COVER.law_coverage
 #[test]
 fn generation_reaches_both_a_written_position_and_an_inherited_one() {

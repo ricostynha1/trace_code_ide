@@ -1,34 +1,16 @@
-//! The human judge.
-//!
-//! Nothing binds English to a formal model by execution — there is no oracle
-//! for prose. Every other bond is checked by running something; this one cannot
-//! be, which is why it is graded below them and why the decision is a person's.
-//!
-//! There is no network code in this module, and none anywhere in this project.
-
 use serde::{Deserialize, Serialize};
 
 use crate::evidence::{Bond, Level};
 use crate::trace::record::{Detail, Evidence, Key};
 
-/// What a judge decided.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum Verdict {
-    /// The model says what the clause says.
     Agrees,
-    /// It does not, and the difference matters.
     Drift,
-    /// The clause cannot be modelled as written.
     Unmodelable,
 }
 
-/// The material a judgement is made from.
-///
-/// A divergence found by differential testing is presented alongside, because
-/// a model that disagrees with the code is a fact the judge needs before
-/// deciding whether it agrees with the requirement.
-///
 /// @implements REQ-JUDGE.divergence_presented
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -37,25 +19,17 @@ pub struct Material {
     pub clause: Option<String>,
     pub clause_text: String,
     pub model_source: String,
-    /// What the requirement hashed to when this was assembled.
     pub requirement_hash: String,
-    /// What the model hashed to when this was assembled.
     pub model_hash: String,
-    /// A disagreement between model and implementation, if one is known.
     pub divergence: Option<String>,
 }
 
-/// A decision, attributable to the person who made it.
-///
 /// @implements REQ-JUDGE.human_decides
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Judgement {
     pub verdict: Verdict,
-    /// Who decided. A judgement is attributable or it is not a judgement.
     pub judged_by: String,
-    /// The listed person who authorised `judged_by`, when `judged_by` is a
-    /// delegate rather than a person (ADR-0015).
     #[serde(default)]
     pub delegated_by: Option<String>,
     pub note: Option<String>,
@@ -63,21 +37,12 @@ pub struct Judgement {
     pub model_hash: String,
 }
 
-/// Who may judge on a project: `.tracelean/judges.json`.
-///
-/// ```json
-/// {"people": [{"name": "ana", "delegatesTo": ["claude-review"]}]}
-/// ```
-///
-/// A person judges in their own name. A delegate judges only in the name of a
-/// person who lists them, and the record keeps both names.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Judges {
     pub people: Vec<Person>,
 }
 
-/// One person who may judge, and whom they authorise to judge for them.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Person {
@@ -86,33 +51,21 @@ pub struct Person {
     pub delegates_to: Vec<String>,
 }
 
-/// Read a project's judges file.
 pub fn parse_judges(text: &str) -> Result<Judges, String> {
     serde_json::from_str(text).map_err(|e| format!("judges.json is not readable: {e}"))
 }
 
-/// Whether a judge may record a verdict, and in whose name.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", rename_all_fields = "camelCase")]
 pub enum Authority {
-    /// Accepted; the person who delegated, if anyone did.
     Accepted { delegated_by: Option<String> },
-    /// Refused, and what would authorise it.
     Refused { reason: String },
 }
 
-/// Lean's `Char.isWhitespace`, so the two sides agree on what a blank name is.
 fn blank(name: &str) -> bool {
     name.chars().all(|c| matches!(c, ' ' | '\t' | '\r' | '\n'))
 }
 
-/// Who may judge.
-///
-/// A blank name is refused whatever the project says. Without a judges file
-/// every name is taken at its word (the record is then attributed to a name,
-/// not to a listed person). With one, a listed person judges in their own
-/// name, and anyone else needs a listed person who delegates to them.
-///
 /// @implements REQ-JUDGE.human_decides
 pub fn authority(judges: &Option<Judges>, judged_by: &str, delegated_by: &Option<String>) -> Authority {
     if blank(judged_by) {
@@ -150,12 +103,6 @@ pub fn authority(judges: &Option<Judges>, judged_by: &str, delegated_by: &Option
     }
 }
 
-/// A change a judgement suggests, which nothing applies automatically.
-///
-/// `Unmodelable` produces a proposal, never a mutation: the judge is saying the
-/// clause cannot be formalised as written, and rewriting somebody's requirement
-/// on that basis is not a conclusion a tool gets to draw.
-///
 /// @implements REQ-JUDGE.proposal_not_mutation
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -165,31 +112,17 @@ pub struct Proposal {
     pub suggestion: String,
 }
 
-/// What recording a judgement produced.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum Outcome {
-    /// Agreement: evidence at the judgement level and no higher.
     Recorded { evidence: Box<Evidence> },
-    /// Drift: recorded at L1, so it is shown and goes stale like any record.
     Drifted { evidence: Box<Evidence> },
-    /// Unmodelable: recorded at L1, and a proposal for a person to act on.
     Proposed { evidence: Box<Evidence>, proposal: Proposal },
-    /// The judge may not judge here; nothing is recorded.
     Refused { reason: String },
 }
 
 pub const PROMPT_VERSION: &str = "1";
 
-/// Record a judgement.
-///
-/// Every verdict a judge may make is recorded, in the one slot a clause has for
-/// its judgement: agreement at the judgement level and never further — a
-/// reading is not an execution, and the most fallible bond in the system must
-/// not be able to produce its most confident output — and drift or
-/// `unmodelable` at L1, which raises nothing but is shown, and goes stale when
-/// the clause or the model it was about changes.
-///
 /// @implements REQ-JUDGE.caps_at_judgement
 /// @implements REQ-JUDGE.human_decides
 /// @implements REQ-JUDGE.drift_recorded
@@ -209,8 +142,6 @@ pub fn record(
         Authority::Accepted { delegated_by } => delegated_by,
         Authority::Refused { reason } => return Outcome::Refused { reason },
     };
-    // The ceiling is enforced by the record itself; the level here is what the
-    // verdict says, never more than a judgement can.
     let (verdict, level) = match judgement.verdict {
         Verdict::Agrees => ("agrees", Level::L2),
         Verdict::Drift => ("drift", Level::L1),
@@ -231,8 +162,6 @@ pub fn record(
             note: judgement.note.clone(),
         },
         link_hash,
-        // What the judgement was about. Changing either half means nobody has
-        // judged the pair that now exists.
         inputs: vec![
             ("requirement".into(), judgement.requirement_hash),
             ("model".into(), judgement.model_hash),
@@ -254,27 +183,18 @@ pub fn record(
     }
 }
 
-/// Whether a judgement still applies to the material in front of us.
-///
 /// @implements REQ-JUDGE.invalidated_by_change
 pub fn still_applies(judgement: &Judgement, material: &Material) -> bool {
     judgement.requirement_hash == material.requirement_hash
         && judgement.model_hash == material.model_hash
 }
 
-/// `still_applies`, in the shape the conformance protocol exchanges.
-///
 /// @implements REQ-JUDGE.invalidated_by_change
 /// @drt REQ-JUDGE.invalidated_by_change
 pub fn still_applies_to(judgement: Judgement, material: Material) -> bool {
     still_applies(&judgement, &material)
 }
 
-/// The prompt a person may carry to a tool of their choosing.
-///
-/// Exported, never sent. Whatever comes back is advice, and the decision the
-/// person then records is their own.
-///
 /// @implements REQ-JUDGE.prompt_exported
 /// @implements REQ-JUDGE.no_call
 /// @implements REQ-JUDGE.divergence_presented
@@ -370,8 +290,6 @@ mod tests {
         }
     }
 
-    /// Even a judge who claims more gets no more: the ceiling is a property of
-    /// the method, not of the claim.
     #[test]
     fn a_judgement_can_never_reach_testing_or_proof() {
         let Outcome::Recorded { mut evidence } =
@@ -398,9 +316,6 @@ mod tests {
         }
     }
 
-    /// Drift is recorded in the judgement's slot at L1, with the note and the
-    /// two hashes it was about, so it shows and goes stale like any record.
-    ///
     /// @tests REQ-JUDGE.drift_recorded
     #[test]
     fn drift_is_recorded_at_the_lowest_level_with_its_note() {
@@ -435,9 +350,6 @@ mod tests {
         }
     }
 
-    /// A delegate counts only in the name of a listed person who delegates to
-    /// them, and the record keeps that person's name.
-    ///
     /// @tests REQ-JUDGE.human_decides
     #[test]
     fn a_delegate_judges_only_for_a_person_who_delegated_to_them() {
@@ -453,16 +365,12 @@ mod tests {
         let Outcome::Refused { reason } = as_delegate(Some("bob")) else { panic!("an unlisted person delegated") };
         assert!(reason.contains("delegatesTo"), "{reason}");
 
-        // A person judges in their own name; without a judges file the name is
-        // taken at its word.
         assert_eq!(delegate_of(&record(material(), judgement(Verdict::Drift), judges(), "l".into())), None);
         let mut j = judgement(Verdict::Agrees);
         j.judged_by = "anyone".into();
         assert!(matches!(record(material(), j, None, "l".into()), Outcome::Recorded { .. }));
     }
 
-    /// A record made before delegation existed still loads, and one without a
-    /// delegate or a note writes neither.
     #[test]
     fn an_older_judgement_record_still_loads() {
         let old = r#"{"judge": {"verdict": "agrees", "judgedBy": "ana", "promptVersion": "1"}}"#;

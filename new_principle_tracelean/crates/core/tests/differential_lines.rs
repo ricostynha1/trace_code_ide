@@ -1,9 +1,3 @@
-//! Line coverage, checked against the model.
-//!
-//! The failure this guards is a line said to be run by a test that never ran
-//! it, a count summed wrongly across tests, or a clause shown fully covered
-//! while one of its lines ran in no test.
-
 mod harness;
 mod support;
 
@@ -95,9 +89,6 @@ fn model_and_implementation_agree_on_how_much_of_a_span_ran() {
     );
 }
 
-/// Over a whole requirement: items in one file or two, overlapping or not, so
-/// a line two items span is counted once.
-///
 /// @drt REQ-LINECOV.requirement_summary
 /// @tests REQ-LINECOV.requirement_summary
 #[test]
@@ -117,10 +108,6 @@ fn model_and_implementation_agree_on_a_requirements_lines() {
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
-/// Whether coverage is measured again: asked or not, held or not, and held
-/// sources that hash as the files do now — Rust files and manifests count,
-/// other files do not, a path given twice is read at its later text — or not.
-///
 /// @drt REQ-STALE.measured_not_retaken
 /// @tests REQ-STALE.measured_not_retaken
 #[test]
@@ -134,7 +121,6 @@ fn model_and_implementation_agree_on_when_coverage_is_measured_again() {
     let model = harness::lean_runner("TraceLean.Hash", "TraceLean.Hash.retake", op, &["measured", "held", "files", "again"], &scratch);
     let paths = ["src/a.rs", "Cargo.toml", "Cargo.lock", "README.md", "notes.rs.md"];
     let file = Schema::Tuple { items: vec![small(&paths), small(&["", "é"])] };
-    // What was held is often what the files hash to now, so both answers come.
     let held: Vec<String> = [vec![], vec![("src/a.rs", "")], vec![("src/a.rs", "é")], vec![("Cargo.toml", "")]]
         .iter()
         .map(|set| sources_hash(&set.iter().map(|(p, t)| (p.to_string(), t.to_string())).collect()))
@@ -154,9 +140,6 @@ fn model_and_implementation_agree_on_when_coverage_is_measured_again() {
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
-/// The page a coverage count opens: no items or several, a symbol or none,
-/// lines run and not, and a line before the item's start, which has no source.
-///
 /// @drt REQ-LINECOV.lines_listed
 /// @tests REQ-LINECOV.lines_listed
 #[test]
@@ -232,7 +215,6 @@ fn model_and_implementation_agree_on_the_marks_beside_lines() {
     window.remove("start");
     window.remove("stop");
     let lines = window.remove("lines").expect("the summary has lines");
-    // Line 0 included: no line, so no mark.
     let Schema::List { inner, max_len } = lines else { unreachable!() };
     let Schema::Struct { fields: mut hit } = *inner else { unreachable!() };
     hit.insert("line".to_string(), Schema::Nat { max: Some(6), edges: vec![0, 1] });
@@ -250,9 +232,6 @@ fn model_and_implementation_agree_on_the_marks_beside_lines() {
     );
 }
 
-/// The generators reach lines run by two tests, lines run by none, spans
-/// partly run and spans with nothing executable in them.
-///
 /// @tests REQ-DRT-COVER.law_coverage
 #[test]
 fn generation_reaches_shared_unrun_and_partial_lines() {

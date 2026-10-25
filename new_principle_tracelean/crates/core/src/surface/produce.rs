@@ -1,14 +1,3 @@
-//! Producing buffers from state.
-//!
-//! [`crate::surface::view`] says what a buffer *is*; this says where one comes
-//! from. For every kind of thing the editor shows there is one function here
-//! from the state to a buffer, and a frontend calls it rather than building a
-//! buffer of its own — which is the whole of `REQ-SHOW.core_produces`, and the
-//! reason two frontends cannot drift apart again.
-//!
-//! Nothing here reads a disk, a terminal or a clock. The state arrives as an
-//! argument; reading it is the shell's job.
-//!
 //! @implements REQ-SHOW.core_produces
 
 use serde::{Deserialize, Serialize};
@@ -16,8 +5,6 @@ use serde::{Deserialize, Serialize};
 use crate::observe::transcript::Event;
 use crate::surface::view::{Buffer, BufferKind, Role, Span};
 
-/// A region something marked, before it is a span: a parser's output, or a
-/// producer's own idea of where a line sits.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Mark {
@@ -26,12 +13,6 @@ pub struct Mark {
     pub role: Role,
 }
 
-/// What can be done at a region when its role is all that is known.
-///
-/// One place, so a path in a listing and a path in a message offer the same
-/// thing. A producer that knows more than the role — a menu row, which
-/// dispatches one particular action — gives its spans actions directly instead.
-///
 /// @implements REQ-SHOW.actions_by_role
 /// @drt REQ-SHOW.actions_by_role
 pub fn actions_for(role: Role) -> Vec<String> {
@@ -44,16 +25,12 @@ pub fn actions_for(role: Role) -> Vec<String> {
         Role::Mark { .. } => &["trace.rollup"],
         Role::Added => &["observe.accept", "observe.reject"],
         Role::Removed => &["observe.accept", "observe.reject"],
-        // A token is something to read; what can be done with code is offered
-        // by the buffer, not by each keyword in it.
         Role::Token { .. } => &[],
-        // The link beside a claim opens it; the word says what kind it is.
         Role::Claim { .. } => &[],
     };
     names.iter().map(|name| name.to_string()).collect()
 }
 
-/// Turn marks into spans, taking each one's affordances from its role.
 pub fn spans_of_marks(marks: Vec<Mark>) -> Vec<Span> {
     marks
         .into_iter()
@@ -66,15 +43,6 @@ pub fn spans_of_marks(marks: Vec<Mark>) -> Vec<Span> {
         .collect()
 }
 
-/// Spans that describe the text they are over: in range, in order, not
-/// overlapping.
-///
-/// Every producer ends with this, which is what makes
-/// `well_formed_by_construction` a property of all of them rather than of each.
-/// An empty or backwards span marks nothing and one starting inside its
-/// predecessor would overlap; both are dropped rather than moved, because
-/// moving a span hides which producer was wrong.
-///
 /// @implements REQ-SHOW.well_formed_by_construction
 /// @implements REQ-SHOW.producers_are_total
 /// @drt REQ-SHOW.well_formed_by_construction
@@ -84,8 +52,6 @@ pub fn tidy(size: usize, spans: Vec<Span>) -> Vec<Span> {
         .into_iter()
         .map(|span| Span { start: span.start.min(size), stop: span.stop.min(size), ..span })
         .collect();
-    // Stable, so two spans starting at the same place keep the order the
-    // producer put them in and the one it wrote first is the one that survives.
     clamped.sort_by_key(|span| span.start);
 
     let mut out: Vec<Span> = Vec::new();
@@ -100,12 +66,6 @@ pub fn tidy(size: usize, spans: Vec<Span>) -> Vec<Span> {
     out
 }
 
-/// A file as a buffer: its own text, and whatever a parser marked in it.
-///
-/// The marks come from outside because the model does not parse Rust. What is
-/// modelled is everything that happens to them afterwards, which is where the
-/// bugs are.
-///
 /// @implements REQ-SHOW.file_from_text
 /// @implements REQ-SHOW.producer_is_pure
 /// @drt REQ-SHOW.file_from_text
@@ -119,7 +79,6 @@ pub fn file_buffer(path: String, text: String, marks: Vec<Mark>) -> Buffer {
     }
 }
 
-/// One line of a review, and what that line is.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DiffLine {
@@ -127,7 +86,6 @@ pub struct DiffLine {
     pub text: String,
 }
 
-/// How many lines two sides share at the front.
 fn common_prefix(a: &[String], b: &[String]) -> usize {
     a.iter().zip(b.iter()).take_while(|(x, y)| x == y).count()
 }
@@ -136,12 +94,6 @@ fn marked(marker: &str, role: Role, line: &str) -> DiffLine {
     DiffLine { role, text: format!("{marker}{line}") }
 }
 
-/// What changed, line by line: context, then what went, then what came.
-///
-/// No heuristics: the lines both sides share at the front, the lines both sides
-/// share at the back, and everything between removed and then added. The same
-/// answer every time, which a heuristic diff is not.
-///
 /// @implements REQ-SHOW.review_from_change
 /// @drt REQ-SHOW.review_from_change
 pub fn diff_lines(before: Vec<String>, after: Vec<String>) -> Vec<DiffLine> {
@@ -172,7 +124,6 @@ pub fn diff_lines(before: Vec<String>, after: Vec<String>) -> Vec<DiffLine> {
     out
 }
 
-/// A span over every line that is not context, at its offset in the joined text.
 fn line_spans(lines: &[DiffLine]) -> Vec<Span> {
     let mut out = Vec::new();
     let mut at = 0usize;
@@ -191,9 +142,6 @@ fn line_spans(lines: &[DiffLine]) -> Vec<Span> {
     out
 }
 
-/// A change between two states of a file, as a buffer a person can accept or
-/// reject.
-///
 /// @implements REQ-SHOW.review_from_change
 /// @implements REQ-SHOW.producer_is_pure
 /// @drt REQ-SHOW.producer_is_pure
@@ -210,17 +158,10 @@ pub fn review_buffer(target: String, before: String, after: String) -> Buffer {
     }
 }
 
-/// Split as the model's `String.splitOn "\n"` does: an empty text is one empty
-/// line, not no lines.
 fn split_lines(text: &str) -> Vec<String> {
     text.split('\n').map(str::to_string).collect()
 }
 
-/// One row of a menu: the key, what it is for, and what it dispatches.
-///
-/// A row that *enters a mode* dispatches nothing, and its span carries no
-/// action: `REQ-VIEW` is explicit that a span's affordances are names the
-/// keymap dispatches, and mode entry is not one of them.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MenuEntry {
@@ -233,8 +174,6 @@ fn menu_line(entry: &MenuEntry) -> String {
     format!("{}  {}", entry.key, entry.description)
 }
 
-/// A keymap mode as a buffer: one row a key, carrying what that key reaches.
-///
 /// @implements REQ-SHOW.menu_from_keymap
 /// @implements REQ-SHOW.producer_is_pure
 /// @drt REQ-SHOW.menu_from_keymap
@@ -261,15 +200,6 @@ pub fn menu_buffer(title: String, entries: Vec<MenuEntry>) -> Buffer {
     }
 }
 
-/// A menu laid out on one row of `width` characters, two spaces between
-/// entries: each entry's key and description when they all fit, and only the
-/// keys when they do not, so a description never takes the room of a later
-/// entry. Each entry still carries what it reaches.
-///
-/// For a frontend with one row to spare for a list, as a terminal has for the
-/// stations: joining the menu's rows itself, it cut the last three stations
-/// off at 100 columns.
-///
 /// @implements REQ-LOOK.row_fits
 /// @drt REQ-LOOK.row_fits
 pub fn menu_row(title: String, entries: Vec<MenuEntry>, width: u64) -> Buffer {
@@ -292,8 +222,6 @@ fn event_line(event: &Event) -> String {
     format!("{}: {}", event.kind, event.text)
 }
 
-/// What was observed, as a buffer: one row an event, each leading to its diff.
-///
 /// @implements REQ-SHOW.record_from_events
 /// @implements REQ-SHOW.producer_is_pure
 /// @drt REQ-SHOW.record_from_events
@@ -320,14 +248,6 @@ pub fn record_buffer(title: String, events: Vec<Event>) -> Buffer {
     }
 }
 
-/// What a sandboxed agent changed, said and spent, as the rows of one buffer.
-///
-/// Three sources, one order. The changes come first because they are the truth:
-/// the transcript is the tool's account of what it did, and
-/// `REQ-TRANSCRIPT.no_interpretation` is the rule that the account never
-/// decides anything. The estimate comes last because it is a reading of that
-/// account against a table, which is one step further from the workspace again.
-///
 /// @implements REQ-SHOW.sandbox_from_observation
 /// @implements REQ-SHOW.producer_is_pure
 /// @drt REQ-SHOW.sandbox_from_observation
@@ -346,12 +266,6 @@ pub fn sandbox_events(
     out
 }
 
-/// The sandbox station's buffer.
-///
-/// A record like any other record, so the rows a frontend draws and the actions
-/// they carry are the ones `record_buffer` already gives — there is no second
-/// kind of buffer here and no second producer.
-///
 /// @implements REQ-SHOW.sandbox_from_observation
 pub fn sandbox_buffer(
     changed: Vec<String>,
@@ -361,7 +275,6 @@ pub fn sandbox_buffer(
     record_buffer("sandbox".to_string(), sandbox_events(changed, said, spend))
 }
 
-/// How many of a requirement's clauses hold each thing a row counts.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Tally {
@@ -372,30 +285,20 @@ pub struct Tally {
     pub proved: usize,
 }
 
-/// A requirement, as a station shows it.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Node {
     pub id: String,
     pub title: String,
     pub refines: Vec<String>,
-    /// The marks every one of its clauses holds.
     pub marks: crate::evidence::Marks,
     pub clauses: usize,
-    /// Clauses a model can answer: all but the structural ones, which need no
-    /// implementation and cannot be tested or proved.
     pub modelled: usize,
-    /// How many clauses hold each: implementing, testing and proving out of
-    /// `modelled`, annotating and judging out of `clauses`.
     pub held: Tally,
-    /// Lines of its implementing code tests run, of how many — when that code
-    /// was measured as it is now.
     #[serde(default)]
     pub covered: Option<(u64, u64)>,
 }
 
-/// A piece of a row: its text, and the role and actions of the span it is,
-/// if it is one.
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct Piece {
     text: String,
@@ -415,7 +318,6 @@ fn pieces_text(pieces: &[Piece]) -> String {
     pieces.iter().map(|p| p.text.as_str()).collect()
 }
 
-/// The spans of a row's pieces, the row starting at `at`.
 fn pieces_spans(at: usize, pieces: &[Piece]) -> Vec<Span> {
     let mut out = Vec::new();
     let mut start = at;
@@ -429,11 +331,6 @@ fn pieces_spans(at: usize, pieces: &[Piece]) -> Vec<Span> {
     out
 }
 
-/// Lines run, of how many, over a requirement and everything refining it.
-///
-/// Each child's figure is added in whole, so a requirement two paths reach
-/// counts twice: this says how much under a row was run, not an exact count
-/// of lines. `fuel` bounds it, because `refines` may hold a cycle.
 fn lines_under(fuel: usize, nodes: &[Node], node: &Node) -> (u64, u64) {
     let own = node.covered.unwrap_or((0, 0));
     match fuel {
@@ -445,8 +342,6 @@ fn lines_under(fuel: usize, nodes: &[Node], node: &Node) -> (u64, u64) {
     }
 }
 
-/// What the requirements refining a node left unrun, if anything: the figure
-/// over the node and all of them, `+children 85%`.
 fn children_short(nodes: &[Node], node: &Node) -> Option<String> {
     let (run, all) = children_of(nodes, &node.id).into_iter().fold((0, 0), |(run, all), child| {
         let (r, a) = lines_under(nodes.len(), nodes, child);
@@ -456,7 +351,6 @@ fn children_short(nodes: &[Node], node: &Node) -> Option<String> {
     (run < all).then(|| format!("+children {}%", (own_run + run) * 100 / (own_all + all)))
 }
 
-/// One count: `J2/4` held of applicable, `T·` where none can be.
 fn count_piece(letter: char, held: usize, of: usize, role: Role) -> Piece {
     match of {
         0 => plain(format!("{letter}·")),
@@ -464,10 +358,6 @@ fn count_piece(letter: char, held: usize, of: usize, role: Role) -> Piece {
     }
 }
 
-/// A requirement as a station shows it, from each clause's marks and whether
-/// something implements it: the marks every clause holds, and how many hold
-/// each. A structural clause is counted only where a mark can apply to it.
-///
 /// @implements REQ-SHOW.index_from_requirements
 /// @implements REQ-EVID.structural_not_applicable
 pub fn node_of(
@@ -497,8 +387,6 @@ pub fn node_of(
     }
 }
 
-/// Whether anything about a requirement is still to do: a clause short of a
-/// mark it can hold, or a line its tests never ran.
 pub fn is_open(node: &Node) -> bool {
     let t = node.held;
     t.implemented < node.modelled
@@ -509,9 +397,6 @@ pub fn is_open(node: &Node) -> bool {
         || node.covered.is_some_and(|(run, all)| run < all)
 }
 
-/// A row of either station, after its lead: the marks, the name, how many
-/// clauses hold each mark in that mark's colour, the lines measured and what
-/// the requirements under it left unrun, and the title.
 fn row_pieces(nodes: &[Node], node: &Node) -> Vec<Piece> {
     use crate::evidence::Mark as M;
     let mut out: Vec<Piece> = crate::surface::requirement_view::mark_pieces(node.marks)
@@ -543,8 +428,6 @@ fn row_pieces(nodes: &[Node], node: &Node) -> Vec<Piece> {
     if let Some((run, all)) = node.covered {
         match all {
             0 => out.push(plain("lines none")),
-            // Coloured as a diff's lines are, but it is no diff: it opens what
-            // was measured rather than the actions of a change under review.
             _ => out.push(Piece {
                 text: format!("lines {}%", run * 100 / all),
                 role: Some(if run == all { Role::Added } else { Role::Removed }),
@@ -561,7 +444,6 @@ fn row_pieces(nodes: &[Node], node: &Node) -> Vec<Piece> {
     out
 }
 
-/// A node at a depth in the refinement graph.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Row {
@@ -569,23 +451,15 @@ pub struct Row {
     pub node: Node,
 }
 
-/// A node with something still to do in it or anywhere under it.
 fn open_under(fuel: usize, nodes: &[Node], node: &Node) -> bool {
     is_open(node)
         || (fuel > 0 && children_of(nodes, &node.id).into_iter().any(|child| open_under(fuel - 1, nodes, child)))
 }
 
-/// The requirements a station shows: all of them, or with `open_only` those
-/// with something to do in them or under them, so the graph keeps the path to
-/// each.
 fn shown(nodes: &[Node], open_only: bool) -> Vec<Node> {
     nodes.iter().filter(|node| !open_only || open_under(nodes.len(), nodes, node)).cloned().collect()
 }
 
-/// The requirement set as a buffer: one row a requirement, carrying what its
-/// evidence reached and what it is called; with `open_only`, only those with
-/// something still to do.
-///
 /// @implements REQ-SHOW.index_from_requirements
 /// @implements REQ-SHOW.producer_is_pure
 /// @implements REQ-SHOW.well_formed_by_construction
@@ -594,7 +468,6 @@ fn shown(nodes: &[Node], open_only: bool) -> Vec<Node> {
 /// @drt REQ-SHOW.index_from_requirements
 /// @drt REQ-SHOW.children_lines
 pub fn requirements_buffer(nodes: Vec<Node>, open_only: bool) -> Buffer {
-    // A flat list has no path to keep, so only what is open itself.
     let rows: Vec<Vec<Piece>> = nodes
         .iter()
         .filter(|node| !open_only || is_open(node))
@@ -620,13 +493,6 @@ fn children_of<'a>(nodes: &'a [Node], parent: &str) -> Vec<&'a Node> {
     nodes.iter().filter(|node| node.refines.iter().any(|name| name == parent)).collect()
 }
 
-/// One node and, when it is open, everything that refines it.
-///
-/// `fuel` bounds the depth, and it has to: `refines` is data, so a cycle in it
-/// is representable and a graph walk without a bound would not be a function. A
-/// node reached at the bound is drawn without its children rather than dropped
-/// — a row missing is a lie about what exists, a row without its children only
-/// a view cut short.
 fn expand(fuel: usize, nodes: &[Node], open: &[String], indent: usize, node: &Node) -> Vec<Row> {
     let mut out = vec![Row { indent, node: node.clone() }];
     if fuel > 0 && open.contains(&node.id) {
@@ -639,17 +505,11 @@ fn expand_all(fuel: usize, nodes: &[Node], open: &[String], indent: usize, todo:
     todo.iter().flat_map(|node| expand(fuel, nodes, open, indent, node)).collect()
 }
 
-/// The refinement graph, depth first, roots first, unfolded where `open` says.
-///
-/// A root is a requirement that refines nothing — the architecture documents.
-/// Folded, only they show, so hundreds of requirements open as a handful. No
-/// chain is longer than the requirements there are, so that is the fuel.
 pub fn design_rows(nodes: Vec<Node>, open: Vec<String>) -> Vec<Row> {
     let roots: Vec<&Node> = nodes.iter().filter(|node| node.refines.is_empty()).collect();
     expand_all(nodes.len(), &nodes, &open, 0, &roots)
 }
 
-/// The fold mark: `▸` folded, `▾` open, `·` nothing refines it.
 fn fold_mark(nodes: &[Node], open: &[String], node: &Node) -> char {
     match (children_of(nodes, &node.id).is_empty(), open.contains(&node.id)) {
         (true, _) => '·',
@@ -658,12 +518,6 @@ fn fold_mark(nodes: &[Node], open: &[String], node: &Node) -> char {
     }
 }
 
-/// A row of the graph is its fold mark and a row of the index, indented under
-/// what it refines. The fold mark of a node with something under it unfolds
-/// it one level, and offers to unfold everything under it.
-///
-/// `graph` is what is drawn, `all` every requirement: what the requirements
-/// under a row left unrun is counted over all of them, shown or not.
 fn design_pieces(graph: &[Node], all: &[Node], open: &[String], row: &Row) -> Vec<Piece> {
     let mut out = vec![plain(" ".repeat(row.indent * 2))];
     let mark = fold_mark(graph, open, &row.node).to_string();
@@ -680,8 +534,6 @@ fn design_pieces(graph: &[Node], all: &[Node], open: &[String], row: &Row) -> Ve
     out
 }
 
-/// The buttons above the graph: unfold all of it, fold it to its roots, and
-/// show only what is still to do or everything again.
 pub fn design_header(open_only: bool) -> Vec<(String, String)> {
     vec![
         ("[ expand all ]".into(), "design.expand_everything".into()),
@@ -690,10 +542,6 @@ pub fn design_header(open_only: bool) -> Vec<(String, String)> {
     ]
 }
 
-/// The refinement graph as a buffer: the buttons, then one row a requirement,
-/// indented under what it refines; with `open_only`, only the requirements
-/// with something to do in them or under them.
-///
 /// @implements REQ-SHOW.graph_from_refinement
 /// @implements REQ-SHOW.producer_is_pure
 /// @implements REQ-SHOW.well_formed_by_construction
@@ -729,9 +577,6 @@ pub fn design_buffer(nodes: Vec<Node>, opened: Vec<String>, open_only: bool) -> 
     }
 }
 
-/// `id` and everything under it, for unfolding all of it at once; every node
-/// with something under it when `id` is `None`. Visited once each, so a cycle
-/// in `refines` ends.
 pub fn design_unfolded(nodes: &[Node], id: Option<&str>) -> Vec<String> {
     let mut todo: Vec<String> = match id {
         Some(id) => vec![id.to_string()],
@@ -750,16 +595,10 @@ pub fn design_unfolded(nodes: &[Node], id: Option<&str>) -> Vec<String> {
     out
 }
 
-/// The character offset the line at `from` starts at.
 fn line_start(lines: &[String], start: usize) -> usize {
     lines.iter().take(start).map(|line| line.chars().count() + 1).sum()
 }
 
-/// One span, moved into the window's coordinates and cut to fit.
-///
-/// A span ending before the window or starting after it marks nothing here and
-/// is dropped. One straddling an edge is cut — saturating subtraction is exactly
-/// the clip wanted at the near edge.
 fn clip_span(shift: usize, size: usize, span: &Span) -> Option<Span> {
     if span.stop <= shift || shift + size <= span.start {
         return None;
@@ -772,13 +611,6 @@ fn clip_span(shift: usize, size: usize, span: &Span) -> Option<Span> {
     })
 }
 
-/// The part of a buffer starting at line `from`, at most `count` lines of it.
-///
-/// This is how a frontend scrolls without lying. A terminal showing forty lines
-/// of a long file draws a fraction of it, and a frontend draws everything it is
-/// given — so what it is given is the fraction. The identity is unchanged, so a
-/// delta carries a scroll the same way it carries an edit.
-///
 /// @implements REQ-SHOW.window_is_a_buffer
 /// @implements REQ-SHOW.producers_are_total
 /// @drt REQ-SHOW.window_is_a_buffer
@@ -798,13 +630,10 @@ mod tests {
     use super::*;
     use crate::surface::view::{directory_buffer, faults, plain_text};
 
-    /// The text a span covers.
     fn under(buffer: &Buffer, span: &Span) -> String {
         buffer.text.chars().skip(span.start).take(span.stop - span.start).collect()
     }
 
-    /// A row counts the clauses holding each mark, each count in the colour of
-    /// its mark, and says how much of its code tests ran.
     #[test]
     fn the_index_counts_each_mark_in_its_colour() {
         let node = Node {
@@ -827,28 +656,22 @@ mod tests {
             .find(|s| s.role == Role::Mark { mark: crate::evidence::Mark::Tested, held: true })
             .expect("the tested count, in the tested colour");
         assert_eq!(under(&shown, tested), "T0/4");
-        // Each position of the marks is its own span, a gap told from a mark.
         let gaps: Vec<bool> = shown.spans[..4]
             .iter()
             .filter_map(|s| match s.role { Role::Mark { held, .. } => Some(held), _ => None })
             .collect();
         assert_eq!(gaps, vec![true, false, false, false]);
         assert!(faults(shown).is_empty());
-        // Measured, the row says how much of its code ran, in red when not all.
         let measured = requirements_buffer(vec![Node { covered: Some((4, 7)), ..node.clone() }], false);
         assert_eq!(plain_text(measured.clone()), vec!["A---  REQ-A  I3/4 A4/4 J0/4 T0/4 P0/4  lines 57%  A thing"]);
         let lines = measured.spans.iter().find(|s| s.role == Role::Removed).expect("a coverage span");
         assert_eq!(under(&measured, lines), "lines 57%");
         assert_eq!(lines.actions, vec!["trace.coverage REQ-A".to_string()], "a coverage figure offered a diff's actions");
-        // Code with no line a test could run is not all covered.
         let nothing = requirements_buffer(vec![Node { covered: Some((0, 0)), ..node }], false);
         assert_eq!(plain_text(nothing.clone()), vec!["A---  REQ-A  I3/4 A4/4 J0/4 T0/4 P0/4  lines none  A thing"]);
         assert!(!nothing.spans.iter().any(|s| matches!(s.role, Role::Added | Role::Removed)));
     }
 
-    /// A structural requirement writes its test and proof as not applicable,
-    /// counts nothing it cannot hold, and with every clause judged is done.
-    ///
     /// @tests REQ-EVID.structural_not_applicable
     #[test]
     fn a_structural_requirement_counts_only_what_applies() {
@@ -887,8 +710,6 @@ mod tests {
         }
     }
 
-    /// The design opens on its roots; a mark unfolds one level, unfolding all
-    /// under a node reaches its grandchildren, and a leaf has no mark to press.
     #[test]
     fn the_design_unfolds_a_level_at_a_time_or_all_at_once() {
         let graph = vec![node("ARCH", &[], None), node("REQ-A", &["ARCH"], None), node("REQ-B", &["REQ-A"], None)];
@@ -915,10 +736,6 @@ mod tests {
         assert_eq!(design_unfolded(&graph, None), vec!["ARCH".to_string(), "REQ-A".to_string()]);
     }
 
-    /// A row whose own lines all ran says what the requirements under it left
-    /// unrun, over itself and all of them; one whose children ran everything
-    /// says nothing more.
-    ///
     /// @tests REQ-SHOW.children_lines
     #[test]
     fn a_row_says_what_the_requirements_under_it_left_unrun() {
@@ -928,7 +745,6 @@ mod tests {
             node("REQ-B", &["REQ-A"], Some((0, 10))),
         ];
         let shown = plain_text(design_buffer(graph.clone(), design_unfolded(&graph, None), false));
-        // ARCH: 15 of 30 lines under it ran, with its own 10 of 10.
         assert_eq!(shown[1], "▾ AJTP  ARCH  I1/1 A1/1 J1/1 T1/1 P1/1  lines 100%  +children 50%  t");
         assert_eq!(shown[2], "  ▾ AJTP  REQ-A  I1/1 A1/1 J1/1 T1/1 P1/1  lines 50%  +children 25%  t");
         assert_eq!(shown[3], "    · AJTP  REQ-B  I1/1 A1/1 J1/1 T1/1 P1/1  lines 0%  t");
@@ -936,9 +752,6 @@ mod tests {
         assert!(!plain_text(design_buffer(whole, vec![], false))[1].contains("+children"));
     }
 
-    /// With only what is open shown, a finished requirement disappears unless
-    /// something under it is open, which keeps the path to what is.
-    ///
     /// @tests REQ-SHOW.open_filtered
     #[test]
     fn open_only_keeps_what_is_still_to_do_and_the_path_to_it() {
@@ -960,10 +773,6 @@ mod tests {
         Mark { start, stop, role }
     }
 
-    /// Marks of all three wrong kinds at once — one overlapping its neighbour,
-    /// one running backwards, one reaching past the end — still produce a
-    /// buffer that describes its own text.
-    ///
     /// @tests REQ-SHOW.well_formed_by_construction
     #[test]
     fn a_producer_cannot_emit_a_span_the_text_does_not_carry() {
@@ -978,11 +787,6 @@ mod tests {
             ],
         );
         assert_eq!(faults(buffer.clone()), vec![]);
-        // The mark that reached past the end is clamped to the whole text, and
-        // sorting by start puts it first — so it is the one that survives and
-        // the three it covers are dropped. Dropping rather than moving is what
-        // makes that legible: the buffer says one region was marked, not four
-        // shuffled into place.
         assert_eq!(buffer.spans.len(), 1);
         assert_eq!((buffer.spans[0].start, buffer.spans[0].stop), (0, 9));
         assert_eq!(buffer.spans[0].role, Role::Requirement);
@@ -1008,16 +812,12 @@ mod tests {
         let buffer = review_buffer("a.rs".into(), "one\ntwo\nthree".into(), "one\nTWO\nthree".into());
         assert_eq!(faults(buffer.clone()), vec![]);
         assert_eq!(plain_text(buffer.clone()), vec![" one", "-two", "+TWO", " three"]);
-        // Only the changed lines can be accepted or rejected; context cannot.
         assert_eq!(buffer.spans.len(), 2);
         for span in &buffer.spans {
             assert_eq!(span.actions, vec!["observe.accept", "observe.reject"]);
         }
     }
 
-    /// A file that did not change produces a review with nothing to act on,
-    /// rather than a review claiming everything changed.
-    ///
     /// @tests REQ-SHOW.review_from_change
     #[test]
     fn an_unchanged_file_reviews_as_no_change() {
@@ -1061,8 +861,6 @@ mod tests {
         assert!(buffer.spans.iter().all(|span| span.actions == vec!["observe.diff"]));
     }
 
-    /// Every kind has a producer, and no producer fails on the empty state.
-    ///
     /// @tests REQ-SHOW.producers_are_total
     #[test]
     fn every_kind_has_a_producer_and_none_of_them_refuses() {
@@ -1078,9 +876,6 @@ mod tests {
         }
     }
 
-    /// A window is a buffer: it describes its own text, carries the spans that
-    /// fall in it, and is empty rather than wrong when it falls off the end.
-    ///
     /// @tests REQ-SHOW.window_is_a_buffer
     #[test]
     fn a_window_is_a_buffer_of_the_part_it_shows() {
@@ -1093,19 +888,14 @@ mod tests {
         let middle = window(whole.clone(), 1, 1);
         assert_eq!(plain_text(middle.clone()), vec!["two"]);
         assert_eq!(faults(middle.clone()), vec![]);
-        // The span that was on the second line is on the window's first.
         assert_eq!(middle.spans.len(), 1);
         assert_eq!((middle.spans[0].start, middle.spans[0].stop), (0, 3));
-        // And the identity is unchanged, so a scroll is a delta like any other.
         assert_eq!(middle.id, whole.id);
 
-        // A window of everything is what it started with.
         assert_eq!(window(whole.clone(), 0, 9).text, whole.text);
-        // A window past the end is empty, not an error.
         assert_eq!(window(whole.clone(), 9, 4).text, "");
         assert_eq!(window(whole.clone(), 0, 0).text, "");
 
-        // A span straddling the near edge is cut rather than dropped.
         let straddling = file_buffer(
             "a.rs".into(),
             "one\ntwo\nthree".into(),
@@ -1116,9 +906,6 @@ mod tests {
         assert_eq!(faults(cut), vec![]);
     }
 
-    /// Non-ASCII text is measured in characters, or a span lands mid-character
-    /// and two frontends disagree about where it is.
-    ///
     /// @tests REQ-SHOW.well_formed_by_construction
     #[test]
     fn a_span_is_measured_in_characters_not_bytes() {
@@ -1127,7 +914,6 @@ mod tests {
             vec![Event { kind: "é".into(), text: "ü".into() }],
         );
         assert_eq!(faults(buffer.clone()), vec![]);
-        // "é: ü" is four characters and six bytes.
         assert_eq!(buffer.spans[0].stop, 4);
         assert_eq!(buffer.text.len(), 6);
     }

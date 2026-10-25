@@ -1,78 +1,32 @@
-//! The representation every frontend renders.
-//!
-//! Implements `REQ-VIEW`. A buffer is an identity, a kind and text; structure is
-//! spans over that text saying what a region *is* and what can be done there. A
-//! file is a buffer, and so is a directory listing, a diff under review and a
-//! menu.
-//!
-//! The core answers "what is on screen" once. Two frontends computing their own
-//! view give two answers, and the unmaintained answer rots with nothing failing
-//! — which is what happened to the TUI this port came from.
-
 use serde::{Deserialize, Serialize};
 
-/// What a buffer holds. Every shown thing is one of these.
-///
 /// @implements REQ-VIEW.everything_is_a_buffer
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", rename_all_fields = "camelCase")]
 pub enum BufferKind {
-    /// The contents of a file on disk.
     File { path: String },
-    /// A directory, listed.
     Directory { path: String },
-    /// A change an external agent made, waiting for a person.
     Review { target: String },
-    /// A list of choices: the which-key bar, a command list.
     Menu { title: String },
-    /// Anything recorded rather than chosen: a transcript, a log.
     Record { title: String },
 }
 
-/// What a region of text *is*. Never how it looks.
-///
-/// A role a frontend does not recognise is still rendered as text; one it does
-/// recognise it may render as richly as its medium allows.
-///
 /// @implements REQ-VIEW.structure_over_text
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum Role {
     Plain,
-    /// A path, in a listing or in a message.
     Path,
-    /// One item of a listing or menu.
     Entry,
-    /// A heading: a section, a file name at the top of a diff.
     Heading,
-    /// A requirement or clause identifier.
     Requirement,
-    /// One position of a clause's evidence marks (`AJTP`), which mark it is,
-    /// and whether it is held or a dash.
-    ///
-    /// Carried rather than left in the text. A frontend that had to read `T`
-    /// out of the characters to colour it would be parsing the buffer, which
-    /// is the one thing a frontend may not do; and one that could not tell a
-    /// held mark from a gap would paint them the same, which is the whole of
-    /// what a colour is for here.
     Mark { mark: crate::evidence::Mark, held: bool },
-    /// A line a change added.
     Added,
-    /// A line a change removed.
     Removed,
-    /// A token of source code, and what kind: what syntax highlighting colours.
-    ///
-    /// The kind comes from parsing, in the core, for the same reason a mark
-    /// carries which it is: a frontend deciding what was a keyword would be
-    /// parsing the buffer itself.
     Token { kind: TokenKind },
-    /// What a claim on a requirement is — implements, tests, models, proves —
-    /// so each is coloured as its gutter chip is, and a requirement's claims
-    /// are told apart at a glance.
     Claim { role: crate::trace::annotation::Role },
 }
 
-/// What a token of source code is.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum TokenKind {
@@ -87,21 +41,12 @@ pub enum TokenKind {
     MacroCall,
     Operator,
     Property,
-    /// Markdown prose: a heading line, `**bold**`, `*italic*`, `[a link](…)`.
     Heading,
     Bold,
     Italic,
     Link,
 }
 
-/// A region of a buffer's text, what it is, and what can be done there.
-///
-/// `actions` names what is available, using the names the keymap dispatches. A
-/// frontend reads them; it does not invent them.
-///
-/// Offsets are in characters, matching the model: a byte offset would mean two
-/// frontends disagreeing about where a span is the moment anything is not ASCII.
-///
 /// @implements REQ-VIEW.affordances_named
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -112,24 +57,14 @@ pub struct Span {
     pub actions: Vec<String>,
 }
 
-/// An action as a span carries it: a name the keymap dispatches, optionally
-/// followed by one space and the target it is about (`screen.show file:a.rs`).
-///
-/// The target is for a span whose text does not spell what it is about — a
-/// tab's text is a number and a title, never its buffer's identity. Without
-/// it the shell had to work the target out from the row, which is a second
-/// path for the action (`REQ-SCREEN.strip_is_the_opened_set`).
 pub fn action_name(action: &str) -> &str {
     action.split_once(' ').map_or(action, |(name, _)| name)
 }
 
-/// The target an action carries after its name, if any. See `action_name`.
 pub fn action_target(action: &str) -> Option<&str> {
     action.split_once(' ').map(|(_, target)| target)
 }
 
-/// What is on screen, or could be.
-///
 /// @implements REQ-VIEW.one_representation
 /// @implements REQ-VIEW.everything_is_a_buffer
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -141,10 +76,6 @@ pub struct Buffer {
     pub spans: Vec<Span>,
 }
 
-/// What is wrong with a buffer's structure.
-///
-/// Reported rather than clamped: a frontend cannot render what is not there,
-/// and moving the span silently would hide which producer was wrong.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", rename_all_fields = "camelCase")]
 pub enum Fault {
@@ -167,8 +98,6 @@ fn faults_between(spans: &[Span]) -> Vec<Fault> {
     out
 }
 
-/// Everything wrong with a buffer's spans, in the order the spans are given.
-///
 /// @implements REQ-VIEW.text_is_the_content
 /// @implements REQ-VIEW.structure_over_text
 /// @drt REQ-VIEW.text_is_the_content
@@ -187,12 +116,6 @@ pub fn faults(buffer: Buffer) -> Vec<Fault> {
     out
 }
 
-/// What can be done at a position: the actions of every span covering it, in
-/// span order, without repeats.
-///
-/// An action a frontend offers and this does not return is an affordance nobody
-/// declared, which is the thing that cannot be checked.
-///
 /// @implements REQ-VIEW.affordances_named
 /// @implements REQ-VIEW.frontend_adds_nothing
 /// @drt REQ-VIEW.affordances_named
@@ -210,8 +133,6 @@ pub fn actions_at(buffer: Buffer, offset: usize) -> Vec<String> {
     out
 }
 
-/// Every action any span of a buffer names, sorted and without repeats.
-///
 /// @implements REQ-VIEW.frontend_adds_nothing
 pub fn declared_actions(buffer: &Buffer) -> Vec<String> {
     let mut out: Vec<String> = Vec::new();
@@ -226,11 +147,6 @@ pub fn declared_actions(buffer: &Buffer) -> Vec<String> {
     out
 }
 
-/// The rendering every frontend has to agree with: the buffer's text, as lines.
-///
-/// A frontend with a richer medium draws more than this. What it may not do is
-/// show something else.
-///
 /// @implements REQ-VIEW.rendering_is_total
 /// @implements REQ-VIEW.text_is_the_content
 /// @drt REQ-VIEW.rendering_is_total
@@ -242,12 +158,6 @@ fn listing_line(entry: &(usize, String)) -> String {
     format!("{}{}", " ".repeat(2 * entry.0), entry.1)
 }
 
-/// A directory listing as a buffer: indentation, then the name, one entry a line.
-///
-/// It has no grammar and needs none — the core produces its spans directly, and
-/// they are the same spans a parser would have produced for a file. One type,
-/// two producers.
-///
 /// @implements REQ-VIEW.structure_has_one_type
 /// @implements REQ-VIEW.everything_is_a_buffer
 /// @implements REQ-SHOW.listing_from_entries
@@ -276,24 +186,14 @@ pub fn directory_buffer(path: String, entries: Vec<(usize, String)>) -> Buffer {
     }
 }
 
-/// A change to what is shown.
-///
-/// A frontend that re-reads everything on every keystroke stutters, so a change
-/// is a delta — and the delta is enough: applying it gives back exactly the
-/// buffer it came from.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Delta {
-    /// The new text, when it changed.
     pub text: Option<String>,
-    /// The new spans, when they changed.
     pub spans: Option<Vec<Span>>,
-    /// The new kind, when it changed.
     pub kind: Option<BufferKind>,
 }
 
-/// What changed between two states of one buffer.
-///
 /// @implements REQ-VIEW.changes_are_deltas
 /// @drt REQ-VIEW.changes_are_deltas
 pub fn delta(before: Buffer, after: Buffer) -> Delta {
@@ -304,8 +204,6 @@ pub fn delta(before: Buffer, after: Buffer) -> Delta {
     }
 }
 
-/// Apply a change.
-///
 /// @implements REQ-VIEW.changes_are_deltas
 pub fn apply_delta(buffer: Buffer, d: Delta) -> Buffer {
     Buffer {
@@ -316,22 +214,13 @@ pub fn apply_delta(buffer: Buffer, d: Delta) -> Buffer {
     }
 }
 
-/// What a frontend says it drew.
-///
-/// A frontend is a process that, given a buffer, answers with this: the lines it
-/// put on screen and, for each position, the actions it offered there. That
-/// answer is a value, so it crosses the same line protocol every other side of
-/// this system crosses, and the same check runs against a terminal, a web view,
-/// or anything else somebody writes.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Rendering {
     pub lines: Vec<String>,
-    /// Every action offered, with the position it was offered at.
     pub offered: Vec<(usize, String)>,
 }
 
-/// A way a rendering fails to be the buffer it came from.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", rename_all_fields = "camelCase")]
 pub enum Breach {
@@ -360,14 +249,6 @@ fn line_breaches(shown: &[String], expected: &[String]) -> Vec<Breach> {
     out
 }
 
-/// Everything a frontend got wrong about a buffer.
-///
-/// Not how it looks — that is the frontend's business. That the text is the
-/// buffer's text, and that the actions offered are exactly the actions
-/// declared: a frontend that invents one is offering something nobody can
-/// trace, and one that drops the last action on a line has quietly removed a
-/// feature.
-///
 /// @implements REQ-VIEW.rendering_is_total
 /// @implements REQ-VIEW.frontend_adds_nothing
 /// @implements REQ-VIEW.one_representation
@@ -396,12 +277,6 @@ pub fn conformance(buffer: Buffer, rendering: Rendering) -> Vec<Breach> {
     out
 }
 
-/// A region as a frontend put it on the screen: the glyphs it painted, and the
-/// name those glyphs carry.
-///
-/// The name is what a screen reader announces and what the capture harness
-/// reads. A frontend with glyphs to spare paints one; what it may not do is
-/// give the region a name the buffer does not contain.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Presented {
@@ -409,37 +284,17 @@ pub struct Presented {
     pub name: String,
 }
 
-/// What a row of presented regions reads as: the names, in order.
-///
-/// The glyphs are not consulted. That is the whole content of the clause.
-///
 /// @implements REQ-VIEW.presentation_may_be_symbolic
 /// @drt REQ-VIEW.presentation_may_be_symbolic
 pub fn accessible(row: Vec<Presented>) -> String {
     row.into_iter().map(|piece| piece.name).collect()
 }
 
-/// The regions a frontend chose to present as something other than their name.
-///
-/// Reported so that a run can say it exercised the symbolic case rather than
-/// assuming it did.
-///
 /// @implements REQ-VIEW.presentation_may_be_symbolic
 pub fn symbolic(row: Vec<Presented>) -> Vec<Presented> {
     row.into_iter().filter(|piece| piece.painted != piece.name).collect()
 }
 
-/// A frontend that presented symbolically, checked against the buffer it was
-/// given.
-///
-/// Its rows are read by their names and then compared exactly as any other
-/// rendering is: there is no second notion of conformance, only a second way of
-/// arriving at the lines.
-///
-/// It is `conformance` with its lines read out of names. That the painting is
-/// not consulted is a theorem (`a_symbol_is_read_as_its_name`); the run checks
-/// the composition against the model as well.
-///
 /// @implements REQ-VIEW.presentation_may_be_symbolic
 /// @implements REQ-VIEW.screen_is_readable
 /// @drt REQ-VIEW.screen_is_readable
@@ -470,7 +325,6 @@ mod tests {
         let buffer = listing();
         assert_eq!(buffer.text, "main.rs\n  deep.rs\nlib.rs");
         assert_eq!(faults(buffer.clone()), vec![]);
-        // Each span covers the name, not the indentation before it.
         let chars: Vec<char> = buffer.text.chars().collect();
         for span in &buffer.spans {
             let named: String = chars[span.start..span.stop].iter().collect();
@@ -483,8 +337,6 @@ mod tests {
     fn what_can_be_done_comes_from_the_span_under_the_cursor() {
         let buffer = listing();
         assert_eq!(actions_at(buffer.clone(), 0), vec!["file.open".to_string()]);
-        // The indentation of the nested entry belongs to no span, so nothing is
-        // offered there — an empty answer rather than a guess.
         assert_eq!(actions_at(buffer, 8), Vec::<String>::new());
     }
 
@@ -532,7 +384,6 @@ mod tests {
         };
         assert_eq!(conformance(buffer.clone(), drawn.clone()), vec![]);
 
-        // An action nobody declared, at a position that has none.
         let mut invented = drawn.clone();
         invented.offered.push((8, "file.delete".into()));
         assert!(matches!(
@@ -540,7 +391,6 @@ mod tests {
             Breach::ActionInvented { .. }
         ));
 
-        // A frontend that draws its own text instead of the buffer's.
         let mut embroidered = drawn;
         embroidered.lines[0] = "📁 main.rs".into();
         assert!(matches!(
@@ -560,7 +410,6 @@ mod tests {
         let buffer = listing();
         let offered = vec![(0, "file.open".to_string()), (10, "file.open".to_string())];
 
-        // The first row painted as an emblem. What is read is still the name.
         let rows = vec![
             vec![presented("📁", "main.rs")],
             vec![presented("  deep.rs", "  deep.rs")],
@@ -571,9 +420,6 @@ mod tests {
         assert_eq!(symbolic(rows[1].clone()), vec![]);
         assert_eq!(presented_conformance(buffer.clone(), rows.clone(), offered.clone()), vec![]);
 
-        // A frontend that names a region after the glyph it painted has put
-        // something on the screen the buffer does not contain, and it is the
-        // name that gives it away — the painting never could.
         let mut mislabelled = rows;
         mislabelled[0] = vec![presented("📁", "📁")];
         assert!(matches!(

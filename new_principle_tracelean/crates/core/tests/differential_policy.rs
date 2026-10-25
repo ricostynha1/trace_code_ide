@@ -1,8 +1,3 @@
-//! The sandbox path policy, checked against the model.
-//!
-//! A wrong answer here is a security hole, and the function is pure, so it is
-//! among the most worthwhile differential tests in the project.
-
 mod harness;
 
 use std::collections::BTreeMap;
@@ -14,9 +9,6 @@ mod support;
 
 const OP: &str = "REQ-SBX.classification_total";
 
-/// Paths chosen to reach every answer, including the ones trying not to be
-/// answered. Random strings would classify as `mirrored` almost every time and
-/// the run would report coverage it did not have.
 fn input_schema() -> Schema {
     let mut fields = BTreeMap::new();
     fields.insert(
@@ -76,15 +68,11 @@ fn model_and_implementation_agree_on_classification() {
     )
     .expect("both runners answer");
 
-    // The agreeing half of what this binding needs; the coverage half comes
-    // from the generation test, and whichever lands second writes the record.
     support::agreed(&result);
 
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
-/// Every answer must actually be reached, or agreement is vacuous.
-///
 /// @tests REQ-DRT-COVER.law_coverage
 #[test]
 fn generation_reaches_every_classification() {

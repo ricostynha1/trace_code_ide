@@ -1,6 +1,3 @@
-//! Interaction surfaces: the keymap, what is shown, and the language-server
-//! layer.
-
 pub mod act;
 pub mod ask;
 pub mod cells;

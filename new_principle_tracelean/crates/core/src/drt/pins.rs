@@ -1,17 +1,8 @@
-//! Asking Lean whether a `@pins` theorem pins its clause.
-//!
-//! A shell around `trace::pinning`: copy the theorem's file with the check
-//! appended into a scratch directory, run `lean` on it — through `lake env`
-//! from the nearest Lake package, after building it, when there is one — and
-//! keep the verdict under `.tracelean/pins`.
-
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use crate::trace::pinning::{accepted, check_source, record_path, PinPlan, PinRecord};
 
-/// The nearest directory at or above `from`, within `root`, holding a Lake
-/// package.
 fn lake_root(root: &Path, from: &Path) -> Option<PathBuf> {
     let mut at = from.parent();
     while let Some(dir) = at {
@@ -26,15 +17,11 @@ fn lake_root(root: &Path, from: &Path) -> Option<PathBuf> {
     None
 }
 
-/// The verdict kept for a clause, if any.
 pub fn read_record(root: &Path, req_id: &str, clause: Option<&str>) -> Option<PinRecord> {
     let text = std::fs::read_to_string(record_path(root, req_id, clause)).ok()?;
     serde_json::from_str(&text).ok()
 }
 
-/// Check one clause's theorem, write the verdict, and return it. `None` when
-/// the clause has no `@pins` theorem to check.
-///
 /// @implements REQ-STRENGTH.kernel_decides
 pub fn check(root: &Path, plan: &PinPlan) -> Option<PinRecord> {
     let (theorem, file) = (plan.theorem.clone()?, plan.file.clone()?);

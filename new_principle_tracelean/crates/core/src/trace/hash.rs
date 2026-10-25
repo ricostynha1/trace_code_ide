@@ -1,15 +1,5 @@
-//! Normalised hashing of an anchored body.
-//!
-//! The hash decides staleness, so both directions matter and they fail
-//! differently: a hash that does not move when the body does leaves stale
-//! evidence looking valid, and one that moves when the body did not makes
-//! people stop annotating.
-
 use std::collections::BTreeMap;
 
-/// A short, stable digest. FNV-1a over the normalised bytes: not cryptographic,
-/// because nothing here defends against an adversary choosing a collision — it
-/// only has to change when the input does.
 fn digest(bytes: &[u8]) -> String {
     let mut h: u64 = 0xcbf2_9ce4_8422_2325;
     for b in bytes {
@@ -19,24 +9,17 @@ fn digest(bytes: &[u8]) -> String {
     format!("{h:016x}")
 }
 
-/// Collapse runs of whitespace outside protected ranges, and drop the ranges
-/// listed in `removed` entirely.
-///
-/// `protected` ranges — string and character literals — are copied through
-/// byte for byte, because whitespace inside a literal is content.
-///
 /// @implements REQ-ANCHOR.whitespace_normalised
 /// @implements REQ-ANCHOR.comments_excluded
 pub fn normalize(source: &str, removed: &[(usize, usize)], protected: &[(usize, usize)]) -> String {
     let bytes = source.as_bytes();
     let mut out = String::with_capacity(source.len());
-    let mut last_was_space = true; // leading whitespace is dropped
+    let mut last_was_space = true;
     let mut i = 0usize;
 
     while i < bytes.len() {
         if let Some((_, end)) = removed.iter().find(|(s, e)| *s <= i && i < *e) {
             i = *end;
-            // A removed range separates tokens, so it counts as whitespace.
             if !last_was_space {
                 out.push(' ');
                 last_was_space = true;
@@ -44,10 +27,6 @@ pub fn normalize(source: &str, removed: &[(usize, usize)], protected: &[(usize, 
             continue;
         }
         if let Some((start, end)) = protected.iter().find(|(s, e)| *s <= i && i < *e) {
-            // Clamped rather than trusted. These ranges come from the scanner
-            // and are always inside the source, but slicing past the end would
-            // turn a scanner bug into a panic in the one function everything
-            // else depends on.
             let from = (*start).min(source.len());
             let to = (*end).min(source.len()).max(from);
             out.push_str(source.get(from..to).unwrap_or(""));
@@ -74,20 +53,15 @@ pub fn normalize(source: &str, removed: &[(usize, usize)], protected: &[(usize, 
     out
 }
 
-/// Hash of text exactly as it is: where a line number means something, as it
-/// does for coverage, a blank line added is a change.
 pub fn text(source: &str) -> String {
     digest(source.as_bytes())
 }
 
-/// Hash of a normalised body.
-///
 /// @implements REQ-ANCHOR.hash_tracks_body
 pub fn body(source: &str, removed: &[(usize, usize)], protected: &[(usize, usize)]) -> String {
     digest(normalize(source, removed, protected).as_bytes())
 }
 
-/// Keyed text, `key ␁ text ␂` per entry in key order.
 fn keyed(entries: &BTreeMap<String, String>) -> String {
     let mut buffer = String::new();
     for (key, text) in entries {
@@ -99,23 +73,12 @@ fn keyed(entries: &BTreeMap<String, String>) -> String {
     buffer
 }
 
-/// Hash of keyed text and a normalised body: a whole requirement document
-/// (what a document describing it is reviewed against), or any other set of
-/// named parts, such as a link's identity.
 pub fn requirement(clauses: &BTreeMap<String, String>, body_text: &str) -> String {
     let mut buffer = keyed(clauses);
     buffer.push_str(normalize(body_text, &[], &[]).as_str());
     digest(buffer.as_bytes())
 }
 
-/// Hash of one clause: what evidence about it rests on.
-///
-/// Its key, its text and its narrowings, and nothing else — so rewording a
-/// sibling clause, or the prose, leaves the clause's evidence standing, and a
-/// narrowing added re-opens it. Keyed by name, so a renamed clause is a
-/// different clause. Without a key it is a requirement's one implicit clause,
-/// whose text is the body, hashed as the body always was.
-///
 /// @implements REQ-REQDOC.clause_addressable
 /// @implements REQ-STALE.requirement_reopens_all
 pub fn clause(key: Option<&str>, text: &str, narrowings: &BTreeMap<String, String>) -> String {
@@ -133,8 +96,6 @@ pub fn clause(key: Option<&str>, text: &str, narrowings: &BTreeMap<String, Strin
     }
 }
 
-/// `body`, in the shape the conformance protocol exchanges.
-///
 /// @implements REQ-ANCHOR.hash_tracks_body
 /// @implements REQ-ANCHOR.whitespace_normalised
 /// @implements REQ-ANCHOR.comments_excluded
@@ -149,9 +110,6 @@ pub fn body_of(
     body(&source, &removed, &protected)
 }
 
-/// `normalize`, in the same shape. Bound separately from `body_of` because a
-/// hash is a poor thing to diverge on: the digest tells you the two sides
-/// disagree, the normalised text tells you where.
 pub fn normalize_of(
     source: String,
     removed: Vec<(usize, usize)>,
@@ -160,9 +118,6 @@ pub fn normalize_of(
     normalize(&source, &removed, &protected)
 }
 
-/// `clause`, in the same shape. A narrowing given twice: the later wins, as
-/// the parser keeps it.
-///
 /// @implements REQ-REQDOC.clause_addressable
 /// @drt REQ-REQDOC.clause_addressable
 /// @drt REQ-STALE.requirement_reopens_all
@@ -190,16 +145,11 @@ mod tests {
         assert_ne!(body(a, &[], &[]), body(b, &[], &[]));
     }
 
-    /// The loop this closes: the annotation lives in a comment attached to what
-    /// it anchors, so if comments counted, writing the annotation would
-    /// invalidate the evidence it carries.
-    ///
     /// @tests REQ-ANCHOR.comments_excluded
     #[test]
     fn editing_a_comment_does_not_invalidate_its_own_evidence() {
         let src = "// @implements REQ-X.c\nfn f() { 1 }";
         let edited = "// @implements REQ-X.c reason=\"clearer\"\nfn f() { 1 }";
-        // The comment is everything up to the newline, in both.
         let comment = |s: &str| vec![(0usize, s.find('\n').unwrap())];
         assert_eq!(body(src, &comment(src), &[]), body(edited, &comment(edited), &[]));
     }
@@ -216,7 +166,6 @@ mod tests {
 
     #[test]
     fn removed_ranges_still_separate_tokens() {
-        // Deleting a comment between two tokens must not glue them together.
         let src = "a/*x*/b";
         assert_eq!(normalize(src, &[(1, 6)], &[]), "a b");
     }
@@ -230,7 +179,6 @@ mod tests {
         let mut narrowed = BTreeMap::new();
         narrowed.insert("empty".to_string(), "No levels: L1.".to_string());
         assert_ne!(clause(Some("ladder"), text, &none), clause(Some("ladder"), text, &narrowed));
-        // The implicit clause hashes its body as the whole document did.
         assert_eq!(clause(None, "body  text", &none), requirement(&none, "body text"));
     }
 }

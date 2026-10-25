@@ -1,10 +1,3 @@
-//! What observing an external agent is, and — more to the point — what it is
-//! not.
-//!
-//! Every clause here is an absence or a shape, so every one is structural
-//! (ADR-0012): there is no function whose output could be compared against a
-//! model, only a tree that either has the path or does not.
-
 use std::path::{Path, PathBuf};
 
 fn project_root() -> PathBuf {
@@ -36,14 +29,6 @@ fn library_sources() -> Vec<(String, String)> {
     out
 }
 
-/// What a tool did arrives as ordinary commands — the same kind a keystroke
-/// makes — and therefore inherits undo, the history tree, provenance and diff
-/// review without any of them knowing an agent exists.
-///
-/// A bespoke apply path for agent edits is how the previous design ended up
-/// needing to understand tools, permissions and streaming protocols in order to
-/// change a file.
-///
 /// @tests REQ-OBS.effects_become_commands
 /// @tests REQ-OBS.undoable
 /// @structural REQ-OBS.effects_become_commands reason="a claim about which type the observation path produces, which is a fact about signatures rather than a value"
@@ -62,8 +47,6 @@ fn what_a_tool_did_arrives_as_ordinary_commands() {
     let commands = mutations(before.clone(), after.clone());
     assert!(!commands.is_empty(), "a change produced no commands");
 
-    // Every one is a `Command` — the same vocabulary a keystroke produces —
-    // and every one has an inverse, which is what `undoable` amounts to.
     let mut state = before.clone();
     let mut undo: Vec<Command> = Vec::new();
     for command in &commands {
@@ -78,26 +61,15 @@ fn what_a_tool_did_arrives_as_ordinary_commands() {
     assert_eq!(state.files, before.files, "the mirrored change could not be undone");
 }
 
-/// There is no channel by which the editor sends the tool anything.
-///
-/// Stated as an absence because that is what can be checked: not that the
-/// editor uses the channel carefully, but that there is nothing to use.
-///
 /// @tests REQ-OBS.no_instruction_channel
 /// @structural REQ-OBS.no_instruction_channel reason="an absence: no code path writes to a tool, and an absence cannot be a function from data to data"
 #[test]
 fn nothing_writes_towards_the_tool() {
     let mut found = Vec::new();
     for (file, text) in library_sources() {
-        // The differential toolchain drives two runner processes it generated
-        // itself, which is this project's own toolchain use and not a tool
-        // being instructed.
         if file.contains("/drt/") {
             continue;
         }
-        // Lean's own language server, asked what the proof state is: Lean's
-        // toolchain, started for a question, not a tool being instructed. The
-        // one module, named, and no other.
         if file.ends_with("src/lean_server.rs") {
             continue;
         }
@@ -106,10 +78,6 @@ fn nothing_writes_towards_the_tool() {
             if line.starts_with("//") || line.starts_with("///") {
                 continue;
             }
-            // Reading one's *own* standard input is being spoken to, which is
-            // what a frontend under test does and cannot instruct anything.
-            // What would be an instruction channel is giving another process a
-            // stdin and writing into it, which is what these name.
             for needle in [".stdin(", "child.stdin", "Stdio::piped", "write_all", "kill()", "send("]
             {
                 if line.contains(needle) {
@@ -123,8 +91,6 @@ fn nothing_writes_towards_the_tool() {
         "something outside the differential toolchain can write towards a process:\n{found:#?}"
     );
 
-    // And the observation surface takes a workspace, not a handle: there is no
-    // argument through which an instruction could be passed.
     let source =
         std::fs::read_to_string(project_root().join("crates/core/src/observe/mod.rs")).unwrap();
     assert!(
@@ -133,12 +99,6 @@ fn nothing_writes_towards_the_tool() {
     );
 }
 
-/// What a tool has changed is observable before anybody decides to accept it.
-///
-/// The diff is a function of two snapshots, so it can be computed and shown
-/// while the workspace is still live — which is the whole difference between
-/// reviewing a change and discovering one.
-///
 /// @tests REQ-OBS.visible_while_running
 /// @structural REQ-OBS.visible_while_running reason="a claim that the diff can be taken at any moment without ending the run, which is about when a function may be called rather than about what it returns"
 #[test]
@@ -153,14 +113,11 @@ fn a_change_can_be_seen_before_it_is_accepted() {
     std::fs::write(base.join("a.rs"), "one").unwrap();
 
     let before = snapshot(&base);
-    // A tool is still running: it has written one file and will write more.
     std::fs::write(base.join("a.rs"), "two").unwrap();
     let midway = snapshot(&base);
     let seen = mutations(before.clone(), midway);
     assert!(!seen.is_empty(), "a change in flight was not visible");
 
-    // Taking the diff changed nothing: the workspace is where it was, and
-    // nothing was accepted.
     let again = snapshot(&base);
     assert_eq!(again.files, Workspace { files: again.files.clone() }.files);
     assert_eq!(
@@ -172,25 +129,16 @@ fn a_change_can_be_seen_before_it_is_accepted() {
     let _ = std::fs::remove_dir_all(&base);
 }
 
-/// An action that changes state returns commands and does not mutate.
-///
 /// @tests REQ-MYTH.actions_are_commands
 /// @structural REQ-MYTH.actions_are_commands reason="a claim about the return type of every action, which is a fact about signatures rather than a value any of them computes"
 #[test]
 fn an_action_returns_commands_rather_than_mutating() {
     use tracelean_core::surface::keymap::Outcome;
 
-    // A dispatch names an action; it does not perform one. The outcome type
-    // carries a name, and the name is all the keymap layer knows.
     let outcome = Outcome::Dispatch { action: "undo".into() };
     let rendered = serde_json::to_value(&outcome).unwrap();
     assert_eq!(rendered["dispatch"]["action"], serde_json::json!("undo"));
 
-    // And the layer has nothing to mutate: no workspace, no command, no
-    // application. It maps a key to a name, and somebody else decides what
-    // that name does. The `&mut` methods it does have edit the *keymap* —
-    // configuration a user changes — which is not the state this clause is
-    // about.
     let source =
         std::fs::read_to_string(project_root().join("crates/core/src/surface/keymap.rs")).unwrap();
     for needle in ["Workspace", "Command", "apply(", "history::"] {
@@ -200,7 +148,6 @@ fn an_action_returns_commands_rather_than_mutating() {
         );
     }
 
-    // The outcome vocabulary carries names and modes, never state.
     for outcome in [
         Outcome::Enter { mode: "File".into() },
         Outcome::Dispatch { action: "undo".into() },
@@ -215,21 +162,12 @@ fn an_action_returns_commands_rather_than_mutating() {
     }
 }
 
-/// A finding about drift or divergence comes from an evidence record.
-///
-/// The failure this prevents is a report that asserts things nobody earned: a
-/// checker that could decide a clause has drifted, without an evidence record
-/// saying so, would be a second source of truth about what is established.
-///
 /// @tests REQ-CHECK.derived_from_evidence
 /// @structural REQ-CHECK.derived_from_evidence reason="a claim about where a finding's information comes from, which is a property of the call graph rather than of any finding"
 #[test]
 fn the_checker_never_invents_a_drift() {
     use tracelean_core::trace::checker::Kind;
 
-    // The finding vocabulary has no drift or divergence kind at all. Drift is
-    // reported by staleness over evidence records, and divergence by a
-    // differential run — both of which produce records rather than findings.
     let named: Vec<String> = [
         Kind::Dangling, Kind::DanglingRefines, Kind::RefinesCycle, Kind::DuplicateId,
         Kind::Unmodeled, Kind::Unimplemented, Kind::Unbound, Kind::Untested, Kind::Contested,
@@ -245,8 +183,6 @@ fn the_checker_never_invents_a_drift() {
         );
     }
 
-    // And the checker reads the index, never a runner or a filesystem. Its
-    // fixtures build temporary trees, so only the library half is read.
     let source =
         std::fs::read_to_string(project_root().join("crates/core/src/trace/checker.rs")).unwrap();
     let library = match source.find("#[cfg(test)]") {

@@ -1,49 +1,30 @@
-//! Line coverage, test by test.
-//!
-//! Each test is run on its own under an instrumented build, so what comes back
-//! is not only which lines ran but which tests ran them and how often. This is
-//! the decision half: reading LLVM's LCOV text, folding the runs into one table
-//! per file, and summarising the lines a clause's implementing items span.
-//! Running anything is `drt::lines_run`'s.
-
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
-/// One test's counts for one file.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TestLines {
     pub test: String,
     pub file: String,
-    /// One-based line, and how often it ran. A line absent is not executable.
     pub lines: Vec<(u32, u64)>,
 }
 
-/// One executable line: how often it ran, and by which tests.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LineHits {
     pub line: u32,
     pub hits: u64,
-    /// The tests that ran it, by name, with their counts. Empty: uncovered.
     pub tests: Vec<(String, u64)>,
 }
 
-/// What `tracelean-trace --coverage` keeps: per file, the text's hash when it
-/// was measured and its lines.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Coverage {
     pub files: BTreeMap<String, (String, Vec<LineHits>)>,
-    /// What every Rust source and manifest hashed to when this was measured
-    /// (`sources_hash`): equal now, and measuring again would say the same.
     #[serde(default)]
     pub sources: String,
 }
 
-/// One hash of every file a Rust test run depends on — each `.rs` file and
-/// each `Cargo.toml`/`Cargo.lock`, by path and text — so a measurement is
-/// known to be current without running anything.
 pub fn sources_hash(files: &BTreeMap<String, String>) -> String {
     let relevant: String = files
         .iter()
@@ -53,15 +34,11 @@ pub fn sources_hash(files: &BTreeMap<String, String>) -> String {
     crate::trace::hash::text(&relevant)
 }
 
-/// Whether coverage is measured again: when asked (`again`), when nothing is
-/// held, or when what is held was taken against sources that hash otherwise.
-///
 /// @implements REQ-STALE.measured_not_retaken
 pub fn retake(held: &Coverage, files: &BTreeMap<String, String>, again: bool) -> bool {
     again || held.files.is_empty() || held.sources != sources_hash(files)
 }
 
-/// LCOV text as `(source file, [(line, count)])`, in the order it names them.
 pub fn lcov(text: &str) -> Vec<(String, Vec<(u32, u64)>)> {
     let mut out: Vec<(String, Vec<(u32, u64)>)> = Vec::new();
     for line in text.lines() {
@@ -78,11 +55,6 @@ pub fn lcov(text: &str) -> Vec<(String, Vec<(u32, u64)>)> {
     out
 }
 
-/// Every test's counts for `file`, folded into its executable lines.
-///
-/// A line any run reports is executable; its hits are the sum over tests, and
-/// the tests listed are those that ran it at least once, by name.
-///
 /// @implements REQ-LINECOV.per_test
 /// @drt REQ-LINECOV.per_test
 pub fn merged(runs: Vec<TestLines>, file: String) -> Vec<LineHits> {
@@ -105,19 +77,13 @@ pub fn merged(runs: Vec<TestLines>, file: String) -> Vec<LineHits> {
         .collect()
 }
 
-/// How much of a stretch of lines ran.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Reach {
-    /// Executable lines some test ran.
     pub run: u64,
-    /// Executable lines.
     pub all: u64,
-    /// Every test that ran any of them, by name.
     pub tests: Vec<String>,
 }
 
-/// How much of lines `start..=end` (one-based) ran.
-///
 /// @implements REQ-LINECOV.clause_summary
 /// @drt REQ-LINECOV.clause_summary
 pub fn span_coverage(lines: Vec<LineHits>, start: u32, end: u32) -> Reach {
@@ -128,25 +94,16 @@ pub fn span_coverage(lines: Vec<LineHits>, start: u32, end: u32) -> Reach {
     Reach { run: inside.iter().filter(|l| l.hits > 0).count() as u64, all: inside.len() as u64, tests }
 }
 
-/// What is shown of a file's measured lines: them when they were measured
-/// against the text the file has now (`hash`), nothing when against other text.
-///
 /// @implements REQ-LINECOV.stale_hidden
 /// @drt REQ-LINECOV.stale_hidden
 pub fn visible(measured: Option<(String, Vec<LineHits>)>, hash: String) -> Option<Vec<LineHits>> {
     measured.filter(|(at, _)| *at == hash).map(|(_, lines)| lines)
 }
 
-/// A file's lines, by reference, when they were measured against the text it
-/// has now: `visible` without the copy.
 pub fn current<'a>(coverage: &'a Coverage, path: &str, hash: &str) -> Option<&'a Vec<LineHits>> {
     coverage.files.get(path).filter(|(measured, _)| measured == hash).map(|(_, lines)| lines)
 }
 
-/// `retake` as the model takes it: whether anything is held and the sources
-/// hash it was taken against, the files as pairs (a path given twice read at
-/// its later text, as the map does).
-///
 /// @drt REQ-STALE.measured_not_retaken
 pub fn retake_owned(measured: bool, held: String, files: Vec<(String, String)>, again: bool) -> bool {
     let mut coverage = Coverage { sources: held, ..Coverage::default() };
@@ -160,8 +117,6 @@ pub fn retake_owned(measured: bool, held: String, files: Vec<(String, String)>, 
 mod sources_tests {
     use super::*;
 
-    /// Only what a Rust test run depends on moves the hash.
-    ///
     /// @tests REQ-STALE.measured_not_retaken
     #[test]
     fn the_sources_hash_moves_with_rust_files_and_manifests_only() {
@@ -179,7 +134,6 @@ mod sources_tests {
     }
 }
 
-/// What a line's marker says when pointed at.
 pub fn said(line: &LineHits) -> String {
     if line.tests.is_empty() {
         return "no test runs this line".into();
@@ -188,9 +142,6 @@ pub fn said(line: &LineHits) -> String {
     format!("run {} times by {}", line.hits, who.join(", "))
 }
 
-/// A measured line as the editor marks it: the zero-based buffer line, how
-/// often tests ran it — none is the mark of a line no test ran — and what
-/// pointing at it says.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Marker {
     pub line: usize,
@@ -198,9 +149,6 @@ pub struct Marker {
     pub said: String,
 }
 
-/// The markers of the measured lines in a window of `height` buffer lines from
-/// `top`. A line numbered 0 is no line and has none.
-///
 /// @implements REQ-LINECOV.uncovered_shown
 /// @drt REQ-LINECOV.uncovered_shown
 pub fn markers(lines: Vec<LineHits>, top: usize, height: usize) -> Vec<Marker> {
@@ -216,9 +164,6 @@ pub fn markers(lines: Vec<LineHits>, top: usize, height: usize) -> Vec<Marker> {
 mod tests {
     use super::*;
 
-    /// Only lines inside the window are marked, counted from its rows; a line
-    /// numbered 0 is no line.
-    ///
     /// @tests REQ-LINECOV.uncovered_shown
     #[test]
     fn markers_fall_on_the_rows_shown() {

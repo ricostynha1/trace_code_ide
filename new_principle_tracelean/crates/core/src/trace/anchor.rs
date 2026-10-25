@@ -1,23 +1,7 @@
-//! Resolving an annotation to a stable anchor in the code.
-//!
-//! Anchors are symbol *paths*, never line numbers: line numbers rot on the
-//! first edit above them, while `crates/core/src/evidence.rs::assurance`
-//! survives reordering, reindentation and moving a function within its file.
-//!
-//! Finding the declarations is the effectful shell — it needs a parser this
-//! project's models cannot run. What it must satisfy is stated as a law:
-//! equal normalised bodies hash equally, and an anchor's identity does not
-//! move unless its body does.
-
 use serde::{Deserialize, Serialize};
 
 use super::annotation::{Directive, ParsedComment, Problem, ProblemKind, RawAnnotation};
 
-/// A language this project can anchor precisely in.
-///
-/// A file whose language is absent anchors to the whole file and its links are
-/// capped at the lowest evidence level, rather than being reported as broken.
-///
 /// @implements REQ-ANCHOR.imprecise_capped
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Lang {
@@ -44,8 +28,6 @@ impl Lang {
         }
     }
 
-    /// Node kinds that are declarations, and whose name is their first
-    /// identifier child.
     fn declaration_kinds(self) -> &'static [&'static str] {
         match self {
             Lang::Rust => &[
@@ -61,8 +43,6 @@ impl Lang {
                 "mod_item",
             ],
             Lang::Lean4 => &["definition", "inductive", "structure", "abbreviation"],
-            // `const x = …` is declared by its declarator, which carries the
-            // name; the `const` around it does not.
             Lang::TypeScript => &[
                 "function_declaration",
                 "class_declaration",
@@ -75,12 +55,6 @@ impl Lang {
         }
     }
 
-    /// Kinds that open a named scope around their contents without being a
-    /// declaration themselves. Rust's `impl Foo` is the case: it names a type
-    /// that is declared elsewhere, so emitting it as a declaration would give
-    /// two declarations in one file the symbol path `Foo` — and an annotation
-    /// on either would then be indistinguishable from an annotation on the
-    /// other.
     fn scope_only(self) -> &'static [&'static str] {
         match self {
             Lang::Rust => &["impl_item"],
@@ -88,8 +62,6 @@ impl Lang {
         }
     }
 
-    /// Kinds that open a named scope closed by a sibling `end`, rather than by
-    /// containing their contents.
     fn sibling_scope(self) -> Option<(&'static str, &'static str)> {
         match self {
             Lang::Rust | Lang::TypeScript => None,
@@ -109,18 +81,13 @@ const LITERAL_KINDS: &[&str] = &[
     "template_string",
 ];
 
-/// One declaration found in a file.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Decl {
-    /// Dotted or double-colon path within the file, e.g. `Reply::is_well_formed`.
     pub symbol_path: String,
     pub start: usize,
     pub end: usize,
     pub start_line: u32,
     pub end_line: u32,
-    /// Whether this declaration's own text parsed. A declaration containing an
-    /// unparsed region may have the wrong extent, so anything hashed from it is
-    /// a guess.
     #[serde(default = "yes")]
     pub precise: bool,
 }
@@ -132,12 +99,8 @@ fn yes() -> bool {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", rename_all_fields = "camelCase")]
 pub enum AnchorKind {
-    /// A named declaration, addressed by its path within the file.
     Decl { symbol_path: String },
-    /// An explicit `begin` … `@end` byte range.
     Region { start: usize, end: usize },
-    /// The whole file — when nothing named follows, or the language has no
-    /// grammar here.
     File,
 }
 
@@ -145,17 +108,13 @@ pub enum AnchorKind {
 pub struct Anchor {
     pub file: String,
     pub kind: AnchorKind,
-    /// Hash of the normalised body, with comment text removed.
     pub body_hash: String,
     pub start_line: u32,
     pub end_line: u32,
-    /// False when the anchor is the whole file for want of a grammar.
     pub precise: bool,
 }
 
 impl Anchor {
-    /// Stable identity string, used in the link hash and on disk.
-    ///
     /// @implements REQ-ANCHOR.symbol_not_line
     pub fn ident(&self) -> String {
         match &self.kind {
@@ -166,19 +125,6 @@ impl Anchor {
     }
 }
 
-/// An anchor's identity, from the file it is in and what it names.
-///
-/// No line number appears anywhere in it. A line number is the identity that
-/// rots on the first edit above it, and an evidence record keyed on one is
-/// invalidated by inserting a blank line.
-///
-/// The file is part of the identity, deliberately: evidence earned for a
-/// function in one file is not inherited by the same text in another
-/// (`REQ-STALE.retarget_invalidates`). What `stable_under_move` asks is that
-/// the identity survives edits *within* the file — moving a function down,
-/// reindenting it, rewriting the comment above it — which it does, because
-/// none of those changes the path or the normalised body.
-///
 /// @implements REQ-ANCHOR.symbol_not_line
 /// @implements REQ-ANCHOR.stable_under_move
 /// @drt REQ-ANCHOR.symbol_not_line
@@ -191,14 +137,6 @@ pub fn anchor_ident(file: String, kind: AnchorKind) -> String {
     }
 }
 
-/// The highest level a link through this anchor may reach.
-///
-/// A file with no available grammar anchors to the whole file, and everything
-/// claimed through it is capped at the bottom of the ladder. Not reported as
-/// broken — an unsupported language is not a fault in the project — but not
-/// allowed to carry a proof either, because nothing knows which declaration the
-/// claim was about.
-///
 /// @implements REQ-ANCHOR.imprecise_capped
 /// @drt REQ-ANCHOR.imprecise_capped
 pub fn anchor_ceiling(precise: bool, claimed: crate::evidence::Level) -> crate::evidence::Level {
@@ -209,31 +147,21 @@ pub fn anchor_ceiling(precise: bool, claimed: crate::evidence::Level) -> crate::
     }
 }
 
-/// What a scan of one file found.
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct Scan {
     pub comments: ParsedComment,
     pub comment_ranges: Vec<(usize, usize)>,
     pub literal_ranges: Vec<(usize, usize)>,
     pub declarations: Vec<Decl>,
-    /// Byte ranges the grammar could not parse. Recorded rather than collapsed
-    /// into one file-wide flag so that an anchor can say whether *it* is
-    /// precise: a tactic block the Lean grammar cannot read says nothing about
-    /// a definition twenty lines above it.
     pub error_ranges: Vec<(usize, usize)>,
     pub precise: bool,
-    /// The grammar the file was read with, if any.
     pub lang: Option<Lang>,
 }
 
-/// Scan a file: comments parsed, literal ranges recorded, declarations found.
-///
 /// @implements REQ-ANNOT.comments_only
 /// @implements REQ-ANNOT.literals_protected
 pub fn scan(content: &str, lang: Option<Lang>) -> Scan {
     let Some(lang) = lang else {
-        // No grammar: nothing is anchored precisely, and nothing is scanned for
-        // annotations either — a link that cannot be placed is not a link.
         return Scan { precise: false, ..Default::default() };
     };
 
@@ -245,10 +173,6 @@ pub fn scan(content: &str, lang: Option<Lang>) -> Scan {
         return Scan { precise: false, ..Default::default() };
     };
 
-    // A tree with an error node is a parse this cannot trust: declarations
-    // after the error are not found, so annotations there would silently anchor
-    // to the whole file while claiming to be precise. Saying so is the
-    // difference between a capped claim and a wrong one.
     let mut scan = Scan { precise: !tree.root_node().has_error(), lang: Some(lang), ..Default::default() };
     collect(tree.root_node(), content, lang, &mut Vec::new(), &mut scan);
     scan.comment_ranges.sort_unstable();
@@ -256,11 +180,8 @@ pub fn scan(content: &str, lang: Option<Lang>) -> Scan {
     scan.error_ranges.sort_unstable();
     scan.declarations.sort_by_key(|d| d.start);
 
-    // Comments are parsed in source order so that a qualifier attaches to the
-    // annotation above it.
     let mut ranges = scan.comment_ranges.clone();
     ranges.sort_unstable();
-    // Lines counted on from the last comment rather than from the top.
     let (mut counted, mut line) = (0usize, 0u32);
     for (start, end) in ranges {
         line += content[counted..start].matches('\n').count() as u32;
@@ -286,8 +207,6 @@ fn collect(
     }
 
     if COMMENT_KINDS.contains(&kind) {
-        // Matched comments are not descended into: tree-sitter nests doc-marker
-        // children inside them, and each would otherwise be counted again.
         out.comment_ranges.push((node.start_byte(), node.end_byte()));
         return;
     }
@@ -333,7 +252,6 @@ fn collect(
         }
     }
 
-    // A scope opened by one node and closed by a later sibling.
     if let Some((open, close)) = lang.sibling_scope() {
         if kind == open {
             if let Some(name) = declaration_name(node, content, lang) {
@@ -342,11 +260,6 @@ fn collect(
             return;
         }
         if kind == close {
-            // Only an `end` that names a scope closes one. Lean writes a bare
-            // `end` to close a `mutual` block or an anonymous section, and
-            // treating that as the end of the enclosing namespace moved every
-            // later declaration out of it — which produced an anchor for a
-            // symbol that does not exist under that name.
             let text = node.utf8_text(content.as_bytes()).unwrap_or_default();
             let named = text.trim_start_matches("end").trim();
             for segment in named.split('.').rev() {
@@ -367,15 +280,11 @@ fn collect(
     }
 }
 
-/// The declared name: the node's `name` field where the grammar has one, else
-/// its first identifier child.
 fn declaration_name(node: tree_sitter::Node, content: &str, lang: Lang) -> Option<String> {
     let span = node
         .child_by_field_name("name")
         .map(|field| field.byte_range())
         .or_else(|| {
-            // Rust's `impl` blocks name a type rather than a declaration; using
-            // the type keeps `Reply::is_well_formed` readable.
             let mut cursor = node.walk();
             let found = node.children(&mut cursor).find_map(|child| {
                 let kind = child.kind();
@@ -390,11 +299,6 @@ fn declaration_name(node: tree_sitter::Node, content: &str, lang: Lang) -> Optio
     content.get(span.start..extended_end(content, span.end, lang)).map(str::to_string)
 }
 
-/// Lean names are dotted: `def Kind.progress` declares `Kind.progress`, not
-/// `Kind`. The grammar hands back only the leading component, which would give
-/// the inductive and each of its functions the same symbol path. The name is
-/// read straight out of the source instead, which does not depend on how the
-/// grammar chose to split the token.
 fn extended_end(content: &str, mut end: usize, lang: Lang) -> usize {
     if !matches!(lang, Lang::Lean4) {
         return end;
@@ -411,9 +315,6 @@ fn extended_end(content: &str, mut end: usize, lang: Lang) -> usize {
     end
 }
 
-/// Resolve one annotation to an anchor: the first declaration starting after
-/// the comment it was written in.
-///
 /// @implements REQ-ANCHOR.symbol_not_line
 /// @implements REQ-ANCHOR.stable_under_move
 pub fn resolve(
@@ -443,24 +344,12 @@ pub fn resolve(
             ),
             start_line: decl.start_line,
             end_line: decl.end_line,
-            // The anchor is precise when the declaration it names parsed, and
-            // when no unparsed region *begins* between the comment and it: such
-            // a region could be hiding a declaration that should have been the
-            // target, which would make this anchor point at the wrong thing.
-            //
-            // Regions that merely enclose both are not that. Recovery wraps
-            // large spans — a whole Lean file, in the worst case — around
-            // constructs the grammar cannot read, and the declarations inside
-            // are still found. Treating an enclosing region as a failure would
-            // cap every annotation in such a file on the strength of one tactic
-            // block, which is the behaviour this replaces.
             precise: decl.precise
                 && !scan
                     .error_ranges
                     .iter()
                     .any(|(start, _)| *start >= comment_end && *start < decl.start),
         },
-        // Nothing named follows, so the claim is about the file.
         None => Anchor {
             file: file.to_string(),
             kind: AnchorKind::File,
@@ -472,17 +361,6 @@ pub fn resolve(
     }
 }
 
-/// The declaration a comment sits inside, innermost first: a Lean inductive
-/// whose constructor carries the doc comment or a structure whose field does,
-/// a Rust enum whose variant does, a struct whose field does, or a function
-/// whose body holds the comment.
-///
-/// A constructor, a variant or a field is not a declaration of its own, so the
-/// first declaration after such a comment is the *next* top-level one — and
-/// the annotation used to bind there, to something its author never pointed
-/// at. When nothing is declared between the comment and the end of the
-/// enclosing declaration, the claim is about that declaration. The same rule
-/// in both languages (ADR-0014).
 fn enclosing(scan: &Scan, comment_end: usize) -> Option<&Decl> {
     let (comment_start, _) = scan.comment_ranges.iter().find(|(_, end)| *end == comment_end)?;
     scan.declarations
@@ -491,7 +369,6 @@ fn enclosing(scan: &Scan, comment_end: usize) -> Option<&Decl> {
         .max_by_key(|d| d.start)
 }
 
-/// Ranges within `[start, end)`, rebased to that slice.
 fn shifted(ranges: &[(usize, usize)], start: usize, end: usize) -> Vec<(usize, usize)> {
     ranges
         .iter()
@@ -500,14 +377,6 @@ fn shifted(ranges: &[(usize, usize)], start: usize, end: usize) -> Vec<(usize, u
         .collect()
 }
 
-/// Region and `@end` balance across a file's directives.
-///
-/// `region_problems`, over the directives alone.
-///
-/// The balance question is about the sequence of directives and nothing else —
-/// not the file, not the parse, not what any of them names — so this is what
-/// the model is compared against.
-///
 /// @implements REQ-ANNOT.region_balanced
 /// @drt REQ-ANNOT.region_balanced
 pub fn region_balance(directives: Vec<Directive>) -> Vec<Problem> {
@@ -605,7 +474,6 @@ impl Holder {
         let src = "fn f() { let s = \"@implements REQ-FAKE.c\"; }";
         let scan = scan(src, Some(Lang::Rust));
         assert!(scan.comments.directives.is_empty(), "{:?}", scan.comments.directives);
-        // Nor in code that is neither string nor comment: a macro's tokens.
         let code = "macro_rules! m { (@implements REQ-FAKE.c) => {} }\n";
         assert!(super::scan(code, Some(Lang::Rust)).comments.directives.is_empty());
         let ts = "const s = `@implements REQ-FAKE.c`;\n// @implements REQ-X.c\nfunction f() {}\n";
@@ -633,9 +501,6 @@ impl Holder {
         );
     }
 
-    /// A constructor's doc comment is inside its inductive; an annotation there
-    /// is about the inductive, not about whatever is declared next.
-    ///
     /// @tests REQ-ANCHOR.symbol_not_line
     #[test]
     fn a_constructor_doc_comment_binds_to_its_inductive() {
@@ -651,14 +516,9 @@ impl Holder {
             resolve("f.lean", src, &scanned, &annotation(0), end).kind
         };
         assert_eq!(bound("REQ-X.c"), AnchorKind::Decl { symbol_path: "N::Origin".into() });
-        // An annotation before a declaration still binds to that declaration.
         assert_eq!(bound("REQ-X.d"), AnchorKind::Decl { symbol_path: "N::after".into() });
     }
 
-    /// The same rule in Rust: a variant's or a field's doc comment, or a
-    /// comment inside a function body, is about the enclosing item — not the
-    /// item declared next.
-    ///
     /// @tests REQ-ANCHOR.symbol_not_line
     #[test]
     fn a_rust_comment_inside_an_item_binds_to_that_item() {
@@ -676,7 +536,6 @@ impl Holder {
         assert_eq!(bound("REQ-X.v"), AnchorKind::Decl { symbol_path: "State".into() });
         assert_eq!(bound("REQ-X.f"), AnchorKind::Decl { symbol_path: "Holder".into() });
         assert_eq!(bound("REQ-X.b"), AnchorKind::Decl { symbol_path: "body".into() });
-        // A method's doc comment still binds to the method that follows it.
         assert_eq!(bound("REQ-X.m"), AnchorKind::Decl { symbol_path: "Holder::method".into() });
     }
 
@@ -700,8 +559,6 @@ impl Holder {
         assert_eq!(region_problems(&stray.comments)[0].kind, ProblemKind::StrayEnd);
     }
 
-    /// Editing the annotation must not invalidate the evidence it carries.
-    ///
     /// @tests REQ-ANCHOR.comments_excluded
     #[test]
     fn editing_a_doc_comment_does_not_move_the_body_hash() {

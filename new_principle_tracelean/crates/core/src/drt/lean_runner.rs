@@ -1,20 +1,9 @@
-//! Generating and building the Lean side of a differential test.
-//!
-//! The model is ordinary compiled Lean, so a case costs microseconds. Only the
-//! thin `main` that decodes a case, calls the model and encodes the reply has to
-//! be generated — and it is generated into a package of its own, because a
-//! project's build files are something a person maintains.
-
 use std::path::{Path, PathBuf};
 
-/// One op, and the Lean expression that answers it.
 #[derive(Debug, Clone, PartialEq)]
 pub struct LeanEntry {
     pub op: String,
-    /// Fully qualified model function, e.g. `TraceLean.assurance`.
     pub function: String,
-    /// Input field names to pass, in argument order. Empty means the function
-    /// takes no arguments.
     pub arguments: Vec<String>,
 }
 
@@ -23,18 +12,11 @@ pub fn package_dir(root: &Path) -> PathBuf {
     root.join(".tracelean").join("drt-lean")
 }
 
-/// Whether a Lean toolchain is available.
-///
-/// A missing toolchain is a first-class explained state — the difference
-/// between "this is broken" and "this is not set up yet".
-///
 /// @implements REQ-DRT-LEAN.toolchain_explained
 pub fn toolchain() -> Result<(), String> {
     toolchain_on(&std::env::var_os("PATH").unwrap_or_default())
 }
 
-/// As `toolchain`, looking only in the directories `path` lists.
-///
 /// @implements REQ-DRT-LEAN.toolchain_explained
 pub fn toolchain_on(path: &std::ffi::OsStr) -> Result<(), String> {
     for tool in ["lean", "lake"] {
@@ -52,9 +34,6 @@ fn which(path: &std::ffi::OsStr, name: &str) -> Option<PathBuf> {
     std::env::split_paths(path).map(|dir| dir.join(name)).find(|candidate| candidate.is_file())
 }
 
-/// The generated package's lakefile, requiring the project's Lean package by
-/// path.
-///
 /// @implements REQ-DRT-LEAN.generated
 pub fn lakefile(model_package: &str, model_path: &str) -> String {
     format!(
@@ -69,20 +48,6 @@ pub fn lakefile(model_package: &str, model_path: &str) -> String {
     )
 }
 
-/// The generated `Main.lean`.
-///
-/// Argument types are never written: `fromJson?` is generic in its result, and
-/// elaboration resolves it from the model function's parameter. The binding
-/// therefore names no type on this side either.
-///
-/// Several imports rather than one, so a single runner can answer every op a
-/// project declares. One runner per op means one `lake build` per op, and those
-/// builds cannot run at once — they all write the same model package's output —
-/// so the cost is paid in series.
-///
-/// Imports are emitted once each, in sorted order, so the same set of entries
-/// always produces the same bytes and a rebuild is a no-op.
-///
 /// @implements REQ-DRT-LEAN.encoding_declared
 /// @implements REQ-DRT-PROTO.reply_one_line
 /// @implements REQ-DRT-PROTO.case_names_op
@@ -142,8 +107,6 @@ pub fn main_lean(imports: &[&str], entries: &[LeanEntry]) -> String {
     out
 }
 
-/// Write the generated package if it differs from what would be generated now.
-///
 /// @implements REQ-DRT-LEAN.generated
 pub fn materialize(
     root: &Path,
@@ -156,8 +119,6 @@ pub fn materialize(
     std::fs::create_dir_all(&dir)?;
     write_if_changed(&dir.join("lakefile.lean"), &lakefile(model_package, model_path))?;
     write_if_changed(&dir.join("Main.lean"), &main_lean(imports, entries))?;
-    // The toolchain file is copied from the model package so the generated
-    // package cannot be built with a different Lean than the model was.
     if let Ok(toolchain) = std::fs::read_to_string(Path::new(model_path).join("lean-toolchain")) {
         write_if_changed(&dir.join("lean-toolchain"), &toolchain)?;
     }
@@ -183,9 +144,6 @@ mod tests {
         }
     }
 
-    /// One runner answers every op it was generated for, from every module
-    /// those ops live in.
-    ///
     /// @tests REQ-DRT-PROTO.runner_shared
     #[test]
     fn one_runner_imports_every_module_its_ops_live_in() {
@@ -199,12 +157,6 @@ mod tests {
         assert!(main.contains("\"REQ-ROLLUP.min_not_mean\""));
     }
 
-    /// The same set of modules always produces the same bytes, whatever order
-    /// the bindings were read in and however often a module is named.
-    ///
-    /// Generation that depended on order would rewrite the shared package on
-    /// every run, and rewriting it is what makes the build stop being a no-op.
-    ///
     /// @tests ARCH-DETERMINISM.stable_ordering
     #[test]
     fn the_imports_do_not_depend_on_order_or_repetition() {
@@ -216,11 +168,6 @@ mod tests {
         assert_eq!(one.matches("import TraceLean.Evidence\n").count(), 1);
     }
 
-    /// An op nothing was generated for is an error, not a wrong answer.
-    ///
-    /// A shared runner is asked for ops it may not have; answering one of them
-    /// with another's function is the failure that would look like agreement.
-    ///
     /// @tests REQ-DRT-PROTO.case_names_op
     #[test]
     fn an_op_the_runner_does_not_carry_is_refused() {

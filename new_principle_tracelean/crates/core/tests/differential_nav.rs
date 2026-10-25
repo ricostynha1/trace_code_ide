@@ -1,6 +1,3 @@
-//! Getting around the workspace, checked against the model: which name a line
-//! declares, and which files a few letters reach.
-
 mod harness;
 mod support;
 
@@ -61,8 +58,6 @@ fn workspace() -> Schema {
     Schema::List {
         inner: Box::new(Schema::Tuple {
             items: vec![
-                // Random text would rarely declare or hold anything; the
-                // examples do, and a random pick is the empty file.
                 text(1, &["a.rs", "b.lean", "c.ts"]),
                 text(
                     0,
@@ -95,8 +90,6 @@ fn uses_input() -> Schema {
     ])
 }
 
-/// Where a name is declared, checked against the model.
-///
 /// @drt REQ-NAV.definitions_found
 /// @tests REQ-NAV.definitions_found
 #[test]
@@ -114,8 +107,6 @@ fn model_and_implementation_agree_on_where_a_name_is_declared() {
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
-/// A name declared once, several times, by its last part, and not at all.
-///
 /// @tests REQ-NAV.definitions_found
 /// @tests REQ-DRT-COVER.law_coverage
 #[test]
@@ -145,8 +136,6 @@ fn generation_reaches_names_declared_once_twice_and_never() {
     );
 }
 
-/// Where a text or a name is used, checked against the model.
-///
 /// @drt REQ-NAV.uses_found
 /// @tests REQ-NAV.uses_found
 #[test]
@@ -169,9 +158,6 @@ fn model_and_implementation_agree_on_where_a_name_is_used() {
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
-/// Whole words and searches, each finding something, and a list cut at its
-/// limit.
-///
 /// @tests REQ-NAV.uses_found
 /// @tests REQ-DRT-COVER.law_coverage
 #[test]
@@ -213,8 +199,6 @@ fn reopen_input() -> Schema {
     ])
 }
 
-/// What a project opens again, checked against the model.
-///
 /// @drt REQ-NAV.session_recalled
 /// @tests REQ-NAV.session_recalled
 #[test]
@@ -232,8 +216,6 @@ fn model_and_implementation_agree_on_what_reopens() {
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
-/// A tab removed since, a file in front that still exists, and one removed.
-///
 /// @tests REQ-NAV.session_recalled
 /// @tests REQ-DRT-COVER.law_coverage
 #[test]
@@ -268,8 +250,6 @@ fn generation_reaches_removed_tabs_and_the_front_file() {
     );
 }
 
-/// Which name a line declares, checked against the model.
-///
 /// @drt REQ-NAV.declaration_line
 /// @tests REQ-NAV.declaration_line
 #[test]
@@ -286,9 +266,6 @@ fn model_and_implementation_agree_on_what_a_line_declares() {
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
-/// A line declaring a name, one declaring it after modifiers, one naming a
-/// path, and one declaring nothing.
-///
 /// @tests REQ-NAV.declaration_line
 /// @tests REQ-DRT-COVER.law_coverage
 #[test]
@@ -314,8 +291,6 @@ fn generation_reaches_every_kind_of_line() {
     );
 }
 
-/// Which files a few letters reach, best first, checked against the model.
-///
 /// @drt REQ-NAV.quick_open
 /// @tests REQ-NAV.quick_open
 #[test]
@@ -333,8 +308,6 @@ fn model_and_implementation_agree_on_what_quick_open_lists() {
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
-/// No letters, letters matching nothing, more matches than kept, and ties.
-///
 /// @tests REQ-NAV.quick_open
 /// @tests REQ-DRT-COVER.law_coverage
 #[test]

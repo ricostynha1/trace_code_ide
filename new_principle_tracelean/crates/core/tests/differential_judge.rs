@@ -1,12 +1,3 @@
-//! What a judgement is allowed to write, checked against the model.
-//!
-//! This is the bond with no oracle: a person reads a clause and a model and
-//! says whether they agree. The danger is not that they are wrong — they are
-//! allowed to be, and the level says so — but that the recording step quietly
-//! promotes their reading above what a reading can support. That is a single
-//! wrong constant, invisible in review, and it would make every stronger
-//! guarantee in the system decorative.
-
 mod harness;
 
 use std::collections::BTreeMap;
@@ -57,7 +48,6 @@ fn input_schema() -> Schema {
             "judgement",
             strukt(&[
                 ("verdict", verdict()),
-                // A person, a delegate, and a blank name.
                 ("judgedBy", text(&["ana", "sam", "rev", " ", ""])),
                 ("delegatedBy", Schema::Option { inner: Box::new(text(&["ana", "bob"])) }),
                 ("note", Schema::Option { inner: Box::new(text(&["unclear"])) }),
@@ -70,7 +60,6 @@ fn input_schema() -> Schema {
     ])
 }
 
-/// A project's judges file, or none: people who delegate to `rev` or `sam`.
 fn judges_schema() -> Schema {
     let names = |names: &[&str]| Schema::Str {
         max_len: Some(3),
@@ -124,11 +113,6 @@ fn model_and_implementation_agree_on_what_a_judgement_records() {
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
-/// Every outcome occurs — including a delegate accepted and refused — and the
-/// recorded ones never exceed `L2`, drift and `unmodelable` sitting at `L1`:
-/// the property stated directly against the implementation, not only through
-/// the model.
-///
 /// @tests REQ-JUDGE.caps_at_judgement
 /// @tests REQ-JUDGE.drift_recorded
 /// @tests REQ-JUDGE.human_decides
@@ -182,13 +166,6 @@ fn generation_reaches_every_verdict_and_none_exceeds_l2() {
     support::covered("REQ-JUDGE.caps_at_judgement", &counts);
 }
 
-/// When a judgement stops applying.
-///
-/// A judgement is about a specific pair of texts. If either moves, nobody has
-/// judged the pair that now exists — and the dangerous implementation is the
-/// one that checks only the requirement, because a model can be rewritten under
-/// a judgement without the text changing at all.
-///
 /// @drt REQ-JUDGE.invalidated_by_change
 /// @tests REQ-JUDGE.invalidated_by_change
 #[test]
@@ -232,7 +209,6 @@ fn model_and_implementation_agree_on_when_a_judgement_lapses() {
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
-/// One detail of each kind, which is the whole input to a ceiling.
 fn ceiling_input() -> Schema {
     let mut variants: BTreeMap<String, Option<Box<Schema>>> = BTreeMap::new();
     variants.insert(
@@ -262,8 +238,6 @@ fn ceiling_input() -> Schema {
     strukt(&[("detail", Schema::Enum { variants })])
 }
 
-/// The ceiling per backend, on its own.
-///
 /// @drt REQ-EVID.judgement_caps
 /// @tests REQ-EVID.judgement_caps
 #[test]
@@ -299,12 +273,6 @@ fn model_and_implementation_agree_on_what_each_backend_can_establish() {
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
-/// The prompt a person carries, checked against the model.
-///
-/// The prompt is the one place a model's opinion enters this system at all, and
-/// a prompt that quietly stopped presenting the divergence would make every
-/// judgement after it worth less without anything reporting a change.
-///
 /// @drt REQ-JUDGE.prompt_exported
 /// @tests REQ-JUDGE.prompt_exported
 /// @tests REQ-JUDGE.divergence_presented
@@ -340,9 +308,6 @@ fn model_and_implementation_agree_on_the_prompt() {
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
-/// A known divergence reaches the prompt, and half the generated prompts have
-/// one — otherwise the agreement above would be about the other branch only.
-///
 /// @tests REQ-JUDGE.divergence_presented
 /// @tests REQ-DRT-COVER.law_coverage
 #[test]
@@ -380,14 +345,6 @@ fn generation_reaches_prompts_with_and_without_a_divergence() {
     );
 }
 
-/// Each backend's ceiling, asked of each backend.
-///
-/// The ceiling is one `match` with three arms, and a run that reached only the
-/// proof arm would agree about a function it never asked the interesting
-/// question. The interesting arm is `judge`: it is the most fallible method and
-/// the one whose ceiling being wrong would let the least reliable bond produce
-/// the most confident output.
-///
 /// @tests REQ-EVID.judgement_caps
 /// @tests REQ-DRT-COVER.law_coverage
 #[test]
@@ -428,7 +385,6 @@ fn generation_reaches_every_backend_and_none_exceeds_its_method() {
     );
 }
 
-/// A judgement as the requirement view shows it.
 fn judged_input() -> Schema {
     let mut verdicts = BTreeMap::new();
     verdicts.insert("L1".to_string(), None);
@@ -445,9 +401,6 @@ fn judged_input() -> Schema {
     )])
 }
 
-/// How a judgement reads, checked against the model: a delegated `L2` must
-/// never read as a person's own, nor a drift as an agreement.
-///
 /// @drt REQ-JUDGE.judgement_shown
 /// @tests REQ-JUDGE.judgement_shown
 #[test]
@@ -475,9 +428,6 @@ fn model_and_implementation_agree_on_how_a_judgement_reads() {
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
-/// Each kind of judgement is generated, so the agreement above is about all
-/// of them.
-///
 /// @tests REQ-JUDGE.judgement_shown
 /// @tests REQ-DRT-COVER.law_coverage
 #[test]
@@ -512,8 +462,6 @@ fn generation_reaches_every_kind_of_judgement_shown() {
     );
 }
 
-/// Hashes drawn from a small alphabet, so a list repeats one and two lists
-/// share one often enough to be asked about.
 fn rests_on_input() -> Schema {
     let hash = || Schema::List {
         inner: Box::new(Schema::Str { max_len: Some(0), examples: vec!["a".into(), "b".into(), "é".into()] }),
@@ -522,8 +470,6 @@ fn rests_on_input() -> Schema {
     strukt(&[("models", hash()), ("checks", hash())])
 }
 
-/// What a judgement rests on, checked against the model.
-///
 /// @drt REQ-JUDGE.structural_judged
 /// @tests REQ-JUDGE.structural_judged
 #[test]
@@ -556,9 +502,6 @@ fn model_and_implementation_agree_on_what_a_judgement_rests_on() {
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
-/// A clause with only structural checks, with a model, with nothing, and a
-/// hash named twice, so the agreement above is about each.
-///
 /// @tests REQ-JUDGE.structural_judged
 /// @tests REQ-DRT-COVER.law_coverage
 #[test]
@@ -576,7 +519,6 @@ fn generation_reaches_clauses_judged_against_a_test() {
         match (models.is_empty(), checks.is_empty()) {
             (true, false) => structural += 1,
             (false, _) => {
-                // A model makes the checks irrelevant to the judgement.
                 assert_eq!(rests, rests_on(models.clone(), vec![]));
                 modelled += 1
             }

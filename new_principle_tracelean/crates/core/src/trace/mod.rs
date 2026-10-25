@@ -1,7 +1,3 @@
-//! Traceability: requirements linked to models, code and tests by annotations
-//! written in comments — never by filename, directory layout, or any other
-//! convention imposed on the project being traced.
-
 pub mod anchor;
 pub mod annotation;
 pub mod checker;

@@ -1,14 +1,3 @@
-//! The order the lockfile writes links in, checked against the model.
-//!
-//! The lockfile is committed, so a change to it is meant to mean a change to
-//! the project. That holds only if the same tree always produces the same
-//! bytes, and the one part of those bytes this project chooses is the order of
-//! the link list.
-//!
-//! Generated links share prefixes deliberately: an order that compared only the
-//! first few fields would look correct on distinct links and produce a
-//! different file on every run for links that agree up to their hashes.
-
 mod harness;
 
 use tracelean_core::drt::run::{run, RunOptions};
@@ -20,10 +9,6 @@ fn strukt(fields: &[(&str, Schema)]) -> Schema {
     Schema::Struct { fields: fields.iter().map(|(k, v)| (k.to_string(), v.clone())).collect() }
 }
 
-/// Tiny alphabets, so generated links collide on their leading fields and the
-/// later ones have to break the tie. `max_len: 0` makes the generator's random
-/// branch produce the empty string rather than a fresh one, which is what keeps
-/// the collisions frequent.
 fn small(examples: &[&str]) -> Schema {
     Schema::Str {
         max_len: Some(0),
@@ -31,9 +16,6 @@ fn small(examples: &[&str]) -> Schema {
     }
 }
 
-/// The leading fields draw from one value each, so links routinely agree all
-/// the way down to their hashes — the case a partial order would leave to
-/// chance, and the reason this order goes through every field.
 fn lock_link() -> Schema {
     strukt(&[
         ("role", small(&["models"])),
@@ -87,9 +69,6 @@ fn model_and_implementation_agree_on_the_order_links_are_written_in() {
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
-/// Determinism stated directly: ordering is idempotent, and it does not depend
-/// on the order the links arrived in.
-///
 /// @tests REQ-LOCK.deterministic_bytes
 /// @tests REQ-DRT-COVER.law_coverage
 #[test]
@@ -115,8 +94,6 @@ fn the_order_is_a_function_of_the_links_alone() {
             "the order depends on the order the links arrived in"
         );
 
-        // Links agreeing on everything but their hashes are the case a partial
-        // order would leave to chance.
         for pair in sorted.windows(2) {
             if pair[0].role == pair[1].role
                 && pair[0].req == pair[1].req
@@ -134,8 +111,6 @@ fn the_order_is_a_function_of_the_links_alone() {
     );
 }
 
-/// A version this build does not know, checked against the model.
-///
 /// @drt REQ-LOCK.version_stamped
 /// @tests REQ-LOCK.version_stamped
 #[test]
@@ -182,12 +157,6 @@ fn model_and_implementation_agree_on_which_versions_are_readable() {
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
-/// Evidence passes through rendering unchanged, checked against the model.
-///
-/// The model is the identity, which is the whole claim. A run that agreed would
-/// be worthless if the generator only ever produced the empty list, so the
-/// coverage check below is the part that makes this test say anything.
-///
 /// @drt REQ-LOCK.evidence_preserved
 /// @tests REQ-LOCK.evidence_preserved
 #[test]
@@ -223,7 +192,6 @@ fn model_and_implementation_agree_that_evidence_passes_through() {
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
-/// An evidence list with every backend represented.
 fn evidence_list_schema() -> Schema {
     let names = |values: &[&str]| Schema::Str {
         max_len: Some(1),
@@ -295,24 +263,10 @@ fn evidence_list_schema() -> Schema {
                 Schema::List {
                     inner: Box::new(Schema::Tuple {
                         items: vec![
-                            // Exactly the names `required_inputs` asks for.
-                            // Without them no generated record can ever be
-                            // reproducible, and the agreement on
-                            // `record_reproducible` would be about the failing
-                            // branch only — which is what the `Vacuous` verdict
-                            // reported when the alphabet was `["model", "code"]`.
-                            // A name no backend requires is still reached:
-                            // `requirement` is not required of a proof, and
-                            // `implementation` is not required of a judgement.
                             names(&["model", "implementation", "requirement", "toolchain"]),
                             names(&["h1", "h2"]),
                         ],
                     }),
-                    // Long enough that carrying *both* names a backend requires
-                    // is ordinary rather than lucky. At four the happy path
-                    // occurred 47 times in 2000; the floor is a statement about
-                    // how often the law must be asked, so the generator moved
-                    // rather than the floor.
                     max_len: Some(8),
                 },
             ),
@@ -331,8 +285,6 @@ fn evidence_list_schema() -> Schema {
     }
 }
 
-/// Rendering reads nothing and every backend's evidence reaches the artefact.
-///
 /// @tests REQ-LOCK.pure_render
 /// @structural REQ-LOCK.pure_render reason="an absence of filesystem access, which a model of the function could not distinguish from its presence"
 /// @tests REQ-DRT-COVER.law_coverage
@@ -352,10 +304,6 @@ fn generation_reaches_every_backend_and_rendering_reads_nothing() {
         if records.is_empty() {
             empty += 1;
         }
-        // Rendering is a function of its argument. Called on a default index
-        // with no filesystem anywhere near it, it still returns what it was
-        // given — which is what `pure_render` and `evidence_preserved` say
-        // together.
         assert_eq!(carried_evidence(records.clone()), records);
         for record in records {
             match record.detail {
@@ -376,15 +324,6 @@ fn generation_reaches_every_backend_and_rendering_reads_nothing() {
     );
 }
 
-/// A change in the serialised form corresponds to a change in the repository,
-/// and nothing else does.
-///
-/// Both directions matter and they fail differently. If reordering the scan
-/// changed the bytes, every diff would carry noise and people would stop
-/// reading them — which is worse than not committing the index at all. If
-/// changing a hash left the bytes alone, the artefact would say a claim still
-/// holds after the thing it is about has moved.
-///
 /// @tests REQ-LOCK.diff_is_meaningful
 /// @structural REQ-LOCK.diff_is_meaningful reason="a claim relating two serialisations to two repository states, not a property of one call"
 /// @tests REQ-LOCK.deterministic_bytes
@@ -424,17 +363,9 @@ fn the_bytes_move_when_the_repository_moves_and_not_otherwise() {
         "a body hash changed and the committed artefact did not"
     );
 
-    // And it is a function: the same value twice is the same bytes twice.
     assert_eq!(to_bytes(&forwards), to_bytes(&forwards));
 }
 
-/// Whether a record carries what would reproduce and invalidate it, checked
-/// against the model.
-///
-/// A record that named no inputs could never be invalidated, so it would be
-/// believed forever — which is the failure this whole system exists to prevent,
-/// arriving through the one door nobody watches.
-///
 /// @drt REQ-EVID.record_reproducible
 /// @tests REQ-EVID.record_reproducible
 /// @tests REQ-STALE.inputs_identified
@@ -477,14 +408,6 @@ fn model_and_implementation_agree_on_whether_a_record_can_be_reproduced() {
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
-/// All three answers, and the one that matters asked of all three backends.
-///
-/// `Reproducible` is the comfortable answer and the easy one to reach; the two
-/// findings are what the law is for. A record that named no inputs would never
-/// go stale and so would be believed forever, so `MissingInput` has to occur —
-/// and it has to occur for every backend, because each names different inputs
-/// and a match arm that forgot one would still pass a run that never reached it.
-///
 /// @tests REQ-EVID.record_reproducible
 /// @tests REQ-DRT-COVER.law_coverage
 #[test]

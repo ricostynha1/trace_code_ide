@@ -1,7 +1,3 @@
-//! Requirement names in a comment, checked against the model: what is a name,
-//! where it ends, and where it may start; and the findings view, whose
-//! messages are read for names the same way.
-
 mod harness;
 
 use std::collections::BTreeMap;
@@ -11,17 +7,11 @@ use tracelean_core::drt::schema::Schema;
 
 mod support;
 
-/// Fragments that are names, near-names and the characters around them: a
-/// clause key, digits in a group, a lower-case letter running into the name, a
-/// non-ASCII letter, a name cut short.
 const FRAGMENTS: &[&str] = &[
     "REQ-SHOW", "REQ-DRT-PROTO.ops_unique", "ARCH-NO-DRIVING", "REQ-X", "R-X", "REQ-", "REQ-Xyz",
     "xREQ-A", "REQ-A.b_2", "REQ-A.", "REQ-A.B", "é", " ", "// ", ".", "-", "A1-B",
 ];
 
-/// A comment is two fragments joined, so every name meets every neighbour on
-/// both sides; the range drawn over it may start late and stop short or past
-/// the end.
 fn comment() -> Schema {
     let mut texts = Vec::new();
     for a in FRAGMENTS {

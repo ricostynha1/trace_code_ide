@@ -1,6 +1,3 @@
-//! `tracelean-trace --drt` on a tree of its own: a clause that agreed is not
-//! run again while what it ran on is unchanged, and is the moment it is not.
-
 use std::path::{Path, PathBuf};
 use std::process::Command;
 

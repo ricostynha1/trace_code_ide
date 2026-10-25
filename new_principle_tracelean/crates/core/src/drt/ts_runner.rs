@@ -1,16 +1,3 @@
-//! Generating the TypeScript side of a differential run.
-//!
-//! The web frontend implements the functions that read a buffer, so it is a
-//! second implementation of the same clauses — and the question that matters
-//! about it is whether it answers what the *model* answers. This generates the
-//! process that asks it.
-//!
-//! Cheaper than the Rust runner in one way and dearer in another. Node strips
-//! the types and runs the file, so there is no build and no build output that
-//! could differ from the source the browser loads; but nothing typechecks the
-//! call, so a binding that does not fit is a caught exception rather than a
-//! compile error. That is why every call is wrapped.
-//!
 //! @implements REQ-DRT-TS.generated
 
 use std::collections::BTreeMap;
@@ -18,25 +5,17 @@ use std::path::{Path, PathBuf};
 
 use super::Binding;
 
-/// Where the generated runner lives. Under the cache directory, because it is
-/// TraceLean's code and not something a person maintains.
-///
 /// @implements REQ-DRT-TS.project_untouched
 pub fn package_dir(root: &Path) -> PathBuf {
     root.join(".tracelean").join("drt-ts")
 }
 
-/// What a binding resolved to, once its source has been read.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Entry {
     pub op: String,
-    /// The module to import, relative to the generated runner.
     pub module: String,
-    /// The exported name to call.
     pub symbol: String,
-    /// Implementation parameter names, in declaration order.
     pub parameters: Vec<String>,
-    /// Implementation parameter name -> model field name to read it from.
     pub sources: Vec<String>,
 }
 
@@ -44,12 +23,7 @@ pub struct Entry {
 pub enum ResolveError {
     MalformedEntry(String),
     MissingFile(PathBuf),
-    /// No such export, or a parameter this cannot name — a destructuring
-    /// pattern, an optional one. Refused rather than guessed at: supplying the
-    /// wrong argument produces agreement about the wrong thing.
     NoSuchFunction { file: PathBuf, symbol: String },
-    /// Two declarations of one name. Taking the first would call one function
-    /// and report agreement about the other.
     AmbiguousFunction { file: PathBuf, symbol: String, count: usize },
 }
 
@@ -75,18 +49,8 @@ impl std::fmt::Display for ResolveError {
     }
 }
 
-/// The characters that open a TypeScript string.
 const TS_QUOTES: &[char] = &['"', '\'', '`'];
 
-/// The parameters of a TypeScript function, in the order it declares them.
-///
-/// A name, then optionally a type after `:` or a default after `=`. Anything
-/// else answers `None`, because a parameter this cannot name is one the runner
-/// cannot supply. `this` is TypeScript's type-only receiver annotation, never
-/// passed by a caller, so it is dropped rather than shifting every argument.
-///
-/// Read from the source with comments and strings blanked, so `// was:
-/// function f(b, a)` is not a declaration; two declarations answer `None`.
 pub fn ts_parameters_of(source: &str, symbol: &str) -> Option<Vec<String>> {
     use super::signature::{blanked, is_identifier, matching, split_top_level};
 
@@ -103,9 +67,6 @@ pub fn ts_parameters_of(source: &str, symbol: &str) -> Option<Vec<String>> {
         if part.is_empty() {
             continue;
         }
-        // A name, then optionally a type or a default. A destructuring pattern
-        // or an optional `name?` leaves something that is not an identifier,
-        // and that is refused rather than guessed at.
         let named = part.split([':', '=']).next().unwrap_or("").trim();
         if named.is_empty() || !is_identifier(named) {
             return None;
@@ -117,23 +78,16 @@ pub fn ts_parameters_of(source: &str, symbol: &str) -> Option<Vec<String>> {
     Some(out)
 }
 
-/// `ts_parameters_of`, over owned arguments, which is what a binding's entry
-/// point has to take: JSON escapes make a borrowed `&str` impossible to supply
-/// (ADR-0010).
-///
 /// @implements REQ-DRT-TS.params_from_source
 /// @drt REQ-DRT-TS.params_from_source
 pub fn ts_parameters_owned(source: String, symbol: String) -> Option<Vec<String>> {
     ts_parameters_of(&source, &symbol)
 }
 
-/// How many functions in `source` are declared with this name, outside
-/// comments and strings.
 pub fn ts_declarations(source: &str, symbol: &str) -> usize {
     declarations_in(&super::signature::blanked(source, TS_QUOTES, false), symbol)
 }
 
-/// `ts_declarations`, over text already blanked.
 fn declarations_in(source: &str, symbol: &str) -> usize {
     let mut count = 0;
     let mut from = 0usize;
@@ -144,10 +98,6 @@ fn declarations_in(source: &str, symbol: &str) -> usize {
     count
 }
 
-/// The `(` that opens `function <symbol>`'s parameter list.
-///
-/// Separate from the Rust one rather than sharing a keyword argument: the two
-/// only look alike until one language's declarations change.
 fn signature_open_paren(source: &str, symbol: &str) -> Option<usize> {
     let mut from = 0usize;
     while let Some(found) = source[from..].find("function ") {
@@ -161,7 +111,6 @@ fn signature_open_paren(source: &str, symbol: &str) -> Option<usize> {
         if &rest[..name_len] != symbol {
             continue;
         }
-        // Generic parameters are skipped by balance, as on the Rust side.
         let skip_space = |mut cursor: usize| {
             while source[cursor..].starts_with([' ', '\t', '\r', '\n']) {
                 cursor += 1;
@@ -182,12 +131,6 @@ fn signature_open_paren(source: &str, symbol: &str) -> Option<usize> {
     None
 }
 
-/// Resolve one binding's TypeScript implementation against the project's source.
-///
-/// The module recorded is the project's own file, so what the runner executes
-/// is what the browser loads — there is no build output in between that could
-/// differ from it.
-///
 /// @implements REQ-DRT-TS.params_from_source
 /// @implements REQ-DRT-TS.runs_the_shipped_source
 pub fn resolve(root: &Path, binding: &Binding, spec: &super::CallSpec) -> Result<Entry, ResolveError> {
@@ -198,8 +141,6 @@ pub fn resolve(root: &Path, binding: &Binding, spec: &super::CallSpec) -> Result
     let source =
         std::fs::read_to_string(&file).map_err(|_| ResolveError::MissingFile(file.clone()))?;
 
-    // The same guard the Rust side has: two declarations of one name is not a
-    // resolution to guess at.
     let declared = ts_declarations(&source, symbol);
     if declared > 1 {
         return Err(ResolveError::AmbiguousFunction {
@@ -224,9 +165,6 @@ pub fn resolve(root: &Path, binding: &Binding, spec: &super::CallSpec) -> Result
 
     Ok(Entry {
         op: binding.op(),
-        // Absolute, because the generated runner is written to a cache
-        // directory that is not under the project. The file imported is the
-        // project's own source, which is what `runs_the_shipped_source` means.
         module: file.display().to_string(),
         symbol: symbol.to_string(),
         parameters,
@@ -234,12 +172,6 @@ pub fn resolve(root: &Path, binding: &Binding, spec: &super::CallSpec) -> Result
     })
 }
 
-/// The generated runner.
-///
-/// One import per module, one case per op, and every call wrapped: nothing this
-/// generates decides anything about a value, which is the same promise the Rust
-/// runner makes by not naming a type.
-///
 /// @implements REQ-DRT-TS.generated
 /// @implements REQ-DRT-TS.failure_is_an_answer
 /// @implements REQ-DRT-PROTO.reply_one_line
@@ -301,15 +233,11 @@ pub fn runner_source(entries: &[Entry]) -> String {
     out
 }
 
-/// Write the generated runner, if it differs from what would be generated now.
-///
 /// @implements REQ-DRT-TS.generated
 /// @implements REQ-DRT-TS.project_untouched
 pub fn materialize(root: &Path, entries: &[Entry]) -> std::io::Result<PathBuf> {
     let dir = package_dir(root);
     std::fs::create_dir_all(&dir)?;
-    // A package that is not a module would make `import` a syntax error, and
-    // the project's own package.json is not this runner's to read.
     let manifest = "{\n  \"private\": true,\n  \"type\": \"module\"\n}\n";
     write_if_changed(&dir.join("package.json"), manifest)?;
     write_if_changed(&dir.join("runner.ts"), &runner_source(entries))?;
@@ -338,24 +266,17 @@ mod tests {
             ts_parameters_of(source, "actionsAt"),
             Some(vec!["buffer".to_string(), "offset".to_string()])
         );
-        // A function with no parameters is not a missing one.
         assert_eq!(ts_parameters_of(source, "nothing"), Some(vec![]));
         assert_eq!(ts_parameters_of(source, "absent"), None);
 
-        // A comma inside a type does not start a parameter.
         assert_eq!(
             ts_parameters_of("export function f(a: Map<string, number>, b: number) {}", "f"),
             Some(vec!["a".to_string(), "b".to_string()])
         );
-        // And a parameter this cannot name is refused.
         assert_eq!(ts_parameters_of("export function f(a: number, b?: number) {}", "f"), None);
         assert_eq!(ts_parameters_of("export function f({a, b}: Pair) {}", "f"), None);
     }
 
-    /// The three ways the first textual match was the wrong one: a signature in
-    /// a comment, TypeScript's type-only `this` taken for an argument, and two
-    /// declarations of one name.
-    ///
     /// @tests REQ-DRT-TS.params_from_source
     #[test]
     fn a_comment_this_and_a_second_declaration_do_not_reorder_the_arguments() {
@@ -377,8 +298,6 @@ mod tests {
         assert_eq!(ts_declarations("function f(a) {}\n// function f(b)\nfunction f(a, b) {}", "f"), 2);
     }
 
-    /// The generated runner imports each module once and dispatches by op.
-    ///
     /// @tests REQ-DRT-TS.generated
     /// @tests REQ-DRT-TS.failure_is_an_answer
     #[test]
@@ -406,8 +325,6 @@ mod tests {
             source.contains("m0.actionsAt(input[\"buffer\"], input[\"offset\"])"),
             "{source}"
         );
-        // Nothing stands between the input and the call: the arguments are the
-        // input's own fields, named by the signature.
         assert!(!source.contains("JSON.parse(input"), "{source}");
         assert!(source.contains("catch (e)"), "a throw must become this case's error");
     }

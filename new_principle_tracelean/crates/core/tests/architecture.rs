@@ -1,23 +1,9 @@
-//! Architectural clauses, checked against the source rather than asserted in a
-//! comment.
-//!
-//! These are properties about what the code *does not do*. Nothing can be run
-//! to demonstrate them: there is no input that makes a network call appear, and
-//! a differential test would compare two things that both do nothing. What can
-//! be done is read the tree and say so, which is what this does — and what
-//! turns `ARCH-NO-DRIVING` from a promise in a document into a claim that fails
-//! when somebody breaks it.
-//!
-//! Scoped to this project's own crates. Dependencies are a separate question,
-//! answered by the dependency list being short enough to read.
-
 use std::path::{Path, PathBuf};
 
 fn project_root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap().parent().unwrap().to_path_buf()
 }
 
-/// Every `.rs` file of this project's own source, with its path.
 fn sources() -> Vec<(String, String)> {
     let root = project_root().join("crates");
     let mut out = Vec::new();
@@ -43,8 +29,6 @@ fn sources() -> Vec<(String, String)> {
     out
 }
 
-/// Lines of code, with comments and the needles this test itself contains
-/// stripped out — otherwise the test would be its own counterexample.
 fn code_lines(text: &str, file: &str) -> Vec<(usize, String)> {
     if file.ends_with("tests/architecture.rs") {
         return Vec::new();
@@ -60,7 +44,6 @@ fn offenders(needles: &[&str]) -> Vec<String> {
     offenders_in(&sources(), needles)
 }
 
-/// The same check over any tree, so a tree built to violate it can be tried.
 fn offenders_in(files: &[(String, String)], needles: &[&str]) -> Vec<String> {
     let mut found = Vec::new();
     for (file, text) in files {
@@ -87,14 +70,9 @@ const AMBIENT: &[&str] = &[
     "hostname", "std::env::var(\"USER\")",
 ];
 
-/// Process spawns outside the differential-testing toolchain.
 fn launches_in(files: &[(String, String)]) -> Vec<String> {
     let mut found = Vec::new();
     for (file, text) in files {
-        // Building a runner is this project's own toolchain use, and it is
-        // what `drt` exists to do; driving an agent is not.
-        // The Lean language server, asked what the proof state is, is the same
-        // toolchain: Lean's own, started for a question and never an agent.
         if file.contains("/src/drt/") || file.contains("/tests/") || file.ends_with("src/lean_server.rs") {
             continue;
         }
@@ -111,8 +89,6 @@ fn tree(files: &[(&str, &str)]) -> Vec<(String, String)> {
     files.iter().map(|(p, t)| (p.to_string(), t.to_string())).collect()
 }
 
-/// Each check above rejects a tree that breaks it, and accepts one that does not.
-///
 /// @tests REQ-CHECK.structural_rejects
 #[test]
 fn the_needle_checks_reject_a_tree_that_breaks_them() {
@@ -129,8 +105,6 @@ fn the_needle_checks_reject_a_tree_that_breaks_them() {
     assert!(launches_in(&tree(&[("core/src/drt/x.rs", "let c = Command::new(\"lake\");\n")])).is_empty());
 }
 
-/// No call to a language model, and nothing that would account for one.
-///
 /// @tests ARCH-NO-DRIVING.no_model_call
 /// @tests ARCH-NO-DRIVING.no_launch
 /// @tests REQ-JUDGE.no_call
@@ -143,8 +117,6 @@ fn nothing_here_calls_a_model_or_reaches_the_network() {
     assert!(found.is_empty(), "this project must make no model or network call:\n{found:#?}");
 }
 
-/// Nothing starts, steers or stops an external tool. The user runs it.
-///
 /// @tests ARCH-NO-DRIVING.no_launch
 /// @tests ARCH-NO-DRIVING.user_runs_it
 /// @tests ARCH-NO-DRIVING.observation_only
@@ -159,9 +131,6 @@ fn nothing_here_launches_a_coding_agent() {
     );
 }
 
-/// A derived artefact embeds nothing that varies between runs of the same
-/// input: no clock, no randomness that is not seeded, no machine identity.
-///
 /// @tests ARCH-DETERMINISM.no_ambient_time
 /// @tests ARCH-DETERMINISM.seeded_generation
 /// @tests ARCH-CORE-SHELL.decision_total
@@ -175,10 +144,6 @@ fn nothing_here_reads_a_clock_or_an_unseeded_source_of_randomness() {
     );
 }
 
-/// The one exception, stated rather than hidden: scratch directories for the
-/// generated runners are named from the process id, which does vary. They are
-/// temporary build directories, not derived artefacts, and nothing produced
-/// from them carries the name.
 #[test]
 fn the_only_varying_names_are_scratch_directories() {
     let found = varying_names_outside_scratch(&sources());
@@ -198,9 +163,6 @@ fn the_scratch_name_check_rejects_a_tree_that_breaks_it() {
 fn varying_names_outside_scratch(files: &[(String, String)]) -> Vec<String> {
     let mut found = Vec::new();
     for (file, text) in files {
-        // Everything from `#[cfg(test)]` onwards builds fixtures, not
-        // artefacts, and a fixture directory has to be unique per process to
-        // let tests run in parallel.
         let fixtures_begin = text
             .lines()
             .position(|line| line.trim() == "#[cfg(test)]")
@@ -222,15 +184,6 @@ fn varying_names_outside_scratch(files: &[(String, String)]) -> Vec<String> {
     found
 }
 
-/// Filesystem access is confined to the modules that declare themselves a
-/// shell, and those modules make no decisions.
-///
-/// `shell_thin` is hard to check directly — "a branch a decision function could
-/// have made" is a judgement. What can be checked is the two things that make
-/// it true in practice: the set of modules that touch the filesystem is small
-/// and named, and none of them contains the vocabulary of a decision. A shell
-/// that started classifying paths or grading evidence would fail here.
-///
 /// @tests ARCH-CORE-SHELL.shell_thin
 /// @tests ARCH-CORE-SHELL.decision_total
 /// @structural ARCH-CORE-SHELL.shell_thin reason="a property of how the modules are divided, which no single function can express"
@@ -245,40 +198,32 @@ fn only_declared_shells_touch_the_filesystem() {
     assert!(thick.is_empty(), "{thick:#?}");
 }
 
-/// Each of these reads or writes, and each is listed with why. Adding a file
-/// here is the moment to ask whether the decision inside it belongs in a core
-/// module instead.
 const SHELLS: &[&str] = &[
-    "core/src/observe/workspace.rs",   // copies a tree into a workspace
-    "core/src/observe/watch.rs",       // reads an agent's transcript and the price table
-    "core/src/observe/workcopy.rs",    // makes, finds and ends a sandbox's copy
-    "core/src/trace/index.rs",         // walks a project and reads its files
-    "core/src/trace/lockfile.rs",      // writes the lock file
-    "core/src/trace/store.rs",         // holds the records backends earn
-    "core/src/history/persistence.rs", // appends and replays the journal
-    "core/src/drt/rust_runner.rs",     // generates a runner package
-    "core/src/drt/lean_runner.rs",     // generates a runner package
-    "core/src/drt/ts_runner.rs",       // generates a runner package
-    "core/src/drt/run.rs",             // speaks to two runner processes
-    "core/src/drt/config.rs",          // reads the binding file
-    "core/src/drt/pins.rs",            // asks Lean about a pinning theorem, keeps the verdict
-    "core/src/drt/auto.rs",            // generates, builds and runs a derived test's runners
-    "core/src/drt/lines_run.rs",       // runs each test under coverage, keeps the lines
-    "core/src/bin/tracelean-trace.rs", // the command-line entry point
-    "editor/src/theme.rs",             // reads the colours a project chose
-    "editor/src/recall.rs",            // keeps what was open for next time
+    "core/src/observe/workspace.rs",
+    "core/src/observe/watch.rs",
+    "core/src/observe/workcopy.rs",
+    "core/src/trace/index.rs",
+    "core/src/trace/lockfile.rs",
+    "core/src/trace/store.rs",
+    "core/src/history/persistence.rs",
+    "core/src/drt/rust_runner.rs",
+    "core/src/drt/lean_runner.rs",
+    "core/src/drt/ts_runner.rs",
+    "core/src/drt/run.rs",
+    "core/src/drt/config.rs",
+    "core/src/drt/pins.rs",
+    "core/src/drt/auto.rs",
+    "core/src/drt/lines_run.rs",
+    "core/src/bin/tracelean-trace.rs",
+    "editor/src/theme.rs",
+    "editor/src/recall.rs",
 ];
 
-/// State a decision could read besides its arguments: a mutable static, a
-/// lazily set one, a per-thread one. Each the core holds is listed with why it
-/// cannot change an answer.
 const HELD: &[(&str, &str)] = &[(
     "core/src/surface/highlight.rs",
     "each language's compiled query, built from a constant; a cache, not an input",
 )];
 
-/// Core modules, other than shells and fixtures, that keep state outside their
-/// arguments.
 fn global_state_outside(files: &[(String, String)], shells: &[&str], held: &[(&str, &str)]) -> Vec<String> {
     let mut found = Vec::new();
     for (file, text) in files {
@@ -299,10 +244,6 @@ fn global_state_outside(files: &[(String, String)], shells: &[&str], held: &[(&s
     found
 }
 
-/// A decision is a total function of its arguments: it reads no file (above),
-/// no clock and no unseeded randomness (`no_ambient_time`), and no state kept
-/// between calls, which is this.
-///
 /// @tests ARCH-CORE-SHELL.decision_total
 /// @structural ARCH-CORE-SHELL.decision_total reason="a claim about every decision in the project at once: what the source may hold besides arguments, read off the tree"
 #[test]
@@ -322,10 +263,8 @@ fn the_global_state_check_rejects_a_decision_that_keeps_some() {
     assert!(global_state_outside(&fixture, SHELLS, HELD).is_empty());
 }
 
-/// Lean's reflection: asking the elaborator what a declaration's type is.
 const REFLECTION: &[&str] = &["#print", "#check", "Lean.Meta", "Lean.Elab", "getConstInfo", "inferType", "MetaM", "TermElabM"];
 
-/// Lines of the differential machinery that ask Lean about a model's types.
 fn reflection_in(files: &[(String, String)]) -> Vec<String> {
     let mut found = Vec::new();
     for (file, text) in files {
@@ -341,10 +280,6 @@ fn reflection_in(files: &[(String, String)]) -> Vec<String> {
     found
 }
 
-/// A schema is declared in a binding or derived from the two signatures as
-/// written (`drt/derive.rs`); nothing asks Lean what a model's types are —
-/// neither the machinery here nor the runner it generates.
-///
 /// @tests REQ-DRT-SCHEMA.declared_not_reflected
 /// @structural REQ-DRT-SCHEMA.declared_not_reflected reason="an absence of reflection in the source and in what it generates, read off both"
 #[test]
@@ -370,11 +305,9 @@ fn the_reflection_check_rejects_machinery_that_reflects() {
     assert!(reflection_in(&tree(&[("core/src/drt/x.rs", "let q = schema.clone();\n")])).is_empty());
 }
 
-/// The modules that read a transcript.
 const TRANSCRIPT_READERS: &[&str] =
     &["core/src/observe/transcript.rs", "core/src/observe/claude.rs", "core/src/observe/watch.rs"];
 
-/// Lines of the transcript readers that could write, truncate or remove a file.
 fn writes_in(files: &[(String, String)], readers: &[&str]) -> Vec<String> {
     let mut found = Vec::new();
     for (file, text) in files {
@@ -393,9 +326,6 @@ fn writes_in(files: &[(String, String)], readers: &[&str]) -> Vec<String> {
     found
 }
 
-/// What reads a transcript only reads it: no write, truncation, removal or
-/// rename anywhere in the modules that open one.
-///
 /// @tests REQ-TRANSCRIPT.read_only
 /// @structural REQ-TRANSCRIPT.read_only reason="an absence: nothing writes to the transcript, and a model of a read could not distinguish a version that also truncated"
 #[test]
@@ -417,14 +347,12 @@ fn the_transcript_check_rejects_a_reader_that_writes() {
     assert!(writes_in(&reads, TRANSCRIPT_READERS).is_empty());
 }
 
-/// Files that touch the filesystem without being a declared shell.
 fn filesystem_outside_shells(files: &[(String, String)], shells: &[&str]) -> Vec<String> {
     let mut unexpected = Vec::new();
     for (file, text) in files {
         if file.contains("/tests/") || shells.contains(&file.as_str()) {
             continue;
         }
-        // Fixtures build temporary trees; that is not the shell this is about.
         let fixtures_begin = text
             .lines()
             .position(|line| line.trim() == "#[cfg(test)]")
@@ -443,9 +371,6 @@ fn filesystem_outside_shells(files: &[(String, String)], shells: &[&str]) -> Vec
     unexpected
 }
 
-/// Shells that stay thin. A decision belongs in a core module where a
-/// conformance runner can call it; the number is a ceiling on drift, not a
-/// style rule, and each shell is currently well under it.
 fn thick_shells(files: &[(String, String)], shells: &[&str]) -> Vec<String> {
     let mut thick = Vec::new();
     for (file, text) in files {
@@ -482,15 +407,6 @@ fn the_shell_checks_reject_a_tree_that_breaks_them() {
     assert!(thick_shells(&tree(&[("core/src/trace/store.rs", "if x {}\n")]), &shells).is_empty());
 }
 
-/// Every axiomatised effect carries a law, and every law is a function
-/// something can compute.
-///
-/// An axiom with no law is an assumption with no content: it says an operation
-/// exists and nothing about what it must do. This reads the one module axioms
-/// are allowed to live in and checks that each opaque constant is either
-/// accompanied by a law or is explicitly documented as carrying its claim in
-/// its type.
-///
 /// @tests ARCH-EFFECT-LAW.law_stated
 /// @tests ARCH-EFFECT-LAW.axioms_confined
 /// @tests ARCH-EFFECT-LAW.axiomatised
@@ -510,7 +426,6 @@ fn axioms_live_in_one_file_and_each_one_states_a_law() {
     assert!(problems.is_empty(), "{problems:#?}");
 }
 
-/// What is wrong with how a set of model files declares axioms.
 fn axiom_problems(models: &[(String, String)]) -> Vec<String> {
     let mut problems = Vec::new();
     let with_axioms: Vec<(&String, &String, usize)> = models
@@ -531,9 +446,6 @@ fn axiom_problems(models: &[(String, String)]) -> Vec<String> {
     let Some((_, text, declared)) = with_axioms.iter().find(|(name, _, _)| name.as_str() == "Effects.lean") else {
         return problems;
     };
-    // Laws are the axioms that state something; effects are the axioms that
-    // only declare a constant. Every effect either has a law or says in its own
-    // doc comment why its type is the whole claim.
     let laws = text.lines().filter(|line| line.contains("axiom") && line.contains("_")).count();
     if !(laws > 0 && *declared >= laws) {
         problems.push(format!("{declared} axioms and {laws} of them named as laws"));
@@ -541,8 +453,6 @@ fn axiom_problems(models: &[(String, String)]) -> Vec<String> {
     if !text.contains("No axiom accompanies this one, and the absence is the point") {
         problems.push("an effect without a law must say why, in the module itself".to_string());
     }
-    // And every law is reachable as a function: the model computes violations,
-    // so a differential test can ask the implementation the same question.
     for law in ["copyViolations", "capabilityViolations", "escapeViolations", "runViolations"] {
         if !text.contains(&format!("def {law}")) {
             problems.push(format!("the law `{law}` is not a function"));
@@ -560,25 +470,16 @@ fn the_axiom_check_rejects_a_tree_that_breaks_it() {
     );
     assert!(axiom_problems(&tree(&[("Effects.lean", &good)])).is_empty());
 
-    // An axiom in another module.
     let stray = tree(&[("Effects.lean", &good), ("Other.lean", "axiom sneaky_law : True\n")]);
     assert_eq!(axiom_problems(&stray).len(), 1);
-    // A law that is not a function, and an effect that does not say why it has no law.
     let bare = tree(&[("Effects.lean", "axiom copy_law : True\n")]);
     assert!(axiom_problems(&bare).len() >= 2, "{:?}", axiom_problems(&bare));
 }
 
-/// Whether a rendered finding names what is wrong rather than being a flag.
 fn names_the_problem(rendered: &str) -> bool {
     rendered.len() > 6 && !rendered.contains("true") && !rendered.contains("false")
 }
 
-/// A finding is a named variant, not a string or a bool.
-///
-/// The failure this prevents is the one that reads as working: a checker that
-/// returns `false`, or an error that says "invalid", tells the person looking
-/// at it nothing they can act on.
-///
 /// @tests ARCH-HONEST.named_findings
 /// @structural ARCH-HONEST.named_findings reason="a claim about every finding type in the project at once, checked by rendering one of each"
 #[test]
@@ -587,8 +488,6 @@ fn every_finding_type_is_a_closed_named_vocabulary() {
     use tracelean_core::surface::keymap::Problem;
     use tracelean_core::trace::checker::Kind;
 
-    // Each of these is an enum whose variants name the problem. Rendering one
-    // through serde gives the name, which is what reaches a report.
     let named: Vec<String> = vec![
         serde_json::to_value(Kind::Unmodeled).unwrap().to_string(),
         serde_json::to_value(Violation::ContainmentUnreported).unwrap().to_string(),
@@ -602,7 +501,6 @@ fn every_finding_type_is_a_closed_named_vocabulary() {
             "a finding rendered as {rendered}, which says nothing about what is wrong"
         );
     }
-    // The predicate rejects what it is there to reject: a bare flag or "invalid".
     for bad in ["false", "true", "\"ok\"", "{\"valid\":false}"] {
         assert!(!names_the_problem(bad), "{bad} should not count as a named finding");
     }
@@ -611,14 +509,6 @@ fn every_finding_type_is_a_closed_named_vocabulary() {
     assert!(named[2].contains("unreachableMode"));
 }
 
-/// A decision function is reachable from outside the crate.
-///
-/// This is what makes a conformance runner possible at all: the generated
-/// runner is a separate package, so anything it calls has to be `pub` and
-/// re-exported. Every binding in `.tracelean/drt.json` names one, and
-/// `bindings_are_real` resolves them against the source — what is left to check
-/// here is that the module path is public the whole way down.
-///
 /// @tests ARCH-CORE-SHELL.decision_public
 /// @structural ARCH-CORE-SHELL.decision_public reason="a claim about module visibility, which is a fact about the source and not a value"
 #[test]
@@ -629,7 +519,6 @@ fn every_module_holding_a_decision_is_public() {
     assert!(hidden.is_empty(), "not public, so a generated runner cannot call into them: {hidden:?}");
 }
 
-/// The decision modules a crate root does not declare `pub mod`.
 fn private_modules(root_text: &str) -> Vec<&'static str> {
     ["drt", "trace", "history", "observe", "surface", "evidence", "judge"]
         .into_iter()
@@ -645,13 +534,6 @@ fn the_visibility_check_rejects_a_private_decision_module() {
     assert_eq!(private_modules(&all.replace("pub mod trace;", "mod trace;")), vec!["trace"]);
 }
 
-/// Where a model's opinion would be useful, a prompt is exported for a person
-/// to carry — and nothing sends it.
-///
-/// The judge produces text. Whether that text ever reaches a model is the
-/// user's decision, made in their own client, and this asserts there is no
-/// second path.
-///
 /// @tests ARCH-NO-DRIVING.export_not_call
 /// @structural ARCH-NO-DRIVING.export_not_call reason="the claim is that a code path does not exist; a model of the export function could not distinguish a version that also sent it"
 #[test]
@@ -669,9 +551,6 @@ fn the_judge_exports_a_prompt_and_nothing_carries_it() {
     });
     assert!(text.contains("REQ-X"), "the prompt does not say what it is about");
 
-    // And nothing in the tree carries it anywhere. The needles are the ones a
-    // transport would need; `nothing_here_calls_a_model_or_reaches_the_network`
-    // covers the provider side, this covers the general one.
     let found = offenders(TRANSPORT);
     assert!(found.is_empty(), "something in this tree can send:\n{found:#?}");
 }
@@ -686,24 +565,6 @@ fn the_transport_check_rejects_a_tree_that_can_send() {
     assert!(offenders_in(&tree(&[("core/src/judge.rs", "pub fn prompt() -> String { String::new() }\n")]), TRANSPORT).is_empty());
 }
 
-/// A link exists only where somebody wrote one, and nothing about it is
-/// inferred from where the file sits.
-///
-/// The failure this prevents is a tool that reads links off directory layout —
-/// `src/foo.rs` implements `reqs/foo.md` — which works until somebody
-/// reorganises the tree and every claim silently changes meaning.
-///
-/// What is checked is that moving and renaming everything changes nothing about
-/// *what* is claimed: the same clause, the same body hash, the same requirement
-/// identity. The `link_hash` does move, and deliberately — it names the link's
-/// target, a file included, so that evidence earned for a function in one file
-/// is not inherited by the same text in another (`REQ-STALE.retarget_invalidates`).
-///
-/// The comparison below can tell two trees apart: the same layout with a
-/// different body moves the claim's hash, so equal claims after a move mean
-/// something. (A convention-keyed tool cannot be built to fail it here; what
-/// can be shown is that the check is not blind.)
-///
 /// @tests REQ-CHECK.structural_rejects
 #[test]
 fn the_no_convention_comparison_is_sensitive_to_what_is_claimed() {
@@ -773,13 +634,6 @@ fn moving_a_file_does_not_change_what_it_claims() {
     let _ = std::fs::remove_dir_all(&base);
 }
 
-/// A check that did not run reads as not run, and a derived relationship is
-/// distinguishable from an asserted one.
-///
-/// Two clauses, one test, because they are the same discipline: every place
-/// this system is unsure carries a field saying so, and nothing defaults that
-/// field to the confident answer.
-///
 /// @tests ARCH-HONEST.absence_is_not_pass
 /// @tests ARCH-HONEST.confidence_carried
 /// @structural ARCH-HONEST.absence_is_not_pass reason="a claim about every reporting path at once: no path may turn an absence into a pass"
@@ -791,20 +645,15 @@ fn every_unsure_answer_carries_a_field_saying_so() {
     use tracelean_core::trace::checker::coverage_kinds;
     use tracelean_core::trace::rollup::{combine, Figure};
 
-    // No evidence sets no mark, and a proof sets only its own.
     assert_eq!(marks(vec![], false), Marks::NONE);
     assert_eq!(marks(vec![Record { bond: Bond::ModelProof, level: Level::L4 }], true).text(), "A--P");
-    // Nothing to aggregate holds nothing, rather than everything.
     assert_eq!(combine(vec![]), Marks::NONE);
 
-    // No roles is a finding, not silence.
     assert!(
         !coverage_kinds(vec![], false, false).is_empty(),
         "a clause nothing claims produced no finding, which reads as passing"
     );
 
-    // A figure over an unclaimed decomposition can never render as exact, and
-    // an anchor in a file that did not parse says it is imprecise.
     assert!(!Figure { met: 2, total: 2, exact: false }.is_complete());
     assert!(Figure { met: 2, total: 2, exact: true }.is_complete());
     let vague = Anchor {
@@ -817,18 +666,10 @@ fn every_unsure_answer_carries_a_field_saying_so() {
     };
     assert!(!vague.precise, "a whole-file anchor claimed to be precisely placed");
 
-    // And those fields survive serialisation, which is where they would be
-    // quietly dropped.
     let rendered = serde_json::to_string(&Figure { met: 1, total: 2, exact: false }).unwrap();
     assert!(rendered.contains("exact"), "a figure lost the field that says it is a bound");
 }
 
-/// Exemption stays rare, and every one that exists says who signed for it.
-///
-/// `exempt_last` is the clause that keeps grey meaningful. It is checked by
-/// counting: an exemption is cheap to write and expensive to justify, and a
-/// number that creeps is the thing to notice.
-///
 /// @tests ARCH-EFFECT-LAW.exempt_last
 /// @structural ARCH-EFFECT-LAW.exempt_last reason="a claim about how many exemptions exist in this repository, which is a count over the tree rather than a value"
 #[test]
@@ -844,9 +685,6 @@ fn exemptions_are_rare_and_every_one_is_signed() {
 
 use tracelean_core::trace::annotation::Qualifier;
 
-/// What is wrong with a tree's exemptions and structural claims: more than five
-/// exemptions, one without a reason and an approver, or a structural claim that
-/// does not say why there is no law to state.
 fn escape_hatch_problems(claims: &[(String, Option<Qualifier>)]) -> Vec<String> {
     let mut problems = Vec::new();
     let exemptions: Vec<_> =
@@ -863,8 +701,6 @@ fn escape_hatch_problems(claims: &[(String, Option<Qualifier>)]) -> Vec<String> 
             problems.push(format!("an exemption in {file} names no reason or no approver"));
         }
     }
-    // Structural claims are the other escape hatch, and they are held to the
-    // same standard: every one says why there is no law to state.
     for (file, qualifier) in claims {
         if let Some(Qualifier::Structural { reason }) = qualifier {
             if !reason.as_ref().is_some_and(|r| r.len() > 20) {
@@ -888,8 +724,6 @@ fn the_escape_hatch_check_rejects_unsigned_and_unexplained_claims() {
     assert_eq!(escape_hatch_problems(&[("a.rs".into(), Some(Qualifier::Structural { reason: Some("short".into()) }))]).len(), 1);
 }
 
-/// Source files of this project, Rust and TypeScript, that hold code, with the
-/// path the index names them by.
 fn feature_files() -> Vec<String> {
     let root = project_root();
     let mut out = Vec::new();
@@ -900,8 +734,6 @@ fn feature_files() -> Vec<String> {
             let path = entry.path();
             let name = path.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default();
             if path.is_dir() {
-                // Tests claim what they test, and an example is a tool for a
-                // test; what is traced is what ships.
                 if !matches!(name.as_str(), "target" | "tests" | "examples") {
                     stack.push(path);
                 }
@@ -914,8 +746,6 @@ fn feature_files() -> Vec<String> {
     out
 }
 
-/// Files no annotation claims. A crate root or a `mod.rs` only says which
-/// modules exist, which is no feature of its own.
 fn unclaimed_files(files: &[String], claimed: &std::collections::BTreeSet<String>) -> Vec<String> {
     files
         .iter()
@@ -924,10 +754,6 @@ fn unclaimed_files(files: &[String], claimed: &std::collections::BTreeSet<String
         .collect()
 }
 
-/// Every file that ships code is claimed by an annotation, so every feature is
-/// reached from a requirement clause; one nothing claims is a feature nobody
-/// asked for, or one nobody said why it is there.
-///
 /// @tests ARCH-SELFHOST.every_feature_traced
 /// @structural ARCH-SELFHOST.every_feature_traced reason="a claim about every source file in this repository at once"
 #[test]
@@ -949,14 +775,6 @@ fn the_tracing_check_rejects_a_file_nothing_claims() {
     assert_eq!(unclaimed_files(&files, &claimed), vec!["crates/a/src/x.rs".to_string()]);
 }
 
-/// A bound entry point takes its inputs as arguments and reads nothing else.
-///
-/// This is what makes the conformance runner possible: the generated package
-/// calls the function with deserialised arguments and nothing more. A function
-/// that consulted the environment, a clock or a global would answer differently
-/// in the runner than in the program, and the differential test would be
-/// comparing two things that were never the same call.
-///
 /// @tests ARCH-CORE-SHELL.no_hidden_input
 /// @structural ARCH-CORE-SHELL.no_hidden_input reason="a claim about what the bound functions may mention, which is read off their source rather than computed"
 #[test]
@@ -977,10 +795,6 @@ fn nothing_a_binding_names_reads_anything_it_was_not_given() {
     assert!(found.is_empty(), "{found:#?}");
 }
 
-/// Bound files that mention something ambient. Which part of a file a symbol
-/// is in is not tracked, so this asks the cruder question: does the module
-/// holding a bound function reach for anything ambient at all? Everything from
-/// `#[cfg(test)]` onward builds fixtures and is not read.
 fn ambient_in_bound_files(bound: &[(String, String)]) -> Vec<String> {
     let mut found = Vec::new();
     for (file, source) in bound {

@@ -1,5 +1,3 @@
-//! The documentation rule, applied to this project's own documentation.
-
 use std::path::{Path, PathBuf};
 
 use tracelean_core::trace::doclink::{current_hashes, pairs, state, State};
@@ -9,8 +7,6 @@ fn project_root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap().parent().unwrap().to_path_buf()
 }
 
-/// Every document in this tree describes something that exists.
-///
 /// @tests REQ-DOCLINK.dangling_reported
 /// @tests ARCH-SELFHOST.docs_checked
 /// @structural ARCH-SELFHOST.docs_checked reason="a claim about every document in this repository at once"
@@ -29,9 +25,6 @@ fn no_document_describes_something_that_does_not_exist() {
     assert!(dangling.is_empty(), "documents describe things that do not exist: {dangling:?}");
 }
 
-/// The mechanism must actually notice: a changed target puts its documents in
-/// review, and this checks that on a copy rather than trusting it.
-///
 /// @tests REQ-DOCLINK.hash_moves_review
 #[test]
 fn changing_what_a_document_describes_puts_it_in_review() {
@@ -45,7 +38,6 @@ fn changing_what_a_document_describes_puts_it_in_review() {
         .expect("at least one confirmed document")
         .clone();
 
-    // What the document would say if its target changed underneath it.
     let moved: Vec<(String, String)> = hashes
         .iter()
         .map(|(target, hash)| {

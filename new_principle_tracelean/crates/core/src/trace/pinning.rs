@@ -1,64 +1,32 @@
-//! Whether a clause's specification pins its model, as the Lean kernel says.
-//!
-//! A clause may have a **specification**, a predicate saying which answers are
-//! right (`def ToFahrenheit (c f : Int) : Prop`, annotated `@specifies`), beside
-//! its **model**, the function the code is tested against (`@models`). The
-//! specification pins
-//! the model when the model meets it and no input has two right answers:
-//!
-//! ```text
-//! (∀ x, P x (f x)) ∧ (∀ x y1 y2, P x y1 → P x y2 → y1 = y2)
-//! ```
-//!
-//! A person proves that in a theorem annotated `@pins`; TraceLean never does
-//! (`REQ-STRENGTH.not_proved_by_us`). What it does is check the theorem: append
-//! to its file an `example` stating exactly the obligation, proved by the
-//! theorem, and ask for its axioms. Lean accepting both, without `sorryAx`, is
-//! the only way a clause becomes pinned. The verdict is kept under
-//! `.tracelean/pins`, keyed by the hashes of the three declarations, so an edit
-//! to any of them puts the clause back to *attempted*.
-
 use serde::{Deserialize, Serialize};
 
 use super::annotation::Role;
 use super::index::Index;
 use super::strength::Strength;
 
-/// What a pinning check needs to know about one clause.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PinPlan {
     pub req_id: String,
     pub clause: Option<String>,
-    /// The clause's `@specifies` declaration, a `Prop`, as Lean names it.
     pub spec: Option<String>,
-    /// The clause's one `@models` declaration: the function the code is tested against.
     pub model: Option<String>,
-    /// How many explicit arguments the model takes.
     pub inputs: usize,
-    /// The `@pins` theorem, as Lean names it.
     pub theorem: Option<String>,
-    /// The file the theorem is in, where the check is appended.
     pub file: Option<String>,
-    /// The three declarations' body hashes joined: what a verdict is about.
     pub key: String,
 }
 
-/// A verdict, as `.tracelean/pins` keeps it.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PinRecord {
     pub theorem_name: String,
     pub key: String,
     pub pinned: bool,
-    /// What Lean said, when it did not accept the theorem.
     #[serde(default)]
     pub said: String,
 }
 
-/// The obligation, in Lean, for a specification `spec` and a model `model` of
-/// `inputs` arguments.
-///
 /// @implements REQ-STRENGTH.per_input
 /// @drt REQ-STRENGTH.per_input
 pub fn statement(spec: String, model: String, inputs: usize) -> String {
@@ -71,12 +39,6 @@ pub fn statement(spec: String, model: String, inputs: usize) -> String {
     format!("({meets}) ∧ (∀{args} y1 y2, {spec}{args} y1 → {spec}{args} y2 → y1 = y2)")
 }
 
-/// What is appended to the theorem's file to check it.
-///
-/// With a specification, an `example` whose type is the obligation, so a
-/// theorem stating anything weaker does not elaborate; without one, the
-/// theorem is only asked to be finished. Either way `#print axioms` says
-/// whether it leans on `sorry`.
 pub fn check_source(plan: &PinPlan) -> Option<String> {
     let theorem = plan.theorem.as_ref()?;
     let mut out = format!("\n\n-- TraceLean: is `{theorem}` the pinning obligation, and is it finished?\n");
@@ -87,9 +49,6 @@ pub fn check_source(plan: &PinPlan) -> Option<String> {
     Some(out)
 }
 
-/// Whether Lean accepted the check: it exited cleanly, reported no error, and
-/// listed the theorem's axioms without `sorryAx`.
-///
 /// @implements REQ-STRENGTH.kernel_decides
 /// @drt REQ-STRENGTH.kernel_decides
 pub fn accepted(theorem_name: String, output: String, exited_ok: bool) -> bool {
@@ -103,9 +62,6 @@ pub fn accepted(theorem_name: String, output: String, exited_ok: bool) -> bool {
         })
 }
 
-/// Where a clause stands: open without a `@pins` theorem, pinned only when the
-/// kernel accepted that theorem as it now is, attempted otherwise.
-///
 /// @implements REQ-STRENGTH.verdict_kept
 /// @implements REQ-STRENGTH.open_is_the_default
 /// @drt REQ-STRENGTH.verdict_kept
@@ -117,12 +73,9 @@ pub fn standing(theorem_name: Option<String>, record: Option<PinRecord>, key: St
     }
 }
 
-/// What an open clause owes when it lacks a specification or a single model.
 pub const OPEN_WITHOUT_BOTH: &str =
     "needs one `@models` function and one `@specifies` `def … : Prop` beside it";
 
-/// A clause's standing as a person reads it: the state, and the theorem, why
-/// it is not yet pinned, or what it owes.
 pub fn shown(plan: &PinPlan, record: Option<PinRecord>) -> (String, String) {
     let failed = record.as_ref().filter(|r| !r.pinned && r.key == plan.key).map(|r| r.said.clone());
     match standing(plan.theorem.clone(), record, plan.key.clone()) {
@@ -143,16 +96,6 @@ pub fn shown(plan: &PinPlan, record: Option<PinRecord>) -> (String, String) {
     }
 }
 
-/// A declaration's shape, from its source: whether it is a proposition, and how
-/// many explicit arguments it takes. `None` for what is not a `def`.
-///
-/// An argument is either named in a binder before the colon or only an arrow
-/// of the type after it: a definition by pattern matching
-/// (`def f : List Nat → Nat | … `) names none and still takes one. What the
-/// type finally returns, after its last top-level arrow, says whether it is a
-/// proposition. The header ends at `:=`, or at a top-level `|` that starts the
-/// first pattern.
-///
 /// @implements REQ-STRENGTH.inputs_counted
 /// @drt REQ-STRENGTH.inputs_counted
 pub fn shape(declaration: String) -> Option<(bool, usize)> {
@@ -161,7 +104,6 @@ pub fn shape(declaration: String) -> Option<(bool, usize)> {
     let header = &header[..header.find(":=").unwrap_or(header.len())];
     let (mut depth, mut names, mut group) = (0usize, 0usize, String::new());
     let mut explicit = false;
-    // After the top-level colon: the type, its arrows, and the text after the last.
     let (mut typed, mut arrows, mut result) = (false, 0usize, String::new());
     for c in header.chars() {
         if typed {
@@ -215,20 +157,10 @@ pub fn shape(declaration: String) -> Option<(bool, usize)> {
     Some((typed && result.trim() == "Prop", names + arrows))
 }
 
-/// A Lean declaration's name, from an anchor's `Ns::name`.
 fn lean_name(symbol: &str) -> String {
     symbol.replace("::", ".")
 }
 
-/// The plan for every clause a `@models`, `@specifies` or `@pins` claims, from
-/// the index and the files' text.
-///
-/// The specification is the clause's `@specifies` declaration, the model its
-/// `@models` declaration and the theorem its `@pins` (ADR-0014). Each is taken
-/// only when it is the only one of its role — with two, which one is meant is
-/// not something to guess by position, and the checker reports the clause —
-/// except that of several models, the one the pinning theorem names is the one
-/// it is about.
 pub fn plans(index: &Index, files: &std::collections::BTreeMap<String, String>) -> Vec<PinPlan> {
     use super::anchor::AnchorKind;
     let mut clauses: Vec<(String, Option<String>)> = index
@@ -283,9 +215,6 @@ pub fn plans(index: &Index, files: &std::collections::BTreeMap<String, String>) 
                 plan.file = Some(link.anchor.file.clone());
                 hashes.push(link.anchor.body_hash.clone());
             }
-            // The model is the clause's one `@models`. While a clause still has
-            // several, the one its pinning theorem names is the one it is
-            // about — read from the theorem, never chosen by position.
             let models: Vec<_> = all(Role::Models)
                 .into_iter()
                 .filter_map(|(symbol, link)| shape(text_of(link)).map(|(_, inputs)| (symbol, link, inputs)))
@@ -309,14 +238,11 @@ pub fn plans(index: &Index, files: &std::collections::BTreeMap<String, String>) 
         .collect()
 }
 
-/// The last segment of a symbol path: what a theorem in the same namespace
-/// calls the declaration.
 fn short_name(symbol: &str) -> &str {
     let last = symbol.rsplit("::").next().unwrap_or(symbol);
     last.rsplit('.').next().unwrap_or(last)
 }
 
-/// Whether `name` occurs in `text` as a whole identifier.
 fn mentions(text: &str, name: &str) -> bool {
     let ident = |c: char| c.is_alphanumeric() || c == '_' || c == '\'';
     text.match_indices(name).any(|(at, _)| {
@@ -326,7 +252,6 @@ fn mentions(text: &str, name: &str) -> bool {
     })
 }
 
-/// Where a clause's verdict is kept.
 pub fn record_path(root: &std::path::Path, req_id: &str, clause: Option<&str>) -> std::path::PathBuf {
     root.join(".tracelean").join("pins").join(format!("{req_id}.{}.json", clause.unwrap_or("_")))
 }
@@ -356,10 +281,6 @@ mod tests {
         assert_eq!(shape("def e (f : (Nat → Nat)) (p : Nat × (Nat × Nat)) : Nat := 0"), Some((false, 2)));
     }
 
-    /// A definition by pattern matching names no argument and still takes
-    /// them: they are the arrows of its type. Counted as none, the obligation
-    /// would quantify over nothing and could never be stated.
-    ///
     /// @tests REQ-STRENGTH.inputs_counted
     #[test]
     fn a_pattern_matched_definition_takes_the_arrows_of_its_type() {
@@ -370,9 +291,7 @@ mod tests {
         );
         assert_eq!(shape("def unavailableBecause : ServerState → String\n  | .running _ => \"a\""), Some((false, 1)));
         assert_eq!(shape("def Holds : Nat → List Nat -> Prop\n  | _, _ => True"), Some((true, 2)));
-        // An arrow inside an argument's type is not an argument.
         assert_eq!(shape("def h : (Nat → Nat) → Nat := fun f => f 0"), Some((false, 1)));
-        // A function-valued result is still taking its arguments.
         assert_eq!(shape("def k (n : Nat) : Nat → Prop := fun _ => True"), Some((true, 2)));
     }
 
@@ -383,9 +302,6 @@ mod tests {
         plans(&index, &files)
     }
 
-    /// The specification is the `@specifies` declaration and the model the
-    /// `@models` one, wherever each stands in the file.
-    ///
     /// @tests REQ-STRENGTH.per_input
     #[test]
     fn the_spec_and_the_model_are_named_by_their_roles_not_their_order() {
@@ -400,7 +316,6 @@ mod tests {
         assert_eq!(plan.key.matches('+').count(), 2, "{}", plan.key);
     }
 
-    /// Two models: which one the specification is about is not guessed.
     #[test]
     fn with_two_models_there_is_no_model_to_pin() {
         let text = "/-- @models REQ-A.c -/\ndef f (c : Int) : Int := c\n\n\
@@ -411,7 +326,6 @@ mod tests {
         assert_eq!(plan.model, None);
         assert_eq!(shown(plan, None).1, OPEN_WITHOUT_BOTH);
 
-        // The pinning theorem says which one it is about.
         let pinned = format!("{text}\n/-- @pins REQ-A.c -/\ntheorem t : ∀ x, P x (g x) := fun _ => rfl\n");
         let plan = &plans_of(&pinned)[0];
         assert_eq!(plan.model.as_deref(), Some("g"));

@@ -1,15 +1,6 @@
-//! What each declaration of a file is claimed for, as marks beside its line:
-//! `M` models, `I` implements, `T` tests, `D` differential test, `P` proves.
-//!
-//! Read from the text being edited rather than from the index, so a mark
-//! follows its declaration while lines are added above it and appears as soon
-//! as the annotation is typed.
-
 use crate::trace::annotation::Role;
 use crate::trace::index::links_of;
 
-/// One mark: the zero-based line it sits beside, its letter, and the
-/// requirement (`REQ-X.clause`, or `REQ-X`) it opens.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
 pub struct Chip {
     pub line: usize,
@@ -17,9 +8,6 @@ pub struct Chip {
     pub requirement: String,
 }
 
-/// The letter a role is marked with, in the order marks are laid out. A pin
-/// is a record, not a claim about the code, and has none. A specification is
-/// the other half of a clause's model, so it is marked as modelling.
 pub fn letter(role: Role) -> Option<char> {
     match role {
         Role::Models | Role::Specifies => Some('M'),
@@ -31,9 +19,6 @@ pub fn letter(role: Role) -> Option<char> {
     }
 }
 
-/// Every mark in a file's text, by line and then in `M I T D P` order, one per
-/// claim.
-///
 /// @implements REQ-SHOW.claims_beside_code
 pub fn chips(file: &str, text: &str) -> Vec<Chip> {
     const ORDER: &str = "MITDP";
@@ -55,11 +40,6 @@ pub fn chips(file: &str, text: &str) -> Vec<Chip> {
     out
 }
 
-/// The chips of a requirement's own document: on each clause's line in its
-/// frontmatter, a letter for each kind of claim on that clause — so what meets
-/// a clause is seen while the clause is written. `claims` is every claim on
-/// requirement `id`, as its clause and role.
-///
 /// @implements REQ-SHOW.claims_beside_code
 pub fn clause_chips(text: &str, id: &str, claims: &[(Option<String>, Role)]) -> Vec<Chip> {
     const ORDER: &str = "MITDP";
@@ -82,10 +62,6 @@ pub fn clause_chips_owned(text: String, id: String, claims: Vec<(Option<String>,
     clause_chips(&text, &id, &claims)
 }
 
-/// Each clause of a requirement's document, as its zero-based line and key: an
-/// indented `key: text` in the frontmatter. A clause written as a block is
-/// marked on its key's line; the deeper `text:` and narrowing lines are not
-/// clauses.
 pub fn clause_lines(text: &str) -> Vec<(usize, String)> {
     let mut out = Vec::new();
     let mut fences = 0;
@@ -116,8 +92,6 @@ pub fn clause_lines(text: &str) -> Vec<(usize, String)> {
 mod tests {
     use super::*;
 
-    /// A requirement's document marks each clause with what claims it.
-    ///
     /// @tests REQ-SHOW.claims_beside_code
     #[test]
     fn a_clause_is_marked_with_the_claims_on_it() {

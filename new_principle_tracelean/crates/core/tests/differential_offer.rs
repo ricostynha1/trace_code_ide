@@ -1,7 +1,3 @@
-//! What a pointer is offered at a position, checked against the model: every
-//! action declared there, the buffer's own, the panes and the places, each
-//! with the shortest keys that reach it.
-
 mod harness;
 
 use std::collections::BTreeMap;
@@ -19,7 +15,6 @@ fn name(examples: &[&str]) -> Schema {
     Schema::Str { max_len: Some(0), examples: examples.iter().map(|s| s.to_string()).collect() }
 }
 
-/// Every kind of buffer, with the titles the menu treats specially.
 fn kind() -> Schema {
     let mut variants = BTreeMap::new();
     for (variant, field, examples) in [
@@ -34,10 +29,6 @@ fn kind() -> Schema {
     Schema::Enum { variants }
 }
 
-/// Actions a span may declare: ones the menu words specially, one carrying a
-/// target, and a diff, which brings an accept and a reject for its file.
-/// Actions a span may declare, with one no dispatcher knows — which is not
-/// offered — and one carrying its own target.
 fn declared() -> Schema {
     name(&[
         "file.open",
@@ -70,8 +61,6 @@ fn mode_name() -> Schema {
     name(&["Main", "File", "Window"])
 }
 
-/// Keymaps where an action is bound twice at different depths, or not at all,
-/// and modes enter each other in cycles.
 fn keymap() -> Schema {
     let mut variants: BTreeMap<String, Option<Box<Schema>>> = BTreeMap::new();
     variants.insert(

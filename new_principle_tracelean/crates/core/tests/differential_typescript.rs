@@ -1,12 +1,3 @@
-//! The web frontend's reading of a buffer, checked against the model.
-//!
-//! The same three questions the Rust core answers, asked of the TypeScript that
-//! the browser runs, over the same generated cases — and answered against the
-//! *model*, not against the Rust. Two implementations agree perfectly when both
-//! are wrong; the model is the only thing either of them is trying to be.
-//!
-//! This is the difference between a second frontend and a second liability.
-
 mod harness;
 
 use std::collections::BTreeMap;
@@ -66,9 +57,6 @@ fn buffer() -> Schema {
         "text".to_string(),
         Schema::Str {
             max_len: None,
-            // A character outside the basic plane is the case that separates
-            // characters from code units, which is the mistake a JavaScript
-            // implementation makes and a Rust one cannot.
             examples: vec![
                 "".into(),
                 "one".into(),
@@ -183,13 +171,6 @@ fn the_typescript_and_the_model_agree_on_whether_a_frontend_drew_the_buffer() {
     );
 }
 
-/// What a row of presented regions reads as.
-///
-/// The clause the window's icons rest on, asked of the language that paints
-/// them. The names are read; the glyphs are not. A JavaScript implementation
-/// joining the wrong field would draw a bar of emblems that a harness read back
-/// as emblems, and the whole permission would be worthless.
-///
 /// @drt REQ-VIEW.presentation_may_be_symbolic
 /// @tests REQ-DRT-TS.second_implementation_same_oracle
 #[test]
@@ -214,9 +195,6 @@ fn the_typescript_and_the_model_agree_on_what_a_presented_row_reads_as() {
     );
 }
 
-/// TypeScript sources for the parameter reader: the plain shapes, and the three
-/// that made the first textual match the wrong one — a signature in a comment
-/// or a string, the type-only `this`, and two declarations of one name.
 fn ts_signature_input() -> Schema {
     let mut fields = BTreeMap::new();
     fields.insert(
@@ -252,9 +230,6 @@ fn ts_signature_input() -> Schema {
     Schema::Struct { fields }
 }
 
-/// Every answer the TypeScript parameter reader can give, and each of the
-/// three ways the first textual match was wrong, must occur.
-///
 /// @tests REQ-DRT-TS.params_from_source
 #[test]
 fn generation_reaches_every_way_a_typescript_signature_can_mislead() {
@@ -265,7 +240,6 @@ fn generation_reaches_every_way_a_typescript_signature_can_mislead() {
     let mut rng = gen::Rng::new(109);
     let (mut named, mut empty, mut refused, mut absent) = (0u64, 0u64, 0u64, 0u64);
     let (mut past_comment, mut this, mut ambiguous) = (0u64, 0u64, 0u64);
-    // As many cases as the differential run asks, from the same seed.
     for _ in 0..3_000 {
         let v = gen::value(&schema, &mut rng);
         let source = v["source"].as_str().unwrap();
@@ -303,9 +277,6 @@ fn generation_reaches_every_way_a_typescript_signature_can_mislead() {
     );
 }
 
-/// The parameter reader, which is what lets a binding name a TypeScript
-/// function without also naming its argument order.
-///
 /// @drt REQ-DRT-TS.params_from_source
 /// @tests REQ-DRT-TS.params_from_source
 #[test]
@@ -338,9 +309,6 @@ fn model_and_implementation_agree_on_a_typescript_signature() {
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
-/// The cases must reach where a JavaScript implementation differs from a Rust
-/// one, or agreement says nothing about the thing most likely to be wrong.
-///
 /// @tests REQ-DRT-COVER.law_coverage
 #[test]
 fn generation_reaches_text_where_characters_and_code_units_differ() {
@@ -353,8 +321,6 @@ fn generation_reaches_text_where_characters_and_code_units_differ() {
     for _ in 0..3_000 {
         let value = gen::value(&schema, &mut rng);
         let buffer: Buffer = serde_json::from_value(value).expect("the schema generates a buffer");
-        // A character outside the basic plane is two UTF-16 code units, so a
-        // frontend counting `String.length` is a position out of step here.
         if buffer.text.chars().any(|c| c as u32 > 0xFFFF) {
             astral += 1;
         }

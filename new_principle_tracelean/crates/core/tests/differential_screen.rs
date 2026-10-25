@@ -1,18 +1,3 @@
-//! What is opened and what is shown, checked against the model.
-//!
-//! Ten bindings over one value: whether a screen holds together, where its panes
-//! go, showing and opening a buffer, splitting, closing, resizing, moving the
-//! focus, and the two menus the session always has.
-//!
-//! **The layout's schema is nested by hand rather than declared recursively.**
-//! `drt::schema` has no recursive form — there is no way to say "a layout, and
-//! inside it, layouts". So `layout(depth)` builds the grammar three levels deep
-//! and stops. That is a real limit on what these runs cover: a layout nested
-//! four deep is never generated, and no floor here can claim otherwise. The fix
-//! is a recursive schema, which is `REQ-DRT-SCHEMA`'s work and not this
-//! clause's; until then the limit is written here rather than left to be
-//! discovered.
-
 mod harness;
 
 use std::collections::BTreeMap;
@@ -29,8 +14,6 @@ use tracelean_core::surface::view::Buffer;
 
 mod support;
 
-// ───────────────────────────────────────────────────────────── the schema
-
 fn strukt(fields: &[(&str, Schema)]) -> Schema {
     Schema::Struct {
         fields: fields.iter().map(|(name, s)| (name.to_string(), s.clone())).collect(),
@@ -45,11 +28,6 @@ fn direction() -> Schema {
     Schema::simple_enum(&["left", "right", "up", "down"])
 }
 
-/// Small regions, and zero among them.
-///
-/// A terminal is eighty by twenty-four and a layout bug does not care; what
-/// finds one is a region too small to give every pane a character, which is why
-/// the sizes here are single digits rather than realistic.
 fn rect() -> Schema {
     strukt(&[
         ("left", Schema::Nat { max: Some(2), edges: vec![0] }),
@@ -59,30 +37,14 @@ fn rect() -> Schema {
     ])
 }
 
-/// Identities one character long, drawn from a three-letter alphabet.
-///
-/// Realistic names would make this suite worthless. A focus matches a pane, and
-/// a pane's buffer is one the session opened, only when two independently drawn
-/// strings are equal — and with twelve random characters to choose from that
-/// almost never happens, so almost every generated screen would be an
-/// incoherent one and the agreeing case would go untested. Short names make the
-/// coincidences the law is about ordinary.
 fn pane_id() -> Schema {
-    // A zero maximum on the generated half, so the alphabet is the three named
-    // letters and the empty name — which is itself a case worth having, since a
-    // pane with no name is one a focus can still match.
     Schema::Str { max_len: Some(0), examples: vec!["a".into(), "b".into(), "c".into()] }
 }
 
 fn buffer_id() -> Schema {
-    // `é` is here for the strip: its rows are numbered by character offset, and
-    // a frontend counting UTF-16 code units or bytes would place the span
-    // differently from the model.
     Schema::Str { max_len: Some(0), examples: vec!["x".into(), "y".into(), "é".into()] }
 }
 
-/// Identities drawn from the workbench's names and one other, so that a home
-/// pane is placed in some screens and gone from others.
 fn home_pane_id() -> Schema {
     Schema::Str {
         max_len: Some(0),
@@ -90,7 +52,6 @@ fn home_pane_id() -> Schema {
     }
 }
 
-/// A layout, nested to a fixed depth. See the note at the top of this file.
 fn layout(depth: usize) -> Schema {
     layout_named(depth, pane_id)
 }
@@ -111,9 +72,6 @@ fn layout_named(depth: usize, pane_id: fn() -> Schema) -> Schema {
                     Schema::List {
                         inner: Box::new(Schema::Tuple {
                             items: vec![
-                                // Zero among the weights: a part weighing
-                                // nothing is the case that makes a share
-                                // allocation divide by nothing.
                                 Schema::Nat { max: Some(4), edges: vec![0, 1] },
                                 layout_named(depth - 1, pane_id),
                             ],
@@ -133,8 +91,6 @@ fn buffer() -> Schema {
         "file".to_string(),
         Some(Box::new(strukt(&[(
             "path",
-            // One name at several depths, for tabs that must tell
-            // same-named files apart by their folders.
             Schema::Str {
                 max_len: Some(4),
                 examples: vec!["a.rs".into(), "x/a.rs".into(), "y/x/a.rs".into(), "z/x/a.rs".into(), "/a.rs".into()],
@@ -185,7 +141,6 @@ fn screen() -> Schema {
     ])
 }
 
-/// A screen whose panes may carry the workbench's names.
 fn home_screen() -> Schema {
     strukt(&[
         ("opened", Schema::List { inner: Box::new(buffer()), max_len: Some(3) }),
@@ -210,8 +165,6 @@ fn one_screen() -> Schema {
     strukt(&[("screen", screen())])
 }
 
-// ───────────────────────────────────────────────────────────── running one
-
 fn check(clause: &str, function: &str, entry: &str, arguments: &[&str], schema: Schema, seed: u64) {
     let op = format!("REQ-SCREEN.{clause}");
     let scratch = harness::scratch(&format!("screen-{clause}"));
@@ -231,8 +184,6 @@ fn check(clause: &str, function: &str, entry: &str, arguments: &[&str], schema: 
 
     let _ = std::fs::remove_dir_all(&scratch);
 }
-
-// ─────────────────────────────────────────────── reading generated values
 
 fn generated(schema: &Schema, seed: u64, cases: usize) -> Vec<serde_json::Value> {
     let mut rng = gen::Rng::new(seed);
@@ -256,14 +207,6 @@ fn splits_within(layout: &Layout) -> Vec<&Vec<(u64, Layout)>> {
     }
 }
 
-/// Whether the placed rectangles tile the region: every cell inside it covered
-/// exactly once, and nothing placed outside it.
-///
-/// This is the half a differential run cannot reach. Comparing Lean against
-/// Rust establishes that the two agree; it says nothing about whether what they
-/// agree on is a tiling, and two implementations of the same wrong arithmetic
-/// would agree perfectly. So the law itself is checked here, over the same
-/// generated regions.
 fn tiles(rect: Rect, placed: &[(String, Rect)]) -> bool {
     for x in rect.left..rect.left + rect.width {
         for y in rect.top..rect.top + rect.height {
@@ -288,7 +231,6 @@ fn tiles(rect: Rect, placed: &[(String, Rect)]) -> bool {
     })
 }
 
-/// Every weight in a layout, outermost first.
 fn weights_of(layout: &Layout) -> Vec<u64> {
     match layout {
         Layout::Pane { .. } => Vec::new(),
@@ -302,12 +244,6 @@ fn weights_of(layout: &Layout) -> Vec<u64> {
     }
 }
 
-/// The parts of the split that directly contains `pane`, and its index among
-/// them — the divider a resize would move.
-///
-/// Replicated here from the implementation's private `index_holding` rather
-/// than exported: a counting helper that called the code under test would count
-/// what that code believes rather than what the value is.
 fn enclosing(pane: &str, layout: &Layout) -> Option<(usize, Vec<u64>)> {
     let Layout::Split { axis, parts } = layout else { return None };
     let at = parts.iter().position(|(_, inner)| pane_ids(inner).iter().any(|id| id == pane));
@@ -315,9 +251,6 @@ fn enclosing(pane: &str, layout: &Layout) -> Option<(usize, Vec<u64>)> {
         None => None,
         Some(index) => {
             let inner = &parts[index].1;
-            // A part that is itself a split along the same axis answers first
-            // — the pane is one of its parts, and its divider is that split's —
-            // and so does the only part there is.
             let nested = matches!(inner, Layout::Split { axis: inner_axis, .. } if inner_axis == axis);
             if matches!(inner, Layout::Split { .. }) && (nested || parts.len() == 1) {
                 enclosing(pane, inner)
@@ -327,8 +260,6 @@ fn enclosing(pane: &str, layout: &Layout) -> Option<(usize, Vec<u64>)> {
         }
     }
 }
-
-// ─────────────────────────────────────────────────── whether it holds together
 
 /// @drt REQ-SCREEN.every_pane_is_opened
 /// @tests REQ-SCREEN.every_pane_is_opened
@@ -379,8 +310,6 @@ fn generation_reaches_every_way_a_screen_falls_apart() {
     );
 }
 
-// ─────────────────────────────────────────────────────────────── placing
-
 fn rect_and_layout() -> Schema {
     strukt(&[("rect", rect()), ("layout", layout(2))])
 }
@@ -425,14 +354,8 @@ fn generation_reaches_the_regions_that_cannot_be_divided_evenly() {
         if rect.width == 0 || rect.height == 0 {
             nothing += 1;
         }
-        // The clause itself, over every generated region. Every pane gets a
-        // rectangle, and the rectangles tile the region — which is what
-        // `layout_tiles_the_region` says and what no comparison of two
-        // implementations could establish.
         let placed = place(rect, layout.clone());
         assert_eq!(placed.len(), pane_ids(&layout).len());
-        // A layout holding no pane places nothing, and there is no tiling to
-        // speak of — which is what the clause says and why it says it.
         if !placed.is_empty() {
             assert!(tiles(rect, &placed), "{rect:?} not tiled by {placed:?}");
         }
@@ -448,8 +371,6 @@ fn generation_reaches_the_regions_that_cannot_be_divided_evenly() {
         ],
     );
 }
-
-// ──────────────────────────────────────────────────── showing and opening
 
 fn id_and_screen() -> Schema {
     strukt(&[("id", buffer_id()), ("screen", screen())])
@@ -486,8 +407,6 @@ fn generation_reaches_showing_what_is_held_and_what_is_not() {
         if showing.map(|(_, buffer)| buffer == id).unwrap_or(false) {
             already += 1;
         }
-        // The clause: showing moves what a pane points at and produces nothing,
-        // so the session holds exactly what it held.
         let after = show_buffer(id.clone(), s.clone());
         assert_eq!(after.opened, s.opened);
         assert_eq!(pane_ids(&after.layout), pane_ids(&s.layout));
@@ -534,8 +453,6 @@ fn generation_reaches_opening_something_new_and_something_held() {
         } else {
             fresh += 1;
         }
-        // The clause: opening shows the buffer and changes the layout in no
-        // other way, and a buffer already held is not held twice.
         let offered: Buffer =
             serde_json::from_value(value["buffer"].clone()).expect("a buffer");
         let after = open_buffer(offered, s.clone());
@@ -551,8 +468,6 @@ fn generation_reaches_opening_something_new_and_something_held() {
         &[("opened something new", fresh), ("opened something already held", again)],
     );
 }
-
-// ──────────────────────────────────────────────────────────── the workbench
 
 fn three_buffers() -> Schema {
     strukt(&[("listing", buffer()), ("document", buffer()), ("side", buffer())])
@@ -590,8 +505,6 @@ fn generation_reaches_three_buffers_and_one_offered_twice() {
         } else {
             shared += 1;
         }
-        // The clause: three places, the listing in the first, focus on it, and
-        // every buffer held once.
         let opened = workbench(listing.clone(), document, side);
         assert_eq!(pane_ids(&opened.layout).len(), 3);
         assert_eq!(panes(&opened.layout)[0], (EXPLORER.to_string(), listing.id));
@@ -640,7 +553,6 @@ fn generation_reaches_a_home_that_is_placed_and_one_that_is_gone() {
         kinds.insert(format!("{:?}", std::mem::discriminant(&kind)));
         let home = home_of(&kind);
         let there = destination(kind.clone(), s.clone());
-        // The clause: home while it is placed, the focus once it is not.
         if pane_ids(&s.layout).iter().any(|pane| pane == home) {
             placed += 1;
             assert_eq!(there, home);
@@ -658,8 +570,6 @@ fn generation_reaches_a_home_that_is_placed_and_one_that_is_gone() {
         ],
     );
 }
-
-// ─────────────────────────────────────────── splitting, closing, resizing
 
 fn axis_and_screen() -> Schema {
     strukt(&[("axis", axis()), ("screen", screen())])
@@ -694,8 +604,6 @@ fn generation_reaches_splitting_a_pane_that_is_there_and_one_that_is_not() {
         } else {
             missing += 1;
         }
-        // The clause: the buffer that was there is in both halves, so neither
-        // is empty — and a focus on no pane splits nothing.
         let axis: Axis = serde_json::from_value(value["axis"].clone()).expect("an axis");
         let before = panes(&s.layout);
         let after = split_focus(axis, s.clone());
@@ -759,9 +667,6 @@ fn generation_reaches_closing_the_last_buffer_and_one_of_many() {
         if !shown.contains(&target) {
             unshown += 1;
         }
-        // The clause: the buffer leaves the opened set and every pane showing
-        // it, and no region is left without a pane. A close that was refused —
-        // the last opened buffer — changes nothing at all.
         let after = close_buffer(target.clone(), s.clone());
         if after != s {
             assert!(!after.opened.iter().any(|b| b.id == target));
@@ -822,8 +727,6 @@ fn generation_reaches_the_floor_and_the_far_side_of_a_split() {
                 if index + 1 == weights.len() && weights.len() > 1 {
                     last += 1;
                 }
-                // The two sides of the divider: the focused part grows by the
-                // amount and its neighbour gives it, or the resize is refused.
                 let sides = if index + 1 < weights.len() {
                     Some((weights[index], weights[index + 1]))
                 } else if index > 0 {
@@ -844,10 +747,6 @@ fn generation_reaches_the_floor_and_the_far_side_of_a_split() {
                 }
             }
         }
-        // The clause, in two halves. Weight moves between the two sides of one
-        // divider: the total is unchanged and at most two parts differ, so a
-        // third pane cannot have drifted. And the floor holds: every weight a
-        // resize changed is at least one.
         let after = resize_focus(amount, s.clone());
         let was = weights_of(&s.layout);
         let now = weights_of(&after.layout);
@@ -872,8 +771,6 @@ fn generation_reaches_the_floor_and_the_far_side_of_a_split() {
         ],
     );
 }
-
-// ─────────────────────────────────────────────────────────── one way in
 
 fn arrangement() -> Schema {
     let mut variants = BTreeMap::new();
@@ -930,10 +827,6 @@ fn generation_reaches_every_kind_of_arrangement() {
         if after == s {
             inert += 1;
         }
-        // The clause: every change routes to the one function that makes it, so
-        // arranging is exactly what calling that function does. A frontend
-        // doing its own arithmetic would differ from this, and that is the
-        // drift the clause exists to stop.
         let directly = match how {
             Arrangement::Split { axis } => split_focus(axis, s.clone()),
             Arrangement::Close => {
@@ -978,16 +871,6 @@ fn generation_reaches_every_kind_of_arrangement() {
     );
 }
 
-// ───────────────────────────────────────────────────── moving the focus
-
-/// A region with room in it, for the one binding a flat region tells nothing
-/// about.
-///
-/// A move lands on a pane that overlaps the focused one across the direction
-/// travelled, and a region of no height has no overlap to find — so a third of
-/// the cases under the ordinary `rect` could never move anywhere, and the
-/// interesting half of this law would go untested. The degenerate region is not
-/// lost: `place` is bound over it, where what it does is the point.
 fn roomy_rect() -> Schema {
     strukt(&[
         ("left", Schema::Nat { max: Some(2), edges: vec![0] }),
@@ -1036,14 +919,6 @@ fn generation_reaches_a_neighbour_an_edge_and_a_pane_nothing_places() {
             stayed += 1;
         } else {
             moved += 1;
-            // The clause: a move lands on a pane, and on one beyond the
-            // focused pane in the direction travelled — never on one behind it.
-            //
-            // Asserted only where the panes are distinct, and that is the
-            // clause `panes_are_distinct` exists for rather than a convenience
-            // here: with two panes carrying one identity, "the pane to the
-            // right of a" names two rectangles and the question has no answer
-            // to check.
             assert!(placed.contains(&landed));
             if distinct_panes(&s.layout) {
                 let where_it_was = place(rect, s.layout.clone());
@@ -1071,8 +946,6 @@ fn generation_reaches_a_neighbour_an_edge_and_a_pane_nothing_places() {
         ],
     );
 }
-
-// ──────────────────────────────────────────────── the strip and stations
 
 /// @drt REQ-SCREEN.strip_is_the_opened_set
 /// @tests REQ-SCREEN.strip_is_the_opened_set
@@ -1104,10 +977,6 @@ fn generation_reaches_an_empty_strip_and_a_name_outside_ascii() {
         if s.opened.iter().any(|b| !b.id.is_ascii()) {
             wide += 1;
         }
-        // The clause: the strip is the opened set — one row each, in the order
-        // they were opened, each carrying the action that shows it. A row is
-        // its number, then the buffer's title (and, for a file whose name
-        // another shares, the folders that tell it apart).
         let bar = strip(s.clone());
         assert_eq!(bar.spans.len(), s.opened.len());
         assert_eq!(bar.text.split('\n').count().max(1), s.opened.len().max(1));
@@ -1116,10 +985,6 @@ fn generation_reaches_an_empty_strip_and_a_name_outside_ascii() {
             let named = row.split_once("  ").map_or("", |(_, rest)| rest);
             assert!(named == title || named.starts_with(&format!("{title} · ")), "the row names the buffer it shows: {row:?} {title:?}");
         }
-        // Each row's action names the buffer it lists, and resolving it — with
-        // nothing under the cursor at all — shows exactly that buffer. Before,
-        // every row carried a bare `screen.show`, which `dispatch` resolved
-        // from the row's text, a number and a title, and so showed nothing.
         for (span, held) in bar.spans.iter().zip(&s.opened) {
             assert_eq!(span.actions, vec![format!("screen.show {}", held.id)]);
             let focus = tracelean_core::surface::act::Focus {
@@ -1175,8 +1040,6 @@ fn generation_asks_for_the_stations_from_every_kind_of_screen() {
     let first = stations(screen_of(&cases[0]));
     let mut asked = 0u64;
     for value in &cases {
-        // The clause itself, over the generator's whole output rather than a
-        // pair somebody chose: no screen changes the answer.
         assert_eq!(stations(screen_of(value)), first);
         asked += 1;
     }

@@ -1,35 +1,15 @@
-//! Assembling what a judge needs to see.
-//!
-//! The requirement↔model bond is the one nothing can check by running it, so the
-//! whole of TraceLean's contribution is putting the two halves in front of a
-//! person, correctly and completely: the clause as written, the model as it is
-//! now, and both hashes so the judgement can be invalidated when either moves.
-//!
-//! Pure. Reading the model's source off disk is the caller's job, because this
-//! must stay a function of the tree it is given rather than of the tree it
-//! happens to run in.
-
 use crate::judge::Material;
 use crate::trace::annotation::Role;
 use crate::trace::index::Index;
 
-/// Why no material could be assembled.
-///
 /// @implements ARCH-HONEST.named_findings
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Missing {
-    /// No requirement carries that identifier.
     NoRequirement { req_id: String },
-    /// The requirement has no such clause.
     NoClause { req_id: String, clause: String },
-    /// Nothing models the clause, so there is nothing to judge it against.
     NoModel,
 }
 
-/// Where the model for a clause lives, and what it hashed to.
-///
-/// Separate from the material because reading a file is an effect and this is
-/// not: the caller takes the location, reads it, and hands the text back.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ModelAt {
     pub file: String,
@@ -39,19 +19,7 @@ pub struct ModelAt {
     pub link_hash: String,
 }
 
-/// Which declaration models a clause.
-///
-/// The first in sorted order when several do, so that asking twice puts the
-/// same thing in front of the judge. A clause modelled by two declarations is a
-/// judgement about the pair, and the caller can show both; what must not happen
-/// is the choice moving between runs.
-///
 /// @implements ARCH-DETERMINISM.stable_ordering
-///
-/// A clause nothing models but a test checks structurally (ADR-0012) is judged
-/// against that test: whether it asks what the clause says is the question a
-/// person can still answer, and the only one left to answer for it.
-///
 /// @implements REQ-JUDGE.structural_judged
 pub fn model_of(index: &Index, req_id: &str, clause: Option<&str>) -> Option<ModelAt> {
     declarations_of(index, req_id, clause, Role::Models)
@@ -60,7 +28,6 @@ pub fn model_of(index: &Index, req_id: &str, clause: Option<&str>) -> Option<Mod
         .or_else(|| structural_checks(index, req_id, clause).into_iter().next())
 }
 
-/// The tests that check a clause by reading the tree, in file and line order.
 pub fn structural_checks(index: &Index, req_id: &str, clause: Option<&str>) -> Vec<ModelAt> {
     let mut found: Vec<ModelAt> = index
         .links
@@ -79,10 +46,6 @@ pub fn structural_checks(index: &Index, req_id: &str, clause: Option<&str>) -> V
     found
 }
 
-/// Every declaration claiming a clause in one role, in file and line order.
-///
-/// A clause has one model and at most one specification (ADR-0014); until the
-/// clauses with several are sorted out, the judge is shown all of them.
 pub fn declarations_of(index: &Index, req_id: &str, clause: Option<&str>, role: Role) -> Vec<ModelAt> {
     let mut found: Vec<ModelAt> = index
         .links
@@ -101,12 +64,6 @@ pub fn declarations_of(index: &Index, req_id: &str, clause: Option<&str>, role: 
     found
 }
 
-/// What the judge reads as "the model": each model and the specification, with
-/// their sources, labelled where there is more than the one model.
-///
-/// `models` and `specs` pair each declaration with its source text. One model
-/// and no specification reads exactly as the model's own source.
-///
 /// @implements REQ-JUDGE.prompt_exported
 pub fn shown_source(models: &[(ModelAt, String)], specs: &[(ModelAt, String)]) -> String {
     if models.len() == 1 && specs.is_empty() {
@@ -127,9 +84,6 @@ pub fn shown_source(models: &[(ModelAt, String)], specs: &[(ModelAt, String)]) -
     sections.join("\n\n")
 }
 
-/// What the judge reads for a clause checked only structurally: each test, said
-/// to be one, so nobody mistakes it for a model of the clause.
-///
 /// @implements REQ-JUDGE.structural_judged
 pub fn structural_source(checks: &[(ModelAt, String)]) -> String {
     checks
@@ -146,21 +100,6 @@ pub fn structural_source(checks: &[(ModelAt, String)]) -> String {
         .join("\n\n")
 }
 
-/// What every declaration modelling a clause hashes to, together.
-///
-/// Sorted, deduplicated and joined, exactly as `earn::anchor_hash` does it, so
-/// that a judgement's recorded input and the input recomputed against the tree
-/// are the same string. They were not: the record carried `model_of`'s single
-/// first-by-line hash while the check recomputed the join, so every clause with
-/// two `@models` went stale the moment it was judged.
-///
-/// The join is the right side of that disagreement. A clause modelled by two
-/// declarations is a judgement about the pair, and a record naming only one of
-/// them would survive a change to the other — a judgement nobody made, still
-/// standing.
-///
-/// A clause nothing models hashes to its structural checks, which are what it
-/// was judged against.
 pub fn model_hashes(index: &Index, req_id: &str, clause: Option<&str>) -> Option<String> {
     let claims = |keep: &dyn Fn(&crate::trace::index::Link) -> bool| -> Vec<String> {
         index
@@ -173,10 +112,6 @@ pub fn model_hashes(index: &Index, req_id: &str, clause: Option<&str>) -> Option
     rests_on(claims(&|link| link.role == Role::Models), claims(&|link| link.is_structural()))
 }
 
-/// What a judgement of a clause rests on: the hashes of every model of it, or,
-/// with none, of every test checking it by reading the tree; sorted, once each,
-/// joined. None when there is neither.
-///
 /// @implements REQ-JUDGE.structural_judged
 /// @drt REQ-JUDGE.structural_judged
 pub fn rests_on(models: Vec<String>, checks: Vec<String>) -> Option<String> {
@@ -189,11 +124,6 @@ pub fn rests_on(models: Vec<String>, checks: Vec<String>) -> Option<String> {
     Some(found.join("+"))
 }
 
-/// Assemble what the judge reads, given the model's source text.
-///
-/// The hashes are what makes the judgement perishable: `still_applies` compares
-/// them, so a judgement survives exactly as long as the pair it was about.
-///
 /// @implements REQ-JUDGE.invalidated_by_change
 /// @implements REQ-JUDGE.divergence_presented
 pub fn assemble(
@@ -208,8 +138,6 @@ pub fn assemble(
         .get(req_id)
         .ok_or_else(|| Missing::NoRequirement { req_id: req_id.to_string() })?;
 
-    // A clause's narrowings are part of what it requires, so the judge reads
-    // them with it, and the hash below covers them.
     let clause_text = match clause {
         None => requirement.body.clone(),
         Some(key) => requirement.clause_text_with_narrowings(key).ok_or_else(|| Missing::NoClause {
@@ -229,9 +157,6 @@ pub fn assemble(
         clause_text,
         model_source,
         requirement_hash,
-        // Every model of the clause, not the one whose source is shown: the
-        // judgement is about the pair when there are two, and the staleness
-        // check asks the tree the same question this way.
         model_hash: model_hashes(index, req_id, clause).unwrap_or_else(|| at.body_hash.clone()),
         divergence,
     };
@@ -275,9 +200,6 @@ mod tests {
         let _ = std::fs::remove_dir_all(&dir);
     }
 
-    /// The judge sees the model and the specification, each labelled with
-    /// where it is; a lone model reads as itself.
-    ///
     /// @tests REQ-JUDGE.prompt_exported
     #[test]
     fn the_model_and_the_specification_are_both_shown() {
@@ -296,10 +218,6 @@ mod tests {
         assert!(two.contains("model 1 of 2") && two.contains("model 2 of 2") && two.contains("def g := 2"), "{two}");
     }
 
-    /// A clause nothing models but a test checks structurally is judged against
-    /// that test, shown as one, and its hash is the test's: change the test and
-    /// the judgement no longer stands.
-    ///
     /// @tests REQ-JUDGE.structural_judged
     #[test]
     fn a_structural_clause_is_judged_against_its_test() {

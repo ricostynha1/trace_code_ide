@@ -1,23 +1,13 @@
-//! Deterministic case generation and shrinking.
-//!
-//! Determinism is a hard requirement, not a convenience: an evidence record
-//! claims "seed 7, twelve million cases, no divergence", and that is auditable
-//! only while seed 7 still means those cases. Hence a generator whose stream is
-//! defined here rather than by a dependency.
-
 use serde_json::{Map, Value};
 
 use super::schema::Schema;
 
-/// xorshift64*, short enough to read and fixed here forever.
-///
 /// @implements REQ-DRT-GEN.fixed_stream
 /// @implements ARCH-DETERMINISM.seeded_generation
 pub struct Rng(u64);
 
 impl Rng {
     pub fn new(seed: u64) -> Rng {
-        // Zero is a fixed point of xorshift; nudge it.
         Rng(if seed == 0 { 0x9E37_79B9_7F4A_7C15 } else { seed })
     }
 
@@ -39,14 +29,6 @@ impl Rng {
     }
 }
 
-/// The first `count` values of the raw stream.
-///
-/// The stream is the thing an evidence record depends on: "seed 7, twelve
-/// million cases, no divergence" is auditable only while seed 7 still means
-/// those cases. So it is defined here rather than by a dependency, and it is
-/// checked rather than trusted — a reimplementation in another language
-/// agreeing bit for bit is what makes "fixed" mean something.
-///
 /// @implements REQ-DRT-GEN.fixed_stream
 /// @implements ARCH-DETERMINISM.seeded_generation
 /// @drt REQ-DRT-GEN.fixed_stream
@@ -56,11 +38,6 @@ pub fn raw_stream(seed: u64, count: u64) -> Vec<u64> {
     (0..count).map(|_| rng.next_u64()).collect()
 }
 
-/// The first `count` values a `Nat` schema generates from a seed.
-///
-/// Drives the real generator rather than repeating it: the schema is built here
-/// and handed to `value`, so what is compared is what runs.
-///
 /// @implements REQ-DRT-GEN.edges_sampled
 /// @drt REQ-DRT-GEN.edges_sampled
 pub fn nat_stream(seed: u64, max: Option<u64>, edges: Vec<u64>, count: u64) -> Vec<u64> {
@@ -69,24 +46,13 @@ pub fn nat_stream(seed: u64, max: Option<u64>, edges: Vec<u64>, count: u64) -> V
     (0..count).map(|_| value(&schema, &mut rng).as_u64().unwrap_or(0)).collect()
 }
 
-/// The first `count` values any schema generates from a seed: the cases a
-/// differential run with that seed asks, in its order.
-///
-/// Every shape, not one: a run draws structures, lists, options, booleans,
-/// integers and enums, and a seed is only auditable if all of them are fixed.
 pub fn value_stream(seed: u64, schema: Schema, count: u64) -> Vec<Value> {
     let mut rng = Rng::new(seed);
     (0..count).map(|_| value(&schema, &mut rng)).collect()
 }
 
-/// One schema of every shape, as the JSON a binding writes them in. The Lean
-/// model reads the same text, so the two streams are over the same shapes.
 pub(crate) const SHAPES: &str ="[{\"type\":\"nat\",\"max\":50,\"edges\":[7]},{\"type\":\"int\",\"min\":-5,\"max\":5},{\"type\":\"bool\"},{\"type\":\"str\",\"max_len\":4,\"examples\":[\"one\",\"\"]},{\"type\":\"option\",\"inner\":{\"type\":\"nat\",\"max\":9}},{\"type\":\"list\",\"inner\":{\"type\":\"int\",\"min\":0,\"max\":3},\"max_len\":3},{\"type\":\"tuple\",\"items\":[{\"type\":\"bool\"},{\"type\":\"nat\",\"max\":3}]},{\"type\":\"struct\",\"fields\":{\"a\":{\"type\":\"bool\"},\"b\":{\"type\":\"str\",\"max_len\":2}}},{\"type\":\"enum\",\"variants\":{\"x\":null,\"y\":{\"type\":\"nat\",\"max\":2}}},{\"type\":\"list\",\"inner\":{\"type\":\"struct\",\"fields\":{\"n\":{\"type\":\"option\",\"inner\":{\"type\":\"int\",\"min\":-1,\"max\":1}}}},\"max_len\":2}]";
 
-/// The first `count` values the `shape`-th schema of `SHAPES` (counted round
-/// the list) generates from a seed: the same seed, the same cases, for every
-/// shape a run can draw.
-///
 /// @implements REQ-DRT-GEN.seed_reproduces
 /// @drt REQ-DRT-GEN.seed_reproduces
 pub fn shape_stream(seed: u64, shape: u64, count: u64) -> Vec<Value> {
@@ -96,7 +62,6 @@ pub fn shape_stream(seed: u64, shape: u64, count: u64) -> Vec<Value> {
     }
 }
 
-/// The `shape`-th schema of `SHAPES`, counted round the list.
 pub fn shape_at(shape: u64) -> Option<Schema> {
     let shapes: Vec<Schema> = serde_json::from_str(SHAPES).unwrap_or_default();
     match shapes.len() as u64 {
@@ -105,14 +70,10 @@ pub fn shape_at(shape: u64) -> Option<Schema> {
     }
 }
 
-/// Generate one value of the declared shape.
-///
 /// @implements REQ-DRT-GEN.seed_reproduces
 pub fn value(schema: &Schema, rng: &mut Rng) -> Value {
     match schema {
         Schema::Nat { max, edges } => {
-            // Edges are sampled heavily rather than drawn uniformly: a run that
-            // never reached a branch has not tested it.
             if !edges.is_empty() && rng.chance(40) {
                 return Value::from(edges[rng.below(edges.len() as u64) as usize]);
             }
@@ -171,9 +132,6 @@ pub fn value(schema: &Schema, rng: &mut Rng) -> Value {
     }
 }
 
-/// One step smaller, in a fixed order. Each candidate is strictly simpler, so
-/// repeatedly taking one terminates.
-///
 /// @implements REQ-DRT-GEN.shrink_terminates
 pub fn shrink(schema: &Schema, v: &Value) -> Vec<Value> {
     let mut out = Vec::new();
@@ -201,7 +159,6 @@ pub fn shrink(schema: &Schema, v: &Value) -> Vec<Value> {
         (Schema::Str { .. }, Value::String(s)) => {
             if !s.is_empty() {
                 out.push(Value::from(""));
-                // By characters: half the bytes of `é` is no string.
                 out.push(Value::from(s.chars().take(s.chars().count() / 2).collect::<String>()));
             }
         }
@@ -209,7 +166,6 @@ pub fn shrink(schema: &Schema, v: &Value) -> Vec<Value> {
         (Schema::List { inner, .. }, Value::Array(items)) => {
             if !items.is_empty() {
                 out.push(Value::Array(vec![]));
-                // Drop each element in turn, then simplify each in place.
                 for i in 0..items.len() {
                     let mut shorter = items.clone();
                     shorter.remove(i);
@@ -225,7 +181,6 @@ pub fn shrink(schema: &Schema, v: &Value) -> Vec<Value> {
             }
         }
         (Schema::Tuple { items }, Value::Array(values)) if items.len() == values.len() => {
-            // A tuple's length is fixed, so only its elements can shrink.
             for (i, (item, current)) in items.iter().zip(values).enumerate() {
                 for smaller in shrink(item, current) {
                     let mut next = values.clone();
@@ -244,8 +199,6 @@ pub fn shrink(schema: &Schema, v: &Value) -> Vec<Value> {
                 }
             }
         }
-        // An enum's variants are unordered, so there is no "smaller" one to
-        // move to; only a payload can shrink.
         (Schema::Enum { variants }, Value::Object(map)) => {
             for (name, payload) in variants {
                 let (Some(inner), Some(current)) = (payload, map.get(name)) else { continue };
@@ -289,7 +242,6 @@ mod tests {
         let hits = (0..1_000)
             .filter(|_| value(&schema, &mut rng) == serde_json::json!(5_000))
             .count();
-        // Uniform over 100k would produce ~0 in a thousand draws.
         assert!(hits > 250, "edge sampled only {hits} times in 1000");
     }
 
@@ -305,7 +257,6 @@ mod tests {
         for _ in 0..50 {
             let mut current = value(&schema, &mut rng);
             let mut steps = 0;
-            // Always take the first candidate: the most aggressive reduction.
             while let Some(next) = shrink(&schema, &current).into_iter().next() {
                 current = next;
                 steps += 1;
@@ -314,10 +265,6 @@ mod tests {
         }
     }
 
-    /// An integer shrinks toward zero, a tuple and an enum's payload shrink in
-    /// place, and what is already smallest — or not of its schema — offers
-    /// nothing.
-    ///
     /// @tests REQ-DRT-GEN.shrink_terminates
     #[test]
     fn every_kind_of_value_shrinks_toward_its_smallest() {
@@ -331,7 +278,6 @@ mod tests {
             shrink(&pair, &serde_json::json!([true, 1])),
             vec![serde_json::json!([false, 1]), serde_json::json!([true, 0])]
         );
-        // A tuple of the wrong length is not of its schema.
         assert!(shrink(&pair, &serde_json::json!([true])).is_empty());
 
         let mut variants = std::collections::BTreeMap::new();

@@ -1,10 +1,3 @@
-//! The sandbox, end to end on a real tree: make one, let an "agent" write into
-//! its copy, see the change and what it said, accept or reject it, end it.
-//!
-//! The agent here is this test writing files and a Claude Code transcript —
-//! the editor cannot tell the difference, which is the point: it only ever
-//! reads what was left behind.
-
 use std::path::{Path, PathBuf};
 
 use tracelean_core::surface::act::Intent;
@@ -57,7 +50,6 @@ fn an_agents_change_is_seen_reviewed_and_accepted_into_the_project() {
     let launcher = std::fs::read_to_string(copied.trim_start_matches("sh ")).expect("the launcher");
     assert!(launcher.contains("exec bwrap "), "{launcher}");
 
-    // The agent edits one file and makes another, in the copy.
     std::fs::write(work(&editor).join("src/a.rs"), "fn a() { 1 }\n").unwrap();
     std::fs::write(work(&editor).join("src/c.rs"), "fn c() {}\n").unwrap();
     assert!(editor.tick(), "the panel did not notice the change");
@@ -67,7 +59,6 @@ fn an_agents_change_is_seen_reviewed_and_accepted_into_the_project() {
     assert!(shown.contains("src/a.rs +1 −1") && shown.contains("src/c.rs +1 −0"), "no sizes:\n{shown}");
     assert_eq!(std::fs::read_to_string(root.join("src/a.rs")).unwrap(), "fn a() {}\n", "the real tree changed early");
 
-    // Clicking the path opens the diff against what the agent wrote.
     let held = editor.screen.opened.iter().find(|b| b.id == "record:sandbox").unwrap().clone();
     let at = held.text[..held.text.find("src/a.rs").unwrap()].chars().count();
     assert_eq!(actions_at(held, at), vec!["observe.diff".to_string()]);
@@ -86,7 +77,6 @@ fn an_agents_change_is_seen_reviewed_and_accepted_into_the_project() {
     let _ = std::fs::remove_dir_all(&root);
 }
 
-/// Rejecting takes the change out of the copy and never touches the project.
 #[test]
 fn a_rejected_change_leaves_the_project_and_the_copy_as_they_were() {
     let root = project("reject");
@@ -102,8 +92,6 @@ fn a_rejected_change_leaves_the_project_and_the_copy_as_they_were() {
     let _ = std::fs::remove_dir_all(&root);
 }
 
-/// One file is accepted from its row and another rejected from its row; each
-/// leaves the other waiting.
 #[test]
 fn changes_are_accepted_and_rejected_one_file_at_a_time() {
     let root = project("one");
@@ -119,7 +107,6 @@ fn changes_are_accepted_and_rejected_one_file_at_a_time() {
         let at = row + held.text[row..].find(button).expect(button);
         let at = held.text[..at].chars().count();
         assert_eq!(actions_at(held.clone(), at), vec![action.to_string()]);
-        // The panel is in the side pane; the offset is the buffer's own.
         let pane = editor.laid_out(editor.region).into_iter().find(|p| p.buffer.id == "record:sandbox").unwrap();
         editor.choose(&pane.pane, at - text_offset_of_top(&held, pane.top), action, None, None);
     };
@@ -135,20 +122,16 @@ fn changes_are_accepted_and_rejected_one_file_at_a_time() {
     let _ = std::fs::remove_dir_all(&root);
 }
 
-/// Where the window of a pane starts, in characters of its buffer.
 fn text_offset_of_top(buffer: &tracelean_core::surface::view::Buffer, top: usize) -> usize {
     buffer.text.split('\n').take(top).map(|line| line.chars().count() + 1).sum()
 }
 
-/// What a Claude Code agent said appears in the panel, newest first.
-///
 /// @tests REQ-TRANSCRIPT.tool_format_read
 #[test]
 fn the_agents_conversation_appears_in_the_panel() {
     let root = project("chat");
     let home = std::env::temp_dir().join(format!("tracelean-claude-home-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&home);
-    // The agent's state directory is where `CLAUDE_CONFIG_DIR` points.
     std::env::set_var("CLAUDE_CONFIG_DIR", &home);
     let mut editor = Editor::open(root.clone(), keymap());
     act(&mut editor, "sandbox.new");
@@ -175,8 +158,6 @@ fn write(path: &Path, lines: &[&str]) {
     std::fs::write(path, lines.join("\n") + "\n").unwrap();
 }
 
-/// A sandbox starts from what the editor holds, so an edit not yet saved is
-/// not mistaken for something the agent did.
 #[test]
 fn an_unsaved_edit_is_not_an_agents_change() {
     let root = project("unsaved");

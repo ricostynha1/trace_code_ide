@@ -1,6 +1,3 @@
-//! Line coverage beside the code: which lines tests ran, which they did not,
-//! and who ran each — measured on the demo, shown by the editor.
-
 use std::path::{Path, PathBuf};
 
 use tracelean_core::surface::keymap;
@@ -9,7 +6,6 @@ use tracelean_editor::Editor;
 
 const KEYMAP: &str = include_str!("../../../assets/keymap.json");
 
-/// The demo, as a project of its own, in a scratch directory.
 fn demo() -> PathBuf {
     let from = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../demo");
     let dir = std::env::temp_dir().join(format!("tracelean-coverage-{}", std::process::id()));
@@ -39,9 +35,6 @@ fn coverage_of(editor: &Editor) -> Vec<(usize, u64, String)> {
     editor.coverage_shown(&found.buffer, found.top, found.at.height as usize)
 }
 
-/// Each test run alone: the branches `describe`'s one test never reaches are
-/// uncovered, and a line two tests reach names both, with their counts.
-///
 /// @tests REQ-LINECOV.per_test
 /// @tests REQ-LINECOV.uncovered_shown
 /// @tests REQ-LINECOV.stale_hidden
@@ -68,7 +61,6 @@ fn uncovered_lines_and_the_tests_behind_each_line_are_shown() {
     assert_eq!(hits, 7);
     assert_eq!(said, "run 7 times by converting_back_gives_what_went_in ×6, the_scales_meet_at_minus_forty ×1");
 
-    // The requirement says how much of what implements each clause is run.
     editor.choose(DOCUMENT, 0, "trace.requirement", Some("REQ-TABLE".into()), None);
     let document = |editor: &Editor| {
         let placed = editor.laid_out(editor.region);
@@ -77,8 +69,6 @@ fn uncovered_lines_and_the_tests_behind_each_line_are_shown() {
     };
     let requirement = document(&editor);
     assert!(requirement.contains("covered     REQ-TABLE.every_sample  4/7 lines run (57%), by 1 test"), "{requirement}");
-    // And over the whole requirement, which a click opens line by line: the
-    // tests behind each item, and each line none ran as a link to it.
     assert!(requirement.contains("covered    REQ-TABLE  "), "{requirement}");
     editor.choose(DOCUMENT, 0, "trace.coverage", Some("REQ-TABLE".into()), None);
     let lines = document(&editor);
@@ -86,7 +76,6 @@ fn uncovered_lines_and_the_tests_behind_each_line_are_shown() {
     assert!(lines.contains("ran by  below_zero_is_ice"), "{lines}");
     assert!(lines.contains(&format!("src/celsius.rs:{}  \"steam\"", line_of("\"steam\"") + 1)), "{lines}");
 
-    // Typed into, the file is no longer the text that was measured.
     editor.choose(DOCUMENT, 0, "file.open", Some("src/celsius.rs".into()), None);
     editor.paste("// a line\n");
     assert!(coverage_of(&editor).is_empty(), "coverage of other text is shown");

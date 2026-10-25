@@ -1,9 +1,3 @@
-//! Pinning per input, checked against the model.
-//!
-//! The failure this guards is a clause shown pinned when Lean never accepted
-//! the theorem as stated — an obligation text that drifted, an answer read too
-//! generously, or a verdict outliving the declarations it was about.
-
 mod harness;
 mod support;
 
@@ -88,9 +82,6 @@ fn model_and_implementation_agree_on_the_obligation() {
     check("per_input", "TraceLean.Pinning.statement", "crates/core/src/trace/pinning.rs::statement", &["spec", "model", "inputs"], statement(), 311);
 }
 
-/// Declarations in the shapes a model takes: binders, arrows only (a
-/// definition by pattern matching), both, an arrow inside an argument, an
-/// ASCII arrow, a proposition, and what is not a definition at all.
 const DECLARATIONS: &[&str] = &[
     "def toF (c : Int) : Int := c",
     "/-- doc -/\ndef ToF (c f : Int) : Prop :=\n  c = f",
@@ -103,7 +94,6 @@ const DECLARATIONS: &[&str] = &[
     "def walk (g : List Nat) (fuel : Nat) : String → List String → Nat × List String\n  | _, _ => (0, [])",
     "abbrev Levels := List Nat",
     "def x := 5",
-    // Brackets inside a binder, which stay part of its type.
     "def nested (xs : List (Option Nat)) {m : Array [Nat]} (p : Nat × (Nat → Prop)) : Prop := True",
     "theorem t : 1 = 1 := rfl",
     "instance : Inhabited Nat := ⟨0⟩",
@@ -137,8 +127,6 @@ fn model_and_implementation_agree_on_where_a_clause_stands() {
     check("verdict_kept", "TraceLean.Pinning.standing", "crates/core/src/trace/pinning.rs::standing", &["theoremName", "record", "key"], verdict(), 313);
 }
 
-/// The generators reach what the clauses are about.
-///
 /// @tests REQ-DRT-COVER.law_coverage
 #[test]
 fn generation_reaches_each_answer_and_each_verdict() {

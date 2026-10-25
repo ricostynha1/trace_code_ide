@@ -1,11 +1,3 @@
-//! Requirement documents, checked against the model.
-//!
-//! The interesting cases are not well-formed documents. They are fences that
-//! do not close, indented lines with nothing above them, `id:` present and
-//! empty, a list that is missing its bracket, and a colon inside a value. A
-//! generator drawing from a line alphabet produces those combinations in an
-//! order nobody would have thought to write down.
-
 mod harness;
 
 use tracelean_core::drt::run::{run, RunOptions};
@@ -17,29 +9,14 @@ fn strukt(fields: &[(&str, Schema)]) -> Schema {
     Schema::Struct { fields: fields.iter().map(|(k, v)| (k.to_string(), v.clone())).collect() }
 }
 
-/// Lines a document might be made of.
 fn line() -> Schema {
     Schema::Str {
-        // Generated (non-example) lines are empty, which the parser skips.
-        // With a one-character alphabet they would be junk that does nothing
-        // either, and they would halve the chance of drawing a fence.
         max_len: Some(0),
-        // `---` and `id:` are repeated so the generator draws them often. A
-        // document is only a requirement if its first line is a fence, a later
-        // line closes it, and an `id:` sits between — three coincidences that
-        // a uniform alphabet produces perhaps once in a thousand documents,
-        // which would leave every branch past the fence untested.
         examples: vec![
-            // Whole documents, because an element is joined into the text with
-            // a newline and may therefore be several lines. Drawing the fence,
-            // the identifier and the closing fence as three independent lines
-            // in the right order happens perhaps once in two hundred documents,
-            // which leaves everything past the fence effectively untested.
             "---\nid: REQ-X\n---".into(),
             "---\nid: REQ-X\nstatus: approved\ndecomposition: complete\n---".into(),
             "---\nid: REQ-Y\nclauses:\n  one: does a thing\n  two: does another\n---".into(),
             "---\nid: REQ-Z\nrefines: [REQ-X, REQ-Y]\nclauses:\n  one: t\n---".into(),
-            // Clauses written as blocks, and every way a block goes wrong.
             "---\nid: REQ-N\nclauses:\n  one: plain\n  two:\n    text: base\n    empty: none is L1\n---".into(),
             "---\nid: REQ-N\nclauses:\n  two:\n    empty: no text\n  one: t\n---".into(),
             "---\nid: REQ-N\nclauses:\n  two:\n    text: a\n    text: b\n    e: x\n    e: y\n---".into(),
@@ -54,8 +31,6 @@ fn line() -> Schema {
             "\ttab: x".into(),
             "Title: cased".into(),
             "---\nid:\n---".into(),
-            // `id:` with nothing after it opens a map rather than setting the
-            // identifier; the empty identifier is the quoted one.
             "---\nid: \"\"\n---".into(),
             "---\nnot a key value\nid: REQ-X\n---".into(),
             "---\nclauses:\n  bare\nid: REQ-X\n---".into(),
@@ -136,9 +111,6 @@ fn model_and_implementation_agree_on_what_a_document_declares() {
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
-/// A run in which nothing ever parsed as a requirement would agree about
-/// nothing, and every named frontmatter fault must occur.
-///
 /// @tests REQ-DRT-COVER.law_coverage
 #[test]
 fn generation_reaches_requirements_and_every_fault() {
@@ -189,8 +161,6 @@ fn generation_reaches_requirements_and_every_fault() {
     assert_eq!(kinds.len(), 9, "not every frontmatter fault occurred: {kinds:?}");
 }
 
-/// Which identifiers are redeclared, checked against the model.
-///
 /// @drt REQ-REQDOC.id_unique
 /// @tests REQ-REQDOC.id_unique
 #[test]
@@ -216,8 +186,6 @@ fn model_and_implementation_agree_on_which_identifiers_are_redeclared() {
         max_len: Some(0),
         examples: examples.iter().map(|s| s.to_string()).collect(),
     };
-    // Three identifiers over four files, so a redeclaration is the common case
-    // rather than a coincidence; distinct random names never collide.
     let schema = strukt(&[(
         "declared",
         Schema::List {

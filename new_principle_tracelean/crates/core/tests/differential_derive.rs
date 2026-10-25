@@ -1,10 +1,3 @@
-//! Deriving a schema from two signatures, checked against the model.
-//!
-//! The failure this guards is a pair of types turned into a generator neither
-//! side has — a float approximated, an `Int` tested against a `u8`, a
-//! structure paired with one that spells a field differently — and so a run
-//! reporting agreement about inputs nobody passes.
-
 mod harness;
 mod support;
 
@@ -19,8 +12,6 @@ fn small(examples: &[&str]) -> Schema {
     Schema::Str { max_len: Some(0), examples: examples.iter().map(|s| s.to_string()).collect() }
 }
 
-/// Lean's integers are unbounded (`bits` 0) and Rust's are not; each side is
-/// generated as its reader would write it, with the odd exception.
 fn bits(lean: bool) -> Schema {
     if lean {
         Schema::Nat { max: Some(0), edges: vec![] }
@@ -29,7 +20,6 @@ fn bits(lean: bool) -> Schema {
     }
 }
 
-/// Types `depth` levels deep, as one side writes them.
 fn side(depth: u32, lean: bool) -> Schema {
     let mut variants: BTreeMap<String, Option<Box<Schema>>> = BTreeMap::new();
     let field = |name: &str, schema: Schema| {
@@ -49,15 +39,11 @@ fn side(depth: u32, lean: bool) -> Schema {
     Schema::Enum { variants }
 }
 
-/// Structures named `P` (sometimes `Q`), of a field or two.
 fn structs(lean: bool) -> Schema {
     let mut simple: BTreeMap<String, Option<Box<Schema>>> = BTreeMap::new();
     simple.insert("int".into(), Some(Box::new(Schema::Struct { fields: [("bits".to_string(), bits(lean))].into_iter().collect() })));
     simple.insert("bool".into(), None);
     let field = Schema::Tuple { items: vec![small(&["x"]), Schema::Enum { variants: simple }] };
-    // One structure, of up to two fields, so the two sides' structures also
-    // differ in how many fields they have (a branch one field each never
-    // reached). An empty one fails its lookup before the fields are compared.
     let one = Schema::Tuple { items: vec![small(&["P"]), Schema::List { inner: Box::new(field), max_len: Some(2) }] };
     Schema::Tuple { items: vec![one] }
 }
@@ -103,9 +89,6 @@ fn model_and_implementation_agree_on_how_two_types_pair() {
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
-/// The generator reaches pairs that give a schema, pairs of structures, and
-/// pairs that are refused.
-///
 /// @tests REQ-DRT-COVER.law_coverage
 #[test]
 fn generation_reaches_pairs_structures_and_mismatches() {
@@ -133,11 +116,6 @@ fn generation_reaches_pairs_structures_and_mismatches() {
     );
 }
 
-// ─── Pairing two signatures ──────────────────────────────────────────────────
-
-/// One argument or result type, from a smaller alphabet than `side`: pairing a
-/// whole signature needs every position to agree, and eleven shapes a side
-/// would make that too rare to reach.
 fn signature_type(lean: bool) -> Schema {
     let mut variants: BTreeMap<String, Option<Box<Schema>>> = BTreeMap::new();
     let field = |name: &str, schema: Schema| {
@@ -155,12 +133,7 @@ fn signature_type(lean: bool) -> Schema {
     Schema::Enum { variants }
 }
 
-/// A signature as `lean_signature` / `rust_signature` give it: named
-/// arguments, then the result.
 fn signature(lean: bool) -> Schema {
-    // The two sides draw names from overlapping alphabets, so a parameter the
-    // code names differently from the model is common and so is one it names
-    // the same.
     let names: &[&str] = if lean { &["a", "b"] } else { &["a", "x"] };
     let argument = Schema::Tuple { items: vec![small(names), signature_type(lean)] };
     Schema::Tuple {
@@ -207,9 +180,6 @@ fn model_and_implementation_agree_on_how_two_signatures_pair() {
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
-/// The generator reaches signatures that pair, arities that differ, a refused
-/// argument, a refused result, and a parameter the code names differently.
-///
 /// @tests REQ-DRT-COVER.law_coverage
 #[test]
 fn generation_reaches_every_way_two_signatures_pair_or_not() {

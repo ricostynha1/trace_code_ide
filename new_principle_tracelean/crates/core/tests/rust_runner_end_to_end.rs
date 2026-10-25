@@ -1,10 +1,3 @@
-//! The stage-0 unblocker, proved end to end: generate a runner against this
-//! crate, compile it, and hold a conversation with it over the protocol.
-//!
-//! The function under test is `drt::signature::parameters` — the differential
-//! tester exercising a part of itself, which is the smallest honest version of
-//! what this whole port is for.
-//!
 use std::collections::BTreeMap;
 use std::io::{BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
@@ -43,7 +36,6 @@ fn generated_runner_answers_cases() {
     let entry = resolve(&root, &binding).expect("binding resolves");
     assert_eq!(entry.op, "REQ-DRT-RUST.params_from_source");
 
-    // Build inside a scratch root so the project's own .tracelean is untouched.
     let scratch = std::env::temp_dir().join("tracelean-drt-e2e");
     let _ = std::fs::remove_dir_all(&scratch);
     let mut deps = BTreeMap::new();
@@ -94,8 +86,6 @@ fn generated_runner_answers_cases() {
     assert_eq!(r["case"], 1);
     assert_eq!(r["output"], serde_json::json!(["a", "b"]));
 
-    // `None` and `Some([])` must stay distinguishable across the wire: one is
-    // "no such function", the other "a function taking nothing".
     let r = ask(&mut stdin, &mut stdout, 2, "fn f() {}", "nope");
     assert_eq!(r["output"], serde_json::Value::Null);
     let r = ask(&mut stdin, &mut stdout, 3, "fn f() {}", "f");

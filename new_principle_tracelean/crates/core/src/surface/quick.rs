@@ -1,17 +1,3 @@
-//! Quick open: the files whose paths match a few typed letters.
-//!
-//! A tree is the way to browse; it is a slow way to reach a file whose name
-//! you already know. The letters typed are matched in order, not necessarily
-//! together (`scr` finds `src/surface/screen.rs`), and the best matches come
-//! first: letters in the file's own name beat letters spread over its folders,
-//! letters together beat letters apart, and a shorter name, then a shorter
-//! path, wins a tie.
-
-/// How well `query` matches `path`, if it does: higher is better.
-///
-/// Matched twice — from the start of the path, and within the file's name
-/// alone — and the better kept: the first letters of `screen` also occur in
-/// `src/`, and matching them there would hide the name that holds them all.
 fn score(path: &str, query: &str) -> Option<i64> {
     let lower: Vec<char> = path.to_lowercase().chars().collect();
     let wanted: Vec<char> = query.to_lowercase().chars().filter(|c| !c.is_whitespace()).collect();
@@ -23,12 +9,10 @@ fn score(path: &str, query: &str) -> Option<i64> {
         .into_iter()
         .filter_map(|from| letters_from(&lower, &wanted, from, name_starts))
         .max()?;
-    // A tie goes to the shorter name, then the shorter path.
     let name = (lower.len() - name_starts) as i64;
     Some(best * 1_000_000 - name * 1000 - lower.len() as i64)
 }
 
-/// The score of matching `wanted` in order, leftmost, from `from`.
 fn letters_from(lower: &[char], wanted: &[char], from: usize, name_starts: usize) -> Option<i64> {
     let mut total = 0i64;
     let mut at = from;
@@ -51,9 +35,6 @@ fn letters_from(lower: &[char], wanted: &[char], from: usize, name_starts: usize
     Some(total)
 }
 
-/// The best `limit` paths for `query`, best first; every path, shortest first,
-/// for an empty query.
-///
 /// @implements REQ-NAV.quick_open
 /// @drt REQ-NAV.quick_open
 pub fn matches(files: Vec<String>, query: &str, limit: usize) -> Vec<String> {

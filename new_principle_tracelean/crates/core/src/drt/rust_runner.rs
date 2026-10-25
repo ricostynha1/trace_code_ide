@@ -1,38 +1,19 @@
-//! Generating the Rust side of a differential test.
-//!
-//! Stage-0 TraceLean refuses any implementation language but Python, so nothing
-//! in a Rust project can reach L3. This lifts that, the same way the Lean side
-//! is already handled: generate a crate, compile it, speak the protocol.
-//!
-//! Two mechanisms replace the runtime reflection Python's runner relies on.
-//! Parameter *order* comes from `super::signature`. Parameter *types* are never
-//! named — `serde_json::from_value` is generic in its return type, so each call
-//! is resolved by the position it is passed into, and a binding that cannot
-//! name a type cannot name a wrong one.
-
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
 use super::config::Binding;
 use super::signature;
 
-/// Where the generated crate lives. Under the cache directory, because it is
-/// TraceLean's code and not something a person maintains.
-///
 /// @implements REQ-DRT-RUST.project_untouched
 pub fn package_dir(root: &Path) -> PathBuf {
     root.join(".tracelean").join("drt-rust")
 }
 
-/// What a binding resolved to, once its source has been read.
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct Entry {
     pub op: String,
-    /// `tracelean_core::drt::signature::parameters`
     pub call_path: String,
-    /// Implementation parameter names, in declaration order.
     pub parameters: Vec<String>,
-    /// Implementation parameter name -> model field name to read it from.
     pub sources: Vec<String>,
 }
 
@@ -41,9 +22,6 @@ pub enum ResolveError {
     MalformedEntry(String),
     MissingFile(PathBuf),
     NoSuchFunction { file: PathBuf, symbol: String },
-    /// One name, more than one declaration. Refused rather than resolved to
-    /// the first: calling the wrong function produces agreement about the
-    /// wrong thing, and nothing downstream can tell.
     AmbiguousFunction { file: PathBuf, symbol: String, count: usize },
     NotInACrate(PathBuf),
     UnmappedField { op: String, parameter: String },
@@ -80,8 +58,6 @@ impl std::fmt::Display for ResolveError {
     }
 }
 
-/// Resolve one binding against the project's source.
-///
 /// @implements REQ-DRT-RUST.params_from_source
 pub fn resolve(root: &Path, binding: &Binding) -> Result<Entry, ResolveError> {
     let spec = &binding.implementation;
@@ -93,8 +69,6 @@ pub fn resolve(root: &Path, binding: &Binding) -> Result<Entry, ResolveError> {
     let source = std::fs::read_to_string(&file)
         .map_err(|_| ResolveError::MissingFile(file.clone()))?;
 
-    // Two declarations of one name is not a resolution this is allowed to
-    // guess at: it would call one of them and report agreement about the other.
     let declared = signature::declarations(&source, symbol);
     if declared > 1 {
         return Err(ResolveError::AmbiguousFunction {
@@ -111,8 +85,6 @@ pub fn resolve(root: &Path, binding: &Binding) -> Result<Entry, ResolveError> {
     let module = module_path(root, Path::new(rel))
         .ok_or_else(|| ResolveError::NotInACrate(PathBuf::from(rel)))?;
 
-    // `params` maps a model field onto an implementation parameter, so it is
-    // inverted here: the generated code reads a field per parameter.
     let mut by_parameter: BTreeMap<&str, &str> = BTreeMap::new();
     for (field, parameter) in &spec.params {
         by_parameter.insert(parameter, field);
@@ -130,11 +102,6 @@ pub fn resolve(root: &Path, binding: &Binding) -> Result<Entry, ResolveError> {
     })
 }
 
-/// `crates/core/src/drt/signature.rs` -> `tracelean_core::drt::signature`.
-///
-/// Walks up for the `src/` boundary and reads the crate's library name from the
-/// `Cargo.toml` above it. A path rather than a declared module name, because
-/// this project has no import conventions to rely on.
 pub fn module_path(root: &Path, rel: &Path) -> Option<String> {
     let components: Vec<&str> = rel.iter().filter_map(|c| c.to_str()).collect();
     let src_at = components.iter().rposition(|c| *c == "src")?;
@@ -145,8 +112,6 @@ pub fn module_path(root: &Path, rel: &Path) -> Option<String> {
     let mut segments = vec![lib];
     for part in &components[src_at + 1..] {
         let stem = part.strip_suffix(".rs").unwrap_or(part);
-        // `lib.rs` is the crate root and `mod.rs` is its directory's module;
-        // neither contributes a segment of its own.
         if stem == "lib" || stem == "mod" || stem == "main" {
             continue;
         }
@@ -155,7 +120,6 @@ pub fn module_path(root: &Path, rel: &Path) -> Option<String> {
     Some(segments.join("::"))
 }
 
-/// The `[lib] name`, else the package name with hyphens normalised.
 fn library_name(cargo_toml: &Path) -> Option<String> {
     let text = std::fs::read_to_string(cargo_toml).ok()?;
     let mut section = "";
@@ -179,21 +143,8 @@ fn library_name(cargo_toml: &Path) -> Option<String> {
     lib_name.or(package_name).map(|n| n.replace('-', "_"))
 }
 
-// ─── Code generation ─────────────────────────────────────────────────────────
-
-/// The generated crate's `Cargo.toml`.
-///
-/// `dependencies` reaches the project by path, so the runner calls the
-/// implementation's own code and nothing stands between them.
-///
 /// @implements REQ-DRT-RUST.path_dependency
 pub fn cargo_toml(crate_deps: &BTreeMap<String, String>) -> String {
-    // The empty `[workspace]` table makes the generated crate its own workspace.
-    // Without it, a runner materialised anywhere inside a cargo workspace — a
-    // `target/` directory, most obviously — is refused by cargo for believing
-    // it is a member of a workspace that never declared it. Where a runner is
-    // put is the caller's business, and a generated crate that only builds in
-    // some directories is a generator that is wrong about its own output.
     let mut out = String::from(
         "# Generated by TraceLean. Edits are overwritten.\n\
          [workspace]\n\n\
@@ -206,11 +157,6 @@ pub fn cargo_toml(crate_deps: &BTreeMap<String, String>) -> String {
     out
 }
 
-/// `text` as a Rust string literal.
-///
-/// Spelled out rather than taken from `{:?}`, so that what the generator
-/// writes is defined here and can be checked against a model: printable ASCII
-/// stays, `"` and `\` are escaped, and anything else is a `\u{..}` escape.
 fn literal(text: &str) -> String {
     let mut out = String::from("\"");
     for c in text.chars() {
@@ -225,15 +171,6 @@ fn literal(text: &str) -> String {
     out
 }
 
-/// The generated dispatch arm for one entry: the call site.
-///
-/// No type is named anywhere in it. Each argument is a local bound by
-/// `serde_json::from_str`, whose return type the compiler infers from the
-/// parameter the local is passed into, and the result goes to
-/// `serde_json::to_value`, generic in what it is given. Arguments are bound to
-/// locals first so that a deserialisation failure names the parameter it was
-/// for; inlining them would report only that some argument did not parse.
-///
 /// @implements REQ-DRT-RUST.types_inferred
 /// @drt REQ-DRT-RUST.types_inferred
 pub fn call_site(entry: Entry) -> String {
@@ -255,13 +192,6 @@ pub fn call_site(entry: Entry) -> String {
     out
 }
 
-/// The generated `main.rs`.
-///
-/// Types are never named: each entry's arm is `call_site`'s, where every
-/// argument's type is resolved from the parameter it is passed into. A binding
-/// therefore cannot name a wrong type, and a binding that does not fit the
-/// function is a compile error rather than a wrong answer.
-///
 /// @implements REQ-DRT-PROTO.reply_one_line
 /// @implements REQ-DRT-PROTO.case_names_op
 /// @implements REQ-DRT-PROTO.runner_shared
@@ -321,8 +251,6 @@ pub fn main_rs(entries: &[Entry]) -> String {
     out
 }
 
-/// Write the generated crate, if it differs from what would be generated now.
-///
 /// @implements REQ-DRT-RUST.generated
 /// @implements REQ-DRT-RUST.rewritten_when_stale
 pub fn materialize(
@@ -374,7 +302,6 @@ mod tests {
             module_path(root, Path::new("crates/core/src/drt/signature.rs")).as_deref(),
             Some("tracelean_core::drt::signature")
         );
-        // lib.rs and mod.rs are not segments of their own.
         assert_eq!(
             module_path(root, Path::new("crates/core/src/lib.rs")).as_deref(),
             Some("tracelean_core")
@@ -396,7 +323,6 @@ mod tests {
         assert_eq!(entry.sources, entry.parameters);
     }
 
-    /// A binding naming a function that is not there is refused, and says so.
     #[test]
     fn missing_function_is_named() {
         let root = Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap().parent().unwrap();
@@ -411,7 +337,6 @@ mod tests {
         let mut b = binding("crates/core/src/drt/signature.rs::parameters");
         b.implementation.params.insert("code".into(), "source".into());
         let entry = resolve(root, &b).unwrap();
-        // Parameter order is unchanged; only where each is read from moves.
         assert_eq!(entry.parameters, vec!["source".to_string(), "symbol".to_string()]);
         assert_eq!(entry.sources, vec!["code".to_string(), "symbol".to_string()]);
     }
@@ -427,8 +352,6 @@ mod tests {
         };
         let code = main_rs(&[entry]);
         assert!(code.contains("serde_json::from_str(field(input, \"a\"))"));
-        // No turbofish anywhere: a named type is a type the binding could get
-        // wrong.
         assert!(!code.contains("::<"), "generated code named a type:\n{code}");
     }
 

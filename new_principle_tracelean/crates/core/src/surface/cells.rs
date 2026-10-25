@@ -1,30 +1,12 @@
-//! What a terminal frontend drew, cell by cell, and whether each cell is the
-//! colour the theme gives its role.
-//!
-//! `drt::frontend::readable` reads a painted screen as text and throws the
-//! escapes away. This keeps them: the bytes a terminal received become a grid
-//! of cells, each with its character and the style it was drawn in. Only the
-//! sequences a frontend here sends are understood — clearing the screen,
-//! placing the cursor, and the graphic renditions for weight, dimming, reverse
-//! video and 24-bit colour — because a full terminal emulator is a dependency,
-//! not a check.
-//!
-//! With the grid, "a span with role `added` is drawn in the theme's colour for
-//! `added`" is a function: `miscoloured` walks the buffer, finds the cell each
-//! character landed in and compares the two. A character's role is the role of
-//! the first span covering it, as the page and the composed panes have it.
-//!
 //! @implements REQ-LOOK.roles_drawn_in_theme_colours
 
 use serde::{Deserialize, Serialize};
 
 use super::view::{Buffer, Role};
 
-/// One cell of a terminal: the character and how it was drawn.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Cell {
     pub text: String,
-    /// `#rrggbb`, or `None` for the terminal's own colour.
     pub fg: Option<String>,
     pub bg: Option<String>,
     pub bold: bool,
@@ -38,7 +20,6 @@ impl Cell {
     }
 }
 
-/// How a role is meant to look: its foreground and whether it is bold.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Look {
     pub role: Role,
@@ -46,7 +27,6 @@ pub struct Look {
     pub bold: bool,
 }
 
-/// One character drawn otherwise than its role says.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Miscoloured {
@@ -56,12 +36,9 @@ pub struct Miscoloured {
     pub role: Role,
     pub expected: Option<String>,
     pub expected_bold: bool,
-    /// What the cell holds, or `None` when the character fell off the grid.
     pub drawn: Option<Cell>,
 }
 
-/// A run of decimal digits, saturating rather than wrapping: a parameter too
-/// large for any screen is off every screen either way.
 fn number(piece: &str, default: u64) -> u64 {
     if piece.is_empty() || !piece.chars().all(|c| c.is_ascii_digit()) {
         return default;
@@ -73,7 +50,6 @@ fn hex(r: u64, g: u64, b: u64) -> String {
     format!("#{:02x}{:02x}{:02x}", r.min(255), g.min(255), b.min(255))
 }
 
-/// The style a graphic rendition leaves, applied code by code.
 fn rendition(style: &mut Cell, params: &str) {
     let codes: Vec<u64> = params.split(';').map(|p| number(p, 0)).collect();
     let mut at = 0;
@@ -100,9 +76,7 @@ fn rendition(style: &mut Cell, params: &str) {
                     }
                     at += 4;
                 }
-                // A palette index: understood as skipped, not as a colour.
                 Some(5) if at + 2 < codes.len() => at += 2,
-                // Malformed: the rest of the sequence means nothing.
                 _ => return,
             },
             _ => {}
@@ -111,20 +85,11 @@ fn rendition(style: &mut Cell, params: &str) {
     }
 }
 
-/// The cells a terminal of `rows` by `columns` shows after receiving `painted`.
-///
-/// As a terminal has it: a character written past the right edge wraps to the
-/// next line, unless wrapping was turned off (`ESC[?7l`), when it overwrites
-/// the last column; a line feed on the last row scrolls the screen up; the
-/// cursor is placed no further than the last row and column. A line feed also
-/// starts its line at the first column, as the capture output means it; the
-/// terminal frontend sends a carriage return before it anyway.
 pub fn grid(painted: String, rows: u64, columns: u64) -> Vec<Vec<Cell>> {
     let mut cells = vec![vec![Cell::blank(); columns as usize]; rows as usize];
     let mut style = Cell::blank();
     let (mut row, mut column) = (0u64, 0u64);
     let mut wraps = true;
-    // The next line, scrolling when there is none.
     let down = |cells: &mut Vec<Vec<Cell>>, row: u64| -> u64 {
         if row + 1 < rows {
             return row + 1;
@@ -190,8 +155,6 @@ pub fn grid(painted: String, rows: u64, columns: u64) -> Vec<Vec<Cell>> {
     cells
 }
 
-/// Every character of `buffer`, drawn from the top-left of `cells`, whose cell
-/// is not in the look its role has; a role with no look is drawn plain.
 pub fn miscoloured(buffer: Buffer, cells: Vec<Vec<Cell>>, looks: Vec<Look>) -> Vec<Miscoloured> {
     let mut out = Vec::new();
     let (mut line, mut column) = (0u64, 0u64);
@@ -226,22 +189,12 @@ pub fn miscoloured(buffer: Buffer, cells: Vec<Vec<Cell>>, looks: Vec<Look>) -> V
     out
 }
 
-/// The two together: what a frontend that painted `painted` for `buffer` drew
-/// in the wrong look, on a terminal of `rows` by `columns`.
-///
 /// @implements REQ-LOOK.roles_drawn_in_theme_colours
 /// @drt REQ-LOOK.roles_drawn_in_theme_colours
 pub fn drawn_wrong(buffer: Buffer, painted: String, rows: u64, columns: u64, looks: Vec<Look>) -> Vec<Miscoloured> {
     miscoloured(buffer, grid(painted, rows, columns), looks)
 }
 
-/// The look the theme gives a role: tokens from `syntax`, claims from `chips`,
-/// the rest from `roles`, with headings, claims and a held proof mark in bold,
-/// and every missing mark in one colour whichever it is. Plain text, and
-/// a role the theme has no colour for, are drawn in the terminal's own colour.
-///
-/// The colour is spelled as a terminal draws it, lowercase, with a channel
-/// that is not hexadecimal read as `ff`.
 pub fn look_of(theme: &serde_json::Value, role: Role) -> Look {
     use crate::evidence::Mark;
     let named = |section: &str, key: &str| theme.get(section)?.get(key)?.as_str().map(str::to_string);
@@ -271,7 +224,6 @@ pub fn look_of(theme: &serde_json::Value, role: Role) -> Look {
         let channel = |at: usize| u64::from(u8::from_str_radix(digits.get(at..at + 2).unwrap_or("ff"), 16).unwrap_or(255));
         hex(channel(0), channel(2), channel(4))
     });
-    // An uncoloured role is drawn plain, bold or not, as a terminal has it.
     let bold = bold && fg.is_some();
     Look { role, fg, bold }
 }
@@ -290,8 +242,6 @@ mod tests {
         }
     }
 
-    /// The escapes a frontend sends become the style of the cells they precede.
-    ///
     /// @tests REQ-LOOK.roles_drawn_in_theme_colours
     #[test]
     fn escapes_become_styles_and_positions() {
@@ -300,15 +250,12 @@ mod tests {
         assert_eq!(cells[0][0].fg.as_deref(), Some("#0102ff"));
         assert!(cells[0][1].bold);
         assert_eq!(cells[0][2], Cell { text: " ".into(), ..Cell::blank() });
-        // `c` was written past the right edge and wrapped.
         assert_eq!(cells[1][0].text, "c");
         assert!(cells[2][0].reverse);
         assert_eq!(cells[2][1].text, "e");
 
-        // With wrapping off the last column is overwritten instead.
         let clipped = grid("\u{1b}[?7labcd".into(), 1, 2);
         assert_eq!((cells_text(&clipped[0])).as_str(), "ad");
-        // A line feed on the last row scrolls the first one away.
         let scrolled = grid("one\r\ntwo\r\n".into(), 2, 3);
         assert_eq!((cells_text(&scrolled[0]), cells_text(&scrolled[1])), ("two".into(), "   ".into()));
     }
@@ -317,9 +264,6 @@ mod tests {
         row.iter().map(|c| c.text.as_str()).collect()
     }
 
-    /// A character in the look its role has is fine; one drawn plain, or in
-    /// another role's colour, or off the grid, is reported.
-    ///
     /// @tests REQ-LOOK.roles_drawn_in_theme_colours
     #[test]
     fn a_character_out_of_its_look_is_reported() {
@@ -337,7 +281,6 @@ mod tests {
         assert!(miscoloured(shown, cut, looks).iter().any(|m| m.drawn.is_none()));
     }
 
-    /// The shipped theme gives every coloured role a colour.
     #[test]
     fn the_shipped_theme_colours_the_roles() {
         let theme: serde_json::Value = serde_json::from_str(include_str!("../../../../assets/theme.json")).unwrap();

@@ -1,6 +1,3 @@
-//! An agent's context, from the editor: opened from a requirement, parts left
-//! out by the person, and the rest copied to the clipboard — and nothing else.
-
 use std::path::PathBuf;
 
 use tracelean_core::surface::keymap::{self, Keymap};
@@ -34,8 +31,6 @@ const TREE: &[(&str, &str)] = &[
     ("tests/plain.rs", "#[test]\nfn unannotated() { thing(); }\n"),
 ];
 
-/// Going to the definition of a requirement name in code opens its document
-/// at the clause's own line.
 #[test]
 fn a_requirement_name_is_defined_at_its_clause() {
     let root = project(TREE);
@@ -49,8 +44,6 @@ fn a_requirement_name_is_defined_at_its_clause() {
     let _ = std::fs::remove_dir_all(&root);
 }
 
-/// Inside the body of an item that claims a clause, what the cursor is on
-/// offers that clause — to open, and to gather for an agent.
 #[test]
 fn inside_a_claiming_item_its_clause_is_offered() {
     let root = project(TREE);
@@ -69,9 +62,6 @@ fn inside_a_claiming_item_its_clause_is_offered() {
     let _ = std::fs::remove_dir_all(&root);
 }
 
-/// From a shell, the same context, with parts chosen by label; a requirement
-/// or part that does not exist is refused, saying what does.
-///
 /// @tests REQ-CONTEXT.from_the_shell
 #[test]
 fn an_agent_gathers_the_context_from_the_shell() {
@@ -111,7 +101,6 @@ fn a_context_is_chosen_part_by_part_and_copied() {
     let shown = plain_text(editor.buffer()).join("\n");
     assert!(shown.contains("Context for an agent"), "{shown}");
     assert!(shown.contains("[ ] refined by"), "what refines it is left out until chosen:\n{shown}");
-    // What will be copied reads as the Markdown it is: its headings marked.
     let headings = editor
         .buffer()
         .spans
@@ -120,7 +109,6 @@ fn a_context_is_chosen_part_by_part_and_copied() {
         .count();
     assert!(headings >= 2, "the preview's headings are marked: {headings}");
 
-    // Leave the code out, take what refines it in.
     here(&mut editor, "context.toggle", Some("code"));
     here(&mut editor, "context.toggle", Some("refined by"));
     here(&mut editor, "context.copy", None);
@@ -130,8 +118,6 @@ fn a_context_is_chosen_part_by_part_and_copied() {
     assert!(copied.contains("- one: no Lean model\n"), "what the clause still lacks:\n{copied}");
     assert!(copied.contains("REQ-B — A finer thing"), "what refines it was chosen:\n{copied}");
     assert!(!copied.contains("## Code that implements it"), "the code was left out:\n{copied}");
-    // The test claiming it, with its source; the test of what refines it, and
-    // an unannotated test naming the implementation, as affected.
     assert!(copied.contains("fn it_does()"), "{copied}");
     assert!(copied.contains("## Other tests that may break"), "{copied}");
     assert!(copied.contains("fn it_does_finely()"), "{copied}");

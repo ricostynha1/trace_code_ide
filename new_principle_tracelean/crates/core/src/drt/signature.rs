@@ -1,28 +1,3 @@
-//! Reading a Rust function's parameter names out of its source.
-//!
-//! Rust has no runtime reflection, so the generated runner cannot bind
-//! arguments by name the way the Python runner does. Parameter *order* is
-//! therefore taken from the declaration, and parameter *types* are left to
-//! inference at the generated call site.
-//!
-//! This is an ordinary total function from text to a list of names, which is
-//! why it is here rather than inline in the generator: it is the part that can
-//! be wrong, and it is checkable on its own.
-
-/// Parameter names of `fn {symbol}` in `source`, in declaration order.
-///
-/// `self` is not a parameter a case can supply, so it is dropped; a method
-/// taking `self` therefore reports only the arguments a binding has to provide,
-/// and binding one is refused elsewhere rather than silently mis-called.
-///
-/// Returns `None` when no such function is declared, which is a different
-/// answer from `Some(vec![])` — a function that takes nothing.
-///
-/// Read from the source with comments and strings blanked, so a signature in a
-/// comment is not a declaration; and two declarations of the name answer `None`
-/// rather than the first, which would call one and report agreement about the
-/// other.
-///
 /// @implements REQ-DRT-RUST.params_from_source
 /// @implements REQ-DRT-BIND.call_only
 pub fn parameters(source: &str, symbol: &str) -> Option<Vec<String>> {
@@ -40,15 +15,11 @@ pub fn parameters(source: &str, symbol: &str) -> Option<Vec<String>> {
         if part.is_empty() {
             continue;
         }
-        // `&self`, `&mut self`, `self`, `self: Box<Self>` — never supplied by a
-        // case.
         let head = part.trim_start_matches('&').trim_start();
         let head = head.strip_prefix("mut ").unwrap_or(head).trim_start();
         if head == "self" || head.starts_with("self:") {
             continue;
         }
-        // A pattern parameter (`(a, b): (u8, u8)`) has no single name to bind,
-        // so it is reported as absent rather than guessed at.
         let name = match part.split_once(':') {
             Some((lhs, _)) => lhs.trim(),
             None => part,
@@ -62,34 +33,17 @@ pub fn parameters(source: &str, symbol: &str) -> Option<Vec<String>> {
     Some(names)
 }
 
-/// `parameters`, over owned arguments.
-///
-/// A binding's entry point has to take owned arguments. JSON escapes make a
-/// borrowed `&str` impossible to supply: the unescaped bytes of `"a\nb"` do not
-/// exist contiguously anywhere in the input, so no lifetime lets serde point at
-/// them. See ADR-0010.
-///
 /// @implements REQ-DRT-RUST.params_from_source
 /// @drt REQ-DRT-RUST.params_from_source
 pub fn parameters_of(source: String, symbol: String) -> Option<Vec<String>> {
     parameters(&source, &symbol)
 }
 
-/// How many functions in `source` are declared with this name.
-///
-/// A binding names a symbol, not a path, so a file holding both a free function
-/// `f` and a method `f` offers two answers to the same question. Counting is
-/// what lets the caller refuse instead of taking the first — which is a wrong
-/// call that compiles, runs, and reports agreement about the wrong function.
-///
-/// A signature inside a comment or a string is not a declaration.
-///
 /// @implements REQ-DRT-BIND.call_only
 pub fn declarations(source: &str, symbol: &str) -> usize {
     declarations_in(&blanked(source, &['"'], true), symbol)
 }
 
-/// `declarations`, over text already blanked.
 fn declarations_in(source: &str, symbol: &str) -> usize {
     let mut count = 0;
     let mut from = 0usize;
@@ -100,7 +54,6 @@ fn declarations_in(source: &str, symbol: &str) -> usize {
     count
 }
 
-/// Where the blanking walk is.
 #[derive(Clone, Copy, PartialEq)]
 enum Mode {
     Code,
@@ -109,14 +62,6 @@ enum Mode {
     Quoted(char),
 }
 
-/// The source with every comment and string literal blanked to spaces, keeping
-/// newlines.
-///
-/// `// fn f(b, a)` above `fn f(a, b)` is a signature only to a reader of text.
-/// `quotes` are the characters that open a string; with `char_literals`, a Rust
-/// character literal such as `'"'` is kept whole so its quote opens nothing.
-/// Character for character, so every offset into the result is one into a
-/// string of the same characters. Shared with the TypeScript reader.
 pub(crate) fn blanked(source: &str, quotes: &[char], char_literals: bool) -> String {
     let cs: Vec<char> = source.chars().collect();
     let keep_newline = |c: char| if c == '\n' { '\n' } else { ' ' };
@@ -157,11 +102,6 @@ pub(crate) fn blanked(source: &str, quotes: &[char], char_literals: bool) -> Str
     out
 }
 
-/// Byte offset of the `(` opening the parameter list of `fn {symbol}`.
-///
-/// Generic parameters are skipped by balance rather than by searching for the
-/// next `(`, because `fn f<T: Fn(u8) -> u8>(x: T)` puts a parenthesis inside
-/// them.
 fn signature_open_paren(source: &str, symbol: &str) -> Option<usize> {
     let mut from = 0usize;
     while let Some(found) = source[from..].find("fn ") {
@@ -193,14 +133,6 @@ fn signature_open_paren(source: &str, symbol: &str) -> Option<usize> {
     None
 }
 
-/// Offset of the delimiter closing the one at `start`.
-///
-/// When the delimiters are angle brackets, the `>` of an arrow is not a closing
-/// bracket: `fn apply<F: Fn(u8) -> u8>(..)` would otherwise close the generic
-/// list early and the parameter list would never be found.
-/// Shared with the TypeScript reader: bracket balance is the one part of the
-/// two parsers that is genuinely the same question, and two copies of it would
-/// drift.
 pub(crate) fn matching(source: &str, start: usize, open: char, close: char) -> Option<usize> {
     let mut depth = 0i32;
     let bytes = source.as_bytes();
@@ -221,8 +153,6 @@ pub(crate) fn matching(source: &str, start: usize, open: char, close: char) -> O
     None
 }
 
-/// Split on `sep` at nesting depth zero, so a comma inside `Vec<A, B>`,
-/// `(A, B)` or `[A; 2]` does not start a new parameter.
 pub(crate) fn split_top_level(text: &str, sep: char) -> Vec<&str> {
     let mut parts = Vec::new();
     let (mut depth, mut start) = (0i32, 0usize);
@@ -230,8 +160,6 @@ pub(crate) fn split_top_level(text: &str, sep: char) -> Vec<&str> {
         match ch {
             '<' | '(' | '[' => depth += 1,
             '>' | ')' | ']' => depth -= 1,
-            // `->` is not a closing angle bracket. Without this a return type
-            // inside a closure parameter unbalances everything after it.
             _ => {}
         }
         if ch == '>' && offset > 0 && text.as_bytes()[offset - 1] == b'-' {
@@ -283,8 +211,6 @@ mod tests {
         );
     }
 
-    /// A parenthesis inside the generic list is why the open paren is found by
-    /// balance rather than by searching for the next `(`.
     #[test]
     fn parenthesis_inside_generics() {
         assert_eq!(
@@ -312,24 +238,17 @@ mod tests {
         assert_eq!(names("fn f(mut a: u8) {}", "f"), Some(vec!["a".into()]));
     }
 
-    /// A pattern parameter has no single name to bind, so it is refused rather
-    /// than guessed at — a wrong guess produces a runner that calls the right
-    /// function with the wrong arguments.
     #[test]
     fn pattern_parameter_is_refused() {
         assert_eq!(names("fn f((a, b): (u8, u8)) {}", "f"), None);
     }
 
-    /// A prefix of another name must not match.
     #[test]
     fn similar_names_do_not_collide() {
         let src = "fn assure(a: u8) {}\nfn assurance(records: Vec<R>) {}";
         assert_eq!(names(src, "assurance"), Some(vec!["records".into()]));
     }
 
-    /// The failure this exists to stop: a free function and a method sharing a
-    /// name, where taking the first produces a call to the wrong one.
-    ///
     /// @tests REQ-DRT-BIND.call_only
     #[test]
     fn a_name_declared_twice_is_counted_twice() {
@@ -339,9 +258,6 @@ mod tests {
         assert_eq!(declarations("pub fn f(x: u8) {}", "f"), 1);
     }
 
-    /// A signature in a comment or a string is not a declaration, and two real
-    /// declarations are refused rather than the first taken.
-    ///
     /// @tests REQ-DRT-RUST.params_from_source
     #[test]
     fn a_commented_signature_does_not_win_and_two_are_refused() {

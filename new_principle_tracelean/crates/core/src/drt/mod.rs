@@ -1,5 +1,3 @@
-//! Differential testing.
-
 pub mod auto;
 pub mod classes;
 pub mod coverage;

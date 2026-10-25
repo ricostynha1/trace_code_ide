@@ -1,28 +1,11 @@
-//! Where a backend leaves the record it earned.
-//!
-//! A directory of one file per record rather than one file holding all of them,
-//! because the backends run as separate processes and often at the same time:
-//! thirty suites appending to one document is a race, and the record that loses
-//! it is evidence that silently never existed.
-//!
-//! Nothing here decides anything. The record arrives made, this writes it down,
-//! and `lockfile` folds the directory into the committed index.
-
 use std::path::{Path, PathBuf};
 
 use super::record::{Evidence, Key};
 
-/// Where a project keeps earned records.
 pub fn dir_in(root: &Path) -> PathBuf {
     root.join(".tracelean").join("evidence")
 }
 
-/// The file one record belongs in.
-///
-/// Named from the slot it occupies — requirement, clause, bond — so a backend
-/// re-running overwrites its own answer instead of accumulating answers, and so
-/// the name is a function of the record rather than of when it was written.
-///
 /// @implements ARCH-DETERMINISM.stable_ordering
 pub fn file_of(root: &Path, record: &Evidence) -> PathBuf {
     slot_file(root, &record.key)
@@ -34,7 +17,6 @@ fn slot_file(root: &Path, key: &Key) -> PathBuf {
     dir_in(root).join(format!("{}.{clause}.{bond}.json", key.req_id))
 }
 
-/// Write one record where the lock builder will find it.
 pub fn write(root: &Path, record: &Evidence) -> std::io::Result<PathBuf> {
     let path = file_of(root, record);
     if let Some(parent) = path.parent() {
@@ -46,12 +28,6 @@ pub fn write(root: &Path, record: &Evidence) -> std::io::Result<PathBuf> {
     Ok(path)
 }
 
-/// Every record a backend has left, sorted by the file it is in.
-///
-/// A file that does not parse is skipped rather than fatal: a half-written
-/// record from a killed run must not stop the rest of the evidence being read.
-/// It is also not silently equivalent to a valid one — it simply is not there,
-/// and a missing record shows up as a clause at a lower level.
 pub fn read_all(root: &Path) -> Vec<Evidence> {
     let Ok(entries) = std::fs::read_dir(dir_in(root)) else { return Vec::new() };
     let mut files: Vec<PathBuf> = entries
@@ -67,13 +43,10 @@ pub fn read_all(root: &Path) -> Vec<Evidence> {
         .collect()
 }
 
-/// Remove one record, for a backend that has decided it no longer holds.
 pub fn remove(root: &Path, record: &Evidence) -> std::io::Result<()> {
     remove_slot(root, &record.key)
 }
 
-/// Empty one slot, whatever record is in it: a person who now says the clause
-/// and the model differ withdraws the agreement anyone recorded before.
 pub fn remove_slot(root: &Path, key: &Key) -> std::io::Result<()> {
     match std::fs::remove_file(slot_file(root, key)) {
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),

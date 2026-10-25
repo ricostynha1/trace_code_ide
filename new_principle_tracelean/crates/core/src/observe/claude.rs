@@ -1,22 +1,9 @@
-//! Claude Code's transcript, read into the events the sandbox shows.
-//!
-//! `transcript::read` knows records that carry their text as a string. Claude
-//! Code writes its conversation as content blocks under `message` — text,
-//! thinking, a tool call, a tool's result — so almost every record it writes
-//! was unrecognised, and the sandbox showed no conversation at all. This reads
-//! that shape. Usage and cost still come from `transcript::read`, which already
-//! knows `message.usage`.
-//!
-//! Read only, and only to show: what the agent said decides nothing
-//! (`REQ-TRANSCRIPT.no_interpretation`).
-//!
 //! @implements REQ-TRANSCRIPT.tool_format_read
 
 use serde_json::Value;
 
 use crate::observe::transcript::Event;
 
-/// How much of one block a row shows. A tool's output can be a whole file.
 const SHOWN: usize = 240;
 
 fn shorten(text: &str) -> String {
@@ -28,7 +15,6 @@ fn shorten(text: &str) -> String {
     }
 }
 
-/// What a tool was called with, briefly: the argument a person recognises.
 fn call(name: &str, input: &Value) -> String {
     let pick = ["file_path", "path", "command", "pattern", "url", "query", "description", "prompt"]
         .iter()
@@ -39,7 +25,6 @@ fn call(name: &str, input: &Value) -> String {
     }
 }
 
-/// The text of a tool result, which is a string or a list of text blocks.
 fn result_text(content: &Value) -> String {
     match content {
         Value::String(text) => text.clone(),
@@ -52,7 +37,6 @@ fn result_text(content: &Value) -> String {
     }
 }
 
-/// Text a harness wrapped around a message rather than something a person said.
 fn is_machinery(text: &str) -> bool {
     let t = text.trim_start();
     t.is_empty() || t.starts_with("<command-") || t.starts_with("<local-command") || t.starts_with("<system-reminder>")
@@ -62,7 +46,6 @@ fn push(out: &mut Vec<Event>, kind: &str, text: String) {
     out.push(Event { kind: kind.to_string(), text });
 }
 
-/// The events of one record, in the order its blocks appear.
 fn record(value: &Value, out: &mut Vec<Event>) {
     let Some(kind) = value.get("type").and_then(|k| k.as_str()) else { return };
     if value.get("isMeta").and_then(|m| m.as_bool()) == Some(true) {
@@ -105,11 +88,6 @@ fn record(value: &Value, out: &mut Vec<Event>) {
     }
 }
 
-/// The conversation in a Claude Code transcript, as far as it is written.
-///
-/// A last line without its newline is still being written and is left for the
-/// next read, as `transcript::read` leaves it.
-///
 /// @implements REQ-TRANSCRIPT.tool_format_read
 /// @implements REQ-TRANSCRIPT.read_only
 pub fn events(text: &str) -> Vec<Event> {

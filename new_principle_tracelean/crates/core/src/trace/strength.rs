@@ -1,50 +1,22 @@
-//! Spec strength: do the proved properties determine the model?
-//!
-//! `@proves` says the model has a property. It says nothing about how much that
-//! property rules out, and the gap is enormous: `discount s ≤ s` is a genuine
-//! machine-checked theorem that the constant-zero function also satisfies.
-//! Unqualified, a proof level is what a testing level would be without a
-//! coverage floor.
-//!
-//! The relational specification is the *set of proved theorems*, and the
-//! question is whether everything satisfying them is this model.
-
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
 use super::annotation::{Qualifier, Role};
 use super::index::Index;
 
-/// What is known about one modelled clause's strength.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", rename_all_fields = "camelCase")]
 pub enum Strength {
-    /// A pinning theorem exists and is finished.
-    ///
-    /// `theorem` is a keyword in the model's language, where this field is
-    /// spelled `theoremName`; the wire name follows the model.
     Pinned { theorem_name: String },
-    /// A pinning theorem exists and is not finished.
-    ///
     /// @implements REQ-STRENGTH.attempted_distinguished
     Attempted { theorem_name: String },
-    /// Nobody has said anything. The default, and not a failure — but not a
-    /// pass either, which is the whole point of naming the state.
-    ///
     /// @implements REQ-STRENGTH.open_is_the_default
     Open,
-    /// Declared unpinnable, with a reason.
-    ///
-    /// Some functions genuinely are not determined by their declared inputs.
-    /// Saying so once, with a reason, beats an obligation that stays open
-    /// forever and teaches everyone to ignore the column it sits in.
-    ///
     /// @implements REQ-STRENGTH.nondeterministic_declared
     Nondeterministic { reason: String },
 }
 
 impl Strength {
-    /// Whether this may be presented as a pass. `Open` may not.
     pub fn is_settled(&self) -> bool {
         matches!(self, Strength::Pinned { .. } | Strength::Nondeterministic { .. })
     }
@@ -59,21 +31,14 @@ impl Strength {
     }
 }
 
-/// The obligation for one modelled declaration.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Obligation {
-    /// The model symbol the question is about.
     pub symbol: String,
-    /// Clauses this declaration models. The question is about the *function*,
-    /// so one declaration owes one obligation however many clauses it serves.
     pub clauses: Vec<(String, Option<String>)>,
-    /// Theorems proved about it, which together are the specification.
     pub theorems: Vec<String>,
     pub strength: Strength,
 }
 
-/// `Obligation::lean_source`, over an owned argument.
-///
 /// @implements REQ-STRENGTH.obligation_generated
 /// @implements REQ-STRENGTH.not_proved_by_us
 /// @drt REQ-STRENGTH.obligation_generated
@@ -83,13 +48,6 @@ pub fn obligation_source(obligation: Obligation) -> String {
 }
 
 impl Obligation {
-    /// The Lean source of the obligation.
-    ///
-    /// Generated, never discharged: proving it is the human's part, and while
-    /// nobody has, the honest report is "open" rather than "fine". The
-    /// generated text therefore ends in `sorry`, so the kernel agrees it is
-    /// unproved until somebody does the work.
-    ///
     /// @implements REQ-STRENGTH.obligation_generated
     /// @implements REQ-STRENGTH.not_proved_by_us
     pub fn lean_source(&self) -> String {
@@ -126,25 +84,16 @@ impl Obligation {
     }
 }
 
-/// A link reduced to what strength depends on: who claims what about which
-/// declaration, and whether that declaration was declared unpinnable.
-///
-/// The rest of a link — its body hash, its line, its file — says nothing about
-/// whether a specification determines a model.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct StrengthLink {
     pub role: Role,
     pub req_id: String,
     pub clause: Option<String>,
-    /// Anchor identity of the declaration this link points at.
     pub anchor: String,
-    /// The reason given, when the model was declared unpinnable.
     pub nondeterministic: Option<String>,
 }
 
-/// Every modelled declaration's obligation, and where it stands.
-///
 /// @implements REQ-STRENGTH.qualifies_proof
 pub fn obligations(index: &Index) -> Vec<Obligation> {
     obligations_from(
@@ -167,11 +116,6 @@ pub fn obligations(index: &Index) -> Vec<Obligation> {
     )
 }
 
-/// The decision, over nothing but the links.
-///
-/// Separated from the index so it is a function of stated claims alone: the
-/// shell projects, this decides.
-///
 /// @implements ARCH-CORE-SHELL.decision_total
 /// @implements REQ-STRENGTH.qualifies_proof
 /// @implements REQ-STRENGTH.open_is_the_default
@@ -182,7 +126,6 @@ pub fn obligations(index: &Index) -> Vec<Obligation> {
 /// @drt REQ-STRENGTH.attempted_distinguished
 /// @drt REQ-STRENGTH.nondeterministic_declared
 pub fn obligations_from(links: Vec<StrengthLink>) -> Vec<Obligation> {
-    // Model symbol -> the clauses it models.
     let mut by_symbol: BTreeMap<String, Vec<(String, Option<String>)>> = BTreeMap::new();
     let mut theorems: BTreeMap<String, Vec<String>> = BTreeMap::new();
     let mut pins: BTreeMap<String, String> = BTreeMap::new();
@@ -198,8 +141,6 @@ pub fn obligations_from(links: Vec<StrengthLink>) -> Vec<Obligation> {
                 }
             }
             Role::Proves => {
-                // A theorem is attributed to the model it is about, which is
-                // the model serving the same clause.
                 for other in &links {
                     if other.role == Role::Models
                         && other.req_id == link.req_id
@@ -235,9 +176,6 @@ pub fn obligations_from(links: Vec<StrengthLink>) -> Vec<Obligation> {
             let strength = match nondeterministic.get(&symbol) {
                 Some(reason) => Strength::Nondeterministic { reason: reason.clone() },
                 None => match pins.get(&symbol) {
-                    // A pinning theorem that exists is not yet a pinning
-                    // theorem that is finished; only the kernel can say which,
-                    // and that is recorded as evidence rather than guessed here.
                     Some(theorem) => Strength::Attempted { theorem_name: theorem.clone() },
                     None => Strength::Open,
                 },
@@ -250,12 +188,6 @@ pub fn obligations_from(links: Vec<StrengthLink>) -> Vec<Obligation> {
     out
 }
 
-/// Mark an obligation pinned, on the strength of a kernel-checked proof.
-///
-/// Separate from `obligations` because only a build can establish it: a `@pins`
-/// annotation says somebody wrote the theorem, and a passing build says the
-/// kernel accepted it.
-///
 /// @implements REQ-STRENGTH.attempted_distinguished
 pub fn confirm(obligation: &mut Obligation, proved: bool) {
     if let Strength::Attempted { theorem_name } = obligation.strength.clone() {
@@ -287,10 +219,6 @@ mod tests {
         assert!(source.contains("@pins REQ-EVID.weakest_link"), "{source}");
     }
 
-    /// A project's obligations come from its links: a modelled declaration owes
-    /// one, and one declared nondeterministic carries the reason it gave — or
-    /// says it gave none.
-    ///
     /// @tests REQ-STRENGTH.qualifies_proof
     #[test]
     fn a_project_owes_an_obligation_for_each_model_it_declares() {
@@ -319,8 +247,6 @@ mod tests {
         assert!(obligation(&["t"]).lean_source().contains("sorry"));
     }
 
-    /// A model with no theorems has an empty specification, which everything
-    /// satisfies — and the generated text says so rather than looking provable.
     #[test]
     fn no_theorems_is_named_as_an_empty_specification() {
         let source = obligation(&[]).lean_source();
@@ -349,7 +275,6 @@ mod tests {
         assert_eq!(attempted.strength.as_str(), "pinned");
     }
 
-    /// Confirming cannot promote something nobody attempted.
     #[test]
     fn confirming_an_open_obligation_changes_nothing() {
         let mut open = obligation(&[]);

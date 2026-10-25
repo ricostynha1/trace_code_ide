@@ -1,13 +1,3 @@
-//! Wire shapes shared by anything that crosses the conformance protocol.
-//!
-//! The models derive their encodings, so the encoding is a consequence of the
-//! datatype rather than a second description of it. That leaves the
-//! implementation to meet them: Lean has no `BTreeMap`, and its association
-//! lists encode as arrays of pairs. A Rust map that serialised as a JSON object
-//! would disagree with its model about a value both sides compute identically.
-
-/// A `BTreeMap` on the wire as `[[key, value], …]`, sorted by key.
-///
 /// @implements REQ-DRT-SCHEMA.json_shape_matches
 pub mod pairs {
     use serde::{Deserialize, Deserializer, Serialize, Serializer};

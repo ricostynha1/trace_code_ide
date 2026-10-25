@@ -1,16 +1,3 @@
-//! Asking for a name: what one key does to an answer being typed.
-//!
-//! The status line is where a key sequence that needs a name asks for it. What
-//! the keys do to the answer is a function, so a window and a terminal edit it
-//! the same way and it can be compared with its model.
-
-/// What one key does to the answer so far: `typing` with the text so far,
-/// `done` with the answer to act on (trimmed), or `cancelled`.
-///
-/// Text goes into the answer, Backspace takes the last character, Enter hands
-/// the answer over — nothing, when it is empty — and Escape drops it. A key
-/// that is not text and not one of those leaves the answer as it was.
-///
 /// @implements REQ-NAV.name_is_asked_for
 pub fn ask_step(answer: String, key: String) -> (String, String) {
     let blank = |c: char| matches!(c, ' ' | '\t' | '\n' | '\r');

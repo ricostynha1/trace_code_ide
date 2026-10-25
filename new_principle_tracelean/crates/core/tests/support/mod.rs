@@ -1,13 +1,3 @@
-//! Shared by the differential suites: judging a run against declared floors.
-//!
-//! Every suite used to end in a row of `assert!(count > n)` lines. Those are
-//! coverage floors written by hand, and writing them by hand meant each suite
-//! reported a failure its own way and none of them could tell a situation the
-//! generator never reached from one it reached too rarely. Routing them through
-//! `drt::coverage` makes the floors the same kind of object the bindings
-//! declare, and makes the vacuous case a named verdict rather than a sentence
-//! in an assertion message.
-
 #![allow(dead_code)]
 
 use std::collections::BTreeMap;
@@ -16,11 +6,6 @@ use tracelean_core::drt::coverage::{level, verdict, Floor, Observed, Verdict};
 use tracelean_core::drt::schema::Schema;
 use tracelean_core::evidence::Level;
 
-/// The schema of `surface::view::Role`, in one place.
-///
-/// Three suites generate roles and the enum is no longer flat — `mark` carries
-/// which mark and whether it is held — so describing it three times would mean
-/// three chances to forget one and a suite quietly never generating a proof.
 pub fn role() -> Schema {
     let mut variants: BTreeMap<String, Option<Box<Schema>>> = BTreeMap::new();
     for nullary in ["plain", "path", "entry", "heading", "requirement", "added", "removed"] {
@@ -36,8 +21,6 @@ pub fn role() -> Schema {
     Schema::Enum { variants }
 }
 
-/// `evidence::Marks`: four booleans, each held or not on its own, and whether
-/// testing and proving apply at all.
 pub fn marks() -> Schema {
     let mut fields = BTreeMap::new();
     for mark in ["annotated", "judged", "tested", "proved", "structural"] {
@@ -46,7 +29,6 @@ pub fn marks() -> Schema {
     Schema::Struct { fields }
 }
 
-/// The payload of a mark's role: which of the four, and whether it is held.
 pub fn mark_role() -> Schema {
     let mut fields = BTreeMap::new();
     fields.insert("mark".to_string(), Schema::simple_enum(&["annotated", "judged", "tested", "proved"]));
@@ -54,12 +36,6 @@ pub fn mark_role() -> Schema {
     Schema::Struct { fields }
 }
 
-/// Judge a run: each entry is a situation, the floor it must reach, and how
-/// often it was reached.
-///
-/// Panics with the verdict, so a suite that falls short says which situation
-/// and by how much, and a suite whose generator cannot produce a situation at
-/// all says that instead.
 pub fn floors_met(counts: &[(&str, u64, u64)]) {
     let floors: Vec<Floor> = counts
         .iter()
@@ -78,34 +54,16 @@ pub fn floors_met(counts: &[(&str, u64, u64)]) {
     );
 }
 
-/// The same, for situations that need only occur: a floor of one.
-///
-/// The verdict distinguishes them from situations that occurred and fell short,
-/// which is exactly what a set-membership assertion could not.
 pub fn each_occurred(counts: &[(&str, u64)]) {
     let floors: Vec<(&str, u64, u64)> =
         counts.iter().map(|(s, reached)| (*s, 1, *reached)).collect();
     floors_met(&floors);
 }
 
-// ─── Earning L3 ──────────────────────────────────────────────────────────────
-//
-// L3 needs two facts that this project's suites establish in two places: the
-// runs agreed (the differential test) and the generator reached the situations
-// the binding declared (the generation test). Neither alone is L3, and neither
-// test can see the other's result.
-//
-// So each reports its half, and whichever arrives second composes the record.
-// The halves are files rather than memory because the two tests are usually two
-// processes. Composing is order-independent: there is no "first" test.
-
-/// Where a half-finished claim waits for its other half.
 fn pending_dir() -> std::path::PathBuf {
     root().join(".tracelean").join("pending")
 }
 
-/// The project root, worked out here rather than borrowed from `harness`,
-/// because not every suite that judges coverage also generates runners.
 fn root() -> std::path::PathBuf {
     std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()
@@ -114,28 +72,11 @@ fn root() -> std::path::PathBuf {
         .to_path_buf()
 }
 
-/// What has been established about a binding so far.
-///
-/// `agreed` is keyed by seed rather than a flag, because a clause may have more
-/// than one implementation: `also_implemented_by` binds a second frontend to the
-/// same model, and both are run against it. Recording L3 after one of them
-/// agreed would be recording that the clause is checked when half of it is.
-///
-/// Each half carries the stamp (`earn::drt_stamp`) of the inputs current when
-/// it was established, and composes only with halves of the same, current
-/// stamp: an "agreed" half left from before a change is about other code.
-/// A file in an older shape reads as nothing established.
 #[derive(serde::Serialize, serde::Deserialize, Default)]
 struct Half {
-    /// Seed -> the agreeing run. One entry per agreeing run.
     #[serde(default)]
     agreed: std::collections::BTreeMap<String, Run>,
-    /// The stamp under which the generator reached the situations the binding
-    /// declared.
     covered: Option<String>,
-    /// The stamp under which a measured run ran every line of the bound entry
-    /// or a waiver excused it (`report_lines`). A Rust-bound op needs it for
-    /// L3: an agreeing run that left lines unrun has not asked them anything.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     lines: Option<String>,
 }
@@ -146,7 +87,6 @@ struct Run {
     stamp: String,
 }
 
-/// The stamp of the inputs an op's records would rest on now.
 fn current_stamp(op: &str) -> String {
     let index = tracelean_core::trace::index::build(&root());
     tracelean_core::trace::earn::drt_stamp(&index, &binding_for(op).clauses())
@@ -170,12 +110,6 @@ fn write_half(op: &str, half: &Half) {
         .expect("the pending dir is writable");
 }
 
-/// Report that a run agreed, and record if coverage has already been judged.
-///
-/// Takes the result rather than the facts, so a suite cannot report a run other
-/// than the one it did: which op, which seed, how many cases and whether
-/// anything diverged all come from the run itself.
-///
 /// @implements REQ-DRT.falsification_only
 pub fn agreed(result: &tracelean_core::drt::run::DrtResult) {
     assert!(
@@ -187,9 +121,6 @@ pub fn agreed(result: &tracelean_core::drt::run::DrtResult) {
         result.divergence.as_ref().map(|d| &d.implementation),
     );
     every_class_reached(result);
-    // A case the implementation could not read asked it nothing, and the
-    // model failing alike made it look like agreement. Only a binding that
-    // says why may draw such input.
     let waived = binding_for(&result.op).waive.iter().any(|w| w.situations.iter().any(|s| s == "unreadable input"));
     assert!(
         result.unreadable == 0 || waived,
@@ -203,10 +134,6 @@ pub fn agreed(result: &tracelean_core::drt::run::DrtResult) {
     let mut half = read_half(&result.op);
     half.agreed.retain(|_, run| run.stamp == stamp);
     half.agreed.insert(result.seed.to_string(), Run { cases: result.cases, stamp: stamp.clone() });
-    // A binding that names no situations states the default: every class of
-    // its input reached at least once (action plan §10), which the check
-    // above has just established. Named floors come on top of the classes and
-    // are recorded by `covered`.
     if binding_for(&result.op).floors.is_empty() {
         half.covered = Some(stamp);
     }
@@ -217,15 +144,6 @@ pub fn agreed(result: &tracelean_core::drt::run::DrtResult) {
     }
 }
 
-/// Which executable lines of each implementing item the op's cases ran, from
-/// the profile its instrumented runner left (`TRACELEAN_DRT_LINES=1`), written
-/// beside the profiles as `<op>.json` — and the line half of action plan §10:
-/// every line of the bound entry run or waived, recorded as the `lines` half
-/// that a Rust-bound op needs for L3.
-///
-/// The bound entry is the function the binding calls. When that is a thin
-/// wrapper no annotation claims (`rows_owned` around `rows`), the items in its
-/// file claiming the op's own clause are held to it instead.
 fn report_lines(op: &str) {
     use tracelean_core::drt::coverage::{floors_of, line_reach, unused_waivers, verdict, Observed, Verdict};
     let root = root();
@@ -269,9 +187,6 @@ fn report_lines(op: &str) {
         }
     }
 
-    // The function the binding calls is what its cases can reach, so every
-    // line of it is run or waived (§10). Other items claiming the clause are
-    // reported, not held to it: a shell is evidenced elsewhere.
     let entry = &binding.implementation.entry;
     let (entry_file, entry_name) = entry.split_once("::").unwrap_or((entry.as_str(), ""));
     let is_entry = |m: &&(String, String, u32, String, Vec<Observed>, Vec<String>)| {
@@ -281,8 +196,6 @@ fn report_lines(op: &str) {
     };
     let mut bound: Vec<_> = measured.iter().filter(is_entry).collect();
     if bound.is_empty() {
-        // A wrapper: what it calls is what its cases entered. An item of the
-        // clause no case entered at all is another way in, not this one.
         bound = measured
             .iter()
             .filter(|m| m.1 == entry_file && m.0 == op && m.4.iter().any(|o| o.reached > 0))
@@ -296,8 +209,6 @@ fn report_lines(op: &str) {
     for (_, _, _, _, _, missed) in &bound {
         assert!(missed.is_empty(), "`{op}`: lines of `{entry}` its cases never run, and no waiver says why: {missed:#?}");
     }
-    // And a line waiver that excuses a line the cases now run is reported, so
-    // waivers do not outlive their cause.
     let line_waivers: Vec<_> = binding
         .waive
         .iter()
@@ -326,18 +237,11 @@ fn report_lines(op: &str) {
     compose(op);
 }
 
-/// Every class of the arguments was reached by some case, or is waived with a
-/// reason in the binding (action plan §10): an agreeing run that never asked a
-/// question has not answered it. A waiver that excuses nothing is reported too,
-/// so waivers cannot pile up.
-///
 /// @implements REQ-DRT-COVER.classes_reached
 /// @implements REQ-DRT-COVER.waiver_unused_reported
 fn every_class_reached(result: &tracelean_core::drt::run::DrtResult) {
     use tracelean_core::drt::coverage::{floors_of, unused_waivers};
     let binding = binding_for(&result.op);
-    // Waivers of classes only: lines are the measured run's to judge
-    // (`report_lines`), and unreadable input is judged by `agreed`.
     let waive: Vec<_> = binding
         .waive
         .iter()
@@ -362,15 +266,6 @@ fn every_class_reached(result: &tracelean_core::drt::run::DrtResult) {
     assert!(unused.is_empty(), "`{}` waives what the run reached or never measured: {unused:?}", result.op);
 }
 
-/// Judge a generator against the floors the binding declared, and record if the
-/// runs have already agreed.
-///
-/// The floors come from `.tracelean/drt.json` and the counts from the caller: a
-/// situation is a predicate over generated values that no JSON can express, so
-/// the binding names it and the suite reports how often the name was reached.
-/// A situation the binding never declared is a counting error, not extra
-/// credit, and is refused.
-///
 /// @implements REQ-DRT-COVER.floor_stated
 /// @implements REQ-DRT-COVER.law_coverage
 /// @implements REQ-DRT-COVER.vacuous_named
@@ -405,7 +300,6 @@ pub fn covered(op: &str, counts: &[(&str, u64)]) {
     compose(op);
 }
 
-/// The binding an op belongs to.
 fn binding_for(op: &str) -> tracelean_core::drt::Binding {
     let bindings = tracelean_core::drt::config::read(&root()).expect("the binding file reads");
     bindings
@@ -414,14 +308,6 @@ fn binding_for(op: &str) -> tracelean_core::drt::Binding {
         .unwrap_or_else(|| panic!("no binding declares the op `{op}`"))
 }
 
-/// Write the record, once both halves are in.
-///
-/// The level is `coverage::level`'s and never a suite's: agreement without a met
-/// floor is not L3, and a met floor without agreement is not L3 either — and
-/// only L3 sets the tested mark. One record per clause the binding says this
-/// call establishes — `also_checks` is a claim the binding made, and the
-/// binding-shape tests hold it to it.
-///
 /// @implements REQ-EVID.mark_per_bond
 /// @implements REQ-DRT-COVER.floor_unmet_is_not_pass
 /// @implements REQ-DRT-BIND.binding_is_the_bond
@@ -429,13 +315,8 @@ fn compose(op: &str) {
     let half = read_half(op);
     let root = root();
     let binding = binding_for(op);
-    // Every implementation the binding declares, not merely one of them, and
-    // both halves established against the inputs as they are now.
     let current = current_stamp(op);
     let stamps: Vec<String> = half.agreed.values().map(|run| run.stamp.clone()).collect();
-    // Coverage is classes, floors and — where lines can be measured, which is
-    // a Rust implementation — every line of the bound entry, under the same
-    // stamp (§10). Without the measured run the coverage half is not in.
     let lines_in = binding.implementation.language != "rust" || half.lines.as_deref() == Some(current.as_str());
     if !tracelean_core::trace::earn::halves_compose(
         &stamps,
@@ -445,18 +326,12 @@ fn compose(op: &str) {
     ) {
         return;
     }
-    // The run the record names, chosen by lowest seed so that the bytes do not
-    // depend on which suite finished first. The others are why the record
-    // exists at all — it is written only once every implementation agreed —
-    // but a `Detail::Drt` names one reproducible run, and this is that one.
     let mut runs: Vec<(u64, u64)> = half
         .agreed
         .iter()
         .filter(|(_, run)| run.stamp == current)
         .filter_map(|(seed, run)| seed.parse::<u64>().ok().map(|seed| (seed, run.cases)))
         .collect();
-    // By the seed as a number, not as the string it is stored under: `"103"`
-    // sorts before `"29"` and the lowest seed should mean the lowest seed.
     runs.sort();
     let Some((seed, cases)) = runs.first().copied() else { return };
     let index = tracelean_core::trace::index::build(&root);
@@ -480,9 +355,6 @@ fn compose(op: &str) {
             Ok(record) => {
                 tracelean_core::trace::store::write(&root, &record).expect("the store is writable");
             }
-            // A clause the binding claims but nothing annotates is a finding the
-            // checker already reports; a record with no input to go stale
-            // against would be worse than no record.
             Err(why) => eprintln!("  no record for {qualified}: {why:?}"),
         }
     }

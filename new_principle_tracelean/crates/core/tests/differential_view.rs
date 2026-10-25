@@ -1,9 +1,3 @@
-//! The representation, checked against the model.
-//!
-//! Five bindings over one type: what is wrong with a buffer's spans, what can be
-//! done at a position, the rendering every frontend must agree with, the spans a
-//! synthetic buffer gets without a grammar, and the delta between two states.
-
 mod harness;
 
 use std::collections::BTreeMap;
@@ -63,8 +57,6 @@ fn buffer() -> Schema {
         "text".to_string(),
         Schema::Str {
             max_len: None,
-            // Whole documents rather than letters: a buffer's text is lines, and
-            // a generator drawing characters would almost never produce one.
             examples: vec![
                 "".into(),
                 "one".into(),
@@ -157,9 +149,6 @@ fn model_and_implementation_agree_on_the_reference_rendering() {
     );
 }
 
-/// A listing comes out of the core as a buffer — an identity, a kind and
-/// text — the same as the model's, so it is no second representation.
-///
 /// @drt REQ-VIEW.structure_has_one_type
 /// @tests REQ-VIEW.structure_has_one_type
 /// @tests REQ-VIEW.everything_is_a_buffer
@@ -214,10 +203,6 @@ fn model_and_implementation_agree_on_what_changed() {
     );
 }
 
-/// The laws must be asked where they have content: buffers whose spans are all
-/// well formed would agree without testing the faults, and two identical
-/// buffers would agree without testing the delta.
-///
 /// @tests REQ-DRT-COVER.law_coverage
 #[test]
 fn generation_reaches_faulty_spans_and_real_changes() {
@@ -232,8 +217,6 @@ fn generation_reaches_faulty_spans_and_real_changes() {
     for n in 0..3_000 {
         let value = gen::value(&schema, &mut rng);
         let mut buffer: Buffer = serde_json::from_value(value).expect("the schema generates a buffer");
-        // One in fifty is the buffer before it again: two equal buffers drawn
-        // at random are too rare to leave "nothing changed" to chance.
         if n % 50 == 49 {
             if let Some(before) = &previous {
                 buffer = before.clone();
@@ -264,8 +247,6 @@ fn generation_reaches_faulty_spans_and_real_changes() {
             }
         }
     }
-    // Two ops share the loop but not the claim: the fault counts say what
-    // `faults` was asked, and the delta counts say what `delta` was asked.
     support::covered(
         "REQ-VIEW.text_is_the_content",
         &[
@@ -286,8 +267,6 @@ fn generation_reaches_faulty_spans_and_real_changes() {
     );
 }
 
-/// A frontend's answer, checked against the buffer it was given.
-///
 /// @drt REQ-VIEW.frontend_adds_nothing
 /// @drt REQ-VIEW.one_representation
 /// @tests REQ-VIEW.frontend_adds_nothing
@@ -340,19 +319,8 @@ fn model_and_implementation_agree_on_whether_a_frontend_drew_the_buffer() {
     );
 }
 
-/// A row of presented regions, as a frontend with glyphs would report it.
-///
-/// The two fields are drawn from overlapping alphabets on purpose, so that a
-/// run holds rows where the painting is the name, rows where it is an emblem,
-/// and rows that mix the two — the last being what a station bar actually is.
 fn presented_row() -> Schema {
     let mut fields = BTreeMap::new();
-    // Small alphabets, and `max_len: Some(0)` so that the half of the time the
-    // generator does not reach for an example it produces the empty string
-    // rather than a fresh random word. Two independently drawn words are almost
-    // never equal, and a run in which they never are would never reach the
-    // ordinary case: a region with no emblem, painted as the word it is. The
-    // names are drawn from a subset of the paintings for the same reason.
     let words = |examples: Vec<String>| Schema::Str { max_len: Some(0), examples };
     fields.insert(
         "painted".to_string(),
@@ -362,12 +330,6 @@ fn presented_row() -> Schema {
     Schema::List { inner: Box::new(Schema::Struct { fields }), max_len: Some(3) }
 }
 
-/// What a row of presented regions reads as.
-///
-/// The clause the icons rest on: a frontend may paint what its medium affords
-/// so long as each painted region carries the buffer's own text as its name,
-/// and what is read off a screen is those names.
-///
 /// @drt REQ-VIEW.presentation_may_be_symbolic
 /// @tests REQ-VIEW.presentation_may_be_symbolic
 #[test]
@@ -385,9 +347,6 @@ fn model_and_implementation_agree_on_what_a_presented_row_reads_as() {
     );
 }
 
-/// A frontend that painted symbolically, checked against the buffer it was
-/// given: its rows read by their names, then compared as any rendering is.
-///
 /// @drt REQ-VIEW.screen_is_readable
 /// @tests REQ-VIEW.screen_is_readable
 #[test]
@@ -418,13 +377,6 @@ fn model_and_implementation_agree_on_whether_a_painted_screen_reads_as_the_buffe
     );
 }
 
-/// The symbolic case has to be reached, or the clause is answered by rows that
-/// were never painted as anything.
-///
-/// A run made only of rows whose painting is their name would agree perfectly
-/// and would say nothing about icons at all — which is the shape of vacuity
-/// this project names rather than tolerates.
-///
 /// @tests REQ-VIEW.presentation_may_be_symbolic
 /// @tests REQ-DRT-COVER.law_coverage
 #[test]
@@ -440,10 +392,6 @@ fn generation_reaches_rows_painted_as_themselves_and_as_symbols() {
         let row: Vec<Presented> =
             serde_json::from_value(value).expect("the schema generates a row");
 
-        // The law, over the same cases: what a row reads as never depends on
-        // what was painted. Repaint every region with one glyph and the reading
-        // is unchanged — which is `a_symbol_is_read_as_its_name`, asked of the
-        // implementation rather than of the model.
         let repainted: Vec<Presented> = row
             .iter()
             .map(|piece| Presented { painted: "🙂".into(), name: piece.name.clone() })
@@ -480,13 +428,6 @@ fn generation_reaches_rows_painted_as_themselves_and_as_symbols() {
     );
 }
 
-/// Asking what can be done at a position, where the answer is not obvious.
-///
-/// A position no span covers affords nothing, and a position two spans cover
-/// affords the union without repeats. Both are cases a frontend reaches by
-/// moving the cursor one character, and a run made of positions inside exactly
-/// one span would agree about neither.
-///
 /// @tests REQ-VIEW.affordances_named
 /// @tests REQ-DRT-COVER.law_coverage
 #[test]
@@ -507,12 +448,8 @@ fn generation_reaches_positions_covered_by_none_one_and_several_spans() {
         let offset = v["offset"].as_u64().unwrap() as usize;
 
         let actions = actions_at(buffer.clone(), offset);
-        // No repeats, whatever the spans said: a frontend that drew this list
-        // would otherwise show the same button twice.
         let unique: std::collections::BTreeSet<&String> = actions.iter().collect();
         assert_eq!(unique.len(), actions.len(), "an affordance was offered twice");
-        // Nothing is invented: every action offered comes from a span that
-        // covers the position.
         for action in &actions {
             assert!(
                 buffer.spans.iter().any(|span| span.start <= offset

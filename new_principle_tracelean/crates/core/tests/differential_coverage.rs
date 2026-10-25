@@ -1,11 +1,3 @@
-//! What a passing run is worth, checked against the model.
-//!
-//! The case this exists for: a run that agreed, over a law whose situation no
-//! case reached. It is the most comfortable possible result and it means
-//! nothing, so the verdict has to distinguish it from a run that met its floor
-//! — and from one that reached the situation but not often enough, which is a
-//! different problem with a different fix.
-
 mod harness;
 
 use std::collections::BTreeMap;
@@ -105,8 +97,6 @@ fn model_and_implementation_agree_on_what_a_run_covered() {
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
-/// What a run establishes, checked against the model.
-///
 /// @drt REQ-DRT-COVER.floor_unmet_is_not_pass
 /// @tests REQ-DRT-COVER.floor_unmet_is_not_pass
 #[test]
@@ -168,8 +158,6 @@ fn model_and_implementation_agree_that_an_uncovered_run_is_not_evidence() {
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
-/// Every verdict must occur, or the agreement above is about one branch.
-///
 /// @tests REQ-DRT-COVER.law_coverage
 #[test]
 fn generation_reaches_every_coverage_verdict() {
@@ -183,7 +171,6 @@ fn generation_reaches_every_coverage_verdict() {
         let value = gen::value(&schema, &mut rng);
         let floors: Vec<Floor> = serde_json::from_value(value["floors"].clone()).unwrap();
         let observed: Vec<Observed> = serde_json::from_value(value["observed"].clone()).unwrap();
-        // An unmet run is counted once for each kind of gap it has.
         match verdict(floors, observed, Vec::new()) {
             Verdict::Met => *seen.entry("met").or_default() += 1,
             Verdict::Undeclared => *seen.entry("undeclared").or_default() += 1,
@@ -204,8 +191,6 @@ fn generation_reaches_every_coverage_verdict() {
     support::covered("REQ-DRT-COVER.floor_stated", &counts);
 }
 
-/// Which waivers excuse nothing, checked against the model.
-///
 /// @drt REQ-DRT-COVER.waiver_unused_reported
 /// @tests REQ-DRT-COVER.waiver_unused_reported
 #[test]
@@ -238,8 +223,6 @@ fn model_and_implementation_agree_on_which_waivers_are_unused() {
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
-/// How often the cases ran each line, checked against the model.
-///
 /// @drt REQ-DRT-COVER.lines_run
 /// @tests REQ-DRT-COVER.lines_run
 #[test]
@@ -299,8 +282,6 @@ fn model_and_implementation_agree_on_how_often_each_line_ran() {
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
-/// The classes a seeded stream reaches, over every shape of schema.
-///
 /// @drt REQ-DRT-COVER.classes_reached
 /// @tests REQ-DRT-COVER.classes_reached
 #[test]

@@ -1,12 +1,3 @@
-//! The terminal frontend, checked against the buffers it is given.
-//!
-//! This is the same harness that checks any other frontend, pointed at the real
-//! binary rather than at a fixture: `check` reads what it says it drew, and
-//! `capture` reads the screen it painted. Nothing here knows what a terminal is.
-//!
-//! The buffers are the ones the core produces, not hand-built ones — a frontend
-//! that only ever sees tidy buffers is a frontend nobody has tested.
-
 use tracelean_core::drt::frontend::{capture, check, painted_screens, Screen, Verdict};
 use tracelean_core::drt::run::RunnerSpec;
 use tracelean_core::observe::transcript::Event;
@@ -22,10 +13,6 @@ fn frontend(flags: &[&str]) -> RunnerSpec {
     RunnerSpec { cmd, cwd: None }
 }
 
-/// One buffer of every kind, every one of them produced by the core, and each
-/// carrying a shape that breaks a careless renderer: no text at all, a trailing
-/// newline, a character that is not one byte, marks that overlap, and a row
-/// with nothing to offer.
 fn buffers() -> Vec<Buffer> {
     vec![
         directory_buffer("src".into(), vec![]),
@@ -66,8 +53,6 @@ fn buffers() -> Vec<Buffer> {
     ]
 }
 
-/// What it says it drew is what the buffer says.
-///
 /// @tests REQ-VIEW.frontend_is_checkable
 /// @tests REQ-VIEW.rendering_is_total
 /// @structural REQ-VIEW.rendering_is_total reason="a claim about a separate process answering for every kind, which is not a value either side computes"
@@ -81,9 +66,6 @@ fn the_terminal_frontend_draws_every_buffer_it_is_given() {
     }
 }
 
-/// And what it paints is the same thing, read off the screen rather than taken
-/// on its word.
-///
 /// @tests REQ-VIEW.screen_is_readable
 /// @structural REQ-VIEW.screen_is_readable reason="a claim about reading a process's screen, which is not a value either side computes"
 #[test]
@@ -97,9 +79,6 @@ fn what_the_terminal_frontend_paints_is_the_buffer() {
     );
 }
 
-/// And each character is painted in the look the theme gives its role, read
-/// back from the escapes it sent rather than from what it says it drew.
-///
 /// @tests REQ-LOOK.roles_drawn_in_theme_colours
 #[test]
 fn the_terminal_frontend_paints_each_role_in_the_themes_colour() {
@@ -110,7 +89,6 @@ fn the_terminal_frontend_paints_each_role_in_the_themes_colour() {
 
     let theme: serde_json::Value = serde_json::from_str(include_str!("../../../assets/theme.json")).unwrap();
     let mut shown = buffers();
-    // Every kind of role the theme colours, side by side and nested.
     shown.push(file_buffer(
         "b.rs".into(),
         "P- T- +x -y fn tests\nplain".into(),
@@ -130,8 +108,6 @@ fn the_terminal_frontend_paints_each_role_in_the_themes_colour() {
     for (buffer, painted) in shown.into_iter().zip(screens) {
         let looks = buffer.spans.iter().map(|s| look_of(&theme, s.role)).collect::<Vec<_>>();
         reached.extend(looks.iter().filter(|l| l.fg.is_some()).map(|l| format!("{:?}", l.role)));
-        // Every painted line ends in a line feed, and one on the last row
-        // would scroll the first away: a row to spare.
         let rows = buffer.text.matches('\n').count() as u64 + 2;
         let columns = buffer.text.lines().map(|l| l.chars().count()).max().unwrap_or(0) as u64 + 1;
         let wrong = drawn_wrong(buffer.clone(), painted, rows, columns, looks);
@@ -140,11 +116,6 @@ fn the_terminal_frontend_paints_each_role_in_the_themes_colour() {
     assert!(reached.len() >= 8, "only {} coloured roles were painted: {reached:?}", reached.len());
 }
 
-/// Every action this frontend can offer is one the keymap dispatches.
-///
-/// An action only the representation knows about is one no key reaches; an
-/// action only this frontend knows about is one nobody can trace.
-///
 /// @tests REQ-VIEW.frontend_adds_nothing
 /// @structural REQ-VIEW.frontend_adds_nothing reason="a claim about the vocabulary a running process may use, read off what it offered"
 #[test]
@@ -163,9 +134,6 @@ fn the_terminal_frontend_offers_no_action_the_keymap_lacks() {
     assert!(offered > 3, "only {offered} actions were reachable, so this checked little");
 }
 
-/// Every kind of buffer reaches the frontend, and the shapes that break
-/// renderers reach it too.
-///
 /// @tests REQ-DRT-COVER.law_coverage
 #[test]
 fn the_buffers_shown_reach_every_kind_and_the_awkward_shapes() {

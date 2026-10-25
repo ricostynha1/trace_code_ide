@@ -1,12 +1,3 @@
-//! The trace of the file being read: for each item in it that claims a
-//! requirement, the clause, what it says, how far its evidence reaches, and
-//! everything else that claims the same clause — the tests of a function, the
-//! function a test tests, the model both answer to — each a link.
-//!
-//! The first TraceLean's trace panel stood beside the code for this reason: a
-//! programmer reads a function and wants to know why it is there and what
-//! else would notice if it changed, without leaving it.
-//!
 //! @implements REQ-SHOW.requirement_opened
 
 use serde::{Deserialize, Serialize};
@@ -16,20 +7,14 @@ use crate::surface::requirement_view::{link_text, mark_pieces, Claim};
 use crate::surface::sandbox_view::Lines;
 use crate::surface::view::{Buffer, Role, TokenKind};
 
-/// One claim the file makes, and the rest of that clause's claims.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Entry {
-    /// Where the annotation is, one-based.
     pub line: u32,
-    /// The item it sits on, when it sits on one.
     pub symbol: Option<String>,
-    /// `implements`, `tests`, …
     pub role: String,
-    /// `REQ-X.clause`, or `REQ-X` for a requirement without clauses.
     pub clause: String,
     pub text: String,
     pub marks: Marks,
-    /// Every other claim on the same clause, anywhere in the tree.
     pub others: Vec<Claim>,
 }
 
@@ -40,8 +25,6 @@ fn claim_role(role: &str) -> Role {
     }
 }
 
-/// The trace of `path`, as a record titled `trace`: one constant identity,
-/// so the side panel showing it follows the document from file to file.
 pub fn file_trace_view(path: &str, entries: &[Entry], width: usize) -> Buffer {
     let mut out = Lines::new(width);
     out.line(&[("Trace of ", Role::Heading, &[]), (path, Role::Path, &["file.open"])]);
@@ -50,7 +33,6 @@ pub fn file_trace_view(path: &str, entries: &[Entry], width: usize) -> Buffer {
         return out.finish("trace");
     }
     let clauses: std::collections::BTreeSet<&str> = entries.iter().map(|e| e.clause.as_str()).collect();
-    // A requirement's own document lists its clauses, each with its claims.
     let own = entries.iter().all(|e| e.role == "clause");
     let unmet = entries.iter().filter(|e| e.others.is_empty()).count();
     let summary = if own {
@@ -111,9 +93,6 @@ mod tests {
         buffer.text[..buffer.text.find(needle).expect(needle)].chars().count()
     }
 
-    /// Each claim the file makes shows its clause, and every other claim on
-    /// the clause is a link.
-    ///
     /// @tests REQ-SHOW.requirement_opened
     #[test]
     fn a_file_shows_what_it_claims_and_what_else_claims_the_same() {
@@ -135,7 +114,6 @@ mod tests {
         assert!(shown.text.contains("REQ-A.one  AJ--"));
     }
 
-    /// A requirement's document lists its clauses, saying which nothing claims.
     #[test]
     fn a_requirement_lists_its_clauses_and_what_claims_each() {
         let clause = |key: &str, others: Vec<Claim>| Entry {

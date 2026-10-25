@@ -1,8 +1,3 @@
-//! Mirroring, checked against the model.
-//!
-//! The law is that applying the derived mutations to the observed-from tree
-//! yields the observed tree. Generate pairs of trees, derive, apply, compare.
-
 mod harness;
 
 use std::collections::BTreeMap;
@@ -21,8 +16,6 @@ fn path_name() -> Schema {
             "a.rs".into(),
             "b.rs".into(),
             "c.rs".into(),
-            // Paths that must be excluded, so the run exercises the exclusion
-            // rather than only the ordinary case.
             ".git/HEAD".into(),
             ".tracelean/trace.lock.json".into(),
             "target/debug/x".into(),
@@ -88,9 +81,6 @@ fn model_and_implementation_agree_on_mirroring() {
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
-/// The law must be exercised where it has content: runs where the two trees
-/// are equal would agree without testing anything.
-///
 /// @tests REQ-DRT-COVER.law_coverage
 #[test]
 fn generation_reaches_real_differences_and_excluded_paths() {
@@ -123,14 +113,6 @@ fn generation_reaches_real_differences_and_excluded_paths() {
     );
 }
 
-/// The mutation list itself, not only the state it reaches.
-///
-/// Agreement on `mirrored` is weaker than it looks: two different mutation
-/// lists can drive the same tree to the same place, so a model that ordered
-/// them differently, emitted a redundant one, or leaked a protected path would
-/// still agree. Comparing the list is what makes `minimal`, `ordering_defined`
-/// and `protected_excluded` checked rather than asserted.
-///
 /// @drt REQ-MIRROR.diff_is_pure
 /// @tests REQ-MIRROR.diff_is_pure
 /// @tests REQ-MIRROR.minimal
@@ -169,12 +151,6 @@ fn model_and_implementation_agree_on_the_mutations_themselves() {
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
-/// What the mirror does about a file the editor cannot represent.
-///
-/// Three states, not two: absent, text, and present-but-opaque. Collapsing the
-/// third into either of the others is how a mirror either loses a change or
-/// writes a binary's bytes into a text buffer and corrupts it on the way back.
-///
 /// @drt REQ-MIRROR.binary_handled
 /// @tests REQ-MIRROR.binary_handled
 #[test]
@@ -199,10 +175,6 @@ fn model_and_implementation_agree_on_what_happens_to_an_opaque_file() {
     let mut state: std::collections::BTreeMap<String, Option<Box<Schema>>> =
         std::collections::BTreeMap::new();
     state.insert("absent".into(), None);
-    // With the hash its bytes are known by, two of them, so an unchanged
-    // binary and a changed one both occur. It was once drawn without one,
-    // which neither side could read — and two sides failing alike agree, so
-    // no opaque file was ever compared (found by measuring lines).
     state.insert(
         "opaque".into(),
         Some(Box::new(Schema::Struct {
@@ -265,10 +237,6 @@ fn model_and_implementation_agree_on_what_happens_to_an_opaque_file() {
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
-/// What a sandbox offers as the agent's: a start known or not, paths the agent
-/// left as they started (their hash in the start) or changed, and a project
-/// that moved on meanwhile.
-///
 /// @drt REQ-OBS.only_what_the_tool_changed
 /// @tests REQ-OBS.only_what_the_tool_changed
 #[test]
@@ -283,8 +251,6 @@ fn model_and_implementation_agree_on_what_the_agent_changed() {
         &scratch,
     );
     let model = harness::lean_runner("TraceLean.Mirror", "TraceLean.Mirror.changedSince", op, &["base", "project", "agent"], &scratch);
-    // A start lists hashes of the same few texts the trees hold, so a path
-    // the agent left alone matches it and one it changed does not.
     let hashes = ["", "hi"].iter().map(|t| tracelean_core::trace::hash::text(t)).chain(["0".to_string()]).collect();
     let base = Schema::Option {
         inner: Box::new(Schema::List {

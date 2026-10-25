@@ -1,15 +1,3 @@
-//! The undo tree, checked against its model.
-//!
-//! Two definitions of one thing: a node's state is *defined* by replaying its
-//! ancestry from the base, and `jump_to` computes it by travelling via the
-//! nearest common ancestor. The report puts both answers next to each other for
-//! every node, so the run checks the model against the implementation and the
-//! two definitions against each other at the same time.
-//!
-//! Scripts rather than single calls, because the property is about a history:
-//! the interesting states are reached by undoing, branching, jumping between
-//! branches and redoing, and no single operation produces one.
-
 mod harness;
 
 use std::collections::BTreeMap;
@@ -23,9 +11,6 @@ fn strukt(fields: &[(&str, Schema)]) -> Schema {
     Schema::Struct { fields: fields.iter().map(|(k, v)| (k.to_string(), v.clone())).collect() }
 }
 
-// A one-letter alphabet. Paths drawn from a wide space would almost never
-// collide, so almost every command would be refused for naming a file that does
-// not exist, and the histories would all be empty.
 fn path_name() -> Schema {
     Schema::Str { max_len: Some(0), examples: vec!["a".into(), "b".into()] }
 }
@@ -49,10 +34,6 @@ fn command() -> Schema {
         "deleteFile".into(),
         Some(Box::new(strukt(&[("path", path_name()), ("content", text())]))),
     );
-    // `delete` and `renameFile` are left out deliberately. Both need a witness
-    // or a free name to match, so almost every one is refused — and a refused
-    // command creates no node, which is the one thing this test needs its
-    // commands to do. What they do is checked by the command suite instead.
     Schema::Enum { variants }
 }
 
@@ -60,8 +41,6 @@ fn movement() -> Schema {
     let mut variants: BTreeMap<String, Option<Box<Schema>>> = BTreeMap::new();
     variants.insert("undo".into(), None);
     variants.insert("redo".into(), None);
-    // Small identifiers, so jumps land on nodes the script actually created —
-    // and occasionally on one it did not, which must also be handled.
     variants.insert(
         "jump".into(),
         Some(Box::new(strukt(&[("node", Schema::Nat { max: Some(5), edges: vec![0] })]))),
@@ -78,10 +57,6 @@ fn step() -> Schema {
 
 fn input_schema() -> Schema {
     strukt(&[
-        // Two files, always. A base that was often empty would make almost
-        // every command refuse for naming a file that does not exist, and the
-        // histories this is about — branches, jumps between them — would never
-        // be built.
         (
             "base",
             strukt(&[(
@@ -137,13 +112,6 @@ fn model_and_implementation_agree_on_a_history() {
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
-/// The law itself, asserted against the implementation rather than only
-/// through the model: travelling and replaying reach the same state, for every
-/// node of every generated history.
-///
-/// Also checks that the generated histories are worth running — branches, not
-/// just straight lines.
-///
 /// @tests REQ-UNDO.jump_equivalence
 /// @tests REQ-DRT-COVER.law_coverage
 #[test]
@@ -169,8 +137,6 @@ fn travelling_and_replaying_agree_on_every_generated_history() {
         if report.nodes.len() > 1 {
             nonempty += 1;
         }
-        // A branch exists when some node has more than one child, which shows
-        // up as two nodes replaying to different states from a shared prefix.
         if report.nodes.len() > 2 {
             branched += 1;
         }
@@ -183,4 +149,3 @@ fn travelling_and_replaying_agree_on_every_generated_history() {
         ],
     );
 }
-

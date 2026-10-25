@@ -1,14 +1,3 @@
-//! What an agent needs to see to change a requirement: its context.
-//!
-//! From a requirement or a clause, the trace already knows the neighbourhood
-//! an agent never reads — what the clause refines and what refines it, the
-//! code that implements it, the tests that pin it, the model that says what it
-//! means, and the tests that may break. This gathers it, lets the person
-//! choose which parts go, and writes the chosen parts as one prompt to copy.
-//! Nothing is sent (`REQ-CONTEXT.copied_not_sent`): the person carries it.
-//!
-//! Pure: the index and the files' text come in, a value goes out.
-
 use std::collections::{BTreeMap, BTreeSet};
 
 use serde::{Deserialize, Serialize};
@@ -18,15 +7,12 @@ use crate::surface::view::{Buffer, Role};
 use crate::trace::anchor::AnchorKind;
 use crate::trace::index::{Index, Link};
 
-/// A requirement as the refinement graph sees it: its name and its parents.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Node {
     pub id: String,
     pub refines: Vec<String>,
 }
 
-/// Everything reachable from `id` one `next` step at a time, without `id`,
-/// each once, in name order.
 fn closure(id: &str, next: impl Fn(&str) -> Vec<String>) -> Vec<String> {
     let mut seen: BTreeSet<String> = BTreeSet::from([id.to_string()]);
     let mut queue = vec![id.to_string()];
@@ -41,26 +27,20 @@ fn closure(id: &str, next: impl Fn(&str) -> Vec<String>) -> Vec<String> {
     seen.into_iter().collect()
 }
 
-/// Everything `id` refines, transitively.
 pub fn ancestors(nodes: Vec<Node>, id: String) -> Vec<String> {
     closure(&id, |at| nodes.iter().filter(|n| n.id == at).flat_map(|n| n.refines.clone()).collect())
 }
 
-/// Everything that refines `id`, transitively.
 pub fn descendants(nodes: Vec<Node>, id: String) -> Vec<String> {
     closure(&id, |at| nodes.iter().filter(|n| n.refines.iter().any(|p| p == at)).map(|n| n.id.clone()).collect())
 }
 
-/// The neighbourhood of `id`: what it refines and what refines it, each
-/// transitively, each once, in name order, and never `id` itself.
-///
 /// @implements REQ-CONTEXT.neighbourhood_is_closed
 /// @drt REQ-CONTEXT.neighbourhood_is_closed
 pub fn neighbourhood(nodes: Vec<Node>, id: String) -> (Vec<String>, Vec<String>) {
     (ancestors(nodes.clone(), id.clone()), descendants(nodes, id))
 }
 
-/// One part of a context.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum Part {
@@ -73,12 +53,10 @@ pub enum Part {
     Affected,
 }
 
-/// The parts, in the one order they are shown and copied in.
 pub const ALL_PARTS: [Part; 7] =
     [Part::Requirement, Part::Refines, Part::RefinedBy, Part::Code, Part::Tests, Part::Models, Part::Affected];
 
 impl Part {
-    /// What the view calls it.
     pub fn label(self) -> &'static str {
         match self {
             Part::Requirement => "requirement",
@@ -92,31 +70,22 @@ impl Part {
     }
 }
 
-/// The part a label names, if it names one.
-///
 /// @implements REQ-CONTEXT.part_named
 /// @drt REQ-CONTEXT.part_named
 pub fn part_named(name: String) -> Option<Part> {
     ALL_PARTS.into_iter().find(|p| p.label() == name)
 }
 
-/// The parts the copied text holds: those included that have something in
-/// them, in the fixed order.
-///
 /// @implements REQ-CONTEXT.person_chooses
 /// @drt REQ-CONTEXT.person_chooses
 pub fn parts_shown(included: Vec<Part>, filled: Vec<Part>) -> Vec<Part> {
     ALL_PARTS.into_iter().filter(|p| included.contains(p) && filled.contains(p)).collect()
 }
 
-/// What a part holds when nobody has chosen: everything but what refines the
-/// target, which in a large tree is most of it.
 pub fn default_parts() -> BTreeSet<Part> {
     ALL_PARTS.into_iter().filter(|p| *p != Part::RefinedBy).collect()
 }
 
-/// What a shell's `--parts` chose: the parts, in their fixed order and each
-/// once, or the first name that is no part.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum ShellParts {
@@ -124,16 +93,10 @@ pub enum ShellParts {
     Unknown { name: String },
 }
 
-/// Space, tab, carriage return and line feed: what is trimmed from a name or a
-/// line. Written out so the model trims the same characters.
 fn blank(c: char) -> bool {
     c == ' ' || c == '\t' || c == '\r' || c == '\n'
 }
 
-/// The parts a shell asked for: `parts` is a comma-separated list of labels
-/// (a dash for a space: `refined-by`), or `all`, or nothing for the default.
-/// The first label that names no part is refused.
-///
 /// @implements REQ-CONTEXT.from_the_shell
 /// @drt REQ-CONTEXT.from_the_shell
 pub fn shell_parts(parts: Option<String>) -> ShellParts {
@@ -157,10 +120,6 @@ pub fn shell_parts(parts: Option<String>) -> ShellParts {
     ShellParts::Chosen { parts: chosen.into_iter().collect() }
 }
 
-/// The context for `target` as an agent asks for it from a shell, with the
-/// parts `shell_parts` chose. A part or a requirement that does not exist is
-/// refused with what does.
-///
 /// @implements REQ-CONTEXT.from_the_shell
 pub fn for_the_shell(
     target: &str,
@@ -179,37 +138,27 @@ pub fn for_the_shell(
     Ok(context_text(&context, &included))
 }
 
-/// A requirement as the context says it.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Said {
     pub id: String,
     pub title: String,
     pub file: String,
-    /// Clause key and text, in key order.
     pub clauses: Vec<(String, String)>,
 }
 
-/// A claimed item, or a line that names one: where it is and its source.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Item {
-    /// `implements`, `tests`, `models`, `proves`, `drt`; `uses` for a test
-    /// line that names an implementing item without claiming anything.
     pub role: String,
-    /// The clause claimed, as `REQ-X.clause`.
     pub claims: String,
     pub path: String,
-    /// One-based.
     pub line: u32,
     pub symbol: Option<String>,
     pub source: String,
 }
 
-/// Everything an agent may be shown about one requirement or clause.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Context {
-    /// `REQ-X` or `REQ-X.clause`, as asked for.
     pub target: String,
-    /// The clause, when one was asked for.
     pub clause: Option<String>,
     pub requirement: Said,
     pub refines: Vec<Said>,
@@ -221,7 +170,6 @@ pub struct Context {
 }
 
 impl Context {
-    /// The parts with something in them.
     pub fn filled(&self) -> Vec<Part> {
         ALL_PARTS
             .into_iter()
@@ -238,16 +186,11 @@ impl Context {
     }
 }
 
-/// The most source an item contributes, so one long function cannot crowd
-/// out the rest.
 const MOST_LINES: usize = 60;
 
-/// The source of the item a link sits on.
 fn source_of(link: &Link, files: &BTreeMap<String, String>) -> String {
     let Some(text) = files.get(&link.anchor.file) else { return String::new() };
     let lines: Vec<&str> = text.lines().collect();
-    // A declaration's rows count from zero; anything else, from the
-    // annotation's own line, which counts from one.
     let (from, to) = match link.anchor.kind {
         AnchorKind::Decl { .. } => (link.anchor.start_line as usize, link.anchor.end_line as usize),
         _ => {
@@ -268,8 +211,6 @@ fn said(index: &Index, id: &str) -> Option<Said> {
         id: r.id.clone(),
         title: r.title.clone(),
         file: r.file.clone(),
-        // A clause's narrowings are part of it, so they are written with it,
-        // each on an indented line under the clause.
         clauses: r
             .clauses
             .iter()
@@ -278,18 +219,13 @@ fn said(index: &Index, id: &str) -> Option<Said> {
     })
 }
 
-/// A claim as the context reads it: one annotation, flattened, with the
-/// source of the item it sits on already cut from its file.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Claim {
-    /// `implements`, `tests`, `models`, `proves`, `drt`, `pins`, `specifies`.
     pub role: String,
     pub req: String,
     pub clause: Option<String>,
-    /// The anchor's identity: one item, however many annotations it carries.
     pub ident: String,
     pub path: String,
-    /// One-based.
     pub line: u32,
     pub symbol: Option<String>,
     pub source: String,
@@ -325,15 +261,10 @@ fn item(claim: &Claim) -> Item {
     }
 }
 
-/// Whether a claim is on the target: its requirement, and its clause when
-/// one was asked for.
 fn on_target(claim: &Claim, id: &str, clause: &Option<String>) -> bool {
     claim.req == id && (clause.is_none() || claim.clause == *clause)
 }
 
-/// The claims on the target with one of `roles`, an item an anchor: an item
-/// claiming two of the clauses is shown once, naming both — merged into the
-/// first item of its anchor when that one has the same role.
 fn of_roles(claims: &[Claim], id: &str, clause: &Option<String>, roles: &[&str]) -> Vec<Item> {
     let mut out: Vec<(String, Item)> = Vec::new();
     for claim in claims.iter().filter(|c| on_target(c, id, clause) && roles.contains(&c.role.as_str())) {
@@ -346,7 +277,6 @@ fn of_roles(claims: &[Claim], id: &str, clause: &Option<String>, roles: &[&str])
     out.into_iter().map(|(_, item)| item).collect()
 }
 
-/// What claims a target, by kind.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Claimed {
     pub code: Vec<Item>,
@@ -354,9 +284,6 @@ pub struct Claimed {
     pub models: Vec<Item>,
 }
 
-/// Every claim on `id` (and `clause`, when one was asked for), each with its
-/// place and source: implementations, tests, and models with their proofs.
-///
 /// @implements REQ-CONTEXT.claims_with_source
 /// @drt REQ-CONTEXT.claims_with_source
 pub fn claims_on(claims: Vec<Claim>, id: String, clause: Option<String>) -> Claimed {
@@ -367,13 +294,10 @@ pub fn claims_on(claims: Vec<Claim>, id: String, clause: Option<String>) -> Clai
     }
 }
 
-/// A letter, a digit or an underscore, ASCII only so the model agrees.
 fn is_word(c: char) -> bool {
     c.is_ascii_alphanumeric() || c == '_'
 }
 
-/// Whether `text` names `word` as a whole word. Matches are taken left to
-/// right without overlapping, as `str::match_indices` takes them.
 fn names(text: &str, word: &str) -> bool {
     let text: Vec<char> = text.chars().collect();
     let word: Vec<char> = word.chars().collect();
@@ -393,13 +317,10 @@ fn names(text: &str, word: &str) -> bool {
     false
 }
 
-/// A path that holds tests by where it is or what it is called.
 fn is_test_path(path: &str) -> bool {
     path.split('/').any(|part| part == "tests" || part == "test" || part.contains("_test") || part.starts_with("test_"))
 }
 
-/// A text's lines: split at line feeds, no line after a final one, and a
-/// carriage return before a line feed dropped.
 fn lines_of(text: &str) -> Vec<String> {
     let mut pieces: Vec<&str> = text.split('\n').collect();
     let ended = pieces.last() == Some(&"");
@@ -417,14 +338,8 @@ fn lines_of(text: &str) -> Vec<String> {
         .collect()
 }
 
-/// The most lines named outside any claim that an affected list carries.
 const MOST_USES: usize = 20;
 
-/// The tests a change to the target may break, past those that claim it: tests
-/// claiming what refines it (`down`), tests whose source names an item that
-/// implements it, and — for a test nobody annotated — lines of test files
-/// that name one, at most `MOST_USES` of them. An item is placed once.
-///
 /// @implements REQ-CONTEXT.affected_tests
 /// @drt REQ-CONTEXT.affected_tests
 pub fn affected(
@@ -478,10 +393,6 @@ pub fn affected(
     out
 }
 
-/// The context of `target` — `REQ-X` or `REQ-X.clause` — or nothing when no
-/// requirement is called that. The shell around `neighbourhood`, `claims_on`
-/// and `affected`: it reads the index and cuts each claim's source.
-///
 /// @implements REQ-CONTEXT.claims_with_source
 /// @implements REQ-CONTEXT.affected_tests
 pub fn gather(target: &str, index: &Index, files: &BTreeMap<String, String>) -> Option<Context> {
@@ -511,7 +422,6 @@ pub fn gather(target: &str, index: &Index, files: &BTreeMap<String, String>) -> 
     })
 }
 
-/// The fence language for a path's source.
 fn fence(path: &str) -> &'static str {
     match path.rsplit('.').next() {
         Some("rs") => "rust",
@@ -543,8 +453,6 @@ fn write_items(out: &mut String, items: &[Item]) {
     }
 }
 
-/// Each clause in view that lacks code, a test or a Lean model, as
-/// `key: no test, no Lean model` — the work a change could also do.
 fn gaps(context: &Context) -> Vec<String> {
     let id = &context.requirement.id;
     let claimed = |items: &[Item], name: &str| items.iter().any(|i| i.claims.split(", ").any(|c| c == name));
@@ -569,8 +477,6 @@ fn gaps(context: &Context) -> Vec<String> {
         .collect()
 }
 
-/// The chosen parts, as one prompt for an agent.
-///
 /// @implements REQ-CONTEXT.person_chooses
 pub fn context_text(context: &Context, included: &BTreeSet<Part>) -> String {
     let mut out = format!("# Context for changing {}\n\n", context.target);
@@ -624,9 +530,6 @@ fn count(n: usize, one: &str, many: &str) -> String {
     format!("{n} {}", if n == 1 { one } else { many })
 }
 
-/// The context as a buffer, titled `context <target>`: a line a part, each
-/// part's name the switch that includes or leaves it out, the button that
-/// copies, and the text that would be copied.
 pub fn context_view(context: &Context, included: &BTreeSet<Part>, width: usize) -> Buffer {
     let mut out = Lines::new(width);
     out.line(&[("Context for an agent", Role::Heading, &[])]);
@@ -658,7 +561,6 @@ pub fn context_view(context: &Context, included: &BTreeSet<Part>, width: usize) 
     out.line(&[("[ Copy for an agent ]", Role::Added, &["context.copy"]), (&size, Role::Plain, &[])]);
     out.blank();
     out.line(&[("What will be copied", Role::Heading, &[])]);
-    // As Markdown, which it is: headings, code and requirement names marked.
     let text = text.trim_end();
     out.marked(text, crate::surface::highlight::markdown(text));
     out.finish(&format!("context {}", context.target))

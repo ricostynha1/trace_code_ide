@@ -1,16 +1,3 @@
-//! Spec strength, checked against the model.
-//!
-//! `@proves` says a model has a property; it says nothing about how much that
-//! property rules out. The four strength states exist to keep that distinction
-//! visible, and the failure mode is that they quietly collapse — an obligation
-//! nobody has attempted reported the same as one that is finished, or a pinning
-//! theorem that merely *exists* reported as one that is *proved*.
-//!
-//! Generated link sets are the right input because the decision is about how
-//! claims relate: which theorem is about which model, which pin belongs to
-//! which declaration, which declaration was declared unpinnable. Those
-//! relations are what a hand-written fixture fixes by accident.
-
 mod harness;
 
 use std::collections::BTreeMap;
@@ -31,9 +18,6 @@ fn small(examples: &[&str]) -> Schema {
     }
 }
 
-/// Only the roles this decision looks at, plus one it must ignore. A wider
-/// vocabulary would mean most generated links were irrelevant, and a theorem
-/// would almost never find the model it is about.
 fn role() -> Schema {
     let mut variants: BTreeMap<String, Option<Box<Schema>>> = BTreeMap::new();
     for name in ["models", "proves", "pins", "implements"] {
@@ -97,10 +81,6 @@ fn model_and_implementation_agree_on_what_a_proof_is_worth() {
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
-/// Three of the four states must occur — `pinned` cannot, and that is the
-/// requirement: only the kernel may say a pinning theorem is finished, so
-/// nothing derived from links alone is allowed to produce it.
-///
 /// @tests REQ-STRENGTH.not_proved_by_us
 /// @tests REQ-DRT-COVER.law_coverage
 #[test]
@@ -141,14 +121,6 @@ fn generation_reaches_every_state_that_links_alone_may_produce() {
     support::covered("REQ-STRENGTH.qualifies_proof", &counts);
 }
 
-/// The obligation text, checked against the model.
-///
-/// The generated proof ends in `sorry` whatever the obligation, so the kernel
-/// itself agrees it is unproved until somebody does the work. That is the
-/// difference between a tool that helps you find out and one that tells you
-/// what you wanted to hear, and it is worth a differential test because it
-/// would be so easy to make the text look finished.
-///
 /// @drt REQ-STRENGTH.obligation_generated
 /// @tests REQ-STRENGTH.obligation_generated
 /// @tests REQ-STRENGTH.not_proved_by_us

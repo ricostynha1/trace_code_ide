@@ -1,13 +1,3 @@
-//! From an action name to something the editor does.
-//!
-//! The keymap turns a key into an action *name*; a span carries action names, so
-//! a rendered affordance carries one too. Neither says what an action does. This
-//! is the middle, and it is one function — which is why a key and a button
-//! cannot mean different things.
-//!
-//! Resolution takes the focus as well as the action: the buffer, the offset and
-//! the text of the span under it. That is what makes `file.open` mean anything.
-//!
 //! @implements REQ-ACT.action_to_intent
 
 use serde::{Deserialize, Serialize};
@@ -16,11 +6,6 @@ use crate::history::command::{Command, Workspace};
 use crate::surface::screen::{Arrangement, Axis, Direction};
 use crate::surface::view::BufferKind;
 
-/// Where the cursor is and what is under it.
-///
-/// `under` is the text of the span the cursor is in, which is how an action
-/// learns what it is about. A cursor in open space has none, and an action
-/// needing one refuses rather than guessing.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Focus {
@@ -29,66 +14,39 @@ pub struct Focus {
     pub under: Option<String>,
 }
 
-/// A move through the history tree.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum Move {
     Back,
     Forward,
     Branch,
-    /// Straight to one node of the history, by its number.
     To { node: u64 },
-    /// Back to the tree as it was opened, before any change.
     Base,
 }
 
-/// A change to what is being watched, or to what a watch produced.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum Watch {
     Start,
-    /// Take in every waiting change: the commands that make it, as one batch.
     Accept { command: Command },
     Reject,
-    /// Make a sandbox: a copy of the project for an agent the user starts.
     Create,
-    /// Hand the user the command that enters the sandbox.
     Copy,
-    /// Discard the sandbox.
     Finish,
-    /// Put the focused buffer's whole text on the clipboard.
     CopyAll,
-    /// Put the line the cursor is on on the clipboard.
     CopyLine,
-    /// Put a file's path on the clipboard.
     CopyPath { path: String },
-    /// Take one file's observed change in, leaving the rest waiting: the
-    /// commands that make it, as one batch.
     AcceptFile { path: String, command: Command },
-    /// Take one file's observed change back out, leaving the rest waiting.
     RejectFile { path: String },
-    /// Include a part of an agent's context, or leave it out.
     ContextToggle { part: crate::surface::context::Part },
-    /// Put the chosen parts of an agent's context on the clipboard.
     ContextCopy,
-    /// Show the history whole, for the open file, or at its saves.
     HistoryFilter { filter: crate::surface::history_view::Filter },
-    /// Unfold a requirement of the design one level, or fold it.
     DesignToggle { id: String },
-    /// Unfold a requirement and everything under it; all of the design when
-    /// none is named.
     DesignExpand { id: Option<String> },
-    /// Fold the design to its roots.
     DesignFold,
-    /// Show only the requirements with something still to do, or all again.
     DesignOpenOnly,
 }
 
-/// Why nothing happened.
-///
-/// A key that appears to do nothing is the failure nobody reports, so the reason
-/// is a value the editor can show.
-///
 /// @implements REQ-ACT.unknown_is_refused
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", rename_all_fields = "camelCase")]
@@ -97,30 +55,18 @@ pub enum Blocked {
     NeedsTarget { action: String, what: String },
 }
 
-/// What the editor is to do next.
-///
 /// @implements REQ-ACT.action_to_intent
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", rename_all_fields = "camelCase")]
 pub enum Intent {
-    /// Produce this buffer and show it. Which producer that is follows from the
-    /// kind, and the shell knows that producing a report means computing one.
     Display { what: BufferKind },
-    /// Change the workspace, through the one path that has an inverse.
     Edit { command: Command },
     Travel {
-        /// `move` is a keyword here and not in the model's language, where this
-        /// field is spelled `move`; the wire name follows the model.
         #[serde(rename = "move")]
         move_: Move,
     },
     Observe { watch: Watch },
-    /// Change the arrangement: split, close, move the focus, resize, show.
-    ///
-    /// Carried as a named change rather than performed here, so that a key and a
-    /// pointer reach the one function that performs it (`REQ-SCREEN`).
     Arrange { how: Arrangement },
-    /// Write the state where it belongs.
     Persist,
     Refuse { why: Blocked },
 }
@@ -129,7 +75,6 @@ fn report(title: &str) -> Intent {
     Intent::Display { what: BufferKind::Record { title: title.to_string() } }
 }
 
-/// The path of the file the cursor is in, if it is in one.
 fn focus_path(focus: &Focus) -> Option<String> {
     match &focus.kind {
         BufferKind::File { path } => Some(path.clone()),
@@ -137,8 +82,6 @@ fn focus_path(focus: &Focus) -> Option<String> {
     }
 }
 
-/// The node a history row names, as `#12`: digits only, and few enough to be
-/// a number on both sides of the model.
 fn node_number(named: &str) -> Option<u64> {
     let digits = named.strip_prefix('#')?;
     if digits.is_empty() || digits.len() > 18 || !digits.chars().all(|c| c.is_ascii_digit()) {
@@ -147,24 +90,17 @@ fn node_number(named: &str) -> Option<u64> {
     digits.parse().ok()
 }
 
-/// A new requirement's document: the frontmatter every requirement has, a
-/// first clause to rewrite, and a heading. A draft until someone approves it.
 pub fn requirement_template(id: &str) -> String {
     format!(
         "---\nid: {id}\ntitle: What this requirement is about\nstatus: draft\nclauses:\n  first: The system shall ...\n---\n\n# {id}\n\nWhy this requirement exists.\n"
     )
 }
 
-/// Approving a draft requirement: the document the cursor is in, else the one
-/// it is on, its first `status: draft` line made `status: approved` — an
-/// edit like any other, which Ctrl+Z takes back.
 fn approve(focus: &Focus, w: &Workspace) -> Intent {
     const DRAFT: &str = "\nstatus: draft\n";
     let found = focus_path(focus).or_else(|| focus.under.clone()).and_then(|path| {
         let text = w.files.get(&path)?;
         let at = text.find(DRAFT)?;
-        // Bytes, which is what a command counts: a requirement with `λ` in its
-        // title would put the edit early by the width of each.
         Some((path.clone(), text[..at].len() + "\nstatus: ".len()))
     });
     match found {
@@ -180,8 +116,6 @@ fn approve(focus: &Focus, w: &Workspace) -> Intent {
     }
 }
 
-/// The file a change is about: the one a review shows, else the one under the
-/// cursor.
 fn changed_file(focus: &Focus) -> Option<String> {
     match &focus.kind {
         BufferKind::Review { target } => Some(target.clone()),
@@ -195,9 +129,6 @@ fn needs(action: &str, what: &str) -> Intent {
     }
 }
 
-/// What a command is about, as a row of waiting changes names it: the file
-/// it edits, makes or deletes, `from → to` for a rename, and a batch's parts
-/// joined by commas.
 pub fn touched(command: &Command) -> String {
     match command {
         Command::Insert { file, .. } | Command::Delete { file, .. } => file.clone(),
@@ -207,9 +138,6 @@ pub fn touched(command: &Command) -> String {
     }
 }
 
-/// The name a definition or a reference is looked up by: in a file, the
-/// identifier at the cursor in the workspace's text of it; anywhere else, what
-/// the span under the cursor says (a requirement, a symbol in a list).
 fn name_at(focus: &Focus, w: &Workspace) -> Option<String> {
     match focus_path(focus).and_then(|path| w.files.get(&path).cloned()) {
         Some(text) => crate::surface::definition::identifier_at(&text, focus.offset),
@@ -217,22 +145,6 @@ fn name_at(focus: &Focus, w: &Workspace) -> Option<String> {
     }
 }
 
-/// What an action means, here, now.
-///
-/// Total: every name the keymap can dispatch has an answer, and every name it
-/// cannot has a refusal. Nothing falls through.
-///
-/// The workspace is here because deleting carries the content it removed — the
-/// witness is part of the command, which is what gives it an inverse — and a
-/// definition is looked up by the name at the cursor in a file's text. What is
-/// `waiting` is the changes observed and not yet taken in, so that accepting
-/// them is an intent carrying their commands rather than a flag the shell
-/// resolves later from its own state.
-///
-/// An action may carry its target after its name (`screen.show file:a.rs`,
-/// see `view::action_name`); that target stands in for what is under the
-/// cursor.
-///
 /// @implements REQ-ACT.action_to_intent
 /// @implements REQ-ACT.focus_is_carried
 /// @implements REQ-ACT.one_path
@@ -281,7 +193,6 @@ pub fn dispatch(action: String, focus: Focus, w: Workspace, waiting: Vec<Command
         "history.undo" => Intent::Travel { move_: Move::Back },
         "history.redo" => Intent::Travel { move_: Move::Forward },
         "history.branch" => Intent::Travel { move_: Move::Branch },
-        // `#0` is the tree as it was opened; `#k` the k-th change, node k-1.
         "history.jump" => match focus.under.as_deref().and_then(node_number) {
             None => needs("history.jump", "a point in the history"),
             Some(0) => Intent::Travel { move_: Move::Base },
@@ -332,7 +243,6 @@ pub fn dispatch(action: String, focus: Focus, w: Workspace, waiting: Vec<Command
         "trace.check" => report("check"),
         "trace.evidence" => report("evidence"),
         "trace.findings" => report("findings"),
-        // What to look for is asked for by the shell, on the status line.
         "definitions.edit" => match &focus.under {
             None => needs("definitions.edit", "a setting"),
             Some(setting) => report(&format!("edit {setting}")),
@@ -340,12 +250,10 @@ pub fn dispatch(action: String, focus: Focus, w: Workspace, waiting: Vec<Command
         "file.find" => report("find"),
         "file.find_lines" => report("find lines"),
         "trace.lock" => report("lock"),
-        // What an agent needs to change the requirement or clause here.
         "trace.context" => match &focus.under {
             None => needs("trace.context", "a requirement"),
             Some(id) => report(&format!("context {id}")),
         },
-        // Which lines of the requirement's or clause's code here tests run.
         "trace.coverage" => match &focus.under {
             None => needs("trace.coverage", "a requirement"),
             Some(id) => report(&format!("coverage {id}")),
@@ -380,9 +288,6 @@ pub fn dispatch(action: String, focus: Focus, w: Workspace, waiting: Vec<Command
             None => needs("file.copy_path", "a file"),
             Some(path) => Intent::Observe { watch: Watch::CopyPath { path } },
         },
-        // The name is read here, from the focus, so the intent carries it: a
-        // shell that read the cursor again afterwards would be resolving the
-        // target itself.
         "file.definition" => match name_at(&focus, &w) {
             None => needs("file.definition", "a name"),
             Some(name) => report(&format!("definition {name}")),
@@ -426,8 +331,6 @@ pub fn dispatch(action: String, focus: Focus, w: Workspace, waiting: Vec<Command
         }
         "screen.focus.up" => Intent::Arrange { how: Arrangement::Focus { dir: Direction::Up } },
         "screen.focus.down" => Intent::Arrange { how: Arrangement::Focus { dir: Direction::Down } },
-        // One weight a press. A pointer dragging a divider sends the amount it
-        // measured; the key means "a bit more", and a bit is one.
         "screen.grow" => Intent::Arrange { how: Arrangement::Resize { amount: 1 } },
         "screen.shrink" => Intent::Arrange { how: Arrangement::Resize { amount: -1 } },
         "screen.show" => match &focus.under {
@@ -436,22 +339,8 @@ pub fn dispatch(action: String, focus: Focus, w: Workspace, waiting: Vec<Command
                 Intent::Arrange { how: Arrangement::ShowBuffer { buffer: buffer.clone() } }
             }
         },
-        // The opened set, as a buffer you can put the cursor in. That is how a
-        // bare keyboard reaches `screen.show`, which needs a target and takes
-        // it from the row under the cursor.
         "screen.strip" => Intent::Display { what: BufferKind::Menu { title: "opened".into() } },
         "screen.offers" => Intent::Display { what: BufferKind::Menu { title: "offers".into() } },
-        // A station is an action of its own rather than one action taking the
-        // station's name as a target. A station has to be reachable from a bare
-        // keyboard, and a target comes from what the cursor is on — so one
-        // `screen.station` would be reachable only when a station row was
-        // already under the cursor, which is only true once you have got to the
-        // stations, which is what the action was for.
-        //
-        // What each one opens is `station_kind`'s answer and not a case here: a
-        // window that knew `requirements` meant the requirement index and a
-        // terminal that did not would be two editors, and a list of stations
-        // written twice is a list that drifts.
         other => match other.strip_prefix("screen.station.") {
             Some(station) => match crate::surface::screen::station_kind(station.to_string()) {
                 Some(what) => Intent::Display { what },
@@ -466,9 +355,6 @@ pub fn dispatch(action: String, focus: Focus, w: Workspace, waiting: Vec<Command
     }
 }
 
-/// Whether an intent is one the editor will act on. A refusal is an answer, not
-/// an action.
-///
 /// @implements REQ-ACT.unknown_is_refused
 /// @drt REQ-ACT.unknown_is_refused
 pub fn acts(intent: Intent) -> bool {
@@ -496,34 +382,21 @@ mod tests {
         }
     }
 
-    /// Every action the keymap can dispatch resolves to something the editor
-    /// acts on. An action in the registry that resolves to a refusal is a key
-    /// that does nothing, which is the failure nobody reports.
-    ///
     /// @tests REQ-ACT.action_to_intent
     #[test]
     fn every_action_the_keymap_names_resolves_to_something_done() {
         let mut workspace = Workspace::default();
         workspace.files.insert("a.rs".to_string(), "fn main() {}".to_string());
         workspace.files.insert("reqs/R.md".to_string(), "---\nstatus: draft\n---\n".to_string());
-        // One focus per kind of thing a cursor can be on, because actions want
-        // different targets: `file.open` wants a path, `screen.station` wants
-        // one of the station names, `screen.show` wants a buffer's identity,
-        // `history.jump` a numbered point.
-        // The claim is that no action in the registry is dead — that *some*
-        // cursor makes it do something — not that one cursor suits them all.
         let cursors = [
             in_file(Some("src/lib.rs")),
             in_file(Some("project")),
             in_file(Some("menu:opened")),
             in_file(Some("#3")),
             Focus { kind: BufferKind::File { path: "reqs/R.md".into() }, offset: 0, under: None },
-            // A part's switch on an agent's context.
             Focus { kind: BufferKind::Record { title: "context REQ-R".into() }, offset: 0, under: Some("code".into()) },
-            // A switch above the history.
             Focus { kind: BufferKind::Record { title: "history".into() }, offset: 0, under: Some("Saved".into()) },
         ];
-        // Accepting takes in what is waiting, so something has to be.
         let waiting = vec![Command::Insert { file: "src/lib.rs".into(), offset: 0, text: "x".into() }];
         for action in keymap::ACTIONS {
             let answers: Vec<Intent> = cursors
@@ -537,9 +410,6 @@ mod tests {
         }
     }
 
-    /// The path a frontend opens is the path under the cursor, whatever buffer
-    /// the cursor is in.
-    ///
     /// @tests REQ-ACT.focus_is_carried
     #[test]
     fn opening_follows_the_cursor_not_the_buffer() {
@@ -562,8 +432,6 @@ mod tests {
                 why: Blocked::NeedsTarget { action: "file.open".into(), what: "a path".into() }
             }
         );
-        // A file that is not in the workspace cannot be deleted with a witness,
-        // and a delete without one has no inverse.
         assert_eq!(
             dispatch("file.delete".into(), in_file(None), Workspace::default(), Vec::new()),
             Intent::Refuse {
@@ -588,9 +456,6 @@ mod tests {
         );
     }
 
-    /// Everything that changes the workspace does so through a command, so undo
-    /// is never a special case and provenance is never missing.
-    ///
     /// @tests REQ-ACT.edits_are_commands
     #[test]
     fn every_change_to_the_workspace_is_a_command() {

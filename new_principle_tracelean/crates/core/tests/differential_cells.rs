@@ -1,7 +1,3 @@
-//! What a terminal drew, read back cell by cell and checked against the model:
-//! the grid the escapes leave, and which characters are not in their role's
-//! look.
-
 mod harness;
 
 use std::collections::BTreeMap;
@@ -22,7 +18,6 @@ fn name(examples: &[&str]) -> Schema {
     Schema::Str { max_len: Some(0), examples: examples.iter().map(|s| s.to_string()).collect() }
 }
 
-/// Few roles, so a look and a span often name the same one.
 fn role() -> Schema {
     let mut variants: BTreeMap<String, Option<Box<Schema>>> = BTreeMap::new();
     for nullary in ["plain", "added", "heading"] {
@@ -35,10 +30,6 @@ fn role() -> Schema {
     Schema::Enum { variants }
 }
 
-/// What a frontend writes, in pieces: text, line ends, the sequences a
-/// frontend here sends, and ones it does not — a palette colour, a colour cut
-/// short, an out-of-range channel, a private mode, a lone escape, a cursor
-/// placed far off the screen, a sequence never finished.
 const PIECES: &[&str] = &[
     "ab", "x", "+", "\n", "\r\n", "\r", "\t", "\u{1b}[2J", "\u{1b}[J", "\u{1b}[H", "\u{1b}[2;3H", "\u{1b}[;2H",
     "\u{1b}[0m", "\u{1b}[m", "\u{1b}[1m", "\u{1b}[2m", "\u{1b}[22m", "\u{1b}[7m", "\u{1b}[27m",
@@ -48,8 +39,6 @@ const PIECES: &[&str] = &[
     "\u{1b}[?7l", "\u{1b}[?7h", "\u{1b}[0;9H", "abcdefgh", "\n\n\n\n",
 ];
 
-/// Painted screens, drawn from the pieces with a fixed stream so the examples
-/// are the same every run; a few end in an escape left open.
 fn painted() -> Vec<String> {
     let mut state: u64 = 410;
     let mut next = |below: u64| {
@@ -123,7 +112,6 @@ fn model_and_implementation_agree_on_what_is_drawn_in_the_wrong_look() {
     support::agreed(&result);
     let _ = std::fs::remove_dir_all(&scratch);
 
-    // The situations the check exists for, counted over the same stream.
     let mut rng = gen::Rng::new(410);
     let (mut right, mut wrong, mut off) = (0u64, 0u64, 0u64);
     for _ in 0..3_000 {
@@ -157,7 +145,6 @@ fn model_and_implementation_agree_on_what_is_drawn_in_the_wrong_look() {
     );
 }
 
-/// The offset of the character at a line and column of `text`.
 fn offset_of(text: &str, line: u64, column: u64) -> usize {
     let (mut at_line, mut at_column) = (0, 0);
     for (offset, c) in text.chars().enumerate() {

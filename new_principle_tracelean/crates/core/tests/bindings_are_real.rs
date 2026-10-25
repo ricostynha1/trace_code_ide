@@ -1,11 +1,3 @@
-//! The binding file and the annotations must describe the same set of bonds.
-//!
-//! A `@drt` annotation claims a clause is differentially tested; a binding in
-//! `.tracelean/drt.json` is what makes that true. If either can exist without
-//! the other, the claim and the mechanism have come apart — which is the exact
-//! failure `REQ-CHECK.unbound_reported` exists to catch, applied to this
-//! project's own configuration.
-
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 
@@ -29,13 +21,8 @@ fn bindings_in_config(root: &Path) -> BTreeSet<String> {
                 Some(clause) => format!("{req}.{clause}"),
                 None => req.clone(),
             }];
-            // A binding may name other clauses the same call checks. They are
-            // as much a claim as the primary one, and are held to the same
-            // rule: annotated, or not claimed.
             if let Some(also) = binding["also_checks"].as_array() {
                 names.extend(also.iter().filter_map(|c| c.as_str()).map(|clause| {
-                    // Qualified names reach clauses of other requirements; bare
-                    // ones stay within this binding's own.
                     if clause.contains('.') {
                         clause.to_string()
                     } else {
@@ -48,9 +35,6 @@ fn bindings_in_config(root: &Path) -> BTreeSet<String> {
         .collect()
 }
 
-/// A `@drt` comment with no binding behind it binds nothing, and a binding is
-/// claimed: the binding, not the comment, is the bond.
-///
 /// @tests REQ-DRT-BIND.binding_is_the_bond
 /// @structural REQ-DRT-BIND.binding_is_the_bond reason="a claim that the binding file and the annotations name the same bonds, read off both"
 #[test]
@@ -85,8 +69,6 @@ fn every_drt_annotation_has_a_binding_and_every_binding_has_an_annotation() {
     assert!(!configured.is_empty(), "no bindings at all");
 }
 
-/// Every binding must name an implementation that exists and can be resolved.
-///
 /// @tests REQ-DRT-RUST.params_from_source
 #[test]
 fn every_binding_resolves_against_the_source() {
@@ -129,8 +111,6 @@ fn every_binding_resolves_against_the_source() {
         let resolved = resolve(&root, &binding)
             .unwrap_or_else(|e| panic!("binding {}: {e}", binding.op()));
 
-        // The model declares the arguments it takes; the implementation must
-        // take the same number, or the call cannot be the same call.
         let declared = entry["model"]["arguments"].as_array().map(|a| a.len()).unwrap_or(0);
         assert_eq!(
             resolved.parameters.len(),

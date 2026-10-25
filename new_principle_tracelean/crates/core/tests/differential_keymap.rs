@@ -1,14 +1,3 @@
-//! Validating a keymap, and answering what keys are available.
-//!
-//! The keymap is data a user edits, so it can be wrong in ways the code cannot.
-//! Everything wrong with it is reported at load — a binding that fails when
-//! pressed is a keymap that works until the moment somebody needs it.
-//!
-//! Two of the six problems are about reachability rather than about any single
-//! binding: a mode no key sequence reaches is dead configuration, and an action
-//! no sequence reaches is a feature the user cannot get to. Neither shows up by
-//! pressing keys, which is why they are worth generating graphs for.
-
 mod harness;
 
 use std::collections::BTreeMap;
@@ -162,12 +151,6 @@ fn model_and_implementation_agree_on_which_keys_are_available() {
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
-/// Every problem the requirement names must occur, or agreement says nothing
-/// about the cases that matter.
-///
-/// Also states the which-key law directly: the bar lists a key if and only if
-/// the same keymap dispatches it.
-///
 /// @tests REQ-MYTH.whichkey_is_a_query
 /// @tests REQ-DRT-COVER.law_coverage
 #[test]
@@ -200,8 +183,6 @@ fn generation_reaches_every_problem_and_the_bar_matches_the_machine() {
                 .or_default() += 1;
         }
 
-        // The bar is a query over the machine, so every key it offers must do
-        // something other than pass through.
         for (mode_name, _) in &keymap.modes {
             for (key, _) in which_key_of(keymap.clone(), mode_name.clone()) {
                 assert!(
@@ -227,14 +208,6 @@ fn generation_reaches_every_problem_and_the_bar_matches_the_machine() {
     support::covered("REQ-MYTH.modes_defined", &counts);
 }
 
-/// The bar, asked where it has something to say.
-///
-/// A which-key bar listing nothing agrees with every implementation, including
-/// one that never lists anything. So the floor is on modes that offer keys, and
-/// separately on each of the three things a key can reach — a mode, an action,
-/// and the way back out — because a bar that showed only one kind would look
-/// right until somebody pressed another.
-///
 /// @tests REQ-MYTH.whichkey_is_a_query
 /// @tests REQ-DRT-COVER.law_coverage
 #[test]
@@ -252,14 +225,6 @@ fn generation_reaches_bars_that_offer_every_kind_of_key() {
         let mode = v["mode"].as_str().unwrap_or_default().to_string();
 
         let bar = which_key_of(keymap.clone(), mode.clone());
-        // The bar is a query over the machine: every key it offers does
-        // something, and it says what. Leaving counts — Escape is a key the bar
-        // is right to show — but passing through does not, because a key that
-        // passes through is one the mode does not bind at all.
-        // The description is whatever the binding carries — generated keymaps
-        // carry generated descriptions, including empty ones — so what is
-        // checked here is that the bar reports the binding's own words, not
-        // that the words are good.
         for (key, _description) in &bar {
             match step(keymap.clone(), mode.clone(), key.clone()) {
                 Outcome::Enter { .. } => entering += 1,

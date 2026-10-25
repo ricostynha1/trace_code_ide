@@ -1,37 +1,16 @@
-//! Where a name is defined, found by reading the files — no language server.
-//!
-//! A language server is a process, and this editor starts none. What a person
-//! mostly wants from "go to definition" is the line that says `fn name`,
-//! `struct name`, `def name`, `theorem name`: a declaration keyword followed by
-//! the name. That is found by reading the workspace, which the editor already
-//! holds, and a name declared twice is answered with both.
-
-/// Words that introduce a declaration, in the languages this editor reads.
 const INTRODUCERS: &[&str] = &[
-    // Rust
     "fn", "struct", "enum", "trait", "type", "mod", "const", "static", "union", "macro_rules!",
-    // Lean
     "def", "theorem", "lemma", "structure", "inductive", "class", "instance", "abbrev", "axiom",
-    // TypeScript / JavaScript
     "function", "interface", "let", "var",
 ];
 
-/// One place a name is declared.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct Declared {
     pub path: String,
-    /// One-based.
     pub line: u32,
-    /// The declaring line, trimmed, for a person choosing between several.
     pub text: String,
 }
 
-/// The identifier around a position: ASCII letters, digits, `_`, and `.`
-/// inside a Lean name (`Workspace.canon`).
-///
-/// ASCII, because `dispatch` reads the name with it and is compared with a
-/// model (`TraceLean.Act.identifierAt`) whose characters are classified the
-/// same way on both sides; the identifiers of the languages read here are.
 pub fn identifier_at(text: &str, offset: usize) -> Option<String> {
     let chars: Vec<char> = text.chars().collect();
     let part = |c: char| c.is_ascii_alphanumeric() || c == '_' || c == '.' || c == '!';
@@ -49,11 +28,6 @@ pub fn identifier_at(text: &str, offset: usize) -> Option<String> {
     (!word.is_empty() && !word.chars().all(|c| c.is_ascii_digit())).then_some(word)
 }
 
-/// Every line of every file that declares `name`, by path then line.
-///
-/// A dotted name (`Workspace.canon`) is also looked for by its last part,
-/// since that is how most declarations spell it.
-///
 /// @implements REQ-NAV.definitions_found
 /// @drt REQ-NAV.definitions_found
 pub fn declarations(files: Vec<(String, String)>, name: &str) -> Vec<Declared> {
@@ -70,10 +44,6 @@ pub fn declarations(files: Vec<(String, String)>, name: &str) -> Vec<Declared> {
     found
 }
 
-/// Every line of every file that holds `needle`, by path then line, at most
-/// `limit` of them. As a whole word only when `whole` — which is how a name's
-/// uses are found — and ignoring case otherwise, which is how a person searches.
-///
 /// @implements REQ-NAV.uses_found
 /// @drt REQ-NAV.uses_found
 pub fn occurrences(mut files: Vec<(String, String)>, needle: &str, whole: bool, limit: usize) -> Vec<Declared> {
@@ -83,13 +53,10 @@ pub fn occurrences(mut files: Vec<(String, String)>, needle: &str, whole: bool, 
     let lowered = needle.to_lowercase();
     let word = |c: Option<char>| c.is_some_and(|c| c.is_alphanumeric() || c == '_');
     let mut found = Vec::new();
-    // By path alone, and stably: two files of one name keep their order.
     files.sort_by(|a, b| a.0.cmp(&b.0));
     for (path, text) in &files {
         for (n, line) in text.lines().enumerate() {
             let hit = if whole {
-                // Every place it starts, overlapping too: in `x...`, `..`
-                // is a whole word only where it starts second.
                 line.char_indices().any(|(at, _)| {
                     line[at..].starts_with(needle)
                         && !word(line[..at].chars().next_back())
@@ -109,19 +76,13 @@ pub fn occurrences(mut files: Vec<(String, String)>, needle: &str, whole: bool, 
     found
 }
 
-/// Whether a line declares `name`: an introducer, then the name as a whole
-/// word, with only modifiers and visibility before the introducer.
 fn declares(line: &str, name: &str) -> bool {
     declared_on(line).as_deref() == Some(name)
 }
 
-/// The name a line declares, if it declares one: the word after its
-/// introducer, with only modifiers and visibility before that.
-///
 /// @implements REQ-NAV.declaration_line
 /// @drt REQ-NAV.declaration_line
 pub fn declared_on(line: &str) -> Option<String> {
-    // A path stays one word: `let Kind::File { .. } = x` declares no `Kind`.
     let line = line.replace("::", "∷");
     let words: Vec<&str> = line
         .split(|c: char| c.is_whitespace() || matches!(c, '(' | ')' | '<' | '>' | ':' | '{' | '=' | ';' | ','))
@@ -131,7 +92,6 @@ pub fn declared_on(line: &str) -> Option<String> {
         if INTRODUCERS.contains(word) {
             return words.get(i + 1).filter(|next| !next.contains('∷')).map(|next| next.to_string());
         }
-        // Only modifiers may come before the introducer.
         let modifier = matches!(
             *word,
             "pub" | "pub(crate)" | "pub(super)" | "crate" | "async" | "unsafe" | "extern" | "export"
@@ -167,7 +127,6 @@ mod tests {
         assert_eq!(places, vec![("src/a.rs", 2), ("web/app.ts", 1)]);
         let canon = declarations(files, "Workspace.canon");
         assert_eq!(canon.first().map(|d| d.line), Some(1));
-        // A pattern naming a path declares nothing of it.
         assert!(!declares("let Kind::File { path } = &kind else {", "Kind"));
         assert!(declares("let kind: Kind = x;", "kind"));
         assert_eq!(declared_on("    pub(crate) fn go(&self) {").as_deref(), Some("go"));

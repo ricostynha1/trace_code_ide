@@ -1,7 +1,3 @@
-//! Finding and asking, checked against their models: a text with `*` and `?`,
-//! the lines that hold a match, what a key does to a typed answer, what a
-//! colour setting accepts, and what the proof panel says of the goals.
-
 mod harness;
 mod support;
 
@@ -38,8 +34,6 @@ fn glob_input() -> Schema {
     ])
 }
 
-/// A text with `*` and `?`, checked against the model.
-///
 /// @drt REQ-NAV.find_by_glob
 /// @tests REQ-NAV.find_by_glob
 #[test]
@@ -56,9 +50,6 @@ fn model_and_implementation_agree_on_where_a_pattern_matches() {
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
-/// A match, none, several, a star, a question mark, an empty pattern, and a
-/// text of more than one line.
-///
 /// @tests REQ-NAV.find_by_glob
 /// @tests REQ-DRT-COVER.law_coverage
 #[test]
@@ -108,8 +99,6 @@ fn generation_reaches_matches_stars_and_lines() {
     );
 }
 
-/// The lines that hold a match, checked against the model.
-///
 /// @drt REQ-NAV.find_lists_lines
 /// @tests REQ-NAV.find_lists_lines
 #[test]
@@ -127,8 +116,6 @@ fn model_and_implementation_agree_on_which_lines_match() {
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
-/// Some lines, none, and every line.
-///
 /// @tests REQ-NAV.find_lists_lines
 /// @tests REQ-DRT-COVER.law_coverage
 #[test]
@@ -165,8 +152,6 @@ fn ask_input() -> Schema {
     ])
 }
 
-/// What a key does to a typed answer, checked against the model.
-///
 /// @drt REQ-NAV.name_is_asked_for
 /// @tests REQ-NAV.name_is_asked_for
 #[test]
@@ -183,9 +168,6 @@ fn model_and_implementation_agree_on_what_a_key_does_to_an_answer() {
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
-/// Each way a key can go: text, a space, Backspace, Enter with and without an
-/// answer, Escape, and a key that is none of them.
-///
 /// @tests REQ-NAV.name_is_asked_for
 /// @tests REQ-DRT-COVER.law_coverage
 #[test]
@@ -240,8 +222,6 @@ fn setting_input() -> Schema {
     )])
 }
 
-/// What a colour setting accepts, checked against the model.
-///
 /// @drt REQ-LOOK.setting_edited_in_place
 /// @tests REQ-LOOK.setting_edited_in_place
 #[test]
@@ -258,8 +238,6 @@ fn model_and_implementation_agree_on_what_a_colour_is() {
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
-/// A colour and a value that is none.
-///
 /// @tests REQ-LOOK.setting_edited_in_place
 /// @tests REQ-DRT-COVER.law_coverage
 #[test]
@@ -293,8 +271,6 @@ fn goals_input() -> Schema {
     ])
 }
 
-/// What the proof panel says of the goals, checked against the model.
-///
 /// @drt REQ-LSP.proof_state_shown
 /// @tests REQ-LSP.proof_state_shown
 #[test]
@@ -317,8 +293,6 @@ fn model_and_implementation_agree_on_what_the_panel_says() {
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
-/// No result, no list of goals, an empty list, several goals.
-///
 /// @tests REQ-LSP.proof_state_shown
 /// @tests REQ-DRT-COVER.law_coverage
 #[test]

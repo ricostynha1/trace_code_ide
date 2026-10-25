@@ -1,15 +1,7 @@
-//! History as a tree.
-//!
-//! A linear stack destroys work: undo three steps, type one character, and the
-//! three are gone. They were an alternative, not a mistake. A tree keeps them.
-
 use serde::{Deserialize, Serialize};
 
 use super::command::{apply, inverse, Command, Outcome, Refusal, Workspace};
 
-/// Node identity. A counter rather than a random identifier, because a derived
-/// artefact must not embed anything that varies between runs of the same input.
-///
 /// @implements ARCH-DETERMINISM.no_ambient_time
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct NodeId(pub u64);
@@ -23,14 +15,10 @@ pub struct Node {
     pub children: Vec<NodeId>,
 }
 
-/// The tree, and where in it we are.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Tree {
-    /// The state before any command. Every node's state is this plus its
-    /// ancestry.
     pub base: Workspace,
     nodes: Vec<Node>,
-    /// Index into `nodes`; `None` means "at the base".
     current: Option<usize>,
     next_id: u64,
 }
@@ -60,7 +48,6 @@ impl Tree {
         self.nodes.iter().position(|n| n.id == id)
     }
 
-    /// The state at the current position.
     pub fn state(&self) -> Result<Workspace, Refusal> {
         match self.current() {
             None => Ok(self.base.clone()),
@@ -68,11 +55,6 @@ impl Tree {
         }
     }
 
-    /// The state at a node, by replaying its ancestry from the base.
-    ///
-    /// This is the *definition* of a node's state. `jump_to` is an optimisation
-    /// of it, and the two are required to agree.
-    ///
     /// @implements REQ-UNDO.jump_equivalence
     pub fn state_at(&self, id: NodeId) -> Result<Workspace, Refusal> {
         let mut workspace = self.base.clone();
@@ -83,7 +65,6 @@ impl Tree {
         Ok(workspace)
     }
 
-    /// Node identifiers from the root down to `id`, inclusive.
     pub fn ancestry(&self, id: NodeId) -> Vec<NodeId> {
         let mut path = Vec::new();
         let mut cursor = Some(id);
@@ -96,11 +77,6 @@ impl Tree {
         path
     }
 
-    /// Record a command, applying it to the current state.
-    ///
-    /// A command recorded after an undo becomes a *sibling* of what was undone,
-    /// so the abandoned path is still there.
-    ///
     /// @implements REQ-UNDO.no_loss_on_branch
     /// @implements REQ-UNDO.reachable
     pub fn push(&mut self, command: Command) -> Result<NodeId, Refusal> {
@@ -108,13 +84,7 @@ impl Tree {
         self.push_from(&state, command).map(|(id, _)| id)
     }
 
-    /// `push`, told the state the tree is at rather than replaying it from the
-    /// base: the same node, and the state after it. An editor holding the
-    /// state saves a replay of the whole history on every key, which grew with
-    /// the session until typing lagged. `state` must be `self.state()`.
     pub fn push_from(&mut self, state: &Workspace, command: Command) -> Result<(NodeId, Workspace), Refusal> {
-        // Applied before anything is recorded, so a refused command leaves no
-        // node behind.
         let after = apply(state, &command)?;
 
         let id = NodeId(self.next_id);
@@ -135,7 +105,6 @@ impl Tree {
         Ok((id, after))
     }
 
-    /// Move to the parent, undoing the current command.
     pub fn undo(&mut self) -> Option<NodeId> {
         let index = self.current?;
         let parent = self.nodes[index].parent;
@@ -143,21 +112,16 @@ impl Tree {
         parent
     }
 
-    /// Move to the most recently created child.
     pub fn redo(&mut self) -> Option<NodeId> {
         let children = match self.current {
             None => self.roots(),
             Some(index) => self.nodes[index].children.clone(),
         };
-        // The latest branch, so redo after undo-and-branch follows the newest
-        // work rather than silently resurrecting the abandoned one.
         let target = children.into_iter().max()?;
         self.current = self.index_of(target);
         Some(target)
     }
 
-    /// Every node ever created, in creation order.
-    ///
     /// @implements REQ-UNDO.reachable
     pub fn ids(&self) -> Vec<NodeId> {
         self.nodes.iter().map(|n| n.id).collect()
@@ -167,9 +131,6 @@ impl Tree {
         self.nodes.iter().filter(|n| n.parent.is_none()).map(|n| n.id).collect()
     }
 
-    /// Travel to a node by way of the nearest common ancestor: invert on the
-    /// way up, apply on the way down.
-    ///
     /// @implements REQ-UNDO.path_via_ancestor
     pub fn jump_to(&mut self, target: NodeId) -> Result<Workspace, Refusal> {
         let from = self.current().map(|id| self.ancestry(id)).unwrap_or_default();
@@ -195,10 +156,6 @@ impl Tree {
         Ok(workspace)
     }
 
-    /// The diff a node represents, as the states either side of it.
-    ///
-    /// Producing it does not move the current position.
-    ///
     /// @implements REQ-UNDO.preview_is_pure
     pub fn preview(&self, id: NodeId) -> Result<(Workspace, Workspace), Refusal> {
         let node = self.node(id).ok_or_else(|| Refusal::NoSuchFile { path: String::new() })?;
@@ -211,26 +168,13 @@ impl Tree {
     }
 }
 
-/// One step of a script driving a tree.
-///
-/// A tree is stateful, and the property worth checking is about a *history* of
-/// operations rather than any single one. A script is how that history gets
-/// into a generator.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", rename_all_fields = "camelCase")]
 pub enum Step {
-    /// An edit.
     Push { command: Command },
-    /// A move through the history, which creates nothing.
     Move { movement: Movement },
 }
 
-/// Moving through a history, as opposed to adding to it.
-///
-/// Split from `Step` because the two are different kinds of thing — one records
-/// work, the other travels over work already recorded — and because a generator
-/// over a flat four-way choice spends three quarters of a script navigating a
-/// tree that was never built.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", rename_all_fields = "camelCase")]
 pub enum Movement {
@@ -239,42 +183,18 @@ pub enum Movement {
     Jump { node: u64 },
 }
 
-/// What running a script produced.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Report {
-    /// Every node the script created, in creation order.
     pub nodes: Vec<u64>,
     pub current: Option<u64>,
-    /// For each node, the state jumping to it reaches.
     pub travelled: Vec<Outcome>,
-    /// For each node, the state replaying its ancestry from the base reaches.
     pub replayed: Vec<Outcome>,
-    /// For each node, the diff it represents: the state before its command and
-    /// the state after.
     pub previews: Vec<(Outcome, Outcome)>,
-    /// Where the tree sits after every node has been previewed.
-    ///
-    /// Equal to `current` or the preview moved the position, which is what
-    /// `preview_is_pure` forbids. A diff view that navigated as a side effect
-    /// of being drawn would leave the user somewhere they did not ask to be —
-    /// and worse, the *next* command would branch from there.
-    ///
     /// @implements REQ-UNDO.preview_is_pure
     pub current_after_previews: Option<u64>,
 }
 
-/// Run a script against a fresh tree, then ask every node the same question two
-/// ways.
-///
-/// `state_at` is the definition of a node's state; `jump_to` is an optimisation
-/// of it that travels by way of the nearest common ancestor. They are required
-/// to agree, and the report puts both answers side by side so a disagreement is
-/// a divergence rather than something a reader has to notice.
-///
-/// Each jump runs on a copy, so the answers do not depend on the order they are
-/// asked in.
-///
 /// @implements REQ-UNDO.jump_equivalence
 /// @implements REQ-UNDO.path_via_ancestor
 /// @implements REQ-UNDO.reachable
@@ -294,8 +214,6 @@ pub fn run_script(base: Workspace, script: Vec<Step>) -> Report {
         .collect();
     let replayed = ids.iter().map(|id| Outcome::from(tree.state_at(*id))).collect();
 
-    // Previewing runs on the tree itself, not a copy: the question is whether
-    // it moves the position, and a copy could not answer it.
     let previewed = tree.clone();
     let previews = ids
         .iter()
@@ -318,11 +236,6 @@ pub fn run_script(base: Workspace, script: Vec<Step>) -> Report {
     }
 }
 
-/// The tree a script builds.
-///
-/// Separate from `run_script` because more than one question is asked of a
-/// generated history — what each node's state is, and where a position came
-/// from — and both need the same tree built the same way.
 pub fn from_script(base: Workspace, script: Vec<Step>) -> Tree {
     let mut tree = Tree::new(base);
     for step in script {
@@ -358,8 +271,6 @@ mod tests {
         Tree::new(Workspace::with(&[("a.rs", "")]))
     }
 
-    /// Told the state it is at, the tree records what `push` would, and says
-    /// the state after it; a refused command still leaves nothing.
     #[test]
     fn push_from_the_held_state_is_push() {
         let (mut told, mut replayed) = (tree(), tree());
@@ -385,13 +296,10 @@ mod tests {
         let second = t.push(insert("a.rs", 0, "two")).unwrap();
 
         assert_eq!(t.len(), 2);
-        // The abandoned path is still reachable and still says what it said.
         assert_eq!(t.state_at(first).unwrap().get("a.rs").unwrap(), "one");
         assert_eq!(t.state_at(second).unwrap().get("a.rs").unwrap(), "two");
     }
 
-    /// The law: travelling and replaying must agree.
-    ///
     /// @tests REQ-UNDO.jump_equivalence
     #[test]
     fn jumping_agrees_with_replaying_from_the_root() {
@@ -408,8 +316,6 @@ mod tests {
         }
     }
 
-    /// Travelling between branches must go via the common ancestor, not
-    /// through the root, and must still land in the same place.
     #[test]
     fn travelling_between_branches_lands_correctly() {
         let mut t = tree();
@@ -452,7 +358,6 @@ mod tests {
         assert_eq!(t.state().unwrap().get("a.rs").unwrap(), "x");
     }
 
-    /// Redo after branching follows the newest work, not the abandoned path.
     #[test]
     fn redo_follows_the_latest_branch() {
         let mut t = tree();

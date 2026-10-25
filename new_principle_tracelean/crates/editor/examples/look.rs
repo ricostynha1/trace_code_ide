@@ -1,14 +1,3 @@
-//! The window's commands, answered by a real editor over standard input and
-//! output — so the page can be looked at in a browser (`web/test/look.mjs`
-//! serves it and photographs it in headless Chrome) without opening a window
-//! on anybody's desktop.
-//!
-//! The commands answer as `crates/desktop/src/main.rs` answers them: the same
-//! editor calls, the same shapes. Only the transport differs. This reads no
-//! file and opens no socket; the script around it does both.
-//!
-//! Run: `cargo run -p tracelean-editor --example look -- demo`
-
 use std::io::{BufRead, Write};
 
 use serde_json::{json, Value};
@@ -39,7 +28,6 @@ fn optional(args: &Value, key: &str) -> Option<String> {
     args[key].as_str().map(str::to_string)
 }
 
-/// One command, as the window answers it.
 fn answer(editor: &mut Editor, command: &str, args: &Value) -> Value {
     match command {
         "shown" => {
@@ -169,8 +157,6 @@ fn answer(editor: &mut Editor, command: &str, args: &Value) -> Value {
     }
 }
 
-/// One request a line in — `{"command": …, "args": {…}}` — one answer a line
-/// out, as JSON.
 fn main() {
     let root = std::env::args().nth(1).unwrap_or_else(|| ".".into());
     let keymap = keymap::load(KEYMAP, &keymap::actions()).expect("the shipped keymap loads");

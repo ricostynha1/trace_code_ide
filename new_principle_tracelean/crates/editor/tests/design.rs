@@ -1,6 +1,3 @@
-//! The design station, from the editor: opened folded to its roots, unfolded a
-//! level by its mark, all of it under a node at once, and folded back.
-
 use std::path::PathBuf;
 
 use tracelean_core::surface::keymap::{self, Keymap};
@@ -36,7 +33,6 @@ fn here(editor: &mut Editor, action: &str, target: Option<&str>) {
 }
 
 fn rows(editor: &Editor) -> Vec<String> {
-    // The id is the third word: mark, grade, id.
     plain_text(editor.buffer())
         .into_iter()
         .skip(1)
@@ -74,7 +70,6 @@ fn a_key_on_a_fold_mark_unfolds_its_row() {
     let root = project(TREE);
     let mut editor = Editor::open(root.clone(), keymap());
     editor.perform(tracelean_core::surface::act::Intent::Display { what: BufferKind::Menu { title: "design".into() } });
-    // The cursor on the mark of the first row, past the header line.
     let header = plain_text(editor.buffer())[0].chars().count();
     editor.offset = header + 1;
     for key in ["Space", "g", "o"] {

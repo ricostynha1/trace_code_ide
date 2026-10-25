@@ -1,17 +1,3 @@
-//! The sandbox laws, checked against the model.
-//!
-//! This is the suite ADR-0002 was written for. The effect — copying a project
-//! into a workspace, probing a host, watching where a tool wrote — cannot run
-//! in Lean. The *law* about it is an ordinary total function over a witness,
-//! and that is what both sides compute here.
-//!
-//! The generator is doing something specific: it draws paths from a small
-//! alphabet that includes protected roots, build directories, escapes and
-//! ordinary source files, so that a generated witness routinely contains a file
-//! the copy was right to omit next to one it was wrong to omit. Random strings
-//! would produce mirrored paths almost every time and the law would never be
-//! asked the question it exists for.
-
 mod harness;
 mod support;
 
@@ -24,8 +10,6 @@ fn strukt(fields: &[(&str, Schema)]) -> Schema {
     Schema::Struct { fields: fields.iter().map(|(k, v)| (k.to_string(), v.clone())).collect() }
 }
 
-/// Paths worth generating: one of each class, plus the spellings that try to
-/// disguise themselves.
 fn path() -> Schema {
     Schema::Str {
         max_len: Some(1),
@@ -46,11 +30,6 @@ fn path() -> Schema {
     }
 }
 
-/// Snapshots are kept short deliberately. Three independently generated
-/// workspaces of four files each almost never coincide, and a run that broke no
-/// law at all would then be a case the suite barely reached — agreement on
-/// nothing but failures is not agreement about the law. Two entries drawn from
-/// a small alphabet collide often enough for the clean path to be real.
 fn workspace() -> Schema {
     strukt(&[(
         "files",
@@ -67,8 +46,6 @@ fn capability() -> Schema {
     let mut variants: BTreeMap<String, Option<Box<Schema>>> = BTreeMap::new();
     let reason = Schema::Str {
         max_len: Some(0),
-        // The empty reason is the case the law exists for, so it is one of two
-        // values rather than one draw in a large alphabet.
         examples: vec!["".into(), "no bwrap".into()],
     };
     variants.insert(
@@ -137,9 +114,6 @@ fn model_and_implementation_agree_on_what_a_run_got_wrong() {
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
-/// Every violation the law can report must actually occur, or agreement is
-/// agreement about the empty list.
-///
 /// @tests REQ-DRT-COVER.law_coverage
 #[test]
 fn generation_reaches_every_violation() {
@@ -174,14 +148,6 @@ fn generation_reaches_every_violation() {
         }
     }
 
-    // The floors are the binding's (`.tracelean/drt.json`), so the coverage
-    // half of the op's evidence is recorded and the run can reach L3.
-    //
-    // `copy differs` and a wholly clean run both need a coincidence between two
-    // independently generated snapshots, so they are rarer than the rest by the
-    // shape of the generator rather than by the shape of the law. The floors
-    // are what this seed honestly reaches; raising them would mean narrowing
-    // the alphabet until the other five stopped occurring.
     support::covered(
         "REQ-OBS.workspace_is_a_copy",
         &[

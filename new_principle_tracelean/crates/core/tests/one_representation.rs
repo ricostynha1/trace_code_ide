@@ -1,11 +1,3 @@
-//! There is one thing on screen, and it is a buffer.
-//!
-//! `everything_is_a_buffer` is a claim about this tree's vocabulary rather than
-//! about a value: a file, a directory listing, a diff under review, a menu and a
-//! transcript are all the same type, and nothing in the core offers a second way
-//! to say what is shown. That is checked by building one of each and by reading
-//! the surface layer, which is what `@structural` records (ADR-0012).
-
 use std::path::{Path, PathBuf};
 
 use tracelean_core::surface::keymap;
@@ -31,8 +23,6 @@ fn of_kind(kind: BufferKind, text: &str, actions: &[&str]) -> Buffer {
     }
 }
 
-/// Every shown thing is a buffer, and every buffer answers the same questions.
-///
 /// @tests REQ-VIEW.everything_is_a_buffer
 /// @structural REQ-VIEW.everything_is_a_buffer reason="a claim about this tree's vocabulary — that one type carries every shown thing and the core offers no second one — which is a property of the code rather than a value any function computes"
 #[test]
@@ -54,7 +44,6 @@ fn a_file_a_listing_a_review_a_menu_and_a_record_are_all_buffers() {
     ];
 
     for buffer in &buffers {
-        // Each one describes its own text, renders, and answers what can be done.
         assert_eq!(faults(buffer.clone()), vec![], "{:?}", buffer.kind);
         assert!(!plain_text(buffer.clone()).is_empty(), "{:?} rendered nothing", buffer.kind);
         assert!(
@@ -63,9 +52,6 @@ fn a_file_a_listing_a_review_a_menu_and_a_record_are_all_buffers() {
             buffer.kind
         );
 
-        // Every action a buffer names is one the keymap can dispatch. An action
-        // only the representation knows about is one no key reaches, and an
-        // action only the keymap knows about is one no buffer offers.
         for action in actions_at(buffer.clone(), 0) {
             assert!(
                 keymap::ACTIONS.contains(&action.as_str()),
@@ -75,9 +61,6 @@ fn a_file_a_listing_a_review_a_menu_and_a_record_are_all_buffers() {
         }
     }
 
-    // And nothing in the surface layer offers a second way to say what is shown.
-    // A frontend-shaped type here would be a view model, which is the thing that
-    // rotted in the tree this port came from.
     let root = project_root();
     for file in ["keymap.rs", "lsp.rs", "mod.rs", "produce.rs"] {
         let source =
@@ -92,13 +75,6 @@ fn a_file_a_listing_a_review_a_menu_and_a_record_are_all_buffers() {
     }
 }
 
-/// Every frontend in this tree renders buffers and builds none.
-///
-/// A frontend that constructs a `Buffer` has become a second producer, which is
-/// the failure `REQ-SHOW.core_produces` exists to prevent: two answers to what
-/// is on screen, one of them maintained. Checkable by reading, because building
-/// one means naming the type.
-///
 /// @tests REQ-SHOW.core_produces
 #[test]
 fn no_frontend_builds_a_buffer_of_its_own() {
@@ -106,8 +82,6 @@ fn no_frontend_builds_a_buffer_of_its_own() {
     let mut checked = 0;
     for directory in ["crates/core/src/bin", "crates/tui/src", "crates/desktop/src"] {
         let Ok(entries) = std::fs::read_dir(root.join(directory)) else {
-            // The terminal frontend does not exist yet; when it does, it is
-            // held to this without anybody remembering to add it here.
             continue;
         };
         for entry in entries.flatten() {
@@ -120,10 +94,6 @@ fn no_frontend_builds_a_buffer_of_its_own() {
             checked += 1;
             for (line_no, line) in library.lines().enumerate() {
                 let line = line.trim();
-                // A frontend *calling* a producer is the point; what it may not
-                // do is construct the value itself. Returning what a producer
-                // returned is a call, so a signature naming the type is not a
-                // construction.
                 if line.starts_with("//") || line.contains("-> Buffer") || line.contains("-> Span") {
                     continue;
                 }
@@ -140,8 +110,6 @@ fn no_frontend_builds_a_buffer_of_its_own() {
     }
     assert!(checked > 0, "no frontend source was read, so this checked nothing");
 
-    // The web frontend is held to the same rule in its own language: a `Buffer`
-    // is a type it receives, never one it makes.
     let web = root.join("web/src");
     if let Ok(entries) = std::fs::read_dir(&web) {
         for entry in entries.flatten() {
@@ -166,21 +134,6 @@ fn no_frontend_builds_a_buffer_of_its_own() {
     }
 }
 
-/// The window can reach the editor.
-///
-/// The page is the strict half of `one_representation`: it renders a buffer the
-/// core produced and produces none, so with no way to ask for one it renders
-/// nothing at all. That is what an opened window showed — *No editor is
-/// attached* — and neither the editor, the producers nor the page were wrong.
-/// The bridge the page looks for was simply not injected, because Tauri injects
-/// it only when the configuration asks.
-///
-/// So the two are read back together: the name the page reaches for, and the
-/// setting that puts it there. Nothing a value can express — the failure is an
-/// agreement between a TypeScript file and a JSON file, which is why this is
-/// checked by reading (ADR-0012) and why the claim is annotated here rather
-/// than in a language TraceLean has no grammar for (ADR-0008).
-///
 /// @tests REQ-VIEW.one_representation
 #[test]
 fn the_window_is_configured_to_hand_the_page_the_bridge_it_looks_for() {
@@ -202,9 +155,6 @@ fn the_window_is_configured_to_hand_the_page_the_bridge_it_looks_for() {
          renders nothing"
     );
 
-    // A page that cannot reach an editor says so rather than drawing something
-    // it made up, which is the same rule stated for the case where there is no
-    // window at all.
     assert!(
         page.contains("No editor is attached"),
         "the page invents something when it has no editor to ask"

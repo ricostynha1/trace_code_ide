@@ -1,12 +1,3 @@
-//! The vendored Lean grammar reads the Lean this project writes
-//! (`vendor/tree-sitter-lean4`, action plan §8).
-//!
-//! A region the grammar cannot parse anchors to the whole file and caps every
-//! annotation after it at L1 (ADR-0008), so a grammar change that loses a
-//! construct costs evidence silently. Two checks guard it: every file of
-//! `formal/` parses cleanly and loses no declaration, and each construct the
-//! extension added parses on its own — and a malformed one does not.
-
 use std::path::Path;
 
 use tracelean_core::trace::anchor::{scan, Lang};
@@ -23,7 +14,6 @@ fn lean_files() -> Vec<(String, String)> {
                     stack.push(path);
                 }
             } else if path.extension().is_some_and(|e| e == "lean")
-                // Lake's own DSL, not the Lean the models are written in.
                 && !path.file_name().is_some_and(|n| n == "lakefile.lean")
             {
                 let rel = path.strip_prefix(&root).unwrap().display().to_string();
@@ -35,9 +25,6 @@ fn lean_files() -> Vec<(String, String)> {
     out
 }
 
-/// The stored parser is the one `grammar.js` generates: the build uses a stale
-/// one with only a warning, so that an editor's background check never starts
-/// a generation, and this is where a stale one fails.
 #[test]
 fn the_stored_parser_is_generated_from_the_grammar() {
     let vendor = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../vendor/tree-sitter-lean4");
@@ -55,7 +42,6 @@ fn the_stored_parser_is_generated_from_the_grammar() {
     );
 }
 
-/// Where a file does not parse, as `line: text`.
 fn unparsed(text: &str) -> Vec<String> {
     let scanned = scan(text, Some(Lang::Lean4));
     let mut found: Vec<String> = scanned
@@ -69,9 +55,6 @@ fn unparsed(text: &str) -> Vec<String> {
     found
 }
 
-/// Every file of this project's own Lean parses, and every declaration that
-/// starts a line is found.
-///
 /// @tests REQ-ANNOT.totality
 #[test]
 fn every_file_of_formal_parses_and_loses_no_declaration() {
@@ -86,9 +69,7 @@ fn every_file_of_formal_parses_and_loses_no_declaration() {
         let starts: Vec<u32> = scanned.declarations.iter().map(|d| d.start_line).collect();
         for (n, line) in text.lines().enumerate() {
             let declares = keywords.iter().any(|k| line.starts_with(k) || line.starts_with(&format!("private {k}")))
-                // An instance with no name has nothing to be addressed by.
                 && !line.strip_prefix("instance ").is_some_and(|rest| rest.starts_with([':', '(', '[', '{']));
-            // A declaration's start may be its doc comment above the line.
             if declares && !scanned.declarations.iter().any(|d| d.start_line as usize <= n && n <= d.end_line as usize) {
                 wrong.push(format!("{file}:{}: no declaration found for `{line}` (starts at {starts:?})", n + 1));
             }
@@ -97,7 +78,6 @@ fn every_file_of_formal_parses_and_loses_no_declaration() {
     assert!(wrong.is_empty(), "{wrong:#?}");
 }
 
-/// Constructs the extension reads, each alone.
 const CONSTRUCTS: &[(&str, &str)] = &[
     ("by_cases", "theorem t (p : Prop) : p ∨ ¬p := by\n  by_cases h : p\n  · exact Or.inl h\n  · exact Or.inr h\n"),
     ("obtain with a pattern", "theorem t (h : ∃ x : Nat, x = 1) : True := by\n  obtain ⟨x, hx⟩ := h\n  trivial\n"),
@@ -128,9 +108,6 @@ fn each_construct_the_grammar_was_extended_for_parses() {
     }
 }
 
-/// An extension that accepts everything would pass the test above, so what is
-/// broken stays broken: an unfinished declaration is reported.
-///
 /// @tests REQ-CHECK.structural_rejects
 #[test]
 fn a_malformed_declaration_is_still_reported() {

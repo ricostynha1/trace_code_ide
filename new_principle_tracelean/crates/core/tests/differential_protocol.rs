@@ -1,14 +1,3 @@
-//! The wire protocol, checked against the model.
-//!
-//! This is the one coupling everything else in the differential machinery rests
-//! on, which makes it the worst place for a silent disagreement: a harness that
-//! misreads a reply reports divergences that are not there, or — much worse —
-//! agreement that is not there either.
-//!
-//! The generator builds lines out of fragments rather than from random strings.
-//! A random string is not JSON, so a random alphabet would test one branch two
-//! thousand times.
-
 mod harness;
 
 use std::collections::BTreeMap;
@@ -22,10 +11,6 @@ fn strukt(fields: &[(&str, Schema)]) -> Schema {
     Schema::Struct { fields: fields.iter().map(|(k, v)| (k.to_string(), v.clone())).collect() }
 }
 
-/// Lines a runner might emit: correct replies, replies to the wrong case,
-/// replies carrying both fields or neither, a `null` output (which is an
-/// answer), an error that is not a string, and three ways of not being a reply
-/// at all.
 fn line() -> Schema {
     Schema::Str {
         max_len: Some(1),
@@ -36,9 +21,6 @@ fn line() -> Schema {
             r#"{"case":1,"error":"boom"}"#.into(),
             r#"{"case":1,"output":1,"error":"boom"}"#.into(),
             r#"{"case":1}"#.into(),
-            // Ill-formed replies need the case to match before they are
-            // reached at all, so there is one for each `expected` the
-            // generator draws rather than only for case 1.
             r#"{"case":0}"#.into(),
             r#"{"case":2}"#.into(),
             r#"{"case":0,"output":1,"error":"boom"}"#.into(),
@@ -137,9 +119,6 @@ fn ops_input() -> Schema {
     strukt(&[(
         "ops",
         Schema::List {
-            // A three-name alphabet, so collisions are the common case rather
-            // than a coincidence: the law is about what happens when two
-            // bindings share an op, and distinct random names never do.
             inner: Box::new(Schema::Str {
                 max_len: Some(0),
                 examples: vec!["a".into(), "b".into(), "c".into()],
@@ -149,8 +128,6 @@ fn ops_input() -> Schema {
     )])
 }
 
-/// Both an op that collides and one that does not must occur.
-///
 /// @tests REQ-DRT-PROTO.ops_unique
 #[test]
 fn generation_reaches_collisions_and_their_absence() {
@@ -172,8 +149,6 @@ fn generation_reaches_collisions_and_their_absence() {
     support::covered("REQ-DRT-PROTO.ops_unique", &[("a collision", collided), ("no collision", clean)]);
 }
 
-/// Whether a reply carries exactly one of an output and an error.
-///
 /// @drt REQ-DRT-PROTO.reply_exclusive
 /// @tests REQ-DRT-PROTO.reply_exclusive
 #[test]
@@ -247,11 +222,6 @@ fn generation_reaches_every_shape_of_reply() {
     );
 }
 
-/// What a case came to, including the ways a runner fails to answer at all.
-///
-/// The process-level failures cannot be produced on demand by a real runner,
-/// so the events are generated: what is compared is the conclusion drawn from
-/// each, which is the decision `Runner::ask` delegates to `outcome`.
 fn event_input() -> Schema {
     let mut variants: BTreeMap<String, Option<Box<Schema>>> = BTreeMap::new();
     let reason = || Schema::Str { max_len: Some(3), examples: vec!["exit 101".into()] };
@@ -262,8 +232,6 @@ fn event_input() -> Schema {
         "read".into(),
         Some(Box::new(strukt(&[
             ("expected", Schema::Nat { max: Some(2), edges: vec![0, 1, 2] }),
-            // Weighted toward answers to each case `expected` can be, so that
-            // an answer is as common as each way of failing to give one.
             (
                 "got",
                 Schema::Option {
@@ -349,8 +317,6 @@ fn generation_reaches_every_outcome() {
     );
 }
 
-/// Inputs carrying the characters that would end a line, or a string, if they
-/// were written unescaped.
 fn case_input() -> Schema {
     let text = Schema::Str {
         max_len: Some(3),
@@ -423,7 +389,6 @@ fn generation_reaches_every_character_that_needs_escaping() {
     for _ in 0..2_000 {
         let value = gen::value(&schema, &mut rng);
         let text = value["input"].to_string() + &value["op"].to_string();
-        // Searched in the escaped text: `\n` there is a line break in the value.
         counts[0] += u64::from(text.contains("\\n") || text.contains("\\r"));
         counts[1] += u64::from(text.contains("\\\"") || text.contains("\\\\"));
         counts[2] += u64::from(text.contains("\\t") || text.contains("\\u0001") || text.contains("\\b"));
@@ -514,9 +479,6 @@ fn generation_reaches_mixed_languages_and_repeated_ops() {
     );
 }
 
-/// Every conclusion the protocol can reach must occur, or agreement is
-/// agreement about one branch.
-///
 /// @tests REQ-DRT-COVER.law_coverage
 #[test]
 fn generation_reaches_every_conclusion() {
@@ -557,14 +519,6 @@ fn generation_reaches_every_conclusion() {
     let _ = NotAReply::NotJson;
 }
 
-/// When two answers agree, checked against the model.
-///
-/// The case that matters is the one an obvious implementation gets wrong: both
-/// sides refusing an input is agreement, not a failed run. Getting that wrong
-/// makes every partial function untestable, and the failure is silent — the
-/// suite reports an error rather than a divergence, and somebody assumes the
-/// harness is broken.
-///
 /// @drt REQ-DRT.error_is_an_answer
 /// @tests REQ-DRT.error_is_an_answer
 #[test]
@@ -581,8 +535,6 @@ fn model_and_implementation_agree_on_when_two_answers_agree() {
     let model =
         harness::lean_runner("TraceLean.Protocol", "TraceLean.Protocol.agree", op, &["model", "implementation"], &scratch);
 
-    // Answers a model and an implementation might give, including `null` —
-    // which is an answer, not an absence.
     let answer = || Schema::Option {
         inner: Box::new(Schema::Enum {
             variants: [
@@ -612,8 +564,6 @@ fn model_and_implementation_agree_on_when_two_answers_agree() {
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
-/// What a clean run is worth, checked against the model.
-///
 /// @drt REQ-DRT.falsification_only
 /// @tests REQ-DRT.falsification_only
 #[test]

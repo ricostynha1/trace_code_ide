@@ -1,14 +1,3 @@
-//! The checker's decisions, checked against the model.
-//!
-//! Two separate things, and both are properties a reader has to be able to
-//! trust without reading the scanner: what a clause's claimed roles imply, and
-//! what each kind of finding means.
-//!
-//! The coverage decision is worth generating because sixteen role
-//! combinations is more than anyone writes fixtures for, and the interesting
-//! ones are the near-misses — modelled and implemented but unbound, implemented
-//! and tested but unmodelled.
-
 mod harness;
 
 use std::collections::BTreeMap;
@@ -179,7 +168,6 @@ fn model_and_implementation_agree_on_unsound_qualifiers() {
         &["qualifier", "today"],
         &scratch,
     );
-    // A date before, on and after the `until`s the qualifiers carry, and none.
     let today = Schema::Option {
         inner: Box::new(Schema::Str {
             max_len: Some(0),
@@ -201,9 +189,6 @@ fn model_and_implementation_agree_on_unsound_qualifiers() {
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
-/// The two properties stated directly: exactly one chain finding per clause,
-/// and nothing that describes progress ever blocks a build.
-///
 /// @tests REQ-CHECK.exactly_once
 /// @tests REQ-CHECK.progress_not_fault
 /// @tests REQ-DRT-COVER.law_coverage
@@ -292,9 +277,6 @@ fn model_and_implementation_agree_on_which_roles_are_crowded() {
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
-/// The generated role lists reach every outcome the clause names, and the
-/// implementation reports a role exactly when it occurs twice or more.
-///
 /// @tests REQ-CHECK.one_of_each_role
 #[test]
 fn every_crowded_role_is_reached_and_counted() {

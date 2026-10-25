@@ -1,30 +1,11 @@
-//! How things look, read from a file rather than written into a frontend.
-//!
-//! A role says what a region *is* and the core decides it; what colour that is
-//! belongs to whoever is looking. So the colours live in JSON: the shipped
-//! `assets/theme.json`, with anything in the project's `.tracelean/theme.json`
-//! laid over it key by key. Changing a colour is editing a file, and both
-//! frontends read the same one, so the terminal and the window cannot drift.
-//!
-//! Nothing here decides what is on screen: a theme can only say how a role, a
-//! token kind or a piece of chrome is painted.
-
 use std::path::Path;
 
 use serde_json::Value;
 
-/// The theme the project ships, compiled in so a frontend always has one.
 pub const SHIPPED: &str = include_str!("../../../assets/theme.json");
 
-/// Where a project overrides it.
 pub const OVERRIDE: &str = ".tracelean/theme.json";
 
-/// The shipped theme with the project's override laid over it.
-///
-/// An override that is missing is the ordinary case; one that does not parse
-/// is ignored rather than allowed to take the editor down with it, because a
-/// typo in a colour should cost a colour and not the session.
-///
 /// @implements REQ-LOOK.roles_drawn_in_theme_colours
 pub fn load(root: &Path) -> Value {
     let mut theme: Value = serde_json::from_str(SHIPPED).expect("the shipped theme parses");
@@ -36,7 +17,6 @@ pub fn load(root: &Path) -> Value {
     theme
 }
 
-/// Lay `over` onto `base`: objects merge key by key, anything else replaces.
 fn merge(base: &mut Value, over: Value) {
     match (base, over) {
         (Value::Object(base), Value::Object(over)) => {
@@ -48,10 +28,6 @@ fn merge(base: &mut Value, over: Value) {
     }
 }
 
-/// Write one setting into the project's override file, keeping what else is
-/// in it, and make the file if there is none. The one place the editor writes
-/// the theme, so that changing a colour is a change to the file and nothing
-/// else.
 pub fn write_setting(root: &Path, section: &str, key: &str, value: &str) -> Result<(), String> {
     let path = root.join(OVERRIDE);
     let mut over: Value = std::fs::read_to_string(&path)
@@ -67,7 +43,6 @@ pub fn write_setting(root: &Path, section: &str, key: &str, value: &str) -> Resu
     std::fs::write(&path, text + "\n").map_err(|error| error.to_string())
 }
 
-/// A colour from one section of the theme, as `#rrggbb`.
 pub fn colour<'a>(theme: &'a Value, section: &str, key: &str) -> Option<&'a str> {
     theme.get(section)?.get(key)?.as_str()
 }
@@ -96,9 +71,6 @@ mod tests {
         assert!(colour(&theme, "ui", "sidebar").is_some(), "the rest of the section survived");
     }
 
-    /// A project's override is laid over the shipped theme; one that does not
-    /// parse costs nothing, and no override is the shipped theme.
-    ///
     /// @tests REQ-LOOK.roles_drawn_in_theme_colours
     #[test]
     fn a_projects_override_is_read_and_a_broken_one_ignored() {

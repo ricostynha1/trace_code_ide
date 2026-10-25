@@ -1,16 +1,3 @@
-//! The classes of a binding's arguments, derived from their declared shapes.
-//!
-//! A hand-written list of situations can always miss a case. The classes of a
-//! shape cannot: below, at and above zero; empty and not; absent and present;
-//! each truth; each enum case; and the same, recursively, for every field,
-//! element and payload. Every differential run must reach all of them
-//! (`REQ-DRT-COVER.classes_reached`); a binding's named situations are counted
-//! on top, never instead.
-//!
-//! Only classes the declared bounds can produce are derived — a `Nat` capped at
-//! zero has no positive class — so a class not reached is the generator's
-//! fault, never the schema's. Pure.
-
 use std::collections::BTreeSet;
 
 use serde_json::Value;
@@ -19,7 +6,6 @@ use super::coverage::Observed;
 use super::gen;
 use super::schema::Schema;
 
-/// A class's name: the path to the value, then what it is.
 fn name(path: &str, label: &str) -> String {
     if path.is_empty() {
         label.to_string()
@@ -28,7 +14,6 @@ fn name(path: &str, label: &str) -> String {
     }
 }
 
-/// The path to a member of the value at `path`.
 fn member(path: &str, key: &str) -> String {
     if path.is_empty() {
         key.to_string()
@@ -37,7 +22,6 @@ fn member(path: &str, key: &str) -> String {
     }
 }
 
-/// Every class a value of `schema` at `path` can fall in.
 fn classes_at(path: &str, schema: &Schema, out: &mut Vec<String>) {
     match schema {
         Schema::Nat { max, edges } => {
@@ -102,14 +86,12 @@ fn classes_at(path: &str, schema: &Schema, out: &mut Vec<String>) {
     }
 }
 
-/// Every class of a schema, in the order they are derived.
 pub fn classes(schema: &Schema) -> Vec<String> {
     let mut out = Vec::new();
     classes_at("", schema, &mut out);
     out
 }
 
-/// The class of a number, by its sign.
 fn sign(path: &str, value: &Value) -> Option<String> {
     if let Some(n) = value.as_u64() {
         return Some(name(path, if n == 0 { "zero" } else { "positive" }));
@@ -118,7 +100,6 @@ fn sign(path: &str, value: &Value) -> Option<String> {
     Some(name(path, if n < 0 { "negative" } else if n == 0 { "zero" } else { "positive" }))
 }
 
-/// Which classes one value of `schema` at `path` is in.
 fn classes_of_at(path: &str, schema: &Schema, value: &Value, out: &mut Vec<String>) {
     match schema {
         Schema::Nat { .. } | Schema::Int { .. } => out.extend(sign(path, value)),
@@ -168,17 +149,12 @@ fn classes_of_at(path: &str, schema: &Schema, value: &Value, out: &mut Vec<Strin
     }
 }
 
-/// Which classes one value of `schema` is in.
 pub fn classes_of(schema: &Schema, value: &Value) -> Vec<String> {
     let mut out = Vec::new();
     classes_of_at("", schema, value, &mut out);
     out
 }
 
-/// How many of the first `cases` cases a seed draws reach each class of the
-/// schema, in the order the classes are derived — the same stream a run with
-/// that seed asks, so the count is of the cases actually asked.
-///
 pub fn reached(schema: Schema, seed: u64, cases: u64) -> Vec<Observed> {
     let hits: Vec<BTreeSet<String>> = gen::value_stream(seed, schema.clone(), cases)
         .iter()
@@ -193,10 +169,6 @@ pub fn reached(schema: Schema, seed: u64, cases: u64) -> Vec<Observed> {
         .collect()
 }
 
-/// `reached` over the `shape`-th of the shapes a seeded stream is checked over
-/// (`gen::SHAPES`, counted round): every class of every kind of schema, reached
-/// or not, from the same stream a run draws.
-///
 /// @implements REQ-DRT-COVER.classes_reached
 /// @drt REQ-DRT-COVER.classes_reached
 pub fn reached_shape(shape: u64, seed: u64, cases: u64) -> Vec<Observed> {
@@ -215,8 +187,6 @@ mod tests {
         Schema::Struct { fields: fields.iter().map(|(k, v)| (k.to_string(), v.clone())).collect() }
     }
 
-    /// Every shape a run is checked over reports its classes, counted round.
-    ///
     /// @tests REQ-DRT-COVER.classes_reached
     #[test]
     fn every_shape_reports_its_classes() {
@@ -252,9 +222,6 @@ mod tests {
         );
     }
 
-    /// The case this exists for: a class the generator can produce only
-    /// rarely, which a hand-named list would never have mentioned.
-    ///
     /// @tests REQ-DRT-COVER.classes_reached
     #[test]
     fn a_class_the_generator_almost_never_draws_is_counted_as_missed() {

@@ -1,8 +1,3 @@
-//! A setting's value: what a colour setting accepts.
-
-/// Whether a value is a colour a theme can hold: `#` and three, four, six or
-/// eight hexadecimal digits. Anything else is refused and changes nothing.
-///
 /// @implements REQ-LOOK.setting_edited_in_place
 pub fn is_colour(value: String) -> bool {
     let Some(digits) = value.strip_prefix('#') else { return false };

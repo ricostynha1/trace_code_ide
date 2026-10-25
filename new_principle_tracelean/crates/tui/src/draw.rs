@@ -1,27 +1,11 @@
-//! Drawing a buffer as text.
-//!
-//! Pure, and the only place this frontend decides what the screen says. The
-//! interactive loop, the answer the conformance harness reads, and the screen
-//! the capture harness reads all come through here — which is what stops this
-//! frontend from reporting one thing and painting another.
-//!
-//! What it may decide is how a region *looks*: a role becomes a colour. What it
-//! may not do is change the text or offer an action no span declares, and
-//! neither is possible here because both come from the buffer.
-//!
 //! @implements REQ-VIEW.text_is_the_content
 //! @implements REQ-VIEW.frontend_adds_nothing
 
 use tracelean_core::surface::screen::Rect;
 use tracelean_core::surface::view::{actions_at, plain_text, Buffer, Rendering, Role};
 
-/// The theme this frontend paints with, set once when it starts.
-///
-/// Unset — in the conformance modes and in tests — it is the shipped theme, so
-/// what a harness reads is painted the way a person would see it.
 static THEME: std::sync::OnceLock<serde_json::Value> = std::sync::OnceLock::new();
 
-/// Paint with this theme from now on. Only the first call counts.
 pub fn use_theme(theme: serde_json::Value) {
     let _ = THEME.set(theme);
 }
@@ -32,7 +16,6 @@ fn theme() -> &'static serde_json::Value {
     })
 }
 
-/// `#rrggbb` as a terminal's 24-bit foreground.
 fn truecolour(hex: &str, bold: bool) -> String {
     let digits = hex.trim_start_matches('#');
     let channel = |at: usize| u8::from_str_radix(digits.get(at..at + 2).unwrap_or("ff"), 16).unwrap_or(255);
@@ -40,18 +23,6 @@ fn truecolour(hex: &str, bold: bool) -> String {
     format!("\u{1b}[0;{weight}38;2;{};{};{}m", channel(0), channel(2), channel(4))
 }
 
-/// A role becomes a colour. The role says what a region *is*; the theme
-/// (`assets/theme.json`, `roles`) says what colour that is, which is the
-/// frontend's business and nobody else's — and the window reads the same file,
-/// so the two cannot disagree about it.
-///
-/// A mark is coloured by which it is, and a gap in one colour whatever it
-/// stands for. Both come from the span — reading `T` out of the text to decide
-/// would be this frontend parsing the buffer.
-///
-/// Which section and key, and which roles are bold, is the core's `look_of`:
-/// the same answer the suite that reads this frontend's cells back checks
-/// against (`REQ-LOOK.roles_drawn_in_theme_colours`).
 fn colour(role: Role) -> String {
     let look = tracelean_core::surface::cells::look_of(theme(), role);
     match look.fg {
@@ -60,23 +31,14 @@ fn colour(role: Role) -> String {
     }
 }
 
-/// The buffer's lines, exactly as the buffer says them.
 pub fn lines(buffer: &Buffer) -> Vec<String> {
     plain_text(buffer.clone())
 }
 
-/// The same lines with the escape sequences a terminal needs to colour them.
-///
-/// Every escape inserted is one a terminal acts on rather than prints, so the
-/// visible text is unchanged — which is what the capture harness checks.
 pub fn painted(buffer: &Buffer) -> Vec<String> {
     painted_with(buffer, "")
 }
 
-/// The same, with `also` — a rendition such as reverse video — put back after
-/// every escape. Each colour begins with a reset, so a rendition written once
-/// in front of the line was undone by the first span, and the status line it
-/// was meant to set apart was never drawn in reverse (`REQ-LOOK.regions_present`).
 pub fn painted_with(buffer: &Buffer, also: &str) -> Vec<String> {
     let mut out = String::from(also);
     for (offset, character) in buffer.text.chars().enumerate() {
@@ -96,8 +58,6 @@ pub fn painted_with(buffer: &Buffer, also: &str) -> Vec<String> {
     out.split('\n').map(|line| if line.starts_with(also) { line.to_string() } else { format!("{also}{line}") }).collect()
 }
 
-/// Where this frontend offers actions: one position per span, which is where
-/// the thing the span is about starts.
 fn offer_positions(buffer: &Buffer) -> Vec<usize> {
     let mut out: Vec<usize> = Vec::new();
     for span in &buffer.spans {
@@ -108,8 +68,6 @@ fn offer_positions(buffer: &Buffer) -> Vec<usize> {
     out
 }
 
-/// What this frontend drew, in the form the conformance harness checks.
-///
 /// @implements REQ-VIEW.frontend_is_checkable
 pub fn render(buffer: &Buffer) -> Rendering {
     let mut offered = Vec::new();
@@ -121,18 +79,8 @@ pub fn render(buffer: &Buffer) -> Rendering {
     Rendering { lines: lines(buffer), offered }
 }
 
-// ─────────────────────────────────────────────── several panes at once
-
-/// One cell of a composed screen: a character and what it is.
-///
-/// The role travels with the character so that colour survives composition. A
-/// grid of plain characters would have meant a terminal showing two buffers
-/// lost the colouring it has when showing one, and the role is the only thing
-/// that says what a region *is*.
 pub type Cell = (char, Role);
 
-/// The character at each offset of a buffer's text, with the role of the span
-/// covering it, split into lines.
 fn cells_of(buffer: &Buffer) -> Vec<Vec<Cell>> {
     let role_at = |offset: usize| -> Role {
         buffer
@@ -153,28 +101,12 @@ fn cells_of(buffer: &Buffer) -> Vec<Vec<Cell>> {
     lines
 }
 
-/// How much of a pane this frontend spends on its own chrome: a column for the
-/// divider on its right, a row for the one below it, where it has a neighbour
-/// there at all.
-///
-/// A terminal has no borders of its own, so a divider has to come out of a
-/// pane. Which pane it comes out of is this frontend's business — a window
-/// draws a line between panes and spends nothing — and it is reported rather
-/// than taken quietly: the caller windows the buffer to the room that is left,
-/// so nothing is drawn over.
 pub fn chrome(region: Rect, at: Rect) -> (u64, u64) {
     let right = u64::from(at.left + at.width < region.left + region.width);
     let below = u64::from(at.top + at.height < region.top + region.height);
     (right, below)
 }
 
-/// Lay several panes out into one grid of cells.
-///
-/// Each pane's buffer is drawn into its own rectangle and clipped to it — a
-/// terminal cannot show a line wider than the pane holding it, and a pane that
-/// overflowed into its neighbour would be one buffer drawing another's text.
-/// The clip is why the caller windows vertically first: between them, what is
-/// drawn is exactly what fits.
 pub fn compose(region: Rect, panes: &[(Rect, Buffer, bool)]) -> Vec<Vec<Cell>> {
     let width = region.width as usize;
     let height = region.height as usize;
@@ -190,10 +122,6 @@ pub fn compose(region: Rect, panes: &[(Rect, Buffer, bool)]) -> Vec<Vec<Cell>> {
                 grid[top + row][left + column] = cell;
             }
         }
-        // The divider, and the focused pane's is brighter — a heading, because
-        // that is the role the stylesheet of a terminal already makes stand
-        // out, and inventing a role for it would put something in the
-        // vocabulary that no buffer can carry.
         let edge = if *focused { Role::Heading } else { Role::Plain };
         if spare_right == 1 && at.width > 0 {
             let column = left + at.width as usize - 1;
@@ -212,10 +140,6 @@ pub fn compose(region: Rect, panes: &[(Rect, Buffer, bool)]) -> Vec<Vec<Cell>> {
             }
         }
     }
-    // A pane's own dividers are on its right and below, so a pane with none —
-    // the last one across, the last one down — would be focused with nothing on
-    // the screen saying so. The dividers its neighbours draw against it are
-    // its edges too, and are marked the same (`REQ-LOOK.focus_visible`).
     for (at, _, _) in panes.iter().filter(|p| p.2) {
         let left = at.left.saturating_sub(region.left) as usize;
         let top = at.top.saturating_sub(region.top) as usize;
@@ -237,24 +161,11 @@ pub fn compose(region: Rect, panes: &[(Rect, Buffer, bool)]) -> Vec<Vec<Cell>> {
     grid
 }
 
-/// A composed grid as plain lines: what a person reads off the screen.
-///
-/// The interactive loop paints rather than reads, so nothing in the binary
-/// calls this — what calls it is the suite that checks a composed screen says
-/// what the buffers in it say, which is the one thing the single-buffer
-/// conformance check cannot see.
 #[allow(dead_code)]
 pub fn text_grid(grid: &[Vec<Cell>]) -> Vec<String> {
     grid.iter().map(|row| row.iter().map(|(character, _)| *character).collect()).collect()
 }
 
-/// A composed grid with the escape sequences a terminal needs to colour it.
-///
-/// One escape per run of a role rather than one per character, so the bytes
-/// stay readable and the visible text is still the grid's own.
-///
-/// The cells `marked` says are selected are drawn in reverse video, the one
-/// mark every terminal draws without a colour of its own.
 pub fn paint_marked(grid: &[Vec<Cell>], marked: impl Fn(usize, usize) -> bool) -> Vec<String> {
     grid.iter()
         .enumerate()
@@ -278,11 +189,6 @@ pub fn paint_marked(grid: &[Vec<Cell>], marked: impl Fn(usize, usize) -> bool) -
         .collect()
 }
 
-/// The bytes a terminal receives for one screen.
-///
-/// The markers are the ones the capture harness reads: a clear at the front and
-/// a NUL at the end, so one painted screen can be told from the next.
-///
 /// @implements REQ-VIEW.screen_is_readable
 pub fn screen(buffer: &Buffer) -> String {
     let mut out = String::from("\u{1b}[2J");
@@ -306,8 +212,6 @@ mod tests {
         )
     }
 
-    /// Colour is added and text is not: what a terminal would print is the
-    /// buffer's own text.
     #[test]
     fn painting_adds_colour_and_no_characters() {
         let buffer = listing();
@@ -336,7 +240,6 @@ mod tests {
         assert_eq!(stripped, lines(&buffer));
     }
 
-    /// And what it says it drew is what the buffer says.
     #[test]
     fn drawing_the_buffer_is_conformant() {
         let buffer = listing();
@@ -352,13 +255,6 @@ mod tests {
         }
     }
 
-    /// Two panes side by side, and each reads back its own buffer.
-    ///
-    /// The composition is where a tiling frontend can quietly lose text — a
-    /// pane overflowing into its neighbour, a divider drawn over a line, an
-    /// off-by-one in the clip — and none of that shows up in the single-buffer
-    /// conformance check, because none of it happens to a single buffer.
-    ///
     /// @tests REQ-VIEW.screen_is_readable
     #[test]
     fn each_pane_reads_back_its_own_buffer() {
@@ -370,14 +266,9 @@ mod tests {
             &[(left, note("l", "one\ntwo"), true), (right, note("r", "abc\nde"), false)],
         );
         let rows = text_grid(&grid);
-        // Five columns of text and the sixth a divider; the right-hand pane
-        // reaches the region's edge, so it keeps all six.
         assert_eq!(rows, vec!["one  │abc   ".to_string(), "two  │de    ".to_string()]);
     }
 
-    /// A line wider than its pane is cut at the pane's edge, not drawn over the
-    /// pane beside it.
-    ///
     /// @tests REQ-VIEW.screen_is_readable
     #[test]
     fn a_long_line_stops_at_the_divider() {
@@ -391,9 +282,6 @@ mod tests {
         assert_eq!(text_grid(&grid), vec!["aaaa│bbbbb".to_string()]);
     }
 
-    /// Painting a grid adds colour and no characters, the same guarantee
-    /// `painted` gives for one buffer.
-    ///
     /// @tests REQ-VIEW.text_is_the_content
     #[test]
     fn painting_a_grid_adds_colour_and_no_characters() {

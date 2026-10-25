@@ -1,12 +1,3 @@
-//! Suppressing the editor's own writes, checked against the model.
-//!
-//! The editor writes into the tree it observes, so its own writes come back as
-//! observations. The failure modes are opposite and both silent: suppress too
-//! much and a real external change disappears; suppress too little and the
-//! editor fights itself. The model pins the consumable semantics — one
-//! suppression, one observation, first match — and random pending sets with
-//! repeated paths and contents are what tell the two implementations apart.
-
 mod harness;
 
 use tracelean_core::drt::run::{run, RunOptions};
@@ -18,9 +9,6 @@ fn strukt(fields: &[(&str, Schema)]) -> Schema {
     Schema::Struct { fields: fields.iter().map(|(k, v)| (k.to_string(), v.clone())).collect() }
 }
 
-// Deliberately tiny alphabets. A suppression only fires when a pending write
-// matches on both path and content, so wide strings would generate two thousand
-// misses and check nothing.
 fn path() -> Schema {
     Schema::Str { max_len: Some(1), examples: vec!["a.rs".into(), "b.rs".into()] }
 }
@@ -85,9 +73,6 @@ fn model_and_implementation_agree_on_suppression() {
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
-/// Both outcomes, and the cases that distinguish *consumed* from *kept*: the
-/// matched write had rounds to spare, and another identical write stays.
-///
 /// @tests REQ-DRT-COVER.law_coverage
 #[test]
 fn generation_reaches_suppression_and_passthrough() {
@@ -130,13 +115,6 @@ fn generation_reaches_suppression_and_passthrough() {
     );
 }
 
-/// Ageing pending suppressions, checked against the model.
-///
-/// The requirement this serves is a liveness one: a self-write that is never
-/// observed must not suppress a later real change forever. Ageing is three
-/// lines, and the failure mode — an entry that reaches zero and stays — is
-/// exactly the kind of off-by-one that reads correctly.
-///
 /// @drt REQ-SELFWRITE.no_deadlock
 /// @tests REQ-SELFWRITE.no_deadlock
 #[test]

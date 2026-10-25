@@ -1,5 +1,3 @@
-//! Running a differential test: ask both sides the same cases, compare, shrink.
-
 use std::io::{BufRead, BufReader, Write};
 use std::path::PathBuf;
 use std::process::{Child, ChildStdin, Command, Stdio};
@@ -12,14 +10,11 @@ use super::gen::{self, Rng};
 use super::protocol::{self, Event, Reply, RunnerError};
 use super::schema::Schema;
 
-/// How many runs go at once: every core but one, so the machine stays usable;
-/// `TRACELEAN_JOBS` overrides.
 pub fn workers() -> usize {
     let cores = std::thread::available_parallelism().map_or(2, |n| n.get());
     std::env::var("TRACELEAN_JOBS").ok().and_then(|j| j.parse().ok()).unwrap_or(cores.saturating_sub(1)).max(1)
 }
 
-/// `f` over every item on `workers()` threads, answers in the items' order.
 pub fn par_map<T: Sync, R: Send>(items: &[T], f: impl Fn(&T) -> R + Sync) -> Vec<R> {
     let next = std::sync::atomic::AtomicUsize::new(0);
     let done: std::sync::Mutex<Vec<(usize, R)>> = std::sync::Mutex::new(Vec::with_capacity(items.len()));
@@ -38,27 +33,16 @@ pub fn par_map<T: Sync, R: Send>(items: &[T], f: impl Fn(&T) -> R + Sync) -> Vec
     done.into_iter().map(|(_, r)| r).collect()
 }
 
-/// How to start one side.
 #[derive(Debug, Clone, PartialEq)]
 pub struct RunnerSpec {
     pub cmd: Vec<String>,
     pub cwd: Option<PathBuf>,
 }
 
-/// How long one case may take before its runner is declared timed out.
-///
-/// Generous: a model is compiled and a case costs microseconds, so anything
-/// near this is a runner stuck in a loop, not a slow one.
 pub const REPLY_TIMEOUT: Duration = Duration::from_secs(120);
 
-/// A live runner process.
-///
-/// Its output is read on a thread of its own and handed over line by line, so
-/// that waiting for a reply can stop at `REPLY_TIMEOUT` instead of blocking
-/// forever on a runner that never answers.
 pub struct Runner {
     child: Child,
-    /// Taken when the runner is let go, so that its input ends.
     stdin: Option<ChildStdin>,
     lines: Receiver<std::io::Result<String>>,
 }
@@ -86,7 +70,6 @@ impl Runner {
         std::thread::spawn(move || loop {
             let mut line = String::new();
             match stdout.read_line(&mut line) {
-                // The end of its output: dropping the sender says so.
                 Ok(0) => break,
                 Ok(_) => {
                     if send.send(Ok(line)).is_err() {
@@ -102,11 +85,6 @@ impl Runner {
         Ok(Runner { child, stdin: Some(stdin), lines })
     }
 
-    /// Ask one case and read one reply.
-    ///
-    /// What happened is put into an `Event` and `protocol::outcome` decides
-    /// what it means — a total function, differentially tested. What is left
-    /// here is the IO and turning that conclusion into this function's result.
     pub fn ask(&mut self, case: u64, op: &str, input: &Value) -> Result<Reply, RunnerError> {
         let line = protocol::case_line(case, op.to_string(), input.clone());
         let written = match self.stdin.as_mut() {
@@ -127,10 +105,6 @@ impl Runner {
 }
 
 impl Drop for Runner {
-    /// Its input is closed first, so a runner that reads to the end exits on
-    /// its own — an instrumented one writes its profile only then — and is
-    /// killed only if it has not after two hundred short waits: a count, not a
-    /// clock, so nothing here reads the time (`ARCH-DETERMINISM`).
     fn drop(&mut self) {
         drop(self.stdin.take());
         for _ in 0..200 {
@@ -144,7 +118,6 @@ impl Drop for Runner {
     }
 }
 
-/// One disagreement, already reduced.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Divergence {
     pub input: Value,
@@ -152,43 +125,28 @@ pub struct Divergence {
     pub implementation: Reply,
 }
 
-/// What a run established.
 #[derive(Debug, Clone, PartialEq)]
 pub struct DrtResult {
     pub op: String,
     pub seed: u64,
     pub cases: u64,
     pub divergence: Option<Divergence>,
-    /// The shape the cases were drawn from, so the run can be replayed.
     pub schema: Schema,
-    /// How many of the cases asked reached each class of the arguments
-    /// (`classes::reached`): the coverage the run reached, beside its count
-    /// and its seed.
     pub reached: Vec<super::coverage::Observed>,
-    /// How many cases the implementation could not even read. Two sides that
-    /// both fail to read an input agree, so a generator drawing a shape the
-    /// types no longer have runs a clause's cases without asking it anything.
     pub unreadable: u64,
 }
 
-/// Whether a reply is the implementation failing to read its arguments — the
-/// Rust runner's `argument …` answer — rather than an answer about them.
 fn unreadable(reply: &Reply) -> bool {
     reply.error.as_deref().is_some_and(|e| e.starts_with("argument `"))
 }
 
 impl DrtResult {
-    /// Falsification, not proof: a clean run is evidence, never a guarantee.
-    ///
     /// @implements REQ-DRT.falsification_only
     pub fn agreed(&self) -> bool {
         self.divergence.is_none()
     }
 }
 
-/// How many cases to ask, from which seed. A divergence is reduced as far as
-/// it goes, with no bound on the rounds: every reduction step is strictly
-/// smaller (`REQ-DRT-GEN.shrink_terminates`), so the reduction ends on its own.
 #[derive(Debug, Clone, Copy)]
 pub struct RunOptions {
     pub seed: u64,
@@ -201,22 +159,11 @@ impl Default for RunOptions {
     }
 }
 
-/// Two replies agree when they are the same answer.
-///
-/// An error on one side against an output on the other is a divergence; both
-/// failing is agreement, because the model rejecting an input the implementation
-/// also rejects is the two behaving alike.
-///
 /// @implements REQ-DRT.error_is_an_answer
 pub fn agree(model: &Reply, implementation: &Reply) -> bool {
-    // The decision itself lives in `protocol`, where it is modelled and
-    // differentially tested; this is the projection from two replies onto it.
     protocol::agree(model.output.clone(), implementation.output.clone())
 }
 
-/// Ask both sides the same cases, in the same order, and reduce the first
-/// disagreement.
-///
 /// @implements REQ-DRT.same_question
 /// @implements REQ-DRT.divergence_reported
 /// @implements REQ-DRT.case_count_stated
@@ -270,11 +217,6 @@ pub fn run(
     })
 }
 
-/// Reduce a diverging input while it still diverges.
-///
-/// A reduction that stops diverging has not found a smaller case — it has found
-/// a different one — so only candidates that still disagree are accepted.
-///
 /// @implements REQ-DRT-GEN.shrink_preserves
 /// @implements REQ-DRT-GEN.shrink_minimal
 fn shrink_divergence(
@@ -285,18 +227,8 @@ fn shrink_divergence(
     implementation: &mut Runner,
 ) -> Result<Divergence, RunnerError> {
     let mut current = input.clone();
-    // A number far above any run's case count, so a reduction's cases cannot be
-    // confused with the run's own — and one every runner can carry back
-    // unchanged. It used to be `u64::MAX / 2`, which a JavaScript runner cannot
-    // echo: its numbers are doubles, integers above 2^53 do not survive a round
-    // trip, and the reply came back as a different case. That turned every
-    // divergence against the TypeScript side into a protocol error instead of a
-    // reduced counterexample — the reduction failing exactly when it was
-    // needed. 2^50 is exact in a double and larger than any case count here.
     let mut case = 1u64 << 50;
 
-    // Until no candidate diverges: stopping earlier would report a case with a
-    // smaller diverging one still in reach.
     'reducing: loop {
         for candidate in gen::shrink(schema, &current) {
             case += 1;
