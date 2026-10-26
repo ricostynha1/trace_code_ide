@@ -65,7 +65,6 @@
           ["c", { "dispatch": { "action": "screen.station.definitions", "description": "definitions: what can be configured" } }],
           ["d", { "dispatch": { "action": "screen.station.design", "description": "the refinement graph" } }],
           ["f", { "dispatch": { "action": "screen.station.findings", "description": "what the checker found" } }],
-          ["g", { "dispatch": { "action": "screen.station.proof", "description": "the Lean goals at the cursor" } }],
           ["h", { "dispatch": { "action": "screen.station.history", "description": "the undo tree" } }],
           ["l", { "dispatch": { "action": "screen.station.trace", "description": "what this file claims, and what else claims it" } }],
           ["p", { "dispatch": { "action": "screen.station.project", "description": "open a project" } }],

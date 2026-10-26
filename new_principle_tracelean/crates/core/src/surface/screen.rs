@@ -645,7 +645,6 @@ pub fn station_entries() -> Vec<MenuEntry> {
         ("history", "The undo tree"),
         ("findings", "What the checker found, and what to create"),
         ("definitions", "What can be configured: colours, keys, languages"),
-        ("proof", "The goals Lean reports at the cursor"),
     ]
     .into_iter()
     .map(|(key, description)| MenuEntry {
@@ -674,8 +673,32 @@ pub fn station_kind(station: String) -> Option<BufferKind> {
         "trace" => Some(BufferKind::Record { title: "trace".to_string() }),
         "findings" => Some(BufferKind::Record { title: "findings".to_string() }),
         "definitions" => Some(BufferKind::Record { title: "definitions".to_string() }),
-        "proof" => Some(BufferKind::Record { title: "proof".to_string() }),
         _ => None,
+    }
+}
+
+pub const GOALS: &str = "record:proof";
+
+fn is_lean(id: &str) -> bool {
+    id.starts_with("file:") && id.ends_with(".lean")
+}
+
+/// @implements REQ-LSP.goals_open_with_the_file
+/// @drt REQ-LSP.goals_open_with_the_file
+pub fn opens_goals(kind: BufferKind, opened: Vec<String>) -> bool {
+    matches!(&kind, BufferKind::File { path } if path.ends_with(".lean")) && !opened.iter().any(|id| id == GOALS)
+}
+
+/// @implements REQ-LSP.goals_close_with_the_file
+/// @drt REQ-LSP.goals_close_with_the_file
+pub fn closed_with(before: Vec<String>, after: Vec<String>) -> Vec<String> {
+    let closed: Vec<&String> = before.iter().filter(|id| !after.contains(id)).collect();
+    if closed.iter().any(|id| *id == GOALS) {
+        after.into_iter().filter(|id| is_lean(id)).collect()
+    } else if closed.iter().any(|id| is_lean(id)) && !after.iter().any(|id| is_lean(id)) && after.iter().any(|id| id == GOALS) {
+        vec![GOALS.to_string()]
+    } else {
+        Vec::new()
     }
 }
 

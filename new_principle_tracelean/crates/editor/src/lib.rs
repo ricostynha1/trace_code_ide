@@ -99,6 +99,8 @@ const OFFER_KEYS: [&str; 35] = [
 
 const SMALL_PROJECT: usize = 40;
 
+use tracelean_core::surface::screen::{self, GOALS as PROOF};
+
 /// @implements REQ-ACT.focus_is_carried
 pub fn focus_in(buffer: &Buffer, offset: usize) -> Focus {
     let text: Vec<char> = buffer.text.chars().collect();
@@ -2231,8 +2233,12 @@ impl Editor {
                         self.open_folders.extend(explorer::holders(path));
                     }
                 }
+                let lean = matches!(&what, BufferKind::File { path } if path.ends_with(".lean"));
                 let buffer = self.produce(what);
                 self.show(buffer);
+                if lean {
+                    self.goals_beside();
+                }
                 if self.screen.opened.iter().any(|b| self.is_tree(b)) {
                     self.refresh_views();
                 }
@@ -2265,9 +2271,33 @@ impl Editor {
         }
     }
 
+    fn goals_beside(&mut self) {
+        let opened: Vec<String> = self.screen.opened.iter().map(|held| held.id.clone()).collect();
+        let document = self.screen.focus.clone();
+        let Some(BufferKind::File { path }) = self.screen.opened.iter().find(|held| held.id == self.buffer().id).map(|held| held.kind.clone()) else { return };
+        if !screen::opens_goals(BufferKind::File { path }, opened) {
+            return;
+        }
+        if destination(BufferKind::Record { title: "proof".into() }, self.screen.clone()) == document {
+            let before = panes(&self.screen.layout);
+            self.rearrange(Arrangement::Split { axis: screen::Axis::Across });
+            if let Some((fresh, _)) = panes(&self.screen.layout).into_iter().find(|p| !before.contains(p)) {
+                self.rearrange(Arrangement::FocusPane { pane: fresh });
+            }
+        }
+        let proof = self.proof_buffer();
+        self.show(proof);
+        self.rearrange(Arrangement::FocusPane { pane: document });
+    }
+
     fn rearrange(&mut self, how: Arrangement) {
         let was = self.screen.focus.clone();
+        let before: Vec<String> = self.screen.opened.iter().map(|held| held.id.clone()).collect();
         self.screen = arrange(how, self.region, self.screen.clone());
+        let after: Vec<String> = self.screen.opened.iter().map(|held| held.id.clone()).collect();
+        for id in screen::closed_with(before, after) {
+            self.screen = close_buffer(id, self.screen.clone());
+        }
         if self.screen.focus != was {
             self.parked.insert(was, (self.offset, self.top));
             let (offset, top) = self.parked.remove(&self.screen.focus).unwrap_or((0, 0));
@@ -2714,7 +2744,7 @@ impl Editor {
     }
 
     fn follow_proof(&mut self) -> bool {
-        if !self.screen.opened.iter().any(|held| held.id == "record:proof") {
+        if !self.screen.opened.iter().any(|held| held.id == PROOF) {
             return false;
         }
         let mut changed = false;
@@ -2767,7 +2797,7 @@ impl Editor {
             return false;
         }
         let fresh = self.proof_buffer();
-        if let Some(held) = self.screen.opened.iter_mut().find(|held| held.id == "record:proof") {
+        if let Some(held) = self.screen.opened.iter_mut().find(|held| held.id == PROOF) {
             *held = fresh;
         }
         true
@@ -2780,7 +2810,7 @@ impl Editor {
             (None, false) => self.goal.clone(),
         };
         Buffer {
-            id: "record:proof".into(),
+            id: PROOF.into(),
             kind: BufferKind::Record { title: "proof".into() },
             text,
             spans: Vec::new(),

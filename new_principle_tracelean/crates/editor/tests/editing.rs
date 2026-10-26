@@ -319,6 +319,29 @@ fn the_proof_panel_names_why_a_lean_file_has_no_goals() {
     let _ = std::fs::remove_dir_all(&root);
 }
 
+/// @tests REQ-LSP.goals_open_with_the_file
+/// @tests REQ-LSP.goals_close_with_the_file
+#[test]
+fn the_goals_open_and_close_with_the_lean_file() {
+    use tracelean_core::surface::screen::Arrangement;
+    let root = project();
+    std::fs::write(root.join("src/m.lean"), "theorem a : 1 = 1 := rfl\n").unwrap();
+    let mut editor = Editor::open(root.clone(), keymap());
+    let held = |editor: &Editor, id: &str| editor.screen.opened.iter().any(|b| b.id == id);
+    editor.perform(Intent::Display { what: BufferKind::File { path: "src/m.lean".into() } });
+    assert!(held(&editor, "record:proof"), "the goals did not open with the file");
+    assert_eq!(editor.buffer().id, "file:src/m.lean", "the file lost the focus");
+    editor.perform(Intent::Arrange { how: Arrangement::Close });
+    assert!(!held(&editor, "record:proof"), "the goals outlived the file");
+    editor.perform(Intent::Display { what: BufferKind::File { path: "src/m.lean".into() } });
+    editor.perform(Intent::Display { what: BufferKind::Record { title: "proof".into() } });
+    editor.perform(Intent::Arrange { how: Arrangement::Close });
+    assert!(!held(&editor, "file:src/m.lean"), "the file outlived the goals");
+    editor.perform(Intent::Display { what: BufferKind::File { path: "src/i.rs".into() } });
+    assert!(!held(&editor, "record:proof"), "a file that is not Lean opened the goals");
+    let _ = std::fs::remove_dir_all(&root);
+}
+
 /// @tests REQ-ACT.one_path
 #[test]
 fn scrolling_many_lines_at_once_lands_where_asked() {

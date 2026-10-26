@@ -96,7 +96,6 @@ const EMBLEMS: Record<string, string> = {
   "screen.station.history": "🌳",
   "screen.station.findings": "🔍",
   "screen.station.definitions": "⚙",
-  "screen.station.proof": "∴",
 };
 
 export function symbolFor(actions: string[]): string | null {

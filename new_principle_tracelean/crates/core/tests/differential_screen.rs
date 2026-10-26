@@ -1039,3 +1039,33 @@ fn generation_asks_for_the_stations_from_every_kind_of_screen() {
     }
     harness::covered("REQ-SCREEN.stations_are_constant", &[("asked of some screen", asked)]);
 }
+
+fn ids() -> Schema {
+    let pool = ["record:proof", "file:a.lean", "file:b.lean", "file:a.rs", "record:trace", "a.lean"];
+    Schema::List {
+        inner: Box::new(Schema::Str { max_len: Some(0), examples: pool.iter().map(|s| s.to_string()).collect() }),
+        max_len: Some(4),
+    }
+}
+
+/// @drt REQ-LSP.goals_open_with_the_file
+/// @tests REQ-LSP.goals_open_with_the_file
+#[test]
+#[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
+fn model_and_implementation_agree_on_when_the_goals_open() {
+    let path = || Schema::Str { max_len: Some(2), examples: vec!["a.lean".into(), "a.rs".into(), ".lean".into(), "x.lean.rs".into()] };
+    let mut kinds = BTreeMap::new();
+    kinds.insert("file".to_string(), Some(Box::new(strukt(&[("path", path())]))));
+    kinds.insert("record".to_string(), Some(Box::new(strukt(&[("title", path())]))));
+    let schema = strukt(&[("kind", Schema::Enum { variants: kinds }), ("opened", ids())]);
+    harness::agree("REQ-LSP.goals_open_with_the_file", &schema, 31, 2_000);
+}
+
+/// @drt REQ-LSP.goals_close_with_the_file
+/// @tests REQ-LSP.goals_close_with_the_file
+#[test]
+#[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
+fn model_and_implementation_agree_on_what_closes_with_the_goals() {
+    let schema = strukt(&[("before", ids()), ("after", ids())]);
+    harness::agree("REQ-LSP.goals_close_with_the_file", &schema, 37, 3_000);
+}

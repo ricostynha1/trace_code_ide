@@ -15,6 +15,8 @@ clauses:
   edits_ordered: Lowered edits shall be applied so that earlier edits do not invalidate the positions of later ones.
   overlap_refused: Overlapping edits in one workspace edit shall be refused rather than applied in an arbitrary order.
   proof_state_shown: The goals Lean's own server reports at the cursor of a Lean file shall be shown beside the file and follow the cursor and the edits, a server that cannot be started shall be named, and asking shall never make a key wait for the answer.
+  goals_open_with_the_file: When a Lean file is opened, the editor shall open the goals pane beside it unless the goals pane is already open.
+  goals_close_with_the_file: When the goals pane is closed, the editor shall close every open Lean file; when the last open Lean file is closed, the editor shall close the goals pane.
   absent_server_named: The absence of a running server shall be reported as such and shall not be presented as an empty result.
 ---
 

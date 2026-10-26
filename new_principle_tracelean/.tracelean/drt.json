@@ -4222,6 +4222,32 @@
         "language": "rust",
         "entry": "crates/core/src/lean_server.rs::goals_shown"
       }
+    },
+    {
+      "req_id": "REQ-LSP",
+      "clause": "goals_open_with_the_file",
+      "model": {
+        "import": "TraceLean.Screen",
+        "function": "TraceLean.Screen.opensGoals",
+        "arguments": ["kind", "opened"]
+      },
+      "implementation": {
+        "language": "rust",
+        "entry": "crates/core/src/surface/screen.rs::opens_goals"
+      }
+    },
+    {
+      "req_id": "REQ-LSP",
+      "clause": "goals_close_with_the_file",
+      "model": {
+        "import": "TraceLean.Screen",
+        "function": "TraceLean.Screen.closedWith",
+        "arguments": ["before", "after"]
+      },
+      "implementation": {
+        "language": "rust",
+        "entry": "crates/core/src/surface/screen.rs::closed_with"
+      }
     }
   ]
 }

@@ -549,9 +549,7 @@ def stationEntries : List MenuEntry :=
    { key := "findings", description := "What the checker found, and what to create",
      action := some "screen.station.findings" },
    { key := "definitions", description := "What can be configured: colours, keys, languages",
-     action := some "screen.station.definitions" },
-   { key := "proof", description := "The goals Lean reports at the cursor",
-     action := some "screen.station.proof" }]
+     action := some "screen.station.definitions" }]
 
 /-- @models REQ-SCREEN.stations_are_constant -/
 def stations (screen : Screen) : Buffer :=
@@ -567,7 +565,6 @@ def stationKind (station : String) : Option BufferKind :=
   else if station == "trace" then some (BufferKind.record "trace")
   else if station == "findings" then some (BufferKind.record "findings")
   else if station == "definitions" then some (BufferKind.record "definitions")
-  else if station == "proof" then some (BufferKind.record "proof")
   else none
 
 /-- @proves REQ-SCREEN.stations_are_constant -/
@@ -1516,5 +1513,61 @@ theorem key_and_pointer_agree (dir : Direction) (rect : Rect) (s : Screen) :
     cases how with
     | focus d => exact absurd rfl (h d)
     | _ => rfl
+
+def goals : String := "record:proof"
+
+def isLeanId (id : String) : Bool := id.startsWith "file:" && id.endsWith ".lean"
+
+/-- @models REQ-LSP.goals_open_with_the_file -/
+def opensGoals (kind : BufferKind) (opened : List String) : Bool :=
+  match kind with
+  | .file path => path.endsWith ".lean" && !opened.contains goals
+  | _ => false
+
+/-- @models REQ-LSP.goals_close_with_the_file -/
+def closedWith (before after : List String) : List String :=
+  let closed := before.filter (fun id => !after.contains id)
+  if closed.contains goals then after.filter isLeanId
+  else if closed.any isLeanId && !after.any isLeanId && after.contains goals then [goals]
+  else []
+
+/-- @proves REQ-LSP.goals_open_with_the_file -/
+theorem goals_open_exactly_with_a_lean_file (kind : BufferKind) (opened : List String) :
+    opensGoals kind opened = true ↔
+      ∃ path, kind = .file path ∧ path.endsWith ".lean" = true ∧ goals ∉ opened := by
+  cases kind <;> simp [opensGoals]
+
+/-- @proves REQ-LSP.goals_close_with_the_file -/
+theorem closing_the_goals_closes_every_lean_file (before after : List String)
+    (closed : goals ∈ before) (gone : goals ∉ after) :
+    closedWith before after = after.filter isLeanId := by
+  have : (before.filter (fun id => !after.contains id)).contains goals = true := by
+    simp [List.mem_filter, closed, gone]
+  simp only [closedWith, this, if_true]
+
+theorem no_lean_left (after : List String) (none : ∀ x ∈ after, isLeanId x = false) :
+    after.any isLeanId = false := by
+  cases h : after.any isLeanId
+  · rfl
+  · obtain ⟨x, hx, hl⟩ := List.any_eq_true.mp h
+    simp [none x hx] at hl
+
+/-- @proves REQ-LSP.goals_close_with_the_file -/
+theorem closing_the_last_lean_file_closes_the_goals (before after : List String) (file : String)
+    (kept : goals ∈ after) (was : file ∈ before) (gone : file ∉ after) (lean : isLeanId file = true)
+    (none : ∀ x ∈ after, isLeanId x = false) :
+    closedWith before after = [goals] := by
+  have closedLean : ∃ x, x ∈ before ∧ x ∉ after ∧ isLeanId x = true := ⟨file, was, gone, lean⟩
+  simp [closedWith, kept, closedLean, no_lean_left after none]
+
+/-- @proves REQ-LSP.goals_close_with_the_file -/
+theorem closing_other_buffers_closes_nothing (before after : List String)
+    (stays : ∀ x ∈ before, x ∉ after → x ≠ goals ∧ isLeanId x = false) :
+    closedWith before after = [] := by
+  have notGoals : ¬(goals ∈ before ∧ goals ∉ after) := fun ⟨a, b⟩ => (stays _ a b).1 rfl
+  have notLean : ¬∃ x, x ∈ before ∧ x ∉ after ∧ isLeanId x = true :=
+    fun ⟨x, a, b, c⟩ => by simp [(stays x a b).2] at c
+  simp [closedWith]
+  rw [if_neg notGoals, if_neg (fun h => notLean h.1.1)]
 
 end TraceLean.Screen

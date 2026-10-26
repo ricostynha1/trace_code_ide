@@ -178,9 +178,11 @@ value that is not a colour is refused (`REQ-LOOK.setting_edited_in_place`).
 file, following the cursor and the edits, as the infoview does in VS Code. It
 asks Lean's own server (`lake env lean --server`, in the nearest folder with a
 `lean-toolchain`) and never waits for it: the answer is picked up by the next
-poll, so a slow elaboration costs a stale panel and not a frozen key. The server
-is not started until the panel is opened on a Lean file, and when it cannot be
-the panel says why. This is the one process the editor starts apart from the
+poll, so a slow elaboration costs a stale panel and not a frozen key. Opening a Lean
+file opens the goals pane beside it, closing either closes the other, and there
+is no other way to open it (`REQ-LSP.goals_open_with_the_file`,
+`goals_close_with_the_file`). When the server cannot be started the pane says
+why. This is the one process the editor starts apart from the
 differential runners, and the architecture test allows exactly that module
 (`crates/core/src/lean_server.rs`): it is Lean's toolchain, never an agent
 (`REQ-LSP.proof_state_shown`).

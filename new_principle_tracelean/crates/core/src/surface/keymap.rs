@@ -118,7 +118,6 @@ pub const ACTIONS: &[&str] = &[
     "screen.station.findings",
     "screen.station.history",
     "screen.station.project",
-    "screen.station.proof",
     "screen.station.sandbox",
     "screen.station.trace",
     "screen.strip",
