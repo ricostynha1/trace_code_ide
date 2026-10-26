@@ -109,10 +109,7 @@ pub fn drt_stamp(index: &Index, clauses: &[String]) -> String {
     let mut parts: Vec<String> = clauses
         .iter()
         .map(|qualified| {
-            let (req_id, clause) = match qualified.split_once('.') {
-                Some((req, clause)) => (req, Some(clause)),
-                None => (qualified.as_str(), None),
-            };
+            let (req_id, clause) = crate::drt::config::split_op(&qualified);
             match drt_record(index, req_id, clause, Level::L1, 0, 0, "")
                 .or_else(|_| derived_drt_record(index, req_id, clause, Level::L1, 0, 0, ""))
             {

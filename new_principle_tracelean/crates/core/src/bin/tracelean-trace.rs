@@ -68,10 +68,7 @@ fn main() {
             eprintln!("--judge needs a clause, as REQ-X.clause");
             return;
         };
-        let (req_id, clause) = match target.split_once('.') {
-            Some((req, clause)) => (req.to_string(), Some(clause.to_string())),
-            None => (target.clone(), None),
-        };
+        let (req_id, clause) = { let (r, c) = tracelean_core::drt::config::split_op(&target); (r.to_string(), c.map(String::from)) };
 
         let Some(_) = trace::material::model_of(&index, &req_id, clause.as_deref()) else {
             eprintln!("nothing models {target}, so there is nothing to judge it against");

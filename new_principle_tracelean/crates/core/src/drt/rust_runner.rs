@@ -1,4 +1,5 @@
 use std::collections::BTreeMap;
+use super::lean_runner::write_if_changed;
 use std::path::{Path, PathBuf};
 
 use super::config::Binding;
@@ -263,13 +264,6 @@ pub fn materialize(
     write_if_changed(&dir.join("Cargo.toml"), &cargo_toml(crate_deps))?;
     write_if_changed(&dir.join("src").join("main.rs"), &main_rs(entries))?;
     Ok(dir)
-}
-
-fn write_if_changed(path: &Path, contents: &str) -> std::io::Result<()> {
-    if std::fs::read_to_string(path).map(|c| c == contents).unwrap_or(false) {
-        return Ok(());
-    }
-    std::fs::write(path, contents)
 }
 
 #[cfg(test)]

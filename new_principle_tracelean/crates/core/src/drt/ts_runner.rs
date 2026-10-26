@@ -1,5 +1,6 @@
 //! @implements REQ-DRT-TS.generated
 
+use super::lean_runner::write_if_changed;
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
@@ -242,13 +243,6 @@ pub fn materialize(root: &Path, entries: &[Entry]) -> std::io::Result<PathBuf> {
     write_if_changed(&dir.join("package.json"), manifest)?;
     write_if_changed(&dir.join("runner.ts"), &runner_source(entries))?;
     Ok(dir)
-}
-
-fn write_if_changed(path: &Path, contents: &str) -> std::io::Result<()> {
-    if std::fs::read_to_string(path).map(|c| c == contents).unwrap_or(false) {
-        return Ok(());
-    }
-    std::fs::write(path, contents)
 }
 
 #[cfg(test)]

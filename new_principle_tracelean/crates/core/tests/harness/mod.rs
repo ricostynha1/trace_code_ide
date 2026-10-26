@@ -645,10 +645,7 @@ fn report_lines(op: &str) {
     let index = tracelean_core::trace::index::build(&root);
     let mut measured = Vec::new();
     for qualified in binding.clauses() {
-        let (req_id, clause) = match qualified.split_once('.') {
-            Some((req, clause)) => (req.to_string(), Some(clause.to_string())),
-            None => (qualified.clone(), None),
-        };
+        let (req_id, clause) = { let (r, c) = tracelean_core::drt::config::split_op(&qualified); (r.to_string(), c.map(String::from)) };
         for link in index.links.iter().filter(|l| {
             l.role == tracelean_core::trace::annotation::Role::Implements && l.req_id == req_id && l.clause == clause
         }) {
@@ -816,10 +813,7 @@ fn compose(op: &str) {
     assert_eq!(established, Level::L3, "an agreeing run that met its floor is what L3 means");
 
     for qualified in binding.clauses() {
-        let (req_id, clause) = match qualified.split_once('.') {
-            Some((req, clause)) => (req.to_string(), Some(clause.to_string())),
-            None => (qualified.clone(), None),
-        };
+        let (req_id, clause) = { let (r, c) = tracelean_core::drt::config::split_op(&qualified); (r.to_string(), c.map(String::from)) };
         match tracelean_core::trace::earn::drt_record(
             &index,
             &req_id,

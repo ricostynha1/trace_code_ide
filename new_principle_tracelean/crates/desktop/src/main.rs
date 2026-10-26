@@ -7,6 +7,7 @@ use std::sync::Mutex;
 
 use tauri::{Manager, State};
 use tracelean_core::surface::keymap::{self, Keymap};
+use tracelean_core::surface::offer::Offer;
 use tracelean_core::surface::produce::window;
 use tracelean_core::surface::screen::Rect;
 use tracelean_core::surface::view::Buffer;
@@ -60,36 +61,63 @@ fn cursor(held: State<'_, Held>, height: usize) -> Option<(usize, usize)> {
     held.0.lock().expect("the editor").cursor_in(height)
 }
 
-#[tauri::command]
-fn bars(held: State<'_, Held>) -> (Buffer, Buffer) {
-    let editor = held.0.lock().expect("the editor");
-    (editor.stations(), editor.strip())
+macro_rules! mutating {
+    ($($name:ident($($arg:ident: $ty:ty),*) => |$e:ident| $body:expr;)*) => {$(
+        #[tauri::command]
+        fn $name(held: State<'_, Held>, $($arg: $ty),*) -> String {
+            let mut $e = held.0.lock().expect("the editor");
+            $body;
+            said(&$e)
+        }
+    )*};
 }
 
-#[tauri::command]
-fn act_in_bar(held: State<'_, Held>, station: bool, action: String, offset: usize) -> String {
-    let mut editor = held.0.lock().expect("the editor");
-    editor.act_in_bar(station, &action, offset);
-    said(&editor)
+macro_rules! query {
+    ($($name:ident($($arg:ident: $ty:ty),*) -> $out:ty => |$e:ident| $body:expr;)*) => {$(
+        #[tauri::command]
+        fn $name(held: State<'_, Held>, $($arg: $ty),*) -> $out {
+            let $e = held.0.lock().expect("the editor");
+            $body
+        }
+    )*};
 }
 
-#[tauri::command]
-fn menu(held: State<'_, Held>) -> Option<Buffer> {
-    held.0.lock().expect("the editor").menu.clone()
+mutating! {
+    act_in_bar(station: bool, action: String, offset: usize) => |e| e.act_in_bar(station, &action, offset);
+    press(key: String) => |e| e.key(&key);
+    act(pane: String, action: String, offset: usize) => |e| e.choose(&pane, offset, &action, None, None);
+    act_here(action: String) => |e| e.act_here(&action);
+    place(pane: String, offset: usize) => |e| e.place(&pane, offset);
+    choose(pane: String, offset: usize, action: String, target: Option<String>, answer: Option<String>) => |e| e.choose(&pane, offset, &action, target, answer);
+    chord(chord: String) => |e| e.chord(&chord);
+    find(text: String, forward: bool) => |e| e.find(&text, forward);
+    replace(text: String, with: String) => |e| e.replace_all(&text, &with);
+    scroll(pane: String, lines: i64) => |e| e.scroll(&pane, lines);
+    cut(pane: String, start: usize, end: usize) => |e| e.cut(&pane, start, end);
+    select(pane: String, start: usize, end: usize) => |e| e.select(&pane, start, end);
+    over_lines(pane: String, start: usize, end: usize, chord: String) => |e| e.over_lines(&pane, start, end, &chord);
+    search(text: String) => |e| e.list_occurrences(&text, false);
+    paste(text: String) => |e| e.paste(&text);
+    grab(pane: String, amount: i64) => |e| e.grab(&pane, amount);
 }
 
-#[tauri::command]
-fn press(held: State<'_, Held>, key: String) -> String {
-    let mut editor = held.0.lock().expect("the editor");
-    editor.key(&key);
-    said(&editor)
-}
-
-#[tauri::command]
-fn act(held: State<'_, Held>, pane: String, action: String, offset: usize) -> String {
-    let mut editor = held.0.lock().expect("the editor");
-    editor.choose(&pane, offset, &action, None, None);
-    said(&editor)
+query! {
+    bars() -> (Buffer, Buffer) => |e| (e.stations(), e.strip());
+    menu() -> Option<Buffer> => |e| e.menu.clone();
+    offers(pane: String, offset: usize) -> Vec<Offer> => |e| e.offers_at(&pane, offset);
+    offers_here() -> (String, usize, Vec<Offer>) => |e| e.offers_here();
+    history_preview(pane: String, offset: usize) -> Option<Buffer> => |e| e.history_preview_at(&pane, offset);
+    described() -> std::collections::BTreeMap<String, String> => |e| tracelean_core::surface::offer::described(&e.keymap);
+    selection() -> Option<(usize, usize)> => |e| e.selection_shown();
+    occurrences() -> Option<(usize, Vec<usize>)> => |e| e.occurrences_shown();
+    selected() -> Option<String> => |e| e.selected();
+    mode() -> String => |e| e.mode.clone();
+    symbols(query: String) -> Vec<(String, String)> => |e| e.symbols(&query);
+    palette(query: String) -> Vec<(String, String)> => |e| e.palette(&query);
+    problems() -> Option<usize> => |e| e.problems();
+    brackets() -> Option<(usize, usize)> => |e| e.bracket_pair();
+    requirement_text(name: String) -> Option<String> => |e| e.requirement_text(&name);
+    quick(query: String) -> Vec<String> => |e| e.quick_open(&query);
 }
 
 #[tauri::command]
@@ -101,178 +129,6 @@ fn tick(held: State<'_, Held>) -> Option<String> {
 #[tauri::command]
 fn take_clipboard(held: State<'_, Held>) -> Option<String> {
     held.0.lock().expect("the editor").clipboard.take()
-}
-
-#[tauri::command]
-fn act_here(held: State<'_, Held>, action: String) -> String {
-    let mut editor = held.0.lock().expect("the editor");
-    editor.act_here(&action);
-    said(&editor)
-}
-
-#[tauri::command]
-fn place(held: State<'_, Held>, pane: String, offset: usize) -> String {
-    let mut editor = held.0.lock().expect("the editor");
-    editor.place(&pane, offset);
-    said(&editor)
-}
-
-#[tauri::command]
-fn offers(
-    held: State<'_, Held>,
-    pane: String,
-    offset: usize,
-) -> Vec<tracelean_core::surface::offer::Offer> {
-    held.0.lock().expect("the editor").offers_at(&pane, offset)
-}
-
-#[tauri::command]
-fn offers_here(held: State<'_, Held>) -> (String, usize, Vec<tracelean_core::surface::offer::Offer>) {
-    held.0.lock().expect("the editor").offers_here()
-}
-
-#[tauri::command]
-fn history_preview(held: State<'_, Held>, pane: String, offset: usize) -> Option<Buffer> {
-    held.0.lock().expect("the editor").history_preview_at(&pane, offset)
-}
-
-#[tauri::command]
-fn choose(
-    held: State<'_, Held>,
-    pane: String,
-    offset: usize,
-    action: String,
-    target: Option<String>,
-    answer: Option<String>,
-) -> String {
-    let mut editor = held.0.lock().expect("the editor");
-    editor.choose(&pane, offset, &action, target, answer);
-    said(&editor)
-}
-
-#[tauri::command]
-fn chord(held: State<'_, Held>, chord: String) -> String {
-    let mut editor = held.0.lock().expect("the editor");
-    editor.chord(&chord);
-    said(&editor)
-}
-
-#[tauri::command]
-fn find(held: State<'_, Held>, text: String, forward: bool) -> String {
-    let mut editor = held.0.lock().expect("the editor");
-    editor.find(&text, forward);
-    said(&editor)
-}
-
-#[tauri::command]
-fn replace(held: State<'_, Held>, text: String, with: String) -> String {
-    let mut editor = held.0.lock().expect("the editor");
-    editor.replace_all(&text, &with);
-    said(&editor)
-}
-
-#[tauri::command]
-fn described(held: State<'_, Held>) -> std::collections::BTreeMap<String, String> {
-    tracelean_core::surface::offer::described(&held.0.lock().expect("the editor").keymap)
-}
-
-#[tauri::command]
-fn scroll(held: State<'_, Held>, pane: String, lines: i64) -> String {
-    let mut editor = held.0.lock().expect("the editor");
-    editor.scroll(&pane, lines);
-    said(&editor)
-}
-
-#[tauri::command]
-fn cut(held: State<'_, Held>, pane: String, start: usize, end: usize) -> String {
-    let mut editor = held.0.lock().expect("the editor");
-    editor.cut(&pane, start, end);
-    said(&editor)
-}
-
-#[tauri::command]
-fn select(held: State<'_, Held>, pane: String, start: usize, end: usize) -> String {
-    let mut editor = held.0.lock().expect("the editor");
-    editor.select(&pane, start, end);
-    said(&editor)
-}
-
-#[tauri::command]
-fn selection(held: State<'_, Held>) -> Option<(usize, usize)> {
-    held.0.lock().expect("the editor").selection_shown()
-}
-
-#[tauri::command]
-fn occurrences(held: State<'_, Held>) -> Option<(usize, Vec<usize>)> {
-    held.0.lock().expect("the editor").occurrences_shown()
-}
-
-#[tauri::command]
-fn selected(held: State<'_, Held>) -> Option<String> {
-    held.0.lock().expect("the editor").selected()
-}
-
-#[tauri::command]
-fn mode(held: State<'_, Held>) -> String {
-    held.0.lock().expect("the editor").mode.clone()
-}
-
-#[tauri::command]
-fn symbols(held: State<'_, Held>, query: String) -> Vec<(String, String)> {
-    held.0.lock().expect("the editor").symbols(&query)
-}
-
-#[tauri::command]
-fn palette(held: State<'_, Held>, query: String) -> Vec<(String, String)> {
-    held.0.lock().expect("the editor").palette(&query)
-}
-
-#[tauri::command]
-fn problems(held: State<'_, Held>) -> Option<usize> {
-    held.0.lock().expect("the editor").problems()
-}
-
-#[tauri::command]
-fn brackets(held: State<'_, Held>) -> Option<(usize, usize)> {
-    held.0.lock().expect("the editor").bracket_pair()
-}
-
-#[tauri::command]
-fn over_lines(held: State<'_, Held>, pane: String, start: usize, end: usize, chord: String) -> String {
-    let mut editor = held.0.lock().expect("the editor");
-    editor.over_lines(&pane, start, end, &chord);
-    said(&editor)
-}
-
-#[tauri::command]
-fn requirement_text(held: State<'_, Held>, name: String) -> Option<String> {
-    held.0.lock().expect("the editor").requirement_text(&name)
-}
-
-#[tauri::command]
-fn quick(held: State<'_, Held>, query: String) -> Vec<String> {
-    held.0.lock().expect("the editor").quick_open(&query)
-}
-
-#[tauri::command]
-fn search(held: State<'_, Held>, text: String) -> String {
-    let mut editor = held.0.lock().expect("the editor");
-    editor.list_occurrences(&text, false);
-    said(&editor)
-}
-
-#[tauri::command]
-fn paste(held: State<'_, Held>, text: String) -> String {
-    let mut editor = held.0.lock().expect("the editor");
-    editor.paste(&text);
-    said(&editor)
-}
-
-#[tauri::command]
-fn grab(held: State<'_, Held>, pane: String, amount: i64) -> String {
-    let mut editor = held.0.lock().expect("the editor");
-    editor.grab(&pane, amount);
-    said(&editor)
 }
 
 #[tauri::command]

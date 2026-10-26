@@ -396,10 +396,7 @@ pub fn affected(
 /// @implements REQ-CONTEXT.claims_with_source
 /// @implements REQ-CONTEXT.affected_tests
 pub fn gather(target: &str, index: &Index, files: &BTreeMap<String, String>) -> Option<Context> {
-    let (id, clause) = match target.split_once('.') {
-        Some((id, clause)) => (id, Some(clause.to_string())),
-        None => (target, None),
-    };
+    let (id, clause) = { let (r, c) = crate::drt::config::split_op(&target); (r, c.map(String::from)) };
     let requirement = said(index, id)?;
     let nodes: Vec<Node> =
         index.requirements.values().map(|r| Node { id: r.id.clone(), refines: r.refines.clone() }).collect();

@@ -1481,10 +1481,7 @@ impl Editor {
             .find(|s| s.role == tracelean_core::surface::view::Role::Requirement && s.start <= self.offset && self.offset < s.stop)
             .map(|s| buffer.text.chars().skip(s.start).take(s.stop - s.start).collect::<String>());
         if let Some(name) = named {
-            let (id, clause) = match name.split_once('.') {
-                Some((id, clause)) => (id.to_string(), Some(clause.to_string())),
-                None => (name.clone(), None),
-            };
+            let (id, clause) = { let (r, c) = tracelean_core::drt::config::split_op(&name); (r.to_string(), c.map(String::from)) };
             if let Some(file) = self.index().requirements.get(&id).map(|r| r.file.clone()) {
                 let text = self.workspace().files.get(&file).cloned().unwrap_or_default();
                 let line = clause
@@ -1599,10 +1596,7 @@ impl Editor {
     }
 
     pub fn requirement_text(&self, name: &str) -> Option<String> {
-        let (id, clause) = match name.split_once('.') {
-            Some((id, clause)) => (id, Some(clause)),
-            None => (name, None),
-        };
+        let (id, clause) = tracelean_core::drt::config::split_op(&name);
         let index = self.index();
         let requirement = index.requirements.get(id)?;
         Some(match clause.and_then(|c| requirement.clauses.get(c)) {
@@ -2533,10 +2527,7 @@ impl Editor {
 
     /// @implements REQ-LINECOV.lines_listed
     fn coverage(&self, named: &str) -> Buffer {
-        let (id, clause) = match named.split_once('.') {
-            Some((id, clause)) => (id, Some(clause.to_string())),
-            None => (named, None),
-        };
+        let (id, clause) = { let (r, c) = tracelean_core::drt::config::split_op(&named); (r, c.map(String::from)) };
         let index = self.index();
         let scope = if clause.is_some() || index.requirements.get(id).is_some_and(|r| r.clauses.is_empty()) {
             Some(clause.clone())
@@ -2550,10 +2541,7 @@ impl Editor {
     /// @implements REQ-JUDGE.prompt_exported
     fn judge(&self, name: &str) -> Buffer {
         use tracelean_core::trace::material;
-        let (req_id, clause) = match name.split_once('.') {
-            Some((req, clause)) => (req, Some(clause)),
-            None => (name, None),
-        };
+        let (req_id, clause) = tracelean_core::drt::config::split_op(&name);
         let index = self.index();
         let refuse = |why: String| {
             make::record_buffer(format!("judge {name}"), vec![Event { kind: "cannot judge".into(), text: why }])
@@ -3846,10 +3834,7 @@ fn continues(prev: &Command, next: &Command) -> bool {
 }
 
 fn named(req_id: &str, clause: &Option<String>) -> String {
-    match clause {
-        Some(clause) => format!("{req_id}.{clause}"),
-        None => req_id.to_string(),
-    }
+    tracelean_core::drt::config::qualified_op(req_id, clause.as_deref())
 }
 
 fn in_cells(rect: Rect, layout: Layout) -> Layout {

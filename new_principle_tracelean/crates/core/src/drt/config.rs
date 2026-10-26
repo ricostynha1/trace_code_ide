@@ -10,6 +10,10 @@ pub fn qualified_op(req_id: &str, clause: Option<&str>) -> String {
     }
 }
 
+pub fn split_op(qualified: &str) -> (&str, Option<&str>) {
+    qualified.split_once('.').map_or((qualified, None), |(req, clause)| (req, Some(clause)))
+}
+
 /// @implements REQ-DRT-BIND.call_only
 pub const LANGUAGES: &[&str] = &["rust", "typescript"];
 

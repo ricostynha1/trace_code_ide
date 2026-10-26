@@ -125,7 +125,8 @@ pub fn materialize(
     Ok(dir)
 }
 
-fn write_if_changed(path: &Path, contents: &str) -> std::io::Result<()> {
+
+pub(crate) fn write_if_changed(path: &Path, contents: &str) -> std::io::Result<()> {
     if std::fs::read_to_string(path).map(|c| c == contents).unwrap_or(false) {
         return Ok(());
     }

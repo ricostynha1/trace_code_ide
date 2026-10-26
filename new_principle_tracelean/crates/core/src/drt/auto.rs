@@ -53,10 +53,7 @@ pub fn suites_due(root: &Path, index: &Index) -> BTreeMap<String, Vec<String>> {
         let clauses = bindings.iter().find(|b| b.op() == op).map(|b| b.clauses()).unwrap_or_else(|| vec![op.clone()]);
         let due = out.entry(link.anchor.file.clone()).or_default();
         for qualified in clauses {
-            let (req_id, clause) = match qualified.split_once('.') {
-                Some((req, clause)) => (req.to_string(), Some(clause.to_string())),
-                None => (qualified.clone(), None),
-            };
+            let (req_id, clause) = { let (r, c) = crate::drt::config::split_op(&qualified); (r.to_string(), c.map(String::from)) };
             let runs = held_for(index, &held, &req_id, &clause);
             if !runs.iter().any(|h| !rerun(vec![h.clone()], h.op.clone(), live.clone(), false)) {
                 due.push(qualified);
