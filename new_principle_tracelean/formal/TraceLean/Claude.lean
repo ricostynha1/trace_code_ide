@@ -104,4 +104,37 @@ def turn : String :=
   recordLine "user"
     [Json.mkObj [("type", Json.str "tool_result"), ("content", Json.str "fn main")]] ++ "\n"
 
+def rowKinds : List String := ["you", "agent", "thinking", "tool", "result", "failed"]
+
+theorem block_kinds (kind : String) (b : Json) : ∀ e ∈ block kind b, e.kind ∈ rowKinds := by
+  intro e h
+  unfold block at h
+  split at h <;> (try simp only [] at h) <;> (repeat' split at h) <;> simp_all [row, rowKinds]
+
+theorem record_kinds (value : Json) : ∀ e ∈ record value, e.kind ∈ rowKinds := by
+  intro e h
+  unfold record at h
+  split at h
+  · split at h
+    · simp at h
+    · split at h
+      · split at h <;> simp_all [row, rowKinds]
+      · split at h
+        · simp only [List.mem_bind] at h
+          obtain ⟨b, _, hb⟩ := h
+          exact block_kinds _ b e hb
+        · simp at h
+      · simp at h
+  · simp at h
+
+/-- @proves REQ-TRANSCRIPT.tool_format_read -/
+theorem every_row_is_said_thought_called_or_returned (text : String) :
+    ∀ e ∈ events text, e.kind ∈ rowKinds := by
+  intro e h
+  simp only [events, List.mem_bind] at h
+  obtain ⟨line, _, hl⟩ := h
+  split at hl
+  · exact record_kinds _ e hl
+  · simp at hl
+
 end TraceLean.Claude

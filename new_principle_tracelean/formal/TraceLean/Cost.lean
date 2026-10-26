@@ -85,4 +85,9 @@ theorem built_record_by_record (table : List Price) (usage : List Usage) (last :
     spendOf table (usage ++ [last]) = accumulate table (spendOf table usage) last := by
   simp [spendOf, List.foldl_append]
 
+/-- @proves REQ-COST.estimate_is_labelled -/
+theorem every_figure_is_labelled_an_estimate (spend : Spend) :
+    ∃ rest : String, estimateLine spend = "estimated " ++ rest :=
+  ⟨_, rfl⟩
+
 end TraceLean.Cost

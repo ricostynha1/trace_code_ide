@@ -232,4 +232,160 @@ def branched : List Point :=
   [⟨0, none, false, "a", none, false⟩, ⟨1, some 0, false, "b", none, false⟩,
    ⟨2, some 0, true, "c", none, false⟩]
 
+def ParentFirst (ps : List Point) (out : List GraphRow) : Prop :=
+  ∀ i (h : i < out.length), out[i].node = none ∨
+    ∃ p ∈ ps, out[i].node = some p.node ∧ p.parent ∈ (out.take i).map (·.node)
+
+def Waiting (ps : List Point) (out : List GraphRow) (pending : List (Option Nat × Nat)) : Prop :=
+  ∀ e ∈ pending, e.1 = none ∨ ∃ p ∈ ps, e.1 = some p.node ∧ p.parent ∈ out.map (·.node)
+
+theorem parent_first_snoc (ps : List Point) (out : List GraphRow) (row : GraphRow)
+    (h : ParentFirst ps out)
+    (hr : row.node = none ∨ ∃ p ∈ ps, row.node = some p.node ∧ p.parent ∈ out.map (·.node)) :
+    ParentFirst ps (out ++ [row]) := by
+  intro i hi
+  by_cases lt : i < out.length
+  · rw [List.getElem_append_left out [row] lt, List.take_append_of_le_length (Nat.le_of_lt lt)]
+    exact h i lt
+  · have e : i = out.length := by simp at hi; omega
+    subst e
+    rw [List.getElem_concat_length out row _ rfl, List.take_left]
+    exact hr
+
+theorem waiting_snoc (ps : List Point) (out : List GraphRow) (row : GraphRow)
+    (pending : List (Option Nat × Nat)) (h : Waiting ps out pending) :
+    Waiting ps (out ++ [row]) pending := by
+  intro e he
+  rcases h e he with n | ⟨p, hp, ep, pp⟩
+  · exact Or.inl n
+  · exact Or.inr ⟨p, hp, ep, by simp only [List.map_append, List.mem_append]; exact Or.inl pp⟩
+
+theorem kids_are_children (ps : List Point) (node : Option Nat) (drawn : List Nat) :
+    ∀ k ∈ kidsOf ps node drawn, ∃ p ∈ ps, p.node = k ∧ p.parent = node := by
+  have go : ∀ (l : List Point) (acc : List Nat), (∀ p ∈ l, p ∈ ps) →
+      (∀ k ∈ acc, ∃ p ∈ ps, p.node = k ∧ p.parent = node) →
+      ∀ k ∈ l.foldl (fun acc p =>
+        if p.parent == node && !drawn.contains p.node && !acc.contains p.node then acc ++ [p.node]
+        else acc) acc, ∃ p ∈ ps, p.node = k ∧ p.parent = node := by
+    intro l
+    induction l with
+    | nil => intro acc _ h; exact h
+    | cons q rest ih =>
+      intro acc sub h
+      simp only [List.foldl]
+      apply ih _ (fun p hp => sub p (List.mem_cons_of_mem _ hp))
+      split
+      · rename_i c
+        intro k hk
+        simp only [List.mem_append, List.mem_singleton] at hk
+        rcases hk with hk | hk
+        · exact h k hk
+        · simp only [Bool.and_eq_true, beq_iff_eq] at c
+          exact ⟨q, sub q (List.mem_cons_self _ _), hk.symm, c.1.1⟩
+      · exact h
+  intro k hk
+  exact go ps [] (fun _ hp => hp) (by simp) k hk
+
+theorem step_pending (ps : List Point) (node : Option Nat) (col : Nat)
+    (rest : List (Option Nat × Nat)) (open_ : List Bool) (drawn : List Nat) :
+    ∀ e ∈ (stepOf ps node col rest open_ drawn).pending,
+      e ∈ rest ∨ ∃ k ∈ kidsOf ps node (markDrawn drawn node), e.1 = some k := by
+  intro e he
+  simp only [stepOf] at he
+  generalize kidsOf ps node (markDrawn drawn node) = kids at he ⊢
+  cases kids with
+  | nil =>
+    simp only [List.drop_nil, List.zip_nil_left, List.map_nil, List.head?_nil, Option.map_none',
+      Option.toList, List.nil_append] at he
+    exact Or.inl he
+  | cons k ks =>
+    simp only [List.head?_cons, Option.map_some', Option.toList, List.mem_append, List.mem_map,
+      List.mem_singleton] at he
+    rcases he with (⟨⟨k', c⟩, hz, rfl⟩ | rfl) | he
+    · exact Or.inr ⟨k', List.mem_of_mem_drop (List.of_mem_zip hz).1, rfl⟩
+    · exact Or.inr ⟨k, List.mem_cons_self _ _, rfl⟩
+    · exact Or.inl he
+
+theorem loop_invariant (ps : List Point) (fuel : Nat) :
+    ∀ pending open_ drawn out,
+      (out.filterMap (·.node)).Nodup → (∀ n ∈ out.filterMap (·.node), n ∈ drawn) →
+      ParentFirst ps out → Waiting ps out pending →
+      ((graphLoop ps fuel pending open_ drawn out).filterMap (·.node)).Nodup ∧
+        ParentFirst ps (graphLoop ps fuel pending open_ drawn out) := by
+  induction fuel with
+  | zero => intro _ _ _ out nd _ pf _; exact ⟨nd, pf⟩
+  | succ fuel ih =>
+    intro pending open_ drawn out nd sub pf w
+    cases pending with
+    | nil => exact ⟨nd, pf⟩
+    | cons head rest =>
+      rcases head with ⟨node, col⟩
+      simp only [graphLoop]
+      split
+      · exact ih rest open_ drawn out nd sub pf (fun e he => w e (List.mem_cons_of_mem _ he))
+      · rename_i unseen
+        have rowNode : (stepOf ps node col rest open_ drawn).row.node = node := rfl
+        apply ih
+        · rw [List.filterMap_append]
+          cases node with
+          | none =>
+            simp only [rowNode, List.filterMap_cons, List.filterMap_nil, List.append_nil]
+            exact nd
+          | some n =>
+            simp only [rowNode, List.filterMap_cons, List.filterMap_nil]
+            have notIn : n ∉ out.filterMap (·.node) := by
+              intro hn
+              apply unseen
+              simp only [seenAlready]
+              exact List.elem_eq_true_of_mem (sub n hn)
+            unfold List.Nodup
+            rw [List.pairwise_append]
+            refine ⟨nd, List.pairwise_singleton _ _, ?_⟩
+            intro a ha b hb
+            simp only [List.mem_singleton] at hb
+            subst hb
+            intro e
+            subst e
+            exact notIn ha
+        · intro m hm
+          rw [List.filterMap_append] at hm
+          simp only [List.mem_append] at hm
+          cases node with
+          | none =>
+            simp only [rowNode, List.filterMap_cons, List.filterMap_nil, List.not_mem_nil,
+              or_false] at hm
+            exact sub m hm
+          | some n =>
+            simp only [rowNode, List.filterMap_cons, List.filterMap_nil, List.mem_singleton] at hm
+            simp only [markDrawn, List.mem_append, List.mem_singleton]
+            rcases hm with hm | hm
+            · exact Or.inl (sub m hm)
+            · exact Or.inr hm
+        · apply parent_first_snoc ps out _ pf
+          rw [rowNode]
+          exact w (node, col) (List.mem_cons_self _ _)
+        · intro e he
+          rcases step_pending ps node col rest open_ drawn e he with hr | ⟨k, hk, ek⟩
+          · exact waiting_snoc ps out _ _ (fun e he => w e (List.mem_cons_of_mem _ he)) e hr
+          · obtain ⟨p, hp, pk, pp⟩ := kids_are_children ps node _ k hk
+            refine Or.inr ⟨p, hp, by rw [ek, pk], ?_⟩
+            simp only [List.map_append, List.map_cons, List.map_nil, List.mem_append,
+              List.mem_singleton]
+            exact Or.inr (by rw [pp, rowNode])
+
+/-- @proves REQ-UNDO.tree_is_drawn -/
+theorem each_node_is_drawn_once_under_its_parent (points : List Point) :
+    ((historyGraph points).filterMap (·.node)).Nodup ∧
+    ∀ i (h : i < (historyGraph points).length), (historyGraph points)[i].node = none ∨
+      ∃ p ∈ points, (historyGraph points)[i].node = some p.node ∧
+        p.parent ∈ ((historyGraph points).take i).map (·.node) := by
+  apply loop_invariant
+  · exact List.nodup_nil
+  · simp
+  · intro i h; simp at h
+  · intro e he
+    simp only [List.mem_singleton] at he
+    subst he
+    exact Or.inl rfl
+
 end TraceLean.HistoryView

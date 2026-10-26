@@ -161,4 +161,21 @@ theorem an_exemption_is_signed_and_in_date (reason judge due today : String) (ex
   · intro late
     simp [qualifierKinds, expired, late]
 
+/-- @proves REQ-CHECK.named_kinds -/
+theorem every_kind_is_reported_by_its_own_name (kind : Kind) :
+    (Lean.fromJson? (Lean.toJson kind) : Except String Kind) = .ok kind ∧
+    ((facts kind).severity = .error → (facts kind).progress = false) := by
+  cases kind <;> exact ⟨rfl, by simp [facts, Kind.severity, Kind.progress]⟩
+
+/-- @proves REQ-CHECK.one_of_each_role -/
+theorem a_crowded_role_is_named (roles : List Role) :
+    (Kind.severalModels ∈ crowdedKinds roles ↔ (roles.filter (· == Role.models)).length > 1) ∧
+    (Kind.severalSpecs ∈ crowdedKinds roles ↔ (roles.filter (· == Role.specifies)).length > 1) ∧
+    (Kind.severalPins ∈ crowdedKinds roles ↔ (roles.filter (· == Role.pins)).length > 1) := by
+  unfold crowdedKinds
+  by_cases a : (roles.filter (· == Role.models)).length > 1 <;>
+    by_cases b : (roles.filter (· == Role.specifies)).length > 1 <;>
+    by_cases c : (roles.filter (· == Role.pins)).length > 1 <;>
+    simp [a, b, c]
+
 end TraceLean.Checker

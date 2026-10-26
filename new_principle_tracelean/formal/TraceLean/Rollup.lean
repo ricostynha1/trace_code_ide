@@ -361,4 +361,244 @@ theorem a_partial_clause_is_never_tested_or_proved (reached : Marks) :
   · simp [partialCap, Marks.holds]
   · simp [partialCap, Marks.holds]
 
+def partHolds (floor p : Marks) : Prop :=
+  (floor.annotated = true → p.annotated = true) ∧ (floor.judged = true → p.judged = true) ∧
+    (floor.tested = true → (p.tested || p.structural) = true) ∧
+    (floor.proved = true → (p.proved || p.structural) = true)
+
+theorem both_parts (floor a b : Marks) (h : partHolds floor (Marks.both a b)) :
+    partHolds floor a ∧ partHolds floor b := by
+  rcases a with ⟨a1, a2, a3, a4, a5⟩
+  rcases b with ⟨b1, b2, b3, b4, b5⟩
+  obtain ⟨h1, h2, h3, h4⟩ := h
+  simp only [Marks.both] at h1 h2 h3 h4
+  refine ⟨⟨?_, ?_, ?_, ?_⟩, ⟨?_, ?_, ?_, ?_⟩⟩ <;> intro hf
+  · have := h1 hf; revert this; cases a1 <;> cases b1 <;> simp
+  · have := h2 hf; revert this; cases a2 <;> cases b2 <;> simp
+  · have := h3 hf; revert this; cases a3 <;> cases a5 <;> cases b3 <;> cases b5 <;> simp
+  · have := h4 hf; revert this; cases a4 <;> cases a5 <;> cases b4 <;> cases b5 <;> simp
+  · have := h1 hf; revert this; cases a1 <;> cases b1 <;> simp
+  · have := h2 hf; revert this; cases a2 <;> cases b2 <;> simp
+  · have := h3 hf; revert this; cases a3 <;> cases a5 <;> cases b3 <;> cases b5 <;> simp
+  · have := h4 hf; revert this; cases a4 <;> cases a5 <;> cases b4 <;> cases b5 <;> simp
+
+theorem fold_parts (floor : Marks) (rest : List Marks) : ∀ acc : Marks,
+    partHolds floor (rest.foldl Marks.both acc) → partHolds floor acc ∧ ∀ p ∈ rest, partHolds floor p := by
+  induction rest with
+  | nil => intro acc h; exact ⟨h, by simp⟩
+  | cons x xs ih =>
+    intro acc h
+    have ⟨hacc, hxs⟩ := ih (Marks.both acc x) h
+    have ⟨ha, hx⟩ := both_parts floor acc x hacc
+    refine ⟨ha, ?_⟩
+    intro p hp
+    cases hp with
+    | head => exact hx
+    | tail _ hp => exact hxs p hp
+
+theorem holds_part (floor m : Marks) (h : m.holds floor = true) : partHolds floor m := by
+  rcases m with ⟨m1, m2, m3, m4, m5⟩
+  rcases floor with ⟨f1, f2, f3, f4, f5⟩
+  simp only [Marks.holds, Bool.and_eq_true] at h
+  obtain ⟨⟨⟨h1, h2⟩, h3⟩, h4⟩ := h
+  refine ⟨?_, ?_, ?_, ?_⟩ <;> simp only [] <;> intro hf <;> subst hf
+  · revert h1; cases m1 <;> simp
+  · revert h2; cases m2 <;> simp
+  · revert h3; cases m3 <;> simp
+  · revert h4; cases m4 <;> simp
+
+/-- @proves REQ-ROLLUP.every_part_holds -/
+theorem the_aggregate_holds_only_what_every_part_holds (parts : List Marks) (floor : Marks)
+    (h : (combine parts).holds floor = true) :
+    (∀ p ∈ parts, partHolds floor p) ∧
+    (parts = [] → (floor.annotated || floor.judged || floor.tested || floor.proved) = false) := by
+  cases parts with
+  | nil =>
+    refine ⟨by simp, fun _ => ?_⟩
+    rcases floor with ⟨f1, f2, f3, f4, f5⟩
+    revert h
+    cases f1 <;> cases f2 <;> cases f3 <;> cases f4 <;> simp [combine, Marks.holds, Marks.empty]
+  | cons first rest =>
+    refine ⟨?_, by simp⟩
+    have whole := holds_part floor _ h
+    simp only [combine, List.foldl] at whole
+    have ⟨hacc, hrest⟩ := fold_parts floor rest _ whole
+    have ⟨_, hfirst⟩ := both_parts floor Marks.neutral first hacc
+    intro p hp
+    cases hp with
+    | head => exact hfirst
+    | tail _ hp => exact hrest p hp
+
+theorem growFor_keeps (graph : List Node) (k : Nat) :
+    ∀ found : List String, ∀ x ∈ found, x ∈ growFor graph k found := by
+  induction k with
+  | zero => intro found x hx; exact hx
+  | succ _ ih =>
+    intro found x hx
+    exact ih (grow graph found) x (by simp [grow, hx])
+
+theorem root_reached (graph : List Node) (root : String) : root ∈ reach graph root :=
+  growFor_keeps graph _ [root] root (by simp)
+
+theorem dedupLast_sub (l : List Node) : ∀ n ∈ dedupLast l, n ∈ l := by
+  induction l with
+  | nil => simp [dedupLast]
+  | cons m rest ih =>
+    intro n hn
+    unfold dedupLast at hn
+    split at hn
+    · exact List.mem_cons_of_mem _ (ih n hn)
+    · cases hn with
+      | head => exact List.mem_cons_self _ _
+      | tail _ hn => exact List.mem_cons_of_mem _ (ih n hn)
+
+theorem dedupLast_keeps_id (l : List Node) : ∀ n ∈ l, ∃ m ∈ dedupLast l, m.id = n.id := by
+  induction l with
+  | nil => simp
+  | cons x rest ih =>
+    intro n hn
+    unfold dedupLast
+    split
+    · rename_i dup
+      cases hn with
+      | head =>
+        simp only [List.any_eq_true, beq_iff_eq] at dup
+        obtain ⟨m, hm, same⟩ := dup
+        obtain ⟨m', hm', same'⟩ := ih m hm
+        exact ⟨m', hm', same'.trans same⟩
+      | tail _ hn => exact ih n hn
+    · cases hn with
+      | head => exact ⟨x, List.mem_cons_self _ _, rfl⟩
+      | tail _ hn =>
+        obtain ⟨m, hm, same⟩ := ih n hn
+        exact ⟨m, List.mem_cons_of_mem _ hm, same⟩
+
+/-- @proves REQ-ROLLUP.open_is_lower_bound -/
+theorem an_open_root_is_provisional (nodes : List Node)
+    (held : List ((String × Option String) × Marks)) (root : String) (floor : Marks)
+    (declared : ∃ n ∈ nodes, n.id = root)
+    (open_ : ∀ n ∈ nodes, n.id = root → n.complete = false) :
+    (rollUp nodes held root floor).covered.exact = false ∧
+    Figure.isComplete (rollUp nodes held root floor).covered = false := by
+  have exact : (rollUp nodes held root floor).covered.exact = false := by
+    obtain ⟨n, hn, hid⟩ := declared
+    obtain ⟨m, hm, same⟩ := dedupLast_keeps_id nodes n hn
+    have inGraph : m ∈ canonNodes nodes := List.mem_mergeSort.mpr hm
+    have incomplete : m.complete = false := open_ m (dedupLast_sub nodes m hm) (same.trans hid)
+    have member : m ∈ members (canonNodes nodes) root := by
+      simp only [members, List.mem_filter]
+      refine ⟨inGraph, ?_⟩
+      rw [same.trans hid]
+      exact List.elem_eq_true_of_mem (root_reached _ root)
+    have notAll : (members (canonNodes nodes) root).all (·.complete) = false := by
+      rw [Bool.eq_false_iff]
+      intro hall
+      rw [List.all_eq_true] at hall
+      have := hall m member
+      rw [incomplete] at this
+      exact Bool.false_ne_true this
+    cases f : (canonNodes nodes).length <;>
+      simp [rollUp, rollUpTree, RollUp.covered, figureOf, notAll, f]
+  refine ⟨exact, ?_⟩
+  simp [Figure.isComplete, exact]
+
+theorem dedupe_go (xs : List String) : ∀ acc : List String, acc.Nodup →
+    (xs.foldl (fun acc x => if acc.contains x then acc else acc ++ [x]) acc).Nodup ∧
+    ∀ y, y ∈ xs.foldl (fun acc x => if acc.contains x then acc else acc ++ [x]) acc ↔
+      y ∈ acc ∨ y ∈ xs := by
+  induction xs with
+  | nil => intro acc h; simp [h]
+  | cons x rest ih =>
+    intro acc h
+    simp only [List.foldl]
+    split
+    · rename_i has
+      have ⟨n, m⟩ := ih acc h
+      refine ⟨n, fun y => ?_⟩
+      rw [m y]
+      have hx : x ∈ acc := List.mem_of_elem_eq_true has
+      constructor
+      · rintro (a | a)
+        · exact Or.inl a
+        · exact Or.inr (List.mem_cons_of_mem _ a)
+      · rintro (a | a)
+        · exact Or.inl a
+        · cases a with
+          | head => exact Or.inl hx
+          | tail _ a => exact Or.inr a
+    · rename_i hasnt
+      have notIn : x ∉ acc := fun hx => hasnt (List.elem_eq_true_of_mem hx)
+      have nd : (acc ++ [x]).Nodup := by
+        unfold List.Nodup
+        rw [List.pairwise_append]
+        refine ⟨h, List.pairwise_singleton _ x, ?_⟩
+        intro a ha b hb
+        simp only [List.mem_singleton] at hb
+        subst hb
+        intro e
+        subst e
+        exact notIn ha
+      have ⟨n, m⟩ := ih (acc ++ [x]) nd
+      refine ⟨n, fun y => ?_⟩
+      rw [m y]
+      simp only [List.mem_append, List.mem_singleton, List.mem_cons, List.not_mem_nil, or_false]
+      constructor
+      · rintro ((a | a) | a)
+        · exact Or.inl a
+        · exact Or.inr (Or.inl a)
+        · exact Or.inr (Or.inr a)
+      · rintro (a | (a | a))
+        · exact Or.inl (Or.inl a)
+        · exact Or.inl (Or.inr a)
+        · exact Or.inr a
+
+theorem dedupe_nodup (xs : List String) : (dedupe xs).Nodup :=
+  (dedupe_go xs [] List.nodup_nil).1
+
+theorem mem_dedupe (xs : List String) (y : String) : y ∈ dedupe xs ↔ y ∈ xs := by
+  have := (dedupe_go xs [] List.nodup_nil).2 y
+  simp only [dedupe] at *
+  rw [this]
+  simp
+
+theorem nodup_sub_length (l : List String) : ∀ m : List String, l.Nodup → (∀ x ∈ l, x ∈ m) →
+    l.length ≤ m.length := by
+  induction l with
+  | nil => intro m _ _; simp
+  | cons x rest ih =>
+    intro m nd sub
+    have ⟨notIn, ndRest⟩ := List.nodup_cons.mp nd
+    have xm : x ∈ m := sub x (List.mem_cons_self _ _)
+    have sub' : ∀ y ∈ rest, y ∈ m.erase x := by
+      intro y hy
+      have ne : y ≠ x := fun e => notIn (e ▸ hy)
+      exact (List.mem_erase_of_ne ne).mpr (sub y (List.mem_cons_of_mem _ hy))
+    have := ih (m.erase x) ndRest sub'
+    rw [List.length_erase_of_mem xm] at this
+    have pos : 0 < m.length := List.length_pos_of_mem xm
+    simp only [List.length_cons]
+    omega
+
+/-- @proves REQ-ROLLUP.untraced_counted -/
+theorem an_unclaimed_file_stays_in_the_denominator (scanned claimed : List String)
+    (file : String) (inTree : file ∈ scanned) (unclaimed : file ∉ claimed) :
+    (fileCoverage scanned claimed).total = (fileCoverage scanned []).total ∧
+    (fileCoverage scanned claimed).met < (fileCoverage scanned claimed).total := by
+  refine ⟨rfl, ?_⟩
+  simp only [fileCoverage]
+  have fileIn : file ∈ dedupe scanned := (mem_dedupe scanned file).mpr inTree
+  have nd : ((dedupe claimed).filter ((dedupe scanned).contains ·)).Nodup :=
+    List.Pairwise.filter _ (dedupe_nodup claimed)
+  have sub : ∀ x ∈ (dedupe claimed).filter ((dedupe scanned).contains ·),
+      x ∈ (dedupe scanned).erase file := by
+    intro x hx
+    rw [List.mem_filter] at hx
+    have xc : x ∈ claimed := (mem_dedupe claimed x).mp hx.1
+    have ne : x ≠ file := fun e => unclaimed (e ▸ xc)
+    exact (List.mem_erase_of_ne ne).mpr (List.mem_of_elem_eq_true hx.2)
+  have le := nodup_sub_length _ _ nd sub
+  rw [List.length_erase_of_mem fileIn] at le
+  have pos : 0 < (dedupe scanned).length := List.length_pos_of_mem fileIn
+  omega
+
 end TraceLean.Rollup

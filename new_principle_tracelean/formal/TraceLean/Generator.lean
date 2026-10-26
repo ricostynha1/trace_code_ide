@@ -240,4 +240,159 @@ theorem the_seed_alone_fixes_the_cases (seed n m : Nat) :
     (rawStream seed (n + m)).take n = rawStream seed n :=
   raw_stream_go_prefix n m _
 
+def stateAfter : Nat → Rng → Rng
+  | 0, r => r
+  | n + 1, r => stateAfter n r.next.2
+
+theorem raw_stream_go_orbit (n : Nat) :
+    ∀ r : Rng, rawStreamGo n r = (List.range n).map (fun i => (stateAfter i r).next.1.toNat) := by
+  induction n with
+  | zero => intro _; simp [rawStreamGo]
+  | succ k ih =>
+    intro r
+    rw [List.range_succ_eq_map]
+    simp [rawStreamGo, ih, stateAfter]
+
+/-- @proves REQ-DRT-GEN.fixed_stream -/
+theorem the_stream_is_the_xorshift_orbit_of_the_seed (seed count : Nat) :
+    rawStream seed count =
+      (List.range count).map (fun i =>
+        (stateAfter i (Rng.new (UInt64.ofNat seed))).next.1.toNat) :=
+  raw_stream_go_orbit count _
+
+def natAt (max : Option Nat) (edges : List Nat) (r : Rng) : Nat :=
+  match (r.chance 40).1 with
+  | true => edges.getD ((r.chance 40).2.below (UInt64.ofNat edges.length)).1.toNat 0
+  | false => ((r.chance 40).2.below (boundOf max)).1.toNat
+
+theorem state_after_add (n : Nat) : ∀ (b : Nat) (r : Rng),
+    stateAfter (n + b) r = stateAfter n (stateAfter b r) := by
+  intro b
+  induction b with
+  | zero => intro r; rfl
+  | succ b ih =>
+    intro r
+    show stateAfter (n + b + 1) r = stateAfter n (stateAfter b r.next.2)
+    rw [← ih]
+    rfl
+
+theorem nat_stream_go_head (max : Option Nat) (edges : List Nat) (notEmpty : edges.isEmpty = false)
+    (k : Nat) (r : Rng) :
+    natStreamGo max edges (k + 1) r = natAt max edges r :: natStreamGo max edges k (stateAfter 2 r) := by
+  simp only [natStreamGo, notEmpty, Bool.false_eq_true, if_false]
+  cases h : (r.chance 40).1 <;> simp only [natAt, h] <;> rfl
+
+theorem nat_stream_go_orbit (max : Option Nat) (edges : List Nat) (nonempty : edges ≠ [])
+    (n : Nat) : ∀ r : Rng,
+    natStreamGo max edges n r = (List.range n).map (fun i => natAt max edges (stateAfter (2 * i) r)) := by
+  have notEmpty : edges.isEmpty = false := by
+    cases edges with
+    | nil => exact absurd rfl nonempty
+    | cons _ _ => rfl
+  induction n with
+  | zero => intro _; simp [natStreamGo]
+  | succ k ih =>
+    intro r
+    rw [List.range_succ_eq_map, nat_stream_go_head max edges notEmpty, ih]
+    simp only [List.map_cons, List.map_map, Nat.mul_zero, List.cons.injEq]
+    refine ⟨rfl, ?_⟩
+    apply List.map_congr_left
+    intro i _
+    simp only [Function.comp, Nat.succ_eq_add_one, Nat.mul_add, Nat.mul_one, state_after_add]
+
+theorem drawn_edge_is_an_edge (edges : List Nat) (nonempty : edges ≠ []) (r : Rng) :
+    edges.getD (r.below (UInt64.ofNat edges.length)).1.toNat 0 ∈ edges := by
+  have pos : 0 < edges.length := by
+    cases edges with
+    | nil => exact absurd rfl nonempty
+    | cons _ _ => simp
+  have small : (UInt64.ofNat edges.length).toNat ≤ edges.length := Nat.mod_le _ _
+  have lt : (r.below (UInt64.ofNat edges.length)).1.toNat < edges.length := by
+    simp only [Rng.below]
+    split
+    · simpa using pos
+    · rename_i nz
+      have nz' : (UInt64.ofNat edges.length).toNat ≠ 0 := by
+        intro z
+        apply nz
+        have : UInt64.ofNat edges.length = 0 := UInt64.toNat.inj (by simpa using z)
+        simp [this]
+      rw [UInt64.toNat_mod]
+      exact Nat.lt_of_lt_of_le (Nat.mod_lt _ (Nat.pos_of_ne_zero nz')) small
+  rw [List.getD_eq_getElem?_getD, List.getElem?_eq_getElem lt]
+  exact List.getElem_mem _ _ _
+
+/-- @proves REQ-DRT-GEN.edges_sampled -/
+theorem a_boundary_is_drawn_whenever_the_coin_says_so (seed : Nat) (max : Option Nat)
+    (edges : List Nat) (count i : Nat) (nonempty : edges ≠ []) (inRange : i < count)
+    (coin : ((stateAfter (2 * i) (Rng.new (UInt64.ofNat seed))).chance 40).1 = true) :
+    ∃ e ∈ edges, (natStream seed max edges count).get? i = some e := by
+  unfold natStream
+  rw [nat_stream_go_orbit max edges nonempty, List.get?_eq_getElem?, List.getElem?_map,
+    List.getElem?_range inRange]
+  refine ⟨_, ?_, rfl⟩
+  simp only [natAt, coin]
+  exact drawn_edge_is_an_edge edges nonempty _
+
+def drawEach (f : Rng → Json × Rng) (acc : List Json × Rng) (_ : Nat) : List Json × Rng :=
+  (acc.1 ++ [(f acc.2).1], (f acc.2).2)
+
+theorem draw_each_extends (f : Rng → Json × Rng) (l : List Nat) :
+    ∀ acc : List Json × Rng, ∃ t, (l.foldl (drawEach f) acc).1 = acc.1 ++ t := by
+  induction l with
+  | nil => intro acc; exact ⟨[], by simp⟩
+  | cons x xs ih =>
+    intro acc
+    obtain ⟨t, ht⟩ := ih (drawEach f acc x)
+    refine ⟨(f acc.2).1 :: t, ?_⟩
+    simp only [List.foldl]
+    rw [ht]
+    simp [drawEach]
+
+theorem draw_each_length (f : Rng → Json × Rng) (l : List Nat) :
+    ∀ acc : List Json × Rng, (l.foldl (drawEach f) acc).1.length = acc.1.length + l.length := by
+  induction l with
+  | nil => intro acc; simp
+  | cons x xs ih =>
+    intro acc
+    simp only [List.foldl, ih, drawEach, List.length_append, List.length_cons, List.length_nil]
+    omega
+
+theorem draw_each_ignores (f : Rng → Json × Rng) (l₁ l₂ : List Nat) (same : l₁.length = l₂.length) :
+    ∀ acc : List Json × Rng, l₁.foldl (drawEach f) acc = l₂.foldl (drawEach f) acc := by
+  induction l₁ generalizing l₂ with
+  | nil => cases l₂ with
+    | nil => intro acc; rfl
+    | cons _ _ => simp at same
+  | cons x xs ih => cases l₂ with
+    | nil => simp at same
+    | cons y ys =>
+      intro acc
+      simp only [List.foldl]
+      exact ih ys (by simpa using same) _
+
+theorem value_stream_prefix (seed : Nat) (schema : Schema) (n m : Nat) :
+    (valueStream seed schema (n + m)).take n = valueStream seed schema n := by
+  show ((List.range (n + m)).foldl (drawEach (valueOf schema)) ([], _)).1.take n =
+    ((List.range n).foldl (drawEach (valueOf schema)) ([], _)).1
+  rw [draw_each_ignores (valueOf schema) (List.range (n + m)) (List.range n ++ List.range m)
+    (by simp), List.foldl_append]
+  obtain ⟨t, ht⟩ := draw_each_extends (valueOf schema) (List.range m)
+    ((List.range n).foldl (drawEach (valueOf schema)) ([], Rng.new (UInt64.ofNat seed)))
+  rw [ht]
+  apply List.take_left'
+  simp [draw_each_length]
+
+/-- @proves REQ-DRT-GEN.seed_reproduces -/
+theorem a_seed_fixes_every_case_of_a_shape (seed shape n m : Nat) :
+    (shapeStream seed shape (n + m)).take n = shapeStream seed shape n ∧
+    (shapeStream seed shape n).length = n := by
+  unfold shapeStream
+  split
+  · rename_i h
+    simp [shapes] at h
+  · refine ⟨value_stream_prefix _ _ n m, ?_⟩
+    show ((List.range n).foldl (drawEach (valueOf _)) ([], _)).1.length = n
+    simp [draw_each_length]
+
 end TraceLean.Generator

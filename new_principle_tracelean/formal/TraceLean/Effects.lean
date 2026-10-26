@@ -119,4 +119,35 @@ theorem the_real_tree_is_checked_untouched (w : Workspace) :
     treeChanges w w = [] := by
   simp [treeChanges]
 
+/-- @proves REQ-OBS.workspace_is_a_copy -/
+theorem a_mirrored_path_passes_only_when_copied_exactly
+    (before workspace : Workspace) (path : String) (h : isMirrored path = true) :
+    copyCheck before workspace path = none ↔ before.get path = workspace.get path := by
+  unfold copyCheck
+  rw [if_pos h]
+  cases before.get path <;> cases workspace.get path <;> simp
+
+/-- @proves REQ-OBS.workspace_is_a_copy -/
+theorem a_faithful_copy_raises_nothing (before workspace : Workspace) (path : String)
+    (same : before.get path = workspace.get path) :
+    copyCheck before workspace path = none := by
+  unfold copyCheck
+  cases hb : before.get path <;> cases hw : workspace.get path <;> simp_all
+
+/-- @proves REQ-SBX.escape_is_not_silent -/
+theorem every_escape_is_reported (writes : List String) (path : String) :
+    Violation.escaped path ∈ escapeViolations writes ↔
+      path ∈ writes ∧ classify path = Class.outside := by
+  unfold escapeViolations
+  simp only [List.mem_filterMap]
+  constructor
+  · rintro ⟨p, hp, e⟩
+    by_cases o : classify p = Class.outside
+    · simp [o] at e
+      subst e
+      exact ⟨hp, o⟩
+    · simp [o] at e
+  · rintro ⟨hp, o⟩
+    exact ⟨path, hp, by simp [o]⟩
+
 end TraceLean.Effects

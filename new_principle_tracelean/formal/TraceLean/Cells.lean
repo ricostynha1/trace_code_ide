@@ -164,4 +164,63 @@ def drawnWrong (buffer : Buffer) (painted : String) (rows columns : Nat) (looks 
 
 def looks : List Look := [⟨.heading, some "#ff0000", true⟩]
 
+def placed : List Char → Nat → Nat → Nat → List (Char × Nat × Nat × Nat)
+  | [], _, _, _ => []
+  | '\n' :: rest, offset, line, _ => placed rest (offset + 1) (line + 1) 0
+  | c :: rest, offset, line, column => (c, offset, line, column) :: placed rest (offset + 1) line (column + 1)
+
+def lookOf (looks : List Look) (role : Role) : Option String × Bool :=
+  match looks.find? (fun l => l.role == role) with
+  | some l => (l.fg, l.bold)
+  | none => (none, false)
+
+def DrawnRight (cells : List (List Cell)) (looks : List Look) (spans : List Span)
+    (offset line column : Nat) : Prop :=
+  ∃ d, ((cells.get? line).bind (fun r => r.get? column)) = some d ∧
+    d.fg = (lookOf looks (roleAt spans offset)).1 ∧ d.bold = (lookOf looks (roleAt spans offset)).2
+
+theorem walk_silent_iff (spans : List Span) (cells : List (List Cell)) (looks : List Look)
+    (chars : List Char) : ∀ offset line column,
+    walk spans cells looks chars offset line column = [] ↔
+      ∀ x ∈ placed chars offset line column, DrawnRight cells looks spans x.2.1 x.2.2.1 x.2.2.2 := by
+  induction chars with
+  | nil => intro _ _ _; simp [walk, placed]
+  | cons ch rest ih =>
+    intro o l c
+    by_cases hc : ch = '\n'
+    · subst hc
+      simp only [walk, placed]
+      exact ih _ _ _
+    · have hp : placed (ch :: rest) o l c = (ch, o, l, c) :: placed rest (o + 1) l (c + 1) := by
+        rw [placed]
+        exact hc
+      rw [walk.eq_3 _ _ _ _ _ _ _ _ hc, hp, List.forall_mem_cons, ← ih]
+      simp only [List.append_eq_nil, DrawnRight, lookOf]
+      apply and_congr_left
+      intro _
+      cases List.find? (fun l => l.role == roleAt spans o) looks <;>
+        cases (cells.get? l).bind (fun r => r.get? c) <;> simp
+
+theorem role_is_first_covering_span (spans : List Span) (offset : Nat) :
+    (∀ s, spans.find? (fun s => s.start ≤ offset && offset < s.stop) = some s →
+      roleAt spans offset = s.role) ∧
+    ((∀ s ∈ spans, ¬ (s.start ≤ offset ∧ offset < s.stop)) → roleAt spans offset = .plain) := by
+  constructor
+  · intro s h
+    simp [roleAt, h]
+  · intro h
+    have none : spans.find? (fun s => s.start ≤ offset && offset < s.stop) = none := by
+      rw [List.find?_eq_none]
+      intro s hs
+      simpa using h s hs
+    simp [roleAt, none]
+
+/-- @proves REQ-LOOK.roles_drawn_in_theme_colours -/
+theorem nothing_miscoloured_means_every_character_in_its_role_look (buffer : Buffer)
+    (painted : String) (rows columns : Nat) (looks : List Look) :
+    drawnWrong buffer painted rows columns looks = [] ↔
+      ∀ x ∈ placed buffer.text.toList 0 0 0,
+        DrawnRight (grid painted rows columns) looks buffer.spans x.2.1 x.2.2.1 x.2.2.2 :=
+  walk_silent_iff _ _ _ _ 0 0 0
+
 end TraceLean.Cells

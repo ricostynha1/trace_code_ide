@@ -75,4 +75,26 @@ def judge (colours : List (String × String)) (pair : Pair) : List Finding :=
 def findings (pairs : List Pair) (colours : List (String × String)) : List Finding :=
   pairs.bind (judge colours)
 
+theorem judge_silent_iff (colours : List (String × String)) (pair : Pair) :
+    judge colours pair = [] ↔
+      ∃ a b r, colourOf colours pair.text = some a ∧ colourOf colours pair.on = some b ∧
+        ratio a b = some r ∧
+        ((pair.least ≤ r ∧ pair.waived = none) ∨ (r < pair.least ∧ pair.waived.isSome = true)) := by
+  unfold judge
+  cases colourOf colours pair.text <;> cases colourOf colours pair.on <;> simp
+  rename_i a b
+  cases ratio a b <;> simp
+  rename_i r
+  cases pair.waived <;> by_cases lt : r < pair.least <;> simp [lt] <;> omega
+
+/-- @proves REQ-LOOK.contrast_sufficient -/
+theorem no_finding_means_every_pair_is_legible (pairs : List Pair)
+    (colours : List (String × String)) :
+    findings pairs colours = [] ↔
+      ∀ pair ∈ pairs, ∃ a b r, colourOf colours pair.text = some a ∧
+        colourOf colours pair.on = some b ∧ ratio a b = some r ∧
+        ((pair.least ≤ r ∧ pair.waived = none) ∨ (r < pair.least ∧ pair.waived.isSome = true)) := by
+  unfold findings
+  simp only [List.bind_eq_nil, judge_silent_iff]
+
 end TraceLean.Contrast
