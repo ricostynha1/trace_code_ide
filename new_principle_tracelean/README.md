@@ -40,7 +40,7 @@ an intent ([REQ-ACT](reqs/surface/REQ-ACT.md)), an intent becomes a buffer
 a value, modelled and differentially tested; a frontend owns the last one only.
 See [docs/06-editor.md](docs/06-editor.md).
 
-**[reqs/README.md](reqs/README.md)** indexes all forty-one requirements by area.
+**[reqs/README.md](reqs/README.md)** indexes all forty-three requirements by area.
 
 ## Checking this tree
 

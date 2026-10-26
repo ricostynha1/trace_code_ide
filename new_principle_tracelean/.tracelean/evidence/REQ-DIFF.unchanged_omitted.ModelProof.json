@@ -1,0 +1,33 @@
+{
+  "key": {
+    "reqId": "REQ-DIFF",
+    "clause": "unchanged_omitted",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Diff.a_clause_the_change_left_alone_is_not_listed",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "14dd0157964b16f4",
+  "inputs": [
+    [
+      "model",
+      "5dc3ec65460d0556"
+    ],
+    [
+      "requirement",
+      "49a20cf718d1529d"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ],
+    [
+      "rules",
+      "80c8c2e339df1610"
+    ]
+  ]
+}

@@ -664,6 +664,15 @@
       "also_checks": ["ARCH-DETERMINISM.stable_ordering"]
     },
     {
+      "req_id": "REQ-REPORT",
+      "clause": "why_not_held"
+    },
+    {
+      "req_id": "REQ-DIFF",
+      "clause": "per_clause",
+      "also_checks": ["text_shown", "marks_moved", "links_moved", "assumptions_moved", "unchanged_omitted", "losses_first"]
+    },
+    {
       "req_id": "REQ-STRENGTH",
       "clause": "proof_states_the_model",
       "also_checks": ["proof_is_general", "proof_is_direct", "proof_not_vacuous", "model_is_a_function", "axioms_declared", "assumptions_shown"]

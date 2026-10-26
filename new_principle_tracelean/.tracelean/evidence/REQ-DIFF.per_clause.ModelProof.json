@@ -1,0 +1,33 @@
+{
+  "key": {
+    "reqId": "REQ-DIFF",
+    "clause": "per_clause",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Diff.a_clause_present_on_one_side_only_is_added_or_removed",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "e532a1e7aebb2962",
+  "inputs": [
+    [
+      "model",
+      "5dc3ec65460d0556"
+    ],
+    [
+      "requirement",
+      "701341f686488409"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ],
+    [
+      "rules",
+      "80c8c2e339df1610"
+    ]
+  ]
+}

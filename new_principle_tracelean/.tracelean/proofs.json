@@ -578,6 +578,90 @@
       }
     },
     {
+      "theorem": "TraceLean.Diff::every_axiom_taken_on_or_let_go_is_reported",
+      "model": "TraceLean.Diff::diff",
+      "reqId": "REQ-DIFF",
+      "clause": "assumptions_moved",
+      "file": "formal/TraceLean/Diff.lean",
+      "line": 266,
+      "verdict": {
+        "verdict": "accepted",
+        "assumed": []
+      }
+    },
+    {
+      "theorem": "TraceLean.Diff::every_annotation_added_removed_or_moved_is_reported",
+      "model": "TraceLean.Diff::diff",
+      "reqId": "REQ-DIFF",
+      "clause": "links_moved",
+      "file": "formal/TraceLean/Diff.lean",
+      "line": 240,
+      "verdict": {
+        "verdict": "accepted",
+        "assumed": []
+      }
+    },
+    {
+      "theorem": "TraceLean.Diff::every_loss_is_listed_before_every_other_change",
+      "model": "TraceLean.Diff::diff",
+      "reqId": "REQ-DIFF",
+      "clause": "losses_first",
+      "file": "formal/TraceLean/Diff.lean",
+      "line": 319,
+      "verdict": {
+        "verdict": "accepted",
+        "assumed": []
+      }
+    },
+    {
+      "theorem": "TraceLean.Diff::every_mark_lost_or_gained_is_reported",
+      "model": "TraceLean.Diff::diff",
+      "reqId": "REQ-DIFF",
+      "clause": "marks_moved",
+      "file": "formal/TraceLean/Diff.lean",
+      "line": 225,
+      "verdict": {
+        "verdict": "accepted",
+        "assumed": []
+      }
+    },
+    {
+      "theorem": "TraceLean.Diff::a_clause_present_on_one_side_only_is_added_or_removed",
+      "model": "TraceLean.Diff::diff",
+      "reqId": "REQ-DIFF",
+      "clause": "per_clause",
+      "file": "formal/TraceLean/Diff.lean",
+      "line": 186,
+      "verdict": {
+        "verdict": "accepted",
+        "assumed": []
+      }
+    },
+    {
+      "theorem": "TraceLean.Diff::a_reworded_clause_shows_both_texts",
+      "model": "TraceLean.Diff::diff",
+      "reqId": "REQ-DIFF",
+      "clause": "text_shown",
+      "file": "formal/TraceLean/Diff.lean",
+      "line": 205,
+      "verdict": {
+        "verdict": "accepted",
+        "assumed": []
+      }
+    },
+    {
+      "theorem": "TraceLean.Diff::a_clause_the_change_left_alone_is_not_listed",
+      "model": "TraceLean.Diff::diff",
+      "reqId": "REQ-DIFF",
+      "clause": "unchanged_omitted",
+      "file": "formal/TraceLean/Diff.lean",
+      "line": 304,
+      "verdict": {
+        "verdict": "accepted",
+        "assumed": []
+      }
+    },
+    {
       "theorem": "TraceLean.DocLink::only_a_rerecorded_hash_is_current",
       "model": "TraceLean.DocLink::recordedFrontmatter",
       "reqId": "REQ-DOCLINK",
@@ -2024,6 +2108,30 @@
       "clause": "position_question",
       "file": "formal/TraceLean/Provenance.lean",
       "line": 201,
+      "verdict": {
+        "verdict": "accepted",
+        "assumed": []
+      }
+    },
+    {
+      "theorem": "TraceLean.Report::every_mark_not_held_and_only_those_is_given_a_reason",
+      "model": "TraceLean.Report::reasons",
+      "reqId": "REQ-REPORT",
+      "clause": "why_not_held",
+      "file": "formal/TraceLean/Report.lean",
+      "line": 56,
+      "verdict": {
+        "verdict": "accepted",
+        "assumed": []
+      }
+    },
+    {
+      "theorem": "TraceLean.Report::the_reason_is_the_first_missing_step",
+      "model": "TraceLean.Report::reasons",
+      "reqId": "REQ-REPORT",
+      "clause": "why_not_held",
+      "file": "formal/TraceLean/Report.lean",
+      "line": 68,
       "verdict": {
         "verdict": "accepted",
         "assumed": []
@@ -3536,7 +3644,7 @@
         ]
       ],
       "statement": "∀\n  (g :\n    String → TraceLean.Act.Focus → TraceLean.Command.Workspace → List TraceLean.Command.Command → TraceLean.Act.Intent),\n  (∀ (a : String) (f : TraceLean.Act.Focus) (w : TraceLean.Command.Workspace) (ws : List TraceLean.Command.Command),\n      (TraceLean.View.actionName a ∈ TraceLean.Act.mutatingActions →\n          (∃ c, g a f w ws = TraceLean.Act.Intent.edit c) ∨ ∃ why, g a f w ws = TraceLean.Act.Intent.refuse why) ∧\n        (TraceLean.View.actionName a = \"observe.accept\" →\n            (∃ c, g a f w ws = TraceLean.Act.Intent.observe (TraceLean.Act.Watch.accept c)) ∨\n              ∃ why, g a f w ws = TraceLean.Act.Intent.refuse why) ∧\n          (TraceLean.View.actionName a = \"observe.accept_file\" →\n            (∃ p c, g a f w ws = TraceLean.Act.Intent.observe (TraceLean.Act.Watch.acceptFile p c)) ∨\n              ∃ why, g a f w ws = TraceLean.Act.Intent.refuse why)) →\n    (∀ (key affordance t : String) (f : TraceLean.Act.Focus) (w : TraceLean.Command.Workspace)\n        (ws : List TraceLean.Command.Command),\n        TraceLean.View.actionName key = TraceLean.View.actionName affordance →\n          TraceLean.View.actionTarget key = none →\n            TraceLean.View.actionTarget affordance = some t → f.under = some t → g key f w ws = g affordance f w ws) →\n      (∀ (a : String) (f : TraceLean.Act.Focus) (w : TraceLean.Command.Workspace) (ws : List TraceLean.Command.Command),\n          TraceLean.View.actionTarget a = none →\n            (TraceLean.View.actionName a ∈ TraceLean.Act.underActions →\n                f.under = none →\n                  ∃ what,\n                    g a f w ws =\n                      TraceLean.Act.Intent.refuse\n                        (TraceLean.Act.Blocked.needsTarget (TraceLean.View.actionName a) what)) ∧\n              (TraceLean.View.actionName a ∈ TraceLean.Act.fileActions →\n                  (∀ (p : String), f.kind ≠ TraceLean.View.BufferKind.file p) →\n                    ∃ what,\n                      g a f w ws =\n                        TraceLean.Act.Intent.refuse\n                          (TraceLean.Act.Blocked.needsTarget (TraceLean.View.actionName a) what)) ∧\n                (TraceLean.View.actionName a = \"observe.accept\" →\n                  ws = [] →\n                    ∃ what,\n                      g a f w ws =\n                        TraceLean.Act.Intent.refuse\n                          (TraceLean.Act.Blocked.needsTarget (TraceLean.View.actionName a) what))) →\n        (∀ (a : String) (f : TraceLean.Act.Focus) (w : TraceLean.Command.Workspace)\n            (ws : List TraceLean.Command.Command),\n            TraceLean.View.actionName a ∈ TraceLean.Act.namedActions →\n              ∀ (x : String), g a f w ws ≠ TraceLean.Act.Intent.refuse (TraceLean.Act.Blocked.unknownAction x)) →\n          (∀ (a : String) (f : TraceLean.Act.Focus) (w : TraceLean.Command.Workspace)\n              (ws : List TraceLean.Command.Command),\n              ¬TraceLean.View.actionName a ∈ TraceLean.Act.namedActions →\n                (TraceLean.View.actionName a).startsWith \"screen.station.\" = false →\n                  g a f w ws =\n                    TraceLean.Act.Intent.refuse (TraceLean.Act.Blocked.unknownAction (TraceLean.View.actionName a))) →\n            (∀ (a t : String) (f : TraceLean.Act.Focus) (w : TraceLean.Command.Workspace)\n                (ws : List TraceLean.Command.Command),\n                TraceLean.View.actionTarget a = some t →\n                  ∀ (u : Option String),\n                    g a f w ws =\n                        TraceLean.Act.dispatchNamed (TraceLean.View.actionName a)\n                          { kind := f.kind, offset := f.offset, under := some t } w ws ∧\n                      g a f w ws = g a { kind := f.kind, offset := f.offset, under := u } w ws) →\n              g = TraceLean.Act.dispatch",
-      "key": "e4ba0f8176f0bf77+43418699da34631e+46e316c5cafb1f7b+4718814e8316b1fa+af04db2be544a874+dd1659d371502ee0+e5f38f134264555d+e92aa8c9c614c2d7",
+      "key": "3b90b015dee10eb1+43418699da34631e+46e316c5cafb1f7b+4718814e8316b1fa+af04db2be544a874+dd1659d371502ee0+e5f38f134264555d+e92aa8c9c614c2d7",
       "pins": []
     },
     {
@@ -3548,7 +3656,7 @@
         ]
       ],
       "statement": "∀ (g : Bool → TraceLean.Evidence.Level → TraceLean.Evidence.Level),\n  (∀ (claimed : TraceLean.Evidence.Level),\n      g false claimed = TraceLean.Evidence.Level.L1 ∧\n        (∀ (other : TraceLean.Evidence.Level), (g false claimed).toNat ≤ other.toNat) ∧ g true claimed = claimed) →\n    g = TraceLean.Anchor.anchorCeiling",
-      "key": "e4ba0f8176f0bf77+c4de5182e39bc735+bb4725b88bf1acac",
+      "key": "3b90b015dee10eb1+c4de5182e39bc735+bb4725b88bf1acac",
       "pins": [
         {
           "theorem": "TraceLean.SpecTrace::imprecise_capped_pinned",
@@ -3576,7 +3684,7 @@
         ]
       ],
       "statement": "∀ (g : String → TraceLean.Anchor.AnchorKind → String),\n  (∀ (file a b : String),\n      g file (TraceLean.Anchor.AnchorKind.decl a) = g file (TraceLean.Anchor.AnchorKind.decl b) ↔ a = b) →\n    (∀ (file name : String),\n        g file (TraceLean.Anchor.AnchorKind.decl name) = file ++ \"::\" ++ name ∧\n          g file TraceLean.Anchor.AnchorKind.file = file) →\n      g = TraceLean.Anchor.anchorIdent",
-      "key": "e4ba0f8176f0bf77+d1b5933586cf1c6d+bc698e900539c752+e63ad56161db5cac",
+      "key": "3b90b015dee10eb1+d1b5933586cf1c6d+bc698e900539c752+e63ad56161db5cac",
       "pins": []
     },
     {
@@ -3600,7 +3708,7 @@
         ]
       ],
       "statement": "∀ (g : String → Nat → TraceLean.Annotation.ParsedComment),\n  (∀ (text : String) (firstLine : Nat),\n      (g text firstLine).directives.length + (g text firstLine).problems.length =\n        (List.filter (fun c => !(TraceLean.Annotation.wordOf c.snd).isEmpty)\n            (TraceLean.Annotation.candidatesOf text firstLine)).length) →\n    (∀ (text : String) (firstLine : Nat),\n        (∀ (a : TraceLean.Annotation.RawAnnotation),\n            TraceLean.Annotation.Directive.annotation a ∈ (g text firstLine).directives →\n              ∃ c,\n                c ∈ TraceLean.Annotation.candidatesOf text firstLine ∧\n                  TraceLean.Annotation.asString (TraceLean.Annotation.wordOf c.snd) ∈ TraceLean.Annotation.roleWords ∧\n                    TraceLean.Annotation.Role.parse\n                          (TraceLean.Annotation.asString (TraceLean.Annotation.wordOf c.snd)) =\n                        some a.role ∧\n                      a.line = c.fst) ∧\n          (∀ (w : String) (r : TraceLean.Annotation.Role),\n              TraceLean.Annotation.Role.parse w = some r → w ∈ TraceLean.Annotation.roleWords) ∧\n            ∀ (r : TraceLean.Annotation.Role),\n              ∃ w, w ∈ TraceLean.Annotation.roleWords ∧ TraceLean.Annotation.Role.parse w = some r) →\n      (∀ (text : String) (firstLine : Nat),\n          (∀ (c : Nat × List Char),\n              c ∈ TraceLean.Annotation.candidatesOf text firstLine →\n                TraceLean.Annotation.asString (TraceLean.Annotation.wordOf c.snd) ∈\n                    TraceLean.Annotation.qualifierWords →\n                  ∃ q,\n                    TraceLean.Annotation.Directive.qualified q\n                        (TraceLean.Annotation.splitIdentifier (TraceLean.Annotation.tailOf c.snd)).fst\n                        (TraceLean.Annotation.splitIdentifier (TraceLean.Annotation.tailOf c.snd)).snd.fst c.fst ∈\n                      (g text firstLine).directives) ∧\n            ∀ (q : TraceLean.Annotation.Qualifier) (id cl : Option String) (ln : Nat),\n              TraceLean.Annotation.Directive.qualified q id cl ln ∈ (g text firstLine).directives →\n                ∃ c,\n                  c ∈ TraceLean.Annotation.candidatesOf text firstLine ∧\n                    TraceLean.Annotation.asString (TraceLean.Annotation.wordOf c.snd) ∈\n                        TraceLean.Annotation.qualifierWords ∧\n                      ln = c.fst ∧\n                        id = (TraceLean.Annotation.splitIdentifier (TraceLean.Annotation.tailOf c.snd)).fst ∧\n                          cl = (TraceLean.Annotation.splitIdentifier (TraceLean.Annotation.tailOf c.snd)).snd.fst) →\n        (∀ (text : String) (firstLine : Nat),\n            (∀ (c : Nat × List Char),\n                c ∈ TraceLean.Annotation.candidatesOf text firstLine →\n                  TraceLean.Annotation.wordOf c.snd ≠ [] →\n                    TraceLean.Annotation.asString (TraceLean.Annotation.wordOf c.snd) ≠ \"end\" →\n                      ¬TraceLean.Annotation.asString (TraceLean.Annotation.wordOf c.snd) ∈\n                            TraceLean.Annotation.roleWords →\n                        ¬TraceLean.Annotation.asString (TraceLean.Annotation.wordOf c.snd) ∈\n                              TraceLean.Annotation.qualifierWords →\n                          ∃ msg,\n                            { kind := TraceLean.Annotation.ProblemKind.unknownRole, line := c.fst, message := msg } ∈\n                              (g text firstLine).problems) ∧\n              ∀ (p : TraceLean.Annotation.Problem),\n                p ∈ (g text firstLine).problems →\n                  p.kind = TraceLean.Annotation.ProblemKind.unknownRole →\n                    ∃ c,\n                      c ∈ TraceLean.Annotation.candidatesOf text firstLine ∧\n                        p.line = c.fst ∧\n                          ¬TraceLean.Annotation.asString (TraceLean.Annotation.wordOf c.snd) ∈\n                                TraceLean.Annotation.roleWords ∧\n                            ¬TraceLean.Annotation.asString (TraceLean.Annotation.wordOf c.snd) ∈\n                                TraceLean.Annotation.qualifierWords) →\n          g = TraceLean.Annotation.parseComment",
-      "key": "e4ba0f8176f0bf77+c3ada71c9c444a58+1a4ed0eedd975b61+1b86482f2eedb145+8a4caac52f3a12d6+cbe189b1d0d7ffa0",
+      "key": "3b90b015dee10eb1+c3ada71c9c444a58+1a4ed0eedd975b61+1b86482f2eedb145+8a4caac52f3a12d6+cbe189b1d0d7ffa0",
       "pins": []
     },
     {
@@ -3612,7 +3720,7 @@
         ]
       ],
       "statement": "∀ (g : List TraceLean.Annotation.Directive → List TraceLean.Annotation.Problem),\n  (∀ (directives : List TraceLean.Annotation.Directive),\n      (List.filter (fun p => p.kind == TraceLean.Annotation.ProblemKind.strayEnd) (g directives)).length =\n          (List.foldl TraceLean.Annotation.tally (0, 0) directives).snd ∧\n        (List.filter (fun p => p.kind == TraceLean.Annotation.ProblemKind.unclosedRegion) (g directives)).length =\n          (List.foldl TraceLean.Annotation.tally (0, 0) directives).fst) →\n    g = TraceLean.Annotation.regionBalance",
-      "key": "e4ba0f8176f0bf77+4340cbd92854e997+27bafbc76d414de5",
+      "key": "3b90b015dee10eb1+4340cbd92854e997+27bafbc76d414de5",
       "pins": []
     },
     {
@@ -3624,7 +3732,7 @@
         ]
       ],
       "statement": "∀ (g : String → String → String × String),\n  (∀ (answer key : String),\n      g answer \"Escape\" = (\"cancelled\", answer) ∧\n        (answer.trim.isEmpty = false → g answer \"Enter\" = (\"done\", answer.trim)) ∧\n          (key.length = 1 → g answer key = (\"typing\", answer ++ key)) ∧\n            ((g answer key).fst = \"done\" → key = \"Enter\" ∧ (g answer key).snd = answer.trim)) →\n    g = TraceLean.Ask.askStep",
-      "key": "e4ba0f8176f0bf77+6807de98f2c54163+82211928557ded91",
+      "key": "3b90b015dee10eb1+6807de98f2c54163+82211928557ded91",
       "pins": []
     },
     {
@@ -3636,7 +3744,7 @@
         ]
       ],
       "statement": "∀ (g : List (String × String) → List (String × String) → List (String × String)),\n  (∀ (derived written : List (String × String)) (k v : String),\n      (k, v) ∈ g derived written ↔\n        (k, v) ∈ written ∨ (k, v) ∈ derived ∧ ∀ (w : String × String), w ∈ written → w.fst ≠ k) →\n    g = TraceLean.Binding.overlaid",
-      "key": "e4ba0f8176f0bf77+8ff2f54d6db3abc3+9b1f0a54a77c2619",
+      "key": "3b90b015dee10eb1+8ff2f54d6db3abc3+9b1f0a54a77c2619",
       "pins": []
     },
     {
@@ -3648,7 +3756,7 @@
         ]
       ],
       "statement": "∀ (g : TraceLean.View.Buffer → String → Nat → Nat → List TraceLean.Cells.Look → List TraceLean.Cells.Miscoloured),\n  (∀ (buffer : TraceLean.View.Buffer) (painted : String) (rows columns : Nat) (looks : List TraceLean.Cells.Look),\n      g buffer painted rows columns looks = [] ↔\n        ∀ (x : Char × Nat × Nat × Nat),\n          x ∈ TraceLean.Cells.placed buffer.text.toList 0 0 0 →\n            TraceLean.Cells.DrawnRight (TraceLean.Cells.grid painted rows columns) looks buffer.spans x.snd.fst\n              x.snd.snd.fst x.snd.snd.snd) →\n    g = TraceLean.Cells.drawnWrong",
-      "key": "e4ba0f8176f0bf77+be1b38068a75470e+16d53c90e92f04fd",
+      "key": "3b90b015dee10eb1+be1b38068a75470e+16d53c90e92f04fd",
       "pins": []
     },
     {
@@ -3668,7 +3776,7 @@
         ]
       ],
       "statement": "∀ (g : List TraceLean.Annotation.Role → Bool → Bool → List TraceLean.Checker.Kind),\n  (∀ (roles : List TraceLean.Annotation.Role),\n      roles.contains TraceLean.Annotation.Role.models = true →\n        roles.contains TraceLean.Annotation.Role.implements = true →\n          roles.contains TraceLean.Annotation.Role.drt = false →\n            (g roles false false).contains TraceLean.Checker.Kind.unbound = true) →\n    (∀ (roles : List TraceLean.Annotation.Role),\n        g roles false true =\n          if roles.contains TraceLean.Annotation.Role.tests = true then [] else [TraceLean.Checker.Kind.untested]) →\n      (∀ (roles : List TraceLean.Annotation.Role) (exempt structural : Bool),\n          (List.filter\n                (fun k =>\n                  k == TraceLean.Checker.Kind.unmodeled || k == TraceLean.Checker.Kind.unimplemented ||\n                    k == TraceLean.Checker.Kind.unbound)\n                (g roles exempt structural)).length ≤\n            1) →\n        g = TraceLean.Checker.coverageKinds",
-      "key": "e4ba0f8176f0bf77+3bacc87678b4070e+112cbc380aceca35+c160a2abd5c80a9d+e82e1eea0f4809ef",
+      "key": "3b90b015dee10eb1+3bacc87678b4070e+112cbc380aceca35+c160a2abd5c80a9d+e82e1eea0f4809ef",
       "pins": []
     },
     {
@@ -3680,7 +3788,7 @@
         ]
       ],
       "statement": "∀ (g : List TraceLean.Annotation.Role → List TraceLean.Checker.Kind),\n  (∀ (roles : List TraceLean.Annotation.Role),\n      (TraceLean.Checker.Kind.severalModels ∈ g roles ↔\n          (List.filter (fun x => x == TraceLean.Annotation.Role.models) roles).length > 1) ∧\n        (TraceLean.Checker.Kind.severalSpecs ∈ g roles ↔\n            (List.filter (fun x => x == TraceLean.Annotation.Role.specifies) roles).length > 1) ∧\n          (TraceLean.Checker.Kind.severalPins ∈ g roles ↔\n            (List.filter (fun x => x == TraceLean.Annotation.Role.pins) roles).length > 1)) →\n    g = TraceLean.Checker.crowdedKinds",
-      "key": "e4ba0f8176f0bf77+9dc960882470908a+5f6ef4faf4eb8c7c",
+      "key": "3b90b015dee10eb1+9dc960882470908a+5f6ef4faf4eb8c7c",
       "pins": []
     },
     {
@@ -3700,7 +3808,7 @@
         ]
       ],
       "statement": "∀ (g : TraceLean.Checker.Kind → TraceLean.Checker.KindFacts),\n  (∀ (kind : TraceLean.Checker.Kind),\n      Lean.fromJson? (Lean.toJson kind) = Except.ok kind ∧\n        ((g kind).severity = TraceLean.Checker.Severity.error → (g kind).progress = false)) →\n    (∀ (kind : TraceLean.Checker.Kind),\n        (g kind).blocksByDefault = true →\n          (g kind).severity = TraceLean.Checker.Severity.error ∧ (g kind).progress = false) →\n      (∀ (kind : TraceLean.Checker.Kind),\n          (g kind).progress = true →\n            (g kind).severity = TraceLean.Checker.Severity.info ∧ (g kind).blocksByDefault = false) →\n        g = TraceLean.Checker.facts",
-      "key": "e4ba0f8176f0bf77+877ede27519bdf01+46ac66af6b89137c+6b7d5105a776cf43+7246e20e5c86a706",
+      "key": "3b90b015dee10eb1+877ede27519bdf01+46ac66af6b89137c+6b7d5105a776cf43+7246e20e5c86a706",
       "pins": []
     },
     {
@@ -3712,7 +3820,7 @@
         ]
       ],
       "statement": "∀ (g : Option TraceLean.Annotation.Qualifier → Option String → List TraceLean.Checker.Kind),\n  (∀ (reason judge due today : String) (expires date : Option String),\n      g (some (TraceLean.Annotation.Qualifier.exempt none (some judge) expires)) date =\n          [TraceLean.Checker.Kind.unsoundExemption] ∧\n        g (some (TraceLean.Annotation.Qualifier.exempt (some reason) none expires)) date =\n            [TraceLean.Checker.Kind.unsoundExemption] ∧\n          g (some (TraceLean.Annotation.Qualifier.exempt (some reason) (some judge) expires)) none = [] ∧\n            (due < today →\n              g (some (TraceLean.Annotation.Qualifier.exempt (some reason) (some judge) (some due))) (some today) =\n                [TraceLean.Checker.Kind.unsoundExemption])) →\n    g = TraceLean.Checker.qualifierKinds",
-      "key": "e4ba0f8176f0bf77+67ce981828613b57+4a676ad29815b287",
+      "key": "3b90b015dee10eb1+67ce981828613b57+4a676ad29815b287",
       "pins": []
     },
     {
@@ -3724,7 +3832,7 @@
         ]
       ],
       "statement": "∀ (g : String → String → List (Option String × TraceLean.Annotation.Role) → List TraceLean.Chips.Chip),\n  (∀ (text id : String) (claims : List (Option String × TraceLean.Annotation.Role)),\n      (∀ (chip : TraceLean.Chips.Chip),\n          chip ∈ g text id claims →\n            ∃ key,\n              (chip.line, key) ∈ TraceLean.Chips.clauseLines text ∧\n                chip.requirement = id ++ \".\" ++ key ∧\n                  ∃ claim,\n                    claim ∈ claims ∧ claim.fst = some key ∧ TraceLean.Chips.letter claim.snd = some chip.letter) ∧\n        ∀ (line : Nat) (key : String),\n          (line, key) ∈ TraceLean.Chips.clauseLines text →\n            ∀ (claim : Option String × TraceLean.Annotation.Role),\n              claim ∈ claims →\n                claim.fst = some key →\n                  ∀ (l : String),\n                    TraceLean.Chips.letter claim.snd = some l →\n                      { line := line, letter := l, requirement := id ++ \".\" ++ key } ∈ g text id claims) →\n    g = TraceLean.Chips.clauseChips",
-      "key": "e4ba0f8176f0bf77+75880f0a18b9bc63+246289c3849ff309",
+      "key": "3b90b015dee10eb1+75880f0a18b9bc63+246289c3849ff309",
       "pins": []
     },
     {
@@ -3736,7 +3844,7 @@
         ]
       ],
       "statement": "∀ (g : String → List TraceLean.Transcript.Event),\n  (∀ (text : String) (e : TraceLean.Transcript.Event), e ∈ g text → e.kind ∈ TraceLean.Claude.rowKinds) →\n    g = TraceLean.Claude.events",
-      "key": "e4ba0f8176f0bf77+6c6c841c76dfe8fc+c5a0baf1e0290f2a",
+      "key": "3b90b015dee10eb1+6c6c841c76dfe8fc+c5a0baf1e0290f2a",
       "pins": []
     },
     {
@@ -3752,7 +3860,7 @@
         ]
       ],
       "statement": "∀\n  (g :\n    TraceLean.Command.Workspace →\n      TraceLean.Command.Command → Except TraceLean.Command.Refusal TraceLean.Command.Workspace),\n  (∀ (w : TraceLean.Command.Workspace) (a b : TraceLean.Command.Command),\n      g w (TraceLean.Command.Command.batch [a, b]) = (g w a).bind fun v => g v b) →\n    (∀ (w : TraceLean.Command.Workspace) (f : String) (o : Nat) (t : String) (cs : List Char),\n        (w.get f = none →\n            g w (TraceLean.Command.Command.insert f o t) = Except.error (TraceLean.Command.Refusal.noSuchFile f)) ∧\n          (w.get f = none →\n              g w (TraceLean.Command.Command.delete f o t) = Except.error (TraceLean.Command.Refusal.noSuchFile f)) ∧\n            (w.get f = some { data := cs } →\n                o > cs.length →\n                  g w (TraceLean.Command.Command.insert f o t) =\n                    Except.error (TraceLean.Command.Refusal.offsetOutOfRange f o cs.length)) ∧\n              (w.get f = some { data := cs } →\n                o + t.length ≤ cs.length →\n                  { data := List.take t.length (List.drop o cs) } ≠ t →\n                    g w (TraceLean.Command.Command.delete f o t) =\n                      Except.error (TraceLean.Command.Refusal.witnessMismatch f o))) →\n      (∀ (w w1 : TraceLean.Command.Workspace) (pre rest : List TraceLean.Command.Command)\n          (c : TraceLean.Command.Command) (e : TraceLean.Command.Refusal),\n          g w (TraceLean.Command.Command.batch pre) = Except.ok w1 →\n            g w1 c = Except.error e → g w (TraceLean.Command.Command.batch (pre ++ c :: rest)) = Except.error e) →\n        g = TraceLean.Command.apply",
-      "key": "e4ba0f8176f0bf77+de96745070240343+bae61b4c7ec2b76d+ebe622fdaf74cf03+fced3711f804be1e",
+      "key": "3b90b015dee10eb1+de96745070240343+bae61b4c7ec2b76d+ebe622fdaf74cf03+fced3711f804be1e",
       "pins": []
     },
     {
@@ -3772,7 +3880,7 @@
         ]
       ],
       "statement": "∀ (g : TraceLean.Command.Command → TraceLean.Command.Command),\n  (∀ (w w' : TraceLean.Command.Workspace) (f : String) (o : Nat) (d p c : String),\n      (TraceLean.Command.apply w (TraceLean.Command.Command.delete f o d) = Except.ok w' →\n          ∃ cs,\n            w.get f = some { data := cs } ∧\n              { data := List.take d.length (List.drop o cs) } = d ∧\n                g (TraceLean.Command.Command.delete f o d) = TraceLean.Command.Command.insert f o d) ∧\n        (TraceLean.Command.apply w (TraceLean.Command.Command.deleteFile p c) = Except.ok w' →\n          w.get p = some c ∧\n            g (TraceLean.Command.Command.deleteFile p c) =\n              TraceLean.Command.Command.batch\n                [TraceLean.Command.Command.createFile p, TraceLean.Command.Command.insert p 0 c])) →\n    (∀ (commands : List TraceLean.Command.Command),\n        g (TraceLean.Command.Command.batch commands) = TraceLean.Command.Command.batch (List.map g commands).reverse) →\n      (∀ (file : String) (offset : Nat) (text : String),\n          g (g (TraceLean.Command.Command.insert file offset text)) =\n            TraceLean.Command.Command.insert file offset text) →\n        g = TraceLean.Command.inverse",
-      "key": "e4ba0f8176f0bf77+cae5fdf85c845a1b+183c2040fae37c18+31a1aa8605a01f87+730599bed1dc6af7",
+      "key": "3b90b015dee10eb1+cae5fdf85c845a1b+183c2040fae37c18+31a1aa8605a01f87+730599bed1dc6af7",
       "pins": []
     },
     {
@@ -3784,7 +3892,7 @@
         ]
       ],
       "statement": "∀\n  (g :\n    TraceLean.Command.Workspace →\n      TraceLean.Command.Command → Except TraceLean.Command.Refusal TraceLean.Command.Workspace),\n  (∀ (w w' : TraceLean.Command.Workspace) (c : TraceLean.Command.Command),\n      TraceLean.Command.apply w.canon c = Except.ok w' →\n        ∃ r, g w.canon c = Except.ok r ∧ ∀ (path : String), r.get path = w.canon.get path) →\n    g = TraceLean.Command.roundTrip",
-      "key": "e4ba0f8176f0bf77+03fee9805742243c+12c7b5807599c120",
+      "key": "3b90b015dee10eb1+03fee9805742243c+12c7b5807599c120",
       "pins": []
     },
     {
@@ -3796,7 +3904,7 @@
         ]
       ],
       "statement": "∀\n  (g :\n    List TraceLean.Context.Claim →\n      String → Option String → List String → List (String × String) → List TraceLean.Context.Item),\n  (∀ (claims : List TraceLean.Context.Claim) (id : String) (clause : Option String) (down : List String)\n      (files : List (String × String)),\n      (∀ (c : TraceLean.Context.Claim),\n          c ∈ claims →\n            c.role = \"tests\" →\n              c.req ∈ down ∨\n                  ((TraceLean.Context.symbolsOf claims id clause).any fun s => TraceLean.Context.names c.source s) =\n                    true →\n                ¬c.ident ∈ TraceLean.Context.placedOf claims id clause →\n                  ∃ c',\n                    c' ∈ claims ∧ c'.ident = c.ident ∧ TraceLean.Context.itemOf c' ∈ g claims id clause down files) ∧\n        ∀ (it : TraceLean.Context.Item),\n          it ∈ g claims id clause down files →\n            it.role = \"uses\" ∨\n              ∃ c,\n                c ∈ claims ∧\n                  c.role = \"tests\" ∧\n                    it = TraceLean.Context.itemOf c ∧\n                      ¬c.ident ∈ TraceLean.Context.placedOf claims id clause ∧\n                        (c.req ∈ down ∨\n                          ((TraceLean.Context.symbolsOf claims id clause).any fun s =>\n                              TraceLean.Context.names c.source s) =\n                            true)) →\n    g = TraceLean.Context.affected",
-      "key": "e4ba0f8176f0bf77+a0cda730f6d991d9+18e62f5d8f170b5f",
+      "key": "3b90b015dee10eb1+a0cda730f6d991d9+18e62f5d8f170b5f",
       "pins": []
     },
     {
@@ -3808,7 +3916,7 @@
         ]
       ],
       "statement": "∀ (g : List TraceLean.Context.Claim → String → Option String → TraceLean.Context.Claimed),\n  (∀ (claims : List TraceLean.Context.Claim) (id : String) (clause : Option String),\n      TraceLean.Context.ClaimsShown claims id clause [\"implements\"] (g claims id clause).code ∧\n        TraceLean.Context.ClaimsShown claims id clause [\"tests\"] (g claims id clause).tests ∧\n          TraceLean.Context.ClaimsShown claims id clause [\"models\", \"proves\", \"drt\", \"pins\"]\n            (g claims id clause).models) →\n    g = TraceLean.Context.claimsOn",
-      "key": "e4ba0f8176f0bf77+7dad820b122f3e63+2978117fe3b5944f",
+      "key": "3b90b015dee10eb1+7dad820b122f3e63+2978117fe3b5944f",
       "pins": []
     },
     {
@@ -3820,7 +3928,7 @@
         ]
       ],
       "statement": "∀ (g : List TraceLean.Context.Node → String → List String × List String),\n  (∀ (nodes : List TraceLean.Context.Node) (id : String),\n      (g nodes id).fst.Nodup ∧\n        (g nodes id).snd.Nodup ∧\n          (∀ (x : String),\n              x ∈ (g nodes id).fst ↔ x ≠ id ∧ TraceLean.Context.ReachFrom (TraceLean.Context.parentsOf nodes) id x) ∧\n            ∀ (x : String),\n              x ∈ (g nodes id).snd ↔ x ≠ id ∧ TraceLean.Context.ReachFrom (TraceLean.Context.childrenOf nodes) id x) →\n    g = TraceLean.Context.neighbourhood",
-      "key": "e4ba0f8176f0bf77+fee04d72f15c3cb8+9a9a4c88b56469ff",
+      "key": "3b90b015dee10eb1+fee04d72f15c3cb8+9a9a4c88b56469ff",
       "pins": []
     },
     {
@@ -3832,7 +3940,7 @@
         ]
       ],
       "statement": "∀ (g : String → Option TraceLean.Context.Part),\n  (∀ (name : String) (p : TraceLean.Context.Part),\n      g (TraceLean.Context.label p) = some p ∧\n        (g name = some p → TraceLean.Context.label p = name) ∧\n          ((∀ (q : TraceLean.Context.Part), TraceLean.Context.label q ≠ name) → g name = none)) →\n    g = TraceLean.Context.partNamed",
-      "key": "e4ba0f8176f0bf77+fbb5ed221932acb9+6e556a9b6e73a148",
+      "key": "3b90b015dee10eb1+fbb5ed221932acb9+6e556a9b6e73a148",
       "pins": [
         {
           "theorem": "TraceLean.SpecSurface::part_named_pinned",
@@ -3856,7 +3964,7 @@
         ]
       ],
       "statement": "∀ (g : List TraceLean.Context.Part → List TraceLean.Context.Part → List TraceLean.Context.Part),\n  (∀ (included filled : List TraceLean.Context.Part) (p : TraceLean.Context.Part),\n      List.Mem p (g included filled) → List.Mem p included) →\n    g = TraceLean.Context.partsShown",
-      "key": "e4ba0f8176f0bf77+94ef9d519eb1804d+9fa1e97c43efc6c4",
+      "key": "3b90b015dee10eb1+94ef9d519eb1804d+9fa1e97c43efc6c4",
       "pins": [
         {
           "theorem": "TraceLean.SpecSurface::chosen_parts_pinned",
@@ -3880,7 +3988,7 @@
         ]
       ],
       "statement": "∀ (g : Option String → TraceLean.Context.ShellParts),\n  (∀ (list : String),\n      list ≠ \"all\" →\n        g none = TraceLean.Context.ShellParts.chosen TraceLean.Context.defaultParts ∧\n          g (some \"all\") = TraceLean.Context.ShellParts.chosen TraceLean.Context.allParts ∧\n            (∀ (bad : String),\n                g (some list) = TraceLean.Context.ShellParts.unknown bad →\n                  bad ∈ List.map TraceLean.Context.shellName (list.splitOn \",\") ∧\n                    TraceLean.Context.partNamed bad = none) ∧\n              ((∃ n,\n                    n ∈ List.map TraceLean.Context.shellName (list.splitOn \",\") ∧\n                      TraceLean.Context.partNamed n = none) →\n                  ∃ bad, g (some list) = TraceLean.Context.ShellParts.unknown bad) ∧\n                ∀ (ps : List TraceLean.Context.Part),\n                  g (some list) = TraceLean.Context.ShellParts.chosen ps →\n                    ∀ (p : TraceLean.Context.Part),\n                      p ∈ ps ↔\n                        ∃ n,\n                          n ∈ List.map TraceLean.Context.shellName (list.splitOn \",\") ∧ TraceLean.Context.label p = n) →\n    g = TraceLean.Context.shellParts",
-      "key": "e4ba0f8176f0bf77+a5290587d3e6e387+2b62813d26939f83",
+      "key": "3b90b015dee10eb1+a5290587d3e6e387+2b62813d26939f83",
       "pins": []
     },
     {
@@ -3892,7 +4000,7 @@
         ]
       ],
       "statement": "∀ (g : List TraceLean.Contrast.Pair → List (String × String) → List TraceLean.Contrast.Finding),\n  (∀ (pairs : List TraceLean.Contrast.Pair) (colours : List (String × String)),\n      g pairs colours = [] ↔\n        ∀ (pair : TraceLean.Contrast.Pair),\n          pair ∈ pairs →\n            ∃ a b r,\n              TraceLean.Contrast.colourOf colours pair.text = some a ∧\n                TraceLean.Contrast.colourOf colours pair.on = some b ∧\n                  TraceLean.Contrast.ratio a b = some r ∧\n                    (pair.least ≤ r ∧ pair.waived = none ∨ r < pair.least ∧ pair.waived.isSome = true)) →\n    g = TraceLean.Contrast.findings",
-      "key": "e4ba0f8176f0bf77+8b614feb3e36a144+8a9edc7dd3a65858",
+      "key": "3b90b015dee10eb1+8b614feb3e36a144+8a9edc7dd3a65858",
       "pins": []
     },
     {
@@ -3904,7 +4012,7 @@
         ]
       ],
       "statement": "∀ (g : TraceLean.Cost.Price → TraceLean.Transcript.Usage → Nat),\n  (∀ (price : TraceLean.Cost.Price) (model : String) (n : Nat),\n      g price { model := model, input := n, cached := 0, cacheWrite := 0, output := 0 } = n * price.input / 1000000 ∧\n        g price { model := model, input := 0, cached := n, cacheWrite := 0, output := 0 } = n * price.cached / 1000000 ∧\n          g price { model := model, input := 0, cached := 0, cacheWrite := n, output := 0 } =\n            n * price.cacheWrite / 1000000) →\n    g = TraceLean.Cost.amountOf",
-      "key": "e4ba0f8176f0bf77+060c20077467402d+e54b33addd70bbac",
+      "key": "3b90b015dee10eb1+060c20077467402d+e54b33addd70bbac",
       "pins": []
     },
     {
@@ -3916,7 +4024,7 @@
         ]
       ],
       "statement": "∀ (g : TraceLean.Cost.Spend → String),\n  (∀ (spend : TraceLean.Cost.Spend), ∃ rest, g spend = \"estimated \" ++ rest) → g = TraceLean.Cost.estimateLine",
-      "key": "e4ba0f8176f0bf77+bedf114c1b8e5b13+5b41726d5d4d0cd4",
+      "key": "3b90b015dee10eb1+bedf114c1b8e5b13+5b41726d5d4d0cd4",
       "pins": []
     },
     {
@@ -3932,7 +4040,7 @@
         ]
       ],
       "statement": "∀ (g : List TraceLean.Cost.Price → List TraceLean.Transcript.Usage → TraceLean.Cost.Spend),\n  (∀ (table : List TraceLean.Cost.Price) (usage : List TraceLean.Transcript.Usage) (last : TraceLean.Transcript.Usage),\n      g table (usage ++ [last]) = TraceLean.Cost.accumulate table (g table usage) last) →\n    (∀ (table : List TraceLean.Cost.Price) (usage : TraceLean.Transcript.Usage),\n        (∀ (price : TraceLean.Cost.Price),\n            TraceLean.Cost.priceOf table usage.model = some price →\n              g table [usage] = { amount := TraceLean.Cost.amountOf price usage, unpriced := [] }) ∧\n          (TraceLean.Cost.priceOf table usage.model = none →\n            g table [usage] = { amount := 0, unpriced := [usage.model] })) →\n      g = TraceLean.Cost.spendOf",
-      "key": "e4ba0f8176f0bf77+c936fc28db5def24+854b6ab4a7211699+c9a7e436c659fca2",
+      "key": "3b90b015dee10eb1+c936fc28db5def24+854b6ab4a7211699+c9a7e436c659fca2",
       "pins": []
     },
     {
@@ -3944,7 +4052,7 @@
         ]
       ],
       "statement": "∀ (g : Bool → TraceLean.Coverage.CoverageVerdict → TraceLean.Evidence.Level),\n  (∀ (agreed : Bool) (v : TraceLean.Coverage.CoverageVerdict),\n      g agreed v = TraceLean.Evidence.Level.L3 → agreed = true ∧ v = TraceLean.Coverage.CoverageVerdict.met) →\n    g = TraceLean.Coverage.coverageLevel",
-      "key": "e4ba0f8176f0bf77+12892e68f2e37ef1+c034a6dca4acfcc0",
+      "key": "3b90b015dee10eb1+12892e68f2e37ef1+c034a6dca4acfcc0",
       "pins": []
     },
     {
@@ -3968,7 +4076,7 @@
         ]
       ],
       "statement": "∀\n  (g :\n    List TraceLean.Coverage.Floor →\n      List TraceLean.Coverage.Observed → List TraceLean.Coverage.Waiver → TraceLean.Coverage.CoverageVerdict),\n  (∀ (floors : List TraceLean.Coverage.Floor) (o : List TraceLean.Coverage.Observed)\n      (w : List TraceLean.Coverage.Waiver),\n      g floors o w = TraceLean.Coverage.CoverageVerdict.met →\n        ∀ (f : TraceLean.Coverage.Floor),\n          f ∈ floors →\n            f.situation ∈ TraceLean.Coverage.excused w ∨\n              0 < TraceLean.Coverage.reachedCount o f.situation ∧\n                f.atLeast ≤ TraceLean.Coverage.reachedCount o f.situation) →\n    (∀ (floors : List TraceLean.Coverage.Floor) (o : List TraceLean.Coverage.Observed) (w : TraceLean.Coverage.Waiver)\n        (ws : List TraceLean.Coverage.Waiver),\n        TraceLean.Coverage.blank w.reason = true →\n          g floors o (w :: ws) = g floors o ws ∧\n            ∀ (s : String), s ∈ w.situations → s ∈ TraceLean.Coverage.unusedWaivers floors o (w :: ws)) →\n      (∀ (floors : List TraceLean.Coverage.Floor) (o : List TraceLean.Coverage.Observed)\n          (w : List TraceLean.Coverage.Waiver) (f : TraceLean.Coverage.Floor),\n          f ∈ floors →\n            TraceLean.Coverage.reachedCount o f.situation = 0 →\n              ¬f.situation ∈ TraceLean.Coverage.excused w →\n                ∃ gaps,\n                  g floors o w = TraceLean.Coverage.CoverageVerdict.unmet gaps ∧\n                    TraceLean.Coverage.Gap.vacuous f.situation ∈ gaps) →\n        (∀ (floors : List TraceLean.Coverage.Floor) (o : List TraceLean.Coverage.Observed)\n            (w : List TraceLean.Coverage.Waiver),\n            g floors o w = TraceLean.Coverage.CoverageVerdict.undeclared ↔ floors = []) →\n          g = TraceLean.Coverage.coverageVerdict",
-      "key": "e4ba0f8176f0bf77+0d35122a8c37465e+4bdccec15e858976+5a57d537ee4c4102+89f8dc52f3886fb1+90e8bcdd0887d489",
+      "key": "3b90b015dee10eb1+0d35122a8c37465e+4bdccec15e858976+5a57d537ee4c4102+89f8dc52f3886fb1+90e8bcdd0887d489",
       "pins": []
     },
     {
@@ -3980,7 +4088,7 @@
         ]
       ],
       "statement": "∀ (g : List (Nat × Nat) → List (Nat × String) → List TraceLean.Coverage.Observed),\n  (∀ (hits : List (Nat × Nat)) (item : List (Nat × String)) (l : Nat × String) (h : Nat × Nat),\n      l ∈ item →\n        List.find? (fun h => h.fst == l.fst) hits = some h →\n          ∃ o, o ∈ g hits item ∧ o.situation = \"line: \" ++ l.snd.trim ∧ o.reached ≤ h.snd) →\n    g = TraceLean.Coverage.lineReach",
-      "key": "e4ba0f8176f0bf77+7664682e5574b60a+7261da63a9941f8b",
+      "key": "3b90b015dee10eb1+7664682e5574b60a+7261da63a9941f8b",
       "pins": []
     },
     {
@@ -3992,7 +4100,7 @@
         ]
       ],
       "statement": "∀ (g : Nat → Nat → Nat → List TraceLean.Coverage.Observed),\n  (∀ (shape seed cases : Nat),\n      ∃ schema,\n        List.map (fun x => x.situation) (g shape seed cases) = TraceLean.Coverage.classesAt \"\" schema ∧\n          ∀ (c : TraceLean.Coverage.Observed),\n            c ∈ g shape seed cases →\n              (c.reached = 0 ↔\n                ∀ (v : Lean.Json),\n                  v ∈ TraceLean.Generator.valueStream seed schema cases →\n                    ¬c.situation ∈ TraceLean.Coverage.classesOf \"\" schema v)) →\n    g = TraceLean.Coverage.reachedShape",
-      "key": "e4ba0f8176f0bf77+5ba8c1a7c839c6b8+b8950c11686134ee",
+      "key": "3b90b015dee10eb1+5ba8c1a7c839c6b8+b8950c11686134ee",
       "pins": []
     },
     {
@@ -4004,7 +4112,7 @@
         ]
       ],
       "statement": "∀ (g : List TraceLean.Coverage.Floor → List TraceLean.Coverage.Observed → List TraceLean.Coverage.Waiver → List String),\n  (∀ (floors : List TraceLean.Coverage.Floor) (o : List TraceLean.Coverage.Observed)\n      (ws : List TraceLean.Coverage.Waiver) (w : TraceLean.Coverage.Waiver) (s : String),\n      w ∈ ws →\n        s ∈ w.situations →\n          (∀ (f : TraceLean.Coverage.Floor),\n              f ∈ floors →\n                f.situation = s →\n                  0 < TraceLean.Coverage.reachedCount o s ∧ f.atLeast ≤ TraceLean.Coverage.reachedCount o s) →\n            s ∈ g floors o ws) →\n    g = TraceLean.Coverage.unusedWaivers",
-      "key": "e4ba0f8176f0bf77+9fe6cc24587bea2b+bf246b69d8c32950",
+      "key": "3b90b015dee10eb1+9fe6cc24587bea2b+bf246b69d8c32950",
       "pins": []
     },
     {
@@ -4016,7 +4124,7 @@
         ]
       ],
       "statement": "∀ (g : String → List TraceLean.CoverageView.Item → Nat → TraceLean.View.Buffer),\n  (∀ (named : String) (items : List TraceLean.CoverageView.Item) (width : Nat) (item : TraceLean.CoverageView.Item),\n      item ∈ items →\n        ∀ (l : TraceLean.Lines.LineHits),\n          l ∈ item.lines →\n            l.hits = 0 →\n              ∃ sp,\n                sp ∈ (g named items width).spans ∧\n                  sp.role = TraceLean.View.Role.path ∧\n                    sp.actions = [\"file.open\"] ∧\n                      { data := List.take (sp.stop - sp.start) (List.drop sp.start (g named items width).text.data) } =\n                        item.path ++ \":\" ++ toString l.line) →\n    g = TraceLean.CoverageView.coverageView",
-      "key": "e4ba0f8176f0bf77+4345d0eb87051f5b+0cd99c96bf8c9369",
+      "key": "3b90b015dee10eb1+4345d0eb87051f5b+0cd99c96bf8c9369",
       "pins": []
     },
     {
@@ -4028,7 +4136,7 @@
         ]
       ],
       "statement": "∀\n  (g :\n    List (String × TraceLean.Derive.Ty) × TraceLean.Derive.Ty →\n      List (String × TraceLean.Derive.Ty) × TraceLean.Derive.Ty →\n        TraceLean.Derive.Structs → TraceLean.Derive.Structs → TraceLean.Derive.Derivation),\n  (∀ (a : String) (t r : TraceLean.Derive.Ty) (s : TraceLean.Derive.Structs),\n      (match g ([(a, t), (a, t)], r) ([(a, t)], r) s s with\n        | TraceLean.Derive.Derivation.err problems => true\n        | TraceLean.Derive.Derivation.ok derived => false) =\n        true) →\n    g = TraceLean.Derive.derive",
-      "key": "e4ba0f8176f0bf77+4b07cf3e01b89cb3+ddc1f2f2258ffd2b",
+      "key": "3b90b015dee10eb1+4b07cf3e01b89cb3+ddc1f2f2258ffd2b",
       "pins": []
     },
     {
@@ -4040,7 +4148,43 @@
         ]
       ],
       "statement": "∀\n  (g :\n    TraceLean.Derive.Ty →\n      TraceLean.Derive.Ty → TraceLean.Derive.Structs → TraceLean.Derive.Structs → Nat → TraceLean.Derive.Paired),\n  (∀ (t : TraceLean.Derive.Ty) (s r : TraceLean.Derive.Structs) (n : Nat),\n      (match g TraceLean.Derive.Ty.float t s r (n + 1) with\n        | TraceLean.Derive.Paired.err why => true\n        | TraceLean.Derive.Paired.ok schema => false) =\n        true) →\n    g = TraceLean.Derive.pair",
-      "key": "e4ba0f8176f0bf77+6b2ff6ff8b8e5376+da6608ffeb1cff65",
+      "key": "3b90b015dee10eb1+6b2ff6ff8b8e5376+da6608ffeb1cff65",
+      "pins": []
+    },
+    {
+      "model": "TraceLean.Diff::diff",
+      "clauses": [
+        [
+          "REQ-DIFF",
+          "assumptions_moved"
+        ],
+        [
+          "REQ-DIFF",
+          "links_moved"
+        ],
+        [
+          "REQ-DIFF",
+          "losses_first"
+        ],
+        [
+          "REQ-DIFF",
+          "marks_moved"
+        ],
+        [
+          "REQ-DIFF",
+          "per_clause"
+        ],
+        [
+          "REQ-DIFF",
+          "text_shown"
+        ],
+        [
+          "REQ-DIFF",
+          "unchanged_omitted"
+        ]
+      ],
+      "statement": "∀ (g : List TraceLean.Diff.ClauseState → List TraceLean.Diff.ClauseState → List TraceLean.Diff.ClauseDiff),\n  (∀ (before after : List TraceLean.Diff.ClauseState) (key : String × Option String),\n      (TraceLean.Diff.find before key = none →\n          (∃ s, TraceLean.Diff.find after key = some s) →\n            ∃ d,\n              d ∈ g before after ∧\n                d.reqId = key.fst ∧ d.clause = key.snd ∧ d.changes.head? = some TraceLean.Diff.Change.added) ∧\n        ((∃ s, TraceLean.Diff.find before key = some s) →\n          TraceLean.Diff.find after key = none →\n            ∃ d,\n              d ∈ g before after ∧\n                d.reqId = key.fst ∧ d.clause = key.snd ∧ d.changes.head? = some TraceLean.Diff.Change.removed)) →\n    (∀ (before after : List TraceLean.Diff.ClauseState) (key : String × Option String) (s : TraceLean.Diff.ClauseState),\n        TraceLean.Diff.find before key = some s →\n          TraceLean.Diff.find after key = some s →\n            ∀ (d : TraceLean.Diff.ClauseDiff), d ∈ g before after → ¬(d.reqId = key.fst ∧ d.clause = key.snd)) →\n      (∀ (before after : List TraceLean.Diff.ClauseState) (key : String × Option String)\n          (b a : TraceLean.Diff.ClauseState),\n          TraceLean.Diff.find before key = some b →\n            TraceLean.Diff.find after key = some a →\n              b.text ≠ a.text →\n                ∃ d,\n                  d ∈ g before after ∧\n                    d.reqId = key.fst ∧ d.clause = key.snd ∧ TraceLean.Diff.Change.reworded b.text a.text ∈ d.changes) →\n        (∀ (before after : List TraceLean.Diff.ClauseState) (key : String × Option String)\n            (b a : TraceLean.Diff.ClauseState),\n            TraceLean.Diff.find before key = some b →\n              TraceLean.Diff.find after key = some a →\n                ∀ (l : TraceLean.Diff.Linked),\n                  (l ∈ b.links →\n                      (∀ (m : TraceLean.Diff.Linked), m ∈ a.links → TraceLean.Diff.sameLink l m = false) →\n                        ∃ d,\n                          d ∈ g before after ∧\n                            d.reqId = key.fst ∧\n                              d.clause = key.snd ∧ TraceLean.Diff.Change.linkRemoved l.role l.symbol ∈ d.changes) ∧\n                    (l ∈ a.links →\n                        (∀ (m : TraceLean.Diff.Linked), m ∈ b.links → TraceLean.Diff.sameLink l m = false) →\n                          ∃ d,\n                            d ∈ g before after ∧\n                              d.reqId = key.fst ∧\n                                d.clause = key.snd ∧ TraceLean.Diff.Change.linkAdded l.role l.symbol ∈ d.changes) ∧\n                      (l ∈ b.links →\n                        (∃ m, m ∈ a.links ∧ TraceLean.Diff.sameLink l m = true) →\n                          ¬l ∈ a.links →\n                            ∃ d,\n                              d ∈ g before after ∧\n                                d.reqId = key.fst ∧\n                                  d.clause = key.snd ∧ TraceLean.Diff.Change.bodyChanged l.role l.symbol ∈ d.changes)) →\n          (∀ (before after : List TraceLean.Diff.ClauseState) (key : String × Option String)\n              (b a : TraceLean.Diff.ClauseState),\n              TraceLean.Diff.find before key = some b →\n                TraceLean.Diff.find after key = some a →\n                  ∀ (x : String),\n                    (x ∈ b.assumed →\n                        ¬x ∈ a.assumed →\n                          ∃ d,\n                            d ∈ g before after ∧\n                              d.reqId = key.fst ∧\n                                d.clause = key.snd ∧ TraceLean.Diff.Change.assumptionDropped x ∈ d.changes) ∧\n                      (¬x ∈ b.assumed →\n                        x ∈ a.assumed →\n                          ∃ d,\n                            d ∈ g before after ∧\n                              d.reqId = key.fst ∧\n                                d.clause = key.snd ∧ TraceLean.Diff.Change.assumptionAdded x ∈ d.changes)) →\n            (∀ (before after : List TraceLean.Diff.ClauseState),\n                ∃ losses rest,\n                  g before after = losses ++ rest ∧\n                    (∀ (d : TraceLean.Diff.ClauseDiff), d ∈ losses → TraceLean.Diff.isLoss d = true) ∧\n                      ∀ (d : TraceLean.Diff.ClauseDiff), d ∈ rest → TraceLean.Diff.isLoss d = false) →\n              (∀ (before after : List TraceLean.Diff.ClauseState) (key : String × Option String)\n                  (b a : TraceLean.Diff.ClauseState),\n                  TraceLean.Diff.find before key = some b →\n                    TraceLean.Diff.find after key = some a →\n                      ∀ (m : TraceLean.Diff.Mark),\n                        (m ∈ b.held →\n                            ¬m ∈ a.held →\n                              ∃ d,\n                                d ∈ g before after ∧\n                                  d.reqId = key.fst ∧\n                                    d.clause = key.snd ∧ TraceLean.Diff.Change.markLost m ∈ d.changes) ∧\n                          (¬m ∈ b.held →\n                            m ∈ a.held →\n                              ∃ d,\n                                d ∈ g before after ∧\n                                  d.reqId = key.fst ∧\n                                    d.clause = key.snd ∧ TraceLean.Diff.Change.markGained m ∈ d.changes)) →\n                g = TraceLean.Diff.diff",
+      "key": "3b90b015dee10eb1+5dc3ec65460d0556+2ef5c4e0f928f405+422404f44b2b209c+4f25db63d95bc34f+74a32404bf2b2bd7+a14360b1c1c8e4e1+b42983e5ee9f8616+e0ccac4a8a3e5139",
       "pins": []
     },
     {
@@ -4060,7 +4204,7 @@
         ]
       ],
       "statement": "∀ (g : List String → List (String × String)),\n  (∀ (lines : List String),\n      (∀ (raw : String), raw ∈ (\"\\n\".intercalate lines).splitOn \"\\n\" → TraceLean.DocLink.keyOf raw ≠ some \"describes\") →\n        g lines = []) →\n    (∀ (lines : List String) (e : String × String),\n        e ∈ g lines →\n          e.snd = \"\" ∨ ∃ raw, raw ∈ (\"\\n\".intercalate lines).splitOn \"\\n\" ∧ TraceLean.DocLink.HashSrc raw e.snd) →\n      (∀ (lines : List String) (e : String × String),\n          e ∈ g lines →\n            ∃ raw, raw ∈ (\"\\n\".intercalate lines).splitOn \"\\n\" ∧ TraceLean.DocLink.keyOf raw = some \"describes\") →\n        g = TraceLean.DocLink.declaredIn",
-      "key": "e4ba0f8176f0bf77+35e6357949d421ab+09e353afbfb61051+6e0f0088ca8f6f57+c1506c21c9e468d5",
+      "key": "3b90b015dee10eb1+35e6357949d421ab+09e353afbfb61051+6e0f0088ca8f6f57+c1506c21c9e468d5",
       "pins": []
     },
     {
@@ -4072,7 +4216,7 @@
         ]
       ],
       "statement": "∀ (g : TraceLean.DocLink.DocState → Bool),\n  (∀ (was now : String),\n      was ≠ now →\n        TraceLean.DocLink.docState { file := \"d.md\", target := \"T\", recordedHash := was } [(\"T\", now)] =\n            TraceLean.DocLink.DocState.inReview was now ∧\n          g (TraceLean.DocLink.DocState.inReview was now) = false) →\n    g = TraceLean.DocLink.docBlocks",
-      "key": "e4ba0f8176f0bf77+34073bbe2a3c6409+8ad6b3f3bebc7157",
+      "key": "3b90b015dee10eb1+34073bbe2a3c6409+8ad6b3f3bebc7157",
       "pins": []
     },
     {
@@ -4088,7 +4232,7 @@
         ]
       ],
       "statement": "∀ (g : TraceLean.DocLink.DocLink → List (String × String) → TraceLean.DocLink.DocState),\n  (∀ (hash : String),\n      g { file := \"d.md\", target := \"T\", recordedHash := hash } [(\"T\", hash)] = TraceLean.DocLink.DocState.current) →\n    (∀ (link : TraceLean.DocLink.DocLink) (current : List (String × String)),\n        TraceLean.SpecTrace.DocStanding link current (g link current)) →\n      g = TraceLean.DocLink.docState",
-      "key": "e4ba0f8176f0bf77+cddf7f4f1b5b07e7+a5c3c2f4a60a9858+e3ab5b28f6eb4bde",
+      "key": "3b90b015dee10eb1+cddf7f4f1b5b07e7+a5c3c2f4a60a9858+e3ab5b28f6eb4bde",
       "pins": [
         {
           "theorem": "TraceLean.SpecTrace::doc_standing_pinned",
@@ -4123,7 +4267,7 @@
         ]
       ],
       "statement": "∀ (g : List String → List (String × String) → String),\n  (∀ (targets : List String) (current : List (String × String)) (link : TraceLean.DocLink.DocLink),\n      g targets current =\n          \"describes: [\" ++ \", \".intercalate targets ++ \"]\\ndescribed_hash:\\n\" ++\n            String.join\n              (List.map\n                (fun target => \"  \" ++ target ++ \": \" ++ (TraceLean.DocLink.lookupHash current target).getD \"?\" ++ \"\\n\")\n                targets) ∧\n        (TraceLean.DocLink.docState link current = TraceLean.DocLink.DocState.current ↔\n          TraceLean.DocLink.lookupHash current link.target = some link.recordedHash)) →\n    g = TraceLean.DocLink.recordedFrontmatter",
-      "key": "e4ba0f8176f0bf77+80b8a4d54a1f21da+7ecfa297f938ec8f",
+      "key": "3b90b015dee10eb1+80b8a4d54a1f21da+7ecfa297f938ec8f",
       "pins": []
     },
     {
@@ -4143,7 +4287,7 @@
         ]
       ],
       "statement": "∀ (g : TraceLean.Keymap.Keymap → String → List String → List TraceLean.Drive.Step),\n  (∀ (keymap : TraceLean.Keymap.Keymap) (mode : String) (keys : List String),\n      (g keymap mode keys).length = keys.length) →\n    (∀ (keymap : TraceLean.Keymap.Keymap) (mode : String) (keys : List String),\n        (TraceLean.Drive.modesVisited (g keymap mode keys)).length = keys.length) →\n      (∀ (keymap : TraceLean.Keymap.Keymap) (mode : String), g keymap mode [] = []) →\n        (∀ (keymap : TraceLean.Keymap.Keymap) (mode : String) (keys : List String),\n            ((g keymap mode keys).all fun s => s.menu == TraceLean.Keymap.whichKey keymap s.mode) = true) →\n          (∀ (keymap : TraceLean.Keymap.Keymap) (mode key : String) (rest : List String),\n              Option.map (fun x => x.mode) (g keymap mode (key :: rest)).head? =\n                some (TraceLean.Keymap.nextMode keymap mode key)) →\n            g = TraceLean.Drive.drive",
-      "key": "e4ba0f8176f0bf77+b50bbd06a7e6541c+6e920f84a26a1ab5+7a2d2da8e518aeba+9494db81b78397e2+cadb8312131b8b8c+f6a77a1d17ceb0fa",
+      "key": "3b90b015dee10eb1+b50bbd06a7e6541c+6e920f84a26a1ab5+7a2d2da8e518aeba+9494db81b78397e2+cadb8312131b8b8c+f6a77a1d17ceb0fa",
       "pins": [
         {
           "theorem": "TraceLean.SpecSurface::session_pinned",
@@ -4167,7 +4311,7 @@
         ]
       ],
       "statement": "∀ (g : TraceLean.Effects.Capability → List TraceLean.Effects.Violation),\n  (∀ (mechanism : String), mechanism ≠ \"\" → g (TraceLean.Effects.Capability.contained mechanism) = []) →\n    g = TraceLean.Effects.capabilityViolations",
-      "key": "e4ba0f8176f0bf77+72767d3112f95b11+426c8baa1030598a",
+      "key": "3b90b015dee10eb1+72767d3112f95b11+426c8baa1030598a",
       "pins": [
         {
           "theorem": "TraceLean.SpecSandbox::capability_reported_pinned",
@@ -4191,7 +4335,7 @@
         ]
       ],
       "statement": "∀ (g : TraceLean.Command.Workspace → TraceLean.Command.Workspace → String → Option TraceLean.Effects.Violation),\n  (∀ (before workspace : TraceLean.Command.Workspace) (path : String),\n      before.get path = workspace.get path → g before workspace path = none) →\n    (∀ (before workspace : TraceLean.Command.Workspace) (path : String),\n        TraceLean.Policy.isMirrored path = true →\n          (g before workspace path = none ↔ before.get path = workspace.get path)) →\n      g = TraceLean.Effects.copyCheck",
-      "key": "e4ba0f8176f0bf77+eb2e8236a31592d3+0ac237a4752ca829+55362821c2c66b02",
+      "key": "3b90b015dee10eb1+eb2e8236a31592d3+0ac237a4752ca829+55362821c2c66b02",
       "pins": [
         {
           "theorem": "TraceLean.SpecSandbox::workspace_is_a_copy_pinned",
@@ -4215,7 +4359,7 @@
         ]
       ],
       "statement": "∀ (g : List String → List TraceLean.Effects.Violation),\n  (∀ (writes : List String) (path : String),\n      TraceLean.Effects.Violation.escaped path ∈ g writes ↔\n        path ∈ writes ∧ TraceLean.Policy.classify path = TraceLean.Policy.Class.outside) →\n    g = TraceLean.Effects.escapeViolations",
-      "key": "e4ba0f8176f0bf77+875ced4d8c3ac542+9a98e73c4c9e5b66",
+      "key": "3b90b015dee10eb1+875ced4d8c3ac542+9a98e73c4c9e5b66",
       "pins": []
     },
     {
@@ -4227,7 +4371,7 @@
         ]
       ],
       "statement": "∀ (g : TraceLean.Command.Workspace → TraceLean.Command.Workspace → List TraceLean.Effects.Violation),\n  (∀ (w : TraceLean.Command.Workspace), g w w = []) → g = TraceLean.Effects.treeChanges",
-      "key": "e4ba0f8176f0bf77+4e8f955d1c1ecf6a+adf5301897b86a56",
+      "key": "3b90b015dee10eb1+4e8f955d1c1ecf6a+adf5301897b86a56",
       "pins": []
     },
     {
@@ -4255,7 +4399,7 @@
         ]
       ],
       "statement": "∀ (g : List TraceLean.Evidence.Record → Bool → TraceLean.Evidence.Marks),\n  (∀ (records : List TraceLean.Evidence.Record) (r : TraceLean.Evidence.Record) (a : Bool),\n      (r.bond ≠ TraceLean.Evidence.Bond.requirementModel → (g (records ++ [r]) a).judged = (g records a).judged) ∧\n        (r.bond ≠ TraceLean.Evidence.Bond.modelImpl → (g (records ++ [r]) a).tested = (g records a).tested) ∧\n          (r.bond ≠ TraceLean.Evidence.Bond.modelProof → (g (records ++ [r]) a).proved = (g records a).proved)) →\n    (∀ (records : List TraceLean.Evidence.Record) (r : TraceLean.Evidence.Record) (a : Bool),\n        (g (records ++ [r]) a).holds (g records a) = true) →\n      (∀ (records : List TraceLean.Evidence.Record) (a : Bool),\n          (g records a).judged =\n              decide (2 ≤ (TraceLean.Evidence.bondLevel records TraceLean.Evidence.Bond.requirementModel).toNat) ∧\n            (g records a).tested =\n                decide (3 ≤ (TraceLean.Evidence.bondLevel records TraceLean.Evidence.Bond.modelImpl).toNat) ∧\n              (g records a).proved =\n                decide (4 ≤ (TraceLean.Evidence.bondLevel records TraceLean.Evidence.Bond.modelProof).toNat)) →\n        (∀ (a j t p : Bool),\n            (∃ m, m.annotated = a ∧ m.judged = j ∧ m.tested = t ∧ m.proved = p) ∧\n              ∃ records,\n                (g records a).annotated = a ∧\n                  (g records a).judged = j ∧ (g records a).tested = t ∧ (g records a).proved = p) →\n          (∀ (a : Bool),\n              g [] a = { annotated := a, judged := false, tested := false, proved := false, structural := false }) →\n            g = TraceLean.Evidence.marks",
-      "key": "e4ba0f8176f0bf77+1272c4a23358fb47+083c60e75b403407+33c8cabc026cf6b4+407dd5e484a4ff1e+8887fcf7d147c28e+de26fc952c665e06",
+      "key": "3b90b015dee10eb1+1272c4a23358fb47+083c60e75b403407+33c8cabc026cf6b4+407dd5e484a4ff1e+8887fcf7d147c28e+de26fc952c665e06",
       "pins": []
     },
     {
@@ -4267,7 +4411,7 @@
         ]
       ],
       "statement": "∀ (g : TraceLean.Evidence.Marks → TraceLean.Evidence.Marks),\n  (∀ (m other : TraceLean.Evidence.Marks),\n      other.structural = false →\n        (g m).tested = false ∧\n          (g m).proved = false ∧\n            (g m).holds { annotated := false, judged := false, tested := true, proved := false, structural := false } =\n                false ∧\n              ((g m).both other).tested = other.tested ∧\n                ((g m).both other).proved = other.proved ∧ (other.both (g m)).tested = other.tested) →\n    g = TraceLean.Evidence.structural",
-      "key": "e4ba0f8176f0bf77+e135a3eff2ec6e64+68fa7ff3898405fa",
+      "key": "3b90b015dee10eb1+e135a3eff2ec6e64+68fa7ff3898405fa",
       "pins": [
         {
           "theorem": "TraceLean.SpecNav::structural_not_applicable_pinned",
@@ -4291,7 +4435,7 @@
         ]
       ],
       "statement": "∀ (g : TraceLean.Evidence.Marks → String),\n  (∀ (m : TraceLean.Evidence.Marks),\n      (g m).toList =\n          [if m.annotated = true then 'A' else '-', if m.judged = true then 'J' else '-',\n            if m.structural = true then '·' else if m.tested = true then 'T' else '-',\n            if m.structural = true then '·' else if m.proved = true then 'P' else '-'] ∧\n        (g m).length = 4) →\n    g = TraceLean.Evidence.written",
-      "key": "e4ba0f8176f0bf77+f108eb4624751126+ddbdef5bebc6b065",
+      "key": "3b90b015dee10eb1+f108eb4624751126+ddbdef5bebc6b065",
       "pins": []
     },
     {
@@ -4303,7 +4447,7 @@
         ]
       ],
       "statement": "∀ (g : List String → List String → List TraceLean.Explorer.Row),\n  (∀ (files opened : List String) (r : TraceLean.Explorer.Row),\n      r ∈ g files opened →\n        (r.depth = 0 → r.path = r.name) ∧\n          (r.folder = true → r.isOpen = opened.contains r.path) ∧\n            (0 < r.depth →\n              ∃ f,\n                f ∈ g files opened ∧\n                  f.folder = true ∧ f.isOpen = true ∧ f.depth + 1 = r.depth ∧ r.path = f.path ++ \"/\" ++ r.name)) →\n    g = TraceLean.Explorer.rows",
-      "key": "e4ba0f8176f0bf77+5a1358f5e4614197+d53c42bfe15cd086",
+      "key": "3b90b015dee10eb1+5a1358f5e4614197+d53c42bfe15cd086",
       "pins": []
     },
     {
@@ -4315,7 +4459,7 @@
         ]
       ],
       "statement": "∀ (g : String → String → List (Nat × Nat)),\n  (∀ (text pattern : String) (m : Nat × Nat),\n      m ∈ g text pattern →\n        m.fst < m.snd ∧\n          ∃ line,\n            line ∈ text.splitOn \"\\n\" ∧\n              ∃ start,\n                TraceLean.Find.GlobMatch (TraceLean.Find.dedupStars (List.map TraceLean.Find.fold pattern.toList))\n                  (List.take (m.snd - m.fst) (List.drop start (List.map TraceLean.Find.fold line.toList)))) →\n    g = TraceLean.Find.globMatches",
-      "key": "e4ba0f8176f0bf77+d9434d01696da7e5+0705e86fe708782a",
+      "key": "3b90b015dee10eb1+d9434d01696da7e5+0705e86fe708782a",
       "pins": []
     },
     {
@@ -4327,7 +4471,7 @@
         ]
       ],
       "statement": "∀ (g : String → String → List (Nat × String)),\n  (∀ (text pattern : String) (number : Nat) (line : String),\n      ((number, line) ∈ g text pattern ↔\n          0 < number ∧ (text.splitOn \"\\n\")[number - 1]? = some line ∧ TraceLean.Find.globMatches line pattern ≠ []) ∧\n        List.Pairwise (fun a b => a.fst < b.fst) (g text pattern)) →\n    g = TraceLean.Find.matchingLines",
-      "key": "e4ba0f8176f0bf77+bef923383ef8f7aa+a08538284cb5f19e",
+      "key": "3b90b015dee10eb1+bef923383ef8f7aa+a08538284cb5f19e",
       "pins": []
     },
     {
@@ -4339,7 +4483,7 @@
         ]
       ],
       "statement": "∀ (g : String → List TraceLean.FindingsView.Found → TraceLean.View.Buffer),\n  (∀ (title : String) (found : List TraceLean.FindingsView.Found) (f : TraceLean.FindingsView.Found),\n      f ∈ found →\n        (f.file ++ \":\" ++ toString f.line, [\"file.open\"]) ∈ TraceLean.FindingsView.linked (g title found) ∧\n          ∀ (r : Nat × Nat),\n            r ∈ TraceLean.Highlight.requirementNames (\" \" ++ f.message) 0 (\" \" ++ f.message).length →\n              ({ data := List.take (r.snd - r.fst) (List.drop r.fst (\" \" ++ f.message).toList) },\n                  [\"trace.requirement\"]) ∈\n                TraceLean.FindingsView.linked (g title found)) →\n    g = TraceLean.FindingsView.findingsView",
-      "key": "e4ba0f8176f0bf77+4335363f164ddb84+1ceadff2bedc3b18",
+      "key": "3b90b015dee10eb1+4335363f164ddb84+1ceadff2bedc3b18",
       "pins": []
     },
     {
@@ -4351,7 +4495,7 @@
         ]
       ],
       "statement": "∀ (g : Nat → Option Nat → List Nat → Nat → List Nat),\n  (∀ (seed : Nat) (max : Option Nat) (edges : List Nat) (count i : Nat),\n      edges ≠ [] →\n        i < count →\n          ((TraceLean.Generator.stateAfter (2 * i) (TraceLean.Generator.Rng.new (UInt64.ofNat seed))).chance 40).fst =\n              true →\n            ∃ e, e ∈ edges ∧ (g seed max edges count).get? i = some e) →\n    g = TraceLean.Generator.natStream",
-      "key": "e4ba0f8176f0bf77+f9e5075bb9a3064a+2a0ed915ed6309ea",
+      "key": "3b90b015dee10eb1+f9e5075bb9a3064a+2a0ed915ed6309ea",
       "pins": []
     },
     {
@@ -4367,7 +4511,7 @@
         ]
       ],
       "statement": "∀ (g : Nat → Nat → List Nat),\n  (∀ (seed n m : Nat), List.take n (g seed (n + m)) = g seed n) →\n    (∀ (seed count : Nat),\n        g seed count =\n          List.map\n            (fun i =>\n              (TraceLean.Generator.stateAfter i (TraceLean.Generator.Rng.new (UInt64.ofNat seed))).next.fst.toNat)\n            (List.range count)) →\n      g = TraceLean.Generator.rawStream",
-      "key": "e4ba0f8176f0bf77+9ef66c65431edf29+0e5b32c4f57fb9c2+1801a31fdfd1ff9e",
+      "key": "3b90b015dee10eb1+9ef66c65431edf29+0e5b32c4f57fb9c2+1801a31fdfd1ff9e",
       "pins": []
     },
     {
@@ -4379,7 +4523,7 @@
         ]
       ],
       "statement": "∀ (g : Nat → Nat → Nat → List Lean.Json),\n  (∀ (seed shape n m : Nat), List.take n (g seed shape (n + m)) = g seed shape n ∧ (g seed shape n).length = n) →\n    g = TraceLean.Generator.shapeStream",
-      "key": "e4ba0f8176f0bf77+a7f2b48c39838c47+4e5ce9e0b238ca3e",
+      "key": "3b90b015dee10eb1+a7f2b48c39838c47+4e5ce9e0b238ca3e",
       "pins": []
     },
     {
@@ -4391,7 +4535,7 @@
         ]
       ],
       "statement": "∀ (g : String → List (Nat × Nat) → List (Nat × Nat) → String),\n  (∀ (source source' : String) (removed removed' protected_ protected' : List (Nat × Nat)),\n      TraceLean.Hash.normalize source removed protected_ = TraceLean.Hash.normalize source' removed' protected' →\n        g source removed protected_ = g source' removed' protected') →\n    g = TraceLean.Hash.bodyHash",
-      "key": "e4ba0f8176f0bf77+0913a5732f797b56+cfc4da25fa423366",
+      "key": "3b90b015dee10eb1+0913a5732f797b56+cfc4da25fa423366",
       "pins": []
     },
     {
@@ -4407,7 +4551,7 @@
         ]
       ],
       "statement": "∀ (g : Option String → String → List (String × String) → String), g = TraceLean.Hash.clauseHash",
-      "key": "e4ba0f8176f0bf77+5a549cc79c8f08e0",
+      "key": "3b90b015dee10eb1+5a549cc79c8f08e0",
       "pins": []
     },
     {
@@ -4423,7 +4567,7 @@
         ]
       ],
       "statement": "∀ (g : String → List (Nat × Nat) → List (Nat × Nat) → String),\n  (∀ (source source' : String) (removed protected_ : List (Nat × Nat)),\n      source.length = source'.length →\n        (∀ (j : Nat),\n            source.toList.getD j ' ' = source'.toList.getD j ' ' ∨\n              (TraceLean.Hash.rangeAt removed j).isSome = true ∧\n                ∀ (r : Nat × Nat), r ∈ protected_ → ¬(r.fst ≤ j ∧ j < r.snd)) →\n          g source removed protected_ = g source' removed protected_) →\n    (∀ (source source' : String) (removed protected_ : List (Nat × Nat)),\n        source.length = source'.length →\n          (∀ (j : Nat),\n              source.toList.getD j ' ' = source'.toList.getD j ' ' ∨\n                (TraceLean.Hash.isSpace' (source.toList.getD j ' ') = true ∧\n                    TraceLean.Hash.isSpace' (source'.toList.getD j ' ') = true) ∧\n                  ∀ (r : Nat × Nat), r ∈ protected_ → ¬(r.fst ≤ j ∧ j < r.snd)) →\n            ∀ (literal : String),\n              literal.toList.getLast? ≠ some ' ' →\n                g source removed protected_ = g source' removed protected_ ∧\n                  g literal [] [(0, literal.length)] = literal) →\n      g = TraceLean.Hash.normalize",
-      "key": "e4ba0f8176f0bf77+d9fa7adb61ff1e6c+db6617a7bd31e417+deeca1f2ba608679",
+      "key": "3b90b015dee10eb1+d9fa7adb61ff1e6c+db6617a7bd31e417+deeca1f2ba608679",
       "pins": []
     },
     {
@@ -4435,7 +4579,7 @@
         ]
       ],
       "statement": "∀ (g : Bool → String → List (String × String) → Bool → Bool),\n  (∀ (measured : Bool) (held : String) (files : List (String × String)) (again : Bool),\n      g true (TraceLean.Hash.sourcesHash files) files false = false ∧\n        g measured held files true = true ∧\n          g false held files again = true ∧\n            (held ≠ TraceLean.Hash.sourcesHash files → g measured held files again = true)) →\n    g = TraceLean.Hash.retake",
-      "key": "e4ba0f8176f0bf77+9f579e9f30cd89b2+38d44d27c8a6069b",
+      "key": "3b90b015dee10eb1+9f579e9f30cd89b2+38d44d27c8a6069b",
       "pins": []
     },
     {
@@ -4447,7 +4591,7 @@
         ]
       ],
       "statement": "∀ (g : String → Nat → Nat → List (Nat × Nat)),\n  (∀ (text : String) (start stop : Nat),\n      (∀ (a b : Nat),\n          (a, b) ∈ g text start stop →\n            min start (min stop text.toList.length) ≤ a ∧\n              a < min stop text.toList.length ∧\n                TraceLean.Highlight.boundary text.toList (min start (min stop text.toList.length)) a = true ∧\n                  TraceLean.Highlight.referenceAt text.toList a (min stop text.toList.length) = some b) ∧\n        ∀ (p e : Nat),\n          min start (min stop text.toList.length) ≤ p →\n            p < min stop text.toList.length →\n              TraceLean.Highlight.boundary text.toList (min start (min stop text.toList.length)) p = true →\n                TraceLean.Highlight.referenceAt text.toList p (min stop text.toList.length) = some e →\n                  (∀ (q : Nat),\n                      min start (min stop text.toList.length) ≤ q →\n                        q < p →\n                          TraceLean.Highlight.boundary text.toList (min start (min stop text.toList.length)) q = true →\n                            TraceLean.Highlight.referenceAt text.toList q (min stop text.toList.length) = none) →\n                    (p, e) ∈ g text start stop) →\n    g = TraceLean.Highlight.requirementNames",
-      "key": "e4ba0f8176f0bf77+4a1c00bf5fccde09+b3c95fa04309d529",
+      "key": "3b90b015dee10eb1+4a1c00bf5fccde09+b3c95fa04309d529",
       "pins": []
     },
     {
@@ -4459,7 +4603,7 @@
         ]
       ],
       "statement": "∀ (g : Nat → String → List TraceLean.HistoryView.Changed → TraceLean.View.Buffer),\n  (∀ (node : Nat) (said : String) (changed : List TraceLean.HistoryView.Changed),\n      (∀ (c : TraceLean.HistoryView.Changed),\n          c ∈ changed →\n            ∀ (d : TraceLean.Produce.DiffLine),\n              d ∈ TraceLean.Produce.diffLines (c.before.splitOn \"\\n\") (c.after.splitOn \"\\n\") →\n                d.role ≠ TraceLean.View.Role.plain → (d.text, d.role) ∈ TraceLean.HistoryView.changedLines c) ∧\n        List.map (fun x => x.role) (g node said changed).spans =\n          List.map (fun x => x.snd)\n            (List.filter TraceLean.HistoryView.Shown\n              ((TraceLean.HistoryView.pointName (some node) ++ \"  \" ++ said, TraceLean.View.Role.heading) ::\n                changed.bind TraceLean.HistoryView.changedLines))) →\n    g = TraceLean.HistoryView.changeView",
-      "key": "e4ba0f8176f0bf77+6b637b2e9eb085b9+d27d74d1998d2b13",
+      "key": "3b90b015dee10eb1+6b637b2e9eb085b9+d27d74d1998d2b13",
       "pins": []
     },
     {
@@ -4471,7 +4615,7 @@
         ]
       ],
       "statement": "∀ (g : List TraceLean.HistoryView.Point → List TraceLean.HistoryView.GraphRow),\n  (∀ (points : List TraceLean.HistoryView.Point),\n      (List.filterMap (fun x => x.node) (g points)).Nodup ∧\n        ∀ (i : Nat) (h : i < (g points).length),\n          (g points)[i].node = none ∨\n            ∃ p,\n              p ∈ points ∧\n                (g points)[i].node = some p.node ∧ p.parent ∈ List.map (fun x => x.node) (List.take i (g points))) →\n    g = TraceLean.HistoryView.historyGraph",
-      "key": "e4ba0f8176f0bf77+dffba39f17e9bf07+aa9247da3ed4c5eb",
+      "key": "3b90b015dee10eb1+dffba39f17e9bf07+aa9247da3ed4c5eb",
       "pins": []
     },
     {
@@ -4483,7 +4627,7 @@
         ]
       ],
       "statement": "∀ (g : List TraceLean.HistoryView.Point → TraceLean.HistoryView.Filter → Option String → TraceLean.View.Buffer),\n  (∀ (points : List TraceLean.HistoryView.Point) (filter : TraceLean.HistoryView.Filter) (file : Option String),\n      List.map (fun x => x.role) (List.filter TraceLean.HistoryView.isJump (g points filter file).spans) =\n          List.map (TraceLean.HistoryView.rowRole points)\n            (TraceLean.HistoryView.historyGraph (TraceLean.HistoryView.shownPoints points filter (file.getD \"\"))) ∧\n        ∀ (row : TraceLean.HistoryView.GraphRow),\n          row ∈ TraceLean.HistoryView.historyGraph (TraceLean.HistoryView.shownPoints points filter (file.getD \"\")) →\n            (TraceLean.HistoryView.rowRole points row = TraceLean.View.Role.heading ↔\n              row.cells.toList.contains '●' = true)) →\n    g = TraceLean.HistoryView.historyView",
-      "key": "e4ba0f8176f0bf77+f98b27ad79de4f53+9fd06018411dbaed",
+      "key": "3b90b015dee10eb1+f98b27ad79de4f53+9fd06018411dbaed",
       "pins": []
     },
     {
@@ -4495,7 +4639,7 @@
         ]
       ],
       "statement": "∀ (g : List TraceLean.HistoryView.Point → TraceLean.HistoryView.Filter → String → List TraceLean.HistoryView.Point),\n  (∀ (points : List TraceLean.HistoryView.Point) (f : TraceLean.HistoryView.Filter) (file : String),\n      (g points f file).all (TraceLean.HistoryView.keep f file) = true) →\n    g = TraceLean.HistoryView.shownPoints",
-      "key": "e4ba0f8176f0bf77+ba47590b8d774998+394db9297164b129",
+      "key": "3b90b015dee10eb1+ba47590b8d774998+394db9297164b129",
       "pins": [
         {
           "theorem": "TraceLean.SpecHistory::filtered_view_pinned",
@@ -4519,7 +4663,7 @@
         ]
       ],
       "statement": "∀ (g : TraceLean.Judge.Detail → TraceLean.Evidence.Level),\n  (∀ (verdict judgedBy promptVersion : String) (delegatedBy note : Option String) (seed cases : Nat)\n      (op theoremName toolchain : String),\n      g (TraceLean.Judge.Detail.judge verdict judgedBy delegatedBy promptVersion note) = TraceLean.Evidence.Level.L2 ∧\n        g (TraceLean.Judge.Detail.drt seed cases op) = TraceLean.Evidence.Level.L3 ∧\n          g (TraceLean.Judge.Detail.proof theoremName toolchain) = TraceLean.Evidence.Level.L4) →\n    g = TraceLean.Judge.Detail.ceiling",
-      "key": "e4ba0f8176f0bf77+0183812077703e72+8e3fd097ad369e28",
+      "key": "3b90b015dee10eb1+0183812077703e72+8e3fd097ad369e28",
       "pins": []
     },
     {
@@ -4531,7 +4675,7 @@
         ]
       ],
       "statement": "∀ (g : TraceLean.Judge.Judged → String),\n  (∀ (judged : TraceLean.Judge.Judged),\n      (∃ pre post, g judged = pre ++ judged.judgedBy ++ post) ∧\n        (∀ (person : String),\n            judged.delegatedBy = some person →\n              ∃ pre post, g judged = pre ++ (\" (delegated by \" ++ person ++ \")\") ++ post) ∧\n          (judged.verdict ≠ \"agrees\" →\n            (∃ pre post, g judged = pre ++ judged.verdict ++ post) ∧\n              ∃ pre post, g judged = pre ++ judged.note.getD \"no note\" ++ post)) →\n    g = TraceLean.Judge.judgedText",
-      "key": "e4ba0f8176f0bf77+3f5356153d6ab83d+7f52bd228c4972db",
+      "key": "3b90b015dee10eb1+3f5356153d6ab83d+7f52bd228c4972db",
       "pins": []
     },
     {
@@ -4551,7 +4695,7 @@
         ]
       ],
       "statement": "∀ (g : TraceLean.Judge.Material → String),\n  (∀ (material : TraceLean.Judge.Material) (judgement : TraceLean.Judge.Judgement)\n      (judges : Option TraceLean.Judge.Judges) (linkHash : String),\n      (∃ pre post, g material = pre ++ \". This is advice. The decision is recorded as \" ++ post) ∧\n        ∀ (e : TraceLean.Judge.EvidenceRecord),\n          (TraceLean.Judge.record material judgement judges linkHash).evidence? = some e →\n            ∃ verdict delegatedBy,\n              e.detail =\n                TraceLean.Judge.Detail.judge verdict judgement.judgedBy delegatedBy TraceLean.Judge.promptVersion\n                  judgement.note) →\n    (∀ (material : TraceLean.Judge.Material),\n        (∃ pre post, g material = pre ++ material.clauseText.trim ++ post) ∧\n          ∃ pre post, g material = pre ++ material.modelSource.trim ++ post) →\n      (∀ (material : TraceLean.Judge.Material) (text : String),\n          material.divergence = some text → ∃ pre post, g material = pre ++ text ++ post) →\n        g = TraceLean.Judge.prompt",
-      "key": "e4ba0f8176f0bf77+0b366673facbb2e3+5690fe48a55309f4+6aa228cbb4f6e3b7+9cfc12df11b8eca0",
+      "key": "3b90b015dee10eb1+0b366673facbb2e3+5690fe48a55309f4+6aa228cbb4f6e3b7+9cfc12df11b8eca0",
       "pins": []
     },
     {
@@ -4575,7 +4719,7 @@
         ]
       ],
       "statement": "∀\n  (g :\n    TraceLean.Judge.Material →\n      TraceLean.Judge.Judgement → Option TraceLean.Judge.Judges → String → TraceLean.Judge.JudgeOutcome),\n  (∀ (material : TraceLean.Judge.Material) (judgement : TraceLean.Judge.Judgement)\n      (judges : Option TraceLean.Judge.Judges) (linkHash : String),\n      judgement.judgedBy.all Char.isWhitespace = true → (g material judgement judges linkHash).evidence? = none) →\n    (∀ (material : TraceLean.Judge.Material) (judgement : TraceLean.Judge.Judgement)\n        (judges : Option TraceLean.Judge.Judges) (linkHash : String) (delegatedBy : Option String),\n        judgement.verdict = TraceLean.Judge.Verdict.drift →\n          TraceLean.Judge.authority judges judgement.judgedBy judgement.delegatedBy =\n              TraceLean.Judge.Authority.accepted delegatedBy →\n            g material judgement judges linkHash =\n              TraceLean.Judge.JudgeOutcome.drifted\n                (TraceLean.Judge.entry material judgement delegatedBy \"drift\" TraceLean.Evidence.Level.L1 linkHash)) →\n      (∀ (material : TraceLean.Judge.Material) (judgement : TraceLean.Judge.Judgement)\n          (judges : Option TraceLean.Judge.Judges) (linkHash : String) (e : TraceLean.Judge.EvidenceRecord),\n          (g material judgement judges linkHash).evidence? = some e →\n            (e.level = TraceLean.Evidence.Level.L1 ∨ e.level = TraceLean.Evidence.Level.L2) ∧\n              e.detail.ceiling = TraceLean.Evidence.Level.L2) →\n        g = TraceLean.Judge.record",
-      "key": "e4ba0f8176f0bf77+3402adaacf045c92+3f7a6bcf1ef639f6+435d8744c88c383d+acdc70c6d24aec4f",
+      "key": "3b90b015dee10eb1+3402adaacf045c92+3f7a6bcf1ef639f6+435d8744c88c383d+acdc70c6d24aec4f",
       "pins": []
     },
     {
@@ -4587,7 +4731,7 @@
         ]
       ],
       "statement": "∀ (g : List String → List String → Option String),\n  (∀ (models checks checks' : List String),\n      (models ≠ [] → g models checks = g models checks') ∧\n        (g [] checks = none ↔ checks = []) ∧\n          (checks ≠ [] →\n            g [] checks = some (\"+\".intercalate (List.mergeSort (fun a b => decide (a ≤ b)) checks).eraseDups))) →\n    g = TraceLean.Judge.restsOn",
-      "key": "e4ba0f8176f0bf77+735e0b5aea4aaa7f+4c8aef472a244e38",
+      "key": "3b90b015dee10eb1+735e0b5aea4aaa7f+4c8aef472a244e38",
       "pins": []
     },
     {
@@ -4599,7 +4743,7 @@
         ]
       ],
       "statement": "∀ (g : TraceLean.Judge.Judgement → TraceLean.Judge.Material → Bool),\n  (∀ (judgement : TraceLean.Judge.Judgement) (material : TraceLean.Judge.Material),\n      TraceLean.SpecJudge.StillStands judgement material (g judgement material)) →\n    g = TraceLean.Judge.stillApplies",
-      "key": "e4ba0f8176f0bf77+36d0c4958d818941+0158d354ca5f85a2",
+      "key": "3b90b015dee10eb1+36d0c4958d818941+0158d354ca5f85a2",
       "pins": [
         {
           "theorem": "TraceLean.SpecJudge::invalidated_by_change_pinned",
@@ -4631,7 +4775,7 @@
         ]
       ],
       "statement": "∀ (g : TraceLean.Keymap.Keymap → String → String → TraceLean.Keymap.Outcome),\n  (∀ (k : TraceLean.Keymap.Keymap) (mode key : String),\n      g k mode key = TraceLean.Keymap.Outcome.passThrough →\n        k.mode mode = none ∨ ∃ m, k.mode mode = some m ∧ m.binding key = none ∧ m.parent = none) →\n    (∀ (k : TraceLean.Keymap.Keymap) (mode key : String) (m : TraceLean.Keymap.Mode) (p : String),\n        k.mode mode = some m →\n          m.binding key = none →\n            m.parent = some p →\n              g k mode key =\n                if key = TraceLean.Keymap.leaveKey then TraceLean.Keymap.Outcome.leave p\n                else TraceLean.Keymap.Outcome.leave k.root) →\n      g = TraceLean.Keymap.step",
-      "key": "e4ba0f8176f0bf77+b2d0950b816b6710+774065c63ca09dd1+c7d0e409d1c91cb9",
+      "key": "3b90b015dee10eb1+b2d0950b816b6710+774065c63ca09dd1+c7d0e409d1c91cb9",
       "pins": []
     },
     {
@@ -4659,7 +4803,7 @@
         ]
       ],
       "statement": "∀ (g : TraceLean.Keymap.Keymap → List String → List TraceLean.Keymap.Problem),\n  (∀ (k : TraceLean.Keymap.Keymap) (as : List String) (name : String) (m : TraceLean.Keymap.Mode),\n      name ≠ k.root →\n        k.mode name = some m → m.parent = none → m.binding TraceLean.Keymap.leaveKey = none → g k as ≠ []) →\n    (∀ (k : TraceLean.Keymap.Keymap) (as : List String),\n        g k as = [] →\n          ∀ (name : String) (m : TraceLean.Keymap.Mode),\n            (name, m) ∈ k.modes →\n              ∀ (key a d : String), (key, TraceLean.Keymap.Binding.dispatch a d) ∈ m.bindings → a ∈ as) →\n      (∀ (k : TraceLean.Keymap.Keymap) (as : List String),\n          g k as = [] →\n            k.hasMode k.root = true ∧\n              ∀ (name : String) (m : TraceLean.Keymap.Mode),\n                (name, m) ∈ k.modes →\n                  (∀ (key t d : String), (key, TraceLean.Keymap.Binding.enter t d) ∈ m.bindings → k.hasMode t = true) ∧\n                    ∀ (p : String), m.parent = some p → k.hasMode p = true) →\n        (∀ (k : TraceLean.Keymap.Keymap) (as : List String),\n            g k as = [] →\n              ∀ (mode key : String),\n                (∀ (t : String),\n                    TraceLean.Keymap.step k mode key = TraceLean.Keymap.Outcome.enter t → k.hasMode t = true) ∧\n                  (∀ (t : String),\n                      TraceLean.Keymap.step k mode key = TraceLean.Keymap.Outcome.leave t → k.hasMode t = true) ∧\n                    ∀ (a : String), TraceLean.Keymap.step k mode key = TraceLean.Keymap.Outcome.dispatch a → a ∈ as) →\n          (∀ (k : TraceLean.Keymap.Keymap) (as : List String),\n              g k as = [] →\n                (∀ (name : String) (m : TraceLean.Keymap.Mode),\n                    k.mode name = some m →\n                      ∀ (key : String) (b : TraceLean.Keymap.Binding), (key, b) ∈ m.bindings → m.binding key = some b) →\n                  ∀ (a : String),\n                    a ∈ as →\n                      ∃ keys key,\n                        TraceLean.Keymap.step k (TraceLean.Keymap.runKeys k k.root keys) key =\n                          TraceLean.Keymap.Outcome.dispatch a) →\n            (∀ (k : TraceLean.Keymap.Keymap) (as : List String),\n                g k as = [] →\n                  ∀ (name : String),\n                    k.hasMode name = true →\n                      ∃ n,\n                        n ≤ k.modes.length + 2 ∧\n                          TraceLean.Keymap.runKeys k name (List.replicate n TraceLean.Keymap.leaveKey) = k.root) →\n              g = TraceLean.Keymap.validate",
-      "key": "e4ba0f8176f0bf77+4596c45eb436aa93+2eaff4d7bd2c851f+6c90b8569761aee3+71f84a58c5697762+7ca277c936e78640+bc42b2749a300cc7+e340df51b23c4ac6",
+      "key": "3b90b015dee10eb1+4596c45eb436aa93+2eaff4d7bd2c851f+6c90b8569761aee3+71f84a58c5697762+7ca277c936e78640+bc42b2749a300cc7+e340df51b23c4ac6",
       "pins": []
     },
     {
@@ -4671,7 +4815,7 @@
         ]
       ],
       "statement": "∀ (g : TraceLean.Keymap.Keymap → String → List (String × String)),\n  (∀ (k : TraceLean.Keymap.Keymap) (mode key : String),\n      ((∃ d, (key, d) ∈ g k mode) ↔\n          ∃ m,\n            k.mode mode = some m ∧\n              ((∃ b, (key, b) ∈ m.bindings) ∨ key = TraceLean.Keymap.leaveKey ∧ m.parent.isSome = true)) ∧\n        ∀ (d : String), (key, d) ∈ g k mode → TraceLean.Keymap.step k mode key ≠ TraceLean.Keymap.Outcome.passThrough) →\n    g = TraceLean.Keymap.whichKey",
-      "key": "e4ba0f8176f0bf77+11fc455a6126a519+9672fea0d2d55bfa",
+      "key": "3b90b015dee10eb1+11fc455a6126a519+9672fea0d2d55bfa",
       "pins": []
     },
     {
@@ -4683,7 +4827,7 @@
         ]
       ],
       "statement": "∀ (g : List TraceLean.Lines.LineHits → Nat → Nat → List TraceLean.Lines.Marker),\n  (∀ (lines : List TraceLean.Lines.LineHits) (top height : Nat) (l : TraceLean.Lines.LineHits),\n      l ∈ lines →\n        1 ≤ l.line →\n          top ≤ l.line - 1 →\n            l.line - 1 < top + height →\n              ∃ m,\n                m ∈ g lines top height ∧\n                  m.line = l.line - 1 ∧\n                    m.hits = l.hits ∧\n                      m.said = TraceLean.Lines.said l ∧ (l.tests = [] → m.said = \"no test runs this line\")) →\n    g = TraceLean.Lines.markers",
-      "key": "e4ba0f8176f0bf77+559e98535359b235+7716ee74a84ccb76",
+      "key": "3b90b015dee10eb1+559e98535359b235+7716ee74a84ccb76",
       "pins": []
     },
     {
@@ -4695,7 +4839,7 @@
         ]
       ],
       "statement": "∀ (g : List TraceLean.Lines.TestLines → String → List TraceLean.Lines.LineHits),\n  (∀ (runs : List TraceLean.Lines.TestLines) (file : String),\n      (∀ (lh : TraceLean.Lines.LineHits),\n          lh ∈ g runs file → lh.hits = TraceLean.Lines.sum (List.map (fun x => x.snd) lh.tests)) ∧\n        (∀ (lh : TraceLean.Lines.LineHits),\n            lh ∈ g runs file →\n              ∀ (e : String × Nat),\n                e ∈ lh.tests →\n                  0 < e.snd ∧ ∃ r, r ∈ runs ∧ r.file = file ∧ r.test = e.fst ∧ ∃ n, (lh.line, n) ∈ r.lines ∧ 0 < n) ∧\n          ∀ (r : TraceLean.Lines.TestLines),\n            r ∈ runs →\n              r.file = file →\n                ∀ (p : Nat × Nat),\n                  p ∈ r.lines →\n                    0 < p.snd →\n                      ∃ lh, lh ∈ g runs file ∧ lh.line = p.fst ∧ r.test ∈ List.map (fun x => x.fst) lh.tests) →\n    g = TraceLean.Lines.merged",
-      "key": "e4ba0f8176f0bf77+2d6ac278459ecaae+bf37ea6b8293b461",
+      "key": "3b90b015dee10eb1+2d6ac278459ecaae+bf37ea6b8293b461",
       "pins": []
     },
     {
@@ -4707,7 +4851,7 @@
         ]
       ],
       "statement": "∀ (g : List TraceLean.Lines.LineHits → Nat → Nat → TraceLean.Lines.Reach),\n  (∀ (lines : List TraceLean.Lines.LineHits) (start stop : Nat),\n      TraceLean.SpecSorted.ClauseSummary lines start stop (g lines start stop)) →\n    g = TraceLean.Lines.spanCoverage",
-      "key": "e4ba0f8176f0bf77+040100a3765d6c7e+7f8b01326d355bb2",
+      "key": "3b90b015dee10eb1+040100a3765d6c7e+7f8b01326d355bb2",
       "pins": [
         {
           "theorem": "TraceLean.SpecSorted::clause_summary_pinned",
@@ -4731,7 +4875,7 @@
         ]
       ],
       "statement": "∀ (g : Option (String × List TraceLean.Lines.LineHits) → String → Option (List TraceLean.Lines.LineHits)),\n  (∀ (hash other : String) (lines : List TraceLean.Lines.LineHits),\n      g (some (hash, lines)) hash = some lines ∧\n        (other ≠ hash → g (some (other, lines)) hash = none) ∧ g none hash = none) →\n    g = TraceLean.Lines.visible",
-      "key": "e4ba0f8176f0bf77+e409b509c5aaff77+a45d7827dfb08a22",
+      "key": "3b90b015dee10eb1+e409b509c5aaff77+a45d7827dfb08a22",
       "pins": []
     },
     {
@@ -4743,7 +4887,7 @@
         ]
       ],
       "statement": "∀ (g : List TraceLean.Record.Evidence → List TraceLean.Record.Evidence),\n  (∀ (evidence : List TraceLean.Record.Evidence),\n      g evidence = evidence ∧ ∀ (r : TraceLean.Record.Evidence), r ∈ g evidence ↔ r ∈ evidence) →\n    g = TraceLean.Lockfile.carriedEvidence",
-      "key": "e4ba0f8176f0bf77+b63f1f28a803b5ed+5a1d9fe3a0accbfd",
+      "key": "3b90b015dee10eb1+b63f1f28a803b5ed+5a1d9fe3a0accbfd",
       "pins": [
         {
           "theorem": "TraceLean.SpecLockfile::evidence_preserved_pinned",
@@ -4771,7 +4915,7 @@
         ]
       ],
       "statement": "∀ (g : List TraceLean.Lockfile.LockLink → List TraceLean.Lockfile.LockLink),\n  (∀ (links : List TraceLean.Lockfile.LockLink),\n      (∀ (a b : TraceLean.Lockfile.LockLink),\n          TraceLean.Lockfile.lockLinkLe a b = true ∨ TraceLean.Lockfile.lockLinkLe b a = true) ∧\n        (∀ (a b c : TraceLean.Lockfile.LockLink),\n            TraceLean.Lockfile.lockLinkLe a b = true →\n              TraceLean.Lockfile.lockLinkLe b c = true → TraceLean.Lockfile.lockLinkLe a c = true) ∧\n          (∀ (a b : TraceLean.Lockfile.LockLink),\n              TraceLean.Lockfile.lockLinkLe a b = true → TraceLean.Lockfile.lockLinkLe b a = true → a = b) ∧\n            List.Pairwise (fun a b => TraceLean.Lockfile.lockLinkLe a b = true) (g links) ∧ (g links).Perm links) →\n    (∀ (l1 l2 : List TraceLean.Lockfile.LockLink), l1.Perm l2 → g l1 = g l2) → g = TraceLean.Lockfile.orderedLinks",
-      "key": "e4ba0f8176f0bf77+a105d7f65b4db0a6+7cf8a40d3edef796+9a3b988ebec603e3",
+      "key": "3b90b015dee10eb1+a105d7f65b4db0a6+7cf8a40d3edef796+9a3b988ebec603e3",
       "pins": []
     },
     {
@@ -4783,7 +4927,7 @@
         ]
       ],
       "statement": "∀ (g : Option Nat → TraceLean.Lockfile.VersionVerdict),\n  (∀ (version : Option Nat),\n      (g version = TraceLean.Lockfile.VersionVerdict.readable ↔ version = some TraceLean.Lockfile.lockVersion) ∧\n        (version = none → g version = TraceLean.Lockfile.VersionVerdict.unstamped) ∧\n          ∀ (v : Nat),\n            version = some v →\n              v ≠ TraceLean.Lockfile.lockVersion →\n                g version = TraceLean.Lockfile.VersionVerdict.unknown v TraceLean.Lockfile.lockVersion) →\n    g = TraceLean.Lockfile.versionVerdict",
-      "key": "e4ba0f8176f0bf77+d8c49421dbdd21ef+883193fe3dbc0d1f",
+      "key": "3b90b015dee10eb1+d8c49421dbdd21ef+883193fe3dbc0d1f",
       "pins": []
     },
     {
@@ -4799,7 +4943,7 @@
         ]
       ],
       "statement": "∀ (g : List (String × TraceLean.Lsp.ServerState) → String → TraceLean.Lsp.DisplayEncoding),\n  (∀ (registry : List (String × TraceLean.Lsp.ServerState)) (language other : String)\n      (state : TraceLean.Lsp.ServerState) (encoding : TraceLean.Lsp.Encoding),\n      (other ≠ language → g ((other, state) :: registry) language = g registry language) ∧\n        g ((language, TraceLean.Lsp.ServerState.running encoding) :: registry) language =\n          TraceLean.Lsp.DisplayEncoding.result encoding) →\n    (∀ (registry : List (String × TraceLean.Lsp.ServerState)) (language : String) (encoding : TraceLean.Lsp.Encoding),\n        g registry language = TraceLean.Lsp.DisplayEncoding.result encoding ↔\n          ∃ name,\n            List.find? (fun x => x.fst == language) registry =\n              some (name, TraceLean.Lsp.ServerState.running encoding)) →\n      g = TraceLean.Lsp.encodingFor",
-      "key": "e4ba0f8176f0bf77+24979beb9cebcabd+28067872bb8e09d2+70a6b6e25986e5e0",
+      "key": "3b90b015dee10eb1+24979beb9cebcabd+28067872bb8e09d2+70a6b6e25986e5e0",
       "pins": []
     },
     {
@@ -4819,7 +4963,7 @@
         ]
       ],
       "statement": "∀ (g : String → String → List TraceLean.Lsp.Edit → TraceLean.Lsp.Lowered),\n  (∀ (file content : String) (edits : List TraceLean.Lsp.Edit) (commands : List TraceLean.Command.Command),\n      g file content edits = TraceLean.Lsp.Lowered.commands commands →\n        List.Pairwise (fun a b => a.end ≤ b.start ∨ b.end ≤ a.start) edits) →\n    (∀ (file content : String), g file content [] = TraceLean.Lsp.Lowered.commands []) →\n      (∀ (file content : String) (edits : List TraceLean.Lsp.Edit),\n          TraceLean.Lsp.firstBadRange content edits = none →\n            TraceLean.Lsp.firstOverlap (TraceLean.Lsp.ordered edits) = none →\n              ∃ commands,\n                g file content edits = TraceLean.Lsp.Lowered.commands commands ∧\n                  ∀ (e : TraceLean.Lsp.Edit),\n                    e ∈ edits → e.text ≠ \"\" → TraceLean.Command.Command.insert file e.start e.text ∈ commands) →\n        g = TraceLean.Lsp.lower",
-      "key": "e4ba0f8176f0bf77+2598b04e1b26dfde+2d43fab67280512b+c491cb566d1339b3+f07a3fc772533a54",
+      "key": "3b90b015dee10eb1+2598b04e1b26dfde+2d43fab67280512b+c491cb566d1339b3+f07a3fc772533a54",
       "pins": []
     },
     {
@@ -4831,7 +4975,7 @@
         ]
       ],
       "statement": "∀ (g : TraceLean.Lsp.ServerState → Option String → TraceLean.Lsp.DisplayText),\n  (∀ (state : TraceLean.Lsp.ServerState) (answer : Option String),\n      (∀ (encoding : TraceLean.Lsp.Encoding), state ≠ TraceLean.Lsp.ServerState.running encoding) →\n        g state answer = TraceLean.Lsp.DisplayText.unavailable (TraceLean.Lsp.unavailableBecause state) ∧\n          (state = TraceLean.Lsp.ServerState.notStarted →\n            g state answer = TraceLean.Lsp.DisplayText.unavailable \"no server is running for this language\")) →\n    g = TraceLean.Lsp.presentText",
-      "key": "e4ba0f8176f0bf77+c21060bc1d6040f4+a4312ae728bc16ca",
+      "key": "3b90b015dee10eb1+c21060bc1d6040f4+a4312ae728bc16ca",
       "pins": []
     },
     {
@@ -4843,7 +4987,7 @@
         ]
       ],
       "statement": "∀ (g : String → Nat → TraceLean.Lsp.Encoding → Option Nat),\n  (∀ (lineText : String) (character : Nat) (encoding : TraceLean.Lsp.Encoding) (b : Nat),\n      g lineText character encoding = some b → TraceLean.Lsp.toCharacter lineText b encoding = some character) →\n    g = TraceLean.Lsp.toByteOffset",
-      "key": "e4ba0f8176f0bf77+0485acc62d0ea74a+9719aad7efac00f3",
+      "key": "3b90b015dee10eb1+0485acc62d0ea74a+9719aad7efac00f3",
       "pins": [
         {
           "theorem": "TraceLean.SpecLsp::column_to_offset_pinned",
@@ -4867,7 +5011,7 @@
         ]
       ],
       "statement": "∀ (g : String → Nat → TraceLean.Lsp.Encoding → Option Nat),\n  (∀ (lineText : String) (offset : Nat) (encoding : TraceLean.Lsp.Encoding) (n : Nat),\n      g lineText offset encoding = some n → TraceLean.Lsp.toByteOffset lineText n encoding = some offset) →\n    g = TraceLean.Lsp.toCharacter",
-      "key": "e4ba0f8176f0bf77+1c8f72d08e1bb34e+4ff066f8b393c9b8",
+      "key": "3b90b015dee10eb1+1c8f72d08e1bb34e+4ff066f8b393c9b8",
       "pins": [
         {
           "theorem": "TraceLean.SpecLsp::offset_to_column_pinned",
@@ -4891,7 +5035,7 @@
         ]
       ],
       "statement": "∀ (g : String → TraceLean.Mirror.FileState → TraceLean.Mirror.FileState → List TraceLean.Mirror.Change),\n  (∀ (path hash : String) (after : TraceLean.Mirror.FileState),\n      (g path (TraceLean.Mirror.FileState.opaque hash) after).all TraceLean.Mirror.Change.isReportOnly = true) →\n    g = TraceLean.Mirror.changeAt",
-      "key": "e4ba0f8176f0bf77+39f3f791673f1494+4a62da10b2dc4090",
+      "key": "3b90b015dee10eb1+39f3f791673f1494+4a62da10b2dc4090",
       "pins": []
     },
     {
@@ -4903,7 +5047,7 @@
         ]
       ],
       "statement": "∀\n  (g :\n    Option (List (String × String)) →\n      TraceLean.Command.Workspace → TraceLean.Command.Workspace → List TraceLean.Command.Command),\n  (∀ (project agent : TraceLean.Command.Workspace) (base : List (String × String)),\n      g none project agent = [] ∧\n        (∀ (c : TraceLean.Command.Command),\n            c ∈ g (some base) project agent ↔\n              c ∈ TraceLean.Mirror.mutationsOf project agent ∧\n                (TraceLean.Mirror.commandPath c = \"\" ∨\n                  TraceLean.Mirror.touchedByAgent base agent.canon (TraceLean.Mirror.commandPath c) = true)) ∧\n          ∀ (p : String),\n            p ≠ \"\" →\n              TraceLean.Mirror.touchedByAgent base agent.canon p = false →\n                ∀ (c : TraceLean.Command.Command),\n                  c ∈ g (some base) project agent → TraceLean.Mirror.commandPath c ≠ p) →\n    g = TraceLean.Mirror.changedSince",
-      "key": "e4ba0f8176f0bf77+ed8715fea7d01908+1a43af4fda7c7f90",
+      "key": "3b90b015dee10eb1+ed8715fea7d01908+1a43af4fda7c7f90",
       "pins": []
     },
     {
@@ -4915,7 +5059,7 @@
         ]
       ],
       "statement": "∀ (g : List TraceLean.Mirror.SelfWrite → List TraceLean.Mirror.SelfWrite),\n  (∀ (path content : String),\n      g (g [{ path := path, content := content, age := 2 }]) = [] ∧\n        g [{ path := path, content := content, age := 1 }] = []) →\n    g = TraceLean.Mirror.expire",
-      "key": "e4ba0f8176f0bf77+cbdd35cfc0552073+412f096435d54040",
+      "key": "3b90b015dee10eb1+cbdd35cfc0552073+412f096435d54040",
       "pins": []
     },
     {
@@ -4927,7 +5071,7 @@
         ]
       ],
       "statement": "∀ (g : TraceLean.Command.Workspace → TraceLean.Command.Workspace → TraceLean.Mirror.Mirroring),\n  (∀ (before after : TraceLean.Command.Workspace),\n      (g before after).refused = [] ∧\n        (∀ (p : String), TraceLean.Policy.isMirrored p = true → (g before after).reached.get p = after.canon.get p) ∧\n          (∀ (p : String),\n              TraceLean.Policy.isMirrored p = false → (g before after).reached.get p = before.canon.get p) ∧\n            ((∀ (p : String), TraceLean.Policy.isMirrored p = false → before.canon.get p = after.canon.get p) →\n              (g before after).reached = after.canon)) →\n    g = TraceLean.Mirror.mirrored",
-      "key": "e4ba0f8176f0bf77+498c5ec9ac5515d5+1a8a8d3786fdc556",
+      "key": "3b90b015dee10eb1+498c5ec9ac5515d5+1a8a8d3786fdc556",
       "pins": []
     },
     {
@@ -4951,7 +5095,7 @@
         ]
       ],
       "statement": "∀ (g : TraceLean.Command.Workspace → TraceLean.Command.Workspace → List TraceLean.Command.Command),\n  (∀ (before after : TraceLean.Command.Workspace) (pre post : List TraceLean.Command.Command)\n      (c : TraceLean.Command.Command),\n      g before after = pre ++ c :: post →\n        ∃ next,\n          TraceLean.Command.apply\n              (List.foldl TraceLean.Mirror.mirrorApply { reached := before.canon, refused := [] } pre).reached c =\n            Except.ok next) →\n    (∀ (before after : TraceLean.Command.Workspace) (pre post : List TraceLean.Command.Command)\n        (c : TraceLean.Command.Command),\n        g before after = pre ++ c :: post →\n          ¬((List.foldl TraceLean.Mirror.mirrorApply { reached := before.canon, refused := [] } (pre ++ post)).refused =\n                [] ∧\n              ∀ (p : String),\n                TraceLean.Policy.isMirrored p = true →\n                  (List.foldl TraceLean.Mirror.mirrorApply { reached := before.canon, refused := [] }\n                            (pre ++ post)).reached.get\n                      p =\n                    after.canon.get p)) →\n      (∀ (before after : TraceLean.Command.Workspace) (c : TraceLean.Command.Command),\n          c ∈ g before after →\n            TraceLean.Policy.isMirrored (TraceLean.Mirror.commandPath c) = true ∧\n              TraceLean.Policy.classify (TraceLean.Mirror.commandPath c) ≠ TraceLean.Policy.Class.protected) →\n        (∀ (before before' after after' : TraceLean.Command.Workspace),\n            (∀ (p : String), before.canon.get p = before'.canon.get p) →\n              (∀ (p : String), after.canon.get p = after'.canon.get p) → g before after = g before' after') →\n          g = TraceLean.Mirror.mutationsOf",
-      "key": "e4ba0f8176f0bf77+33dad4e741f81e93+05c40b99135e4f14+10512a1388cd756f+35c02db6aa51a5e4+8c83cd3048deac65",
+      "key": "3b90b015dee10eb1+33dad4e741f81e93+05c40b99135e4f14+10512a1388cd756f+35c02db6aa51a5e4+8c83cd3048deac65",
       "pins": []
     },
     {
@@ -4975,7 +5119,7 @@
         ]
       ],
       "statement": "∀ (g : List TraceLean.Mirror.SelfWrite → String → String → TraceLean.Mirror.Suppression),\n  (∀ (path content : String), (g [{ path := path, content := content, age := 3 }] path content).suppressed = true) →\n    (∀ (path content : String), g [] path content = { suppressed := false, pending := [] }) →\n      (∀ (path content : String),\n          (g [{ path := path, content := content, age := 3 }] path content).suppressed = true ∧\n            (g (g [{ path := path, content := content, age := 3 }] path content).pending path content).suppressed =\n              false) →\n        (∀ (path written seen : String),\n            written ≠ seen →\n              g [{ path := path, content := written, age := 3 }] path seen =\n                { suppressed := false, pending := [{ path := path, content := written, age := 3 }] }) →\n          g = TraceLean.Mirror.suppress",
-      "key": "e4ba0f8176f0bf77+e203d47d41f94328+2e3e60bae9de8dfb+5f828f3e0b428ff2+9b89c0bd68408d6e+a4585f77fa0a1db9",
+      "key": "3b90b015dee10eb1+e203d47d41f94328+2e3e60bae9de8dfb+5f828f3e0b428ff2+9b89c0bd68408d6e+a4585f77fa0a1db9",
       "pins": []
     },
     {
@@ -4987,7 +5131,7 @@
         ]
       ],
       "statement": "∀ (g : List (String × String) → String → List TraceLean.Nav.Declared),\n  (∀ (files : List (String × String)) (name : String),\n      (∀ (d : TraceLean.Nav.Declared),\n          d ∈ g files name ↔\n            ∃ file,\n              file ∈ files ∧\n                ∃ i t,\n                  (file.snd.splitOn \"\\n\")[i]? = some t ∧\n                    (TraceLean.Nav.declaredOn t = some name ∨\n                        TraceLean.Nav.lastPart name ≠ name ∧\n                          TraceLean.Nav.declaredOn t = some (TraceLean.Nav.lastPart name)) ∧\n                      d = TraceLean.Nav.placed file.fst (i, t)) ∧\n        List.Pairwise (fun a b => TraceLean.Nav.byPlace a b = true) (g files name)) →\n    g = TraceLean.Nav.declarations",
-      "key": "e4ba0f8176f0bf77+28e8cb8d937d7122+61f85f9b690076b7",
+      "key": "3b90b015dee10eb1+28e8cb8d937d7122+61f85f9b690076b7",
       "pins": []
     },
     {
@@ -4999,7 +5143,7 @@
         ]
       ],
       "statement": "∀ (g : String → Option String),\n  (∀ (line : String),\n      (∀ (mods : List String) (intro next : String) (rest : List String),\n          TraceLean.Nav.wordsOf line = mods ++ intro :: next :: rest →\n            (∀ (m : String),\n                m ∈ mods → TraceLean.Nav.modifier m = true ∧ TraceLean.Nav.introducers.contains m = false) →\n              TraceLean.Nav.introducers.contains intro = true →\n                (¬TraceLean.Nav.pathMark ∈ next.toList → g line = some next) ∧\n                  (TraceLean.Nav.pathMark ∈ next.toList → g line = none)) ∧\n        ∀ (w : String),\n          g line = some w →\n            ¬TraceLean.Nav.pathMark ∈ w.toList ∧\n              ∃ mods intro rest,\n                TraceLean.Nav.wordsOf line = mods ++ intro :: w :: rest ∧\n                  (∀ (m : String), m ∈ mods → TraceLean.Nav.modifier m = true) ∧\n                    TraceLean.Nav.introducers.contains intro = true) →\n    g = TraceLean.Nav.declaredOn",
-      "key": "e4ba0f8176f0bf77+402a533088c9c027+fbdd6810a3099bbb",
+      "key": "3b90b015dee10eb1+402a533088c9c027+fbdd6810a3099bbb",
       "pins": []
     },
     {
@@ -5011,7 +5155,7 @@
         ]
       ],
       "statement": "∀ (g : List (String × String) → String → Bool → Nat → List TraceLean.Nav.Declared),\n  (∀ (files : List (String × String)) (needle : String) (whole : Bool) (limit : Nat),\n      (needle.isEmpty = true → g files needle whole limit = []) ∧\n        (g files needle whole limit).length ≤ limit ∧\n          (∀ (d : TraceLean.Nav.Declared),\n              d ∈ g files needle whole limit →\n                ∃ file,\n                  file ∈ files ∧\n                    ∃ i t,\n                      (file.snd.splitOn \"\\n\")[i]? = some t ∧\n                        TraceLean.Nav.holds needle whole t = true ∧ d = TraceLean.Nav.placed file.fst (i, t)) ∧\n            (needle.isEmpty = false →\n                (TraceLean.Nav.linesKept files (TraceLean.Nav.holds needle whole)).length ≤ limit →\n                  ∀ (file : String × String),\n                    file ∈ files →\n                      ∀ (i : Nat) (t : String),\n                        (file.snd.splitOn \"\\n\")[i]? = some t →\n                          TraceLean.Nav.holds needle whole t = true →\n                            TraceLean.Nav.placed file.fst (i, t) ∈ g files needle whole limit) ∧\n              List.Pairwise (fun a b => a.path ≤ b.path) (g files needle whole limit)) →\n    g = TraceLean.Nav.occurrences",
-      "key": "e4ba0f8176f0bf77+c84b8923fb900f7a+58f3d714f30f93b8",
+      "key": "3b90b015dee10eb1+c84b8923fb900f7a+58f3d714f30f93b8",
       "pins": []
     },
     {
@@ -5023,7 +5167,7 @@
         ]
       ],
       "statement": "∀ (g : List String → String → Nat → List String),\n  (∀ (files : List String) (query : String) (limit : Nat),\n      (g files query limit).length ≤ limit ∧\n        (∀ (p : String),\n            p ∈ g files query limit →\n              p ∈ files ∧\n                (List.filter (fun c => !c.isWhitespace) (List.map Char.toLower query.toList)).Sublist\n                  (List.map Char.toLower p.toList)) ∧\n          List.Pairwise (TraceLean.Nav.Ranked query) (g files query limit) ∧\n            (List.filter (fun c => !c.isWhitespace) (List.map Char.toLower query.toList) = [] →\n              (∀ (p : String), TraceLean.Nav.score p query = some (-↑p.length)) ∧\n                (files.length ≤ limit → ∀ (p : String), p ∈ files → p ∈ g files query limit))) →\n    g = TraceLean.Nav.quickOpen",
-      "key": "e4ba0f8176f0bf77+3ac728cd357e1b1c+6bc92dc29a584ea2",
+      "key": "3b90b015dee10eb1+3ac728cd357e1b1c+6bc92dc29a584ea2",
       "pins": []
     },
     {
@@ -5035,7 +5179,7 @@
         ]
       ],
       "statement": "∀ (g : List String → Option String → List String → List String),\n  (∀ (files existing : List String) (shown : Option String) (p : String),\n      List.Mem p (g files shown existing) → List.Mem p existing) →\n    g = TraceLean.Nav.reopened",
-      "key": "e4ba0f8176f0bf77+64c56ae5ef19c11c+684e58cf0319557f",
+      "key": "3b90b015dee10eb1+64c56ae5ef19c11c+684e58cf0319557f",
       "pins": [
         {
           "theorem": "TraceLean.SpecNav::session_recalled_pinned",
@@ -5059,7 +5203,7 @@
         ]
       ],
       "statement": "∀ (g : TraceLean.View.Buffer → Nat → TraceLean.Keymap.Keymap → List TraceLean.Offer.Offered),\n  (∀ (buffer : TraceLean.View.Buffer) (offset : Nat) (keymap : TraceLean.Keymap.Keymap),\n      (∀ (o : TraceLean.Offer.Offered),\n          o ∈ g buffer offset keymap →\n            TraceLean.Offer.known o.action = true ∧ o.keys = TraceLean.Offer.keysFor keymap o.action) ∧\n        (∀ (a : String),\n            a ∈ TraceLean.View.actionsAt buffer offset →\n              TraceLean.Offer.known a = true → ∃ o, o ∈ g buffer offset keymap ∧ o.action = a ∧ o.group = \"here\") ∧\n          (∀ (o : TraceLean.Offer.Offered),\n              o ∈ TraceLean.Offer.ofBuffer keymap buffer.kind →\n                TraceLean.Offer.known o.action = true → o ∈ g buffer offset keymap) ∧\n            ∀ (a : String),\n              a ∈ TraceLean.Offer.places →\n                TraceLean.Offer.known a = true → ∃ o, o ∈ g buffer offset keymap ∧ o.action = a ∧ o.group = \"go\") →\n    g = TraceLean.Offer.offers",
-      "key": "e4ba0f8176f0bf77+e582bb091cef893d+13c13365d1e62d28",
+      "key": "3b90b015dee10eb1+e582bb091cef893d+13c13365d1e62d28",
       "pins": []
     },
     {
@@ -5071,7 +5215,7 @@
         ]
       ],
       "statement": "∀ (g : List String → TraceLean.Persistence.Log),\n  (∀ (lines more : List String),\n      (g lines).commands <+: (g (lines ++ more)).commands ∧\n        ((g lines).truncatedAfter.isSome = true →\n          (g (lines ++ more)).commands = (g lines).commands ∧\n            (g (lines ++ more)).truncatedAfter = (g lines).truncatedAfter)) →\n    g = TraceLean.Persistence.parseLog",
-      "key": "e4ba0f8176f0bf77+a4f38c1a37bb81c7+a5bde79d77cb1611",
+      "key": "3b90b015dee10eb1+a4f38c1a37bb81c7+a5bde79d77cb1611",
       "pins": []
     },
     {
@@ -5095,7 +5239,7 @@
         ]
       ],
       "statement": "∀ (g : TraceLean.Command.Workspace → List String → Nat → TraceLean.Persistence.ReplayReport),\n  (∀ (base : TraceLean.Command.Workspace) (good : List String) (bad : String) (rest : List String) (at_ : Nat),\n      (∀ (l : String), l ∈ good → l.trim = \"\" ∨ (TraceLean.Persistence.readEntry l).isSome = true) →\n        bad.trim ≠ \"\" →\n          TraceLean.Persistence.readEntry bad = none →\n            (g base (good ++ bad :: rest) at_).truncatedAfter = some good.length ∧\n              (g base (good ++ bad :: rest) at_).commands = List.filterMap TraceLean.Persistence.entryOf good ∧\n                (g base (good ++ bad :: rest) at_).direct =\n                  TraceLean.Persistence.outcomeOfExcept\n                    (TraceLean.Persistence.replay base (List.filterMap TraceLean.Persistence.entryOf good))) →\n    (∀ (base : TraceLean.Command.Workspace) (lines : List String) (checkpointAt : Nat),\n        (g base lines checkpointAt).direct =\n          TraceLean.Persistence.outcomeOfExcept\n            (List.foldl (fun acc c => acc.bind fun w => TraceLean.Command.apply w c) (Except.ok base.canon)\n              (g base lines checkpointAt).commands)) →\n      (∀ (base : TraceLean.Command.Workspace) (lines : List String) (checkpointAt : Nat),\n          (g base lines checkpointAt).viaCheckpoint = (g base lines checkpointAt).direct) →\n        g = TraceLean.Persistence.replayReport",
-      "key": "e4ba0f8176f0bf77+28d6b9470ce598fd+0d9f7088e32a1b89+d06d09fe3a61cd07+d98e8127639ba747",
+      "key": "3b90b015dee10eb1+28d6b9470ce598fd+0d9f7088e32a1b89+d06d09fe3a61cd07+d98e8127639ba747",
       "pins": []
     },
     {
@@ -5115,7 +5259,7 @@
         ]
       ],
       "statement": "∀ (g : String → TraceLean.Policy.Class),\n  (∀ (path first : String) (rest : List String),\n      TraceLean.Policy.Inside path →\n        TraceLean.Policy.resolveFrom (path.splitOn \"/\") = some (first :: rest) →\n          TraceLean.Policy.protectedRoots.contains first = true → g path = TraceLean.Policy.Class.protected) →\n    (∀ (path first : String) (rest : List String),\n        TraceLean.Policy.Inside path →\n          TraceLean.Policy.resolveFrom (path.splitOn \"/\") = some (first :: rest) →\n            TraceLean.Policy.protectedRoots.contains first = false →\n              TraceLean.Policy.passThroughAtRoot.contains first = true ∨\n                  ((first :: rest).any fun s => TraceLean.Policy.passThroughAnywhere.contains s) = true →\n                g path = TraceLean.Policy.Class.passThrough) →\n      (∀ (path first : String) (rest : List String),\n          TraceLean.Policy.Inside path →\n            TraceLean.Policy.resolveFrom (path.splitOn \"/\") = some (first :: rest) →\n              TraceLean.Policy.protectedRoots.contains first = false →\n                TraceLean.Policy.passThroughAtRoot.contains first = false →\n                  ((first :: rest).any fun s => TraceLean.Policy.passThroughAnywhere.contains s) = false →\n                    g path = TraceLean.Policy.Class.mirrored) →\n        g = TraceLean.Policy.classify",
-      "key": "e4ba0f8176f0bf77+aa31253138e0844c+1ce65f102c3ec37a+7707f36af164e862+98c41828cdba1b41",
+      "key": "3b90b015dee10eb1+aa31253138e0844c+1ce65f102c3ec37a+7707f36af164e862+98c41828cdba1b41",
       "pins": []
     },
     {
@@ -5127,7 +5271,7 @@
         ]
       ],
       "statement": "∀ (g : TraceLean.View.Role → List String), g = TraceLean.Produce.actionsFor",
-      "key": "e4ba0f8176f0bf77+9b9e674698f33c44",
+      "key": "3b90b015dee10eb1+9b9e674698f33c44",
       "pins": []
     },
     {
@@ -5143,7 +5287,7 @@
         ]
       ],
       "statement": "∀ (g : List TraceLean.Produce.Node → List String → Bool → TraceLean.View.Buffer),\n  (∀ (nodes : List TraceLean.Produce.Node) (opened : List String) (openOnly : Bool),\n      (∀ (n : TraceLean.Produce.Node),\n          n ∈ TraceLean.Produce.shown nodes openOnly →\n            n.refines = [] →\n              { indent := 0, node := n } ∈\n                TraceLean.Produce.designRows (TraceLean.Produce.shown nodes openOnly) opened) ∧\n        (∀ (r : TraceLean.Produce.Row),\n            r ∈ TraceLean.Produce.designRows (TraceLean.Produce.shown nodes openOnly) opened →\n              r.node ∈ TraceLean.Produce.shown nodes openOnly ∧\n                (r.indent = 0 ∧ r.node.refines = [] ∨\n                  0 < r.indent ∧\n                    ∃ m,\n                      { indent := r.indent - 1, node := m } ∈\n                          TraceLean.Produce.designRows (TraceLean.Produce.shown nodes openOnly) opened ∧\n                        opened.contains m.id = true ∧ r.node.refines.contains m.id = true)) ∧\n          (∀ (r : TraceLean.Produce.Row),\n              r ∈ TraceLean.Produce.designRows (TraceLean.Produce.shown nodes openOnly) opened →\n                r.indent < (TraceLean.Produce.shown nodes openOnly).length →\n                  opened.contains r.node.id = true →\n                    ∀ (c : TraceLean.Produce.Node),\n                      c ∈ TraceLean.Produce.shown nodes openOnly →\n                        c.refines.contains r.node.id = true →\n                          { indent := r.indent + 1, node := c } ∈\n                            TraceLean.Produce.designRows (TraceLean.Produce.shown nodes openOnly) opened) ∧\n            (∀ (r : TraceLean.Produce.Row),\n                r ∈ TraceLean.Produce.designRows (TraceLean.Produce.shown nodes openOnly) opened →\n                  r.node.id ≠ \"\" →\n                    TraceLean.Produce.Marked (g nodes opened openOnly) TraceLean.View.Role.requirement r.node.id) ∧\n              ∀ (s : TraceLean.View.Span),\n                s ∈ (g nodes opened openOnly).spans →\n                  s.role = TraceLean.View.Role.requirement →\n                    ∃ r,\n                      r ∈ TraceLean.Produce.designRows (TraceLean.Produce.shown nodes openOnly) opened ∧\n                        TraceLean.Produce.textUnder (g nodes opened openOnly) s = r.node.id) →\n    (∀ (nodes : List TraceLean.Produce.Node) (opened : List String),\n        (∀ (n : TraceLean.Produce.Node),\n            n ∈ nodes →\n              TraceLean.Produce.isOpen n = true →\n                n.id ≠ \"\" →\n                  TraceLean.Produce.Marked (TraceLean.Produce.requirementsBuffer nodes true)\n                    TraceLean.View.Role.requirement n.id) ∧\n          (∀ (s : TraceLean.View.Span),\n              s ∈ (TraceLean.Produce.requirementsBuffer nodes true).spans →\n                s.role = TraceLean.View.Role.requirement →\n                  ∃ n,\n                    n ∈ nodes ∧\n                      TraceLean.Produce.isOpen n = true ∧\n                        TraceLean.Produce.textUnder (TraceLean.Produce.requirementsBuffer nodes true) s = n.id) ∧\n            (∀ (n : TraceLean.Produce.Node),\n                n ∈ TraceLean.Produce.shown nodes true ↔\n                  n ∈ nodes ∧\n                    ∃ c, TraceLean.Produce.isOpen c = true ∧ TraceLean.Produce.DescendsWithin nodes nodes.length n c) ∧\n              (∀ (n : TraceLean.Produce.Node),\n                  n ∈ nodes → TraceLean.Produce.isOpen n = true → n ∈ TraceLean.Produce.shown nodes true) ∧\n                (∀ (c : TraceLean.Produce.Node),\n                    c ∈ nodes →\n                      TraceLean.Produce.isOpen c = true →\n                        ∀ (n : TraceLean.Produce.Node),\n                          n ∈ nodes → c.refines.contains n.id = true → n ∈ TraceLean.Produce.shown nodes true) ∧\n                  (∀ (s : TraceLean.View.Span),\n                      s ∈ (g nodes opened true).spans →\n                        s.role = TraceLean.View.Role.requirement →\n                          ∃ n,\n                            n ∈ TraceLean.Produce.shown nodes true ∧\n                              TraceLean.Produce.textUnder (g nodes opened true) s = n.id) ∧\n                    TraceLean.Produce.shown nodes false = nodes) →\n      g = TraceLean.Produce.designBuffer",
-      "key": "e4ba0f8176f0bf77+25441622715767d1+49d550b89db82caf+587e8276b73d2376",
+      "key": "3b90b015dee10eb1+25441622715767d1+49d550b89db82caf+587e8276b73d2376",
       "pins": []
     },
     {
@@ -5155,7 +5299,7 @@
         ]
       ],
       "statement": "∀ (g : List String → List String → List TraceLean.Produce.DiffLine),\n  (∀ (before after : List String),\n      ∃ same removed added kept,\n        before = same ++ removed ++ kept ∧\n          after = same ++ added ++ kept ∧\n            g before after =\n              List.map (fun l => { role := TraceLean.View.Role.plain, text := \" \" ++ l }) same ++\n                    List.map (fun l => { role := TraceLean.View.Role.removed, text := \"-\" ++ l }) removed ++\n                  List.map (fun l => { role := TraceLean.View.Role.added, text := \"+\" ++ l }) added ++\n                List.map (fun l => { role := TraceLean.View.Role.plain, text := \" \" ++ l }) kept) →\n    g = TraceLean.Produce.diffLines",
-      "key": "e4ba0f8176f0bf77+886dd32e573ce1bd+920399b40da38a8a",
+      "key": "3b90b015dee10eb1+886dd32e573ce1bd+920399b40da38a8a",
       "pins": []
     },
     {
@@ -5167,7 +5311,7 @@
         ]
       ],
       "statement": "∀ (g : String → String → List TraceLean.Produce.Mark → TraceLean.View.Buffer),\n  (∀ (path text : String) (marks : List TraceLean.Produce.Mark), (g path text marks).text = text) →\n    g = TraceLean.Produce.fileBuffer",
-      "key": "e4ba0f8176f0bf77+3ddda33e4b52c471+579477404a85ee4e",
+      "key": "3b90b015dee10eb1+3ddda33e4b52c471+579477404a85ee4e",
       "pins": []
     },
     {
@@ -5179,7 +5323,7 @@
         ]
       ],
       "statement": "∀ (g : String → List TraceLean.Produce.MenuEntry → TraceLean.View.Buffer),\n  (∀ (title : String) (entries : List TraceLean.Produce.MenuEntry),\n      (g title entries).text = \"\\n\".intercalate (List.map (fun e => e.key ++ \"  \" ++ e.description) entries) ∧\n        (∀ (e : TraceLean.Produce.MenuEntry),\n            e ∈ entries →\n              ∃ s,\n                s ∈ (g title entries).spans ∧\n                  s.actions = e.action.toList ∧\n                    TraceLean.Produce.textUnder (g title entries) s = e.key ++ \"  \" ++ e.description) ∧\n          ∀ (s : TraceLean.View.Span),\n            s ∈ (g title entries).spans →\n              ∃ e,\n                e ∈ entries ∧\n                  s.actions = e.action.toList ∧\n                    TraceLean.Produce.textUnder (g title entries) s = e.key ++ \"  \" ++ e.description) →\n    g = TraceLean.Produce.menuBuffer",
-      "key": "e4ba0f8176f0bf77+dd1183891445ce98+4713c22f675e0f04",
+      "key": "3b90b015dee10eb1+dd1183891445ce98+4713c22f675e0f04",
       "pins": []
     },
     {
@@ -5191,7 +5335,7 @@
         ]
       ],
       "statement": "∀ (g : String → List TraceLean.Produce.MenuEntry → Nat → TraceLean.View.Buffer),\n  (∀ (title : String) (entries : List TraceLean.Produce.MenuEntry) (width : Nat),\n      ((\"  \".intercalate (List.map (fun e => e.key ++ \"  \" ++ e.description) entries)).length ≤ width →\n          (g title entries width).text = \"  \".intercalate (List.map (fun e => e.key ++ \"  \" ++ e.description) entries) ∧\n            (g title entries width).text.length ≤ width ∧\n              ∀ (e : TraceLean.Produce.MenuEntry),\n                e ∈ entries →\n                  ∃ s,\n                    s ∈ (g title entries width).spans ∧\n                      s.actions = e.action.toList ∧\n                        TraceLean.Produce.textUnder (g title entries width) s = e.key ++ \"  \" ++ e.description) ∧\n        (¬(\"  \".intercalate (List.map (fun e => e.key ++ \"  \" ++ e.description) entries)).length ≤ width →\n            (g title entries width).text = \"  \".intercalate (List.map (fun x => x.key) entries) ∧\n              ∀ (e : TraceLean.Produce.MenuEntry),\n                e ∈ entries →\n                  e.key ≠ \"\" →\n                    ∃ s,\n                      s ∈ (g title entries width).spans ∧\n                        s.actions = e.action.toList ∧ TraceLean.Produce.textUnder (g title entries width) s = e.key) ∧\n          ∀ (s : TraceLean.View.Span),\n            s ∈ (g title entries width).spans → ∃ e, e ∈ entries ∧ s.actions = e.action.toList) →\n    g = TraceLean.Produce.menuRow",
-      "key": "e4ba0f8176f0bf77+bd0db8ae98423fc2+e71536f33217604c",
+      "key": "3b90b015dee10eb1+bd0db8ae98423fc2+e71536f33217604c",
       "pins": []
     },
     {
@@ -5203,7 +5347,7 @@
         ]
       ],
       "statement": "∀ (g : String → List TraceLean.Transcript.Event → TraceLean.View.Buffer),\n  (∀ (title : String) (events : List TraceLean.Transcript.Event),\n      (g title events).text = \"\\n\".intercalate (List.map (fun e => e.kind ++ \": \" ++ e.text) events) ∧\n        (∀ (e : TraceLean.Transcript.Event),\n            e ∈ events →\n              ∃ s,\n                s ∈ (g title events).spans ∧\n                  s.role = TraceLean.View.Role.entry ∧\n                    TraceLean.Produce.textUnder (g title events) s = e.kind ++ \": \" ++ e.text) ∧\n          ∀ (s : TraceLean.View.Span),\n            s ∈ (g title events).spans →\n              ∃ e,\n                e ∈ events ∧\n                  s.role = TraceLean.View.Role.entry ∧\n                    TraceLean.Produce.textUnder (g title events) s = e.kind ++ \": \" ++ e.text) →\n    g = TraceLean.Produce.recordBuffer",
-      "key": "e4ba0f8176f0bf77+3ac7b9bbc53940f2+cf522cefd9657ed2",
+      "key": "3b90b015dee10eb1+3ac7b9bbc53940f2+cf522cefd9657ed2",
       "pins": []
     },
     {
@@ -5219,7 +5363,7 @@
         ]
       ],
       "statement": "∀ (g : List TraceLean.Produce.Node → Bool → TraceLean.View.Buffer),\n  (∀ (nodes : List TraceLean.Produce.Node) (openOnly : Bool) (node : TraceLean.Produce.Node),\n      node ∈ nodes →\n        (!openOnly || TraceLean.Produce.isOpen node) = true →\n          ∀ (ran all : Nat),\n            List.foldl\n                  (fun acc child =>\n                    (acc.fst + (TraceLean.Produce.linesUnder nodes nodes.length child).fst,\n                      acc.snd + (TraceLean.Produce.linesUnder nodes nodes.length child).snd))\n                  (0, 0) (TraceLean.Produce.childrenOf nodes node.id) =\n                (ran, all) →\n              ran < all →\n                TraceLean.Produce.Marked (g nodes openOnly) TraceLean.View.Role.removed\n                  (\"+children \" ++\n                      toString\n                        (((node.covered.getD (0, 0)).fst + ran) * 100 / ((node.covered.getD (0, 0)).snd + all)) ++\n                    \"%\")) →\n    (∀ (nodes : List TraceLean.Produce.Node) (node : TraceLean.Produce.Node),\n        node ∈ nodes →\n          (∃ rows, rows.length = nodes.length ∧ (g nodes false).text = \"\\n\".intercalate rows) ∧\n            (node.id ≠ \"\" → TraceLean.Produce.Marked (g nodes false) TraceLean.View.Role.requirement node.id) ∧\n              (∀ (e : TraceLean.Evidence.Mark × Bool × Char),\n                  e ∈ node.marks.each →\n                    node.marks.applies e.fst = true →\n                      TraceLean.Produce.Marked (g nodes false) (TraceLean.View.Role.mark e.fst e.snd.fst)\n                        (String.singleton (TraceLean.Evidence.letter e.snd.fst e.snd.snd))) ∧\n                (node.modelled ≠ 0 →\n                    TraceLean.Produce.Marked (g nodes false)\n                      (TraceLean.View.Role.claim TraceLean.Annotation.Role.implements)\n                      (\"I\" ++ toString node.held.implemented ++ \"/\" ++ toString node.modelled)) ∧\n                  (node.clauses ≠ 0 →\n                      TraceLean.Produce.Marked (g nodes false)\n                        (TraceLean.View.Role.mark TraceLean.Evidence.Mark.annotated true)\n                        (\"A\" ++ toString node.held.annotated ++ \"/\" ++ toString node.clauses)) ∧\n                    (node.clauses ≠ 0 →\n                        TraceLean.Produce.Marked (g nodes false)\n                          (TraceLean.View.Role.mark TraceLean.Evidence.Mark.judged true)\n                          (\"J\" ++ toString node.held.judged ++ \"/\" ++ toString node.clauses)) ∧\n                      (node.modelled ≠ 0 →\n                          TraceLean.Produce.Marked (g nodes false)\n                            (TraceLean.View.Role.mark TraceLean.Evidence.Mark.tested true)\n                            (\"T\" ++ toString node.held.tested ++ \"/\" ++ toString node.modelled)) ∧\n                        (node.modelled ≠ 0 →\n                            TraceLean.Produce.Marked (g nodes false)\n                              (TraceLean.View.Role.mark TraceLean.Evidence.Mark.proved true)\n                              (\"P\" ++ toString node.held.proved ++ \"/\" ++ toString node.modelled)) ∧\n                          ∀ (s : TraceLean.View.Span),\n                            s ∈ (g nodes false).spans →\n                              s.role = TraceLean.View.Role.requirement →\n                                ∃ n, n ∈ nodes ∧ TraceLean.Produce.textUnder (g nodes false) s = n.id) →\n      g = TraceLean.Produce.requirementsBuffer",
-      "key": "e4ba0f8176f0bf77+3124866956145259+837d294d3b3cee83+873dcf2c34bba4a5",
+      "key": "3b90b015dee10eb1+3124866956145259+837d294d3b3cee83+873dcf2c34bba4a5",
       "pins": []
     },
     {
@@ -5231,7 +5375,7 @@
         ]
       ],
       "statement": "∀ (g : String → String → String → TraceLean.View.Buffer),\n  (∀ (target other before after : String),\n      (g target before after).text = (g other before after).text ∧\n        (g target before after).spans = (g other before after).spans ∧\n          (g target before after).id = \"review:\" ++ target ∧\n            (g target before after).kind = TraceLean.View.BufferKind.review target ∧\n              TraceLean.View.faults (g target before after) = []) →\n    g = TraceLean.Produce.reviewBuffer",
-      "key": "e4ba0f8176f0bf77+78c5c7a3ec8c2c7a+8b1c42012787c6ec",
+      "key": "3b90b015dee10eb1+78c5c7a3ec8c2c7a+8b1c42012787c6ec",
       "pins": []
     },
     {
@@ -5243,7 +5387,7 @@
         ]
       ],
       "statement": "∀ (g : List String → List TraceLean.Transcript.Event → TraceLean.Cost.Spend → List TraceLean.Transcript.Event),\n  (∀ (changed : List String) (said : List TraceLean.Transcript.Event) (spend : TraceLean.Cost.Spend),\n      (g changed said spend).length = changed.length + said.length + 1 ∧\n        List.map (fun x => x.text) (List.take changed.length (g changed said spend)) = changed ∧\n          (∀ (e : TraceLean.Transcript.Event),\n              e ∈ List.take changed.length (g changed said spend) → e.kind = \"changed\") ∧\n            List.take said.length (List.drop changed.length (g changed said spend)) = said ∧\n              (g changed said spend).getLast? = some { kind := \"cost\", text := TraceLean.Cost.estimateLine spend }) →\n    g = TraceLean.Produce.sandboxEvents",
-      "key": "e4ba0f8176f0bf77+abc562971ca8a349+96cfb1401925baf3",
+      "key": "3b90b015dee10eb1+abc562971ca8a349+96cfb1401925baf3",
       "pins": []
     },
     {
@@ -5259,7 +5403,7 @@
         ]
       ],
       "statement": "∀ (g : Nat → List TraceLean.View.Span → List TraceLean.View.Span),\n  (∀ (id : String) (kind : TraceLean.View.BufferKind) (text : String) (spans : List TraceLean.View.Span),\n      TraceLean.View.faults { id := id, kind := kind, text := text, spans := g text.length spans } = []) →\n    (∀ (size : Nat) (spans : List TraceLean.View.Span),\n        TraceLean.Produce.Fits 0 (g size spans) size ∧\n          ∀ (s : TraceLean.View.Span), s ∈ g size spans → s.start < s.stop) →\n      g = TraceLean.Produce.tidy",
-      "key": "e4ba0f8176f0bf77+33b4dcb380ce6097+66b1234c873a9015+f27fc58d67559da8",
+      "key": "3b90b015dee10eb1+33b4dcb380ce6097+66b1234c873a9015+f27fc58d67559da8",
       "pins": []
     },
     {
@@ -5271,7 +5415,7 @@
         ]
       ],
       "statement": "∀ (g : TraceLean.View.Buffer → Nat → Nat → TraceLean.View.Buffer),\n  (∀ (buffer : TraceLean.View.Buffer) (start count : Nat),\n      TraceLean.View.faults (g buffer start count) = [] ∧\n        (g buffer start count).id = buffer.id ∧\n          (g buffer start count).kind = buffer.kind ∧\n            (g buffer start count).text =\n                \"\\n\".intercalate (List.take count (List.drop start (buffer.text.splitOn \"\\n\"))) ∧\n              ∀ (s : TraceLean.View.Span),\n                s ∈ (g buffer start count).spans →\n                  ∃ s', s' ∈ buffer.spans ∧ s.role = s'.role ∧ s.actions = s'.actions) →\n    g = TraceLean.Produce.window",
-      "key": "e4ba0f8176f0bf77+7e374d2b880b864b+feb80f9437a552dc",
+      "key": "3b90b015dee10eb1+7e374d2b880b864b+feb80f9437a552dc",
       "pins": []
     },
     {
@@ -5283,7 +5427,7 @@
         ]
       ],
       "statement": "∀ (g : Bool → Option (List String) → Option String → String),\n  (∀ (goals : List String) (rendered : Option String) (answered : Bool) (reported : Option (List String))\n      (other : Option String),\n      (goals ≠ [] → g true (some goals) rendered = \"\\n\\n\".intercalate goals) ∧\n        g true (some []) rendered ≠ g false reported other ∧\n          (answered = false → g answered reported other = \"no goals here\")) →\n    g = TraceLean.ProofState.goalsShown",
-      "key": "e4ba0f8176f0bf77+9c6f2d0e5df500d8+2b2ffefa36f96812",
+      "key": "3b90b015dee10eb1+9c6f2d0e5df500d8+2b2ffefa36f96812",
       "pins": []
     },
     {
@@ -5295,7 +5439,7 @@
         ]
       ],
       "statement": "∀ (g : List TraceLean.Proofcheck.Heard → List (String × String)),\n  (∀ (heard : List TraceLean.Proofcheck.Heard) (model thm : String),\n      (model, thm) ∈ g heard ↔\n        ∃ facts,\n          TraceLean.Proofcheck.Heard.facts thm model facts ∈ heard ∧\n            (TraceLean.Proofcheck.verdict facts).isAccepted = true) →\n    g = TraceLean.Proofcheck.accepted",
-      "key": "e4ba0f8176f0bf77+4363ad1cb6640039+d181740d7378c53b",
+      "key": "3b90b015dee10eb1+4363ad1cb6640039+d181740d7378c53b",
       "pins": []
     },
     {
@@ -5307,7 +5451,7 @@
         ]
       ],
       "statement": "∀ (g : TraceLean.Proofcheck.PinFacts → TraceLean.Proofcheck.Verdict),\n  (∀ (facts : TraceLean.Proofcheck.PinFacts) (assumed : List String),\n      g facts = TraceLean.Proofcheck.Verdict.accepted assumed →\n        facts.found = true ∧\n          facts.statement = true ∧ TraceLean.Proofcheck.axiomVerdict facts.axioms = Except.ok assumed) →\n    g = TraceLean.Proofcheck.pinVerdict",
-      "key": "e4ba0f8176f0bf77+00549d51ca5f9b3d+dd77221bdec4ea3d",
+      "key": "3b90b015dee10eb1+00549d51ca5f9b3d+dd77221bdec4ea3d",
       "pins": []
     },
     {
@@ -5319,7 +5463,7 @@
         ]
       ],
       "statement": "∀ (g : List TraceLean.Proofcheck.CheckLink → List TraceLean.Proofcheck.ModelPlan),\n  (∀ (links : List TraceLean.Proofcheck.CheckLink) (p : TraceLean.Proofcheck.ModelPlan),\n      p ∈ g links →\n        ∀ (c : String × Option String),\n          c ∈ p.clauses →\n            ∃ l, l ∈ links ∧ l.role = TraceLean.Annotation.Role.models ∧ (l.reqId, l.clause) = c ∧ l.symbol = p.model) →\n    g = TraceLean.Proofcheck.plans",
-      "key": "e4ba0f8176f0bf77+e9ffc40f6519ec23+5ed7c889bac41421",
+      "key": "3b90b015dee10eb1+e9ffc40f6519ec23+5ed7c889bac41421",
       "pins": []
     },
     {
@@ -5347,7 +5491,7 @@
         ]
       ],
       "statement": "∀ (g : Option (String × List String) → String → List String → Option String → TraceLean.Strength.Strength),\n  (∀ (held : Option (String × List String)) (keyNow reason : String) (pins : List String),\n      g held keyNow pins (some reason) = TraceLean.Strength.Strength.nondeterministic reason) →\n    (∀ (held : Option (String × List String)) (keyNow t : String) (rest : List String),\n        (∀ (acc : List String), held = some (keyNow, acc) → ∀ (p : String), p ∈ acc → ¬p ∈ t :: rest) →\n          g held keyNow (t :: rest) none = TraceLean.Strength.Strength.attempted t) →\n      (∀ (held : Option (String × List String)) (keyNow : String) (pins : List String) (t : String),\n          g held keyNow pins none = TraceLean.Strength.Strength.pinned t →\n            t ∈ pins ∧ ∃ acc, held = some (keyNow, acc) ∧ t ∈ acc) →\n        (∀ (held : Option (String × List String)) (keyNow : String) (pins : List String),\n            (∀ (acc : List String), held ≠ some (keyNow, acc)) →\n              ∀ (t : String), g held keyNow pins none ≠ TraceLean.Strength.Strength.pinned t) →\n          (∀ (held : Option (String × List String)) (keyNow : String),\n              g held keyNow [] none = TraceLean.Strength.Strength.open) →\n            g = TraceLean.Proofcheck.standing",
-      "key": "e4ba0f8176f0bf77+e14fd3ebd3dc53ab+67f7b20577a01914+8f4fab0ac96f4208+97c8931fcb789142+b28d601418793dec+c5d6d9fa35914641",
+      "key": "3b90b015dee10eb1+e14fd3ebd3dc53ab+67f7b20577a01914+8f4fab0ac96f4208+97c8931fcb789142+b28d601418793dec+c5d6d9fa35914641",
       "pins": []
     },
     {
@@ -5383,7 +5527,7 @@
         ]
       ],
       "statement": "∀ (g : TraceLean.Proofcheck.ProofFacts → TraceLean.Proofcheck.Verdict),\n  (∀ (facts : TraceLean.Proofcheck.ProofFacts),\n      facts.ignores = true ∨ facts.closes = true → (g facts).isAccepted = false) →\n    (∀ (facts : TraceLean.Proofcheck.ProofFacts), facts.mentions = false → (g facts).isAccepted = false) →\n      (∀ (facts : TraceLean.Proofcheck.ProofFacts) (via : String),\n          facts.found = true →\n            facts.isType = false →\n              (∃ kept, TraceLean.Proofcheck.axiomVerdict facts.axioms = Except.ok kept) →\n                facts.mentions = true →\n                  facts.general = true →\n                    facts.leak = some via →\n                      g facts = TraceLean.Proofcheck.Verdict.refused (TraceLean.Proofcheck.Refusal.indirect via)) →\n        (∀ (facts : TraceLean.Proofcheck.ProofFacts),\n            facts.found = true →\n              facts.isType = true → g facts = TraceLean.Proofcheck.Verdict.refused TraceLean.Proofcheck.Refusal.type) →\n          (∀ (facts : TraceLean.Proofcheck.ProofFacts) (assumed : List String),\n              g facts = TraceLean.Proofcheck.Verdict.accepted assumed →\n                ∀ (x : String),\n                  x ∈ assumed ↔ ∃ a, a ∈ facts.axioms ∧ a.fst = x ∧ ¬x ∈ TraceLean.Proofcheck.leanOwn ∧ a.snd = true) →\n            (∀ (facts : TraceLean.Proofcheck.ProofFacts), facts.general = false → (g facts).isAccepted = false) →\n              (∀ (facts : TraceLean.Proofcheck.ProofFacts),\n                  (∃ a,\n                      a ∈ facts.axioms ∧ (a.fst = \"sorryAx\" ∨ ¬a.fst ∈ TraceLean.Proofcheck.leanOwn ∧ a.snd = false)) →\n                    (g facts).isAccepted = false) →\n                g = TraceLean.Proofcheck.verdict",
-      "key": "e4ba0f8176f0bf77+fadf42714a8c5485+15cadb4de0785753+1ffd63c26bb66391+77d9faf18a356796+7f422e5a4d7d1bea+af114db0fc361d31+c3825f206f77f36e+cf287628ed0848c0",
+      "key": "3b90b015dee10eb1+fadf42714a8c5485+15cadb4de0785753+1ffd63c26bb66391+77d9faf18a356796+7f422e5a4d7d1bea+af114db0fc361d31+c3825f206f77f36e+cf287628ed0848c0",
       "pins": []
     },
     {
@@ -5395,7 +5539,7 @@
         ]
       ],
       "statement": "∀ (g : Option Lean.Json → Option Lean.Json → Bool),\n  (∀ (model implementation : Option Lean.Json),\n      model = none ∨ implementation = none → (g model implementation = true ↔ model = implementation)) →\n    g = TraceLean.Protocol.agree",
-      "key": "e4ba0f8176f0bf77+0bb14760b8406bd0+1dbe7b8ab937e7fe",
+      "key": "3b90b015dee10eb1+0bb14760b8406bd0+1dbe7b8ab937e7fe",
       "pins": []
     },
     {
@@ -5411,7 +5555,7 @@
         ]
       ],
       "statement": "∀ (g : Nat → String → Lean.Json → String),\n  (∀ (number : Nat) (op : String) (input : Lean.Json),\n      ¬'\\n' ∈ (TraceLean.Protocol.written input).data →\n        ¬'\\n' ∈ (g number op input).data ∧\n          (g number op input).data.head? = some (Char.ofNat 123) ∧\n            (g number op input).data.getLast? = some (Char.ofNat 125)) →\n    (∀ (number : Nat) (op op' : String) (input : Lean.Json),\n        (∃ before after,\n            (g number op input).data = before ++ \",\\\"op\\\":\".data ++ (TraceLean.Protocol.quoted op).data ++ after) ∧\n          (g number op input = g number op' input → op = op')) →\n      g = TraceLean.Protocol.caseLine",
-      "key": "e4ba0f8176f0bf77+fec732bf5fa6209d+5c272fa6b5678603+636f19e9a8cb988b",
+      "key": "3b90b015dee10eb1+fec732bf5fa6209d+5c272fa6b5678603+636f19e9a8cb988b",
       "pins": []
     },
     {
@@ -5423,7 +5567,7 @@
         ]
       ],
       "statement": "∀ (g : Bool → TraceLean.Evidence.Level),\n  (∀ (agreed : Bool),\n      g agreed ≠ TraceLean.Evidence.Level.L4 ∧ (agreed = true → g agreed = TraceLean.Evidence.Level.L3)) →\n    g = TraceLean.Protocol.drtLevel",
-      "key": "e4ba0f8176f0bf77+e4fc3c21dd99ab63+c7a796cdc4a030f4",
+      "key": "3b90b015dee10eb1+e4fc3c21dd99ab63+c7a796cdc4a030f4",
       "pins": []
     },
     {
@@ -5435,7 +5579,7 @@
         ]
       ],
       "statement": "∀ (g : List String → List String),\n  (∀ (ops : List String),\n      (∀ (op : String), op ∈ g ops ↔ 2 ≤ List.count op ops) ∧ (g ops = [] ↔ ∀ (op : String), List.count op ops ≤ 1)) →\n    g = TraceLean.Protocol.duplicateOps",
-      "key": "e4ba0f8176f0bf77+9b2ae0dec8de59b8+65906ea66e67dcf0",
+      "key": "3b90b015dee10eb1+9b2ae0dec8de59b8+65906ea66e67dcf0",
       "pins": [
         {
           "theorem": "TraceLean.SpecSorted::ops_unique_pinned",
@@ -5463,7 +5607,7 @@
         ]
       ],
       "statement": "∀ (g : Nat → String → TraceLean.Protocol.Heard),\n  (∀ (expected : Nat) (line : String),\n      (∀ (n : Nat) (output : Option Lean.Json) (error : Option String),\n          g expected line = TraceLean.Protocol.Heard.answered n output error → n = expected) ∧\n        ∀ (e got : Nat), g expected line = TraceLean.Protocol.Heard.wrongCase e got → e = expected ∧ got ≠ expected) →\n    (∀ (expected : Nat) (line : String),\n        (∀ (n : Nat) (output : Option Lean.Json) (error : Option String),\n            g expected line = TraceLean.Protocol.Heard.answered n output error →\n              ∃ value fields, Lean.Json.parse line.trim = Except.ok value ∧ value.getObj? = Except.ok fields) ∧\n          ∀ (message : String),\n            Lean.Json.parse line.trim = Except.error message →\n              g expected line = TraceLean.Protocol.Heard.notAReply TraceLean.Protocol.NotAReply.notJson) →\n      g = TraceLean.Protocol.hear",
-      "key": "e4ba0f8176f0bf77+fc56830a116db684+92cc7f24ee216587+efa62cb9417595ee",
+      "key": "3b90b015dee10eb1+fc56830a116db684+92cc7f24ee216587+efa62cb9417595ee",
       "pins": []
     },
     {
@@ -5475,7 +5619,7 @@
         ]
       ],
       "statement": "∀ (g : Option Lean.Json → Option String → Bool),\n  (∀ (output : Option Lean.Json) (error : Option String),\n      g output error = true ↔ output.isSome = true ∧ error = none ∨ output = none ∧ error.isSome = true) →\n    g = TraceLean.Protocol.isExclusive",
-      "key": "e4ba0f8176f0bf77+c33336d8df0f8e74+0414c3d41ed8774b",
+      "key": "3b90b015dee10eb1+c33336d8df0f8e74+0414c3d41ed8774b",
       "pins": [
         {
           "theorem": "TraceLean.SpecTrace::reply_exclusive_pinned",
@@ -5499,7 +5643,7 @@
         ]
       ],
       "statement": "∀ (g : TraceLean.Protocol.Event → TraceLean.Protocol.Outcome),\n  (∀ (reason : String) (n : Nat),\n      (g (TraceLean.Protocol.Event.couldNotStart reason)).answered = false ∧\n        (g TraceLean.Protocol.Event.noReplyInTime).answered = false ∧\n          (g (TraceLean.Protocol.Event.pipeBroke reason)).answered = false ∧\n            (g (TraceLean.Protocol.Event.read n none)).answered = false) →\n    g = TraceLean.Protocol.outcome",
-      "key": "e4ba0f8176f0bf77+d59e4611436ca6dc+9216f276964b24a6",
+      "key": "3b90b015dee10eb1+d59e4611436ca6dc+9216f276964b24a6",
       "pins": []
     },
     {
@@ -5511,7 +5655,7 @@
         ]
       ],
       "statement": "∀ (g : List TraceLean.Protocol.Placed → List TraceLean.Protocol.Shared),\n  (∀ (placed : List TraceLean.Protocol.Placed),\n      (∀ (p : TraceLean.Protocol.Placed), p ∈ placed → ∃ s, s ∈ g placed ∧ s.language = p.language ∧ p.op ∈ s.ops) ∧\n        (∀ (s : TraceLean.Protocol.Shared),\n            s ∈ g placed → ∀ (op : String), op ∈ s.ops → ∃ p, p ∈ placed ∧ p.language = s.language ∧ p.op = op) ∧\n          (List.map (fun s => s.language) (g placed)).Nodup) →\n    g = TraceLean.Protocol.sharedRunners",
-      "key": "e4ba0f8176f0bf77+19ba9a69554ca2c8+cc36f17fa0ee86e6",
+      "key": "3b90b015dee10eb1+19ba9a69554ca2c8+cc36f17fa0ee86e6",
       "pins": []
     },
     {
@@ -5535,7 +5679,7 @@
         ]
       ],
       "statement": "∀ (g : TraceLean.Command.Command → String → Nat → TraceLean.Provenance.BackStep),\n  (∀ (file text : String) (offset position : Nat),\n      offset + TraceLean.Provenance.byteLen text ≤ position →\n        g (TraceLean.Command.Command.insert file offset text) file position =\n            TraceLean.Provenance.BackStep.moved (position - TraceLean.Provenance.byteLen text) ∧\n          g (TraceLean.Command.Command.delete file offset text) file position =\n            TraceLean.Provenance.BackStep.moved (position + TraceLean.Provenance.byteLen text)) →\n    (∀ (file text : String) (offset position : Nat),\n        position < offset →\n          g (TraceLean.Command.Command.insert file offset text) file position =\n              TraceLean.Provenance.BackStep.moved position ∧\n            g (TraceLean.Command.Command.delete file offset text) file position =\n              TraceLean.Provenance.BackStep.moved position) →\n      (∀ (file text : String) (offset position : Nat),\n          offset ≤ position →\n            position < offset + TraceLean.Provenance.byteLen text →\n              g (TraceLean.Command.Command.insert file offset text) file position =\n                TraceLean.Provenance.BackStep.writtenHere) →\n        (∀ (file text : String) (offset position : Nat),\n            g (TraceLean.Command.Command.insert file offset text) file position =\n                TraceLean.Provenance.BackStep.moved position ∨\n              g (TraceLean.Command.Command.insert file offset text) file position =\n                  TraceLean.Provenance.BackStep.writtenHere ∨\n                g (TraceLean.Command.Command.insert file offset text) file position =\n                  TraceLean.Provenance.BackStep.moved (position - TraceLean.Provenance.byteLen text)) →\n          g = TraceLean.Provenance.back",
-      "key": "e4ba0f8176f0bf77+3c74019b46571f27+637c3ee621956bca+70b68adf5357fdc4+b25cb2cfbef8693b+b3cea837b738b650",
+      "key": "3b90b015dee10eb1+3c74019b46571f27+637c3ee621956bca+70b68adf5357fdc4+b25cb2cfbef8693b+b3cea837b738b650",
       "pins": []
     },
     {
@@ -5551,7 +5695,7 @@
         ]
       ],
       "statement": "∀ (g : TraceLean.Tree.Tree → Nat → String → Nat → TraceLean.Provenance.Origin),\n  (∀ (t : TraceLean.Tree.Tree) (atNode : Nat) (file : String) (position : Nat),\n      (∀ (id : Nat),\n          id ∈ t.ancestry atNode →\n            ∀ (n : TraceLean.Tree.Node), t.node? id = some n → TraceLean.Provenance.OnlyMoves n.command) →\n        g t atNode file position = TraceLean.Provenance.Origin.base) →\n    (∀ (t : TraceLean.Tree.Tree) (atNode : Nat) (file : String) (position : Nat),\n        (∀ (n : Nat),\n            g t atNode file position = TraceLean.Provenance.Origin.node n →\n              n ∈ t.ancestry atNode ∧ TraceLean.Provenance.Wrote t n) ∧\n          ∀ (nd : TraceLean.Tree.Node),\n            t.node? atNode = some nd →\n              TraceLean.Provenance.back nd.command file position = TraceLean.Provenance.BackStep.writtenHere →\n                g t atNode file position = TraceLean.Provenance.Origin.node atNode) →\n      g = TraceLean.Provenance.origin",
-      "key": "e4ba0f8176f0bf77+8df56585372e9725+10550c6b17fc5878+683ea8f60a370107",
+      "key": "3b90b015dee10eb1+8df56585372e9725+10550c6b17fc5878+683ea8f60a370107",
       "pins": []
     },
     {
@@ -5567,7 +5711,7 @@
         ]
       ],
       "statement": "∀ (g : TraceLean.Record.Evidence → TraceLean.Record.Reproducibility),\n  (∀ (record : TraceLean.Record.Evidence),\n      g record = TraceLean.Record.Reproducibility.reproducible ↔\n        TraceLean.Record.Complete record.detail ∧\n          record.linkHash.isEmpty = false ∧\n            ∀ (name : String),\n              name ∈ TraceLean.Record.requiredInputs record.detail → ∃ i, i ∈ record.inputs ∧ i.fst = name) →\n    (∀ (record : TraceLean.Record.Evidence),\n        (g record = TraceLean.Record.Reproducibility.reproducible →\n            ∀ (name : String),\n              name ∈ TraceLean.Record.requiredInputs record.detail → ∃ hash, (name, hash) ∈ record.inputs) ∧\n          \"model\" ∈ TraceLean.Record.requiredInputs record.detail ∧\n            ∀ (name : String),\n              g record = TraceLean.Record.Reproducibility.missingInput name →\n                name ∈ TraceLean.Record.requiredInputs record.detail ∧\n                  ∀ (i : String × String), i ∈ record.inputs → i.fst ≠ name) →\n      g = TraceLean.Record.reproducibility",
-      "key": "e4ba0f8176f0bf77+bd66b93d24bbfb5e+689203d39caa9d3a+9cb5e8ab83dc1aec",
+      "key": "3b90b015dee10eb1+bd66b93d24bbfb5e+689203d39caa9d3a+9cb5e8ab83dc1aec",
       "pins": []
     },
     {
@@ -5579,7 +5723,7 @@
         ]
       ],
       "statement": "∀ (g : TraceLean.Refinement.Graph → List (String × String)),\n  (∀ (g_1 : TraceLean.Refinement.Graph) (child parent : String),\n      (child, parent) ∈ g g_1 ↔\n        ∃ e, e ∈ g_1 ∧ e.fst = child ∧ parent ∈ e.snd ∧ TraceLean.Refinement.hasNode g_1 parent = false) →\n    g = TraceLean.Refinement.danglingIn",
-      "key": "e4ba0f8176f0bf77+9ea64c735fbb374d+f2a06460f4a83cc7",
+      "key": "3b90b015dee10eb1+9ea64c735fbb374d+f2a06460f4a83cc7",
       "pins": [
         {
           "theorem": "TraceLean.SpecSorted::refines_resolves_pinned",
@@ -5603,7 +5747,19 @@
         ]
       ],
       "statement": "∀ (g : TraceLean.Refinement.Graph → TraceLean.Refinement.GraphReport),\n  (∀ (edges : TraceLean.Refinement.Graph),\n      ((g edges).cycle = none ↔\n          ∀ (c : List String), ¬TraceLean.Refinement.IsCycle (TraceLean.Refinement.canonGraph edges) c) ∧\n        ∀ (c : List String),\n          (g edges).cycle = some c → TraceLean.Refinement.IsCycle (TraceLean.Refinement.canonGraph edges) c) →\n    g = TraceLean.Refinement.graphReport",
-      "key": "e4ba0f8176f0bf77+a2a6887eda815a9c+c598e42a94f1ed07",
+      "key": "3b90b015dee10eb1+a2a6887eda815a9c+c598e42a94f1ed07",
+      "pins": []
+    },
+    {
+      "model": "TraceLean.Report::reasons",
+      "clauses": [
+        [
+          "REQ-REPORT",
+          "why_not_held"
+        ]
+      ],
+      "statement": "∀ (g : TraceLean.Report.CardFacts → List TraceLean.Report.Reason),\n  (∀ (facts : TraceLean.Report.CardFacts) (m : TraceLean.Diff.Mark),\n      (∃ r, r ∈ g facts ∧ r.mark = m) ↔ ¬m ∈ facts.held) →\n    (∀ (facts : TraceLean.Report.CardFacts) (r : TraceLean.Report.Reason),\n        r ∈ g facts →\n          (r.mark = TraceLean.Diff.Mark.tested ∨ r.mark = TraceLean.Diff.Mark.proved →\n              facts.structural = false →\n                TraceLean.Report.has facts \"models\" = false → r.missing = TraceLean.Report.Missing.noModel) ∧\n            (r.mark = TraceLean.Diff.Mark.tested →\n                facts.structural = false →\n                  TraceLean.Report.has facts \"models\" = true →\n                    TraceLean.Report.has facts \"implements\" = true →\n                      TraceLean.Report.has facts \"drt\" = false → r.missing = TraceLean.Report.Missing.unbound) ∧\n              (r.mark = TraceLean.Diff.Mark.proved →\n                facts.structural = false →\n                  TraceLean.Report.has facts \"models\" = true →\n                    TraceLean.Report.has facts \"proves\" = true →\n                      facts.refused ≠ [] → r.missing = TraceLean.Report.Missing.allRefused facts.refused)) →\n      g = TraceLean.Report.reasons",
+      "key": "3b90b015dee10eb1+c1edc59285b531b3+97d31ed8c2ac4c22+b527e67178d80339",
       "pins": []
     },
     {
@@ -5615,7 +5771,7 @@
         ]
       ],
       "statement": "∀ (g : List (String × String) → List (String × String)),\n  (∀ (id file : String), g [(id, file)] = []) → g = TraceLean.Requirement.duplicateIds",
-      "key": "e4ba0f8176f0bf77+ed7528f9e644fd0b+a5506529d7295a22",
+      "key": "3b90b015dee10eb1+ed7528f9e644fd0b+a5506529d7295a22",
       "pins": []
     },
     {
@@ -5647,7 +5803,7 @@
         ]
       ],
       "statement": "∀ (g : List String → TraceLean.Requirement.Parsed),\n  (∀ (lines : List String),\n      (g lines).isRequirement = true →\n        ((g lines).clauses = [] → (g lines).addressable = [none]) ∧\n          ((g lines).clauses ≠ [] → (g lines).addressable = List.map (fun c => some c.fst) (g lines).clauses)) →\n    (∀ (lines fm body : List String),\n        (TraceLean.Requirement.splitFrontmatter (TraceLean.Requirement.resplit lines) = none →\n            TraceLean.Requirement.fenceUnclosed (TraceLean.Requirement.resplit lines) = true →\n              (1, TraceLean.Requirement.FrontmatterKind.unclosedFrontmatter) ∈ (g lines).problems) ∧\n          (TraceLean.Requirement.splitFrontmatter (TraceLean.Requirement.resplit lines) = some (fm, body) →\n              ∀ (x : Nat × TraceLean.Requirement.FrontmatterKind),\n                x ∈ (TraceLean.Requirement.readFrontmatter fm).problems → x ∈ (g lines).problems) ∧\n            ((g lines).isRequirement = true →\n                TraceLean.Requirement.splitFrontmatter (TraceLean.Requirement.resplit lines) = some (fm, body) →\n                  ∀ (u : Nat × String),\n                    u ∈ (TraceLean.Requirement.readFrontmatter fm).unknown →\n                      (u.fst, TraceLean.Requirement.FrontmatterKind.unknownKey) ∈ (g lines).problems) ∧\n              (∀ (f : TraceLean.Requirement.Fields) (b : TraceLean.Requirement.Block),\n                  f.block = some b →\n                    (TraceLean.Requirement.lookup? (TraceLean.Requirement.mapEntry f.maps \"clauses\") b.clause).getD \"\" =\n                        \"\" →\n                      (b.line, TraceLean.Requirement.FrontmatterKind.missingText) ∈\n                        (TraceLean.Requirement.closeBlock f).problems) ∧\n                ∀ (f : TraceLean.Requirement.Fields) (n : Nat) (raw : String),\n                  TraceLean.Requirement.Grows f (TraceLean.Requirement.readLine f n raw)) →\n      (∀ (lines : List String),\n          (g lines).isRequirement = true →\n            (∀ (x : String × List (String × String)),\n                x ∈ (g lines).narrowings → x.fst ∈ List.map (fun x => x.fst) (g lines).clauses) ∧\n              ∀ (y : Option String),\n                y ∈ (g lines).addressable →\n                  y = none ∨ ∃ k, k ∈ List.map (fun x => x.fst) (g lines).clauses ∧ y = some k) →\n        (∀ (lines front body pre post : List String) (raw k v : String),\n            TraceLean.Requirement.splitFrontmatter ((\"\\n\".intercalate lines).splitOn \"\\n\") = some (front, body) →\n              front = pre ++ raw :: post →\n                ((TraceLean.Requirement.trimEnd raw).trim.isEmpty ||\n                      (TraceLean.Requirement.trimStart (TraceLean.Requirement.trimEnd raw)).startsWith \"#\") =\n                    false →\n                  ((TraceLean.Requirement.trimEnd raw).startsWith \" \" ||\n                        (TraceLean.Requirement.trimEnd raw).startsWith \"\\t\") =\n                      true →\n                    (TraceLean.Requirement.stateBefore pre).current = some \"clauses\" →\n                      TraceLean.Requirement.splitOnFirst (TraceLean.Requirement.trimEnd raw).trim ':' = some (k, v) →\n                        ((∀ (b : TraceLean.Requirement.Block),\n                              (TraceLean.Requirement.stateBefore pre).block = some b →\n                                ¬TraceLean.Requirement.indentOf (TraceLean.Requirement.trimEnd raw) > b.indent) →\n                            ((TraceLean.Requirement.mapEntry (TraceLean.Requirement.stateBefore pre).maps \"clauses\").any\n                                  fun x => x.fst == k.trim) =\n                                true →\n                              (pre.length + 2, TraceLean.Requirement.FrontmatterKind.duplicateClause) ∈\n                                (g lines).problems) ∧\n                          (∀ (b : TraceLean.Requirement.Block),\n                              (TraceLean.Requirement.stateBefore pre).block = some b →\n                                TraceLean.Requirement.indentOf (TraceLean.Requirement.trimEnd raw) > b.indent →\n                                  k.trim ≠ \"text\" →\n                                    ((TraceLean.Requirement.narrowingsOf (TraceLean.Requirement.stateBefore pre)\n                                              b.clause).any\n                                          fun x => x.fst == k.trim) =\n                                        true →\n                                      (pre.length + 2, TraceLean.Requirement.FrontmatterKind.duplicateNarrowing) ∈\n                                        (g lines).problems) ∧\n                            ∀ (b : TraceLean.Requirement.Block),\n                              (TraceLean.Requirement.stateBefore pre).block = some b →\n                                TraceLean.Requirement.indentOf (TraceLean.Requirement.trimEnd raw) > b.indent →\n                                  k.trim = \"text\" →\n                                    b.hasText = true →\n                                      (pre.length + 2, TraceLean.Requirement.FrontmatterKind.duplicateNarrowing) ∈\n                                        (g lines).problems) →\n          (∀ (lines : List String),\n              (g lines).isRequirement = true →\n                ∃ fm body,\n                  TraceLean.Requirement.splitFrontmatter (TraceLean.Requirement.resplit lines) = some (fm, body) ∧\n                    TraceLean.Requirement.lookup? (TraceLean.Requirement.readFrontmatter fm).scalars \"id\" =\n                        some (g lines).id ∧\n                      (g lines).id ≠ \"\") →\n            (∀ (lines : List String),\n                (g lines).decomposition = TraceLean.Requirement.Decomposition.complete →\n                  ∃ fm body d,\n                    TraceLean.Requirement.splitFrontmatter (TraceLean.Requirement.resplit lines) = some (fm, body) ∧\n                      TraceLean.Requirement.lookup? (TraceLean.Requirement.readFrontmatter fm).scalars \"decomposition\" =\n                          some d ∧\n                        d.trim.toLower = \"complete\") →\n              g = TraceLean.Requirement.parseLines",
-      "key": "e4ba0f8176f0bf77+cad3550825a70c07+05c1db9a9e26f19e+29acd6af997d738e+87b2c9d36e5afbc3+8ccc4c8a7100b278+b01f1c29448c6a98+cb4bd762c72cc5cb",
+      "key": "3b90b015dee10eb1+cad3550825a70c07+05c1db9a9e26f19e+29acd6af997d738e+87b2c9d36e5afbc3+8ccc4c8a7100b278+b01f1c29448c6a98+cb4bd762c72cc5cb",
       "pins": []
     },
     {
@@ -5659,7 +5815,7 @@
         ]
       ],
       "statement": "∀ (g : TraceLean.RequirementView.Shown → TraceLean.View.Buffer),\n  (∀ (view : TraceLean.RequirementView.Shown) (c : TraceLean.RequirementView.ClauseShown),\n      c ∈ view.clauses →\n        (c.key.getD \"(the whole requirement)\" ≠ \"\" →\n            TraceLean.Produce.Offers (g view) TraceLean.View.Role.heading [] (c.key.getD \"(the whole requirement)\")) ∧\n          (∀ (mark : TraceLean.Evidence.Mark) (held : Bool) (ch : Char),\n              (mark, held, ch) ∈ c.marks.each →\n                c.marks.applies mark = true →\n                  TraceLean.Produce.Offers (g view) (TraceLean.View.Role.mark mark held) [\"trace.rollup\"]\n                    (String.singleton (TraceLean.Evidence.letter held ch))) ∧\n            ∀ (claim : TraceLean.RequirementView.Claim),\n              claim ∈ c.claims →\n                TraceLean.Produce.Offers (g view) TraceLean.View.Role.path [\"file.open\"]\n                  (claim.path ++ \":\" ++ toString claim.line)) →\n    g = TraceLean.RequirementView.requirementView",
-      "key": "e4ba0f8176f0bf77+24238bce88ec348d+688cbe7da582f11c",
+      "key": "3b90b015dee10eb1+24238bce88ec348d+688cbe7da582f11c",
       "pins": []
     },
     {
@@ -5671,7 +5827,7 @@
         ]
       ],
       "statement": "∀ (g : List (String × List TraceLean.Lines.LineHits) → TraceLean.RequirementView.Covered),\n  (∀ (items : List (String × List TraceLean.Lines.LineHits)),\n      ∃ keys tests,\n        keys.Nodup ∧\n          (∀ (k : String × Nat), k ∈ keys ↔ ∃ i, i ∈ items ∧ ∃ l, l ∈ i.snd ∧ (i.fst, l.line) = k) ∧\n            tests.Nodup ∧\n              (∀ (t : String), t ∈ tests ↔ ∃ i, i ∈ items ∧ ∃ l, l ∈ i.snd ∧ ∃ p, p ∈ l.tests ∧ p.fst = t) ∧\n                (g items).all = keys.length ∧\n                  (g items).tests = tests.length ∧\n                    (g items).run =\n                      (List.filter\n                          (fun k => decide (∃ i, i ∈ items ∧ ∃ l, l ∈ i.snd ∧ (i.fst, l.line) = k ∧ 0 < l.hits))\n                          keys).length) →\n    g = TraceLean.RequirementView.total",
-      "key": "e4ba0f8176f0bf77+50c520a93cbf4d64+07b30b946fb2d1fe",
+      "key": "3b90b015dee10eb1+50c520a93cbf4d64+07b30b946fb2d1fe",
       "pins": []
     },
     {
@@ -5683,7 +5839,7 @@
         ]
       ],
       "statement": "∀ (g : TraceLean.Rollup.Figure → Bool),\n  (∀ (met total : Nat), g { met := met, total := total, exact := false } = false) →\n    g = TraceLean.Rollup.Figure.isComplete",
-      "key": "e4ba0f8176f0bf77+ac485f79c09af56a+5497678b9752c31f",
+      "key": "3b90b015dee10eb1+ac485f79c09af56a+5497678b9752c31f",
       "pins": []
     },
     {
@@ -5699,7 +5855,7 @@
         ]
       ],
       "statement": "∀ (g : List TraceLean.Evidence.Marks → TraceLean.Evidence.Marks),\n  (∀ (parts : List TraceLean.Evidence.Marks) (floor : TraceLean.Evidence.Marks),\n      (g parts).holds floor = true →\n        (∀ (p : TraceLean.Evidence.Marks), p ∈ parts → TraceLean.Rollup.partHolds floor p) ∧\n          (parts = [] → (floor.annotated || floor.judged || floor.tested || floor.proved) = false)) →\n    (∀ (parts : List TraceLean.Evidence.Marks), TraceLean.SpecRollup.EveryPartHolds parts (g parts)) →\n      g = TraceLean.Rollup.combine",
-      "key": "e4ba0f8176f0bf77+f59ac700b6197593+38d6bce464c67eb2+fed54c9067548cfb",
+      "key": "3b90b015dee10eb1+f59ac700b6197593+38d6bce464c67eb2+fed54c9067548cfb",
       "pins": [
         {
           "theorem": "TraceLean.SpecRollup::every_part_holds_pinned",
@@ -5734,7 +5890,7 @@
         ]
       ],
       "statement": "∀ (g : List String → List String → TraceLean.Rollup.Figure),\n  (∀ (scanned claimed : List String) (file : String),\n      file ∈ scanned →\n        ¬file ∈ claimed →\n          (g scanned claimed).total = (g scanned []).total ∧ (g scanned claimed).met < (g scanned claimed).total) →\n    g = TraceLean.Rollup.fileCoverage",
-      "key": "e4ba0f8176f0bf77+425ac11f8d9aaaad+4fa9298a65879274",
+      "key": "3b90b015dee10eb1+425ac11f8d9aaaad+4fa9298a65879274",
       "pins": []
     },
     {
@@ -5746,7 +5902,7 @@
         ]
       ],
       "statement": "∀ (g : TraceLean.Rollup.Figure → String),\n  (∀ (met total : Nat),\n      g { met := met, total := total, exact := false } =\n        toString \"≤ \" ++ toString (if (total == 0) = true then 0 else (met * 200 + total) / (total * 2)) ++\n          toString \"% (provisional)\") →\n    g = TraceLean.Rollup.render",
-      "key": "e4ba0f8176f0bf77+ffcc9c4258d7e4e1+2aa465b136abeb89",
+      "key": "3b90b015dee10eb1+ffcc9c4258d7e4e1+2aa465b136abeb89",
       "pins": []
     },
     {
@@ -5774,7 +5930,7 @@
         ]
       ],
       "statement": "∀\n  (g :\n    List TraceLean.Rollup.Node →\n      List ((String × Option String) × TraceLean.Evidence.Marks) →\n        String → TraceLean.Evidence.Marks → TraceLean.Rollup.RollUp),\n  (∀ (nodes : List TraceLean.Rollup.Node) (held : List ((String × Option String) × TraceLean.Evidence.Marks))\n      (root : String) (floor : TraceLean.Evidence.Marks) (n : TraceLean.Rollup.Node) (c : Option String),\n      n ∈ TraceLean.Rollup.members (TraceLean.Rollup.canonNodes nodes) root →\n        c ∈ n.clauses →\n          n.exempt.contains c = false →\n            n.partialClauses.contains c = true →\n              (floor.tested || floor.proved) = true →\n                (g nodes held root floor).covered.met < (g nodes held root floor).covered.total) →\n    (∀ (nodes : List TraceLean.Rollup.Node) (held : List ((String × Option String) × TraceLean.Evidence.Marks))\n        (root : String) (floor : TraceLean.Evidence.Marks),\n        (g nodes held root floor).covered.total =\n          ((TraceLean.Rollup.members (TraceLean.Rollup.canonNodes nodes) root).bind fun n =>\n              List.filter (fun c => !n.exempt.contains c) n.clauses).length) →\n      (∀ (nodes : List TraceLean.Rollup.Node) (held : List ((String × Option String) × TraceLean.Evidence.Marks))\n          (root : String) (floor : TraceLean.Evidence.Marks),\n          (∃ n, n ∈ nodes ∧ n.id = root) →\n            (∀ (n : TraceLean.Rollup.Node), n ∈ nodes → n.id = root → n.complete = false) →\n              (g nodes held root floor).covered.exact = false ∧ (g nodes held root floor).covered.isComplete = false) →\n        (∀ (nodes : List TraceLean.Rollup.Node) (held : List ((String × Option String) × TraceLean.Evidence.Marks))\n            (root : String) (floor : TraceLean.Evidence.Marks),\n            (g nodes held root floor).marks =\n              TraceLean.Rollup.combine\n                (TraceLean.Rollup.reachMarks (TraceLean.Rollup.canonNodes nodes) (TraceLean.Rollup.canonHeld held)\n                  root)) →\n          (∀ (nodes other : List TraceLean.Rollup.Node),\n              nodes.Perm other →\n                List.Pairwise (fun a b => ¬a.id = b.id) nodes →\n                  ∀ (held : List ((String × Option String) × TraceLean.Evidence.Marks)) (root : String)\n                    (floor : TraceLean.Evidence.Marks), g nodes held root floor = g other held root floor) →\n            (∀ (nodes : List TraceLean.Rollup.Node) (held : List ((String × Option String) × TraceLean.Evidence.Marks))\n                (root : String) (floor : TraceLean.Evidence.Marks),\n                TraceLean.SpecRollup.EveryPartHolds\n                  (TraceLean.Rollup.reachMarks (TraceLean.Rollup.canonNodes nodes) (TraceLean.Rollup.canonHeld held)\n                    root)\n                  (g nodes held root floor).marks) →\n              g = TraceLean.Rollup.rollUp",
-      "key": "e4ba0f8176f0bf77+ae45a1a9d281d747+2e0ef7a4068870f3+65a5b0392773cd02+864d1abe67bbe1f6+9f505eef11462a47+d6b59f865ebe1354+d6c939acd5850c25",
+      "key": "3b90b015dee10eb1+ae45a1a9d281d747+2e0ef7a4068870f3+65a5b0392773cd02+864d1abe67bbe1f6+9f505eef11462a47+d6b59f865ebe1354+d6c939acd5850c25",
       "pins": []
     },
     {
@@ -5786,7 +5942,7 @@
         ]
       ],
       "statement": "∀ (g : TraceLean.RustRunner.Entry → String),\n  (∀ (entry : TraceLean.RustRunner.Entry),\n      (∀ (p : String × String),\n          p ∈ entry.parameters.zip entry.sources →\n            (\"            let \" ++ p.fst ++ \" = serde_json::from_str(field(input, \" ++\n                    TraceLean.RustRunner.literal p.snd ++\n                  \"))\").data <:+:\n              (g entry).data) ∧\n        (\"            let out = \" ++ entry.call_path ++ \"(\" ++ \", \".intercalate entry.parameters ++ \");\\n\").data <:+:\n          (g entry).data) →\n    g = TraceLean.RustRunner.callSite",
-      "key": "e4ba0f8176f0bf77+e220b1c1a1d939a6+00dea98623cb3399",
+      "key": "3b90b015dee10eb1+e220b1c1a1d939a6+00dea98623cb3399",
       "pins": []
     },
     {
@@ -5798,7 +5954,7 @@
         ]
       ],
       "statement": "∀ (g : TraceLean.SandboxView.View → TraceLean.View.Buffer),\n  (∀ (view : TraceLean.SandboxView.View),\n      TraceLean.View.faults (g view) = [] ∧\n        (view.session = none →\n            TraceLean.Produce.Offers (g view) TraceLean.View.Role.entry [\"sandbox.new\"] \"[ New sandbox ]\") ∧\n          ∀ (shown : TraceLean.SandboxView.Shown),\n            view.session = some shown →\n              (shown.id ≠ \"\" → TraceLean.Produce.Offers (g view) TraceLean.View.Role.heading [] shown.id) ∧\n                TraceLean.Produce.Offers (g view) TraceLean.View.Role.entry [\"sandbox.copy\"] \"[ Copy command ]\" ∧\n                  TraceLean.Produce.Offers (g view) TraceLean.View.Role.entry [\"sandbox.end\"] \"[ End sandbox ]\" ∧\n                    (∀ (c : TraceLean.SandboxView.Pending),\n                        c ∈ view.pending →\n                          c.path ≠ \"\" →\n                            TraceLean.Produce.Offers (g view) TraceLean.View.Role.path [\"observe.diff\"] c.path) ∧\n                      (view.pending ≠ [] →\n                          TraceLean.Produce.Offers (g view) TraceLean.View.Role.added [\"observe.accept\"]\n                              \"[ Accept all ]\" ∧\n                            TraceLean.Produce.Offers (g view) TraceLean.View.Role.removed [\"observe.reject\"]\n                              \"[ Reject all ]\") ∧\n                        TraceLean.Produce.Offers (g view) TraceLean.View.Role.heading [] \"Conversation, newest first\") →\n    g = TraceLean.SandboxView.sandboxView",
-      "key": "e4ba0f8176f0bf77+cebf0149688306d8+8d2608dd61379d14",
+      "key": "3b90b015dee10eb1+cebf0149688306d8+8d2608dd61379d14",
       "pins": []
     },
     {
@@ -5810,7 +5966,7 @@
         ]
       ],
       "statement": "∀ (g : Type), g = TraceLean.Screen.Screen",
-      "key": "e4ba0f8176f0bf77+8f043133e986f1ae",
+      "key": "3b90b015dee10eb1+8f043133e986f1ae",
       "pins": []
     },
     {
@@ -5822,7 +5978,7 @@
         ]
       ],
       "statement": "∀ (g : TraceLean.Screen.Arrangement → TraceLean.Screen.Rect → TraceLean.Screen.Screen → TraceLean.Screen.Screen),\n  (∀ (dir : TraceLean.Screen.Direction) (rect : TraceLean.Screen.Rect) (s : TraceLean.Screen.Screen),\n      g (TraceLean.Screen.Arrangement.focus dir) rect s =\n          g (TraceLean.Screen.Arrangement.focusPane (TraceLean.Screen.focusStep rect s dir)) rect s ∧\n        ∀ (how : TraceLean.Screen.Arrangement) (r1 r2 : TraceLean.Screen.Rect),\n          (∀ (d : TraceLean.Screen.Direction), how ≠ TraceLean.Screen.Arrangement.focus d) → g how r1 s = g how r2 s) →\n    g = TraceLean.Screen.arrange",
-      "key": "e4ba0f8176f0bf77+f33bd6ef77cd82b4+8e1e20fa9225630f",
+      "key": "3b90b015dee10eb1+f33bd6ef77cd82b4+8e1e20fa9225630f",
       "pins": []
     },
     {
@@ -5834,7 +5990,7 @@
         ]
       ],
       "statement": "∀ (g : String → TraceLean.Screen.Screen → TraceLean.Screen.Screen),\n  (∀ (buffer : String) (s : TraceLean.Screen.Screen),\n      (List.filter (fun held => decide (held.id ≠ buffer)) s.opened = [] → g buffer s = s) ∧\n        (List.filter (fun held => decide (held.id ≠ buffer)) s.opened ≠ [] →\n          (g buffer s).opened = List.filter (fun held => decide (held.id ≠ buffer)) s.opened ∧\n            (∀ (held : TraceLean.View.Buffer), held ∈ (g buffer s).opened → held.id ≠ buffer) ∧\n              TraceLean.Screen.panes (g buffer s).layout ≠ [] ∧\n                (∀ (p : String × String), p ∈ TraceLean.Screen.panes (g buffer s).layout → p.snd ≠ buffer) ∧\n                  (g buffer s).focus ∈ TraceLean.Screen.paneIds (g buffer s).layout)) →\n    g = TraceLean.Screen.closeBuffer",
-      "key": "e4ba0f8176f0bf77+20bdfd43fa664359+5a8af20847f0d5e0",
+      "key": "3b90b015dee10eb1+20bdfd43fa664359+5a8af20847f0d5e0",
       "pins": []
     },
     {
@@ -5846,7 +6002,7 @@
         ]
       ],
       "statement": "∀ (g : List String → List String → List String),\n  (∀ (before after : List String),\n      (∀ (x : String), x ∈ before → ¬x ∈ after → x ≠ TraceLean.Screen.goals ∧ TraceLean.Screen.isLeanId x = false) →\n        g before after = []) →\n    (∀ (before after : List String),\n        TraceLean.Screen.goals ∈ before →\n          ¬TraceLean.Screen.goals ∈ after → g before after = List.filter TraceLean.Screen.isLeanId after) →\n      (∀ (before after : List String) (file : String),\n          TraceLean.Screen.goals ∈ after →\n            file ∈ before →\n              ¬file ∈ after →\n                TraceLean.Screen.isLeanId file = true →\n                  (∀ (x : String), x ∈ after → TraceLean.Screen.isLeanId x = false) →\n                    g before after = [TraceLean.Screen.goals]) →\n        g = TraceLean.Screen.closedWith",
-      "key": "e4ba0f8176f0bf77+585af878a1f84ebd+0972ac1644d44b59+3e354fa5a27423d0+f130aab4fed7bda1",
+      "key": "3b90b015dee10eb1+585af878a1f84ebd+0972ac1644d44b59+3e354fa5a27423d0+f130aab4fed7bda1",
       "pins": []
     },
     {
@@ -5862,7 +6018,7 @@
         ]
       ],
       "statement": "∀ (g : TraceLean.Screen.Screen → Bool),\n  (∀ (s : TraceLean.Screen.Screen),\n      g s = true ↔\n        (∀ (b : String), b ∈ TraceLean.Screen.shownBuffers s.layout → ∃ held, held ∈ s.opened ∧ held.id = b) ∧\n          s.focus ∈ TraceLean.Screen.paneIds s.layout ∧ (TraceLean.Screen.paneIds s.layout).Nodup) →\n    (∀ (id : String) (s : TraceLean.Screen.Screen), g s = true → g (TraceLean.Screen.showBuffer id s) = true) →\n      g = TraceLean.Screen.coherent",
-      "key": "e4ba0f8176f0bf77+039ea0dd4a02df36+010a05c96b2b3e6d+741c2f69a3ddb855",
+      "key": "3b90b015dee10eb1+039ea0dd4a02df36+010a05c96b2b3e6d+741c2f69a3ddb855",
       "pins": []
     },
     {
@@ -5874,7 +6030,7 @@
         ]
       ],
       "statement": "∀ (g : TraceLean.View.BufferKind → TraceLean.Screen.Screen → String),\n  (∀ (s : TraceLean.Screen.Screen) (path title : String),\n      let into := fun home => if home ∈ TraceLean.Screen.paneIds s.layout then home else s.focus;\n      g (TraceLean.View.BufferKind.directory path) s = into TraceLean.Screen.explorer ∧\n        g (TraceLean.View.BufferKind.file path) s = into TraceLean.Screen.document ∧\n          g (TraceLean.View.BufferKind.review path) s = into TraceLean.Screen.document ∧\n            g (TraceLean.View.BufferKind.menu title) s = into TraceLean.Screen.side ∧\n              ((TraceLean.Screen.pageLeads.any fun lead => title.startsWith lead) = true →\n                  g (TraceLean.View.BufferKind.record title) s = into TraceLean.Screen.document) ∧\n                ((TraceLean.Screen.documentRecords.any fun lead => title.startsWith lead) = false →\n                  g (TraceLean.View.BufferKind.record title) s = into TraceLean.Screen.side)) →\n    g = TraceLean.Screen.destination",
-      "key": "e4ba0f8176f0bf77+624f1eeb642f5110+1e1c6325bbd7500a",
+      "key": "3b90b015dee10eb1+624f1eeb642f5110+1e1c6325bbd7500a",
       "pins": []
     },
     {
@@ -5886,7 +6042,7 @@
         ]
       ],
       "statement": "∀ (g : TraceLean.Screen.Layout → Bool),\n  (∀ (layout : TraceLean.Screen.Layout), TraceLean.Screen.PanesDistinct layout (g layout)) →\n    g = TraceLean.Screen.distinctPanes",
-      "key": "e4ba0f8176f0bf77+f1ecad4716a4db3c+1c3a6b2b0ccfe072",
+      "key": "3b90b015dee10eb1+f1ecad4716a4db3c+1c3a6b2b0ccfe072",
       "pins": [
         {
           "theorem": "TraceLean.Screen::panes_distinct_pinned",
@@ -5910,7 +6066,7 @@
         ]
       ],
       "statement": "∀ (g : TraceLean.Screen.Rect → TraceLean.Screen.Screen → TraceLean.Screen.Direction → String),\n  (∀ (rect : TraceLean.Screen.Rect) (s : TraceLean.Screen.Screen) (dir : TraceLean.Screen.Direction),\n      (TraceLean.Screen.rectOf s.focus (TraceLean.Screen.place rect s.layout) = none → g rect s dir = s.focus) ∧\n        ∀ (from_ : TraceLean.Screen.Rect),\n          TraceLean.Screen.rectOf s.focus (TraceLean.Screen.place rect s.layout) = some from_ →\n            (List.filter\n                    (fun other =>\n                      decide (other.fst ≠ s.focus) && TraceLean.Screen.beyond from_ other.snd dir &&\n                        TraceLean.Screen.overlaps from_ other.snd dir)\n                    (TraceLean.Screen.place rect s.layout) =\n                  [] →\n                g rect s dir = s.focus) ∧\n              ∃ r,\n                List.filter\n                      (fun other =>\n                        decide (other.fst ≠ s.focus) && TraceLean.Screen.beyond from_ other.snd dir &&\n                          TraceLean.Screen.overlaps from_ other.snd dir)\n                      (TraceLean.Screen.place rect s.layout) ≠\n                    [] →\n                  (g rect s dir, r) ∈\n                      List.filter\n                        (fun other =>\n                          decide (other.fst ≠ s.focus) && TraceLean.Screen.beyond from_ other.snd dir &&\n                            TraceLean.Screen.overlaps from_ other.snd dir)\n                        (TraceLean.Screen.place rect s.layout) ∧\n                    ∀ (c : String × TraceLean.Screen.Rect),\n                      c ∈\n                          List.filter\n                            (fun other =>\n                              decide (other.fst ≠ s.focus) && TraceLean.Screen.beyond from_ other.snd dir &&\n                                TraceLean.Screen.overlaps from_ other.snd dir)\n                            (TraceLean.Screen.place rect s.layout) →\n                        TraceLean.Screen.gap from_ dir r ≤ TraceLean.Screen.gap from_ dir c.snd) →\n    g = TraceLean.Screen.focusStep",
-      "key": "e4ba0f8176f0bf77+48a602485720c325+967be96aa5ba5063",
+      "key": "3b90b015dee10eb1+48a602485720c325+967be96aa5ba5063",
       "pins": []
     },
     {
@@ -5926,7 +6082,7 @@
         ]
       ],
       "statement": "∀ (g : TraceLean.View.Buffer → TraceLean.Screen.Screen → TraceLean.Screen.Screen),\n  (∀ (buffer : TraceLean.View.Buffer) (s : TraceLean.Screen.Screen),\n      TraceLean.Screen.panes (g buffer s).layout =\n          List.map (fun q => if q.fst = s.focus then (q.fst, buffer.id) else q) (TraceLean.Screen.panes s.layout) ∧\n        TraceLean.Screen.weights (g buffer s).layout = TraceLean.Screen.weights s.layout ∧\n          (g buffer s).focus = s.focus ∧ buffer.id ∈ List.map (fun held => held.id) (g buffer s).opened) →\n    (∀ (buffer : TraceLean.View.Buffer) (screen : TraceLean.Screen.Screen),\n        TraceLean.Screen.isOpened screen buffer.id = true → (g buffer screen).opened = screen.opened) →\n      g = TraceLean.Screen.openBuffer",
-      "key": "e4ba0f8176f0bf77+c06eb9b1d8f88429+b2fe3c610376541b+ef70f139e08e9b42",
+      "key": "3b90b015dee10eb1+c06eb9b1d8f88429+b2fe3c610376541b+ef70f139e08e9b42",
       "pins": []
     },
     {
@@ -5938,7 +6094,7 @@
         ]
       ],
       "statement": "∀ (g : TraceLean.View.BufferKind → List String → Bool),\n  (∀ (kind : TraceLean.View.BufferKind) (opened : List String),\n      g kind opened = true ↔\n        ∃ path,\n          kind = TraceLean.View.BufferKind.file path ∧\n            path.endsWith \".lean\" = true ∧ ¬TraceLean.Screen.goals ∈ opened) →\n    g = TraceLean.Screen.opensGoals",
-      "key": "e4ba0f8176f0bf77+4a85df64501fdf40+f90f39fb54eaab03",
+      "key": "3b90b015dee10eb1+4a85df64501fdf40+f90f39fb54eaab03",
       "pins": []
     },
     {
@@ -5950,7 +6106,7 @@
         ]
       ],
       "statement": "∀ (g : TraceLean.Screen.Rect → TraceLean.Screen.Layout → List (String × TraceLean.Screen.Rect)),\n  (∀ (rect : TraceLean.Screen.Rect) (layout : TraceLean.Screen.Layout),\n      TraceLean.Screen.panes layout ≠ [] →\n        List.map Prod.fst (g rect layout) = TraceLean.Screen.paneIds layout ∧\n          ∀ (x y : Nat),\n            TraceLean.Screen.coverCount (g rect layout) x y =\n              if TraceLean.Screen.covers rect x y = true then 1 else 0) →\n    g = TraceLean.Screen.place",
-      "key": "e4ba0f8176f0bf77+737eeaaa0cd574c1+3d47ddfeabe328ae",
+      "key": "3b90b015dee10eb1+737eeaaa0cd574c1+3d47ddfeabe328ae",
       "pins": []
     },
     {
@@ -5966,7 +6122,7 @@
         ]
       ],
       "statement": "∀ (g : Int → TraceLean.Screen.Screen → TraceLean.Screen.Screen),\n  (∀ (amount : Int) (s : TraceLean.Screen.Screen),\n      TraceLean.Screen.OneDivider (TraceLean.Screen.weights s.layout) (TraceLean.Screen.weights (g amount s).layout) ∧\n        (g amount s).focus = s.focus ∧ (g amount s).opened = s.opened) →\n    (∀ (amount : Int) (s : TraceLean.Screen.Screen) (axis : TraceLean.Screen.Axis)\n        (parts : List (Nat × TraceLean.Screen.Layout)) (index : Nat) (here next : Nat × TraceLean.Screen.Layout),\n        s.layout = TraceLean.Screen.Layout.split axis parts →\n          TraceLean.Screen.indexHolding s.focus 0 parts = some index →\n            (∀ (ps : List (Nat × TraceLean.Screen.Layout)), here.snd ≠ TraceLean.Screen.Layout.split axis ps) →\n              parts.get? index = some here →\n                parts.get? (index + 1) = some next →\n                  Int.ofNat here.fst + amount < 1 ∨ Int.ofNat next.fst - amount < 1 → (g amount s).layout = s.layout) →\n      g = TraceLean.Screen.resizeFocus",
-      "key": "e4ba0f8176f0bf77+38567ed311d04ebe+3ff3175f100eeee3+895a59f1b72b6b2e",
+      "key": "3b90b015dee10eb1+38567ed311d04ebe+3ff3175f100eeee3+895a59f1b72b6b2e",
       "pins": []
     },
     {
@@ -5978,7 +6134,7 @@
         ]
       ],
       "statement": "∀ (g : TraceLean.Screen.Axis → TraceLean.Screen.Screen → TraceLean.Screen.Screen),\n  (∀ (axis : TraceLean.Screen.Axis) (s : TraceLean.Screen.Screen),\n      s.focus ∈ TraceLean.Screen.paneIds s.layout →\n        ∃ fresh pre post b,\n          TraceLean.Screen.panes s.layout = pre ++ (s.focus, b) :: post ∧\n            TraceLean.Screen.panes (g axis s).layout = pre ++ (s.focus, b) :: (fresh, b) :: post) →\n    g = TraceLean.Screen.splitFocus",
-      "key": "e4ba0f8176f0bf77+8be7de2bdd0a8aed+b2c567761c8e141d",
+      "key": "3b90b015dee10eb1+8be7de2bdd0a8aed+b2c567761c8e141d",
       "pins": []
     },
     {
@@ -5990,7 +6146,7 @@
         ]
       ],
       "statement": "∀ (g : String → Option TraceLean.View.BufferKind),\n  (∀ (station : String),\n      (g station).isSome = true ↔ station ∈ List.map (fun x => x.key) TraceLean.Screen.stationEntries) →\n    g = TraceLean.Screen.stationKind",
-      "key": "e4ba0f8176f0bf77+d7e41fd4db172b62+25fba4527225a633",
+      "key": "3b90b015dee10eb1+d7e41fd4db172b62+25fba4527225a633",
       "pins": []
     },
     {
@@ -6002,7 +6158,7 @@
         ]
       ],
       "statement": "∀ (g : TraceLean.Screen.Screen → TraceLean.View.Buffer),\n  (∀ (a b : TraceLean.Screen.Screen), g a = g b) → g = TraceLean.Screen.stations",
-      "key": "e4ba0f8176f0bf77+f21b900614c977da+54db50d5317031ba",
+      "key": "3b90b015dee10eb1+f21b900614c977da+54db50d5317031ba",
       "pins": []
     },
     {
@@ -6014,7 +6170,7 @@
         ]
       ],
       "statement": "∀ (g : TraceLean.Screen.Screen → TraceLean.View.Buffer),\n  (∀ (s : TraceLean.Screen.Screen),\n      (g s).kind = TraceLean.View.BufferKind.menu \"opened\" ∧\n        (g s).text = (TraceLean.Produce.menuBuffer \"opened\" (TraceLean.Screen.stripEntries s.opened 1 s.opened)).text ∧\n          List.map (fun span => (span.start, span.stop, span.actions)) (g s).spans =\n              List.map (fun span => (span.start, span.stop, span.actions))\n                (TraceLean.Produce.menuBuffer \"opened\" (TraceLean.Screen.stripEntries s.opened 1 s.opened)).spans ∧\n            List.map (fun x => x.action) (TraceLean.Screen.stripEntries s.opened 1 s.opened) =\n                List.map (fun buffer => some (\"screen.show \" ++ buffer.id)) s.opened ∧\n              List.map (fun x => x.description) (TraceLean.Screen.stripEntries s.opened 1 s.opened) =\n                List.map (TraceLean.Screen.stripTitle s.opened) s.opened) →\n    g = TraceLean.Screen.strip",
-      "key": "e4ba0f8176f0bf77+996d30a83cfdbb17+df0d3048a51b573c",
+      "key": "3b90b015dee10eb1+996d30a83cfdbb17+df0d3048a51b573c",
       "pins": []
     },
     {
@@ -6026,7 +6182,7 @@
         ]
       ],
       "statement": "∀ (g : TraceLean.View.Buffer → TraceLean.View.Buffer → TraceLean.View.Buffer → TraceLean.Screen.Screen),\n  (∀ (listing document_ side_ : TraceLean.View.Buffer),\n      (∃ parts, (g listing document_ side_).layout = TraceLean.Screen.Layout.split TraceLean.Screen.Axis.across parts) ∧\n        TraceLean.Screen.panes (g listing document_ side_).layout =\n            [(TraceLean.Screen.explorer, listing.id), (TraceLean.Screen.document, document_.id),\n              (TraceLean.Screen.side, side_.id)] ∧\n          (g listing document_ side_).focus = TraceLean.Screen.explorer ∧\n            TraceLean.Screen.coherent (g listing document_ side_) = true) →\n    g = TraceLean.Screen.workbench",
-      "key": "e4ba0f8176f0bf77+14540c4ee7843788+db4239b43eb242f4",
+      "key": "3b90b015dee10eb1+14540c4ee7843788+db4239b43eb242f4",
       "pins": []
     },
     {
@@ -6038,7 +6194,7 @@
         ]
       ],
       "statement": "∀ (g : String → Bool),\n  (∀ (value : String),\n      g value = true ↔\n        value.startsWith \"#\" = true ∧\n          (List.drop 1 value.toList).length ∈ [3, 4, 6, 8] ∧\n            ∀ (c : Char), c ∈ List.drop 1 value.toList → TraceLean.Setting.isHex c = true) →\n    (∀ (value : String),\n        (value.startsWith \"#\" = false ∨ ∃ c, c ∈ List.drop 1 value.toList ∧ TraceLean.Setting.isHex c = false) →\n          g value = false) →\n      g = TraceLean.Setting.isColour",
-      "key": "e4ba0f8176f0bf77+b3d3ff1d832d3fab+3b21ff3ebb5d20c9+c8ffccb2ed9dbda7",
+      "key": "3b90b015dee10eb1+b3d3ff1d832d3fab+3b21ff3ebb5d20c9+c8ffccb2ed9dbda7",
       "pins": []
     },
     {
@@ -6050,7 +6206,7 @@
         ]
       ],
       "statement": "∀ (g : String → String → Option (List String)),\n  (∀ (source symbol : String) (names : List String),\n      g source symbol = some names →\n        TraceLean.Signature.declarations (TraceLean.Signature.blanked source.toList ['\\\"'] true) symbol ≤ 1 ∧\n          ∃ openAt closeAt,\n            TraceLean.Signature.signatureOpenParen (TraceLean.Signature.blanked source.toList ['\\\"'] true) symbol =\n                some openAt ∧\n              TraceLean.Signature.matching (TraceLean.Signature.blanked source.toList ['\\\"'] true) openAt '(' ')' =\n                  some closeAt ∧\n                names =\n                    List.filterMap TraceLean.Signature.parameterName\n                      (TraceLean.Signature.splitTopLevel\n                        (List.take (closeAt - openAt - 1)\n                          (List.drop (openAt + 1) (TraceLean.Signature.blanked source.toList ['\\\"'] true)))\n                        ',') ∧\n                  ∀ (n : String),\n                    n ∈ names →\n                      TraceLean.Signature.isIdentifier n = true ∧\n                        n.data <:+: TraceLean.Signature.blanked source.toList ['\\\"'] true) →\n    g = TraceLean.Signature.parameters",
-      "key": "e4ba0f8176f0bf77+76463bde45524054+0a9415c50639c801",
+      "key": "3b90b015dee10eb1+76463bde45524054+0a9415c50639c801",
       "pins": []
     },
     {
@@ -6062,7 +6218,7 @@
         ]
       ],
       "statement": "∀ (g : String → String → Option (List String)),\n  (∀ (source symbol : String) (names : List String),\n      g source symbol = some names →\n        TraceLean.Signature.tsDeclarations\n              (TraceLean.Signature.blanked source.toList TraceLean.Signature.tsQuotes false) symbol ≤\n            1 ∧\n          ∃ openAt closeAt,\n            TraceLean.Signature.tsSignatureOpenParen\n                  (TraceLean.Signature.blanked source.toList TraceLean.Signature.tsQuotes false) symbol =\n                some openAt ∧\n              TraceLean.Signature.matching\n                    (TraceLean.Signature.blanked source.toList TraceLean.Signature.tsQuotes false) openAt '(' ')' =\n                  some closeAt ∧\n                names =\n                    List.filterMap TraceLean.Signature.tsParameterName\n                      (TraceLean.Signature.splitTopLevel\n                        (List.take (closeAt - openAt - 1)\n                          (List.drop (openAt + 1)\n                            (TraceLean.Signature.blanked source.toList TraceLean.Signature.tsQuotes false)))\n                        ',') ∧\n                  ∀ (n : String),\n                    n ∈ names →\n                      TraceLean.Signature.isIdentifier n = true ∧\n                        n.data <:+: TraceLean.Signature.blanked source.toList TraceLean.Signature.tsQuotes false) →\n    g = TraceLean.Signature.tsParameters",
-      "key": "e4ba0f8176f0bf77+1858205b7022e979+d2420100e12fc361",
+      "key": "3b90b015dee10eb1+1858205b7022e979+d2420100e12fc361",
       "pins": []
     },
     {
@@ -6074,7 +6230,7 @@
         ]
       ],
       "statement": "∀ (g : List TraceLean.Staleness.HeldRun → String → List String → Bool → Bool),\n  (∀ (held : List TraceLean.Staleness.HeldRun) (op : String) (live : List String),\n      g held op live true = true ∧\n        (g held op live false = false ↔\n          ∃ h,\n            List.Mem h held ∧\n              h.op = op ∧ h.agreed = true ∧ TraceLean.Staleness.staleness h.record live h.current = none)) →\n    g = TraceLean.Staleness.rerun",
-      "key": "e4ba0f8176f0bf77+49e9d624598a993c+f695c58bbc80cf44",
+      "key": "3b90b015dee10eb1+49e9d624598a993c+f695c58bbc80cf44",
       "pins": []
     },
     {
@@ -6086,7 +6242,7 @@
         ]
       ],
       "statement": "∀ (g : List TraceLean.Staleness.Record → List TraceLean.Staleness.Record → List TraceLean.Staleness.Record),\n  (∀ (stale : List TraceLean.Staleness.Record), g stale [] = []) → g = TraceLean.Staleness.revalidated",
-      "key": "e4ba0f8176f0bf77+8315ef0545f5edc0+588f7a903c9ceb85",
+      "key": "3b90b015dee10eb1+8315ef0545f5edc0+588f7a903c9ceb85",
       "pins": []
     },
     {
@@ -6102,7 +6258,7 @@
         ]
       ],
       "statement": "∀ (g : TraceLean.Staleness.Record → List String → List (String × String) → Option TraceLean.Staleness.Staleness),\n  (∀ (record : TraceLean.Staleness.Record) (live : List String) (current : List (String × String)) (name hash : String),\n      List.Mem (name, hash) record.inputs →\n        TraceLean.Staleness.lookup current name ≠ some hash → g record live current ≠ none) →\n    (∀ (record : TraceLean.Staleness.Record) (current : List (String × String)),\n        ¬List.Mem record.linkHash [] → g record [] current = some TraceLean.Staleness.Staleness.linkRetargeted) →\n      g = TraceLean.Staleness.staleness",
-      "key": "e4ba0f8176f0bf77+aace6213626c3e45+d3a623c94a45de55+ddd37c4b8fb7d457",
+      "key": "3b90b015dee10eb1+aace6213626c3e45+d3a623c94a45de55+ddd37c4b8fb7d457",
       "pins": []
     },
     {
@@ -6118,7 +6274,7 @@
         ]
       ],
       "statement": "∀ (g : List TraceLean.Staleness.Record → List String → List (String × String) → TraceLean.Staleness.Sweep),\n  (∀ (liveLinkHashes : List String) (current : List (String × String)) (records : List TraceLean.Staleness.Record),\n      (g records liveLinkHashes current).valid.length + (g records liveLinkHashes current).stale.length =\n        records.length) →\n    (∀ (live : List String) (current : List (String × String)) (records : List TraceLean.Staleness.Record),\n        (∀ (r : TraceLean.Staleness.Record), List.Mem r (g records live current).valid → List.Mem r records) ∧\n          ∀ (p : TraceLean.Staleness.Record × TraceLean.Staleness.Staleness),\n            List.Mem p (g records live current).stale → List.Mem p.fst records) →\n      g = TraceLean.Staleness.sweep",
-      "key": "e4ba0f8176f0bf77+43f9e30e67d7bbde+21528fbdac898ff0+fffbc4a00b2ef280",
+      "key": "3b90b015dee10eb1+43f9e30e67d7bbde+21528fbdac898ff0+fffbc4a00b2ef280",
       "pins": []
     },
     {
@@ -6138,7 +6294,7 @@
         ]
       ],
       "statement": "∀ (g : String → TraceLean.Transcript.TranscriptRead),\n  (∀ (text : String),\n      text.splitOn \"\\n\" = [text] → g text = { events := [], unrecognised := [], held := text, usage := [] }) →\n    (∀ (text : String),\n        (∀ (l : String), l ∈ (text.splitOn \"\\n\").dropLast → (TraceLean.Transcript.stripCR l).trim = \"\") →\n          g text = { events := [], unrecognised := [], held := (text.splitOn \"\\n\").getLast!, usage := [] }) →\n      (∀ (text line : String),\n          line ∈ TraceLean.Transcript.completeLines text →\n            ((TraceLean.Transcript.classify line).event = none →\n                (TraceLean.Transcript.classify line).claimed = true ∨\n                    (TraceLean.Transcript.classify line).usage = none →\n                  line ∈ (g text).unrecognised) ∧\n              (∀ (e : TraceLean.Transcript.Event),\n                  (TraceLean.Transcript.classify line).event = some e → e ∈ (g text).events) ∧\n                ∀ (u : TraceLean.Transcript.Usage),\n                  (TraceLean.Transcript.classify line).usage = some u → u ∈ (g text).usage) →\n        g = TraceLean.Transcript.readTranscript",
-      "key": "e4ba0f8176f0bf77+bcd8789899d37482+44852416c3f6ade4+6067232a02bbe587+cf20fc4c26431a2c",
+      "key": "3b90b015dee10eb1+bcd8789899d37482+44852416c3f6ade4+6067232a02bbe587+cf20fc4c26431a2c",
       "pins": []
     },
     {
@@ -6166,7 +6322,7 @@
         ]
       ],
       "statement": "∀ (g : TraceLean.Command.Workspace → List TraceLean.Tree.Step → TraceLean.Tree.Report),\n  (∀ (base : TraceLean.Command.Workspace), (g base []).travelled = (g base []).replayed) →\n    (∀ (base : TraceLean.Command.Workspace) (script : List TraceLean.Tree.Step),\n        (g base script).travelled =\n            List.map\n              (fun target => TraceLean.Tree.outcomeOf ((TraceLean.Tree.fromScript base script).viaAncestor target))\n              (TraceLean.Tree.fromScript base script).ids ∧\n          ∀ (target : Nat) (from_ to : List Nat),\n            from_ =\n                (Option.map (TraceLean.Tree.fromScript base script).ancestry\n                      (TraceLean.Tree.fromScript base script).current).getD\n                  [] →\n              to = (TraceLean.Tree.fromScript base script).ancestry target →\n                List.take (TraceLean.Tree.Tree.sharedPrefix from_ to) from_ =\n                    List.take (TraceLean.Tree.Tree.sharedPrefix from_ to) to ∧\n                  ∀ (x y : Nat),\n                    from_[TraceLean.Tree.Tree.sharedPrefix from_ to]? = some x →\n                      to[TraceLean.Tree.Tree.sharedPrefix from_ to]? = some y → x ≠ y) →\n      (∀ (base : TraceLean.Command.Workspace) (script : List TraceLean.Tree.Step) (step : TraceLean.Tree.Step),\n          (g base script).nodes <+: (g base (script ++ [step])).nodes) →\n        (∀ (base : TraceLean.Command.Workspace) (script : List TraceLean.Tree.Step),\n            (g base script).currentAfterPreviews = (g base script).current) →\n          (∀ (base : TraceLean.Command.Workspace) (script : List TraceLean.Tree.Step) (c : TraceLean.Command.Command),\n              (∃ extra,\n                  (g base\n                        (script ++\n                          [TraceLean.Tree.Step.move TraceLean.Tree.Movement.undo, TraceLean.Tree.Step.push c])).nodes =\n                    (g base script).nodes ++ extra) ∧\n                (((TraceLean.Tree.fromScript base script).undo.push c).current =\n                    (TraceLean.Tree.fromScript base script).undo.current ∨\n                  ∃ n,\n                    n ∈ ((TraceLean.Tree.fromScript base script).undo.push c).nodes ∧\n                      ((TraceLean.Tree.fromScript base script).undo.push c).current = some n.id ∧\n                        n.parent = (TraceLean.Tree.fromScript base script).undo.current)) →\n            g = TraceLean.Tree.runScript",
-      "key": "e4ba0f8176f0bf77+4f4d41ec41bf2c80+5c9ac680c1f63f81+7ac25729eb845caa+ae60050f1f38c1a5+b484841ca1707417+ddce07a40d1145d8",
+      "key": "3b90b015dee10eb1+4f4d41ec41bf2c80+5c9ac680c1f63f81+7ac25729eb845caa+ae60050f1f38c1a5+b484841ca1707417+ddce07a40d1145d8",
       "pins": []
     },
     {
@@ -6178,7 +6334,7 @@
         ]
       ],
       "statement": "∀ (g : List TraceLean.View.Presented → String),\n  (∀ (row : List TraceLean.View.Presented) (glyph : String),\n      g (List.map (fun piece => { painted := glyph, name := piece.name }) row) = g row ∧\n        ∀ (piece : TraceLean.View.Presented) (rest : List TraceLean.View.Presented),\n          g (piece :: rest) = piece.name ++ g rest) →\n    g = TraceLean.View.accessible",
-      "key": "e4ba0f8176f0bf77+da75aeb5093b18ea+3169c5ce1aa6bbe1",
+      "key": "3b90b015dee10eb1+da75aeb5093b18ea+3169c5ce1aa6bbe1",
       "pins": [
         {
           "theorem": "TraceLean.SpecSurface::read_as_names_pinned",
@@ -6202,7 +6358,7 @@
         ]
       ],
       "statement": "∀ (g : TraceLean.View.Buffer → Nat → List String),\n  (∀ (buffer : TraceLean.View.Buffer) (offset : Nat) (action : String),\n      action ∈ g buffer offset ↔ ∃ s, s ∈ buffer.spans ∧ s.start ≤ offset ∧ offset < s.stop ∧ action ∈ s.actions) →\n    g = TraceLean.View.actionsAt",
-      "key": "e4ba0f8176f0bf77+91324f0af65e3f3a+966b5e864f7b081e",
+      "key": "3b90b015dee10eb1+91324f0af65e3f3a+966b5e864f7b081e",
       "pins": []
     },
     {
@@ -6222,7 +6378,7 @@
         ]
       ],
       "statement": "∀ (g : TraceLean.View.Buffer → TraceLean.View.Rendering → List TraceLean.View.Breach),\n  (∀ (buffer : TraceLean.View.Buffer) (rendering : TraceLean.View.Rendering),\n      g buffer rendering = [] → rendering.lines = TraceLean.View.plainText buffer) →\n    (∀ (buffer : TraceLean.View.Buffer) (rendering : TraceLean.View.Rendering) (offset : Nat) (action : String),\n        (offset, action) ∈ rendering.offered →\n          (¬∃ s, s ∈ buffer.spans ∧ s.start ≤ offset ∧ offset < s.stop ∧ action ∈ s.actions) →\n            TraceLean.View.Breach.actionInvented offset action ∈ g buffer rendering) →\n      (∀ (buffer : TraceLean.View.Buffer), g buffer { lines := TraceLean.View.plainText buffer, offered := [] } = []) →\n        g = TraceLean.View.conformance",
-      "key": "e4ba0f8176f0bf77+b9f69cf500f6df83+065cdc928fb194b3+219fe453486f956f+5d7875cb5358a828",
+      "key": "3b90b015dee10eb1+b9f69cf500f6df83+065cdc928fb194b3+219fe453486f956f+5d7875cb5358a828",
       "pins": []
     },
     {
@@ -6234,7 +6390,7 @@
         ]
       ],
       "statement": "∀ (g : TraceLean.View.Buffer → TraceLean.View.Buffer → TraceLean.View.Delta),\n  (∀ (before after : TraceLean.View.Buffer),\n      before.id = after.id → TraceLean.View.applyDelta before (g before after) = after) →\n    g = TraceLean.View.delta",
-      "key": "e4ba0f8176f0bf77+33cd2cc372099424+29158c10a553f3b5",
+      "key": "3b90b015dee10eb1+33cd2cc372099424+29158c10a553f3b5",
       "pins": []
     },
     {
@@ -6254,7 +6410,7 @@
         ]
       ],
       "statement": "∀ (g : String → List (Nat × String) → TraceLean.View.Buffer),\n  (∀ (path path' : String) (entries entries' : List (Nat × String)),\n      (g path entries).kind = TraceLean.View.BufferKind.directory path ∧\n        (g path entries).text.data = TraceLean.View.listingText entries ∧\n          ((g path entries).id = (g path' entries').id → path = path')) →\n    (∀ (path : String) (entries : List (Nat × String)),\n        (g path entries).spans.length = entries.length ∧\n          ∀ (p : TraceLean.View.Span × Nat × String),\n            p ∈ (g path entries).spans.zip entries →\n              List.take (p.fst.stop - p.fst.start) (List.drop p.fst.start (g path entries).text.data) = p.snd.snd.data ∧\n                (List.drop p.fst.stop (g path entries).text.data = [] ∨\n                    ∃ rest, List.drop p.fst.stop (g path entries).text.data = '\\n' :: rest) ∧\n                  p.fst.role = TraceLean.View.Role.path ∧ p.fst.actions = [\"file.open\"]) →\n      (∀ (path : String) (entries : List (Nat × String)), TraceLean.View.faults (g path entries) = []) →\n        g = TraceLean.View.directoryBuffer",
-      "key": "e4ba0f8176f0bf77+2c4a79afd9285f01+56058822b58efa06+5a1b5c40b8f725c3+5dd404b459260095",
+      "key": "3b90b015dee10eb1+2c4a79afd9285f01+56058822b58efa06+5a1b5c40b8f725c3+5dd404b459260095",
       "pins": []
     },
     {
@@ -6270,7 +6426,7 @@
         ]
       ],
       "statement": "∀ (g : TraceLean.View.Buffer → List TraceLean.View.Fault),\n  (∀ (buffer : TraceLean.View.Buffer),\n      g buffer = [] ↔\n        (∀ (s : TraceLean.View.Span), s ∈ buffer.spans → s.start ≤ s.stop ∧ s.stop ≤ buffer.text.length) ∧\n          List.Pairwise (fun a b => a.stop ≤ b.start) buffer.spans) →\n    g = TraceLean.View.faults",
-      "key": "e4ba0f8176f0bf77+e713a595e72505b2+b5391c834873fde8",
+      "key": "3b90b015dee10eb1+e713a595e72505b2+b5391c834873fde8",
       "pins": []
     },
     {
@@ -6282,7 +6438,7 @@
         ]
       ],
       "statement": "∀ (g : TraceLean.View.Buffer → List (List TraceLean.View.Presented) → List (Nat × String) → List TraceLean.View.Breach),\n  (∀ (buffer : TraceLean.View.Buffer) (rows : List (List TraceLean.View.Presented)) (offered : List (Nat × String)),\n      g buffer rows offered = [] → List.map TraceLean.View.accessible rows = TraceLean.View.plainText buffer) →\n    g = TraceLean.View.presentedConformance",
-      "key": "e4ba0f8176f0bf77+7aca3c2e268cc9df+0f581f5ba2b690ec",
+      "key": "3b90b015dee10eb1+7aca3c2e268cc9df+0f581f5ba2b690ec",
       "pins": []
     },
     {
@@ -6294,7 +6450,7 @@
         ]
       ],
       "statement": "∀ (g : List TraceLean.Produce.MenuEntry → List String → TraceLean.View.Buffer),\n  (∀ (starts : List TraceLean.Produce.MenuEntry) (recent : List String),\n      recent ≠ [] →\n        ∃ rows,\n          (g starts recent).text = rows.fst ∧\n            (g starts recent).spans = TraceLean.Produce.tidy rows.fst.length rows.snd ∧\n              ∀ (folder : String),\n                folder ∈ recent →\n                  ∃ sp,\n                    sp ∈ rows.snd ∧\n                      sp.role = TraceLean.View.Role.path ∧\n                        sp.actions = [\"file.open\"] ∧\n                          List.take (sp.stop - sp.start) (List.drop sp.start rows.fst.data) = folder.data) →\n    g = TraceLean.Welcome.welcome",
-      "key": "e4ba0f8176f0bf77+7e581973d12cc3b6+c326ef0d43a94e66",
+      "key": "3b90b015dee10eb1+7e581973d12cc3b6+c326ef0d43a94e66",
       "pins": []
     }
   ]

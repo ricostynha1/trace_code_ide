@@ -1,6 +1,7 @@
 pub mod anchor;
 pub mod annotation;
 pub mod checker;
+pub mod diff;
 pub mod doclink;
 pub mod earn;
 pub mod hash;

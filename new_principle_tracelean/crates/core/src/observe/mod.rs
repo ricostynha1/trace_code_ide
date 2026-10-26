@@ -3,6 +3,7 @@ pub mod cost;
 pub mod effects;
 pub mod mirror;
 pub mod policy;
+pub mod revision;
 pub mod sandbox;
 pub mod transcript;
 pub mod watch;

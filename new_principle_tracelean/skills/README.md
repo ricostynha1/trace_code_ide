@@ -66,6 +66,8 @@ All take the project root first (`.`). "Writes" is under `.tracelean/`.
 | *(none)* | counts per finding kind; last line says `blocking: true/false` | — |
 | `--show <Kind>` | lists one kind in full (`Unbound`, `Dangling`, …: [07](07-findings.md)) | — |
 | `--context X [--parts …]` | a clause's or requirement's context, as Markdown | — |
+| `--diff <revision> [--json]` | what a change did to the evidence since a revision, clause by clause: reworded text, marks lost (first) and gained, annotations added, removed or moved, axioms newly assumed | — |
+| `--report <dir> [--diff <revision>]` | writes `<dir>/index.html`: one card per clause with its text, marks, why each missing mark is missing, model, code, tests, theorems and Lean's verdicts, strength, judgement and findings; against a revision, the cards that changed are marked | report |
 | `--stale` | what to redo, with the command for each; exit 1 if any | — |
 | `--drt [--again]` | compares every clause with a Lean `def` modelling it and a Rust `fn` implementing it, no binding needed; records L3 where earned. One that agreed against model, code and clause that hash as they do now is `cached`, not re-run | evidence, lock |
 | `--lock` | folds evidence into `trace.lock`, naming what went stale | lock |

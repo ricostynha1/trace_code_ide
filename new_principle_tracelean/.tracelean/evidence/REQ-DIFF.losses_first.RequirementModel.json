@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-DIFF",
+    "clause": "losses_first",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "The clauses carrying a removal or a lost mark are placed before all others."
+    }
+  },
+  "linkHash": "9d25f370610c37df",
+  "inputs": [
+    [
+      "requirement",
+      "01c2aeb7b3556303"
+    ],
+    [
+      "model",
+      "5dc3ec65460d0556"
+    ]
+  ]
+}

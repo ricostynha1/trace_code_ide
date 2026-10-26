@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-REPORT",
+    "clause": "why_not_held",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "reasons gives every mark not held, and only those, the first missing step in the chain model, code, comparison, theorem, verdict."
+    }
+  },
+  "linkHash": "f8b968ee470709ac",
+  "inputs": [
+    [
+      "requirement",
+      "cb15254acb89a726"
+    ],
+    [
+      "model",
+      "c1edc59285b531b3"
+    ]
+  ]
+}

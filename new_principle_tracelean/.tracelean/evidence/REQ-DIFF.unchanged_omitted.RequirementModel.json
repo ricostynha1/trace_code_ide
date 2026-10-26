@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-DIFF",
+    "clause": "unchanged_omitted",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "A clause whose changes are empty is filtered out."
+    }
+  },
+  "linkHash": "613df28b5fc8653b",
+  "inputs": [
+    [
+      "requirement",
+      "49a20cf718d1529d"
+    ],
+    [
+      "model",
+      "5dc3ec65460d0556"
+    ]
+  ]
+}

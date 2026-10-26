@@ -1,0 +1,33 @@
+{
+  "key": {
+    "reqId": "REQ-DIFF",
+    "clause": "marks_moved",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Diff.every_mark_lost_or_gained_is_reported",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "05069aaaf24a5339",
+  "inputs": [
+    [
+      "model",
+      "5dc3ec65460d0556"
+    ],
+    [
+      "requirement",
+      "3504242f5d86ed63"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ],
+    [
+      "rules",
+      "80c8c2e339df1610"
+    ]
+  ]
+}

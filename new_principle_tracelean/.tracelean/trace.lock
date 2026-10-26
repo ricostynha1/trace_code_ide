@@ -208,6 +208,26 @@
       ],
       "decomposition": "complete"
     },
+    "REQ-DIFF": {
+      "clauses": [
+        "assumptions_moved",
+        "base_from_history",
+        "links_moved",
+        "losses_first",
+        "marks_moved",
+        "per_clause",
+        "text_shown",
+        "unchanged_omitted"
+      ],
+      "content_hash": "b73363ad7495bc87",
+      "file": "reqs/trace/REQ-DIFF.md",
+      "refines": [
+        "ARCH-HONEST",
+        "REQ-EVID",
+        "REQ-LOCK"
+      ],
+      "decomposition": "open"
+    },
     "REQ-DOCLINK": {
       "clauses": [
         "confirmation_is_human",
@@ -630,6 +650,24 @@
         "REQ-UNDO"
       ],
       "decomposition": "complete"
+    },
+    "REQ-REPORT": {
+      "clauses": [
+        "card_per_clause",
+        "changes_marked",
+        "evidence_on_card",
+        "findings_on_card",
+        "static_page",
+        "why_not_held"
+      ],
+      "content_hash": "7173a3062e5245a0",
+      "file": "reqs/trace/REQ-REPORT.md",
+      "refines": [
+        "ARCH-HONEST",
+        "REQ-EVID",
+        "REQ-DIFF"
+      ],
+      "decomposition": "open"
     },
     "REQ-REQDOC": {
       "clauses": [
@@ -1655,6 +1693,86 @@
       "anchor": "crates/core/src/observe/cost.rs::spend_of",
       "body_hash": "ed014f66f4315d45",
       "link_hash": "ae966d81af467d14",
+      "qualifier": null
+    },
+    {
+      "role": "drt",
+      "req": "REQ-DIFF",
+      "clause": "assumptions_moved",
+      "file": "crates/core/src/trace/diff.rs",
+      "anchor": "crates/core/src/trace/diff.rs::diff",
+      "body_hash": "e0b712bad10a2f6a",
+      "link_hash": "c4fc409215a2a19a",
+      "qualifier": null
+    },
+    {
+      "role": "drt",
+      "req": "REQ-DIFF",
+      "clause": "links_moved",
+      "file": "crates/core/src/trace/diff.rs",
+      "anchor": "crates/core/src/trace/diff.rs::diff",
+      "body_hash": "e0b712bad10a2f6a",
+      "link_hash": "06a1a2a8b00bdc69",
+      "qualifier": null
+    },
+    {
+      "role": "drt",
+      "req": "REQ-DIFF",
+      "clause": "losses_first",
+      "file": "crates/core/src/trace/diff.rs",
+      "anchor": "crates/core/src/trace/diff.rs::diff",
+      "body_hash": "e0b712bad10a2f6a",
+      "link_hash": "967ab72b83e9bf90",
+      "qualifier": null
+    },
+    {
+      "role": "drt",
+      "req": "REQ-DIFF",
+      "clause": "marks_moved",
+      "file": "crates/core/src/trace/diff.rs",
+      "anchor": "crates/core/src/trace/diff.rs::diff",
+      "body_hash": "e0b712bad10a2f6a",
+      "link_hash": "c550c1fb31ba44d8",
+      "qualifier": null
+    },
+    {
+      "role": "drt",
+      "req": "REQ-DIFF",
+      "clause": "per_clause",
+      "file": "crates/core/src/trace/diff.rs",
+      "anchor": "crates/core/src/trace/diff.rs::diff",
+      "body_hash": "e0b712bad10a2f6a",
+      "link_hash": "3a6417057ab694c9",
+      "qualifier": null
+    },
+    {
+      "role": "drt",
+      "req": "REQ-DIFF",
+      "clause": "per_clause",
+      "file": "crates/core/tests/differential_diff.rs",
+      "anchor": "crates/core/tests/differential_diff.rs::model_and_implementation_agree_on_what_a_change_did",
+      "body_hash": "dd1aa82abdee02e3",
+      "link_hash": "81141a929eeaa8c6",
+      "qualifier": null
+    },
+    {
+      "role": "drt",
+      "req": "REQ-DIFF",
+      "clause": "text_shown",
+      "file": "crates/core/src/trace/diff.rs",
+      "anchor": "crates/core/src/trace/diff.rs::diff",
+      "body_hash": "e0b712bad10a2f6a",
+      "link_hash": "66dc8050bb8d262d",
+      "qualifier": null
+    },
+    {
+      "role": "drt",
+      "req": "REQ-DIFF",
+      "clause": "unchanged_omitted",
+      "file": "crates/core/src/trace/diff.rs",
+      "anchor": "crates/core/src/trace/diff.rs::diff",
+      "body_hash": "e0b712bad10a2f6a",
+      "link_hash": "f0a9eb72f9cab29e",
       "qualifier": null
     },
     {
@@ -3525,6 +3643,26 @@
       "anchor": "crates/core/tests/differential_provenance.rs::model_and_implementation_agree_on_where_text_came_from",
       "body_hash": "c36412fe3bc6f44d",
       "link_hash": "2b9c539b02c49a4d",
+      "qualifier": null
+    },
+    {
+      "role": "drt",
+      "req": "REQ-REPORT",
+      "clause": "why_not_held",
+      "file": "crates/core/src/surface/report.rs",
+      "anchor": "crates/core/src/surface/report.rs::reasons",
+      "body_hash": "f60f4a3fbe472eff",
+      "link_hash": "b102d9558b1d0f54",
+      "qualifier": null
+    },
+    {
+      "role": "drt",
+      "req": "REQ-REPORT",
+      "clause": "why_not_held",
+      "file": "crates/core/tests/report.rs",
+      "anchor": "crates/core/tests/report.rs::model_and_implementation_agree_on_why_a_mark_is_not_held",
+      "body_hash": "d1ce7e6d69430f02",
+      "link_hash": "aeb3548ffdee63b9",
       "qualifier": null
     },
     {
@@ -5611,6 +5749,16 @@
       "role": "implements",
       "req": "ARCH-DETERMINISM",
       "clause": "stable_ordering",
+      "file": "crates/core/src/trace/diff.rs",
+      "anchor": "crates/core/src/trace/diff.rs::diff",
+      "body_hash": "e0b712bad10a2f6a",
+      "link_hash": "b360503ec1b576fe",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "ARCH-DETERMINISM",
+      "clause": "stable_ordering",
       "file": "crates/core/src/trace/earn.rs",
       "anchor": "crates/core/src/trace/earn.rs::merge",
       "body_hash": "14266a3f399a6f46",
@@ -6673,7 +6821,7 @@
       "clause": "from_the_shell",
       "file": "crates/core/src/bin/tracelean-trace.rs",
       "anchor": "crates/core/src/bin/tracelean-trace.rs::main",
-      "body_hash": "ba319cc435dda2c9",
+      "body_hash": "5d1634792fc24eed",
       "link_hash": "cfb1dd6e6161c477",
       "qualifier": null
     },
@@ -6815,6 +6963,96 @@
       "anchor": "crates/core/src/observe/watch.rs::table_of",
       "body_hash": "772351f96973e686",
       "link_hash": "779bf01d1271a2ee",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-DIFF",
+      "clause": "assumptions_moved",
+      "file": "crates/core/src/trace/diff.rs",
+      "anchor": "crates/core/src/trace/diff.rs::diff",
+      "body_hash": "e0b712bad10a2f6a",
+      "link_hash": "db7905c101b6bbf6",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-DIFF",
+      "clause": "base_from_history",
+      "file": "crates/core/src/observe/revision.rs",
+      "anchor": "crates/core/src/observe/revision.rs::states_at",
+      "body_hash": "03f548ed9eae33fa",
+      "link_hash": "aa6f6eef5f37ac75",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-DIFF",
+      "clause": "links_moved",
+      "file": "crates/core/src/trace/diff.rs",
+      "anchor": "crates/core/src/trace/diff.rs::diff",
+      "body_hash": "e0b712bad10a2f6a",
+      "link_hash": "549b7db13762256b",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-DIFF",
+      "clause": "losses_first",
+      "file": "crates/core/src/trace/diff.rs",
+      "anchor": "crates/core/src/trace/diff.rs::diff",
+      "body_hash": "e0b712bad10a2f6a",
+      "link_hash": "a31f102c7db6c35c",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-DIFF",
+      "clause": "marks_moved",
+      "file": "crates/core/src/trace/diff.rs",
+      "anchor": "crates/core/src/trace/diff.rs::diff",
+      "body_hash": "e0b712bad10a2f6a",
+      "link_hash": "24ca54dcf808f184",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-DIFF",
+      "clause": "per_clause",
+      "file": "crates/core/src/trace/diff.rs",
+      "anchor": "crates/core/src/trace/diff.rs::diff",
+      "body_hash": "e0b712bad10a2f6a",
+      "link_hash": "0adbfbd63091a04b",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-DIFF",
+      "clause": "per_clause",
+      "file": "crates/core/src/trace/diff.rs",
+      "anchor": "crates/core/src/trace/diff.rs::states",
+      "body_hash": "9b61e6ca5fed07df",
+      "link_hash": "38690723015b491e",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-DIFF",
+      "clause": "text_shown",
+      "file": "crates/core/src/trace/diff.rs",
+      "anchor": "crates/core/src/trace/diff.rs::diff",
+      "body_hash": "e0b712bad10a2f6a",
+      "link_hash": "5f089c11e651fb0f",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-DIFF",
+      "clause": "unchanged_omitted",
+      "file": "crates/core/src/trace/diff.rs",
+      "anchor": "crates/core/src/trace/diff.rs::diff",
+      "body_hash": "e0b712bad10a2f6a",
+      "link_hash": "994f76594ac6911a",
       "qualifier": null
     },
     {
@@ -8433,7 +8671,7 @@
       "clause": "human_decides",
       "file": "crates/core/src/bin/tracelean-trace.rs",
       "anchor": "crates/core/src/bin/tracelean-trace.rs::main",
-      "body_hash": "ba319cc435dda2c9",
+      "body_hash": "5d1634792fc24eed",
       "link_hash": "642e3a15ac658d39",
       "qualifier": null
     },
@@ -8543,7 +8781,7 @@
       "clause": "no_call",
       "file": "crates/core/src/bin/tracelean-trace.rs",
       "anchor": "crates/core/src/bin/tracelean-trace.rs::main",
-      "body_hash": "ba319cc435dda2c9",
+      "body_hash": "5d1634792fc24eed",
       "link_hash": "9832a41f49e5f574",
       "qualifier": null
     },
@@ -8573,7 +8811,7 @@
       "clause": "prompt_exported",
       "file": "crates/core/src/bin/tracelean-trace.rs",
       "anchor": "crates/core/src/bin/tracelean-trace.rs::main",
-      "body_hash": "ba319cc435dda2c9",
+      "body_hash": "5d1634792fc24eed",
       "link_hash": "375f03d31121ea8c",
       "qualifier": null
     },
@@ -9835,6 +10073,66 @@
       "anchor": "crates/core/src/history/provenance.rs::origins",
       "body_hash": "798578df86e734a1",
       "link_hash": "eff1ff2e79eda1fd",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-REPORT",
+      "clause": "card_per_clause",
+      "file": "crates/core/src/surface/report.rs",
+      "anchor": "crates/core/src/surface/report.rs::card",
+      "body_hash": "0e11dbe21104dfcd",
+      "link_hash": "e3fbdd8b468a5e37",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-REPORT",
+      "clause": "changes_marked",
+      "file": "crates/core/src/surface/report.rs",
+      "anchor": "crates/core/src/surface/report.rs::card",
+      "body_hash": "0e11dbe21104dfcd",
+      "link_hash": "532939b39a2abc1b",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-REPORT",
+      "clause": "evidence_on_card",
+      "file": "crates/core/src/surface/report.rs",
+      "anchor": "crates/core/src/surface/report.rs::card",
+      "body_hash": "0e11dbe21104dfcd",
+      "link_hash": "30a72a7dc8707637",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-REPORT",
+      "clause": "findings_on_card",
+      "file": "crates/core/src/surface/report.rs",
+      "anchor": "crates/core/src/surface/report.rs::card",
+      "body_hash": "0e11dbe21104dfcd",
+      "link_hash": "3d4384a03f2b71e0",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-REPORT",
+      "clause": "static_page",
+      "file": "crates/core/src/surface/report.rs",
+      "anchor": "crates/core/src/surface/report.rs::page",
+      "body_hash": "138141f4c1f4c009",
+      "link_hash": "7bafaa76a0772f5a",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-REPORT",
+      "clause": "why_not_held",
+      "file": "crates/core/src/surface/report.rs",
+      "anchor": "crates/core/src/surface/report.rs::reasons",
+      "body_hash": "f60f4a3fbe472eff",
+      "link_hash": "0656dea3728d6870",
       "qualifier": null
     },
     {
@@ -11283,7 +11581,7 @@
       "clause": "listed_for_a_script",
       "file": "crates/core/src/bin/tracelean-trace.rs",
       "anchor": "crates/core/src/bin/tracelean-trace.rs::main",
-      "body_hash": "ba319cc435dda2c9",
+      "body_hash": "5d1634792fc24eed",
       "link_hash": "24d049892b205e19",
       "qualifier": null
     },
@@ -13199,6 +13497,76 @@
     },
     {
       "role": "models",
+      "req": "REQ-DIFF",
+      "clause": "assumptions_moved",
+      "file": "formal/TraceLean/Diff.lean",
+      "anchor": "formal/TraceLean/Diff.lean::TraceLean.Diff::diff",
+      "body_hash": "5dc3ec65460d0556",
+      "link_hash": "a7bd89a290fb90cb",
+      "qualifier": null
+    },
+    {
+      "role": "models",
+      "req": "REQ-DIFF",
+      "clause": "links_moved",
+      "file": "formal/TraceLean/Diff.lean",
+      "anchor": "formal/TraceLean/Diff.lean::TraceLean.Diff::diff",
+      "body_hash": "5dc3ec65460d0556",
+      "link_hash": "21e7de6a63ede8ba",
+      "qualifier": null
+    },
+    {
+      "role": "models",
+      "req": "REQ-DIFF",
+      "clause": "losses_first",
+      "file": "formal/TraceLean/Diff.lean",
+      "anchor": "formal/TraceLean/Diff.lean::TraceLean.Diff::diff",
+      "body_hash": "5dc3ec65460d0556",
+      "link_hash": "9d25f370610c37df",
+      "qualifier": null
+    },
+    {
+      "role": "models",
+      "req": "REQ-DIFF",
+      "clause": "marks_moved",
+      "file": "formal/TraceLean/Diff.lean",
+      "anchor": "formal/TraceLean/Diff.lean::TraceLean.Diff::diff",
+      "body_hash": "5dc3ec65460d0556",
+      "link_hash": "49115bb8dc257019",
+      "qualifier": null
+    },
+    {
+      "role": "models",
+      "req": "REQ-DIFF",
+      "clause": "per_clause",
+      "file": "formal/TraceLean/Diff.lean",
+      "anchor": "formal/TraceLean/Diff.lean::TraceLean.Diff::diff",
+      "body_hash": "5dc3ec65460d0556",
+      "link_hash": "adc936641a7b2698",
+      "qualifier": null
+    },
+    {
+      "role": "models",
+      "req": "REQ-DIFF",
+      "clause": "text_shown",
+      "file": "formal/TraceLean/Diff.lean",
+      "anchor": "formal/TraceLean/Diff.lean::TraceLean.Diff::diff",
+      "body_hash": "5dc3ec65460d0556",
+      "link_hash": "4c23942291d691e4",
+      "qualifier": null
+    },
+    {
+      "role": "models",
+      "req": "REQ-DIFF",
+      "clause": "unchanged_omitted",
+      "file": "formal/TraceLean/Diff.lean",
+      "anchor": "formal/TraceLean/Diff.lean::TraceLean.Diff::diff",
+      "body_hash": "5dc3ec65460d0556",
+      "link_hash": "613df28b5fc8653b",
+      "qualifier": null
+    },
+    {
+      "role": "models",
       "req": "REQ-DOCLINK",
       "clause": "confirmation_is_human",
       "file": "formal/TraceLean/DocLink.lean",
@@ -14345,6 +14713,16 @@
       "anchor": "formal/TraceLean/Provenance.lean::TraceLean.Provenance::origin",
       "body_hash": "8df56585372e9725",
       "link_hash": "5e16950dc1470ce0",
+      "qualifier": null
+    },
+    {
+      "role": "models",
+      "req": "REQ-REPORT",
+      "clause": "why_not_held",
+      "file": "formal/TraceLean/Report.lean",
+      "anchor": "formal/TraceLean/Report.lean::TraceLean.Report::reasons",
+      "body_hash": "c1edc59285b531b3",
+      "link_hash": "f8b968ee470709ac",
       "qualifier": null
     },
     {
@@ -16269,6 +16647,76 @@
     },
     {
       "role": "proves",
+      "req": "REQ-DIFF",
+      "clause": "assumptions_moved",
+      "file": "formal/TraceLean/Diff.lean",
+      "anchor": "formal/TraceLean/Diff.lean::TraceLean.Diff::every_axiom_taken_on_or_let_go_is_reported",
+      "body_hash": "4f25db63d95bc34f",
+      "link_hash": "fea29bef707bb305",
+      "qualifier": null
+    },
+    {
+      "role": "proves",
+      "req": "REQ-DIFF",
+      "clause": "links_moved",
+      "file": "formal/TraceLean/Diff.lean",
+      "anchor": "formal/TraceLean/Diff.lean::TraceLean.Diff::every_annotation_added_removed_or_moved_is_reported",
+      "body_hash": "74a32404bf2b2bd7",
+      "link_hash": "ebc6896500dfddb4",
+      "qualifier": null
+    },
+    {
+      "role": "proves",
+      "req": "REQ-DIFF",
+      "clause": "losses_first",
+      "file": "formal/TraceLean/Diff.lean",
+      "anchor": "formal/TraceLean/Diff.lean::TraceLean.Diff::every_loss_is_listed_before_every_other_change",
+      "body_hash": "e0ccac4a8a3e5139",
+      "link_hash": "0f7d01d64eec9d87",
+      "qualifier": null
+    },
+    {
+      "role": "proves",
+      "req": "REQ-DIFF",
+      "clause": "marks_moved",
+      "file": "formal/TraceLean/Diff.lean",
+      "anchor": "formal/TraceLean/Diff.lean::TraceLean.Diff::every_mark_lost_or_gained_is_reported",
+      "body_hash": "422404f44b2b209c",
+      "link_hash": "05069aaaf24a5339",
+      "qualifier": null
+    },
+    {
+      "role": "proves",
+      "req": "REQ-DIFF",
+      "clause": "per_clause",
+      "file": "formal/TraceLean/Diff.lean",
+      "anchor": "formal/TraceLean/Diff.lean::TraceLean.Diff::a_clause_present_on_one_side_only_is_added_or_removed",
+      "body_hash": "2ef5c4e0f928f405",
+      "link_hash": "e532a1e7aebb2962",
+      "qualifier": null
+    },
+    {
+      "role": "proves",
+      "req": "REQ-DIFF",
+      "clause": "text_shown",
+      "file": "formal/TraceLean/Diff.lean",
+      "anchor": "formal/TraceLean/Diff.lean::TraceLean.Diff::a_reworded_clause_shows_both_texts",
+      "body_hash": "a14360b1c1c8e4e1",
+      "link_hash": "986e8d7ebe8514ae",
+      "qualifier": null
+    },
+    {
+      "role": "proves",
+      "req": "REQ-DIFF",
+      "clause": "unchanged_omitted",
+      "file": "formal/TraceLean/Diff.lean",
+      "anchor": "formal/TraceLean/Diff.lean::TraceLean.Diff::a_clause_the_change_left_alone_is_not_listed",
+      "body_hash": "b42983e5ee9f8616",
+      "link_hash": "14dd0157964b16f4",
+      "qualifier": null
+    },
+    {
+      "role": "proves",
       "req": "REQ-DOCLINK",
       "clause": "confirmation_is_human",
       "file": "formal/TraceLean/DocLink.lean",
@@ -17475,6 +17923,26 @@
       "anchor": "formal/TraceLean/Provenance.lean::TraceLean.Provenance::the_writer_of_a_position_is_named",
       "body_hash": "683ea8f60a370107",
       "link_hash": "d7e10457f31e5cb1",
+      "qualifier": null
+    },
+    {
+      "role": "proves",
+      "req": "REQ-REPORT",
+      "clause": "why_not_held",
+      "file": "formal/TraceLean/Report.lean",
+      "anchor": "formal/TraceLean/Report.lean::TraceLean.Report::every_mark_not_held_and_only_those_is_given_a_reason",
+      "body_hash": "97d31ed8c2ac4c22",
+      "link_hash": "f9ecf64ba62de9fc",
+      "qualifier": null
+    },
+    {
+      "role": "proves",
+      "req": "REQ-REPORT",
+      "clause": "why_not_held",
+      "file": "formal/TraceLean/Report.lean",
+      "anchor": "formal/TraceLean/Report.lean::TraceLean.Report::the_reason_is_the_first_missing_step",
+      "body_hash": "b527e67178d80339",
+      "link_hash": "7d60ba1a3d050f6c",
       "qualifier": null
     },
     {
@@ -20855,6 +21323,106 @@
       "anchor": "crates/core/tests/differential_station.rs::model_and_implementation_agree_on_what_a_run_is_estimated_to_have_cost",
       "body_hash": "28534c339ad3248e",
       "link_hash": "7b61a70be74e4abd",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-DIFF",
+      "clause": "assumptions_moved",
+      "file": "crates/core/tests/differential_diff.rs",
+      "anchor": "crates/core/tests/differential_diff.rs::model_and_implementation_agree_on_what_a_change_did",
+      "body_hash": "dd1aa82abdee02e3",
+      "link_hash": "01ab688274bea5fe",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-DIFF",
+      "clause": "base_from_history",
+      "file": "crates/core/tests/evidence_diff.rs",
+      "anchor": "crates/core/tests/evidence_diff.rs::a_revision_is_compared_without_being_checked_out",
+      "body_hash": "cff050aec834fab3",
+      "link_hash": "17abd18dcd402668",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-DIFF",
+      "clause": "links_moved",
+      "file": "crates/core/tests/differential_diff.rs",
+      "anchor": "crates/core/tests/differential_diff.rs::model_and_implementation_agree_on_what_a_change_did",
+      "body_hash": "dd1aa82abdee02e3",
+      "link_hash": "721b948666367fd1",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-DIFF",
+      "clause": "losses_first",
+      "file": "crates/core/tests/differential_diff.rs",
+      "anchor": "crates/core/tests/differential_diff.rs::model_and_implementation_agree_on_what_a_change_did",
+      "body_hash": "dd1aa82abdee02e3",
+      "link_hash": "09b204120e6d6836",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-DIFF",
+      "clause": "losses_first",
+      "file": "crates/core/tests/evidence_diff.rs",
+      "anchor": "crates/core/tests/evidence_diff.rs::a_revision_is_compared_without_being_checked_out",
+      "body_hash": "cff050aec834fab3",
+      "link_hash": "294e1236a5863201",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-DIFF",
+      "clause": "marks_moved",
+      "file": "crates/core/tests/differential_diff.rs",
+      "anchor": "crates/core/tests/differential_diff.rs::model_and_implementation_agree_on_what_a_change_did",
+      "body_hash": "dd1aa82abdee02e3",
+      "link_hash": "b6d48e04e41a1a18",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-DIFF",
+      "clause": "per_clause",
+      "file": "crates/core/tests/differential_diff.rs",
+      "anchor": "crates/core/tests/differential_diff.rs::model_and_implementation_agree_on_what_a_change_did",
+      "body_hash": "dd1aa82abdee02e3",
+      "link_hash": "3182c3962e4fa297",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-DIFF",
+      "clause": "text_shown",
+      "file": "crates/core/tests/differential_diff.rs",
+      "anchor": "crates/core/tests/differential_diff.rs::model_and_implementation_agree_on_what_a_change_did",
+      "body_hash": "dd1aa82abdee02e3",
+      "link_hash": "644b5c5ac2574b97",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-DIFF",
+      "clause": "text_shown",
+      "file": "crates/core/tests/evidence_diff.rs",
+      "anchor": "crates/core/tests/evidence_diff.rs::a_revision_is_compared_without_being_checked_out",
+      "body_hash": "cff050aec834fab3",
+      "link_hash": "2492ce5878bedb14",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-DIFF",
+      "clause": "unchanged_omitted",
+      "file": "crates/core/tests/differential_diff.rs",
+      "anchor": "crates/core/tests/differential_diff.rs::model_and_implementation_agree_on_what_a_change_did",
+      "body_hash": "dd1aa82abdee02e3",
+      "link_hash": "f8f6347e0ac1a48e",
       "qualifier": null
     },
     {
@@ -26279,6 +26847,66 @@
     },
     {
       "role": "tests",
+      "req": "REQ-REPORT",
+      "clause": "card_per_clause",
+      "file": "crates/core/tests/report.rs",
+      "anchor": "crates/core/tests/report.rs::every_clause_gets_a_card_with_its_evidence_findings_and_changes",
+      "body_hash": "e5f4e6b6bdc7bbf3",
+      "link_hash": "1c634918f576741a",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-REPORT",
+      "clause": "changes_marked",
+      "file": "crates/core/tests/report.rs",
+      "anchor": "crates/core/tests/report.rs::every_clause_gets_a_card_with_its_evidence_findings_and_changes",
+      "body_hash": "e5f4e6b6bdc7bbf3",
+      "link_hash": "b81d314ea5094812",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-REPORT",
+      "clause": "evidence_on_card",
+      "file": "crates/core/tests/report.rs",
+      "anchor": "crates/core/tests/report.rs::every_clause_gets_a_card_with_its_evidence_findings_and_changes",
+      "body_hash": "e5f4e6b6bdc7bbf3",
+      "link_hash": "29f23b26444ee45e",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-REPORT",
+      "clause": "findings_on_card",
+      "file": "crates/core/tests/report.rs",
+      "anchor": "crates/core/tests/report.rs::every_clause_gets_a_card_with_its_evidence_findings_and_changes",
+      "body_hash": "e5f4e6b6bdc7bbf3",
+      "link_hash": "5b7d43e5fe9a2aef",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-REPORT",
+      "clause": "static_page",
+      "file": "crates/core/tests/report.rs",
+      "anchor": "crates/core/tests/report.rs::every_clause_gets_a_card_with_its_evidence_findings_and_changes",
+      "body_hash": "e5f4e6b6bdc7bbf3",
+      "link_hash": "37755cae457e7e9c",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-REPORT",
+      "clause": "why_not_held",
+      "file": "crates/core/tests/report.rs",
+      "anchor": "crates/core/tests/report.rs::model_and_implementation_agree_on_why_a_mark_is_not_held",
+      "body_hash": "d1ce7e6d69430f02",
+      "link_hash": "19e191d250157f0c",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
       "req": "REQ-REQDOC",
       "clause": "clause_addressable",
       "file": "crates/core/src/trace/earn.rs",
@@ -29955,7 +30583,7 @@
       "inputs": [
         [
           "implementation",
-          "14266a3f399a6f46+35fbd7fd6dec384d+4729e32663cd848d+587cb28fa61c740d+6a54a220f2f21645+6dbb5825145b9a7f+81dae90c2f5ecf33+8468cca469f870e3+e44b39311041bcbe+e8af451290160611"
+          "14266a3f399a6f46+35fbd7fd6dec384d+4729e32663cd848d+587cb28fa61c740d+6a54a220f2f21645+6dbb5825145b9a7f+81dae90c2f5ecf33+8468cca469f870e3+e0b712bad10a2f6a+e44b39311041bcbe+e8af451290160611"
         ],
         [
           "model",
@@ -34052,7 +34680,7 @@
       "inputs": [
         [
           "implementation",
-          "560440270dd7dc8e+69b717aadb840d9c+ba319cc435dda2c9"
+          "560440270dd7dc8e+5d1634792fc24eed+69b717aadb840d9c"
         ],
         [
           "model",
@@ -34751,6 +35379,643 @@
         [
           "requirement",
           "c23920a8a1330489"
+        ],
+        [
+          "toolchain",
+          "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        ],
+        [
+          "rules",
+          "80c8c2e339df1610"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-DIFF",
+        "clause": "assumptions_moved",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "Each assumed axiom on one side only is reported dropped or added."
+        }
+      },
+      "linkHash": "a7bd89a290fb90cb",
+      "inputs": [
+        [
+          "requirement",
+          "fbcc88916ca2f02f"
+        ],
+        [
+          "model",
+          "5dc3ec65460d0556"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-DIFF",
+        "clause": "assumptions_moved",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 81,
+          "cases": 3000,
+          "op": "REQ-DIFF.per_clause"
+        }
+      },
+      "linkHash": "c4fc409215a2a19a",
+      "inputs": [
+        [
+          "implementation",
+          "e0b712bad10a2f6a"
+        ],
+        [
+          "model",
+          "5dc3ec65460d0556"
+        ],
+        [
+          "requirement",
+          "fbcc88916ca2f02f"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-DIFF",
+        "clause": "assumptions_moved",
+        "bond": "modelProof"
+      },
+      "level": "L4",
+      "detail": {
+        "proof": {
+          "theoremName": "TraceLean.Diff.every_axiom_taken_on_or_let_go_is_reported",
+          "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        }
+      },
+      "linkHash": "fea29bef707bb305",
+      "inputs": [
+        [
+          "model",
+          "5dc3ec65460d0556"
+        ],
+        [
+          "requirement",
+          "fbcc88916ca2f02f"
+        ],
+        [
+          "toolchain",
+          "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        ],
+        [
+          "rules",
+          "80c8c2e339df1610"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-DIFF",
+        "clause": "links_moved",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "Links are identified by role and symbol: one side only is removed or added; same identity with no identical link is a body change."
+        }
+      },
+      "linkHash": "21e7de6a63ede8ba",
+      "inputs": [
+        [
+          "requirement",
+          "c8b15cd7ee7c7078"
+        ],
+        [
+          "model",
+          "5dc3ec65460d0556"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-DIFF",
+        "clause": "links_moved",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 81,
+          "cases": 3000,
+          "op": "REQ-DIFF.per_clause"
+        }
+      },
+      "linkHash": "06a1a2a8b00bdc69",
+      "inputs": [
+        [
+          "implementation",
+          "e0b712bad10a2f6a"
+        ],
+        [
+          "model",
+          "5dc3ec65460d0556"
+        ],
+        [
+          "requirement",
+          "c8b15cd7ee7c7078"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-DIFF",
+        "clause": "links_moved",
+        "bond": "modelProof"
+      },
+      "level": "L4",
+      "detail": {
+        "proof": {
+          "theoremName": "TraceLean.Diff.every_annotation_added_removed_or_moved_is_reported",
+          "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        }
+      },
+      "linkHash": "ebc6896500dfddb4",
+      "inputs": [
+        [
+          "model",
+          "5dc3ec65460d0556"
+        ],
+        [
+          "requirement",
+          "c8b15cd7ee7c7078"
+        ],
+        [
+          "toolchain",
+          "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        ],
+        [
+          "rules",
+          "80c8c2e339df1610"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-DIFF",
+        "clause": "losses_first",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "The clauses carrying a removal or a lost mark are placed before all others."
+        }
+      },
+      "linkHash": "9d25f370610c37df",
+      "inputs": [
+        [
+          "requirement",
+          "01c2aeb7b3556303"
+        ],
+        [
+          "model",
+          "5dc3ec65460d0556"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-DIFF",
+        "clause": "losses_first",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 81,
+          "cases": 3000,
+          "op": "REQ-DIFF.per_clause"
+        }
+      },
+      "linkHash": "967ab72b83e9bf90",
+      "inputs": [
+        [
+          "implementation",
+          "e0b712bad10a2f6a"
+        ],
+        [
+          "model",
+          "5dc3ec65460d0556"
+        ],
+        [
+          "requirement",
+          "01c2aeb7b3556303"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-DIFF",
+        "clause": "losses_first",
+        "bond": "modelProof"
+      },
+      "level": "L4",
+      "detail": {
+        "proof": {
+          "theoremName": "TraceLean.Diff.every_loss_is_listed_before_every_other_change",
+          "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        }
+      },
+      "linkHash": "0f7d01d64eec9d87",
+      "inputs": [
+        [
+          "model",
+          "5dc3ec65460d0556"
+        ],
+        [
+          "requirement",
+          "01c2aeb7b3556303"
+        ],
+        [
+          "toolchain",
+          "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        ],
+        [
+          "rules",
+          "80c8c2e339df1610"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-DIFF",
+        "clause": "marks_moved",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "Each of the four marks held on one side only is reported lost or gained."
+        }
+      },
+      "linkHash": "49115bb8dc257019",
+      "inputs": [
+        [
+          "requirement",
+          "3504242f5d86ed63"
+        ],
+        [
+          "model",
+          "5dc3ec65460d0556"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-DIFF",
+        "clause": "marks_moved",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 81,
+          "cases": 3000,
+          "op": "REQ-DIFF.per_clause"
+        }
+      },
+      "linkHash": "c550c1fb31ba44d8",
+      "inputs": [
+        [
+          "implementation",
+          "e0b712bad10a2f6a"
+        ],
+        [
+          "model",
+          "5dc3ec65460d0556"
+        ],
+        [
+          "requirement",
+          "3504242f5d86ed63"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-DIFF",
+        "clause": "marks_moved",
+        "bond": "modelProof"
+      },
+      "level": "L4",
+      "detail": {
+        "proof": {
+          "theoremName": "TraceLean.Diff.every_mark_lost_or_gained_is_reported",
+          "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        }
+      },
+      "linkHash": "05069aaaf24a5339",
+      "inputs": [
+        [
+          "model",
+          "5dc3ec65460d0556"
+        ],
+        [
+          "requirement",
+          "3504242f5d86ed63"
+        ],
+        [
+          "toolchain",
+          "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        ],
+        [
+          "rules",
+          "80c8c2e339df1610"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-DIFF",
+        "clause": "per_clause",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "diff keys every clause on either side; one present on one side only opens with added or removed."
+        }
+      },
+      "linkHash": "adc936641a7b2698",
+      "inputs": [
+        [
+          "requirement",
+          "701341f686488409"
+        ],
+        [
+          "model",
+          "5dc3ec65460d0556"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-DIFF",
+        "clause": "per_clause",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 81,
+          "cases": 3000,
+          "op": "REQ-DIFF.per_clause"
+        }
+      },
+      "linkHash": "3a6417057ab694c9",
+      "inputs": [
+        [
+          "implementation",
+          "9b61e6ca5fed07df+e0b712bad10a2f6a"
+        ],
+        [
+          "model",
+          "5dc3ec65460d0556"
+        ],
+        [
+          "requirement",
+          "701341f686488409"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-DIFF",
+        "clause": "per_clause",
+        "bond": "modelProof"
+      },
+      "level": "L4",
+      "detail": {
+        "proof": {
+          "theoremName": "TraceLean.Diff.a_clause_present_on_one_side_only_is_added_or_removed",
+          "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        }
+      },
+      "linkHash": "e532a1e7aebb2962",
+      "inputs": [
+        [
+          "model",
+          "5dc3ec65460d0556"
+        ],
+        [
+          "requirement",
+          "701341f686488409"
+        ],
+        [
+          "toolchain",
+          "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        ],
+        [
+          "rules",
+          "80c8c2e339df1610"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-DIFF",
+        "clause": "text_shown",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "A clause present on both sides with different text carries reworded with both texts."
+        }
+      },
+      "linkHash": "4c23942291d691e4",
+      "inputs": [
+        [
+          "requirement",
+          "0150db3463654d5b"
+        ],
+        [
+          "model",
+          "5dc3ec65460d0556"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-DIFF",
+        "clause": "text_shown",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 81,
+          "cases": 3000,
+          "op": "REQ-DIFF.per_clause"
+        }
+      },
+      "linkHash": "66dc8050bb8d262d",
+      "inputs": [
+        [
+          "implementation",
+          "e0b712bad10a2f6a"
+        ],
+        [
+          "model",
+          "5dc3ec65460d0556"
+        ],
+        [
+          "requirement",
+          "0150db3463654d5b"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-DIFF",
+        "clause": "text_shown",
+        "bond": "modelProof"
+      },
+      "level": "L4",
+      "detail": {
+        "proof": {
+          "theoremName": "TraceLean.Diff.a_reworded_clause_shows_both_texts",
+          "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        }
+      },
+      "linkHash": "986e8d7ebe8514ae",
+      "inputs": [
+        [
+          "model",
+          "5dc3ec65460d0556"
+        ],
+        [
+          "requirement",
+          "0150db3463654d5b"
+        ],
+        [
+          "toolchain",
+          "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        ],
+        [
+          "rules",
+          "80c8c2e339df1610"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-DIFF",
+        "clause": "unchanged_omitted",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "A clause whose changes are empty is filtered out."
+        }
+      },
+      "linkHash": "613df28b5fc8653b",
+      "inputs": [
+        [
+          "requirement",
+          "49a20cf718d1529d"
+        ],
+        [
+          "model",
+          "5dc3ec65460d0556"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-DIFF",
+        "clause": "unchanged_omitted",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 81,
+          "cases": 3000,
+          "op": "REQ-DIFF.per_clause"
+        }
+      },
+      "linkHash": "f0a9eb72f9cab29e",
+      "inputs": [
+        [
+          "implementation",
+          "e0b712bad10a2f6a"
+        ],
+        [
+          "model",
+          "5dc3ec65460d0556"
+        ],
+        [
+          "requirement",
+          "49a20cf718d1529d"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-DIFF",
+        "clause": "unchanged_omitted",
+        "bond": "modelProof"
+      },
+      "level": "L4",
+      "detail": {
+        "proof": {
+          "theoremName": "TraceLean.Diff.a_clause_the_change_left_alone_is_not_listed",
+          "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        }
+      },
+      "linkHash": "14dd0157964b16f4",
+      "inputs": [
+        [
+          "model",
+          "5dc3ec65460d0556"
+        ],
+        [
+          "requirement",
+          "49a20cf718d1529d"
         ],
         [
           "toolchain",
@@ -40226,7 +41491,7 @@
       "inputs": [
         [
           "implementation",
-          "3e85a7d5b06f305d+448cb95e43510bf3+79e8f4b682a14a28+95cbdb4e6ad99141+ba319cc435dda2c9"
+          "3e85a7d5b06f305d+448cb95e43510bf3+5d1634792fc24eed+79e8f4b682a14a28+95cbdb4e6ad99141"
         ],
         [
           "model",
@@ -40527,7 +41792,7 @@
       "inputs": [
         [
           "implementation",
-          "0bfb42630f56bb5b+20aa6e203b9f9046+7c945938216fc55c+ba319cc435dda2c9"
+          "0bfb42630f56bb5b+20aa6e203b9f9046+5d1634792fc24eed+7c945938216fc55c"
         ],
         [
           "model",
@@ -46219,6 +47484,97 @@
         [
           "requirement",
           "4f53aaa0e7567380"
+        ],
+        [
+          "toolchain",
+          "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        ],
+        [
+          "rules",
+          "80c8c2e339df1610"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-REPORT",
+        "clause": "why_not_held",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "reasons gives every mark not held, and only those, the first missing step in the chain model, code, comparison, theorem, verdict."
+        }
+      },
+      "linkHash": "f8b968ee470709ac",
+      "inputs": [
+        [
+          "requirement",
+          "cb15254acb89a726"
+        ],
+        [
+          "model",
+          "c1edc59285b531b3"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-REPORT",
+        "clause": "why_not_held",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 91,
+          "cases": 3000,
+          "op": "REQ-REPORT.why_not_held"
+        }
+      },
+      "linkHash": "aeb3548ffdee63b9",
+      "inputs": [
+        [
+          "implementation",
+          "f60f4a3fbe472eff"
+        ],
+        [
+          "model",
+          "c1edc59285b531b3"
+        ],
+        [
+          "requirement",
+          "cb15254acb89a726"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-REPORT",
+        "clause": "why_not_held",
+        "bond": "modelProof"
+      },
+      "level": "L4",
+      "detail": {
+        "proof": {
+          "theoremName": "TraceLean.Report.every_mark_not_held_and_only_those_is_given_a_reason",
+          "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+        }
+      },
+      "linkHash": "7d60ba1a3d050f6c",
+      "inputs": [
+        [
+          "model",
+          "c1edc59285b531b3"
+        ],
+        [
+          "requirement",
+          "cb15254acb89a726"
         ],
         [
           "toolchain",

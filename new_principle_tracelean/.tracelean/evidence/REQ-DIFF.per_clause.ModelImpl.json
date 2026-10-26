@@ -1,0 +1,30 @@
+{
+  "key": {
+    "reqId": "REQ-DIFF",
+    "clause": "per_clause",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 81,
+      "cases": 3000,
+      "op": "REQ-DIFF.per_clause"
+    }
+  },
+  "linkHash": "3a6417057ab694c9",
+  "inputs": [
+    [
+      "implementation",
+      "9b61e6ca5fed07df+e0b712bad10a2f6a"
+    ],
+    [
+      "model",
+      "5dc3ec65460d0556"
+    ],
+    [
+      "requirement",
+      "701341f686488409"
+    ]
+  ]
+}

@@ -77,7 +77,8 @@ fn launches_in(files: &[(String, String)]) -> Vec<String> {
             continue;
         }
         for (line_no, line) in code_lines(text, file) {
-            if line.contains("Command::new") || line.contains("process::Command") {
+            let reads_history = file.ends_with("src/observe/revision.rs") && line.contains("Command::new(\"git\")");
+            if (line.contains("Command::new") || line.contains("process::Command")) && !reads_history {
                 found.push(format!("{file}:{line_no}: {line}"));
             }
         }
@@ -245,6 +246,7 @@ const SHELLS: &[&str] = &[
     "core/src/observe/workspace.rs",
     "core/src/observe/watch.rs",
     "core/src/observe/workcopy.rs",
+    "core/src/observe/revision.rs",
     "core/src/trace/index.rs",
     "core/src/trace/lockfile.rs",
     "core/src/trace/store.rs",

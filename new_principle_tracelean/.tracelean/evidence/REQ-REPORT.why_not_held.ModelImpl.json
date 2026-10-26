@@ -1,0 +1,30 @@
+{
+  "key": {
+    "reqId": "REQ-REPORT",
+    "clause": "why_not_held",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 91,
+      "cases": 3000,
+      "op": "REQ-REPORT.why_not_held"
+    }
+  },
+  "linkHash": "aeb3548ffdee63b9",
+  "inputs": [
+    [
+      "implementation",
+      "f60f4a3fbe472eff"
+    ],
+    [
+      "model",
+      "c1edc59285b531b3"
+    ],
+    [
+      "requirement",
+      "cb15254acb89a726"
+    ]
+  ]
+}

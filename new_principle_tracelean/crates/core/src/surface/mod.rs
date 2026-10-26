@@ -19,6 +19,7 @@ pub mod offer;
 pub mod produce;
 pub mod quick;
 pub mod reopen;
+pub mod report;
 pub mod requirement_view;
 pub mod sandbox_view;
 pub mod screen;

@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-DIFF",
+    "clause": "marks_moved",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "Each of the four marks held on one side only is reported lost or gained."
+    }
+  },
+  "linkHash": "49115bb8dc257019",
+  "inputs": [
+    [
+      "requirement",
+      "3504242f5d86ed63"
+    ],
+    [
+      "model",
+      "5dc3ec65460d0556"
+    ]
+  ]
+}

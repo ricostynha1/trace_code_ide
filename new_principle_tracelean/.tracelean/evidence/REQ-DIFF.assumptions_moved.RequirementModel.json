@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-DIFF",
+    "clause": "assumptions_moved",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "Each assumed axiom on one side only is reported dropped or added."
+    }
+  },
+  "linkHash": "a7bd89a290fb90cb",
+  "inputs": [
+    [
+      "requirement",
+      "fbcc88916ca2f02f"
+    ],
+    [
+      "model",
+      "5dc3ec65460d0556"
+    ]
+  ]
+}

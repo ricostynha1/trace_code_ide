@@ -1,0 +1,33 @@
+{
+  "key": {
+    "reqId": "REQ-REPORT",
+    "clause": "why_not_held",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Report.every_mark_not_held_and_only_those_is_given_a_reason",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "7d60ba1a3d050f6c",
+  "inputs": [
+    [
+      "model",
+      "c1edc59285b531b3"
+    ],
+    [
+      "requirement",
+      "cb15254acb89a726"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ],
+    [
+      "rules",
+      "80c8c2e339df1610"
+    ]
+  ]
+}

@@ -52,6 +52,62 @@ fn main() {
         return;
     }
 
+    if let Some(out_dir) = value_after(&args, "--report") {
+        let files = tracelean_core::observe::workspace::snapshot(&root).files;
+        let lock = trace::lockfile::read(&root).unwrap_or_default();
+        let proofs = tracelean_core::drt::proofs::load(&root);
+        let states = trace::diff::states(&lock, &index.requirements, &proofs);
+        let base = value_after(&args, "--diff");
+        let changes = base
+            .as_deref()
+            .map(|b| tracelean_core::observe::revision::changes_since(&root, b, states.clone()))
+            .transpose()
+            .unwrap_or_else(|why| {
+                eprintln!("{why}");
+                std::process::exit(2)
+            })
+            .unwrap_or_default();
+        let policy = trace::checker::Policy::default();
+        let mut findings = trace::checker::check(&index, &policy);
+        findings.extend(trace::checker::refused(&proofs, &policy));
+        let strengths = trace::proofcheck::strengths(&index, &proofs, &files);
+        let shared = tracelean_core::surface::report::Shared {
+            index: &index,
+            lock: &lock,
+            proofs: &proofs,
+            strengths: &strengths,
+            findings: &findings,
+            files: &files,
+            changes: &changes,
+            base: base.as_deref(),
+        };
+        let page = tracelean_core::surface::report::page(&shared, &states);
+        let out_dir = PathBuf::from(out_dir);
+        std::fs::create_dir_all(&out_dir).and_then(|_| std::fs::write(out_dir.join("index.html"), page)).unwrap_or_else(|why| {
+            eprintln!("cannot write the report: {why}");
+            std::process::exit(2)
+        });
+        println!("{}", out_dir.join("index.html").display());
+        return;
+    }
+
+    if let Some(base) = value_after(&args, "--diff") {
+        let before = tracelean_core::observe::revision::states_at(&root, &base).unwrap_or_else(|why| {
+            eprintln!("{why}");
+            std::process::exit(2)
+        });
+        let lock = trace::lockfile::read(&root).unwrap_or_default();
+        let after = trace::diff::states(&lock, &index.requirements, &tracelean_core::drt::proofs::load(&root));
+        let diffs = trace::diff::diff(before, after);
+        let json = args.iter().any(|a| a == "--json");
+        let text = match json {
+            true => serde_json::to_string_pretty(&diffs).unwrap_or_default() + "\n",
+            false => trace::diff::render(&base, &diffs),
+        };
+        print!("{text}");
+        return;
+    }
+
     if std::env::args().any(|a| a == "--hashes") {
         for (target, hash) in trace::doclink::current_hashes(&index) {
             println!("{target}\t{hash}");

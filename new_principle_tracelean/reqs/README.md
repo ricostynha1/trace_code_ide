@@ -1,6 +1,6 @@
 # Requirements
 
-Forty-one documents, 253 clauses. Identity is the frontmatter `id`, never the path —
+Forty-three documents, 321 clauses. Identity is the frontmatter `id`, never the path —
 a document may move without any annotation changing.
 
 A requirement is *complete* when its author claims the clauses exhaust it. An
@@ -34,6 +34,8 @@ something anyone can claim to have exhausted.
 | [REQ-ROLLUP](trace/REQ-ROLLUP.md) | 6 | Roll-up and coverage reporting |
 | [REQ-LOCK](trace/REQ-LOCK.md) | 5 | The committed index |
 | [REQ-STRENGTH](trace/REQ-STRENGTH.md) | 18 | Proof honesty and spec strength |
+| [REQ-DIFF](trace/REQ-DIFF.md) | 8 | What a change did to the evidence |
+| [REQ-REPORT](trace/REQ-REPORT.md) | 6 | A report a reviewer can read |
 | [REQ-DOCLINK](trace/REQ-DOCLINK.md) | 8 | Documentation is linked and goes stale |
 
 ## Differential testing — how a model and an implementation are compared

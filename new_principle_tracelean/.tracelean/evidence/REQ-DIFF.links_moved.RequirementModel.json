@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-DIFF",
+    "clause": "links_moved",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "Links are identified by role and symbol: one side only is removed or added; same identity with no identical link is a body change."
+    }
+  },
+  "linkHash": "21e7de6a63ede8ba",
+  "inputs": [
+    [
+      "requirement",
+      "c8b15cd7ee7c7078"
+    ],
+    [
+      "model",
+      "5dc3ec65460d0556"
+    ]
+  ]
+}
