@@ -9,7 +9,8 @@ TraceLean rebuilt under those rules — the same move as compiling a compiler wi
 itself.
 
 **New here? Read [docs/USING.md](docs/USING.md)** — how to use the editor, in
-five minutes. To change it — keys, actions, colours, panels — read
+five minutes. The complete guide, with every key, station and command and
+worked examples, is the [user manual](user_manual.md). To change it — keys, actions, colours, panels — read
 [docs/DEVELOPER_GUIDE.md](docs/DEVELOPER_GUIDE.md).
 
 ## Layout
