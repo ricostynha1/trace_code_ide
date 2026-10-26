@@ -285,4 +285,147 @@ theorem a_judgement_caps_at_the_second_level (verdict judgedBy promptVersion : S
     (Detail.proof theoremName toolchain).ceiling = Level.L4 := by
   simp [Detail.ceiling]
 
+theorem infixSelf (x : String) : ∃ p q, x = p ++ x ++ q := ⟨"", "", by simp⟩
+
+theorem infixLeft (a : String) {s x : String} (h : ∃ p q, s = p ++ x ++ q) :
+    ∃ p q, a ++ s = p ++ x ++ q := by
+  obtain ⟨p, q, h⟩ := h
+  exact ⟨a ++ p, q, by rw [h]; simp only [String.append_assoc]⟩
+
+theorem infixRight (b : String) {s x : String} (h : ∃ p q, s = p ++ x ++ q) :
+    ∃ p q, s ++ b = p ++ x ++ q := by
+  obtain ⟨p, q, h⟩ := h
+  exact ⟨p, q ++ b, by rw [h]; simp only [String.append_assoc]⟩
+
+syntax "infix_tac" : tactic
+
+macro_rules
+  | `(tactic| infix_tac) =>
+    `(tactic| first
+      | with_reducible exact infixSelf _
+      | (apply infixLeft; infix_tac)
+      | (apply infixRight; infix_tac))
+
+/-- @proves REQ-JUDGE.prompt_exported -/
+theorem prompt_carries_clause_and_model (material : Material) :
+    (∃ pre post, prompt material = pre ++ material.clauseText.trim ++ post) ∧
+    (∃ pre post, prompt material = pre ++ material.modelSource.trim ++ post) := by
+  unfold prompt
+  exact ⟨by infix_tac, by infix_tac⟩
+
+/-- @proves REQ-JUDGE.divergence_presented -/
+theorem prompt_presents_divergence (material : Material) (text : String)
+    (h : material.divergence = some text) :
+    ∃ pre post, prompt material = pre ++ text ++ post := by
+  unfold prompt
+  rw [h]
+  dsimp only
+  infix_tac
+
+/-- @proves REQ-JUDGE.advice_is_not_evidence -/
+theorem advice_enters_only_as_the_human_decision (material : Material) (judgement : Judgement)
+    (judges : Option Judges) (linkHash : String) :
+    (∃ pre post, prompt material = pre ++ ". This is advice. The decision is recorded as " ++ post) ∧
+    ∀ e, (record material judgement judges linkHash).evidence? = some e →
+      ∃ verdict delegatedBy,
+        e.detail = .judge verdict judgement.judgedBy delegatedBy promptVersion judgement.note := by
+  refine ⟨?_, ?_⟩
+  · unfold prompt
+    infix_tac
+  · intro e h
+    simp only [record] at h
+    split at h
+    all_goals try split at h
+    all_goals simp [JudgeOutcome.evidence?] at h
+    all_goals subst h
+    all_goals exact ⟨_, _, rfl⟩
+
+/-- @proves REQ-JUDGE.judgement_shown -/
+theorem judgement_is_shown_with_its_note_and_delegator (judged : Judged) :
+    (∃ pre post, judgedText judged = pre ++ judged.judgedBy ++ post) ∧
+    (∀ person, judged.delegatedBy = some person →
+      ∃ pre post, judgedText judged = pre ++ (" (delegated by " ++ person ++ ")") ++ post) ∧
+    (judged.verdict ≠ "agrees" →
+      (∃ pre post, judgedText judged = pre ++ judged.verdict ++ post) ∧
+      (∃ pre post, judgedText judged = pre ++ judged.note.getD "no note" ++ post)) := by
+  refine ⟨?_, ?_, ?_⟩
+  · unfold judgedText
+    split <;> infix_tac
+  · intro person hp
+    have hd : ∃ pre post, delegatedText judged.delegatedBy =
+        pre ++ (" (delegated by " ++ person ++ ")") ++ post := by
+      rw [hp]
+      exact ⟨"", "", by simp [delegatedText]⟩
+    unfold judgedText
+    split
+    · exact infixLeft _ hd
+    · exact infixLeft _ hd
+  · intro hv
+    unfold judgedText
+    have : (judged.verdict == "agrees") = false := by simp [hv]
+    rw [if_neg (by simp [this])]
+    exact ⟨by infix_tac, by infix_tac⟩
+
+theorem eraseDups_loop_length (as bs : List String) :
+    bs.length ≤ (List.eraseDups.loop as bs).length := by
+  induction as generalizing bs with
+  | nil => simp [List.eraseDups.loop]
+  | cons a rest ih =>
+    simp only [List.eraseDups.loop]
+    split
+    · exact ih bs
+    · exact Nat.le_trans (Nat.le_succ _) (ih (a :: bs))
+
+theorem eraseDups_ne_nil (xs : List String) (h : xs ≠ []) : xs.eraseDups ≠ [] := by
+  cases xs with
+  | nil => exact absurd rfl h
+  | cons a rest =>
+    intro he
+    have := eraseDups_loop_length rest [a]
+    simp only [List.eraseDups, List.eraseDups.loop, List.elem_nil] at he
+    rw [he] at this
+    simp at this
+
+/-- @proves REQ-JUDGE.structural_judged -/
+theorem unmodelled_clause_rests_on_its_checks (models checks checks' : List String) :
+    (models ≠ [] → restsOn models checks = restsOn models checks') ∧
+    (restsOn [] checks = none ↔ checks = []) ∧
+    (checks ≠ [] → restsOn [] checks =
+      some (String.intercalate "+" ((checks.mergeSort (fun a b => decide (a ≤ b))).eraseDups))) := by
+  refine ⟨?_, ?_, ?_⟩
+  · intro hm
+    have : models.isEmpty = false := by cases models <;> simp_all
+    simp [restsOn, this]
+  · constructor
+    · intro h
+      cases checks with
+      | nil => rfl
+      | cons c rest =>
+        exfalso
+        have hs : (c :: rest).mergeSort (fun a b => decide (a ≤ b)) ≠ [] := by
+          intro he
+          have := (List.mergeSort_perm (fun a b => decide (a ≤ b)) (c :: rest)).length_eq
+          rw [he] at this
+          simp at this
+        have := eraseDups_ne_nil _ hs
+        simp only [restsOn, List.isEmpty_nil, if_true] at h
+        split at h
+        · rename_i he
+          exact this (List.isEmpty_iff.mp he)
+        · cases h
+    · intro h
+      subst h
+      simp [restsOn, List.mergeSort, List.eraseDups, List.eraseDups.loop]
+  · intro hc
+    have hs : checks.mergeSort (fun a b => decide (a ≤ b)) ≠ [] := by
+      intro he
+      have := (List.mergeSort_perm (fun a b => decide (a ≤ b)) checks).length_eq
+      rw [he] at this
+      cases checks <;> simp_all
+    have := eraseDups_ne_nil _ hs
+    have he : ((checks.mergeSort (fun a b => decide (a ≤ b))).eraseDups).isEmpty = false := by
+      cases h : (checks.mergeSort (fun a b => decide (a ≤ b))).eraseDups <;> simp_all
+    simp only [restsOn, List.isEmpty_nil, if_true]
+    rw [if_neg (by simp [he])]
+
 end TraceLean.Judge

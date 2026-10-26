@@ -134,4 +134,479 @@ def obligationSource (obligation : Obligation) : String :=
   "    ∀ f g, Spec_" ++ name ++ " f → Spec_" ++ name ++ " g → f = g := by\n" ++
   "  sorry\n"
 
+theorem suffixSelf (x : String) : ∃ p, x = p ++ x := ⟨"", by simp⟩
+
+theorem suffixLeft (a : String) {s x : String} (h : ∃ p, s = p ++ x) : ∃ p, a ++ s = p ++ x := by
+  obtain ⟨p, h⟩ := h
+  exact ⟨a ++ p, by rw [h]; simp only [String.append_assoc]⟩
+
+syntax "suffix_tac" : tactic
+
+macro_rules
+  | `(tactic| suffix_tac) =>
+    `(tactic| first
+      | with_reducible exact suffixSelf _
+      | (apply suffixLeft; suffix_tac))
+
+/-- @proves REQ-STRENGTH.obligation_generated -/
+theorem obligation_states_that_the_spec_determines_the_model (obligation : Obligation) :
+    ∃ pre, obligationSource obligation = pre ++
+      ("/-- @pins " ++ String.intercalate " " (obligation.clauses.map clauseName) ++ " -/\n" ++
+      "theorem pins_" ++ leanName obligation.symbol ++ " :\n" ++
+      "    ∀ f g, Spec_" ++ leanName obligation.symbol ++ " f → Spec_" ++
+        leanName obligation.symbol ++ " g → f = g := by\n" ++
+      "  sorry\n") := by
+  unfold obligationSource
+  try dsimp only
+  simp only [String.append_assoc]
+  suffix_tac
+
+/-- @proves REQ-STRENGTH.not_proved_by_us -/
+theorem obligation_is_left_undischarged (obligation : Obligation) :
+    ∃ pre, obligationSource obligation = pre ++ (" g → f = g := by\n" ++ "  sorry\n") := by
+  unfold obligationSource
+  try dsimp only
+  simp only [String.append_assoc]
+  suffix_tac
+
+theorem assoc?_cons {β : Type} (x : String × β) (xs : List (String × β)) (k : String) :
+    assoc? (x :: xs) k = if x.1 = k then some x.2 else assoc? xs k := by
+  unfold assoc?
+  by_cases h : x.1 = k
+  · simp [List.find?, h]
+  · have hb : (x.1 == k) = false := by simp [h]
+    simp [List.find?, hb, h]
+
+theorem assoc?_nil {β : Type} (k : String) : assoc? ([] : List (String × β)) k = none := rfl
+
+theorem assoc?_append_single {β : Type} (xs : List (String × β)) (k k' : String) (v : β) :
+    assoc? (xs ++ [(k, v)]) k' = match assoc? xs k' with
+      | some w => some w
+      | none => if k = k' then some v else none := by
+  induction xs with
+  | nil => simp [assoc?_cons, assoc?_nil]
+  | cons x rest ih =>
+    simp only [List.cons_append, assoc?_cons]
+    by_cases h : x.1 = k'
+    · simp [h]
+    · simp only [h, if_false]
+      exact ih
+
+theorem assoc?_map_set {β : Type} (xs : List (String × β)) (k k' : String) (v : β) :
+    assoc? (xs.map (fun p => if p.1 == k then (k, v) else p)) k' =
+      if k' = k then (if xs.any (·.1 == k) then some v else none) else assoc? xs k' := by
+  induction xs with
+  | nil => by_cases h : k' = k <;> simp [assoc?_nil, h]
+  | cons x rest ih =>
+    simp only [List.map_cons, assoc?_cons, List.any_cons]
+    by_cases hx : x.1 = k
+    · have hb : (x.1 == k) = true := by simp [hx]
+      simp only [hb, if_true, Bool.true_or]
+      by_cases hk : k' = k
+      · simp [hk]
+      · have : ¬ x.1 = k' := fun h => hk (h ▸ hx.symm ▸ rfl)
+        simp only [hk, if_false] at ih ⊢
+        rw [if_neg (fun h => hk h.symm), ih, if_neg this]
+    · have hb : (x.1 == k) = false := by simp [hx]
+      simp only [hb, Bool.false_or]
+      rw [ih]
+      by_cases hk : k' = k
+      · subst hk
+        simp [hx]
+      · simp [hk]
+
+theorem assoc?_assocSet {β : Type} (xs : List (String × β)) (k k' : String) (v : β) :
+    assoc? (assocSet xs k v) k' = if k' = k then some v else assoc? xs k' := by
+  unfold assocSet
+  split
+  · rename_i hany
+    rw [assoc?_map_set, hany]
+    simp
+  · rename_i hany
+    rw [assoc?_append_single]
+    by_cases hk : k' = k
+    · subst hk
+      have : assoc? xs k' = none := by
+        unfold assoc?
+        cases hf : xs.find? (·.1 == k') with
+        | none => rfl
+        | some p =>
+          exfalso
+          apply hany
+          exact List.any_eq_true.mpr ⟨p, List.mem_of_find?_eq_some hf,
+            List.find?_some (p := fun (x : String × β) => x.fst == k') hf⟩
+      simp [this]
+    · rw [if_neg hk]
+      cases assoc? xs k' with
+      | some w => rfl
+      | none => exact if_neg (fun h : k = k' => hk h.symm)
+
+theorem assoc?_assocPush {β : Type} (xs : List (String × List β)) (k k' : String) (v : β) :
+    assoc? (assocPush xs k v) k' =
+      if k' = k then some ((assoc? xs k).getD [] ++ [v]) else assoc? xs k' := by
+  unfold assocPush
+  split
+  · rename_i cur hcur
+    rw [assoc?_assocSet, hcur]
+    rfl
+  · rename_i hnone
+    rw [assoc?_append_single]
+    by_cases hk : k' = k
+    · subst hk
+      simp [hnone]
+    · rw [if_neg hk]
+      cases assoc? xs k' with
+      | some w => rfl
+      | none => exact if_neg (fun h : k = k' => hk h.symm)
+
+theorem foldlInv {α β : Type} (P : β → Prop) (f : β → α → β) :
+    ∀ (xs : List α) (init : β), P init → (∀ b, ∀ x ∈ xs, P b → P (f b x)) → P (xs.foldl f init)
+  | [], _, h, _ => h
+  | x :: xs, init, h, step =>
+    foldlInv P f xs (f init x) (step init x (by simp) h)
+      (fun b y hy hb => step b y (List.mem_cons_of_mem _ hy) hb)
+
+theorem foldlMono {α β : Type} (Q : β → Prop) (f : β → α → β) :
+    ∀ (xs : List α) (init : β), (∀ b, ∀ x ∈ xs, Q b → Q (f b x)) →
+      (∃ x ∈ xs, ∀ b, Q (f b x)) → Q (xs.foldl f init)
+  | [], _, _, ⟨_, hx, _⟩ => by simp at hx
+  | y :: ys, init, mono, ⟨x, hx, hset⟩ => by
+    rw [List.foldl_cons]
+    rcases List.mem_cons.mp hx with rfl | hx
+    · exact foldlInv Q f ys _ (hset init) (fun b z hz hb => mono b z (List.mem_cons_of_mem _ hz) hb)
+    · exact foldlMono Q f ys _ (fun b z hz hb => mono b z (List.mem_cons_of_mem _ hz) hb) ⟨x, hx, hset⟩
+
+theorem mem_insertSorted {α : Type} [BEq α] [LawfulBEq α] (le : α → α → Bool) (x y : α) :
+    ∀ (xs : List α), (y ∈ xs ∨ y = x) → y ∈ insertSorted le xs x
+  | [], h => by simp at h; simp [insertSorted, h]
+  | z :: rest, h => by
+    unfold insertSorted
+    split
+    · rename_i hxz
+      have hxz : x = z := by simpa using hxz
+      rcases h with h | rfl
+      · exact h
+      · simp [hxz]
+    · split
+      · rcases h with h | rfl
+        · exact List.mem_cons_of_mem _ h
+        · simp
+      · rcases h with h | rfl
+        · rcases List.mem_cons.mp h with rfl | h
+          · simp
+          · exact List.mem_cons_of_mem _ (mem_insertSorted le x y rest (Or.inl h))
+        · exact List.mem_cons_of_mem _ (mem_insertSorted le y y rest (Or.inr rfl))
+
+theorem mem_sortedUnique {α : Type} [BEq α] [LawfulBEq α] (le : α → α → Bool) (y : α)
+    (xs : List α) (h : y ∈ xs) : y ∈ sortedUnique le xs := by
+  unfold sortedUnique
+  have : ∀ (ys acc : List α), (y ∈ acc ∨ y ∈ ys) → y ∈ ys.foldl (insertSorted le) acc := by
+    intro ys
+    induction ys with
+    | nil => intro acc h; simpa using h
+    | cons z rest ih =>
+      intro acc h
+      rw [List.foldl_cons]
+      apply ih
+      rcases h with h | h
+      · exact Or.inl (mem_insertSorted le z y acc (Or.inl h))
+      · rcases List.mem_cons.mp h with rfl | h
+        · exact Or.inl (mem_insertSorted le y y acc (Or.inr rfl))
+        · exact Or.inr h
+  exact this xs [] (Or.inr h)
+
+abbrev StrengthAcc := List (String × List (String × Option String))
+  × List (String × List String) × List (String × String) × List (String × String)
+
+def strengthStep (links : List StrengthLink) (acc : StrengthAcc) (link : StrengthLink) :
+    StrengthAcc :=
+  let (bySymbol, theorems, pins, nondet) := acc
+  let key := (link.reqId, link.clause)
+  match link.role with
+  | .models =>
+    let bySymbol := assocPush bySymbol link.anchor key
+    let nondet := match link.nondeterministic with
+      | some reason => assocSet nondet link.anchor reason
+      | none => nondet
+    (bySymbol, theorems, pins, nondet)
+  | .proves =>
+    let theorems := links.foldl
+      (fun acc other =>
+        if other.role == Role.models && other.reqId == link.reqId && other.clause == link.clause
+        then assocPush acc other.anchor link.anchor else acc)
+      theorems
+    (bySymbol, theorems, pins, nondet)
+  | .pins =>
+    let pins := links.foldl
+      (fun acc other =>
+        if other.role == Role.models && other.reqId == link.reqId && other.clause == link.clause
+        then assocSet acc other.anchor link.anchor else acc)
+      pins
+    (bySymbol, theorems, pins, nondet)
+  | _ => acc
+
+def finishObligations (res : StrengthAcc) : List Obligation :=
+  let (bySymbol, theorems, pins, nondet) := res
+  let symbols := sortedUnique (fun a b => decide (a ≤ b)) (bySymbol.map (·.1))
+  symbols.map (fun symbol =>
+    let clauses := sortedUnique clauseLe ((assoc? bySymbol symbol).getD [])
+    let proved := sortedUnique (fun a b => decide (a ≤ b)) ((assoc? theorems symbol).getD [])
+    let strength :=
+      match assoc? nondet symbol with
+      | some reason => Strength.nondeterministic reason
+      | none => match assoc? pins symbol with
+        | some theoremName => Strength.attempted theoremName
+        | none => Strength.«open»
+    { symbol := symbol, clauses := clauses, theorems := proved, strength := strength })
+
+theorem obligationsFrom_eq (links : List StrengthLink) :
+    obligationsFrom links = finishObligations (links.foldl (strengthStep links) ([], [], [], [])) :=
+  rfl
+
+theorem isSome_assocSet {β : Type} (xs : List (String × β)) (k a : String) (v : β)
+    (h : (assoc? xs a).isSome) : (assoc? (assocSet xs k v) a).isSome := by
+  rw [assoc?_assocSet]; split <;> simp_all
+
+theorem isSome_assocPush {β : Type} (xs : List (String × List β)) (k a : String) (v : β)
+    (h : (assoc? xs a).isSome) : (assoc? (assocPush xs k v) a).isSome := by
+  rw [assoc?_assocPush]; split <;> simp_all
+
+theorem mem_assocPush {β : Type} (xs : List (String × List β)) (k a : String) (v w : β)
+    (h : w ∈ (assoc? xs a).getD []) : w ∈ (assoc? (assocPush xs k v) a).getD [] := by
+  rw [assoc?_assocPush]
+  split
+  · rename_i he; subst he; simp [h]
+  · exact h
+
+theorem step_nondet_mono (links : List StrengthLink) (acc : StrengthAcc) (x : StrengthLink)
+    (a : String) (h : (assoc? acc.2.2.2 a).isSome) :
+    (assoc? (strengthStep links acc x).2.2.2 a).isSome := by
+  obtain ⟨b, t, p, nd⟩ := acc
+  unfold strengthStep
+  cases hr : x.role <;> simp only [hr] <;> try exact h
+  cases x.nondeterministic with
+  | none => exact h
+  | some r => exact isSome_assocSet _ _ _ _ h
+
+theorem step_nondet_set (links : List StrengthLink) (acc : StrengthAcc) (x : StrengthLink)
+    (reason : String) (hr : x.role = .models) (hn : x.nondeterministic = some reason) :
+    (assoc? (strengthStep links acc x).2.2.2 x.anchor).isSome := by
+  obtain ⟨b, t, p, nd⟩ := acc
+  unfold strengthStep
+  simp only [hr, hn]
+  rw [assoc?_assocSet]
+  simp
+
+theorem step_pins_mono (links : List StrengthLink) (acc : StrengthAcc) (x : StrengthLink)
+    (a : String) (h : (assoc? acc.2.2.1 a).isSome) :
+    (assoc? (strengthStep links acc x).2.2.1 a).isSome := by
+  obtain ⟨b, t, p, nd⟩ := acc
+  unfold strengthStep
+  cases hr : x.role <;> simp only [hr] <;> try exact h
+  refine foldlInv (fun q => (assoc? q a).isSome) _ links p h ?_
+  intro q y _ hq
+  try dsimp only
+  split
+  · exact isSome_assocSet _ _ _ _ hq
+  · exact hq
+
+theorem step_pins_set (links : List StrengthLink) (acc : StrengthAcc) (x m : StrengthLink)
+    (hr : x.role = .pins) (hm : m ∈ links) (hmr : m.role = .models) (hreq : m.reqId = x.reqId)
+    (hcl : m.clause = x.clause) :
+    (assoc? (strengthStep links acc x).2.2.1 m.anchor).isSome := by
+  obtain ⟨b, t, p, nd⟩ := acc
+  unfold strengthStep
+  simp only [hr]
+  refine foldlMono (fun q => (assoc? q m.anchor).isSome) _ links p ?_ ⟨m, hm, ?_⟩
+  · intro q y _ hq
+    try dsimp only
+    split
+    · exact isSome_assocSet _ _ _ _ hq
+    · exact hq
+  · intro q
+    try dsimp only
+    rw [if_pos (by simp [hmr, hreq, hcl]), assoc?_assocSet]
+    simp
+
+theorem step_pins_from (links : List StrengthLink) (acc : StrengthAcc) (x : StrengthLink)
+    (hx : x ∈ links)
+    (h : ∀ k v, assoc? acc.2.2.1 k = some v → ∃ l ∈ links, l.role = .pins ∧ l.anchor = v) :
+    ∀ k v, assoc? (strengthStep links acc x).2.2.1 k = some v →
+      ∃ l ∈ links, l.role = .pins ∧ l.anchor = v := by
+  obtain ⟨b, t, p, nd⟩ := acc
+  unfold strengthStep
+  cases hr : x.role <;> simp only [hr] <;> try exact h
+  refine foldlInv (fun q => ∀ k v, assoc? q k = some v →
+      ∃ l ∈ links, l.role = .pins ∧ l.anchor = v) _ links p h ?_
+  intro q y _ hq k v hk
+  try dsimp only at hk
+  split at hk
+  · rw [assoc?_assocSet] at hk
+    split at hk
+    · cases hk
+      exact ⟨x, hx, hr, rfl⟩
+    · exact hq k v hk
+  · exact hq k v hk
+
+theorem step_symbols_mono (links : List StrengthLink) (acc : StrengthAcc) (x : StrengthLink)
+    (a : String) (h : (assoc? acc.1 a).isSome) :
+    (assoc? (strengthStep links acc x).1 a).isSome := by
+  obtain ⟨b, t, p, nd⟩ := acc
+  unfold strengthStep
+  cases hr : x.role <;> simp only [hr] <;> try exact h
+  exact isSome_assocPush _ _ _ _ h
+
+theorem step_symbols_set (links : List StrengthLink) (acc : StrengthAcc) (x : StrengthLink)
+    (hr : x.role = .models) : (assoc? (strengthStep links acc x).1 x.anchor).isSome := by
+  obtain ⟨b, t, p, nd⟩ := acc
+  unfold strengthStep
+  simp only [hr]
+  rw [assoc?_assocPush]
+  simp
+
+theorem step_theorems_mono (links : List StrengthLink) (acc : StrengthAcc) (x : StrengthLink)
+    (a w : String) (h : w ∈ (assoc? acc.2.1 a).getD []) :
+    w ∈ (assoc? (strengthStep links acc x).2.1 a).getD [] := by
+  obtain ⟨b, t, p, nd⟩ := acc
+  unfold strengthStep
+  cases hr : x.role <;> simp only [hr] <;> try exact h
+  refine foldlInv (fun q => w ∈ (assoc? q a).getD []) _ links t h ?_
+  intro q y _ hq
+  try dsimp only
+  split
+  · exact mem_assocPush _ _ _ _ _ hq
+  · exact hq
+
+theorem step_theorems_set (links : List StrengthLink) (acc : StrengthAcc) (x m : StrengthLink)
+    (hr : x.role = .proves) (hm : m ∈ links) (hmr : m.role = .models) (hreq : x.reqId = m.reqId)
+    (hcl : x.clause = m.clause) :
+    x.anchor ∈ (assoc? (strengthStep links acc x).2.1 m.anchor).getD [] := by
+  obtain ⟨b, t, p, nd⟩ := acc
+  unfold strengthStep
+  simp only [hr]
+  refine foldlMono (fun q => x.anchor ∈ (assoc? q m.anchor).getD []) _ links t ?_ ⟨m, hm, ?_⟩
+  · intro q y _ hq
+    try dsimp only
+    split
+    · exact mem_assocPush _ _ _ _ _ hq
+    · exact hq
+  · intro q
+    try dsimp only
+    rw [if_pos (by simp [hmr, hreq, hcl]), assoc?_assocPush]
+    simp
+
+theorem mem_finish (res : StrengthAcc) (o : Obligation) (h : o ∈ finishObligations res) :
+    o.strength = (match assoc? res.2.2.2 o.symbol with
+      | some reason => Strength.nondeterministic reason
+      | none => match assoc? res.2.2.1 o.symbol with
+        | some theoremName => Strength.attempted theoremName
+        | none => Strength.«open») := by
+  obtain ⟨b, t, p, nd⟩ := res
+  simp only [finishObligations, List.mem_map] at h
+  obtain ⟨symbol, _, rfl⟩ := h
+  rfl
+
+/-- @proves REQ-STRENGTH.nondeterministic_declared -/
+theorem declared_nondeterministic_is_excluded (links : List StrengthLink) (m : StrengthLink)
+    (hm : m ∈ links) (hrole : m.role = .models) (reason : String)
+    (hnd : m.nondeterministic = some reason) (o : Obligation)
+    (ho : o ∈ obligationsFrom links) (hs : o.symbol = m.anchor) :
+    (∃ r, o.strength = .nondeterministic r) ∧ o.strength ≠ .«open» := by
+  rw [obligationsFrom_eq] at ho
+  have hst := mem_finish _ o ho
+  have hsome : (assoc? (links.foldl (strengthStep links) ([], [], [], [])).2.2.2 o.symbol).isSome := by
+    rw [hs]
+    exact foldlMono (fun q => (assoc? q.2.2.2 m.anchor).isSome) _ links _
+      (fun q y _ hq => step_nondet_mono links q y _ hq)
+      ⟨m, hm, fun q => step_nondet_set links q m reason hrole hnd⟩
+  cases hn : assoc? (links.foldl (strengthStep links) ([], [], [], [])).2.2.2 o.symbol with
+  | none => rw [hn] at hsome; cases hsome
+  | some r =>
+    rw [hn] at hst
+    exact ⟨⟨r, hst⟩, by rw [hst]; intro h; cases h⟩
+
+/-- @proves REQ-STRENGTH.attempted_distinguished -/
+theorem attempted_open_and_discharged_are_distinct (links : List StrengthLink) (o : Obligation)
+    (ho : o ∈ obligationsFrom links) :
+    (∀ t, o.strength ≠ .pinned t) ∧
+    (∀ t, o.strength = .attempted t → ∃ l ∈ links, l.role = .pins ∧ l.anchor = t) ∧
+    (o.strength = .«open» → ∀ m ∈ links, ∀ p ∈ links, m.role = .models → m.anchor = o.symbol →
+      p.role = .pins → p.reqId ≠ m.reqId ∨ p.clause ≠ m.clause) := by
+  rw [obligationsFrom_eq] at ho
+  have hst := mem_finish _ o ho
+  generalize hres : links.foldl (strengthStep links) ([], [], [], []) = res at hst
+  have hfrom : ∀ k v, assoc? res.2.2.1 k = some v → ∃ l ∈ links, l.role = .pins ∧ l.anchor = v := by
+    rw [← hres]
+    refine foldlInv (fun (q : StrengthAcc) => ∀ k v, assoc? q.2.2.1 k = some v →
+      ∃ l ∈ links, l.role = .pins ∧ l.anchor = v) _ links _ ?_ ?_
+    · intro k v hk; simp [assoc?_nil] at hk
+    · intro q y hy hq
+      exact step_pins_from links q y hy hq
+  refine ⟨?_, ?_, ?_⟩
+  · intro t
+    rw [hst]
+    split
+    · intro h; cases h
+    · split <;> (intro h; cases h)
+  · intro t ht
+    rw [hst] at ht
+    split at ht
+    · cases ht
+    · split at ht
+      · rename_i v hv
+        cases ht
+        exact hfrom _ _ hv
+      · cases ht
+  · intro hopen m hm p hp hmr hma hpr
+    rw [hst] at hopen
+    split at hopen
+    · cases hopen
+    · split at hopen
+      · cases hopen
+      · rename_i hnone
+        by_cases hreq : p.reqId = m.reqId
+        · by_cases hcl : p.clause = m.clause
+          · exfalso
+            have hsome : (assoc? res.2.2.1 m.anchor).isSome := by
+              rw [← hres]
+              exact foldlMono (fun q => (assoc? q.2.2.1 m.anchor).isSome) _ links _
+                (fun q y _ hq => step_pins_mono links q y _ hq)
+                ⟨p, hp, fun q => step_pins_set links q p m hpr hm hmr hreq.symm hcl.symm⟩
+            rw [hma, hnone] at hsome
+            cases hsome
+          · exact Or.inr hcl
+        · exact Or.inl hreq
+
+/-- @proves REQ-STRENGTH.qualifies_proof -/
+theorem proofs_are_presented_with_their_strength (links : List StrengthLink) (m : StrengthLink)
+    (hm : m ∈ links) (hrole : m.role = .models) :
+    ∃ o ∈ obligationsFrom links, o.symbol = m.anchor ∧
+      ∀ p ∈ links, p.role = .proves → p.reqId = m.reqId → p.clause = m.clause →
+        p.anchor ∈ o.theorems := by
+  rw [obligationsFrom_eq]
+  generalize hres : links.foldl (strengthStep links) ([], [], [], []) = res
+  have hsym : (assoc? res.1 m.anchor).isSome := by
+    rw [← hres]
+    exact foldlMono (fun q => (assoc? q.1 m.anchor).isSome) _ links _
+      (fun q y _ hq => step_symbols_mono links q y _ hq)
+      ⟨m, hm, fun q => step_symbols_set links q m hrole⟩
+  have hthm : ∀ p ∈ links, p.role = .proves → p.reqId = m.reqId → p.clause = m.clause →
+      p.anchor ∈ (assoc? res.2.1 m.anchor).getD [] := by
+    intro p hp hpr hreq hcl
+    rw [← hres]
+    exact foldlMono (fun q => p.anchor ∈ (assoc? q.2.1 m.anchor).getD []) _ links _
+      (fun q y _ hq => step_theorems_mono links q y _ _ hq)
+      ⟨p, hp, fun q => step_theorems_set links q p m hpr hm hrole hreq hcl⟩
+  obtain ⟨b, t, p, nd⟩ := res
+  have hkey : m.anchor ∈ b.map (·.1) := by
+    cases hf : b.find? (·.1 == m.anchor) with
+    | none => simp [assoc?, hf] at hsym
+    | some e =>
+      have he := List.find?_some (p := fun (x : String × List (String × Option String)) => x.1 == m.anchor) hf
+      have := List.mem_of_find?_eq_some hf
+      exact List.mem_map.mpr ⟨e, this, by simpa using he⟩
+  refine ⟨_, List.mem_map.mpr ⟨m.anchor, mem_sortedUnique _ _ _ hkey, rfl⟩, rfl, ?_⟩
+  intro q hq hqr hreq hcl
+  exact mem_sortedUnique _ _ _ (hthm q hq hqr hreq hcl)
+
 end TraceLean.Strength
