@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "re-recorded: clause text identical to the text judged and model unchanged; only the clause hash changed"
+      "note": "bodyHash is the digest of the normalised body and nothing else, so it moves exactly with it up to digest collisions."
     }
   },
   "linkHash": "a5e8f9f7d9edf1e0",
   "inputs": [
     [
       "requirement",
-      "0f080146d7f929a1"
+      "5e6ad90234e6d30b"
     ],
     [
       "model",

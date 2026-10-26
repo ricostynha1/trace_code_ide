@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "restsOn rests a clause with no model on its structural checks' hashes, sorted and once each; the material labels the test as a structural check, and a changed test changes the hash."
+      "note": "With no model, what a judgement rests on is the structural checks, so it is shown as such and moves with them."
     }
   },
   "linkHash": "1a06c686d63fd413",
   "inputs": [
     [
       "requirement",
-      "e45b0a4f4366afa8"
+      "9a9a9f35f742446d"
     ],
     [
       "model",

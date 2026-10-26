@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "render takes the index and the evidence and its body touches no file; the check renders twice to the same bytes and leaves the lock on disk as it was."
+      "note": "Rendering is called twice with the same bytes and writes nothing to the tree."
     }
   },
   "linkHash": "e62f9bd7dab0c4ab",
   "inputs": [
     [
       "requirement",
-      "6084d613360dc2b6"
+      "b52a95bc209df5df"
     ],
     [
       "model",

@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "A disagreement comes back with the input that produced it, and the check asserts that input is the smallest one: every mark false."
+      "note": "A real implementation that disagrees with its model is run and the reported divergence is the minimal case, the all-false marks."
     }
   },
   "linkHash": "b72bcd4a27dc8396",
   "inputs": [
     [
       "requirement",
-      "070b7a01d93a2540"
+      "01cdea5b4d524692"
     ],
     [
       "model",

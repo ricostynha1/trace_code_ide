@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+      "note": "Every line yields directives or problems, and both are kept in the fold."
     }
   },
   "linkHash": "c4d09d9ff18b87a5",
   "inputs": [
     [
       "requirement",
-      "e714daa4037e5f05"
+      "e9b8e93d84836e62"
     ],
     [
       "model",

@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "Exemptions are counted and each is signed with a reason; the check rejects an unsigned one."
+      "note": "Every exemption in the index must be signed with a reason and the count is held rare; whether a law was worth stating is the reason's to say, and the check makes it be said."
     }
   },
   "linkHash": "05a4e33afda2feb7",
   "inputs": [
     [
       "requirement",
-      "87a4e1b3efb40ff8"
+      "ae89c50c96c09ae2"
     ],
     [
       "model",

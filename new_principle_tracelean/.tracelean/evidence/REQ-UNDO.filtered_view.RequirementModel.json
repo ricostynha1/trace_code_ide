@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+      "note": "shownPoints keeps the filtered nodes, each under its nearest kept ancestor, and marks the one nearest the position."
     }
   },
   "linkHash": "8a99ad106bc5efb6",
   "inputs": [
     [
       "requirement",
-      "37cc69569648532d"
+      "c4db65d7059759f2"
     ],
     [
       "model",

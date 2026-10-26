@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "re-recorded: clause text identical to the text judged and model unchanged; only the clause hash changed"
+      "note": "A position inside an inserted text is written here, which ends the walk."
     }
   },
   "linkHash": "dc33450458ddeade",
   "inputs": [
     [
       "requirement",
-      "434947dc532c76ff"
+      "c619395b3b50940b"
     ],
     [
       "model",

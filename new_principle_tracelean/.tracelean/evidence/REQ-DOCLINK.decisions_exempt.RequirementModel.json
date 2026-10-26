@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "a target declared without a hash reads with an empty hash, which is how a decision declares what it affects; decided under autonomy, night of 2026-10-10"
+      "note": "A decision record declares requirement ids with no hash, and declaredIn reads those with an empty hash rather than a recorded one."
     }
   },
   "linkHash": "3b5431c545419147",
   "inputs": [
     [
       "requirement",
-      "cc62e88e3c03eff0"
+      "64cc0322f046e123"
     ],
     [
       "model",

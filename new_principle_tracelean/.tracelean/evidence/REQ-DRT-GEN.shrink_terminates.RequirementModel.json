@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "Every reduction step is strictly smaller; checked over each schema kind, and wide characters shrink by character."
+      "note": "Repeated shrinking reaches a fixed point within a bound for every generated list."
     }
   },
   "linkHash": "3945a75497058e64",
   "inputs": [
     [
       "requirement",
-      "86cdfb5b1664366f"
+      "049f71a95169cdfe"
     ],
     [
       "model",

@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "The generated crate depends on the project by path."
+      "note": "The generated manifest reaches the implementation by path."
     }
   },
   "linkHash": "461f498cb747189b",
   "inputs": [
     [
       "requirement",
-      "4f2311d1b42e74f3"
+      "f490ef3fef73c0dd"
     ],
     [
       "model",

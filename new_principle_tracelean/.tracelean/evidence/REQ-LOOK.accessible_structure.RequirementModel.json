@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "The page's accessibility tree, read in Chrome, names each region and control."
+      "note": "The page is built and its browser checks run against the accessibility tree the browser itself reports."
     }
   },
   "linkHash": "f1e85346d5ee24a4",
   "inputs": [
     [
       "requirement",
-      "50a6fea4ce331a65"
+      "539a13f02eda6d02"
     ],
     [
       "model",

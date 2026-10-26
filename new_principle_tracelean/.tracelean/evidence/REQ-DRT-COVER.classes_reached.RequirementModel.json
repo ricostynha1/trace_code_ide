@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+      "note": "reachedShape lists, for a declared shape, the classes the seeded cases reached."
     }
   },
   "linkHash": "94df3e762f1669f1",
   "inputs": [
     [
       "requirement",
-      "886cf55c14fe0bcb"
+      "44a10a0ed8de97f4"
     ],
     [
       "model",

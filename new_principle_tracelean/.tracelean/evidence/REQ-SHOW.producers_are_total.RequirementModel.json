@@ -4,21 +4,21 @@
     "clause": "producers_are_total",
     "bond": "requirementModel"
   },
-  "level": "L2",
+  "level": "L1",
   "detail": {
     "judge": {
-      "verdict": "agrees",
+      "verdict": "drift",
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "tidy makes every produced buffer well formed whatever it was given; decided under autonomy, night of 2026-10-10"
+      "note": "The model is tidy, which shows a produced buffer cannot fail on its spans; nothing in it says every buffer kind has a producer."
     }
   },
   "linkHash": "d422f4df5cf2b6fb",
   "inputs": [
     [
       "requirement",
-      "33620c953421d0ab"
+      "0b3f55341b1b4c0a"
     ],
     [
       "model",

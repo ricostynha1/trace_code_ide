@@ -8,16 +8,17 @@
   "detail": {
     "judge": {
       "verdict": "agrees",
-      "judgedBy": "ricostynha",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "approved in review 2026-10-10"
+      "note": "mutationsOf is a function of the two trees."
     }
   },
   "linkHash": "f0c0890cfdddf5ec",
   "inputs": [
     [
       "requirement",
-      "572d51b3b8c640e6"
+      "3a81f94cb193629c"
     ],
     [
       "model",

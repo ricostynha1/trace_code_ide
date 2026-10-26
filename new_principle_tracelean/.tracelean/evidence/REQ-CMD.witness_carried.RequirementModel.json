@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "re-recorded: clause text identical to the text judged and model unchanged; only the clause hash changed"
+      "note": "delete and deleteFile carry what they remove, and rename carries both names, so no inverse needs another source."
     }
   },
   "linkHash": "51b2605de54c2acc",
   "inputs": [
     [
       "requirement",
-      "8a0925daeaa6e691"
+      "111ecce9a25091f2"
     ],
     [
       "model",

@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+      "note": "Coverage is visible only when the hash it was measured against is the file's current one."
     }
   },
   "linkHash": "6b01926bb6353f61",
   "inputs": [
     [
       "requirement",
-      "88941d844a9dde94"
+      "4072efb41d3c39b7"
     ],
     [
       "model",

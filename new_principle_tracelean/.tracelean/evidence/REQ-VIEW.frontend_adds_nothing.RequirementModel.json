@@ -8,16 +8,17 @@
   "detail": {
     "judge": {
       "verdict": "agrees",
-      "judgedBy": "ricostynha",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "approved in review 2026-10-10"
+      "note": "conformance reports any offered action the buffer does not carry at that offset."
     }
   },
   "linkHash": "c1226446e7ef741c",
   "inputs": [
     [
       "requirement",
-      "8e8366faf5b51304"
+      "194a37657cf96d79"
     ],
     [
       "model",

@@ -8,16 +8,17 @@
   "detail": {
     "judge": {
       "verdict": "agrees",
-      "judgedBy": "ricostynha",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "approved in review 2026-10-10"
+      "note": "Only touched paths whose content differs yield commands, and each yields only the delete and insert its change needs, an empty side yielding none."
     }
   },
   "linkHash": "332565f7dc9c8d16",
   "inputs": [
     [
       "requirement",
-      "e76b8b29511354a2"
+      "428856bf0d887bc4"
     ],
     [
       "model",

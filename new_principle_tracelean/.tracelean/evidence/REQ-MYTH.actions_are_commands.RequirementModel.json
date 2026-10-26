@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "Every action goes through the keymap's command names."
+      "note": "The keymap layer cannot reach a workspace or command and an outcome is only a name."
     }
   },
   "linkHash": "a35b1ac16f249b48",
   "inputs": [
     [
       "requirement",
-      "9069c2107de06055"
+      "ce716f2f7120a2af"
     ],
     [
       "model",

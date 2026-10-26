@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "bondLevel defaults to L1, below every mark's threshold, so an unrecorded bond sets nothing."
+      "note": "A bond with no record stays at L1, below every mark's threshold, so its mark is unset."
     }
   },
   "linkHash": "10a8ba661b21de36",
   "inputs": [
     [
       "requirement",
-      "9ed5003dbd9eeec9"
+      "12541a151bf210cf"
     ],
     [
       "model",

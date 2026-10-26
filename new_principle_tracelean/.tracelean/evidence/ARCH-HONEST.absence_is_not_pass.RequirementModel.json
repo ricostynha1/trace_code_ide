@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "Every reporting path carries an unsure answer as its own field; the check asserts the fields reach the artefact."
+      "note": "No records give no marks, an empty aggregate holds nothing, an unclaimed clause yields a finding, and an inexact figure is not complete."
     }
   },
   "linkHash": "a1bc4d93503bf992",
   "inputs": [
     [
       "requirement",
-      "13d3f735a5729044"
+      "392721ff5524fbe0"
     ],
     [
       "model",

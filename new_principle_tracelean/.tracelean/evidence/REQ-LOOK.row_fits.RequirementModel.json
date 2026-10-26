@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+      "note": "menuRow uses full entries when they fit the width and only the keys otherwise, each piece carrying its entry's actions."
     }
   },
   "linkHash": "6362b8188a55c09e",
   "inputs": [
     [
       "requirement",
-      "844469489f3a4c0f"
+      "ca2a4047b84a435f"
     ],
     [
       "model",

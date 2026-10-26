@@ -8,16 +8,17 @@
   "detail": {
     "judge": {
       "verdict": "agrees",
-      "judgedBy": "ricostynha",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "approved in review 2026-10-10"
+      "note": "The keymap is a value validated as a whole when loaded, so a bad binding is reported then."
     }
   },
   "linkHash": "5c8f86a14062dbfe",
   "inputs": [
     [
       "requirement",
-      "a7d5dd5e61ace4f2"
+      "76983197292f05e2"
     ],
     [
       "model",

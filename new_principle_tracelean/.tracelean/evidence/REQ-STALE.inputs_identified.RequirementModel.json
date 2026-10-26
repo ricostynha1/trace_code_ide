@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "a record missing an input field is named; the inputs list itself is earn's; decided under autonomy, night of 2026-10-10"
+      "note": "A record missing the fields that identify its inputs is refused."
     }
   },
   "linkHash": "5e1dde18de8ae945",
   "inputs": [
     [
       "requirement",
-      "64c6aaf1b6ed8af9"
+      "eb114871106a2c4d"
     ],
     [
       "model",

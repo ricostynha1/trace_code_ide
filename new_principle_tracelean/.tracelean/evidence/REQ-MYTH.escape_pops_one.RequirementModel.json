@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+      "note": "An unbound Escape leaves to the parent, one level; any other unbound key outside the root leaves to the root."
     }
   },
   "linkHash": "a509f59855ebf1b0",
   "inputs": [
     [
       "requirement",
-      "04c58920becc7633"
+      "1e7ff46dbdc526f5"
     ],
     [
       "model",

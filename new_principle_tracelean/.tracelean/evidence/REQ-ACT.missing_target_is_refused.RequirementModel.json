@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+      "note": "dispatchNamed answers an action needing a target the focus lacks with a refusal naming it."
     }
   },
   "linkHash": "204482bd23b412c3",
   "inputs": [
     [
       "requirement",
-      "1e8be2e211d3d529"
+      "19186cced9e81a81"
     ],
     [
       "model",

@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "the four qualifiers are read by parseLine, within the comment parser modelled here; decided under autonomy, night of 2026-10-10"
+      "note": "parseComment reads each line through parseLine, which recognises the four qualifiers and attaches them as stated."
     }
   },
   "linkHash": "70565e51b6a2c534",
   "inputs": [
     [
       "requirement",
-      "62ca00da5ea277ed"
+      "ff383f1b03f1dc2b"
     ],
     [
       "model",

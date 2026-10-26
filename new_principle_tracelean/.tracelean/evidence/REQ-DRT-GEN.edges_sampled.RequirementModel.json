@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "re-recorded: clause text identical to the text judged and model unchanged; only the clause hash changed"
+      "note": "natStream draws from the declared edges as well as the range, by the seeded stream that favours them."
     }
   },
   "linkHash": "0d348bfcc3433da6",
   "inputs": [
     [
       "requirement",
-      "eb63a6d441170a5d"
+      "ede2f256959273a0"
     ],
     [
       "model",

@@ -8,16 +8,17 @@
   "detail": {
     "judge": {
       "verdict": "agrees",
-      "judgedBy": "ricostynha",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "approved in review 2026-10-10"
+      "note": "An observation matching a pending self-write is suppressed."
     }
   },
   "linkHash": "6b7030f5bb5533a5",
   "inputs": [
     [
       "requirement",
-      "40ba3ed235418db1"
+      "14a5af3726346934"
     ],
     [
       "model",

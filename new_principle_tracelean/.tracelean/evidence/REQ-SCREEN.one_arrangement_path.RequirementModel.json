@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+      "note": "arrange is the one function every arrangement goes through."
     }
   },
   "linkHash": "891884622e11154e",
   "inputs": [
     [
       "requirement",
-      "51bd2b4ab2f30637"
+      "46ebf1d57404af47"
     ],
     [
       "model",

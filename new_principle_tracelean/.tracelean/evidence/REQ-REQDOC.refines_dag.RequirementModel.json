@@ -8,16 +8,17 @@
   "detail": {
     "judge": {
       "verdict": "agrees",
-      "judgedBy": "ricostynha",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "approved in review 2026-10-10"
+      "note": "graphReport finds a cycle in the refinement graph."
     }
   },
   "linkHash": "de5c949f11d548fa",
   "inputs": [
     [
       "requirement",
-      "44bb4168401fccd6"
+      "cf48d8ba491eb781"
     ],
     [
       "model",

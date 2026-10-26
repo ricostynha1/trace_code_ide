@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "re-recorded: clause text identical to the text judged and model unchanged; only the clause hash changed"
+      "note": "whichKey is computed from the mode's bindings and its parent, with nothing kept beside them."
     }
   },
   "linkHash": "10a66b0cbba36a1b",
   "inputs": [
     [
       "requirement",
-      "b79f4e8ae946d20d"
+      "0678a2f1edd191ab"
     ],
     [
       "model",

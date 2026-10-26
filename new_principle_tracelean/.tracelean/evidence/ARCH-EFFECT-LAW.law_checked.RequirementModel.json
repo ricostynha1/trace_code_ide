@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "Each law is a computable function the effects suite runs against the sandbox; the check requires each to be a function."
+      "note": "The stated effect laws are bound to one differential op and the check runs it against the real implementation."
     }
   },
   "linkHash": "c9abe96122eeaf3c",
   "inputs": [
     [
       "requirement",
-      "042364abb7746c1d"
+      "8f088cca030b52c5"
     ],
     [
       "model",

@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "occurrences: whole-word at every start including overlapping ones, case-folded search otherwise, by path then line, at most the limit; case folding and word characters are ASCII in the model, Unicode in Rust."
+      "note": "occurrences lists the lines holding the needle, whole-word or not, by path then line, up to the limit."
     }
   },
   "linkHash": "31cf102ac59fa0cf",
   "inputs": [
     [
       "requirement",
-      "c9d4e3ea0dcb539e"
+      "8b6ca7f5b14dda6d"
     ],
     [
       "model",

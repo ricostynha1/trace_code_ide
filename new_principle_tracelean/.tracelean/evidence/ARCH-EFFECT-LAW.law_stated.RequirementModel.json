@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "Every axiom is accompanied by a law, and the one effect without a law says why in its requirement, which the check reads."
+      "note": "The axiom check refuses an axiomatised operation that has no law naming it."
     }
   },
   "linkHash": "5bf5b376cf59fbf9",
   "inputs": [
     [
       "requirement",
-      "f0d9386513d88581"
+      "5c89a651ac43e77d"
     ],
     [
       "model",

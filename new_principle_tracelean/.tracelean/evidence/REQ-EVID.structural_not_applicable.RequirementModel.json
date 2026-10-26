@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "structural clears tested and proved and sets structural; letterOf writes a dot for a mark that does not apply; both leaves the other part's T and P when one part is structural."
+      "note": "A structural clause's tested and proved are cleared and marked not applicable, keeping its other marks; combine leaves them out of the aggregate."
     }
   },
   "linkHash": "a393fa574ac42e3b",
   "inputs": [
     [
       "requirement",
-      "6eda17e62987d88f"
+      "590a71cbf618a4eb"
     ],
     [
       "model",

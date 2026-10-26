@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "Assertions read the painted cells, not the frontend's account."
+      "note": "What the key did is read off the painted screen, not from the frontend's account."
     }
   },
   "linkHash": "6559094aefa2a3e0",
   "inputs": [
     [
       "requirement",
-      "47cc25a976989518"
+      "2b24c41ec1a8490d"
     ],
     [
       "model",

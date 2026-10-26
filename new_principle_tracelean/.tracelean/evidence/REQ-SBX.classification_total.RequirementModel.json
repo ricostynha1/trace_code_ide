@@ -8,16 +8,17 @@
   "detail": {
     "judge": {
       "verdict": "agrees",
-      "judgedBy": "ricostynha",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "approved in review 2026-10-10"
+      "note": "classify answers one of the four classes for every path."
     }
   },
   "linkHash": "08d94897c02d05a5",
   "inputs": [
     [
       "requirement",
-      "6280e2a39ac35925"
+      "d36e6f90ce311cd3"
     ],
     [
       "model",

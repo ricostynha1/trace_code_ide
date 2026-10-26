@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+      "note": "diffLines keeps the common prefix and suffix and marks what was removed and added."
     }
   },
   "linkHash": "7257aefc14322bbc",
   "inputs": [
     [
       "requirement",
-      "cc8bc27e9db4b0ce"
+      "9e4eb8ddd3f8ff57"
     ],
     [
       "model",

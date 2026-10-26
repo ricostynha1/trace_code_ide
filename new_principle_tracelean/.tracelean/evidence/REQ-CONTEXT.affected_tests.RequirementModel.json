@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+      "note": "affected gathers tests claiming requirements below the target and tests naming its implementing items, less those already claiming it."
     }
   },
   "linkHash": "61fbed40032883bc",
   "inputs": [
     [
       "requirement",
-      "d407e1046f7459c0"
+      "7b16a5fe46eae97a"
     ],
     [
       "model",

@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "stationKind gives each of the seven stations the kind of buffer it stands for and none for any other name; the proof goals now open beside a Lean file rather than from a station."
+      "note": "stationKind gives each of the seven stations the kind of buffer it stands for and none for any other name."
     }
   },
   "linkHash": "41b41ef0c2e83404",
   "inputs": [
     [
       "requirement",
-      "8e70358f44206d98"
+      "f705ddbcb58f41a3"
     ],
     [
       "model",

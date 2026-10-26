@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+      "note": "Every scanned file is in the total and only claimed scanned files in the met count."
     }
   },
   "linkHash": "44a8ca5d2d56e412",
   "inputs": [
     [
       "requirement",
-      "35fcc6c16d2878f6"
+      "1f74a948d16f64ec"
     ],
     [
       "model",

@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "Generation writes only under the cache."
+      "note": "The runner and its package are written only under .tracelean."
     }
   },
   "linkHash": "96d789f16827ca2b",
   "inputs": [
     [
       "requirement",
-      "532dcbc3c14f8f3c"
+      "9773527186367357"
     ],
     [
       "model",

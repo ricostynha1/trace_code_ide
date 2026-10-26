@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "The judge exports a prompt; no transport is linked; the check rejects a tree that can send."
+      "note": "The judge produces a prompt as text and no transport exists in the tree to send it."
     }
   },
   "linkHash": "52169cf7a846df4a",
   "inputs": [
     [
       "requirement",
-      "3bf8fe793ab71c7f"
+      "ea11c779cf6e021e"
     ],
     [
       "model",

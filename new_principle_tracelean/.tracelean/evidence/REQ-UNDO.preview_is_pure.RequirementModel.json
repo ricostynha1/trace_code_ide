@@ -8,16 +8,17 @@
   "detail": {
     "judge": {
       "verdict": "agrees",
-      "judgedBy": "ricostynha",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "approved in review 2026-10-10"
+      "note": "The current node after every preview is reported, so a preview that moved it would show."
     }
   },
   "linkHash": "044e5d5948d55efd",
   "inputs": [
     [
       "requirement",
-      "9ef31d958b332d35"
+      "f17c954e92c7d72c"
     ],
     [
       "model",

@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "--stale prints one line per link for a script."
+      "note": "The stale listing prints each item to redo and exits non-zero exactly when there is one."
     }
   },
   "linkHash": "02858f1acbfb24ae",
   "inputs": [
     [
       "requirement",
-      "acf2616931a4d987"
+      "02d0e4742ab2548e"
     ],
     [
       "model",

@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "Every .rs and .ts file that ships, now including the web frontend via the TypeScript grammar, is claimed by an annotation; the check rejects an unclaimed file."
+      "note": "Every shipped source file must carry a claim, over a walk shown to reach more than forty files."
     }
   },
   "linkHash": "a779c16bf17b4475",
   "inputs": [
     [
       "requirement",
-      "436b867d186cebff"
+      "f4845fe6f94b2423"
     ],
     [
       "model",

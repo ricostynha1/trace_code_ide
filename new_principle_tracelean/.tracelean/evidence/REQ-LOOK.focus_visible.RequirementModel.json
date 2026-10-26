@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "Each of three panes focused in turn, including the last across with no divider of its own, has its edges in a style no other edge has; checked in the terminal's cells and in the page."
+      "note": "For each of the three panes in turn, its edges are drawn in one style that no other edge has."
     }
   },
   "linkHash": "9b363bca1a52127a",
   "inputs": [
     [
       "requirement",
-      "812a6b265d31a1f5"
+      "1c758e2ce17cb0bf"
     ],
     [
       "model",

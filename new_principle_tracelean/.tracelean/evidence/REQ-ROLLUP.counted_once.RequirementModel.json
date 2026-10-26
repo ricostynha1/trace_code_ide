@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "rollUp combines marks over the reachable set built once per id; types moved from Level to Marks."
+      "note": "rollUpTree walks the canonical graph with a bound and the visited set, counting each requirement once and not again under itself."
     }
   },
   "linkHash": "243da6456bc4c003",
   "inputs": [
     [
       "requirement",
-      "012f642ed7aceab2"
+      "df7527b15b753e2c"
     ],
     [
       "model",

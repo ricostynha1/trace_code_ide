@@ -8,16 +8,17 @@
   "detail": {
     "judge": {
       "verdict": "agrees",
-      "judgedBy": "ricostynha",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "approved in review 2026-10-10"
+      "note": "parseLog stops at an incomplete entry and records where, and the report carries it."
     }
   },
   "linkHash": "3a52c2debec81937",
   "inputs": [
     [
       "requirement",
-      "1b55ac09ed1d968a"
+      "a14f2332d6cb31cc"
     ],
     [
       "model",

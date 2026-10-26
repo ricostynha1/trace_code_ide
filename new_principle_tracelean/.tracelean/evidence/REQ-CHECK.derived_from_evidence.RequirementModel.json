@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "Checker findings are computed from the index and records only."
+      "note": "The checker's kinds include no drift or divergence and it reaches for no file, process or run, so such findings can only come from records."
     }
   },
   "linkHash": "1b91fac4b26b5839",
   "inputs": [
     [
       "requirement",
-      "80fcfa23ee1f40d4"
+      "5d068aaac9d236e8"
     ],
     [
       "model",

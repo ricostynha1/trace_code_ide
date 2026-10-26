@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "ToJson/FromJson throughout the generated dispatch."
+      "note": "The generated main decodes and encodes through toJson and fromJson?, the one declared convention."
     }
   },
   "linkHash": "a868f36bf69a5ca6",
   "inputs": [
     [
       "requirement",
-      "ba6017c651ff6c06"
+      "85f58d0c267a85f5"
     ],
     [
       "model",

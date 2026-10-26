@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "The TypeScript runner is generated."
+      "note": "The runner is generated with a generated-by header, and regenerating it gives the same text."
     }
   },
   "linkHash": "0be5d6fef05b448f",
   "inputs": [
     [
       "requirement",
-      "5c16852867ab6d50"
+      "b171547e60f3969b"
     ],
     [
       "model",

@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+      "note": "pair names every type pair it cannot generate, including floats and mismatches, and never approximates."
     }
   },
   "linkHash": "3328967bdc5145cc",
   "inputs": [
     [
       "requirement",
-      "a903c5850f2b8040"
+      "576b18ca99cabc5d"
     ],
     [
       "model",

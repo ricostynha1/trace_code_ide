@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "re-recorded: clause text identical to the text judged and model unchanged; only the clause hash changed"
+      "note": "A role-shaped token outside the vocabulary is returned as an unknown-role problem."
     }
   },
   "linkHash": "f2cda8e9261e7bd0",
   "inputs": [
     [
       "requirement",
-      "66a0f9e812ee651d"
+      "f3d17bc9be6dd25f"
     ],
     [
       "model",

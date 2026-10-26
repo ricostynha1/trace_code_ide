@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+      "note": "rows walks the files as folders and names, opening the opened folders, each row standing for its path."
     }
   },
   "linkHash": "66db579db2b78e85",
   "inputs": [
     [
       "requirement",
-      "52ea811be3e2c641"
+      "f4eed6a76d5bc277"
     ],
     [
       "model",

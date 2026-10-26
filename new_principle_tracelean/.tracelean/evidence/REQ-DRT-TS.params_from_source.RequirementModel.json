@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+      "note": "tsParameters reads the names from the TypeScript signature."
     }
   },
   "linkHash": "61fcd6a3127f3613",
   "inputs": [
     [
       "requirement",
-      "f3a19935acf61c9e"
+      "1739fb59c1ab0882"
     ],
     [
       "model",

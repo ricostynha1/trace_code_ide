@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+      "note": "The first matching pending write is removed when it suppresses."
     }
   },
   "linkHash": "b1a41e635af3ebd2",
   "inputs": [
     [
       "requirement",
-      "88b1d15d370024b5"
+      "f272d5f3c52bf39f"
     ],
     [
       "model",

@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+      "note": "The frontmatter reader reports a key or narrowing given twice among its problems."
     }
   },
   "linkHash": "b4b15a9f47566b9e",
   "inputs": [
     [
       "requirement",
-      "9321b8d470678fe5"
+      "59704d9a0e3ee2d4"
     ],
     [
       "model",

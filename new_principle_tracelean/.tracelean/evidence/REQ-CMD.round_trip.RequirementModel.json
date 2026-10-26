@@ -8,16 +8,17 @@
   "detail": {
     "judge": {
       "verdict": "agrees",
-      "judgedBy": "ricostynha",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "approved in review 2026-10-10"
+      "note": "roundTrip applies the command then its inverse, which is the pair the clause says restores the state."
     }
   },
   "linkHash": "5761d36ea6f24e90",
   "inputs": [
     [
       "requirement",
-      "8b7aad0d88dac8d9"
+      "6d41b0c14c4033c0"
     ],
     [
       "model",

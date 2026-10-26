@@ -8,16 +8,17 @@
   "detail": {
     "judge": {
       "verdict": "agrees",
-      "judgedBy": "ricostynha",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "approved in review 2026-10-10"
+      "note": "With no pins and no declaration a model is open."
     }
   },
   "linkHash": "cb7fd4ceb0e99238",
   "inputs": [
     [
       "requirement",
-      "ddd19ed3ed7044f0"
+      "7cec149dc54cf764"
     ],
     [
       "model",

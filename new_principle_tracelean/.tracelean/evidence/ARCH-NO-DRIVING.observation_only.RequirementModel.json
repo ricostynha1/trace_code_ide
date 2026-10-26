@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "Information flows from transcript and tree into the editor, never back; read off the tree."
+      "note": "With no process launched toward a tool, what reaches the editor from it can only be what it left in a workspace."
     }
   },
   "linkHash": "0469bfd3aef8e007",
   "inputs": [
     [
       "requirement",
-      "70f369a01f85fe64"
+      "3786f8d395b201e8"
     ],
     [
       "model",

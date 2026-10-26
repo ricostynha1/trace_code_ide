@@ -8,16 +8,17 @@
   "detail": {
     "judge": {
       "verdict": "agrees",
-      "judgedBy": "ricostynha",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "approved in review 2026-10-10"
+      "note": "conformance requires every line of the buffer's text to be drawn, whatever the kind."
     }
   },
   "linkHash": "14c022447f87a97d",
   "inputs": [
     [
       "requirement",
-      "12236ebe108747b9"
+      "31c1c2b068b6d2e6"
     ],
     [
       "model",

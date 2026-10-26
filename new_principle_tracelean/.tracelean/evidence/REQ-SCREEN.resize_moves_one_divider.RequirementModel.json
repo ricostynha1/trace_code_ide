@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "re-recorded: clause text identical to the text judged and model unchanged; only the clause hash changed"
+      "note": "resizeAt moves weight across the focused pane's divider only."
     }
   },
   "linkHash": "25080e57fba0a821",
   "inputs": [
     [
       "requirement",
-      "8bfdf080909cd3c8"
+      "cd1ac59fd9537404"
     ],
     [
       "model",

@@ -8,16 +8,17 @@
   "detail": {
     "judge": {
       "verdict": "agrees",
-      "judgedBy": "ricostynha",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "approved in review 2026-10-10"
+      "note": "The report replays directly and from the checkpoint, so the two outcomes can be compared."
     }
   },
   "linkHash": "d55f9a4b8178e7b7",
   "inputs": [
     [
       "requirement",
-      "29c73efb5a570d74"
+      "e4125851111dfe6e"
     ],
     [
       "model",

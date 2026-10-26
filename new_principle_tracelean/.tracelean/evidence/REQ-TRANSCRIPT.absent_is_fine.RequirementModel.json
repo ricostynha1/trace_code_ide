@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "an empty transcript reads as no events and no error; decided under autonomy, night of 2026-10-10"
+      "note": "An empty transcript reads as no events and no error."
     }
   },
   "linkHash": "59baf1642d7f782e",
   "inputs": [
     [
       "requirement",
-      "2d6bcc37292e9148"
+      "4401916fb4221eab"
     ],
     [
       "model",

@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+      "note": "Narrowings are read beside their clause and only clause keys are addressable."
     }
   },
   "linkHash": "1e09095c86731ad6",
   "inputs": [
     [
       "requirement",
-      "f2f4bcd33cdbb247"
+      "0dc95066dcdec80f"
     ],
     [
       "model",

@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "re-recorded: clause text identical to the text judged and model unchanged; only the clause hash changed"
+      "note": "window returns a buffer of the taken lines with the spans clipped into it."
     }
   },
   "linkHash": "28bf32c1b49e61c0",
   "inputs": [
     [
       "requirement",
-      "c344c582e4db07ee"
+      "53f9e77b258a1e5f"
     ],
     [
       "model",

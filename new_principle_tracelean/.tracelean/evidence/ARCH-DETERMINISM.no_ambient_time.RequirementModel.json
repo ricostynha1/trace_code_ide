@@ -11,18 +11,18 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "No clock or unseeded randomness named in the source outside fixtures; Runner::drop waits by count, not time."
+      "note": "Clocks, randomness and machine identity are refused in the source, and the derived artefacts under .tracelean are read for this machine's root, home and temporary paths, with a planted path shown to be caught."
     }
   },
-  "linkHash": "d1cb950e9518d1b7",
+  "linkHash": "0741a7e9c75815ef",
   "inputs": [
     [
       "requirement",
-      "fafc4d04da1f770e"
+      "7ffc972115a4374b"
     ],
     [
       "model",
-      "db7dcdeb5d93ea29"
+      "e44197b5404da4a1"
     ]
   ]
 }

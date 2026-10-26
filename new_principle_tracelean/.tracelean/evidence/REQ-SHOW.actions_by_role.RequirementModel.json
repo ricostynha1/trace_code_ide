@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "actionsFor maps Role.mark to trace.rollup as Role.level did; other roles unchanged."
+      "note": "actionsFor is one table from role to actions, so a role offers the same actions in every buffer."
     }
   },
   "linkHash": "73e5d1c89edb65d4",
   "inputs": [
     [
       "requirement",
-      "45e94cee1fcb5d78"
+      "2e3dd932c21cc6cb"
     ],
     [
       "model",

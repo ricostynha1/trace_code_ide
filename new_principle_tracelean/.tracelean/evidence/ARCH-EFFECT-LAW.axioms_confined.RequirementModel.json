@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "Axioms appear in one file only; the check reads every model file."
+      "note": "The check reads every model file and refuses an axiom outside the one effects module."
     }
   },
   "linkHash": "b1fa5d51d14891db",
   "inputs": [
     [
       "requirement",
-      "e290248e6e5e583a"
+      "b92d3dd5e054e24e"
     ],
     [
       "model",

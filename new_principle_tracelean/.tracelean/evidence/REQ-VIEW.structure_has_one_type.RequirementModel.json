@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "re-recorded: clause text identical to the text judged and model unchanged; only the clause hash changed"
+      "note": "A listing's spans are the same Span a parser's marks become."
     }
   },
   "linkHash": "9aeffb828e3f10b7",
   "inputs": [
     [
       "requirement",
-      "d8d9d9a48443ea34"
+      "dec765c4e0f36bda"
     ],
     [
       "model",

@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "re-recorded: clause text identical to the text judged and model unchanged; only the clause hash changed"
+      "note": "back inverts each command exactly, by offsets and lengths."
     }
   },
   "linkHash": "5ea0b7510f747add",
   "inputs": [
     [
       "requirement",
-      "a4bbed003d7ad8ec"
+      "c790236cd868149f"
     ],
     [
       "model",

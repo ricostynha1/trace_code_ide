@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "re-recorded: clause text identical to the text judged and model unchanged; only the clause hash changed"
+      "note": "A line that is not recognised is kept as unrecognised and the read goes on."
     }
   },
   "linkHash": "29e38c1e97a06a54",
   "inputs": [
     [
       "requirement",
-      "8328c757f3309cd4"
+      "24b98c02165075b9"
     ],
     [
       "model",

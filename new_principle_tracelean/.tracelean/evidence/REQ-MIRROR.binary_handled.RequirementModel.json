@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+      "note": "A change involving an opaque file is reported only, never mirrored as text."
     }
   },
   "linkHash": "8ad9363826619073",
   "inputs": [
     [
       "requirement",
-      "e91dac2c393d6e6d"
+      "64c29d45a5ec957a"
     ],
     [
       "model",

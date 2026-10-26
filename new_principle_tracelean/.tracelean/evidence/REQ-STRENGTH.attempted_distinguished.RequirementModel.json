@@ -8,16 +8,17 @@
   "detail": {
     "judge": {
       "verdict": "agrees",
-      "judgedBy": "ricostynha",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "approved in review 2026-10-10"
+      "note": "A model is open with no pins, attempted with one, and nondeterministic when declared; pinned is the separate kernel verdict."
     }
   },
   "linkHash": "e42377348aa6c654",
   "inputs": [
     [
       "requirement",
-      "917634030ababd40"
+      "e282424e21740fd4"
     ],
     [
       "model",

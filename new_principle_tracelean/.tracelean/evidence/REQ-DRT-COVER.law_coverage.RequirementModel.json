@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+      "note": "Each floor names a law's situation and coverageVerdict reports, per situation, whether the observed counts reached it."
     }
   },
   "linkHash": "7f5c1db6c11eba4d",
   "inputs": [
     [
       "requirement",
-      "1780113b1ef2519f"
+      "ba179b676308dc26"
     ],
     [
       "model",

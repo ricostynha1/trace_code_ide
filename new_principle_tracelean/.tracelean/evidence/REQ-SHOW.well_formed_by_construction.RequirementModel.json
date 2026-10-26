@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "re-recorded: clause text identical to the text judged and model unchanged; only the clause hash changed"
+      "note": "Every producer ends in tidy, which clamps, orders and drops overlaps, so the result has no faults."
     }
   },
   "linkHash": "7d4cfafb551d509e",
   "inputs": [
     [
       "requirement",
-      "13536e8cb99fa6a9"
+      "491c7d65ddb6da61"
     ],
     [
       "model",

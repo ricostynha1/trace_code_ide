@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "re-recorded: clause text identical to the text judged and model unchanged; only the clause hash changed"
+      "note": "directoryBuffer writes one entry a line with a span for each."
     }
   },
   "linkHash": "112994f2daa9c78b",
   "inputs": [
     [
       "requirement",
-      "df9e049a5b0b3ee7"
+      "b361290c01fb5e9a"
     ],
     [
       "model",

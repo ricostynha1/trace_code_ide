@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-DRT-BIND",
+    "clause": "derived_unless_written",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Binding::a_written_field_replaces_its_derived_one",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "09c621de67c36a5e",
+  "inputs": [
+    [
+      "model",
+      "8ff2f54d6db3abc3"
+    ],
+    [
+      "requirement",
+      "7545fd9735257db1"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

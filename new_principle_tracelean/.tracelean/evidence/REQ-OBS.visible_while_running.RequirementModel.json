@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "Changes appear while the tool runs."
+      "note": "A change made mid-run is seen as mutations, and looking does not alter it."
     }
   },
   "linkHash": "4f0033716de7eb25",
   "inputs": [
     [
       "requirement",
-      "87a2e08c0f07c24c"
+      "52797025af9079e7"
     ],
     [
       "model",

@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "A dropped link changes the bytes."
+      "note": "The bytes do not move with the walk order and do move with a body hash."
     }
   },
   "linkHash": "969a1b801dbbe725",
   "inputs": [
     [
       "requirement",
-      "13845ee23e2d217b"
+      "f3a536e38da97064"
     ],
     [
       "model",

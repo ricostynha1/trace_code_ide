@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "The context is put on the clipboard or printed; nothing sends it."
+      "note": "The chosen context lands on the editor's clipboard and nothing else is done with it."
     }
   },
   "linkHash": "49cab8be04dff89e",
   "inputs": [
     [
       "requirement",
-      "3a8cf60320ea975c"
+      "27cec7b098cd60ff"
     ],
     [
       "model",

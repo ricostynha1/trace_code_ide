@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "A failed build carries the compiler's message."
+      "note": "A deliberately broken generated crate fails to build with a message naming the mismatched types and the file."
     }
   },
   "linkHash": "5b571c8cf6282f8a",
   "inputs": [
     [
       "requirement",
-      "57406e9ccb9db442"
+      "b51fd03cb3bce326"
     ],
     [
       "model",

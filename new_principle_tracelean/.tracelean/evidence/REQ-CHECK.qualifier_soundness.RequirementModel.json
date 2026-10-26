@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "expiry judged against the date given, none when none, as the today narrowing says; decided under autonomy, night of 2026-10-10"
+      "note": "An exemption missing a reason or approver, or expired against the given date, is unsound; with no date nothing has expired."
     }
   },
   "linkHash": "f125b0ccd563642d",
   "inputs": [
     [
       "requirement",
-      "e327e2ecff8fb70a"
+      "665b4d9c4c11349c"
     ],
     [
       "model",

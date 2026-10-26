@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+      "note": "A row is read as the names its pieces carry, never the painting."
     }
   },
   "linkHash": "db5862b22892677d",
   "inputs": [
     [
       "requirement",
-      "99bf32df86776f0f"
+      "4af1202b005cf310"
     ],
     [
       "model",

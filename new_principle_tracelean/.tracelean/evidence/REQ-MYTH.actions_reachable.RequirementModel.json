@@ -8,16 +8,17 @@
   "detail": {
     "judge": {
       "verdict": "agrees",
-      "judgedBy": "ricostynha",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "approved in review 2026-10-10"
+      "note": "validate walks the modes reachable from the root and reports every action no reachable mode dispatches."
     }
   },
   "linkHash": "b7467e20d38ffad8",
   "inputs": [
     [
       "requirement",
-      "8eef2f1dd3a245de"
+      "9da291a1f77272be"
     ],
     [
       "model",

@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "re-recorded: clause text identical to the text judged, model declaration byte-identical; only hashes moved"
+      "note": "Buffer is the one type every frontend is given."
     }
   },
   "linkHash": "9a30174b644a2f86",
   "inputs": [
     [
       "requirement",
-      "77d3c42b9c472b65"
+      "15ee6bbe4145b035"
     ],
     [
       "model",

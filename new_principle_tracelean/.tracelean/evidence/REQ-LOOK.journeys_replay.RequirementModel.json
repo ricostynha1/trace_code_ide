@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "tests/journeys.json replays in the terminal and in the page."
+      "note": "The written journeys replay in the terminal by its bytes; the web frontend replays the same file in journeys.mjs."
     }
   },
   "linkHash": "4e18f0a1479b79b7",
   "inputs": [
     [
       "requirement",
-      "b7d153d99bbe64e9"
+      "ddc2834546914400"
     ],
     [
       "model",

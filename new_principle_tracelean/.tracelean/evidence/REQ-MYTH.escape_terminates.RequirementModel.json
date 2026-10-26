@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+      "note": "validate reports a missing root and every mode the root cannot reach through parents, which is what makes repeated Escape end at the root."
     }
   },
   "linkHash": "47c67fca5e3046df",
   "inputs": [
     [
       "requirement",
-      "fd4ad805378cc730"
+      "8b71a9d3bdb13d19"
     ],
     [
       "model",

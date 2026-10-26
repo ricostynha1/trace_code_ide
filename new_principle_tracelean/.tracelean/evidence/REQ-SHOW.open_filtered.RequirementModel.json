@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "isOpen is a count short of its denominator or an unrun line; the index keeps open rows, the graph keeps a row with an open one at or under it, which is the path down to it."
+      "note": "shown keeps only open requirements and those above them when openOnly is asked."
     }
   },
   "linkHash": "8c44a11f28717bd6",
   "inputs": [
     [
       "requirement",
-      "aa988992db31ff51"
+      "5446158a6c2bef46"
     ],
     [
       "model",

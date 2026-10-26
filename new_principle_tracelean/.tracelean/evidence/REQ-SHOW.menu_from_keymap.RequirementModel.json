@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+      "note": "menuBuffer writes one line a key and carries the action on its span when there is one."
     }
   },
   "linkHash": "9e6db49d35c536ef",
   "inputs": [
     [
       "requirement",
-      "71f40cb5586b65f9"
+      "93c51156a8bee53c"
     ],
     [
       "model",

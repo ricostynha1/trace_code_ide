@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "re-recorded: clause text identical to the text judged and model unchanged; only the clause hash changed"
+      "note": "A position after an insert moves back by its length, after a delete forward by what was deleted."
     }
   },
   "linkHash": "631e743dde41fab8",
   "inputs": [
     [
       "requirement",
-      "fefadbfa045fc253"
+      "bf2014af9ec2911d"
     ],
     [
       "model",

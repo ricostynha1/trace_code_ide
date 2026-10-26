@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "Wording change only (tested mark); the model's distinction between structural and exempt is unchanged."
+      "note": "A structural clause asks only for a test, keeps its findings, and is not exempt."
     }
   },
   "linkHash": "d55d3fe1117a3cd0",
   "inputs": [
     [
       "requirement",
-      "9804e54407d990a9"
+      "fe80bbdd55a1fe6e"
     ],
     [
       "model",

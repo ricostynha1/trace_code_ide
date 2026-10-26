@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "the prompt says it is advice and that the decision is the asker's; record refuses a judgement naming no person; decided under autonomy, night of 2026-10-10"
+      "note": "The prompt says it is advice and that the decision is recorded as the asker's."
     }
   },
   "linkHash": "147ccb74d7671163",
   "inputs": [
     [
       "requirement",
-      "87a2476be237a570"
+      "55e6e907993afc87"
     ],
     [
       "model",

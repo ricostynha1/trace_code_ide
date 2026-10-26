@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+      "note": "mirrored applies the derived mutations to the first tree and reports what it reached."
     }
   },
   "linkHash": "5300d58ea9941469",
   "inputs": [
     [
       "requirement",
-      "12824ab11567ca06"
+      "771b2fda634aae3d"
     ],
     [
       "model",

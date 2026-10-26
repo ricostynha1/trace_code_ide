@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+      "note": "A changing intent is an Edit carrying a command; the workspace is an argument so the witness can be carried."
     }
   },
   "linkHash": "c88ca6a671c883d4",
   "inputs": [
     [
       "requirement",
-      "f483d1bec841e49f"
+      "cf525a4e16234eef"
     ],
     [
       "model",

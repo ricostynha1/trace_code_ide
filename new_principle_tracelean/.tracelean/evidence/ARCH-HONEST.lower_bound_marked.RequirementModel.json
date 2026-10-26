@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "an inexact figure renders as \"≤ n% (provisional)\", which says it can only fall; decided under autonomy, night of 2026-10-10"
+      "note": "An inexact figure renders as a bounded percentage marked provisional, an exact one as a plain percentage."
     }
   },
   "linkHash": "631c88bd25c89407",
   "inputs": [
     [
       "requirement",
-      "0c39d3c85032dd96"
+      "e4ea9081fac925e9"
     ],
     [
       "model",

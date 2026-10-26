@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "Asked of an empty PATH the answer names lean and elan; a missing toolchain is an Err, not a model failure."
+      "note": "A PATH without Lean is reported with an explanation naming lean and elan."
     }
   },
   "linkHash": "952a2fc1218a7d6c",
   "inputs": [
     [
       "requirement",
-      "40c39da133c23406"
+      "f94d60812e7db345"
     ],
     [
       "model",

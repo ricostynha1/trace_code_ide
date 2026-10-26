@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "Marks carry A J T P each independently; the added structural field says T and P do not apply and is no fifth mark."
+      "note": "The marks are independent booleans; no field is computed from another."
     }
   },
   "linkHash": "f9ad64f1cb5668dd",
   "inputs": [
     [
       "requirement",
-      "712e1124dbf7cd19"
+      "71be756093f00369"
     ],
     [
       "model",

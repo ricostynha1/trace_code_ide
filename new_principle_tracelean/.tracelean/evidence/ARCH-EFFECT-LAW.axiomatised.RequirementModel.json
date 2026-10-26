@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "Effects are opaque constants in the one effects module, each with its law; the check reads that module."
+      "note": "Every axiom in the model directory is found and checked to be a bodiless constant with a stated law, against the requirement's own list."
     }
   },
   "linkHash": "be30d760e7dc7529",
   "inputs": [
     [
       "requirement",
-      "46bd65faf99ca23e"
+      "b21102d72c8e7f65"
     ],
     [
       "model",

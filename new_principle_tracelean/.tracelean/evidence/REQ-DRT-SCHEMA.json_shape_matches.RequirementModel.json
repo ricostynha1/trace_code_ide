@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "Wire helpers (pairs) give maps the shape Lean derives; every suite exercises the encodings."
+      "note": "A sum type generates a bare name for a nullary variant and a one-key object otherwise, the encoding both sides use."
     }
   },
   "linkHash": "3c92e6441ad7acc5",
   "inputs": [
     [
       "requirement",
-      "8291d74aa491cd84"
+      "4a033fdd0d4c4f71"
     ],
     [
       "model",

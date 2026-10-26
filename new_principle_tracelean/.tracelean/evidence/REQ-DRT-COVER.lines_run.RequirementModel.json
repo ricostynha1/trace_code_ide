@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+      "note": "lineReach turns the hits for an item's lines into observations, so an unrun line is a named gap."
     }
   },
   "linkHash": "291a43248b71f3c3",
   "inputs": [
     [
       "requirement",
-      "455457b332078c78"
+      "60332e0a4cac2c91"
     ],
     [
       "model",

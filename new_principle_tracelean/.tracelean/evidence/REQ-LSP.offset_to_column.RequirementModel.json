@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+      "note": "toCharacter counts the units in the prefix ending at the byte, or none; the two conversions read one relation, so they round-trip."
     }
   },
   "linkHash": "be41a19a5c878912",
   "inputs": [
     [
       "requirement",
-      "0ddd98ae4cf39586"
+      "35e1c046a5dc9f8d"
     ],
     [
       "model",

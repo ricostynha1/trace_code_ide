@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+      "note": "A position no recorded edit wrote is attributed to the base."
     }
   },
   "linkHash": "7cda6cc9fdbb95c0",
   "inputs": [
     [
       "requirement",
-      "f37ab484e4bf769d"
+      "ab7914562334e32c"
     ],
     [
       "model",

@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "reopened keeps the tabs then the front file, each only if it exists; the shell around it reads and writes the names."
+      "note": "reopened keeps the recalled files and the one in front that still exist."
     }
   },
   "linkHash": "947c49046d9d3243",
   "inputs": [
     [
       "requirement",
-      "8e6a6469db2c226a"
+      "d47614d0b53043e5"
     ],
     [
       "model",

@@ -8,16 +8,17 @@
   "detail": {
     "judge": {
       "verdict": "agrees",
-      "judgedBy": "ricostynha",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "approved in review 2026-10-10"
+      "note": "coverageVerdict reads the binding's floors and gives undeclared for a binding that states none, apart from met, so a floor is what a binding states."
     }
   },
   "linkHash": "2a7ec8be421d323c",
   "inputs": [
     [
       "requirement",
-      "eee2a9e4b65df76f"
+      "23747ce6a249bfa1"
     ],
     [
       "model",

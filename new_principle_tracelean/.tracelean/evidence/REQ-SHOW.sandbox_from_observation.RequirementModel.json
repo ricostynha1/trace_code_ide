@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "re-recorded: clause text identical to the text judged, model declaration byte-identical; only hashes moved"
+      "note": "sandboxEvents orders the changed paths, then what was said, then the cost estimate."
     }
   },
   "linkHash": "7f902859040f9d33",
   "inputs": [
     [
       "requirement",
-      "0a2767abdb16ef30"
+      "91804cc147bebf87"
     ],
     [
       "model",

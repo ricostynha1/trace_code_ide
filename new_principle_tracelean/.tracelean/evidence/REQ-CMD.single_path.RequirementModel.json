@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+      "note": "apply is the one function from a workspace and a command to a workspace; the model has no other way to change one."
     }
   },
   "linkHash": "1765845a8787e705",
   "inputs": [
     [
       "requirement",
-      "f7bb3c68b813cb8c"
+      "b8c2e4e7e5c1fade"
     ],
     [
       "model",

@@ -4,21 +4,21 @@
     "clause": "stable_ordering",
     "bond": "requirementModel"
   },
-  "level": "L2",
+  "level": "L1",
   "detail": {
     "judge": {
-      "verdict": "agrees",
+      "verdict": "drift",
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "lockLinkLe compares every field of a lock link, so the order is total; the lock is the collection modelled; decided under autonomy, night of 2026-10-10"
+      "note": "The model orders only the lock's links by lockLinkLe; the clause covers every collection written or compared, and the evidence records, coverage entries and bindings are outside the model."
     }
   },
   "linkHash": "d7cf3e43900b6374",
   "inputs": [
     [
       "requirement",
-      "9a2a6e477c8d773d"
+      "650b62209daa01b5"
     ],
     [
       "model",

@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "re-recorded: clause text identical to the text judged, model declaration byte-identical; only hashes moved"
+      "note": "Evidence is carried through as it is, element for element."
     }
   },
   "linkHash": "bfe2b6fbf143ee5b",
   "inputs": [
     [
       "requirement",
-      "ad864f09a206853e"
+      "8e22559fe265109f"
     ],
     [
       "model",

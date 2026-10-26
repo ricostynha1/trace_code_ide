@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "re-recorded: clause text identical to the text judged and model unchanged; only the clause hash changed"
+      "note": "declaredIn pairs each target with the hash the document recorded for it."
     }
   },
   "linkHash": "5d26fed946feddd3",
   "inputs": [
     [
       "requirement",
-      "bae0e29608820e42"
+      "ef8226fd57048b0c"
     ],
     [
       "model",

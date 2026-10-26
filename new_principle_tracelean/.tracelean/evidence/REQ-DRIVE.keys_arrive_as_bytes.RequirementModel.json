@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "Keys reach the terminal as bytes over a pseudo-terminal; no names are supplied."
+      "note": "The space bar is written as its byte and the leader menu must then appear."
     }
   },
   "linkHash": "aca2502ee75ad8c0",
   "inputs": [
     [
       "requirement",
-      "15663aad5a030c52"
+      "264fa9660dbd4f83"
     ],
     [
       "model",

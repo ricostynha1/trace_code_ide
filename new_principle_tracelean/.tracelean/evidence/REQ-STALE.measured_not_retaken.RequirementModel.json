@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "retaken when asked, when nothing is held, or when the held sources hash differs from the Rust sources now; otherwise not. Decided under autonomy given 2026-10-10 evening"
+      "note": "retake is false only when measured against sources hashing as now, unless asked."
     }
   },
   "linkHash": "08ec11a0ce545b9f",
   "inputs": [
     [
       "requirement",
-      "f97d3602cede5b59"
+      "f86fe4f6f7d9fa21"
     ],
     [
       "model",

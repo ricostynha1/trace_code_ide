@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "quickOpen scores letters in order from the path start and from the name, keeps the better, ranks by score then path, and lists every file shortest first for no letters."
+      "note": "quickOpen keeps the paths holding the letters in order, scored and sorted by better, up to the limit."
     }
   },
   "linkHash": "1c2609fd7c218821",
   "inputs": [
     [
       "requirement",
-      "767e8eb4beadb71e"
+      "a12b30e0212e839a"
     ],
     [
       "model",

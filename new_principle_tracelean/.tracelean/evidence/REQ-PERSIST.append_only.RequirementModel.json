@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "models reading an appended log, stopping at a torn tail; that nothing rewrites it is the structural test; decided under autonomy, night of 2026-10-10"
+      "note": "parseLog reads the log as entries appended in order and stops at a torn tail; that nothing rewrites it is the structural test."
     }
   },
   "linkHash": "2bb7027d65bbe10d",
   "inputs": [
     [
       "requirement",
-      "cdd5ea752334f1c3"
+      "d7318bbf8d91c7a9"
     ],
     [
       "model",

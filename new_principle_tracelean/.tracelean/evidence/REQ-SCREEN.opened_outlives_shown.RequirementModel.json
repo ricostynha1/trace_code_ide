@@ -8,16 +8,17 @@
   "detail": {
     "judge": {
       "verdict": "agrees",
-      "judgedBy": "ricostynha",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "approved in review 2026-10-10"
+      "note": "An opened buffer is shown again without being added a second time."
     }
   },
   "linkHash": "9e9ed886d22575d4",
   "inputs": [
     [
       "requirement",
-      "7c92cf592c8fd581"
+      "fc676a1badaf2336"
     ],
     [
       "model",

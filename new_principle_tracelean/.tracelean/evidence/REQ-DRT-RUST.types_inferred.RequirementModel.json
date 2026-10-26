@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+      "note": "The call site binds each argument and calls the entry with no type named, leaving inference to the compiler."
     }
   },
   "linkHash": "ec4f73c2866d5706",
   "inputs": [
     [
       "requirement",
-      "d40604b7f460dc6f"
+      "9a958ed2ebe25c32"
     ],
     [
       "model",

@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "declaredOn: the word after the first declaring word when only modifiers precede it, a path never; whitespace is ASCII in the model and Unicode in Rust, which the generated lines never reach."
+      "note": "declaredOn splits the line with path separators kept whole and reads the word after a declaring word past modifiers."
     }
   },
   "linkHash": "b7b75d8c8df36f70",
   "inputs": [
     [
       "requirement",
-      "334fa2ad1e8a5649"
+      "7398404da315fde7"
     ],
     [
       "model",

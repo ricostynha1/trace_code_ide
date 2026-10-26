@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "Nothing starts a coding tool; the person does."
+      "note": "No launch site exists, so starting a tool is left to the user."
     }
   },
   "linkHash": "899e1f0090785230",
   "inputs": [
     [
       "requirement",
-      "15aa47781c304e23"
+      "b596e1d36e0b8a2f"
     ],
     [
       "model",

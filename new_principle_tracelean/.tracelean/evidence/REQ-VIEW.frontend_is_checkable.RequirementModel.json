@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "Each frontend answers with what it drew; wrong-on-purpose frontends are caught."
+      "note": "The reference and web frontends answer with what they drew and the check finds them conformant."
     }
   },
   "linkHash": "94404755ef967cb9",
   "inputs": [
     [
       "requirement",
-      "ad99e5ce1f15d088"
+      "c23e22378b9d05ed"
     ],
     [
       "model",

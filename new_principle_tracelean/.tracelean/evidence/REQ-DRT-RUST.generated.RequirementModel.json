@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "The runner is a generated crate."
+      "note": "The runner is a generated crate with a manifest and a main, under the cache."
     }
   },
   "linkHash": "18638a15f6070347",
   "inputs": [
     [
       "requirement",
-      "efe21d6f9c058619"
+      "8550140ef06df914"
     ],
     [
       "model",

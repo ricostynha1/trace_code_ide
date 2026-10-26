@@ -8,16 +8,17 @@
   "detail": {
     "judge": {
       "verdict": "agrees",
-      "judgedBy": "ricostynha",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "approved in review 2026-10-10"
+      "note": "An agreeing judgement is recorded at L2 and never higher."
     }
   },
   "linkHash": "5169dce24f696b5e",
   "inputs": [
     [
       "requirement",
-      "e654592a09987b85"
+      "a73bfdbf0a4a14dc"
     ],
     [
       "model",

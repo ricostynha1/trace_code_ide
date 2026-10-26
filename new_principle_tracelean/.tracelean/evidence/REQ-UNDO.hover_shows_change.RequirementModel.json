@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+      "note": "changeView shows a node's added and removed lines without moving anything."
     }
   },
   "linkHash": "baa124e274a3a514",
   "inputs": [
     [
       "requirement",
-      "9747a710917660e5"
+      "108baf6183fd133c"
     ],
     [
       "model",

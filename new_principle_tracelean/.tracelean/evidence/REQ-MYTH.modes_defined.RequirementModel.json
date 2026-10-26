@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+      "note": "validate's per-mode problems report a target or parent naming no mode."
     }
   },
   "linkHash": "e41d007ef5118885",
   "inputs": [
     [
       "requirement",
-      "284cbf65cb8736e6"
+      "4051ea936c198100"
     ],
     [
       "model",

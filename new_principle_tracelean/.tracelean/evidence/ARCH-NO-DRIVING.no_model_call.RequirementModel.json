@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "No model API or network client in the source; read off the tree."
+      "note": "No network client, provider endpoint or credential name appears in the tree."
     }
   },
   "linkHash": "f1f07f1ca112ff5c",
   "inputs": [
     [
       "requirement",
-      "e7729900146a8001"
+      "6b6637475069e37c"
     ],
     [
       "model",

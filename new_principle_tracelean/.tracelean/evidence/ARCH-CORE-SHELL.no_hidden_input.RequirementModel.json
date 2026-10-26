@@ -11,18 +11,18 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "Bound entries take their inputs as arguments; the check reads each binding's entry and its parameters."
+      "note": "Every bound implementation file is scanned for ambient reads, which is the clause's declared-arguments-alone restricted to what is compared."
     }
   },
   "linkHash": "e47773d1ad1748d4",
   "inputs": [
     [
       "requirement",
-      "04246ef7d9686da7"
+      "32e3ef4d235c8248"
     ],
     [
       "model",
-      "31eee8c528db1b55"
+      "92a7b4262e67d219"
     ]
   ]
 }

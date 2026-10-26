@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "partialCap clears tested and proved, so a partial clause never meets a floor asking for either."
+      "note": "A partial clause stays in the count with its marks capped below tested and proved."
     }
   },
   "linkHash": "33b0a6396e693602",
   "inputs": [
     [
       "requirement",
-      "8eadae2473ace6ab"
+      "01108a4466d32d39"
     ],
     [
       "model",

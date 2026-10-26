@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "Figure exactness still follows decomposition; floor is now Marks via holds."
+      "note": "The roll-up over an open decomposition carries an inexact figure, rendered provisional."
     }
   },
   "linkHash": "3dc4621e6caa0b25",
   "inputs": [
     [
       "requirement",
-      "801ea2dcceebf30e"
+      "5f69265f4a77cbb8"
     ],
     [
       "model",

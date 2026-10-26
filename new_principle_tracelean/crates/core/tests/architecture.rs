@@ -110,7 +110,6 @@ fn the_needle_checks_reject_a_tree_that_breaks_them() {
 /// @tests REQ-JUDGE.no_call
 /// @structural ARCH-NO-DRIVING.no_model_call reason="an absence has no function to model; what can be stated is that no call site exists, and that is read off the tree"
 /// @structural REQ-JUDGE.no_call reason="recording a judgement calls nothing, and an absence of call sites is read off the tree rather than computed"
-/// @structural ARCH-NO-DRIVING.no_launch reason="the same absence, for process spawning"
 #[test]
 fn nothing_here_calls_a_model_or_reaches_the_network() {
     let found = offenders(NETWORK);
@@ -122,6 +121,7 @@ fn nothing_here_calls_a_model_or_reaches_the_network() {
 /// @tests ARCH-NO-DRIVING.observation_only
 /// @structural ARCH-NO-DRIVING.user_runs_it reason="who starts a tool is not a value this system computes"
 /// @structural ARCH-NO-DRIVING.observation_only reason="a claim about which direction information flows through the tree, not about any one function"
+/// @structural ARCH-NO-DRIVING.no_launch reason="an absence of process spawning, read off the tree"
 #[test]
 fn nothing_here_launches_a_coding_agent() {
     let found = launches_in(&sources());
@@ -136,12 +136,55 @@ fn nothing_here_launches_a_coding_agent() {
 /// @tests ARCH-CORE-SHELL.decision_total
 /// @structural ARCH-DETERMINISM.no_ambient_time reason="a constraint on what the source may mention; a function that read a clock would satisfy any model of itself"
 #[test]
-fn nothing_here_reads_a_clock_or_an_unseeded_source_of_randomness() {
+fn nothing_derived_depends_on_a_clock_randomness_or_this_machine() {
     let found = offenders(AMBIENT);
     assert!(
         found.is_empty(),
         "a derived artefact must be a function of its input alone:\n{found:#?}"
     );
+
+    let root = project_root();
+    let machine = machine_paths(&root);
+    assert!(
+        !machine_paths_in(&[("made".to_string(), format!("{{\"file\":\"{}\"}}", machine[0]))], &machine).is_empty(),
+        "a path of this machine written into an artefact went unnoticed"
+    );
+    let mut derived = Vec::new();
+    for dir in [root.join(".tracelean"), root.join(".tracelean").join("evidence")] {
+        for entry in std::fs::read_dir(&dir).expect("the derived artefacts").flatten() {
+            let path = entry.path();
+            if path.extension().is_some_and(|e| e == "json" || e == "lock") {
+                if let Ok(text) = std::fs::read_to_string(&path) {
+                    derived.push((path.display().to_string(), text));
+                }
+            }
+        }
+    }
+    assert!(derived.len() > 100, "only {} derived artefacts read; the walk is wrong", derived.len());
+    let leaked = machine_paths_in(&derived, &machine);
+    assert!(leaked.is_empty(), "a derived artefact names this machine:\n{leaked:#?}");
+}
+
+fn machine_paths(root: &Path) -> Vec<String> {
+    let mut paths = vec![root.display().to_string()];
+    if let Ok(home) = std::env::var("HOME") {
+        paths.push(home);
+    }
+    paths.push(std::env::temp_dir().display().to_string());
+    paths.retain(|p| p.len() > 1);
+    paths
+}
+
+fn machine_paths_in(files: &[(String, String)], machine: &[String]) -> Vec<String> {
+    let mut found = Vec::new();
+    for (file, text) in files {
+        for path in machine {
+            if text.contains(path.as_str()) {
+                found.push(format!("{file}: {path}"));
+            }
+        }
+    }
+    found
 }
 
 #[test]

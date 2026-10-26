@@ -8,16 +8,17 @@
   "detail": {
     "judge": {
       "verdict": "agrees",
-      "judgedBy": "ricostynha",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "approved in review 2026-10-10"
+      "note": "parseLine accepts exactly the seven roles; anything else role-shaped is a problem."
     }
   },
   "linkHash": "4c47ca8c30975a90",
   "inputs": [
     [
       "requirement",
-      "1a41816762f47d62"
+      "72e6ba9407c68b7f"
     ],
     [
       "model",

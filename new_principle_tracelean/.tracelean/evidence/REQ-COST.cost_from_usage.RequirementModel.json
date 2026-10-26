@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "re-recorded: clause text identical to the text judged and model unchanged; only the clause hash changed"
+      "note": "spendOf folds the usage against the table and takes nothing else."
     }
   },
   "linkHash": "9333def4f8aa2491",
   "inputs": [
     [
       "requirement",
-      "d058b2c295dcb50d"
+      "f1389f3cc2e4e098"
     ],
     [
       "model",

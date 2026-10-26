@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "The shrunk input the check receives still makes the model answer ---- and the implementation answer the marks themselves."
+      "note": "The reduced case the run reports still makes the model and the implementation disagree in the original way."
     }
   },
   "linkHash": "60b5dda41af75a66",
   "inputs": [
     [
       "requirement",
-      "cf794689b2f52cc6"
+      "7b06a1388ebf3ad5"
     ],
     [
       "model",

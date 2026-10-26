@@ -11,18 +11,18 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "Bindings name the implementation itself; the runner calls it directly."
+      "note": "The generated runner calls the implementation's entry point with nothing between it and the comparison."
     }
   },
   "linkHash": "4293323875b51df9",
   "inputs": [
     [
       "requirement",
-      "15eec7b5f7d0b6db"
+      "d83c279ea53766ad"
     ],
     [
       "model",
-      "47fc82d6f1738981"
+      "7b8eba9f338051d6"
     ]
   ]
 }

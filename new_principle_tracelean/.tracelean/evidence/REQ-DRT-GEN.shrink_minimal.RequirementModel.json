@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "The round cap is gone: reduction runs until no candidate diverges, and a test shows a divergence reduced from a large number to 1."
+      "note": "Each reduction step is strictly smaller, and the reducer in run.rs only stops when no one-step reduction still diverges, which is the reading of reachable by its reduction steps."
     }
   },
   "linkHash": "7c9c2c40e0e8ba91",
   "inputs": [
     [
       "requirement",
-      "2ca3bb14987381db"
+      "cbf7e1af46a9182f"
     ],
     [
       "model",

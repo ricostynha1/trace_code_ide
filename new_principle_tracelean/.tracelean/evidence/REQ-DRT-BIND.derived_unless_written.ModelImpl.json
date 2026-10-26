@@ -1,0 +1,30 @@
+{
+  "key": {
+    "reqId": "REQ-DRT-BIND",
+    "clause": "derived_unless_written",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 61,
+      "cases": 2000,
+      "op": "REQ-DRT-BIND.derived_unless_written"
+    }
+  },
+  "linkHash": "38e6fed6dbb1770d",
+  "inputs": [
+    [
+      "implementation",
+      "088d6d2e5ac82873+f4fa9df95594f003"
+    ],
+    [
+      "model",
+      "8ff2f54d6db3abc3"
+    ],
+    [
+      "requirement",
+      "7545fd9735257db1"
+    ]
+  ]
+}

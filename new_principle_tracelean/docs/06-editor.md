@@ -166,7 +166,8 @@ may hold `*` (any run of characters) and `?` (any one), within a line and in any
 case (`REQ-NAV.find_by_glob`); `F3` goes on to the next match of the last text.
 
 The stations on the left are Project, Trace, Sandbox, Design, History,
-Findings, Definitions and Proof.
+Findings and Definitions. The goals pane is not a station: it opens beside a
+Lean file.
 
 **Definitions** lists every colour of the theme with its value now, read from the
 JSON that sets it, and says where the keys and the languages live. `Space f e`
@@ -174,7 +175,7 @@ JSON that sets it, and says where the keys and the languages live. `Space f e`
 `.tracelean/theme.json` at once; the window repaints without a restart, and a
 value that is not a colour is refused (`REQ-LOOK.setting_edited_in_place`).
 
-**Proof** shows the goals Lean reports at the cursor of a Lean file, beside the
+**The goals pane** shows the goals Lean reports at the cursor of a Lean file, beside the
 file, following the cursor and the edits, as the infoview does in VS Code. It
 asks Lean's own server (`lake env lean --server`, in the nearest folder with a
 `lean-toolchain`) and never waits for it: the answer is picked up by the next

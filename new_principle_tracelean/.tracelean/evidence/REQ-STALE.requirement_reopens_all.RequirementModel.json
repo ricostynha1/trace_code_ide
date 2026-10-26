@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+      "note": "Each record carries the clause hash of its key, text and narrowings, so rewording that clause reopens it and no other."
     }
   },
   "linkHash": "cec0f4581b48be05",
   "inputs": [
     [
       "requirement",
-      "b883a261cbe2868e"
+      "311bdc924f1075cf"
     ],
     [
       "model",

@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+      "note": "What is painted is checked through its accessible names against the buffer."
     }
   },
   "linkHash": "52a26c6f9101f0bd",
   "inputs": [
     [
       "requirement",
-      "f1928dcc07501fc7"
+      "81e1a33b87da111e"
     ],
     [
       "model",

@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "A document target resolves through the annotation anchor code."
+      "note": "Every requirement and link target hashes the same way for a document as for an annotation."
     }
   },
   "linkHash": "9b00885d921219b7",
   "inputs": [
     [
       "requirement",
-      "693172eff61d2d1c"
+      "81ce7787e6e92127"
     ],
     [
       "model",

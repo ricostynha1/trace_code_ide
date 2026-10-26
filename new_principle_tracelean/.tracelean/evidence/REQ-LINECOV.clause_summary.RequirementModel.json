@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+      "note": "spanCoverage counts the executable lines in the item, those run, and the distinct tests that ran them."
     }
   },
   "linkHash": "e5d2635ef989071d",
   "inputs": [
     [
       "requirement",
-      "7cb612aa95e37391"
+      "4dba8078626b288a"
     ],
     [
       "model",

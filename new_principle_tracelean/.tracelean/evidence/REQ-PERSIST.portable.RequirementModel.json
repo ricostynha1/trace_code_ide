@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "The journal is plain JSON lines with no machine-specific paths."
+      "note": "A log carries no machine path, so it replays in a moved copy."
     }
   },
   "linkHash": "97ce84fd4fa432a3",
   "inputs": [
     [
       "requirement",
-      "eab856fb841daf86"
+      "da92a8ba697e7f2f"
     ],
     [
       "model",

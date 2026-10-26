@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "re-recorded: clause text identical to the text judged, model declaration byte-identical; only hashes moved"
+      "note": "touchedPaths keeps only mirrored paths, so a protected path yields no mutation."
     }
   },
   "linkHash": "e979a2c4b772a746",
   "inputs": [
     [
       "requirement",
-      "611c8c5d462139cf"
+      "a192eae3211c0595"
     ],
     [
       "model",

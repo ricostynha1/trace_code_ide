@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "Every document's links are resolved against the index, and drift is reported as in-review."
+      "note": "Every document link is resolved against the index and a dangling one fails the check."
     }
   },
   "linkHash": "e33f8c50b3a97205",
   "inputs": [
     [
       "requirement",
-      "08491b097319627b"
+      "5d365cc64516ccc2"
     ],
     [
       "model",

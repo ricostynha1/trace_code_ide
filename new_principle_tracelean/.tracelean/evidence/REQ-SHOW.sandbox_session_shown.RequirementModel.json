@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+      "note": "sandboxView shows the session or its absence, the command, each waiting change, accept and reject, and the conversation newest first, wrapped to the width."
     }
   },
   "linkHash": "e43b90e599086a10",
   "inputs": [
     [
       "requirement",
-      "59a9702a9f011b7c"
+      "bfc1b733d58320d7"
     ],
     [
       "model",

@@ -11,18 +11,18 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "The TypeScript is compared with the Lean model, not with the Rust."
+      "note": "Every second implementation's binding has a model, is in another language, and the suite compares it against the Lean runner, never the Rust one."
     }
   },
   "linkHash": "5f5dda106a7f9c1d",
   "inputs": [
     [
       "requirement",
-      "4c1bffdc024e124f"
+      "5a0bd6b3dbb57d42"
     ],
     [
       "model",
-      "6233666a751643b7"
+      "026ae8188041d17d"
     ]
   ]
 }

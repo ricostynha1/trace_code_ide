@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "re-recorded: clause text identical to the text judged, model declaration byte-identical; only hashes moved"
+      "note": "delta gives only what changed between two buffers."
     }
   },
   "linkHash": "2df191e7be595e44",
   "inputs": [
     [
       "requirement",
-      "83ba3ceb5cee0001"
+      "ca35a4cc539eb1d2"
     ],
     [
       "model",

@@ -4,21 +4,21 @@
     "clause": "obligation_generated",
     "bond": "requirementModel"
   },
-  "level": "L2",
+  "level": "L1",
   "detail": {
     "judge": {
-      "verdict": "agrees",
+      "verdict": "drift",
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+      "note": "The generated Spec is a conjunction of True placeholders naming the proved theorems in comments, not their statements, so the obligation as written does not say that those properties determine the model until a person fills them in."
     }
   },
   "linkHash": "4443ca811974a39b",
   "inputs": [
     [
       "requirement",
-      "3fe26295b19608a6"
+      "00ecdbdf11e24ade"
     ],
     [
       "model",

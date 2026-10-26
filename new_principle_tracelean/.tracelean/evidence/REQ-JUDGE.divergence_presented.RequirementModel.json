@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "re-recorded: clause text identical to the text judged and model unchanged; only the clause hash changed"
+      "note": "A known divergence is placed in the prompt beside the clause and model."
     }
   },
   "linkHash": "fa5e530817bfe025",
   "inputs": [
     [
       "requirement",
-      "f775f7d4d2688dfd"
+      "8ebbfc1dde23ec6f"
     ],
     [
       "model",

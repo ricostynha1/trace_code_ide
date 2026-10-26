@@ -11,18 +11,18 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "A binding serialises to a call and nothing more."
+      "note": "A binding may carry only the keys that describe a call, and the generated dispatch calls the entry point directly."
     }
   },
   "linkHash": "4db951004e4b5661",
   "inputs": [
     [
       "requirement",
-      "2cafd7a99969c180"
+      "f720ad7b7f286b6f"
     ],
     [
       "model",
-      "47fc82d6f1738981"
+      "7b8eba9f338051d6"
     ]
   ]
 }

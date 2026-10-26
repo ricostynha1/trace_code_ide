@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "models which roles crowd a clause; naming every declaration is the finding's, held by its test; decided under autonomy, night of 2026-10-10"
+      "note": "crowdedKinds names the role that crowds a clause; naming every declaration involved is the finding's, held by its test."
     }
   },
   "linkHash": "76bb6f0e4935a419",
   "inputs": [
     [
       "requirement",
-      "30adeb5154ba69b4"
+      "cda7282caa3123ad"
     ],
     [
       "model",

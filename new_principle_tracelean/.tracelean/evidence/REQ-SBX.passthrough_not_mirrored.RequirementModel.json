@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+      "note": "Root-only names pass through only as the first segment, the tool-only names at any depth."
     }
   },
   "linkHash": "d3c2ddb7fe3983c7",
   "inputs": [
     [
       "requirement",
-      "ae06bac288d3dc81"
+      "c86398fdbccb54ad"
     ],
     [
       "model",

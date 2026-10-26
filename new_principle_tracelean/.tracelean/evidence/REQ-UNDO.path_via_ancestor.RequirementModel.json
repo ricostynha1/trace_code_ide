@@ -8,16 +8,17 @@
   "detail": {
     "judge": {
       "verdict": "agrees",
-      "judgedBy": "ricostynha",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "approved in review 2026-10-10"
+      "note": "jumpTo is reported against stateAt for every node."
     }
   },
   "linkHash": "45614e16555c79cd",
   "inputs": [
     [
       "requirement",
-      "7671b7c4a1eec783"
+      "a288535482cc4b03"
     ],
     [
       "model",

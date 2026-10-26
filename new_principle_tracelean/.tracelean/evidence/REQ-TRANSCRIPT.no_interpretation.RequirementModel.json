@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "The reader's output is events and usage; there is nowhere for a command to come out."
+      "note": "Reading a transcript yields events, unrecognised lines, the held tail and usage, and no commands."
     }
   },
   "linkHash": "90b871a3b1120bd9",
   "inputs": [
     [
       "requirement",
-      "40921bbe83e3326f"
+      "2932fcfeed5d1ff0"
     ],
     [
       "model",

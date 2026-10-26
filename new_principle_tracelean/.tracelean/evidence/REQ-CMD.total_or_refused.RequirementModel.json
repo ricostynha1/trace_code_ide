@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "re-recorded: clause text identical to the text judged, model declaration byte-identical; only hashes moved"
+      "note": "Every arm either refuses with a named reason or returns a whole new workspace; a refused batch returns no partial workspace."
     }
   },
   "linkHash": "483bccbeacb69ce4",
   "inputs": [
     [
       "requirement",
-      "d0d101053ed35ba7"
+      "dfa9dffbfa34f78b"
     ],
     [
       "model",

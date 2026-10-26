@@ -8,16 +8,17 @@
   "detail": {
     "judge": {
       "verdict": "agrees",
-      "judgedBy": "ricostynha",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "approved in review 2026-10-10"
+      "note": "validate reports a binding's action that is not among the known actions."
     }
   },
   "linkHash": "5845862d3feaf9da",
   "inputs": [
     [
       "requirement",
-      "b3723ab9a2821cf0"
+      "688c3734209150be"
     ],
     [
       "model",

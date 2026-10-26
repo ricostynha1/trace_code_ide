@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "designBuffer draws refinement indented from the roots, folded except where opened; the open-only header toggles what is kept and nothing else."
+      "note": "designBuffer draws the shown graph as rows indented under what they refine, folded except where opened."
     }
   },
   "linkHash": "8ebda0c63b4f254b",
   "inputs": [
     [
       "requirement",
-      "cb3258c2ae39c310"
+      "56981ffb820777ff"
     ],
     [
       "model",

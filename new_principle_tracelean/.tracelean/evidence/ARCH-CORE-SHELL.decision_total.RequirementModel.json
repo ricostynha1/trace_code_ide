@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "Three checks together: no file IO outside declared shells, no clock or unseeded randomness, no state kept between calls outside one listed compile cache; each rejects a counter-example."
+      "note": "Global state outside arguments is refused across decision modules, and rendering the index is shown to read and write nothing; IO, clocks and randomness are refused by the sibling checks."
     }
   },
   "linkHash": "a28156ba14f09681",
   "inputs": [
     [
       "requirement",
-      "6cd23571fa602b28"
+      "8f127bbef436532d"
     ],
     [
       "model",

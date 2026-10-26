@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "re-recorded: clause text identical to the text judged and model unchanged; only the clause hash changed"
+      "note": "merged keeps, per line, each test that ran it and how often, from per-test runs."
     }
   },
   "linkHash": "4a444fcd2cf8999d",
   "inputs": [
     [
       "requirement",
-      "cf45683a480086cb"
+      "483f8a4fdfcf4a9c"
     ],
     [
       "model",

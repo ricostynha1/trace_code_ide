@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "The modules that open a transcript contain no write, truncation, removal or rename; the check rejects one that writes."
+      "note": "No transcript reader contains a write."
     }
   },
   "linkHash": "c22c88133faa7b43",
   "inputs": [
     [
       "requirement",
-      "9d5d21eb01616326"
+      "a9c95c28bc4de6ac"
     ],
     [
       "model",

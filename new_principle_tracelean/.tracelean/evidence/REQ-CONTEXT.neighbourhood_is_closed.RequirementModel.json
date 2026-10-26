@@ -8,16 +8,17 @@
   "detail": {
     "judge": {
       "verdict": "agrees",
-      "judgedBy": "ricostynha",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "approved in review 2026-10-10"
+      "note": "neighbourhood is the ancestors and descendants of the requirement, each walk excluding the start."
     }
   },
   "linkHash": "a6faa66fec1ef712",
   "inputs": [
     [
       "requirement",
-      "95f70d1598e55dc3"
+      "dfb876442b830a04"
     ],
     [
       "model",

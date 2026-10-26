@@ -8,16 +8,17 @@
   "detail": {
     "judge": {
       "verdict": "agrees",
-      "judgedBy": "ricostynha",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "approved in review 2026-10-10"
+      "note": "expire ages each pending write and drops it at zero."
     }
   },
   "linkHash": "9c53aeb0644269b0",
   "inputs": [
     [
       "requirement",
-      "c94b6e575a75eac2"
+      "c48785dff0d88cad"
     ],
     [
       "model",

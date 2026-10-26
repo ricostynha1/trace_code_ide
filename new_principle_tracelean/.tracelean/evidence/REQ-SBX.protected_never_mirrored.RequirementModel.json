@@ -8,16 +8,17 @@
   "detail": {
     "judge": {
       "verdict": "agrees",
-      "judgedBy": "ricostynha",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "approved in review 2026-10-10"
+      "note": "A protected root is classified protected, never mirrored."
     }
   },
   "linkHash": "a313fb7edcc178f8",
   "inputs": [
     [
       "requirement",
-      "4375164a635819f2"
+      "bbd7dc9e7ff68a98"
     ],
     [
       "model",

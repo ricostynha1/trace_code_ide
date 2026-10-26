@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "Each place is drawn in its own rectangle."
+      "note": "The stations, the strip, the panes at their placed rectangles, the status and the bar are each found in their own rows and columns."
     }
   },
   "linkHash": "6c23bf656c8e215e",
   "inputs": [
     [
       "requirement",
-      "69544f27e77723f1"
+      "5aa9a62630141d35"
     ],
     [
       "model",

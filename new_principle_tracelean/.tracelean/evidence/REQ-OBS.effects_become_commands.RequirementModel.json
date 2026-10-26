@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "Observed changes become ordinary commands in the history."
+      "note": "A tool's change arrives as ordinary commands that apply to reach the new tree and invert to undo it."
     }
   },
   "linkHash": "31a5e3e8b9c52903",
   "inputs": [
     [
       "requirement",
-      "cb92481e5ab8347c"
+      "fadff3521efd372b"
     ],
     [
       "model",

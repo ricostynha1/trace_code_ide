@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "Two recording runners show both sides were sent the same lines, numbered one up, in the same order."
+      "note": "Two recording runners are asked the same forty cases, numbered in order, and the logs are identical."
     }
   },
   "linkHash": "5005b15379144506",
   "inputs": [
     [
       "requirement",
-      "6ff2b95026474c99"
+      "8f2bf7a34a3a4c15"
     ],
     [
       "model",

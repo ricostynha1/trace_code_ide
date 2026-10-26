@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+      "note": "A waiver with a blank reason excuses nothing in the verdict."
     }
   },
   "linkHash": "f1e259486e054b4e",
   "inputs": [
     [
       "requirement",
-      "ccb9a407b9d66b52"
+      "57f8d6f59548b59c"
     ],
     [
       "model",

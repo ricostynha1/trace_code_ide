@@ -8,16 +8,17 @@
   "detail": {
     "judge": {
       "verdict": "agrees",
-      "judgedBy": "ricostynha",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "approved in review 2026-10-10"
+      "note": "parameters reads the names from the implementation's own signature, and refuses an ambiguous one."
     }
   },
   "linkHash": "8f5f1bf1273ce723",
   "inputs": [
     [
       "requirement",
-      "59ca574852c9e6b4"
+      "6d0baaf9dc88ea31"
     ],
     [
       "model",

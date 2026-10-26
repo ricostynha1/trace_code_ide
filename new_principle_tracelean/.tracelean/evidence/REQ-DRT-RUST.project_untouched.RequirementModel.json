@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "Generation writes only under the cache."
+      "note": "Every file generated is under .tracelean."
     }
   },
   "linkHash": "f92472aa618e9d0f",
   "inputs": [
     [
       "requirement",
-      "532dcbc3c14f8f3c"
+      "9773527186367357"
     ],
     [
       "model",

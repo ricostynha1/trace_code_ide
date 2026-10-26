@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+      "note": "toByteOffset finds the byte offset where the prefix of that many units ends, or none, as the specification states."
     }
   },
   "linkHash": "dd6be28f1535f376",
   "inputs": [
     [
       "requirement",
-      "d80751441c2e153d"
+      "b1fbeb938519bf11"
     ],
     [
       "model",

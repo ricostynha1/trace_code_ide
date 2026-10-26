@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "Literal ranges are recorded and excluded from annotation parsing in every grammar."
+      "note": "An annotation inside a string literal yields no directive and the same text in a comment does."
     }
   },
   "linkHash": "34734cf5f4098258",
   "inputs": [
     [
       "requirement",
-      "56d27ab602a06310"
+      "ad88ccc840d079e1"
     ],
     [
       "model",

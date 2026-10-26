@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+      "note": "Only a newly produced record for the same link replaces a stale one."
     }
   },
   "linkHash": "921e5420c41fb097",
   "inputs": [
     [
       "requirement",
-      "e40d913ef1d87a05"
+      "4e7cd7fe971faecb"
     ],
     [
       "model",

@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "No Lean reflection vocabulary in the machinery or the runner it generates; schemas are declared in tests or derived from both signatures."
+      "note": "No reflection appears in the machinery or in a generated runner, and a binding has no field to compute a shape."
     }
   },
   "linkHash": "805d522098e94983",
   "inputs": [
     [
       "requirement",
-      "840bbfc9aa8da612"
+      "b55b8a2f334f91cd"
     ],
     [
       "model",

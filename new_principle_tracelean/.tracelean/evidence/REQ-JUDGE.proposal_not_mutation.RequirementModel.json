@@ -8,16 +8,17 @@
   "detail": {
     "judge": {
       "verdict": "agrees",
-      "judgedBy": "ricostynha",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "approved in review 2026-10-10"
+      "note": "An unmodelable verdict produces a proposal value and changes nothing."
     }
   },
   "linkHash": "853c919e48df8e19",
   "inputs": [
     [
       "requirement",
-      "ff57ac813eeb36a4"
+      "fe3147b086f1db26"
     ],
     [
       "model",

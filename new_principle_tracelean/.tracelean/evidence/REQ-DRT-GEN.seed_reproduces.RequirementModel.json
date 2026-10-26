@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+      "note": "shapeStream is a function of the seed, the shape and the count."
     }
   },
   "linkHash": "72ac462374cb3a8f",
   "inputs": [
     [
       "requirement",
-      "b2c957054aa98ebd"
+      "279f402e3dd596ce"
     ],
     [
       "model",

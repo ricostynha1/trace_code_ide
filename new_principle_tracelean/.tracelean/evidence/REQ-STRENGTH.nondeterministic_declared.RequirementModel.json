@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+      "note": "A model declared nondeterministic with a reason is given that standing instead of open."
     }
   },
   "linkHash": "4cfd8dbf007b4579",
   "inputs": [
     [
       "requirement",
-      "1c6d08bdd2758a2c"
+      "79370e1e4bc3cd89"
     ],
     [
       "model",

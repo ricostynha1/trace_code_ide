@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+      "note": "resizeAt refuses a move that would take either side below one and changes nothing."
     }
   },
   "linkHash": "ccc91926a081002b",
   "inputs": [
     [
       "requirement",
-      "3d7bf6d2597d6617"
+      "1240be9ee4aaf129"
     ],
     [
       "model",

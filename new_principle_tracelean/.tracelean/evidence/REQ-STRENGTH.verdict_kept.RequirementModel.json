@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "re-recorded: clause text identical to the text judged, model declaration byte-identical; only hashes moved"
+      "note": "A verdict counts only for the same theorem and key; otherwise the clause is attempted."
     }
   },
   "linkHash": "01d147a9e079b29e",
   "inputs": [
     [
       "requirement",
-      "34da1c1f80b1b67e"
+      "635227f0a1934c23"
     ],
     [
       "model",

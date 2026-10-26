@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "The generated package declares a lean_exe."
+      "note": "The generated package declares a lean_exe, so the model is compiled into a runner."
     }
   },
   "linkHash": "d48f8370b02f1502",
   "inputs": [
     [
       "requirement",
-      "b992b3a8ffd3068a"
+      "50d64547d811ac17"
     ],
     [
       "model",

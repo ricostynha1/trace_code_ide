@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "Same check: precision and level are fields of each record and survive into the lock."
+      "note": "A bound figure, an imprecise anchor and missing evidence each carry a field saying so, and the field survives serialisation."
     }
   },
   "linkHash": "9a66a29377e7b4ab",
   "inputs": [
     [
       "requirement",
-      "c3baa36d9a1ef31c"
+      "1bdf49622338b975"
     ],
     [
       "model",

@@ -11,18 +11,18 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "params only rename arguments."
+      "note": "Each parameter map entry must be a plain identifier to a plain identifier, a rename and nothing computed."
     }
   },
   "linkHash": "cfd77d3cd50fbf27",
   "inputs": [
     [
       "requirement",
-      "4b21882d0bf303e3"
+      "b7ad5be1c2a629e6"
     ],
     [
       "model",
-      "47fc82d6f1738981"
+      "7b8eba9f338051d6"
     ]
   ]
 }

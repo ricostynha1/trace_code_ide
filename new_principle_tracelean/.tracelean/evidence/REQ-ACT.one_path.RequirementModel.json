@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+      "note": "A key and an affordance both arrive as the action string to the one dispatch, so they resolve to the same intent."
     }
   },
   "linkHash": "aa613845d496f85f",
   "inputs": [
     [
       "requirement",
-      "78ca4adb9622fddd"
+      "f5a1dd55461f390c"
     ],
     [
       "model",

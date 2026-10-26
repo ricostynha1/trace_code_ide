@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "re-recorded: clause text identical to the text judged and model unchanged; only the clause hash changed"
+      "note": "A failure compares as an answer: both failing agree, one failing against a value disagrees, so nothing aborts."
     }
   },
   "linkHash": "cd97fab3713e7809",
   "inputs": [
     [
       "requirement",
-      "f831e15726a38ec2"
+      "d0ec4e8c19854bbd"
     ],
     [
       "model",

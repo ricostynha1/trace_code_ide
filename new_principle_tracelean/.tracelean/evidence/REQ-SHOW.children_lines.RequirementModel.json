@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "linesUnder sums the lines of every requirement under a row (a shared one counted on each path, as asked) and the row shows the combined share only when those below left a line unrun."
+      "note": "Each row's pieces carry the children's line share, shown only when something under the row left a line unrun."
     }
   },
   "linkHash": "b4f6ef30bf0e3489",
   "inputs": [
     [
       "requirement",
-      "7da9c043cb88a207"
+      "a9868fa542e8a281"
     ],
     [
       "model",

@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+      "note": "Links are put in one total order before serialisation, and the rest is written in a fixed field order, so one state gives one byte string."
     }
   },
   "linkHash": "bed7be8bc56f86b2",
   "inputs": [
     [
       "requirement",
-      "5c2b7461aad7195f"
+      "b130fe65976ee273"
     ],
     [
       "model",

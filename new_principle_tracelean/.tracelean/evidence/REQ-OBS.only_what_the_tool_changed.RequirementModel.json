@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "offers only paths whose copy content differs from the start's hash; none when the start is unknown; protected paths excluded as mutationsOf excludes them. Decided under autonomy given 2026-10-10 evening"
+      "note": "changedSince offers nothing without a base and otherwise only the commands on paths the agent changed from that base."
     }
   },
   "linkHash": "d2fa93c33ef1f0c2",
   "inputs": [
     [
       "requirement",
-      "9d53e652aa9cb51b"
+      "4adfb11afc0042c0"
     ],
     [
       "model",

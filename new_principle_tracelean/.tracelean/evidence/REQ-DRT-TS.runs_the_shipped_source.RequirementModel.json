@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "Node strips types from the project's own file; no build output."
+      "note": "The runner imports the shipped view.ts itself."
     }
   },
   "linkHash": "fe6955e070a4bef2",
   "inputs": [
     [
       "requirement",
-      "c0485ca3b64f0ccb"
+      "8693fd3928826189"
     ],
     [
       "model",

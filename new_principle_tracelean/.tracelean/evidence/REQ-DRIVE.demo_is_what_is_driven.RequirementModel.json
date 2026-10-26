@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "The driving suite opens the demo the person would."
+      "note": "The driven terminal lists the shipped demo tree's files, including a non-ASCII name."
     }
   },
   "linkHash": "4ccd40779f06b6a9",
   "inputs": [
     [
       "requirement",
-      "fbdafe0e8343c76e"
+      "313ea1e68c3ac7f2"
     ],
     [
       "model",

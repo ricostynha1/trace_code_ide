@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "re-recorded: clause text identical to the text judged, model declaration byte-identical; only hashes moved"
+      "note": "origin walks the ancestry back from the node and answers the edit that wrote the position."
     }
   },
   "linkHash": "5e16950dc1470ce0",
   "inputs": [
     [
       "requirement",
-      "af941ff7f4d93e7b"
+      "4f53aaa0e7567380"
     ],
     [
       "model",

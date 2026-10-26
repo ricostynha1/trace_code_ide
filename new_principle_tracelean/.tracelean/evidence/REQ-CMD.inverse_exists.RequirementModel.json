@@ -8,16 +8,17 @@
   "detail": {
     "judge": {
       "verdict": "agrees",
-      "judgedBy": "ricostynha",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "approved in review 2026-10-10"
+      "note": "inverse is total over every command and needs only the command itself."
     }
   },
   "linkHash": "09ed6d96a153ff60",
   "inputs": [
     [
       "requirement",
-      "d36fbd93c9551280"
+      "dec58c35dd44f863"
     ],
     [
       "model",

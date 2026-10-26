@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "re-recorded: clause text identical to the text judged and model unchanged; only the clause hash changed"
+      "note": "duplicateIds lists every later declaration of an id already seen."
     }
   },
   "linkHash": "66c0cd38536feb33",
   "inputs": [
     [
       "requirement",
-      "05bd932f68ea23ff"
+      "b0942078997771fb"
     ],
     [
       "model",

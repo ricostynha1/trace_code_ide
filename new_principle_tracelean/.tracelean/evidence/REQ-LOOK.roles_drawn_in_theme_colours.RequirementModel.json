@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+      "note": "drawnWrong reads the painted bytes as a grid and lists every character whose look differs from its role's."
     }
   },
   "linkHash": "4650723e5de73c83",
   "inputs": [
     [
       "requirement",
-      "5468d0c637731224"
+      "88455e8d72a7668b"
     ],
     [
       "model",

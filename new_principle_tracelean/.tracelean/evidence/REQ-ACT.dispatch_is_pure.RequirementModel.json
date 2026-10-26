@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "clause reworded to what dispatch reads: action, focus, workspace and waiting changes; decided under autonomy, night of 2026-10-10"
+      "note": "dispatch is a function of the action, the focus, the workspace and the waiting commands only."
     }
   },
   "linkHash": "d061790901f7115f",
   "inputs": [
     [
       "requirement",
-      "159c72b18a9d8c8f"
+      "8eb7159745a8def9"
     ],
     [
       "model",

@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "re-recorded: clause text identical to the text judged, model declaration byte-identical; only hashes moved"
+      "note": "partsShown keeps the parts both included and filled, in allParts' order."
     }
   },
   "linkHash": "21da378a19146b2b",
   "inputs": [
     [
       "requirement",
-      "a97bb89e25a256f8"
+      "d141bee26c140715"
     ],
     [
       "model",

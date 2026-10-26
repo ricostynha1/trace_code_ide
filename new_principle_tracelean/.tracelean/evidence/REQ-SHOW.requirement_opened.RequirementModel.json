@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "ricostynha, this session: \"perform you the judgements\". Each clause is shown with its marks and each claim as a path:line link that opens the file. Beyond the clause: the document body and the evidence and marks summary lines; the per-clause rows keep the A J T P letters while the summary uses I P M T S D."
+      "note": "requirementView shows each clause with its marks and claims, each claim a link to its file and line."
     }
   },
   "linkHash": "6cfca4316b773547",
   "inputs": [
     [
       "requirement",
-      "56b664e251de23cf"
+      "194263b5b27f56c7"
     ],
     [
       "model",

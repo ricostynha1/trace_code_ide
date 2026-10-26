@@ -8,16 +8,17 @@
   "detail": {
     "judge": {
       "verdict": "agrees",
-      "judgedBy": "ricostynha",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "approved in review 2026-10-10"
+      "note": "Any path whose content differs between before and after in the real tree is reported."
     }
   },
   "linkHash": "791efe897a90fdbc",
   "inputs": [
     [
       "requirement",
-      "561953de2a6bbad3"
+      "931a0de5bfae56de"
     ],
     [
       "model",

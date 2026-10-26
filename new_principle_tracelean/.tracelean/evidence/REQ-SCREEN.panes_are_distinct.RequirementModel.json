@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "re-recorded: clause text identical to the text judged, model declaration byte-identical; only hashes moved"
+      "note": "distinctPanes holds exactly when the pane ids have no duplicate."
     }
   },
   "linkHash": "1f11884a0c876c99",
   "inputs": [
     [
       "requirement",
-      "62329bf2720af23e"
+      "fdcbc8850ceacf9f"
     ],
     [
       "model",

@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "re-recorded: clause text identical to the text judged, model declaration byte-identical; only hashes moved"
+      "note": "A record missing its verdict and judge, its case count and op, or its theorem and toolchain is refused."
     }
   },
   "linkHash": "5fb7030406a3083f",
   "inputs": [
     [
       "requirement",
-      "6202e164965fe80d"
+      "5a046c316765270f"
     ],
     [
       "model",

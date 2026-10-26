@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "The schema grammar is a closed enum."
+      "note": "The grammar is a closed list of nine shapes, each generating only values of its shape."
     }
   },
   "linkHash": "3819d1a4d66bfb96",
   "inputs": [
     [
       "requirement",
-      "0d1a478808af9896"
+      "0de8cf74b79852a5"
     ],
     [
       "model",

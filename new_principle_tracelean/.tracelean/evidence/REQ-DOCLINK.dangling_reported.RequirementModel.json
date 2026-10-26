@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "re-recorded: clause text identical to the text judged, model declaration byte-identical; only hashes moved"
+      "note": "A target with no current hash is dangling."
     }
   },
   "linkHash": "bce00e4d6ec518a4",
   "inputs": [
     [
       "requirement",
-      "3ea708b7807b579a"
+      "ed1c4d0727affa2e"
     ],
     [
       "model",

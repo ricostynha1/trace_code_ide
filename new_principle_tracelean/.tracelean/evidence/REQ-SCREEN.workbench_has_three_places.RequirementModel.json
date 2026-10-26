@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "re-recorded: clause text identical to the text judged and model unchanged; only the clause hash changed"
+      "note": "workbench places the listing, the document and the side panel across, weighted 1, 2, 1, with the explorer focused."
     }
   },
   "linkHash": "4c533b1b3941e286",
   "inputs": [
     [
       "requirement",
-      "96d5b020cd5177e6"
+      "74b3f27a93f9e177"
     ],
     [
       "model",

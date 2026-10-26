@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+      "note": "findingsView writes a row per finding whose place and named requirements are links."
     }
   },
   "linkHash": "62043f55cc47f020",
   "inputs": [
     [
       "requirement",
-      "31ca6b0b4ddf8e38"
+      "b1826a16b4747367"
     ],
     [
       "model",

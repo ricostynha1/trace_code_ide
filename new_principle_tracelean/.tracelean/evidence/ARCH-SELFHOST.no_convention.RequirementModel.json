@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "Moving a file changes no claim it makes; the comparison is shown sensitive to what is claimed."
+      "note": "Moving and renaming every file leaves the link and the requirement identity unchanged, and the requirement is found by its declared id."
     }
   },
   "linkHash": "7278835b8efa4c40",
   "inputs": [
     [
       "requirement",
-      "a5e0c1c9c932d1bc"
+      "44aae3b332ce6157"
     ],
     [
       "model",

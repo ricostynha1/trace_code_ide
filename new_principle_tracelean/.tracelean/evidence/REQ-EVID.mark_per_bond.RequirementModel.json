@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "marks reads each mark from its own bond's records only; structural is set from the links, not from any record."
+      "note": "judged reads the requirement-model bond at L2, tested the model-implementation bond at L3, proved the model-proof bond at L4, and nothing else."
     }
   },
   "linkHash": "eac2caae256dee44",
   "inputs": [
     [
       "requirement",
-      "bcf322481f7fdbc5"
+      "2475b5d8e2800f17"
     ],
     [
       "model",

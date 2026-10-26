@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "A tampered runner is rewritten."
+      "note": "A tampered main.rs is rewritten to what the generator produces."
     }
   },
   "linkHash": "ed35a1d15b35784b",
   "inputs": [
     [
       "requirement",
-      "2875c22d5128ebb5"
+      "65366d4f770ed250"
     ],
     [
       "model",

@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+      "note": "markers places a marker beside each measured line in view with its hits and what it says about the tests."
     }
   },
   "linkHash": "fc9867eb8baaed2d",
   "inputs": [
     [
       "requirement",
-      "940934161ac5c334"
+      "421cd91824c03469"
     ],
     [
       "model",

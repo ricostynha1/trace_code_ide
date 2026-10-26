@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+      "note": "caseLine writes one braced JSON object with no line break."
     }
   },
   "linkHash": "9c1e4788468f2bda",
   "inputs": [
     [
       "requirement",
-      "c7a15a671459f411"
+      "e96f0522c023ab72"
     ],
     [
       "model",

@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "re-recorded: clause text identical to the text judged and model unchanged; only the clause hash changed"
+      "note": "normalize drops the removed (comment) spans before the hash is taken."
     }
   },
   "linkHash": "7bbfbaef33965d66",
   "inputs": [
     [
       "requirement",
-      "7eaa5aea7cebad3f"
+      "e25f9955f9ce3c59"
     ],
     [
       "model",

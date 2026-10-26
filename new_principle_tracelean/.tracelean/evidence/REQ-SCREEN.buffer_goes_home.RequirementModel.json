@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+      "note": "destination sends a kind to its home pane when the layout places it and to the focus otherwise; homeOf reads the page titles."
     }
   },
   "linkHash": "97e8bca14c50b940",
   "inputs": [
     [
       "requirement",
-      "6bd9701c3bb19a9a"
+      "9ae89804e2f08958"
     ],
     [
       "model",

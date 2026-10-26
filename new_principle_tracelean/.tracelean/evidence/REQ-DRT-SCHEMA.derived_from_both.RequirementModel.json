@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+      "note": "derive pairs the two argument lists by position, refuses a length mismatch, and returns every pair problem instead of a schema."
     }
   },
   "linkHash": "1c59688f7e185820",
   "inputs": [
     [
       "requirement",
-      "0b1d02972efdbef8"
+      "effd5449629eacff"
     ],
     [
       "model",

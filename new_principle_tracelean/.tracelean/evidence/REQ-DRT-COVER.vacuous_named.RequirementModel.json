@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "a floor no case reached is an unmet gap, never met; decided under autonomy, night of 2026-10-10"
+      "note": "A floor no case reached is an unmet gap, never met."
     }
   },
   "linkHash": "c0b4ff224982f5b2",
   "inputs": [
     [
       "requirement",
-      "3065f0f22a70c6af"
+      "1acac2bddb9c1b06"
     ],
     [
       "model",

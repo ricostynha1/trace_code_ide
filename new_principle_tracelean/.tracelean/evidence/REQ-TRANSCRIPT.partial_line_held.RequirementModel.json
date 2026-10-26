@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "re-recorded: clause text identical to the text judged, model declaration byte-identical; only hashes moved"
+      "note": "The last, unterminated part is held rather than parsed."
     }
   },
   "linkHash": "ec6febf803228bbb",
   "inputs": [
     [
       "requirement",
-      "38023b2ec963de4c"
+      "9b30d71ec8f3fb1e"
     ],
     [
       "model",

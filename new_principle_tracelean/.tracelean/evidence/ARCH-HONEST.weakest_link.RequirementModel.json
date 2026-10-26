@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "combine folds both from neutral: a mark is held only when every part holds it; a structural part, which cannot hold T or P, leaves the others' T and P as they are (REQ-EVID.structural_not_applicable), and never raises them."
+      "note": "combine holds a mark only when every part holds it, by conjunction over the parts, and holds nothing for no parts."
     }
   },
   "linkHash": "673b93f13a696d06",
   "inputs": [
     [
       "requirement",
-      "b494971e3ddb6e27"
+      "6f3178b8eb6af0b8"
     ],
     [
       "model",

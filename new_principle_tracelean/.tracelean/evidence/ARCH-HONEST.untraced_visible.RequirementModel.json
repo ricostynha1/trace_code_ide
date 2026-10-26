@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "The scan keeps every scanned file, so untraced ones are counted in the denominator."
+      "note": "The index keeps every scanned file, including those nothing claims, which is what the coverage views count."
     }
   },
   "linkHash": "40379609657497c9",
   "inputs": [
     [
       "requirement",
-      "5573c66d6a906dd0"
+      "68fb6aba3809466c"
     ],
     [
       "model",

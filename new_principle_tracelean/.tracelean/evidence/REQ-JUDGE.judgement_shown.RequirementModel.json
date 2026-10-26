@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+      "note": "judgedText shows the verdict, the note for a drift or unmodelable one, and who delegated it."
     }
   },
   "linkHash": "da91a13dc3529d8b",
   "inputs": [
     [
       "requirement",
-      "fc6972b37792b312"
+      "400e1f3d6bcfbf2c"
     ],
     [
       "model",

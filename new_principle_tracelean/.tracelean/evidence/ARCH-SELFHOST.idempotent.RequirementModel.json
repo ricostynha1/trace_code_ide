@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "Locking twice gives the same bytes."
+      "note": "Building the index a second time from the same tree serialises to the same text."
     }
   },
   "linkHash": "2a838c71a147aa08",
   "inputs": [
     [
       "requirement",
-      "7c7430649ec25282"
+      "e50543740e1fea46"
     ],
     [
       "model",

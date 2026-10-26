@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "A package is generated under the cache and built."
+      "note": "The Lean package is materialised by the generator under the cache, requiring the model package."
     }
   },
   "linkHash": "72ce21b67950702d",
   "inputs": [
     [
       "requirement",
-      "45e9d4caa942f8b2"
+      "25c61ca8661efa23"
     ],
     [
       "model",

@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "re-recorded: clause text identical to the text judged and model unchanged; only the clause hash changed"
+      "note": "declaredIn reads the targets a document's frontmatter declares."
     }
   },
   "linkHash": "5d55d5ba00c78b5b",
   "inputs": [
     [
       "requirement",
-      "ec5786c131735979"
+      "6fbfd6294d5aa67f"
     ],
     [
       "model",

@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "Findings are a closed enum, each rendered with its name; the check renders one of each."
+      "note": "Findings from three vocabularies render as named kinds, and generic values are shown not to count as named."
     }
   },
   "linkHash": "f6040440726815ec",
   "inputs": [
     [
       "requirement",
-      "9489a667332c469a"
+      "c8a9725451f98930"
     ],
     [
       "model",

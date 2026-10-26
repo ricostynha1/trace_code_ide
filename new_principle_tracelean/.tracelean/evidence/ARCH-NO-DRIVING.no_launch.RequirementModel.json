@@ -11,18 +11,18 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "No process spawn of an agent anywhere in the source; the check lists launch sites."
+      "note": "Process spawning is refused outside the differential toolchain and Lean's own server, so no coding agent can be launched, prompted, steered or stopped."
     }
   },
-  "linkHash": "730f70e0560173b1",
+  "linkHash": "ca989c5c09b20e2f",
   "inputs": [
     [
       "requirement",
-      "bf3477cd815bc416"
+      "dff0e9ef281598df"
     ],
     [
       "model",
-      "c5b1fedc3bbe403c"
+      "ac1a404c3a1e74c3"
     ]
   ]
 }

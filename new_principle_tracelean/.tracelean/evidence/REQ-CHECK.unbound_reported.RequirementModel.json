@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "re-recorded: clause text identical to the text judged and model unchanged; only the clause hash changed"
+      "note": "A clause modelled and implemented with no drt claim yields unbound."
     }
   },
   "linkHash": "89dd456cd7cd688b",
   "inputs": [
     [
       "requirement",
-      "83d68191a050f586"
+      "621fbd792fa29499"
     ],
     [
       "model",

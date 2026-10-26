@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "re-recorded: clause text identical to the text judged, model declaration byte-identical; only hashes moved"
+      "note": "step answers every mode and key; none is dropped."
     }
   },
   "linkHash": "1b5cb1cb48e88c89",
   "inputs": [
     [
       "requirement",
-      "cdf749d4473155cc"
+      "791363f024db9d09"
     ],
     [
       "model",

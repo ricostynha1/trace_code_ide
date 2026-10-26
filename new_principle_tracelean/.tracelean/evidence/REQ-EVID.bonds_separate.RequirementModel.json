@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "Bond is a separate key; a record moves only bondLevel of its own bond."
+      "note": "The three bonds are distinct constructors and each is graded from its own records."
     }
   },
   "linkHash": "eaf97597ddfe7db6",
   "inputs": [
     [
       "requirement",
-      "165016157b4b5ba0"
+      "4fc0bd8d577c7025"
     ],
     [
       "model",

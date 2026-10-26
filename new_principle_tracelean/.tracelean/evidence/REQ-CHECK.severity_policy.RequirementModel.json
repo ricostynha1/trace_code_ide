@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+      "note": "Each kind carries its default blocking flag, which policy can override, and few kinds block by default."
     }
   },
   "linkHash": "5f4e17a543ea029a",
   "inputs": [
     [
       "requirement",
-      "418591974254a6d7"
+      "fd32fe64f6a96589"
     ],
     [
       "model",

@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "rollUp canonicalises nodes and held marks before folding; order-independence unchanged by the Marks type."
+      "note": "The nodes and held marks are put in canonical order before the walk."
     }
   },
   "linkHash": "3e73cf8d75d44110",
   "inputs": [
     [
       "requirement",
-      "04cbf462882c495c"
+      "7036898e73367a38"
     ],
     [
       "model",

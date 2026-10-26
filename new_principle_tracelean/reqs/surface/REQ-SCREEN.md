@@ -52,8 +52,8 @@ layout is compared across Lean, Rust and TypeScript and floating point would
 differ at the last digit. A pane resized to nothing cannot be found again, and
 a drag arrives a column at a time, so refusing is where it stops.
 
-The stations (Project, Trace, Sandbox, Design, History, Findings, Definitions,
-Proof) are reachable from every state, since a station produced from the
+The stations (Project, Trace, Sandbox, Design, History, Findings and
+Definitions) are reachable from every state, since a station produced from the
 current project would be missing exactly when no project is open. The
 workbench's panes are named `explorer`, `document` and `side`, so a buffer can
 go home after the layout has been rearranged; when its home is gone it goes to

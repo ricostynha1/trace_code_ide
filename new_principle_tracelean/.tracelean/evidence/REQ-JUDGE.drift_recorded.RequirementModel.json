@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+      "note": "Drift and unmodelable are recorded at L1 with the note and the requirement and model hashes, keyed by the clause so they replace the earlier judgement."
     }
   },
   "linkHash": "3ab69d9ebf830f19",
   "inputs": [
     [
       "requirement",
-      "afcf0a707f2f5e72"
+      "6468f6c40f26792e"
     ],
     [
       "model",

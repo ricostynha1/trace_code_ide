@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "Adding a record can only set a mark; the structural flag comes from links and no record clears it."
+      "note": "Each bond's level is the maximum over its records, so adding a record cannot lower one and no mark clears."
     }
   },
   "linkHash": "b6a903e0747472c0",
   "inputs": [
     [
       "requirement",
-      "14e509e8b9fe4305"
+      "2974cd8fccbe91cc"
     ],
     [
       "model",

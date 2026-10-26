@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "Every module holding a decision is declared pub in its crate root; the check reads the roots and rejects a private one."
+      "note": "The test requires every module of the crate root to be public, which is what makes each decision function a reachable library item."
     }
   },
   "linkHash": "a07533610ebbe6ce",
   "inputs": [
     [
       "requirement",
-      "ca129236b7749d0e"
+      "2038be0f29f8c915"
     ],
     [
       "model",

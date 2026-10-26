@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "Nothing under formal/ is written by generation."
+      "note": "Generation writes only under .tracelean and nothing into the project's formal package."
     }
   },
   "linkHash": "e06c1d5473b04365",
   "inputs": [
     [
       "requirement",
-      "b464843dc945d5c4"
+      "da31c8573f3d78b7"
     ],
     [
       "model",

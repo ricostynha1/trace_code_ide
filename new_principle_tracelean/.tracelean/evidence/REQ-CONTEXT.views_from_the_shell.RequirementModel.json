@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "tracelean-view calls editor.view and builds no buffer; the check reads the shell's source and rejects one that builds its own; every view prints what the editor shows and keeps nothing."
+      "note": "The view binary is checked to print only what the editor makes and to build no buffer of its own."
     }
   },
   "linkHash": "275211609d87e49c",
   "inputs": [
     [
       "requirement",
-      "340a311ad0c7fa8c"
+      "086acc6d95b40785"
     ],
     [
       "model",

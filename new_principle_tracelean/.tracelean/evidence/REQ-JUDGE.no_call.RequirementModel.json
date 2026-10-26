@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "Recording a judgement calls nothing; read off the tree."
+      "note": "No network or model call exists in the tree, so recording one calls nothing."
     }
   },
   "linkHash": "27c0bd8df6e4776e",
   "inputs": [
     [
       "requirement",
-      "c173ed9f176a4f83"
+      "a89f80e9b359334d"
     ],
     [
       "model",

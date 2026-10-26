@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "re-recorded: clause text identical to the text judged, model declaration byte-identical; only hashes moved"
+      "note": "A contained or unavailable state must be named, otherwise containmentUnreported."
     }
   },
   "linkHash": "8dc41ad915511b7c",
   "inputs": [
     [
       "requirement",
-      "94b03c736989b208"
+      "3b47ed286bf769dd"
     ],
     [
       "model",

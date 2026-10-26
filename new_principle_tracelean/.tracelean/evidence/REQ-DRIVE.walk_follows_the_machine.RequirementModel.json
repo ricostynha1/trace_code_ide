@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "re-recorded: clause text identical to the text judged, model declaration byte-identical; only hashes moved"
+      "note": "Each step's mode is nextMode of the previous one, so a session is predicted from the keymap alone."
     }
   },
   "linkHash": "8dcf140107b1ddd5",
   "inputs": [
     [
       "requirement",
-      "21f154bbe84272e5"
+      "c5da4d5fd0a70c12"
     ],
     [
       "model",

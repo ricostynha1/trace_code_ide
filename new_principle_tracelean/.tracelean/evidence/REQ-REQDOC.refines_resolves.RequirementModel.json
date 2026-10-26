@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "re-recorded: clause text identical to the text judged, model declaration byte-identical; only hashes moved"
+      "note": "danglingIn lists each refined id that names no node."
     }
   },
   "linkHash": "a207c532c2a864d0",
   "inputs": [
     [
       "requirement",
-      "2ec522dedcf9eb01"
+      "ed4defc24212a664"
     ],
     [
       "model",

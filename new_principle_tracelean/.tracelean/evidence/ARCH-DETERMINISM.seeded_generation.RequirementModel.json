@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "re-recorded: clause text identical to the text judged and model unchanged; only the clause hash changed"
+      "note": "The raw stream is a function of the seed and the count alone."
     }
   },
   "linkHash": "6ba7f2d5f98099db",
   "inputs": [
     [
       "requirement",
-      "c406abe63455efc3"
+      "da154b01cfdbfd56"
     ],
     [
       "model",

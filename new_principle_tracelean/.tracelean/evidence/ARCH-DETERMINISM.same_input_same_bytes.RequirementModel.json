@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "Rendering the same index twice gives the same bytes, and the lock is rewritten byte-identically."
+      "note": "Building the index twice from one tree and serialising both gives identical text."
     }
   },
   "linkHash": "31f21ce35da4f7fe",
   "inputs": [
     [
       "requirement",
-      "5163122fdab09115"
+      "a27f749870fae0ce"
     ],
     [
       "model",

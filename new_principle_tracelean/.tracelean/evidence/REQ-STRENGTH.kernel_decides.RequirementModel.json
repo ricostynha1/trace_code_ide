@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+      "note": "accepted needs a clean exit, no error, and the axioms line for the theorem without sorryAx."
     }
   },
   "linkHash": "0ee9c543a55b1b26",
   "inputs": [
     [
       "requirement",
-      "b9efdcef08fcfda7"
+      "8cf9b6e2544f5535"
     ],
     [
       "model",

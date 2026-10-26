@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "Every buffer is produced by the core; frontends render, and the web draw is annotated as such."
+      "note": "No frontend source constructs a Buffer or Span."
     }
   },
   "linkHash": "71a2a8d02dca60f3",
   "inputs": [
     [
       "requirement",
-      "1adb5f0ac7fbd640"
+      "8244f1786cdcaf1f"
     ],
     [
       "model",

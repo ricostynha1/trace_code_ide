@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+      "note": "sharedRunners groups every placed op by language into one runner each."
     }
   },
   "linkHash": "c01deddb5db2ccb4",
   "inputs": [
     [
       "requirement",
-      "e5346fcb81fb2829"
+      "9d03a7c3d096b335"
     ],
     [
       "model",

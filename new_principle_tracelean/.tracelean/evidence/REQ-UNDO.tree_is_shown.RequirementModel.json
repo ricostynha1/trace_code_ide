@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "ricostynha, this session: \"perform you the judgements\". Every row is named (#n) and jumps there, and the current node is marked. Caveat: under the File and Saved filters only the kept nodes are shown, so the clause holds for the All view."
+      "note": "historyView names every shown node, marks where the workspace is, and each row jumps."
     }
   },
   "linkHash": "84b61d4f08809565",
   "inputs": [
     [
       "requirement",
-      "8c27c6edfa27ff8c"
+      "f5de50bfdfdd691d"
     ],
     [
       "model",

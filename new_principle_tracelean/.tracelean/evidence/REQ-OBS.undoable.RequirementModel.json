@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "An observed change is undone like any other."
+      "note": "Every mirrored command is inverted by the history's own inverse and the tree returns to before."
     }
   },
   "linkHash": "d3731c38008ce13c",
   "inputs": [
     [
       "requirement",
-      "dd8be90945dc1a10"
+      "b62eccf70873a1bb"
     ],
     [
       "model",

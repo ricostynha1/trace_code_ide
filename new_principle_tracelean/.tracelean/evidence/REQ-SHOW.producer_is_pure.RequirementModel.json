@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "one producer as the pure function every producer is; agreement on generated states is the check; decided under autonomy, night of 2026-10-10"
+      "note": "A producer is a Lean function of what it is given, and the Rust ones are compared with it on generated states."
     }
   },
   "linkHash": "b244fd8ebbe5483c",
   "inputs": [
     [
       "requirement",
-      "75246ab3e956294c"
+      "537adac80e01e482"
     ],
     [
       "model",

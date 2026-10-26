@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "re-recorded: clause text identical to the text judged, model declaration byte-identical; only hashes moved"
+      "note": "drive maps a keymap, a start mode and keys to one step per key with its mode and menu."
     }
   },
   "linkHash": "68cd1a6366ca2852",
   "inputs": [
     [
       "requirement",
-      "72970674c3e72ac6"
+      "7e50521f4e7a503a"
     ],
     [
       "model",

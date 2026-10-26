@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "Annotations are read only from comment nodes: one in a string, a macro's tokens or a TypeScript template is not a link."
+      "note": "An annotation in a string, a macro pattern or a template literal is not read, while one in a comment is."
     }
   },
   "linkHash": "6c51361b2b9baf5e",
   "inputs": [
     [
       "requirement",
-      "1ffdce7d35fa8796"
+      "157c0252f4c914a5"
     ],
     [
       "model",

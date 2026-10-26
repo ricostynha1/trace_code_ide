@@ -11,14 +11,14 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "the model states the clause's behaviour; decided under autonomy, night of 2026-10-10"
+      "note": "closeBuffer drops the buffer, removes its panes from the layout, refocuses a placed pane, and leaves the last buffer."
     }
   },
   "linkHash": "e929b9dd131ff8a5",
   "inputs": [
     [
       "requirement",
-      "f0deaf2d4c25e196"
+      "c150e24494731f7a"
     ],
     [
       "model",
