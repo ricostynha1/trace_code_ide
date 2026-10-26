@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-MIRROR",
+    "clause": "apply_reproduces",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Mirror::applying_the_mutations_reproduces_the_tree",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "2830d688ac794449",
+  "inputs": [
+    [
+      "model",
+      "498c5ec9ac5515d5"
+    ],
+    [
+      "requirement",
+      "12824ab11567ca06"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

@@ -31,7 +31,8 @@ Those formats were read out of the stage-0 source rather than invented, so the
 new tree is a valid input to the old tool from the first commit
 ([ADR-0001](decisions/ADR-0001-bootstrap-on-stage0-formats.md)).
 
-`tools/stage0-trace` is the driver that runs it.
+`tools/stage0-trace` is the driver that runs it. It is built against the vendored
+Lean grammar, so both kernels read the same tree and a disagreement is the kernels'.
 
 ## The one thing stage 0 cannot do
 

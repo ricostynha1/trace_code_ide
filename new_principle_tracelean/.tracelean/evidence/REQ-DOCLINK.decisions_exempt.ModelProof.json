@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-DOCLINK",
+    "clause": "decisions_exempt",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.DocLink::a_document_without_a_target_declares_no_hash",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "90a5a7e7381729c2",
+  "inputs": [
+    [
+      "model",
+      "35e6357949d421ab"
+    ],
+    [
+      "requirement",
+      "cc62e88e3c03eff0"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

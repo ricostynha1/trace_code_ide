@@ -205,11 +205,10 @@ fn evidence_list_schema() -> Schema {
     }
 }
 
-/// @tests REQ-LOCK.pure_render
-/// @structural REQ-LOCK.pure_render reason="an absence of filesystem access, which a model of the function could not distinguish from its presence"
+/// @tests REQ-LOCK.evidence_preserved
 /// @tests REQ-DRT-COVER.law_coverage
 #[test]
-fn generation_reaches_every_backend_and_rendering_reads_nothing() {
+fn generation_reaches_every_backend_and_evidence_is_carried() {
     use tracelean_core::drt::gen;
     use tracelean_core::trace::lockfile::carried_evidence;
     use tracelean_core::trace::record::{Detail, Evidence};

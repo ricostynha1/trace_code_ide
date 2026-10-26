@@ -11,10 +11,10 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "Rendering takes an index and writes nothing."
+      "note": "render takes the index and the evidence and its body touches no file; the check renders twice to the same bytes and leaves the lock on disk as it was."
     }
   },
-  "linkHash": "9977468572842b7c",
+  "linkHash": "e62f9bd7dab0c4ab",
   "inputs": [
     [
       "requirement",
@@ -22,7 +22,7 @@
     ],
     [
       "model",
-      "f08eac392109e319"
+      "fbb4d48e9cc6e339"
     ]
   ]
 }

@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-LSP",
+    "clause": "goals_close_with_the_file",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Screen::closing_other_buffers_closes_nothing",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "338d0b36f28d5822",
+  "inputs": [
+    [
+      "model",
+      "585af878a1f84ebd"
+    ],
+    [
+      "requirement",
+      "8cf3da6b47291f5b"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

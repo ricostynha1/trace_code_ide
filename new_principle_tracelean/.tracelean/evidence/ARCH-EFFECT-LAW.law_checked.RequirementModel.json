@@ -11,7 +11,7 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "Each law is a computable function the effects suite runs against the sandbox."
+      "note": "Each law is a computable function the effects suite runs against the sandbox; the check requires each to be a function."
     }
   },
   "linkHash": "c9abe96122eeaf3c",
@@ -22,7 +22,7 @@
     ],
     [
       "model",
-      "bd67151f049c78d7"
+      "9a94ee8338a54801"
     ]
   ]
 }

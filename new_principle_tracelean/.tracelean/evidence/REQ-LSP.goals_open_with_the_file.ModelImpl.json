@@ -1,0 +1,30 @@
+{
+  "key": {
+    "reqId": "REQ-LSP",
+    "clause": "goals_open_with_the_file",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 31,
+      "cases": 2000,
+      "op": "REQ-LSP.goals_open_with_the_file"
+    }
+  },
+  "linkHash": "3e1125708ea2600c",
+  "inputs": [
+    [
+      "implementation",
+      "35f0731fd0802dea"
+    ],
+    [
+      "model",
+      "4a85df64501fdf40"
+    ],
+    [
+      "requirement",
+      "487677fb39595df1"
+    ]
+  ]
+}

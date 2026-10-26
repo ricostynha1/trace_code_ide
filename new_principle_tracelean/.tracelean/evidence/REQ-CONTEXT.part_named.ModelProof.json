@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-CONTEXT",
+    "clause": "part_named",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Context::parts_are_named_by_their_labels",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "4064fcb656b69776",
+  "inputs": [
+    [
+      "model",
+      "fbb5ed221932acb9"
+    ],
+    [
+      "requirement",
+      "3659e4f0871d78f8"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

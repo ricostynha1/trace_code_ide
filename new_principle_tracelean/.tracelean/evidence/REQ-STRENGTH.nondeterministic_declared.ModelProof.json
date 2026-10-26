@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-STRENGTH",
+    "clause": "nondeterministic_declared",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Strength::declared_nondeterministic_is_excluded",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "ec4aa1dd5a1bd311",
+  "inputs": [
+    [
+      "model",
+      "87d4da9d465362f8"
+    ],
+    [
+      "requirement",
+      "1c6d08bdd2758a2c"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

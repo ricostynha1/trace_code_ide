@@ -516,6 +516,7 @@ fn an_evidence_record_cannot_omit_what_would_reproduce_it() {
 /// @tests ARCH-CORE-SHELL.decision_total
 /// @structural ARCH-HONEST.untraced_visible reason="a claim that every coverage view lists unclaimed files, which is about what a report contains rather than about a value a function returns"
 /// @structural ARCH-CORE-SHELL.decision_total reason="a claim about the shape of every decision in the project; the individual decisions are each modelled, this is that they all are"
+/// @structural REQ-LOCK.pure_render reason="an absence of filesystem access, which a model of the function could not distinguish from its presence"
 #[test]
 fn rendering_the_index_reads_nothing_and_invents_nothing() {
     use tracelean_core::evidence::{Bond, Level};

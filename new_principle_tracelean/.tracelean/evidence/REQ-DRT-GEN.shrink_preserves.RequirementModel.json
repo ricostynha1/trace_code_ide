@@ -11,7 +11,7 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "Only candidates that still diverge are accepted."
+      "note": "The shrunk input the check receives still makes the model answer ---- and the implementation answer the marks themselves."
     }
   },
   "linkHash": "60b5dda41af75a66",
@@ -22,7 +22,7 @@
     ],
     [
       "model",
-      "0d257b986eccec20"
+      "0e743a30921b64ed"
     ]
   ]
 }

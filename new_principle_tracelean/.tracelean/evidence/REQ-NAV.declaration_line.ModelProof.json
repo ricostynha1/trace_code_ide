@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-NAV",
+    "clause": "declaration_line",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Nav::a_line_declares_the_word_after_its_declaring_word",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "811c73cee7aa0b76",
+  "inputs": [
+    [
+      "model",
+      "402a533088c9c027"
+    ],
+    [
+      "requirement",
+      "334fa2ad1e8a5649"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

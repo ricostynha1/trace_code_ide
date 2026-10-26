@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-NAV",
+    "clause": "find_by_glob",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Find::every_match_is_a_nonempty_glob_match",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "580a91ec2ab07d1f",
+  "inputs": [
+    [
+      "model",
+      "d9434d01696da7e5"
+    ],
+    [
+      "requirement",
+      "82fe2c0edcd10f1a"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

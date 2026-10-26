@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-DRT-RUST",
+    "clause": "types_inferred",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.RustRunner::a_call_site_leaves_types_to_inference",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "960d37a78488cc4d",
+  "inputs": [
+    [
+      "model",
+      "e220b1c1a1d939a6"
+    ],
+    [
+      "requirement",
+      "d40604b7f460dc6f"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

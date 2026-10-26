@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-CHECK",
+    "clause": "one_of_each_role",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Checker::a_crowded_role_is_named",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "29dee05aea12ab03",
+  "inputs": [
+    [
+      "model",
+      "9dc960882470908a"
+    ],
+    [
+      "requirement",
+      "30adeb5154ba69b4"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

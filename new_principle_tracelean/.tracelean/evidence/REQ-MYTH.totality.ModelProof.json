@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-MYTH",
+    "clause": "totality",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Keymap::only_an_unbound_key_at_a_parentless_mode_passes_through",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "cb6904e4d1caa0a2",
+  "inputs": [
+    [
+      "model",
+      "b2d0950b816b6710"
+    ],
+    [
+      "requirement",
+      "cdf749d4473155cc"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

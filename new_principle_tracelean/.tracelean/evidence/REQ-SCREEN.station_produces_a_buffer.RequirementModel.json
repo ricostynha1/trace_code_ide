@@ -11,7 +11,7 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "ricostynha, this session: \"perform you the judgements\". stationKind gives each of the eight stations the kind of buffer it stands for and none for any other name; every_station_produces proves each listed station produces one."
+      "note": "stationKind gives each of the seven stations the kind of buffer it stands for and none for any other name; the proof goals now open beside a Lean file rather than from a station."
     }
   },
   "linkHash": "41b41ef0c2e83404",
@@ -22,7 +22,7 @@
     ],
     [
       "model",
-      "cba74144dff1da0d"
+      "d7e41fd4db172b62"
     ]
   ]
 }

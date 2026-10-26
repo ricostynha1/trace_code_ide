@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "ARCH-DETERMINISM",
+    "clause": "stable_ordering",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Lockfile::links_have_a_total_order",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "e63da5ed6df9f577",
+  "inputs": [
+    [
+      "model",
+      "a105d7f65b4db0a6"
+    ],
+    [
+      "requirement",
+      "9a2a6e477c8d773d"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

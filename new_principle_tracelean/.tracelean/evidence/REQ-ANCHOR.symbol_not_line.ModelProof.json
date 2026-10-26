@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-ANCHOR",
+    "clause": "symbol_not_line",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Anchor::a_symbol_anchor_is_addressed_by_its_path",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "f7cc35912e3defe4",
+  "inputs": [
+    [
+      "model",
+      "d1b5933586cf1c6d"
+    ],
+    [
+      "requirement",
+      "0c120e0dd61fc9ca"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

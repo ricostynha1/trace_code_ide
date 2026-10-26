@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-EVID",
+    "clause": "marks",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Evidence::every_combination_of_marks_is_reachable",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "1c874cbac515ef97",
+  "inputs": [
+    [
+      "model",
+      "3bd29cdfa957e905"
+    ],
+    [
+      "requirement",
+      "712e1124dbf7cd19"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

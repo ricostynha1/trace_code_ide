@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-MIRROR",
+    "clause": "diff_is_pure",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Mirror::the_mutations_depend_only_on_the_two_trees",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "60fe0bffc72f8c3b",
+  "inputs": [
+    [
+      "model",
+      "33dad4e741f81e93"
+    ],
+    [
+      "requirement",
+      "572d51b3b8c640e6"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

@@ -11,7 +11,7 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "A divergence comes back with its reduced case; the reduction test shows it reduced to the smallest."
+      "note": "A disagreement comes back with the input that produced it, and the check asserts that input is the smallest one: every mark false."
     }
   },
   "linkHash": "b72bcd4a27dc8396",
@@ -22,7 +22,7 @@
     ],
     [
       "model",
-      "0d257b986eccec20"
+      "0e743a30921b64ed"
     ]
   ]
 }

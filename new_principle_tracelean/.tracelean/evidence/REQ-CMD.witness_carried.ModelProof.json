@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-CMD",
+    "clause": "witness_carried",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Command::a_destructive_command_carries_what_it_destroys",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "01948cfd53be2491",
+  "inputs": [
+    [
+      "model",
+      "854a6245d289ba86"
+    ],
+    [
+      "requirement",
+      "8a0925daeaa6e691"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

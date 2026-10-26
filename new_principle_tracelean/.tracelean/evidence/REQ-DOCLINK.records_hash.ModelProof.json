@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-DOCLINK",
+    "clause": "records_hash",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.DocLink::every_declared_hash_is_one_the_document_records",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "7e9e8e63f7f3535f",
+  "inputs": [
+    [
+      "model",
+      "35e6357949d421ab"
+    ],
+    [
+      "requirement",
+      "bae0e29608820e42"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

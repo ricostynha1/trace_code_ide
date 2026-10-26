@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-DRT-TS",
+    "clause": "params_from_source",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Signature::ts_parameters_follow_the_signature",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "e7788616d685d3f2",
+  "inputs": [
+    [
+      "model",
+      "1858205b7022e979"
+    ],
+    [
+      "requirement",
+      "f3a19935acf61c9e"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

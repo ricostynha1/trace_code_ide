@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-REQDOC",
+    "clause": "refines_resolves",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Refinement::a_missing_parent_is_reported",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "d672413c0b08f2cc",
+  "inputs": [
+    [
+      "model",
+      "9ea64c735fbb374d"
+    ],
+    [
+      "requirement",
+      "2ec522dedcf9eb01"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

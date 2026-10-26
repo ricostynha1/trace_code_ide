@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-LINECOV",
+    "clause": "requirement_summary",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.RequirementView::a_requirement_counts_each_line_once",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "668d067e259d3a2f",
+  "inputs": [
+    [
+      "model",
+      "50c520a93cbf4d64"
+    ],
+    [
+      "requirement",
+      "9c57e907a4d9588a"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

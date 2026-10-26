@@ -1,7 +1,7 @@
 ---
 describes: [ARCH-EFFECT-LAW, ARCH-HONEST, REQ-EVID]
 described_hash:
-  ARCH-EFFECT-LAW: a52673a3000aa966
+  ARCH-EFFECT-LAW: 5fa787559dbeb5d1
   ARCH-HONEST: cfd9f166b870b9b3
   REQ-EVID: 081297c90e76bc0b
 ---
@@ -65,7 +65,9 @@ Lean never runs it. The content of the claim is the law, and the law is
 checkable. This is what stops the method applying only to arithmetic. See
 [ADR-0002](decisions/ADR-0002-axiomatised-effects.md).
 
-`@exempt` is reserved for things with no observable law worth stating.
+`@exempt` is reserved for things with no observable law worth stating. An effect
+whose type already says everything, like a read typed `String → String`, needs no
+law, and its requirement says so.
 
 ## Requirement format
 

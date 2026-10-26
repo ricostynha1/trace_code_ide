@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-ANNOT",
+    "clause": "totality",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Annotation::every_candidate_parses_or_is_a_problem",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "06ba8ada2ccf1147",
+  "inputs": [
+    [
+      "model",
+      "c3ada71c9c444a58"
+    ],
+    [
+      "requirement",
+      "e714daa4037e5f05"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

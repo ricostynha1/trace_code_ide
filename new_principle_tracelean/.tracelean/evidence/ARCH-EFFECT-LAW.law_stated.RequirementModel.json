@@ -11,7 +11,7 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "Every opaque constant is accompanied by a law or documents its claim in its type."
+      "note": "Every axiom is accompanied by a law, and the one effect without a law says why in its requirement, which the check reads."
     }
   },
   "linkHash": "5bf5b376cf59fbf9",
@@ -22,7 +22,7 @@
     ],
     [
       "model",
-      "144654390a25b589"
+      "910485ef15f8dc28"
     ]
   ]
 }

@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-LSP",
+    "clause": "goals_open_with_the_file",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Screen::goals_open_exactly_with_a_lean_file",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "576f74f2c85a965d",
+  "inputs": [
+    [
+      "model",
+      "4a85df64501fdf40"
+    ],
+    [
+      "requirement",
+      "487677fb39595df1"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}

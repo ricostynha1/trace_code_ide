@@ -1,0 +1,29 @@
+{
+  "key": {
+    "reqId": "REQ-DRT",
+    "clause": "falsification_only",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Protocol::agreement_is_never_proof",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "d2e397eb76a70cc6",
+  "inputs": [
+    [
+      "model",
+      "e4fc3c21dd99ab63"
+    ],
+    [
+      "requirement",
+      "6a52f4f684e8bff3"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ]
+  ]
+}
