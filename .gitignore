@@ -21,3 +21,7 @@ Cargo.lock
 !.tracelean/trace.lock.json
 !.tracelean/trace_policy.json
 !.tracelean/drt.json
+
+# Claude Code session state
+.claude/worktrees/
+.claude/scheduled_tasks.lock

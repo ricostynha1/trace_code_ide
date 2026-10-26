@@ -1,0 +1,59 @@
+Bugs:
+
+1) on the IDE when clicking on sometihg (the color of that thing) clicking on symbols on text etiro they become not visible become a rectangle solid with one color. 
+
+
+2) On the text bufers it is not working do drag to after the end of the page shown with the moue by dragging a lateral bar (note i believe that that bar does not exist) 
+
+3) When using the apllication and like chaging from elment of text to the other with arrows etc (even though the botton pannel of which key does not change at all, it is rerendered when it does not change !! this creates some sort of lag. It must only be rerende if it changes .... really same with all buffers really) (And note that that tevalutuon must be done only to the part that will be in view, in a not part in view of the buffer does change that should not force the rest to change)
+
+4) Spacet t f Findings (should have a button on the left as tree, agent sandbox etc)
+
+5) The text on a md requiremnt should apper when the requreimnt is opened on the requiremnts tab. At the moment only title status, and the caluses are shown.
+
+6) Findings messages should be actionable: 
+Has a model and a implemntation but nothing binds it.  Should say Missing DRT binding model and implementation ( Same for the the rest of the messages). (should say whay needs to be created and not what exists !!)
+
+7) When calling botton functions which key that need arguments such as spafe f r (rename) is not bein possible to rename i click cpage f r , and like no box exist to have to be isnerted the new name whatsoever). So like I cannot rename ata ll a file. Something is missing. In emacs like it would appear on the botton part (where now is saying nothing happened file was not select, althought it should be. And there to be possible to write the new name etc. Moreover the best would be for automaiccaly after hitting renmae, to not need to click anywhere and the focus to go to the rename and when click enter file is renamed
+
+8) Writting text even in insert mode is calcking (the space does not write a space !!!)
+
+9) Bug: I created a file, and opened in the apllication (after deleteing the file the buffer stayed opened, the problem now is that when selecting that buffer and try to do Space w q, the buffer does not close with the error: Refused, no such file (path "tests")
+
+10) Even on Insert mode on Lean files i am unable to even change them to add somethin altogether , I recheck the bug is more subtler the carchter are alwyas addded to a random place, even if i do change witht they keyboard the place when pressing crachters it goest to another place 
+
+11) I opend 3 things and when resizing the thing on the right fron  right to left instead of making the midle smaller it is making the first smaller it is weird (and it appear it is moving in oposite directions to what is expected)
+
+12) Order not the same between what appear on a requremnt on evidecne: and marks 
+also Marks letter is not very easy to understand should be: 
+implements: I, 
+proves: P 
+models : M 
+Tests: T 
+strong: S (now is pins today)  (prove that spec is strong)
+drt : D   (This is the diferncial test)
+
+(with the others i did not understood anything) and note the colors of what appears on evidence and marks should follow the same order (and like follow same things and be equal only differntiaint gthat one has the complete nouns and the other single letters)
+
+
+Features MIssing: 
+
+On the left side whouls exist a Definition icon that open the definiions:
+
+- Possible defiinionts change color of everyhing keywords of everything , autosave a file. 
+- Do a list of possible features (note as we are doing this 100% tree sitter + myth keyboard it seems that almost everyghing can be configurable). And what appears should b edynamic appearing depedning on the JSON etc (note see if is possible to aplly definions change live) (deviinons should also be a regular buffer, but with a particular distinct look, think as you mange to do for the file tree)
+
+- Lean files (it would be cool to watch lust like i VSCode on lean files the prove steps state that usually appear at the right !!!) 
+
+- On the undo tree visualizer it should be good for the changes on the current brnach to appear at a difernt color (and i apreciate that the brnach that is the current is put on top as it is being inserted now that is really good !!)
+
+- There must exist commands to find on buffers (Space f f) something that allows to insert a word and that w*o that accepts like glob to everywhere from file system buffer code buffer etc to be able to find fings !! (two flalurs one go to the next match). Other only shows the lines that match our querry ! (the secnod falvou more for searching file systems info or requmrents with a given name state etc etc)
+
+
+
+
+Documentation MIssing:
+
+About how to represent the buffers etc:
+Explain how the file system buffer was created (jsons, tree sitter working on it etc etc) in the way that is basically a regular buffer with added funcionality in a document (that seems a good minimal example)
+from code to configuraitons etc
