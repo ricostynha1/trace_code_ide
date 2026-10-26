@@ -782,13 +782,13 @@ fn the_tracing_check_rejects_a_file_nothing_claims() {
 #[test]
 fn nothing_a_binding_names_reads_anything_it_was_not_given() {
     let root = project_root();
-    let text = std::fs::read_to_string(root.join(".tracelean/drt.json")).expect("drt.json");
-    let config: serde_json::Value = serde_json::from_str(&text).expect("readable JSON");
+    let index = tracelean_core::trace::index::build(&root);
+    let files = tracelean_core::observe::workspace::snapshot(&root).files;
+    let bindings = tracelean_core::drt::auto::bindings(&root, &index, &files).expect("the bindings read");
 
     let mut bound = Vec::new();
-    for binding in config["bindings"].as_array().expect("bindings") {
-        let entry = binding["implementation"]["entry"].as_str().unwrap_or_default();
-        let (file, _symbol) = entry.split_once("::").expect("file::symbol");
+    for binding in tracelean_core::drt::auto::tested(&index, bindings) {
+        let (file, _symbol) = binding.implementation.split_entry().expect("file::symbol");
         let source = std::fs::read_to_string(root.join(file)).expect("a bound file exists");
         bound.push((file.to_string(), source));
     }

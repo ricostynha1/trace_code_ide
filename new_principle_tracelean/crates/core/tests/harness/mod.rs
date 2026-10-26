@@ -437,7 +437,14 @@ fn declared_bindings() -> &'static [Binding] {
     use std::sync::OnceLock;
     static BINDINGS: OnceLock<Vec<Binding>> = OnceLock::new();
     BINDINGS.get_or_init(|| {
-        tracelean_core::drt::config::read(&project_root()).expect("the binding file reads")
+        let root = project_root();
+        let index = tracelean_core::trace::index::build(&root);
+        let files = tracelean_core::observe::workspace::snapshot(&root).files;
+        let formal = root.join("formal");
+        let found = tracelean_core::drt::auto::bindings(&root, &index, &files).expect("the binding file reads");
+        let mut found = tracelean_core::drt::auto::tested(&index, found);
+        found.retain(|b| b.model.as_ref().is_none_or(|m| formal.join(m.import.replace('.', "/")).with_extension("lean").is_file()));
+        found
     })
 }
 

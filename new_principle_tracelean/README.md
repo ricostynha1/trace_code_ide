@@ -30,7 +30,7 @@ demo/       a small ordinary tree to open the editor on, and the one
             the driving suite drives
 skills/     how to work on a project that uses this methodology
 tools/      the stage-0 driver: the old TraceLean, tracing this tree
-.tracelean/ drt.json — every differential binding
+.tracelean/ drt.json — what the derived differential bindings cannot say
 ```
 
 A key becomes an action ([REQ-MYTH](reqs/surface/REQ-MYTH.md)), an action becomes

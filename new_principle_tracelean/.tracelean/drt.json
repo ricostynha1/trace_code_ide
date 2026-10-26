@@ -1,19 +1,6 @@
 {
-  "comment": "Every differential binding in this project. A binding describes a call and nothing more; the runners for both sides are generated and built by TraceLean.",
+  "comment": "What a binding derived from a clause's @models and its @drt or @implements function cannot say: coverage floors, waivers, renamed parameters, further clauses and implementations, and calls the annotations do not name. Every other binding is derived.",
   "bindings": [
-    {
-      "req_id": "REQ-LOOK",
-      "clause": "contrast_sufficient",
-      "model": {
-        "import": "TraceLean.Contrast",
-        "function": "TraceLean.Contrast.findings",
-        "arguments": ["pairs", "colours"]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/surface/contrast.rs::findings"
-      }
-    },
     {
       "req_id": "REQ-LOOK",
       "clause": "row_fits",
@@ -26,16 +13,7 @@
           "situation": "only the keys fit",
           "atLeast": 50
         }
-      ],
-      "model": {
-        "import": "TraceLean.Produce",
-        "function": "TraceLean.Produce.menuRow",
-        "arguments": ["title", "entries", "width"]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/surface/produce.rs::menu_row"
-      }
+      ]
     },
     {
       "req_id": "REQ-LOOK",
@@ -53,29 +31,7 @@
           "situation": "a character off the grid",
           "atLeast": 300
         }
-      ],
-      "model": {
-        "import": "TraceLean.Cells",
-        "function": "TraceLean.Cells.drawnWrong",
-        "arguments": ["buffer", "painted", "rows", "columns", "looks"]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/surface/cells.rs::drawn_wrong"
-      }
-    },
-    {
-      "req_id": "REQ-ACT",
-      "clause": "everything_is_offered",
-      "model": {
-        "import": "TraceLean.Offer",
-        "function": "TraceLean.Offer.offers",
-        "arguments": ["buffer", "offset", "keymap"]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/surface/offer.rs::offered_owned"
-      }
+      ]
     },
     {
       "req_id": "REQ-EVID",
@@ -90,24 +46,7 @@
           "atLeast": 200
         }
       ],
-      "also_checks": [
-        "absent_is_unset",
-        "bonds_separate",
-        "marks",
-        "monotone"
-      ],
-      "model": {
-        "import": "TraceLean.Evidence",
-        "function": "TraceLean.Evidence.marks",
-        "arguments": [
-          "records",
-          "annotated"
-        ]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/evidence.rs::marks"
-      }
+      "also_checks": ["absent_is_unset", "bonds_separate", "marks", "monotone"]
     },
     {
       "req_id": "REQ-CMD",
@@ -129,10 +68,7 @@
       "model": {
         "import": "TraceLean.Command",
         "function": "TraceLean.Command.roundTripOutcome",
-        "arguments": [
-          "workspace",
-          "command"
-        ]
+        "arguments": ["workspace", "command"]
       },
       "implementation": {
         "language": "rust",
@@ -142,9 +78,7 @@
     {
       "req_id": "REQ-CMD",
       "clause": "total_or_refused",
-      "also_checks": [
-        "single_path"
-      ],
+      "also_checks": ["single_path"],
       "floors": [
         {
           "situation": "applied successfully",
@@ -158,14 +92,7 @@
       "model": {
         "import": "TraceLean.Command",
         "function": "TraceLean.Command.applyOutcome",
-        "arguments": [
-          "workspace",
-          "command"
-        ]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/history/command.rs::apply_outcome"
+        "arguments": ["workspace", "command"]
       }
     },
     {
@@ -189,22 +116,7 @@
           "atLeast": 1
         }
       ],
-      "also_checks": [
-        "protected_never_mirrored",
-        "passthrough_not_mirrored",
-        "escape_is_not_silent"
-      ],
-      "model": {
-        "import": "TraceLean.Policy",
-        "function": "TraceLean.Policy.classify",
-        "arguments": [
-          "path"
-        ]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/observe/policy.rs::classify"
-      }
+      "also_checks": ["protected_never_mirrored", "passthrough_not_mirrored", "escape_is_not_silent"]
     },
     {
       "req_id": "REQ-MIRROR",
@@ -224,19 +136,7 @@
           "situation": "the exclusion rule applied",
           "atLeast": 100
         }
-      ],
-      "model": {
-        "import": "TraceLean.Mirror",
-        "function": "TraceLean.Mirror.mirrored",
-        "arguments": [
-          "before",
-          "after"
-        ]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/observe/mirror.rs::mirrored"
-      }
+      ]
     },
     {
       "req_id": "REQ-MYTH",
@@ -259,23 +159,7 @@
           "atLeast": 1
         }
       ],
-      "also_checks": [
-        "escape_pops_one",
-        "outcomes_closed"
-      ],
-      "model": {
-        "import": "TraceLean.Keymap",
-        "function": "TraceLean.Keymap.step",
-        "arguments": [
-          "keymap",
-          "mode",
-          "key"
-        ]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/surface/keymap.rs::step"
-      }
+      "also_checks": ["escape_pops_one", "outcomes_closed"]
     },
     {
       "req_id": "REQ-STALE",
@@ -294,17 +178,11 @@
           "atLeast": 1
         }
       ],
-      "also_checks": [
-        "retarget_invalidates"
-      ],
+      "also_checks": ["retarget_invalidates"],
       "model": {
         "import": "TraceLean.Staleness",
         "function": "TraceLean.Staleness.staleness",
-        "arguments": [
-          "record",
-          "liveLinkHashes",
-          "current"
-        ]
+        "arguments": ["record", "liveLinkHashes", "current"]
       },
       "implementation": {
         "language": "rust",
@@ -330,11 +208,7 @@
       "model": {
         "import": "TraceLean.Lsp",
         "function": "TraceLean.Lsp.toByteOffset",
-        "arguments": [
-          "lineText",
-          "character",
-          "encoding"
-        ]
+        "arguments": ["lineText", "character", "encoding"]
       },
       "implementation": {
         "language": "rust",
@@ -364,11 +238,7 @@
       "model": {
         "import": "TraceLean.Lsp",
         "function": "TraceLean.Lsp.toCharacter",
-        "arguments": [
-          "lineText",
-          "offset",
-          "encoding"
-        ]
+        "arguments": ["lineText", "offset", "encoding"]
       },
       "implementation": {
         "language": "rust",
@@ -399,16 +269,11 @@
           "atLeast": 100
         }
       ],
-      "also_checks": [
-        "inverse_exists",
-        "witness_carried"
-      ],
+      "also_checks": ["inverse_exists", "witness_carried"],
       "model": {
         "import": "TraceLean.Command",
         "function": "TraceLean.Command.inverse",
-        "arguments": [
-          "command"
-        ]
+        "arguments": ["command"]
       },
       "implementation": {
         "language": "rust",
@@ -432,21 +297,7 @@
           "atLeast": 1
         }
       ],
-      "also_checks": [
-        "dangling_reported"
-      ],
-      "model": {
-        "import": "TraceLean.DocLink",
-        "function": "TraceLean.DocLink.docState",
-        "arguments": [
-          "link",
-          "current"
-        ]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/trace/doclink.rs::state"
-      }
+      "also_checks": ["dangling_reported"]
     },
     {
       "req_id": "REQ-SELFWRITE",
@@ -469,37 +320,7 @@
           "atLeast": 10
         }
       ],
-      "also_checks": [
-        "suppression_is_consumed",
-        "content_matched",
-        "unmatched_is_external"
-      ],
-      "model": {
-        "import": "TraceLean.Mirror",
-        "function": "TraceLean.Mirror.suppress",
-        "arguments": [
-          "pending",
-          "path",
-          "content"
-        ]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/observe/mirror.rs::suppress"
-      }
-    },
-    {
-      "req_id": "REQ-TRANSCRIPT",
-      "clause": "tool_format_read",
-      "model": {
-        "import": "TraceLean.Claude",
-        "function": "TraceLean.Claude.events",
-        "arguments": ["text"]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/observe/claude.rs::events_owned"
-      }
+      "also_checks": ["suppression_is_consumed", "content_matched", "unmatched_is_external"]
     },
     {
       "req_id": "REQ-TRANSCRIPT",
@@ -522,20 +343,11 @@
           "atLeast": 100
         }
       ],
-      "also_checks": [
-        "unknown_preserved",
-        "absent_is_fine"
-      ],
+      "also_checks": ["unknown_preserved", "absent_is_fine"],
       "model": {
         "import": "TraceLean.Transcript",
         "function": "TraceLean.Transcript.readChunks",
-        "arguments": [
-          "chunks"
-        ]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/observe/transcript.rs::read_chunks"
+        "arguments": ["chunks"]
       }
     },
     {
@@ -563,23 +375,7 @@
           "atLeast": 10
         }
       ],
-      "also_checks": [
-        "edits_become_commands",
-        "overlap_refused"
-      ],
-      "model": {
-        "import": "TraceLean.Lsp",
-        "function": "TraceLean.Lsp.lower",
-        "arguments": [
-          "file",
-          "content",
-          "edits"
-        ]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/surface/lsp.rs::lower_outcome"
-      }
+      "also_checks": ["edits_become_commands", "overlap_refused"]
     },
     {
       "req_id": "REQ-JUDGE",
@@ -597,18 +393,7 @@
           "situation": "a delegated judgement",
           "atLeast": 100
         }
-      ],
-      "model": {
-        "import": "TraceLean.Judge",
-        "function": "TraceLean.Judge.judgedText",
-        "arguments": [
-          "judged"
-        ]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/surface/requirement_view.rs::judged_text"
-      }
+      ]
     },
     {
       "req_id": "REQ-JUDGE",
@@ -635,20 +420,11 @@
           "atLeast": 1
         }
       ],
-      "also_checks": [
-        "proposal_not_mutation",
-        "human_decides",
-        "drift_recorded"
-      ],
+      "also_checks": ["proposal_not_mutation", "human_decides", "drift_recorded"],
       "model": {
         "import": "TraceLean.Judge",
         "function": "TraceLean.Judge.record",
-        "arguments": [
-          "material",
-          "judgement",
-          "judges",
-          "linkHash"
-        ]
+        "arguments": ["material", "judgement", "judges", "linkHash"]
       },
       "implementation": {
         "language": "rust",
@@ -659,105 +435,9 @@
       }
     },
     {
-      "req_id": "REQ-LINECOV",
-      "clause": "requirement_summary",
-      "model": {
-        "import": "TraceLean.RequirementView",
-        "function": "TraceLean.RequirementView.total",
-        "arguments": ["items"]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/surface/coverage_view.rs::total_owned"
-      }
-    },
-    {
-      "req_id": "REQ-LINECOV",
-      "clause": "lines_listed",
-      "model": {
-        "import": "TraceLean.CoverageView",
-        "function": "TraceLean.CoverageView.coverageView",
-        "arguments": ["named", "items", "width"]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/surface/coverage_view.rs::coverage_view_owned"
-      }
-    },
-    {
-      "req_id": "REQ-STALE",
-      "clause": "agreed_not_rerun",
-      "model": {
-        "import": "TraceLean.Staleness",
-        "function": "TraceLean.Staleness.rerun",
-        "arguments": ["held", "op", "live", "again"]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/drt/rerun.rs::rerun"
-      }
-    },
-    {
-      "req_id": "REQ-STALE",
-      "clause": "measured_not_retaken",
-      "model": {
-        "import": "TraceLean.Hash",
-        "function": "TraceLean.Hash.retake",
-        "arguments": ["measured", "held", "files", "again"]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/trace/lines.rs::retake_owned"
-      }
-    },
-    {
-      "req_id": "REQ-OBS",
-      "clause": "only_what_the_tool_changed",
-      "model": {
-        "import": "TraceLean.Mirror",
-        "function": "TraceLean.Mirror.changedSince",
-        "arguments": ["base", "project", "agent"]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/observe/mirror.rs::changed_since_owned"
-      }
-    },
-    {
       "req_id": "REQ-MIRROR",
       "clause": "diff_is_pure",
-      "also_checks": [
-        "minimal",
-        "ordering_defined",
-        "protected_excluded"
-      ],
-      "model": {
-        "import": "TraceLean.Mirror",
-        "function": "TraceLean.Mirror.mutationsOf",
-        "arguments": [
-          "before",
-          "after"
-        ]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/observe/mirror.rs::mutations"
-      }
-    },
-    {
-      "req_id": "REQ-SELFWRITE",
-      "clause": "no_deadlock",
-      "model": {
-        "import": "TraceLean.Mirror",
-        "function": "TraceLean.Mirror.expire",
-        "arguments": [
-          "pending"
-        ]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/observe/mirror.rs::expire"
-      }
+      "also_checks": ["minimal", "ordering_defined", "protected_excluded"]
     },
     {
       "req_id": "REQ-EVID",
@@ -779,18 +459,7 @@
           "situation": "testing and proving not applicable",
           "atLeast": 460
         }
-      ],
-      "model": {
-        "import": "TraceLean.Evidence",
-        "function": "TraceLean.Evidence.written",
-        "arguments": [
-          "marks"
-        ]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/evidence.rs::written"
-      }
+      ]
     },
     {
       "req_id": "REQ-EVID",
@@ -808,53 +477,29 @@
           "situation": "judged",
           "atLeast": 400
         }
-      ],
-      "model": {
-        "import": "TraceLean.Evidence",
-        "function": "TraceLean.Evidence.structural",
-        "arguments": [
-          "marks"
-        ]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/evidence.rs::structural"
-      }
+      ]
     },
     {
       "req_id": "REQ-JUDGE",
       "clause": "structural_judged",
       "floors": [
-        { "situation": "checked only structurally", "atLeast": 180 },
-        { "situation": "modelled", "atLeast": 660 },
-        { "situation": "neither", "atLeast": 50 },
-        { "situation": "a hash named twice", "atLeast": 300 }
-      ],
-      "model": {
-        "import": "TraceLean.Judge",
-        "function": "TraceLean.Judge.restsOn",
-        "arguments": ["models", "checks"]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/trace/material.rs::rests_on"
-      }
-    },
-    {
-      "req_id": "REQ-JUDGE",
-      "clause": "invalidated_by_change",
-      "model": {
-        "import": "TraceLean.Judge",
-        "function": "TraceLean.Judge.stillApplies",
-        "arguments": [
-          "judgement",
-          "material"
-        ]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/judge.rs::still_applies_to"
-      }
+        {
+          "situation": "checked only structurally",
+          "atLeast": 180
+        },
+        {
+          "situation": "modelled",
+          "atLeast": 660
+        },
+        {
+          "situation": "neither",
+          "atLeast": 50
+        },
+        {
+          "situation": "a hash named twice",
+          "atLeast": 300
+        }
+      ]
     },
     {
       "req_id": "REQ-DOCLINK",
@@ -880,9 +525,7 @@
       "model": {
         "import": "TraceLean.DocLink",
         "function": "TraceLean.DocLink.docBlocks",
-        "arguments": [
-          "state"
-        ]
+        "arguments": ["state"]
       },
       "implementation": {
         "language": "rust",
@@ -909,9 +552,7 @@
       "model": {
         "import": "TraceLean.Judge",
         "function": "TraceLean.Judge.Detail.ceiling",
-        "arguments": [
-          "detail"
-        ]
+        "arguments": ["detail"]
       },
       "implementation": {
         "language": "rust",
@@ -921,18 +562,11 @@
     {
       "req_id": "REQ-ANNOT",
       "clause": "totality",
-      "also_checks": [
-        "role_vocabulary",
-        "qualifiers",
-        "unknown_role_named"
-      ],
+      "also_checks": ["role_vocabulary", "qualifiers", "unknown_role_named"],
       "model": {
         "import": "TraceLean.Annotation",
         "function": "TraceLean.Annotation.parseCommentLines",
-        "arguments": [
-          "lines",
-          "firstLine"
-        ]
+        "arguments": ["lines", "firstLine"]
       },
       "implementation": {
         "language": "rust",
@@ -947,11 +581,7 @@
       "clause": "jump_equivalence",
       "waive": [
         {
-          "situations": [
-            "line: Err(refusal) => {",
-            "line: let kind = refusal.kind().to_string();",
-            "line: (Outcome::Refused { kind: kind.clone() }, Outcome::Refused { kind })"
-          ],
+          "situations": ["line: Err(refusal) => {", "line: let kind = refusal.kind().to_string();", "line: (Outcome::Refused { kind: kind.clone() }, Outcome::Refused { kind })"],
           "reason": "a node is recorded only after its command applied (`push_from`), so previewing a node of the tree re-applies a command that applied there; no script reaches a refusal"
         }
       ],
@@ -965,24 +595,7 @@
           "atLeast": 100
         }
       ],
-      "also_checks": [
-        "path_via_ancestor",
-        "reachable",
-        "no_loss_on_branch",
-        "preview_is_pure"
-      ],
-      "model": {
-        "import": "TraceLean.Tree",
-        "function": "TraceLean.Tree.runScript",
-        "arguments": [
-          "base",
-          "script"
-        ]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/history/tree.rs::run_script"
-      }
+      "also_checks": ["path_via_ancestor", "reachable", "no_loss_on_branch", "preview_is_pure"]
     },
     {
       "req_id": "REQ-PROV",
@@ -997,26 +610,11 @@
           "atLeast": 200
         }
       ],
-      "also_checks": [
-        "mapping_before",
-        "mapping_after",
-        "mapping_inside",
-        "exact_not_heuristic",
-        "base_is_honest"
-      ],
+      "also_checks": ["mapping_before", "mapping_after", "mapping_inside", "exact_not_heuristic", "base_is_honest"],
       "model": {
         "import": "TraceLean.Provenance",
         "function": "TraceLean.Provenance.origins",
-        "arguments": [
-          "base",
-          "script",
-          "file",
-          "position"
-        ]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/history/provenance.rs::origins"
+        "arguments": ["base", "script", "file", "position"]
       }
     },
     {
@@ -1040,20 +638,11 @@
           "atLeast": 100
         }
       ],
-      "also_checks": [
-        "checkpoint_equivalent",
-        "truncated_is_reported",
-        "append_only",
-        "ARCH-DETERMINISM.replay_exact"
-      ],
+      "also_checks": ["checkpoint_equivalent", "truncated_is_reported", "append_only", "ARCH-DETERMINISM.replay_exact"],
       "model": {
         "import": "TraceLean.Persistence",
         "function": "TraceLean.Persistence.replayReport",
-        "arguments": [
-          "base",
-          "lines",
-          "checkpointAt"
-        ]
+        "arguments": ["base", "lines", "checkpointAt"]
       },
       "implementation": {
         "language": "rust",
@@ -1072,20 +661,7 @@
           "atLeast": 100
         }
       ],
-      "also_checks": [
-        "ARCH-DETERMINISM.stable_ordering"
-      ],
-      "model": {
-        "import": "TraceLean.Lockfile",
-        "function": "TraceLean.Lockfile.orderedLinks",
-        "arguments": [
-          "links"
-        ]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/trace/lockfile.rs::ordered_links"
-      }
+      "also_checks": ["ARCH-DETERMINISM.stable_ordering"]
     },
     {
       "req_id": "REQ-STRENGTH",
@@ -1108,22 +684,7 @@
           "atLeast": 150
         }
       ],
-      "also_checks": [
-        "open_is_the_default",
-        "attempted_distinguished",
-        "nondeterministic_declared"
-      ],
-      "model": {
-        "import": "TraceLean.Strength",
-        "function": "TraceLean.Strength.obligationsFrom",
-        "arguments": [
-          "links"
-        ]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/trace/strength.rs::obligations_from"
-      }
+      "also_checks": ["open_is_the_default", "attempted_distinguished", "nondeterministic_declared"]
     },
     {
       "req_id": "REQ-CHECK",
@@ -1146,58 +707,12 @@
           "atLeast": 1
         }
       ],
-      "also_checks": [
-        "unbound_reported",
-        "structural_is_not_exempt"
-      ],
-      "model": {
-        "import": "TraceLean.Checker",
-        "function": "TraceLean.Checker.coverageKinds",
-        "arguments": [
-          "roles",
-          "exempt",
-          "structural"
-        ]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/trace/checker.rs::coverage_kinds"
-      }
+      "also_checks": ["unbound_reported", "structural_is_not_exempt"]
     },
     {
       "req_id": "REQ-CHECK",
       "clause": "named_kinds",
-      "also_checks": [
-        "progress_not_fault",
-        "severity_policy"
-      ],
-      "model": {
-        "import": "TraceLean.Checker",
-        "function": "TraceLean.Checker.facts",
-        "arguments": [
-          "kind"
-        ]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/trace/checker.rs::facts"
-      }
-    },
-    {
-      "req_id": "REQ-CHECK",
-      "clause": "qualifier_soundness",
-      "model": {
-        "import": "TraceLean.Checker",
-        "function": "TraceLean.Checker.qualifierKinds",
-        "arguments": [
-          "qualifier",
-          "today"
-        ]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/trace/checker.rs::qualifier_kinds"
-      }
+      "also_checks": ["progress_not_fault", "severity_policy"]
     },
     {
       "req_id": "REQ-CHECK",
@@ -1219,34 +734,12 @@
           "situation": "SeveralPins",
           "atLeast": 50
         }
-      ],
-      "model": {
-        "import": "TraceLean.Checker",
-        "function": "TraceLean.Checker.crowdedKinds",
-        "arguments": [
-          "roles"
-        ]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/trace/checker.rs::crowded_kinds"
-      }
+      ]
     },
     {
       "req_id": "REQ-ANCHOR",
       "clause": "whitespace_normalised",
-      "also_checks": [
-        "comments_excluded"
-      ],
-      "model": {
-        "import": "TraceLean.Hash",
-        "function": "TraceLean.Hash.normalize",
-        "arguments": [
-          "source",
-          "removed",
-          "protected"
-        ]
-      },
+      "also_checks": ["comments_excluded"],
       "implementation": {
         "language": "rust",
         "entry": "crates/core/src/trace/hash.rs::normalize_of"
@@ -1264,54 +757,7 @@
           "situation": "a body extended",
           "atLeast": 100
         }
-      ],
-      "model": {
-        "import": "TraceLean.Hash",
-        "function": "TraceLean.Hash.bodyHash",
-        "arguments": [
-          "source",
-          "removed",
-          "protected"
-        ]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/trace/hash.rs::body_of"
-      }
-    },
-    {
-      "req_id": "REQ-REQDOC",
-      "clause": "clause_addressable",
-      "model": {
-        "import": "TraceLean.Hash",
-        "function": "TraceLean.Hash.clauseHash",
-        "arguments": [
-          "key",
-          "text",
-          "narrowings"
-        ]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/trace/hash.rs::clause_of"
-      }
-    },
-    {
-      "req_id": "REQ-STALE",
-      "clause": "requirement_reopens_all",
-      "model": {
-        "import": "TraceLean.Hash",
-        "function": "TraceLean.Hash.clauseHash",
-        "arguments": [
-          "key",
-          "text",
-          "narrowings"
-        ]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/trace/hash.rs::clause_of"
-      }
+      ]
     },
     {
       "req_id": "REQ-REQDOC",
@@ -1330,20 +776,7 @@
           "atLeast": 100
         }
       ],
-      "also_checks": [
-        "refines_resolves"
-      ],
-      "model": {
-        "import": "TraceLean.Refinement",
-        "function": "TraceLean.Refinement.graphReport",
-        "arguments": [
-          "edges"
-        ]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/trace/requirement.rs::graph_report"
-      }
+      "also_checks": ["refines_resolves"]
     },
     {
       "req_id": "REQ-MYTH",
@@ -1382,24 +815,7 @@
           "atLeast": 1
         }
       ],
-      "also_checks": [
-        "actions_defined",
-        "escape_terminates",
-        "actions_reachable",
-        "keymap_is_data"
-      ],
-      "model": {
-        "import": "TraceLean.Keymap",
-        "function": "TraceLean.Keymap.validate",
-        "arguments": [
-          "keymap",
-          "actions"
-        ]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/surface/keymap.rs::validate_of"
-      }
+      "also_checks": ["actions_defined", "escape_terminates", "actions_reachable", "keymap_is_data"]
     },
     {
       "req_id": "REQ-MYTH",
@@ -1425,56 +841,12 @@
           "situation": "a key that leaves a mode",
           "atLeast": 100
         }
-      ],
-      "model": {
-        "import": "TraceLean.Keymap",
-        "function": "TraceLean.Keymap.whichKey",
-        "arguments": [
-          "keymap",
-          "mode"
-        ]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/surface/keymap.rs::which_key_of"
-      }
+      ]
     },
     {
       "req_id": "REQ-DRT-GEN",
       "clause": "fixed_stream",
-      "also_checks": [
-        "ARCH-DETERMINISM.seeded_generation"
-      ],
-      "model": {
-        "import": "TraceLean.Generator",
-        "function": "TraceLean.Generator.rawStream",
-        "arguments": [
-          "seed",
-          "count"
-        ]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/drt/gen.rs::raw_stream"
-      }
-    },
-    {
-      "req_id": "REQ-DRT-GEN",
-      "clause": "edges_sampled",
-      "model": {
-        "import": "TraceLean.Generator",
-        "function": "TraceLean.Generator.natStream",
-        "arguments": [
-          "seed",
-          "max",
-          "edges",
-          "count"
-        ]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/drt/gen.rs::nat_stream"
-      }
+      "also_checks": ["ARCH-DETERMINISM.seeded_generation"]
     },
     {
       "req_id": "REQ-DRT-GEN",
@@ -1484,20 +856,7 @@
           "situations": ["line: None => Vec::new(),"],
           "reason": "`shape_at` answers None only for an empty `SHAPES`, which is a constant with ten shapes; no input reaches it"
         }
-      ],
-      "model": {
-        "import": "TraceLean.Generator",
-        "function": "TraceLean.Generator.shapeStream",
-        "arguments": [
-          "seed",
-          "shape",
-          "count"
-        ]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/drt/gen.rs::shape_stream"
-      }
+      ]
     },
     {
       "req_id": "REQ-DRT-RUST",
@@ -1527,19 +886,7 @@
           "situation": "two declarations refused",
           "atLeast": 20
         }
-      ],
-      "model": {
-        "import": "TraceLean.Signature",
-        "function": "TraceLean.Signature.parameters",
-        "arguments": [
-          "source",
-          "symbol"
-        ]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/drt/signature.rs::parameters_of"
-      }
+      ]
     },
     {
       "req_id": "ARCH-HONEST",
@@ -1557,18 +904,7 @@
           "situation": "nothing counted",
           "atLeast": 20
         }
-      ],
-      "model": {
-        "import": "TraceLean.Rollup",
-        "function": "TraceLean.Rollup.render",
-        "arguments": [
-          "figure"
-        ]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/trace/rollup.rs::render_figure"
-      }
+      ]
     },
     {
       "req_id": "REQ-ROLLUP",
@@ -1599,27 +935,7 @@
           "atLeast": 50
         }
       ],
-      "also_checks": [
-        "never_complete_when_open",
-        "exempt_leaves_denominator",
-        "partial_capped",
-        "deterministic_order",
-        "counted_once"
-      ],
-      "model": {
-        "import": "TraceLean.Rollup",
-        "function": "TraceLean.Rollup.rollUp",
-        "arguments": [
-          "nodes",
-          "held",
-          "root",
-          "floor"
-        ]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/trace/rollup.rs::roll_up"
-      }
+      "also_checks": ["never_complete_when_open", "exempt_leaves_denominator", "partial_capped", "deterministic_order", "counted_once"]
     },
     {
       "req_id": "REQ-ROLLUP",
@@ -1642,20 +958,7 @@
           "atLeast": 900
         }
       ],
-      "model": {
-        "import": "TraceLean.Rollup",
-        "function": "TraceLean.Rollup.combine",
-        "arguments": [
-          "parts"
-        ]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/trace/rollup.rs::combine"
-      },
-      "also_checks": [
-        "ARCH-HONEST.weakest_link"
-      ]
+      "also_checks": ["ARCH-HONEST.weakest_link"]
     },
     {
       "req_id": "REQ-OBS",
@@ -1667,26 +970,44 @@
         }
       ],
       "floors": [
-        { "situation": "missing from copy", "atLeast": 20 },
-        { "situation": "copy differs", "atLeast": 10 },
-        { "situation": "extra in copy", "atLeast": 20 },
-        { "situation": "protected root unseen", "atLeast": 20 },
-        { "situation": "real tree changed", "atLeast": 20 },
-        { "situation": "escaped", "atLeast": 20 },
-        { "situation": "containment unreported", "atLeast": 20 },
-        { "situation": "no violation at all", "atLeast": 10 }
+        {
+          "situation": "missing from copy",
+          "atLeast": 20
+        },
+        {
+          "situation": "copy differs",
+          "atLeast": 10
+        },
+        {
+          "situation": "extra in copy",
+          "atLeast": 20
+        },
+        {
+          "situation": "protected root unseen",
+          "atLeast": 20
+        },
+        {
+          "situation": "real tree changed",
+          "atLeast": 20
+        },
+        {
+          "situation": "escaped",
+          "atLeast": 20
+        },
+        {
+          "situation": "containment unreported",
+          "atLeast": 20
+        },
+        {
+          "situation": "no violation at all",
+          "atLeast": 10
+        }
       ],
-      "also_checks": [
-        "REQ-SBX.real_tree_untouched",
-        "REQ-SBX.capability_reported",
-        "REQ-SBX.escape_is_not_silent"
-      ],
+      "also_checks": ["REQ-SBX.real_tree_untouched", "REQ-SBX.capability_reported", "REQ-SBX.escape_is_not_silent"],
       "model": {
         "import": "TraceLean.Effects",
         "function": "TraceLean.Effects.runViolations",
-        "arguments": [
-          "witness"
-        ]
+        "arguments": ["witness"]
       },
       "implementation": {
         "language": "rust",
@@ -1710,21 +1031,7 @@
           "atLeast": 50
         }
       ],
-      "also_checks": [
-        "case_echoed"
-      ],
-      "model": {
-        "import": "TraceLean.Protocol",
-        "function": "TraceLean.Protocol.hear",
-        "arguments": [
-          "expected",
-          "line"
-        ]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/drt/protocol.rs::hear"
-      }
+      "also_checks": ["case_echoed"]
     },
     {
       "req_id": "REQ-DRT-PROTO",
@@ -1738,18 +1045,7 @@
           "situation": "no collision",
           "atLeast": 50
         }
-      ],
-      "model": {
-        "import": "TraceLean.Protocol",
-        "function": "TraceLean.Protocol.duplicateOps",
-        "arguments": [
-          "ops"
-        ]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/drt/protocol.rs::duplicate_ops"
-      }
+      ]
     },
     {
       "req_id": "REQ-DRT-PROTO",
@@ -1771,19 +1067,7 @@
           "situation": "neither",
           "atLeast": 50
         }
-      ],
-      "model": {
-        "import": "TraceLean.Protocol",
-        "function": "TraceLean.Protocol.isExclusive",
-        "arguments": [
-          "output",
-          "error"
-        ]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/drt/protocol.rs::is_exclusive"
-      }
+      ]
     },
     {
       "req_id": "REQ-DRT-PROTO",
@@ -1813,9 +1097,7 @@
       "model": {
         "import": "TraceLean.Protocol",
         "function": "TraceLean.Protocol.outcome",
-        "arguments": [
-          "event"
-        ]
+        "arguments": ["event"]
       },
       "implementation": {
         "language": "rust",
@@ -1839,22 +1121,7 @@
           "atLeast": 50
         }
       ],
-      "also_checks": [
-        "case_names_op"
-      ],
-      "model": {
-        "import": "TraceLean.Protocol",
-        "function": "TraceLean.Protocol.caseLine",
-        "arguments": [
-          "number",
-          "op",
-          "input"
-        ]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/drt/protocol.rs::case_line"
-      }
+      "also_checks": ["case_names_op"]
     },
     {
       "req_id": "REQ-DRT-PROTO",
@@ -1868,18 +1135,7 @@
           "situation": "an op placed twice",
           "atLeast": 50
         }
-      ],
-      "model": {
-        "import": "TraceLean.Protocol",
-        "function": "TraceLean.Protocol.sharedRunners",
-        "arguments": [
-          "placed"
-        ]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/drt/protocol.rs::shared_runners"
-      }
+      ]
     },
     {
       "req_id": "REQ-REQDOC",
@@ -1906,39 +1162,16 @@
           "atLeast": 20
         }
       ],
-      "also_checks": [
-        "clauseless_uniform",
-        "decomposition_claimed",
-        "malformed_reported",
-        "narrowings_nest",
-        "clause_unique"
-      ],
-      "model": {
-        "import": "TraceLean.Requirement",
-        "function": "TraceLean.Requirement.parseLines",
-        "arguments": [
-          "lines"
-        ]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/trace/requirement.rs::parse_lines"
-      }
+      "also_checks": ["clauseless_uniform", "decomposition_claimed", "malformed_reported", "narrowings_nest", "clause_unique"]
     },
     {
       "req_id": "REQ-STALE",
       "clause": "scanner_never_writes",
-      "also_checks": [
-        "stale_is_visible"
-      ],
+      "also_checks": ["stale_is_visible"],
       "model": {
         "import": "TraceLean.Staleness",
         "function": "TraceLean.Staleness.sweep",
-        "arguments": [
-          "records",
-          "liveLinkHashes",
-          "current"
-        ]
+        "arguments": ["records", "liveLinkHashes", "current"]
       },
       "implementation": {
         "language": "rust",
@@ -1949,39 +1182,9 @@
       }
     },
     {
-      "req_id": "REQ-STALE",
-      "clause": "no_silent_revalidation",
-      "model": {
-        "import": "TraceLean.Staleness",
-        "function": "TraceLean.Staleness.revalidated",
-        "arguments": [
-          "stale",
-          "produced"
-        ]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/trace/record.rs::revalidated"
-      }
-    },
-    {
       "req_id": "REQ-DOCLINK",
       "clause": "declares_target",
-      "also_checks": [
-        "records_hash",
-        "decisions_exempt"
-      ],
-      "model": {
-        "import": "TraceLean.DocLink",
-        "function": "TraceLean.DocLink.declaredIn",
-        "arguments": [
-          "lines"
-        ]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/trace/doclink.rs::declared_in"
-      }
+      "also_checks": ["records_hash", "decisions_exempt"]
     },
     {
       "req_id": "REQ-DOCLINK",
@@ -2003,34 +1206,7 @@
           "situation": "no targets at all",
           "atLeast": 50
         }
-      ],
-      "model": {
-        "import": "TraceLean.DocLink",
-        "function": "TraceLean.DocLink.recordedFrontmatter",
-        "arguments": [
-          "targets",
-          "current"
-        ]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/trace/doclink.rs::recorded_of"
-      }
-    },
-    {
-      "req_id": "REQ-LOCK",
-      "clause": "version_stamped",
-      "model": {
-        "import": "TraceLean.Lockfile",
-        "function": "TraceLean.Lockfile.versionVerdict",
-        "arguments": [
-          "version"
-        ]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/trace/lockfile.rs::version_verdict"
-      }
+      ]
     },
     {
       "req_id": "REQ-LOCK",
@@ -2052,18 +1228,7 @@
           "situation": "no evidence at all",
           "atLeast": 50
         }
-      ],
-      "model": {
-        "import": "TraceLean.Lockfile",
-        "function": "TraceLean.Lockfile.carriedEvidence",
-        "arguments": [
-          "evidence"
-        ]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/trace/lockfile.rs::carried_evidence"
-      }
+      ]
     },
     {
       "req_id": "REQ-JUDGE",
@@ -2078,37 +1243,7 @@
           "atLeast": 200
         }
       ],
-      "also_checks": [
-        "divergence_presented",
-        "advice_is_not_evidence"
-      ],
-      "model": {
-        "import": "TraceLean.Judge",
-        "function": "TraceLean.Judge.prompt",
-        "arguments": [
-          "material"
-        ]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/judge.rs::prompt"
-      }
-    },
-    {
-      "req_id": "REQ-LSP",
-      "clause": "absent_server_named",
-      "model": {
-        "import": "TraceLean.Lsp",
-        "function": "TraceLean.Lsp.presentText",
-        "arguments": [
-          "state",
-          "answer"
-        ]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/surface/lsp.rs::present_text"
-      }
+      "also_checks": ["divergence_presented", "advice_is_not_evidence"]
     },
     {
       "req_id": "REQ-LSP",
@@ -2123,21 +1258,7 @@
           "atLeast": 100
         }
       ],
-      "also_checks": [
-        "encoding_declared"
-      ],
-      "model": {
-        "import": "TraceLean.Lsp",
-        "function": "TraceLean.Lsp.encodingFor",
-        "arguments": [
-          "registry",
-          "language"
-        ]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/surface/lsp.rs::encoding_for"
-      }
+      "also_checks": ["encoding_declared"]
     },
     {
       "req_id": "REQ-ANCHOR",
@@ -2156,21 +1277,7 @@
           "atLeast": 300
         }
       ],
-      "also_checks": [
-        "stable_under_move"
-      ],
-      "model": {
-        "import": "TraceLean.Anchor",
-        "function": "TraceLean.Anchor.anchorIdent",
-        "arguments": [
-          "file",
-          "kind"
-        ]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/trace/anchor.rs::anchor_ident"
-      }
+      "also_checks": ["stable_under_move"]
     },
     {
       "req_id": "REQ-ANCHOR",
@@ -2188,50 +1295,7 @@
           "situation": "an imprecise anchor claiming L1",
           "atLeast": 20
         }
-      ],
-      "model": {
-        "import": "TraceLean.Anchor",
-        "function": "TraceLean.Anchor.anchorCeiling",
-        "arguments": [
-          "precise",
-          "claimed"
-        ]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/trace/anchor.rs::anchor_ceiling"
-      }
-    },
-    {
-      "req_id": "REQ-DRT",
-      "clause": "error_is_an_answer",
-      "model": {
-        "import": "TraceLean.Protocol",
-        "function": "TraceLean.Protocol.agree",
-        "arguments": [
-          "model",
-          "implementation"
-        ]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/drt/protocol.rs::agree"
-      }
-    },
-    {
-      "req_id": "REQ-DRT",
-      "clause": "falsification_only",
-      "model": {
-        "import": "TraceLean.Protocol",
-        "function": "TraceLean.Protocol.drtLevel",
-        "arguments": [
-          "agreed"
-        ]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/drt/protocol.rs::drt_level"
-      }
+      ]
     },
     {
       "req_id": "REQ-DRT-COVER",
@@ -2254,57 +1318,7 @@
           "atLeast": 1
         }
       ],
-      "also_checks": [
-        "law_coverage",
-        "vacuous_named",
-        "waiver_reasoned"
-      ],
-      "model": {
-        "import": "TraceLean.Coverage",
-        "function": "TraceLean.Coverage.coverageVerdict",
-        "arguments": [
-          "floors",
-          "observed",
-          "waivers"
-        ]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/drt/coverage.rs::verdict"
-      }
-    },
-    {
-      "req_id": "REQ-DRT-COVER",
-      "clause": "waiver_unused_reported",
-      "model": {
-        "import": "TraceLean.Coverage",
-        "function": "TraceLean.Coverage.unusedWaivers",
-        "arguments": [
-          "floors",
-          "observed",
-          "waivers"
-        ]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/drt/coverage.rs::unused_waivers"
-      }
-    },
-    {
-      "req_id": "REQ-DRT-COVER",
-      "clause": "lines_run",
-      "model": {
-        "import": "TraceLean.Coverage",
-        "function": "TraceLean.Coverage.lineReach",
-        "arguments": [
-          "hits",
-          "item"
-        ]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/drt/coverage.rs::line_reach"
-      }
+      "also_checks": ["law_coverage", "vacuous_named", "waiver_reasoned"]
     },
     {
       "req_id": "REQ-DRT-COVER",
@@ -2314,84 +1328,12 @@
           "situations": ["line: None => Vec::new(),"],
           "reason": "`shape_at` answers None only for an empty `SHAPES`, which is a constant with ten shapes; no input reaches it"
         }
-      ],
-      "model": {
-        "import": "TraceLean.Coverage",
-        "function": "TraceLean.Coverage.reachedShape",
-        "arguments": [
-          "shape",
-          "seed",
-          "cases"
-        ]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/drt/classes.rs::reached_shape"
-      }
-    },
-    {
-      "req_id": "REQ-DRT-COVER",
-      "clause": "floor_unmet_is_not_pass",
-      "model": {
-        "import": "TraceLean.Coverage",
-        "function": "TraceLean.Coverage.coverageLevel",
-        "arguments": [
-          "agreed",
-          "verdict"
-        ]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/drt/coverage.rs::level"
-      }
+      ]
     },
     {
       "req_id": "REQ-STRENGTH",
       "clause": "obligation_generated",
-      "also_checks": [
-        "not_proved_by_us"
-      ],
-      "model": {
-        "import": "TraceLean.Strength",
-        "function": "TraceLean.Strength.obligationSource",
-        "arguments": [
-          "obligation"
-        ]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/trace/strength.rs::obligation_source"
-      }
-    },
-    {
-      "req_id": "REQ-ANNOT",
-      "clause": "region_balanced",
-      "model": {
-        "import": "TraceLean.Annotation",
-        "function": "TraceLean.Annotation.regionBalance",
-        "arguments": [
-          "directives"
-        ]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/trace/anchor.rs::region_balance"
-      }
-    },
-    {
-      "req_id": "REQ-REQDOC",
-      "clause": "id_unique",
-      "model": {
-        "import": "TraceLean.Requirement",
-        "function": "TraceLean.Requirement.duplicateIds",
-        "arguments": [
-          "declared"
-        ]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/trace/requirement.rs::duplicate_ids"
-      }
+      "also_checks": ["not_proved_by_us"]
     },
     {
       "req_id": "REQ-EVID",
@@ -2410,19 +1352,11 @@
           "atLeast": 100
         }
       ],
-      "also_checks": [
-        "REQ-STALE.inputs_identified"
-      ],
+      "also_checks": ["REQ-STALE.inputs_identified"],
       "model": {
         "import": "TraceLean.Record",
         "function": "TraceLean.Record.reproducibility",
-        "arguments": [
-          "record"
-        ]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/trace/record.rs::reproducibility"
+        "arguments": ["record"]
       }
     },
     {
@@ -2445,36 +1379,7 @@
           "situation": "nothing scanned at all",
           "atLeast": 20
         }
-      ],
-      "model": {
-        "import": "TraceLean.Rollup",
-        "function": "TraceLean.Rollup.fileCoverage",
-        "arguments": [
-          "scanned",
-          "claimed"
-        ]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/trace/rollup.rs::file_coverage"
-      }
-    },
-    {
-      "req_id": "REQ-MIRROR",
-      "clause": "binary_handled",
-      "model": {
-        "import": "TraceLean.Mirror",
-        "function": "TraceLean.Mirror.changeAt",
-        "arguments": [
-          "path",
-          "before",
-          "after"
-        ]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/observe/mirror.rs::change_at"
-      }
+      ]
     },
     {
       "req_id": "REQ-VIEW",
@@ -2501,20 +1406,7 @@
           "atLeast": 100
         }
       ],
-      "also_checks": [
-        "structure_over_text"
-      ],
-      "model": {
-        "import": "TraceLean.View",
-        "function": "TraceLean.View.faults",
-        "arguments": [
-          "buffer"
-        ]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/surface/view.rs::faults"
-      }
+      "also_checks": ["structure_over_text"]
     },
     {
       "req_id": "REQ-VIEW",
@@ -2537,18 +1429,6 @@
           "atLeast": 300
         }
       ],
-      "model": {
-        "import": "TraceLean.View",
-        "function": "TraceLean.View.actionsAt",
-        "arguments": [
-          "buffer",
-          "offset"
-        ]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/surface/view.rs::actions_at"
-      },
       "also_implemented_by": [
         {
           "language": "typescript",
@@ -2580,9 +1460,7 @@
       "model": {
         "import": "TraceLean.View",
         "function": "TraceLean.View.plainText",
-        "arguments": [
-          "buffer"
-        ]
+        "arguments": ["buffer"]
       },
       "implementation": {
         "language": "rust",
@@ -2598,19 +1476,7 @@
     {
       "req_id": "REQ-VIEW",
       "clause": "structure_has_one_type",
-      "also_checks": ["everything_is_a_buffer"],
-      "model": {
-        "import": "TraceLean.View",
-        "function": "TraceLean.View.directoryBuffer",
-        "arguments": [
-          "path",
-          "entries"
-        ]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/surface/view.rs::directory_buffer"
-      }
+      "also_checks": ["everything_is_a_buffer"]
     },
     {
       "req_id": "REQ-VIEW",
@@ -2628,32 +1494,7 @@
           "situation": "nothing changed at all",
           "atLeast": 1
         }
-      ],
-      "model": {
-        "import": "TraceLean.View",
-        "function": "TraceLean.View.delta",
-        "arguments": [
-          "before",
-          "after"
-        ]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/surface/view.rs::delta"
-      }
-    },
-    {
-      "req_id": "REQ-VIEW",
-      "clause": "screen_is_readable",
-      "model": {
-        "import": "TraceLean.View",
-        "function": "TraceLean.View.presentedConformance",
-        "arguments": ["buffer", "rows", "offered"]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/surface/view.rs::presented_conformance"
-      }
+      ]
     },
     {
       "req_id": "REQ-VIEW",
@@ -2680,21 +1521,7 @@
           "atLeast": 2
         }
       ],
-      "also_checks": [
-        "one_representation"
-      ],
-      "model": {
-        "import": "TraceLean.View",
-        "function": "TraceLean.View.conformance",
-        "arguments": [
-          "buffer",
-          "rendering"
-        ]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/surface/view.rs::conformance"
-      },
+      "also_checks": ["one_representation"],
       "also_implemented_by": [
         {
           "language": "typescript",
@@ -2730,9 +1557,7 @@
       "model": {
         "import": "TraceLean.View",
         "function": "TraceLean.View.accessible",
-        "arguments": [
-          "row"
-        ]
+        "arguments": ["row"]
       },
       "implementation": {
         "language": "rust",
@@ -2748,17 +1573,36 @@
     {
       "req_id": "REQ-SHOW",
       "clause": "index_from_requirements",
-      "also_checks": [
-        "children_lines"
-      ],
+      "also_checks": ["children_lines"],
       "floors": [
-        { "situation": "no requirements at all", "atLeast": 400 },
-        { "situation": "a requirement holding no mark", "atLeast": 150 },
-        { "situation": "a requirement holding every mark", "atLeast": 175 },
-        { "situation": "two requirements or more", "atLeast": 1290 },
-        { "situation": "a structural requirement", "atLeast": 1650 },
-        { "situation": "a row saying what its children left unrun", "atLeast": 560 },
-        { "situation": "only what is open, something finished hidden", "atLeast": 630 }
+        {
+          "situation": "no requirements at all",
+          "atLeast": 400
+        },
+        {
+          "situation": "a requirement holding no mark",
+          "atLeast": 150
+        },
+        {
+          "situation": "a requirement holding every mark",
+          "atLeast": 175
+        },
+        {
+          "situation": "two requirements or more",
+          "atLeast": 1290
+        },
+        {
+          "situation": "a structural requirement",
+          "atLeast": 1650
+        },
+        {
+          "situation": "a row saying what its children left unrun",
+          "atLeast": 560
+        },
+        {
+          "situation": "only what is open, something finished hidden",
+          "atLeast": 630
+        }
       ],
       "model": {
         "import": "TraceLean.Produce",
@@ -2776,16 +1620,32 @@
     {
       "req_id": "REQ-SHOW",
       "clause": "graph_from_refinement",
-      "also_checks": [
-        "open_filtered"
-      ],
+      "also_checks": ["open_filtered"],
       "floors": [
-        { "situation": "nothing to draw", "atLeast": 1080 },
-        { "situation": "a root with something under it", "atLeast": 530 },
-        { "situation": "a requirement refining two others, drawn under each", "atLeast": 490 },
-        { "situation": "a requirement no root reaches, drawn nowhere", "atLeast": 970 },
-        { "situation": "a cycle in refines", "atLeast": 150 },
-        { "situation": "a finished requirement kept for what is open under it", "atLeast": 80 }
+        {
+          "situation": "nothing to draw",
+          "atLeast": 1080
+        },
+        {
+          "situation": "a root with something under it",
+          "atLeast": 530
+        },
+        {
+          "situation": "a requirement refining two others, drawn under each",
+          "atLeast": 490
+        },
+        {
+          "situation": "a requirement no root reaches, drawn nowhere",
+          "atLeast": 970
+        },
+        {
+          "situation": "a cycle in refines",
+          "atLeast": 150
+        },
+        {
+          "situation": "a finished requirement kept for what is open under it",
+          "atLeast": 80
+        }
       ],
       "model": {
         "import": "TraceLean.Produce",
@@ -2804,122 +1664,146 @@
       "req_id": "REQ-SHOW",
       "clause": "sandbox_from_observation",
       "floors": [
-        { "situation": "nothing changed and nothing said", "atLeast": 350 },
-        { "situation": "something changed", "atLeast": 1400 },
-        { "situation": "the tool said something", "atLeast": 1050 },
-        { "situation": "an estimate with something unpriced", "atLeast": 1400 }
-      ],
-      "model": {
-        "import": "TraceLean.Produce",
-        "function": "TraceLean.Produce.sandboxEvents",
-        "arguments": ["changed", "said", "spend"]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/surface/produce.rs::sandbox_events"
-      }
+        {
+          "situation": "nothing changed and nothing said",
+          "atLeast": 350
+        },
+        {
+          "situation": "something changed",
+          "atLeast": 1400
+        },
+        {
+          "situation": "the tool said something",
+          "atLeast": 1050
+        },
+        {
+          "situation": "an estimate with something unpriced",
+          "atLeast": 1400
+        }
+      ]
     },
     {
       "req_id": "REQ-SCREEN",
       "clause": "station_produces_a_buffer",
       "floors": [
-        { "situation": "a station that exists", "atLeast": 560 },
-        { "situation": "a name that is no station", "atLeast": 830 },
-        { "situation": "each of the five stations", "atLeast": 5 }
-      ],
-      "model": {
-        "import": "TraceLean.Screen",
-        "function": "TraceLean.Screen.stationKind",
-        "arguments": ["station"]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/surface/screen.rs::station_kind"
-      }
+        {
+          "situation": "a station that exists",
+          "atLeast": 560
+        },
+        {
+          "situation": "a name that is no station",
+          "atLeast": 830
+        },
+        {
+          "situation": "each of the five stations",
+          "atLeast": 5
+        }
+      ]
     },
     {
       "req_id": "REQ-COST",
       "clause": "cost_from_usage",
       "also_checks": ["price_is_per_model"],
       "floors": [
-        { "situation": "no usage at all", "atLeast": 540 },
-        { "situation": "every model priced", "atLeast": 270 },
-        { "situation": "a model the table does not price", "atLeast": 1280 },
-        { "situation": "the same unpriced model twice", "atLeast": 360 }
-      ],
-      "model": {
-        "import": "TraceLean.Cost",
-        "function": "TraceLean.Cost.spendOf",
-        "arguments": ["table", "usage"]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/observe/cost.rs::spend_of"
-      }
+        {
+          "situation": "no usage at all",
+          "atLeast": 540
+        },
+        {
+          "situation": "every model priced",
+          "atLeast": 270
+        },
+        {
+          "situation": "a model the table does not price",
+          "atLeast": 1280
+        },
+        {
+          "situation": "the same unpriced model twice",
+          "atLeast": 360
+        }
+      ]
     },
     {
       "req_id": "REQ-COST",
       "clause": "cache_priced_apart",
       "floors": [
-        { "situation": "ordinary input only", "atLeast": 125 },
-        { "situation": "cached input only", "atLeast": 129 },
-        { "situation": "a cache write only", "atLeast": 113 },
-        { "situation": "output only", "atLeast": 137 },
-        { "situation": "a total below one millionth, which truncates to nothing", "atLeast": 285 }
-      ],
-      "model": {
-        "import": "TraceLean.Cost",
-        "function": "TraceLean.Cost.amountOf",
-        "arguments": ["price", "usage"]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/observe/cost.rs::amount_of"
-      }
+        {
+          "situation": "ordinary input only",
+          "atLeast": 125
+        },
+        {
+          "situation": "cached input only",
+          "atLeast": 129
+        },
+        {
+          "situation": "a cache write only",
+          "atLeast": 113
+        },
+        {
+          "situation": "output only",
+          "atLeast": 137
+        },
+        {
+          "situation": "a total below one millionth, which truncates to nothing",
+          "atLeast": 285
+        }
+      ]
     },
     {
       "req_id": "REQ-COST",
       "clause": "estimate_is_labelled",
       "floors": [
-        { "situation": "nothing spent", "atLeast": 274 },
-        { "situation": "a fractional part needing padding", "atLeast": 382 },
-        { "situation": "one model unpriced", "atLeast": 680 },
-        { "situation": "several models unpriced", "atLeast": 720 }
-      ],
-      "model": {
-        "import": "TraceLean.Cost",
-        "function": "TraceLean.Cost.estimateLine",
-        "arguments": ["spend"]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/observe/cost.rs::estimate_line"
-      }
+        {
+          "situation": "nothing spent",
+          "atLeast": 274
+        },
+        {
+          "situation": "a fractional part needing padding",
+          "atLeast": 382
+        },
+        {
+          "situation": "one model unpriced",
+          "atLeast": 680
+        },
+        {
+          "situation": "several models unpriced",
+          "atLeast": 720
+        }
+      ]
     },
     {
       "req_id": "REQ-DRT-TS",
       "clause": "params_from_source",
       "floors": [
-        { "situation": "a signature yielding names", "atLeast": 100 },
-        { "situation": "a signature taking no parameters", "atLeast": 10 },
-        { "situation": "a declared signature refused", "atLeast": 10 },
-        { "situation": "an absent symbol", "atLeast": 100 },
-        { "situation": "a signature in a comment or string passed over", "atLeast": 20 },
-        { "situation": "a this parameter dropped", "atLeast": 20 },
-        { "situation": "two declarations refused", "atLeast": 20 }
-      ],
-      "model": {
-        "import": "TraceLean.Signature",
-        "function": "TraceLean.Signature.tsParameters",
-        "arguments": [
-          "source",
-          "symbol"
-        ]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/drt/ts_runner.rs::ts_parameters_owned"
-      }
+        {
+          "situation": "a signature yielding names",
+          "atLeast": 100
+        },
+        {
+          "situation": "a signature taking no parameters",
+          "atLeast": 10
+        },
+        {
+          "situation": "a declared signature refused",
+          "atLeast": 10
+        },
+        {
+          "situation": "an absent symbol",
+          "atLeast": 100
+        },
+        {
+          "situation": "a signature in a comment or string passed over",
+          "atLeast": 20
+        },
+        {
+          "situation": "a this parameter dropped",
+          "atLeast": 20
+        },
+        {
+          "situation": "two declarations refused",
+          "atLeast": 20
+        }
+      ]
     },
     {
       "req_id": "REQ-SHOW",
@@ -2946,21 +1830,7 @@
           "atLeast": 50
         }
       ],
-      "also_checks": [
-        "producers_are_total"
-      ],
-      "model": {
-        "import": "TraceLean.Produce",
-        "function": "TraceLean.Produce.tidy",
-        "arguments": [
-          "size",
-          "spans"
-        ]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/surface/produce.rs::tidy"
-      }
+      "also_checks": ["producers_are_total"]
     },
     {
       "req_id": "REQ-SHOW",
@@ -2982,19 +1852,7 @@
           "situation": "more than two entries",
           "atLeast": 300
         }
-      ],
-      "model": {
-        "import": "TraceLean.View",
-        "function": "TraceLean.View.directoryBuffer",
-        "arguments": [
-          "path",
-          "entries"
-        ]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/surface/view.rs::directory_buffer"
-      }
+      ]
     },
     {
       "req_id": "REQ-SHOW",
@@ -3016,9 +1874,7 @@
       "model": {
         "import": "TraceLean.Produce",
         "function": "TraceLean.Produce.actionsFor",
-        "arguments": [
-          "role"
-        ]
+        "arguments": ["role"]
       },
       "implementation": {
         "language": "rust",
@@ -3049,20 +1905,7 @@
           "situation": "a mark reaching past the text",
           "atLeast": 500
         }
-      ],
-      "model": {
-        "import": "TraceLean.Produce",
-        "function": "TraceLean.Produce.fileBuffer",
-        "arguments": [
-          "path",
-          "text",
-          "marks"
-        ]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/surface/produce.rs::file_buffer"
-      }
+      ]
     },
     {
       "req_id": "REQ-SHOW",
@@ -3084,19 +1927,7 @@
           "situation": "two texts that are the same",
           "atLeast": 20
         }
-      ],
-      "model": {
-        "import": "TraceLean.Produce",
-        "function": "TraceLean.Produce.diffLines",
-        "arguments": [
-          "before",
-          "after"
-        ]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/surface/produce.rs::diff_lines"
-      }
+      ]
     },
     {
       "req_id": "REQ-SHOW",
@@ -3118,111 +1949,7 @@
           "situation": "a side with no text at all",
           "atLeast": 300
         }
-      ],
-      "model": {
-        "import": "TraceLean.Produce",
-        "function": "TraceLean.Produce.reviewBuffer",
-        "arguments": [
-          "target",
-          "before",
-          "after"
-        ]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/surface/produce.rs::review_buffer"
-      }
-    },
-    {
-      "req_id": "REQ-SHOW",
-      "clause": "requirement_opened",
-      "model": {
-        "import": "TraceLean.RequirementView",
-        "function": "TraceLean.RequirementView.requirementView",
-        "arguments": ["view"]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/surface/requirement_view.rs::requirement_view"
-      }
-    },
-    {
-      "req_id": "REQ-SHOW",
-      "clause": "sandbox_session_shown",
-      "model": {
-        "import": "TraceLean.SandboxView",
-        "function": "TraceLean.SandboxView.sandboxView",
-        "arguments": ["view"]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/surface/sandbox_view.rs::sandbox_view"
-      }
-    },
-    {
-      "req_id": "REQ-SHOW",
-      "clause": "listing_is_a_tree",
-      "model": {
-        "import": "TraceLean.Explorer",
-        "function": "TraceLean.Explorer.rows",
-        "arguments": ["files", "opened"]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/surface/explorer.rs::rows_owned"
-      }
-    },
-    {
-      "req_id": "REQ-SHOW",
-      "clause": "claims_beside_code",
-      "model": {
-        "import": "TraceLean.Chips",
-        "function": "TraceLean.Chips.clauseChips",
-        "arguments": ["text", "id", "claims"]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/surface/chips.rs::clause_chips_owned"
-      }
-    },
-    {
-      "req_id": "REQ-SHOW",
-      "clause": "findings_lead_somewhere",
-      "model": {
-        "import": "TraceLean.FindingsView",
-        "function": "TraceLean.FindingsView.findingsView",
-        "arguments": ["title", "found"]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/surface/findings_view.rs::findings_view_owned"
-      }
-    },
-    {
-      "req_id": "REQ-SHOW",
-      "clause": "references_are_links",
-      "model": {
-        "import": "TraceLean.Highlight",
-        "function": "TraceLean.Highlight.requirementNames",
-        "arguments": ["text", "start", "stop"]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/surface/highlight.rs::requirement_names"
-      }
-    },
-    {
-      "req_id": "REQ-SHOW",
-      "clause": "recent_reopens",
-      "model": {
-        "import": "TraceLean.Welcome",
-        "function": "TraceLean.Welcome.welcome",
-        "arguments": ["starts", "recent"]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/surface/welcome.rs::welcome_owned"
-      }
+      ]
     },
     {
       "req_id": "REQ-SHOW",
@@ -3244,19 +1971,7 @@
           "situation": "a row whose characters are not bytes",
           "atLeast": 300
         }
-      ],
-      "model": {
-        "import": "TraceLean.Produce",
-        "function": "TraceLean.Produce.menuBuffer",
-        "arguments": [
-          "title",
-          "entries"
-        ]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/surface/produce.rs::menu_buffer"
-      }
+      ]
     },
     {
       "req_id": "REQ-SHOW",
@@ -3278,20 +1993,7 @@
           "situation": "a window showing the whole text",
           "atLeast": 100
         }
-      ],
-      "model": {
-        "import": "TraceLean.Produce",
-        "function": "TraceLean.Produce.window",
-        "arguments": [
-          "buffer",
-          "start",
-          "count"
-        ]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/surface/produce.rs::window"
-      }
+      ]
     },
     {
       "req_id": "REQ-SHOW",
@@ -3313,44 +2015,12 @@
           "situation": "an event whose characters are not bytes",
           "atLeast": 300
         }
-      ],
-      "model": {
-        "import": "TraceLean.Produce",
-        "function": "TraceLean.Produce.recordBuffer",
-        "arguments": [
-          "title",
-          "events"
-        ]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/surface/produce.rs::record_buffer"
-      }
+      ]
     },
     {
       "req_id": "REQ-ACT",
       "clause": "action_to_intent",
-      "also_checks": [
-        "one_path",
-        "focus_is_carried",
-        "missing_target_is_refused",
-        "edits_are_commands",
-        "dispatch_is_pure"
-      ],
-      "model": {
-        "import": "TraceLean.Act",
-        "function": "TraceLean.Act.dispatch",
-        "arguments": [
-          "action",
-          "focus",
-          "w",
-          "waiting"
-        ]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/surface/act.rs::dispatch"
-      }
+      "also_checks": ["one_path", "focus_is_carried", "missing_target_is_refused", "edits_are_commands", "dispatch_is_pure"]
     },
     {
       "req_id": "REQ-ACT",
@@ -3358,9 +2028,7 @@
       "model": {
         "import": "TraceLean.Act",
         "function": "TraceLean.Act.acts",
-        "arguments": [
-          "intent"
-        ]
+        "arguments": ["intent"]
       },
       "implementation": {
         "language": "rust",
@@ -3400,18 +2068,11 @@
           "atLeast": 50
         }
       ],
-      "also_checks": [
-        "walk_follows_the_machine",
-        "menu_is_the_bar_there"
-      ],
+      "also_checks": ["walk_follows_the_machine", "menu_is_the_bar_there"],
       "model": {
         "import": "TraceLean.Drive",
         "function": "TraceLean.Drive.drive",
-        "arguments": [
-          "keymap",
-          "mode",
-          "keys"
-        ]
+        "arguments": ["keymap", "mode", "keys"]
       },
       "implementation": {
         "language": "rust",
@@ -3422,35 +2083,49 @@
       "req_id": "REQ-SCREEN",
       "clause": "every_pane_is_opened",
       "floors": [
-        { "situation": "a coherent screen", "atLeast": 150 },
-        { "situation": "a pane showing a buffer nothing opened", "atLeast": 800 },
-        { "situation": "a focus on no pane at all", "atLeast": 800 },
-        { "situation": "two panes sharing an identity", "atLeast": 250 }
+        {
+          "situation": "a coherent screen",
+          "atLeast": 150
+        },
+        {
+          "situation": "a pane showing a buffer nothing opened",
+          "atLeast": 800
+        },
+        {
+          "situation": "a focus on no pane at all",
+          "atLeast": 800
+        },
+        {
+          "situation": "two panes sharing an identity",
+          "atLeast": 250
+        }
       ],
-      "also_checks": [
-        "screen_is_a_value",
-        "focus_is_placed",
-        "panes_are_distinct"
-      ],
-      "model": {
-        "import": "TraceLean.Screen",
-        "function": "TraceLean.Screen.coherent",
-        "arguments": ["screen"]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/surface/screen.rs::coherent"
-      }
+      "also_checks": ["screen_is_a_value", "focus_is_placed", "panes_are_distinct"]
     },
     {
       "req_id": "REQ-SCREEN",
       "clause": "layout_tiles_the_region",
       "floors": [
-        { "situation": "a region divided at least once", "atLeast": 700 },
-        { "situation": "a split nested inside a split", "atLeast": 350 },
-        { "situation": "a part weighing nothing", "atLeast": 300 },
-        { "situation": "a region too small for its parts", "atLeast": 500 },
-        { "situation": "a region of no extent", "atLeast": 400 }
+        {
+          "situation": "a region divided at least once",
+          "atLeast": 700
+        },
+        {
+          "situation": "a split nested inside a split",
+          "atLeast": 350
+        },
+        {
+          "situation": "a part weighing nothing",
+          "atLeast": 300
+        },
+        {
+          "situation": "a region too small for its parts",
+          "atLeast": 500
+        },
+        {
+          "situation": "a region of no extent",
+          "atLeast": 400
+        }
       ],
       "model": {
         "import": "TraceLean.Screen",
@@ -3466,417 +2141,414 @@
       "req_id": "REQ-SCREEN",
       "clause": "opened_outlives_shown",
       "floors": [
-        { "situation": "shown a buffer the session holds", "atLeast": 500 },
-        { "situation": "shown a buffer nothing opened", "atLeast": 800 },
-        { "situation": "shown the buffer already in the focused pane", "atLeast": 150 }
+        {
+          "situation": "shown a buffer the session holds",
+          "atLeast": 500
+        },
+        {
+          "situation": "shown a buffer nothing opened",
+          "atLeast": 800
+        },
+        {
+          "situation": "shown the buffer already in the focused pane",
+          "atLeast": 150
+        }
       ],
       "model": {
         "import": "TraceLean.Screen",
         "function": "TraceLean.Screen.showBuffer",
         "arguments": ["id", "screen"]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/surface/screen.rs::show_buffer"
       }
     },
     {
       "req_id": "REQ-SCREEN",
       "clause": "station_opens_a_buffer",
       "floors": [
-        { "situation": "opened something new", "atLeast": 800 },
-        { "situation": "opened something already held", "atLeast": 500 }
-      ],
-      "model": {
-        "import": "TraceLean.Screen",
-        "function": "TraceLean.Screen.openBuffer",
-        "arguments": ["buffer", "screen"]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/surface/screen.rs::open_buffer"
-      }
+        {
+          "situation": "opened something new",
+          "atLeast": 800
+        },
+        {
+          "situation": "opened something already held",
+          "atLeast": 500
+        }
+      ]
     },
     {
       "req_id": "REQ-SCREEN",
       "clause": "workbench_has_three_places",
       "floors": [
-        { "situation": "three different buffers", "atLeast": 450 },
-        { "situation": "one buffer offered for two places", "atLeast": 800 }
-      ],
-      "model": {
-        "import": "TraceLean.Screen",
-        "function": "TraceLean.Screen.workbench",
-        "arguments": ["listing", "document", "side"]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/surface/screen.rs::workbench"
-      }
+        {
+          "situation": "three different buffers",
+          "atLeast": 450
+        },
+        {
+          "situation": "one buffer offered for two places",
+          "atLeast": 800
+        }
+      ]
     },
     {
       "req_id": "REQ-SCREEN",
       "clause": "buffer_goes_home",
       "floors": [
-        { "situation": "a kind whose home is placed", "atLeast": 300 },
-        { "situation": "a kind whose home is gone", "atLeast": 800 },
-        { "situation": "each of the five kinds", "atLeast": 5 }
-      ],
-      "model": {
-        "import": "TraceLean.Screen",
-        "function": "TraceLean.Screen.destination",
-        "arguments": ["kind", "screen"]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/surface/screen.rs::destination"
-      }
+        {
+          "situation": "a kind whose home is placed",
+          "atLeast": 300
+        },
+        {
+          "situation": "a kind whose home is gone",
+          "atLeast": 800
+        },
+        {
+          "situation": "each of the five kinds",
+          "atLeast": 5
+        }
+      ]
     },
     {
       "req_id": "REQ-SCREEN",
       "clause": "split_keeps_the_buffer",
       "floors": [
-        { "situation": "split a pane that exists", "atLeast": 500 },
-        { "situation": "split with the focus on no pane", "atLeast": 800 },
-        { "situation": "split a pane inside a split", "atLeast": 250 }
-      ],
-      "model": {
-        "import": "TraceLean.Screen",
-        "function": "TraceLean.Screen.splitFocus",
-        "arguments": ["axis", "screen"]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/surface/screen.rs::split_focus"
-      }
+        {
+          "situation": "split a pane that exists",
+          "atLeast": 500
+        },
+        {
+          "situation": "split with the focus on no pane",
+          "atLeast": 800
+        },
+        {
+          "situation": "split a pane inside a split",
+          "atLeast": 250
+        }
+      ]
     },
     {
       "req_id": "REQ-SCREEN",
       "clause": "close_collapses_the_pane",
       "floors": [
-        { "situation": "closed one of several", "atLeast": 400 },
-        { "situation": "closed the last opened buffer", "atLeast": 100 },
-        { "situation": "closed a buffer filling every pane", "atLeast": 300 },
-        { "situation": "closed a buffer nothing showed", "atLeast": 800 }
-      ],
-      "model": {
-        "import": "TraceLean.Screen",
-        "function": "TraceLean.Screen.closeBuffer",
-        "arguments": ["buffer", "screen"]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/surface/screen.rs::close_buffer"
-      }
+        {
+          "situation": "closed one of several",
+          "atLeast": 400
+        },
+        {
+          "situation": "closed the last opened buffer",
+          "atLeast": 100
+        },
+        {
+          "situation": "closed a buffer filling every pane",
+          "atLeast": 300
+        },
+        {
+          "situation": "closed a buffer nothing showed",
+          "atLeast": 800
+        }
+      ]
     },
     {
       "req_id": "REQ-SCREEN",
       "clause": "resize_moves_one_divider",
       "floors": [
-        { "situation": "grew the focused pane", "atLeast": 600 },
-        { "situation": "shrank the focused pane", "atLeast": 600 },
-        { "situation": "refused at the floor", "atLeast": 200 },
-        { "situation": "resized the last part of a split", "atLeast": 60 },
-        { "situation": "resized with nothing to move against", "atLeast": 1000 }
+        {
+          "situation": "grew the focused pane",
+          "atLeast": 600
+        },
+        {
+          "situation": "shrank the focused pane",
+          "atLeast": 600
+        },
+        {
+          "situation": "refused at the floor",
+          "atLeast": 200
+        },
+        {
+          "situation": "resized the last part of a split",
+          "atLeast": 60
+        },
+        {
+          "situation": "resized with nothing to move against",
+          "atLeast": 1000
+        }
       ],
-      "also_checks": ["resize_has_a_floor"],
-      "model": {
-        "import": "TraceLean.Screen",
-        "function": "TraceLean.Screen.resizeFocus",
-        "arguments": ["amount", "screen"]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/surface/screen.rs::resize_focus"
-      }
+      "also_checks": ["resize_has_a_floor"]
     },
     {
       "req_id": "REQ-SCREEN",
       "clause": "focus_follows_geometry",
       "floors": [
-        { "situation": "moved to a neighbour", "atLeast": 50 },
-        { "situation": "stayed at the edge", "atLeast": 1200 },
-        { "situation": "three or more panes placed", "atLeast": 200 },
-        { "situation": "asked from a pane the layout does not place", "atLeast": 800 }
-      ],
-      "model": {
-        "import": "TraceLean.Screen",
-        "function": "TraceLean.Screen.focusStep",
-        "arguments": ["rect", "screen", "dir"]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/surface/screen.rs::focus_step"
-      }
+        {
+          "situation": "moved to a neighbour",
+          "atLeast": 50
+        },
+        {
+          "situation": "stayed at the edge",
+          "atLeast": 1200
+        },
+        {
+          "situation": "three or more panes placed",
+          "atLeast": 200
+        },
+        {
+          "situation": "asked from a pane the layout does not place",
+          "atLeast": 800
+        }
+      ]
     },
     {
       "req_id": "REQ-SCREEN",
       "clause": "strip_is_the_opened_set",
       "floors": [
-        { "situation": "several buffers opened", "atLeast": 700 },
-        { "situation": "nothing opened at all", "atLeast": 300 },
-        { "situation": "a buffer whose identity is not plain ascii", "atLeast": 300 }
-      ],
-      "model": {
-        "import": "TraceLean.Screen",
-        "function": "TraceLean.Screen.strip",
-        "arguments": ["screen"]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/surface/screen.rs::strip"
-      }
+        {
+          "situation": "several buffers opened",
+          "atLeast": 700
+        },
+        {
+          "situation": "nothing opened at all",
+          "atLeast": 300
+        },
+        {
+          "situation": "a buffer whose identity is not plain ascii",
+          "atLeast": 300
+        }
+      ]
     },
     {
       "req_id": "REQ-SCREEN",
       "clause": "one_arrangement_path",
       "floors": [
-        { "situation": "split the focused pane", "atLeast": 200 },
-        { "situation": "closed what the focus showed", "atLeast": 200 },
-        { "situation": "moved the focus", "atLeast": 200 },
-        { "situation": "resized", "atLeast": 200 },
-        { "situation": "showed an opened buffer", "atLeast": 200 },
-        { "situation": "an arrangement that changed nothing", "atLeast": 200 }
-      ],
-      "model": {
-        "import": "TraceLean.Screen",
-        "function": "TraceLean.Screen.arrange",
-        "arguments": ["how", "rect", "screen"]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/surface/screen.rs::arrange"
-      }
+        {
+          "situation": "split the focused pane",
+          "atLeast": 200
+        },
+        {
+          "situation": "closed what the focus showed",
+          "atLeast": 200
+        },
+        {
+          "situation": "moved the focus",
+          "atLeast": 200
+        },
+        {
+          "situation": "resized",
+          "atLeast": 200
+        },
+        {
+          "situation": "showed an opened buffer",
+          "atLeast": 200
+        },
+        {
+          "situation": "an arrangement that changed nothing",
+          "atLeast": 200
+        }
+      ]
     },
     {
       "req_id": "REQ-SCREEN",
       "clause": "stations_are_constant",
       "floors": [
-        { "situation": "asked of some screen", "atLeast": 1000 }
-      ],
-      "model": {
-        "import": "TraceLean.Screen",
-        "function": "TraceLean.Screen.stations",
-        "arguments": ["screen"]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/surface/screen.rs::stations"
-      }
+        {
+          "situation": "asked of some screen",
+          "atLeast": 1000
+        }
+      ]
     },
     {
       "req_id": "REQ-CONTEXT",
       "clause": "neighbourhood_is_closed",
       "floors": [
-        { "situation": "nothing above", "atLeast": 1200 },
-        { "situation": "two or more steps up", "atLeast": 40 },
-        { "situation": "a cycle back to the target", "atLeast": 340 },
-        { "situation": "a name declared twice", "atLeast": 260 }
-      ],
-      "model": {
-        "import": "TraceLean.Context",
-        "function": "TraceLean.Context.neighbourhood",
-        "arguments": ["nodes", "id"]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/surface/context.rs::neighbourhood"
-      }
+        {
+          "situation": "nothing above",
+          "atLeast": 1200
+        },
+        {
+          "situation": "two or more steps up",
+          "atLeast": 40
+        },
+        {
+          "situation": "a cycle back to the target",
+          "atLeast": 340
+        },
+        {
+          "situation": "a name declared twice",
+          "atLeast": 260
+        }
+      ]
     },
     {
       "req_id": "REQ-CONTEXT",
       "clause": "person_chooses",
       "floors": [
-        { "situation": "nothing chosen", "atLeast": 250 },
-        { "situation": "a part chosen with nothing in it", "atLeast": 1200 },
-        { "situation": "chosen out of order", "atLeast": 830 },
-        { "situation": "a part chosen twice", "atLeast": 550 }
-      ],
-      "model": {
-        "import": "TraceLean.Context",
-        "function": "TraceLean.Context.partsShown",
-        "arguments": ["included", "filled"]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/surface/context.rs::parts_shown"
-      }
+        {
+          "situation": "nothing chosen",
+          "atLeast": 250
+        },
+        {
+          "situation": "a part chosen with nothing in it",
+          "atLeast": 1200
+        },
+        {
+          "situation": "chosen out of order",
+          "atLeast": 830
+        },
+        {
+          "situation": "a part chosen twice",
+          "atLeast": 550
+        }
+      ]
     },
     {
       "req_id": "REQ-CONTEXT",
       "clause": "part_named",
       "floors": [
-        { "situation": "a label that names a part", "atLeast": 500 },
-        { "situation": "a name that is no part", "atLeast": 1100 }
-      ],
-      "model": {
-        "import": "TraceLean.Context",
-        "function": "TraceLean.Context.partNamed",
-        "arguments": ["name"]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/surface/context.rs::part_named"
-      }
+        {
+          "situation": "a label that names a part",
+          "atLeast": 500
+        },
+        {
+          "situation": "a name that is no part",
+          "atLeast": 1100
+        }
+      ]
     },
     {
       "req_id": "REQ-CONTEXT",
       "clause": "from_the_shell",
       "floors": [
-        { "situation": "nothing asked for", "atLeast": 100 },
-        { "situation": "a list of labels", "atLeast": 400 },
-        { "situation": "a name that is no part", "atLeast": 400 }
-      ],
-      "model": {
-        "import": "TraceLean.Context",
-        "function": "TraceLean.Context.shellParts",
-        "arguments": ["parts"]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/surface/context.rs::shell_parts"
-      }
+        {
+          "situation": "nothing asked for",
+          "atLeast": 100
+        },
+        {
+          "situation": "a list of labels",
+          "atLeast": 400
+        },
+        {
+          "situation": "a name that is no part",
+          "atLeast": 400
+        }
+      ]
     },
     {
       "req_id": "REQ-CONTEXT",
       "clause": "claims_with_source",
       "floors": [
-        { "situation": "a clause asked for", "atLeast": 200 },
-        { "situation": "two claims on one item", "atLeast": 90 }
-      ],
-      "model": {
-        "import": "TraceLean.Context",
-        "function": "TraceLean.Context.claimsOn",
-        "arguments": ["claims", "id", "clause"]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/surface/context.rs::claims_on"
-      }
+        {
+          "situation": "a clause asked for",
+          "atLeast": 200
+        },
+        {
+          "situation": "two claims on one item",
+          "atLeast": 90
+        }
+      ]
     },
     {
       "req_id": "REQ-CONTEXT",
       "clause": "affected_tests",
       "floors": [
-        { "situation": "a test that names an implementing item", "atLeast": 100 },
-        { "situation": "a line of an unclaimed test file", "atLeast": 25 }
-      ],
-      "model": {
-        "import": "TraceLean.Context",
-        "function": "TraceLean.Context.affected",
-        "arguments": ["claims", "id", "clause", "down", "files"]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/surface/context.rs::affected"
-      }
+        {
+          "situation": "a test that names an implementing item",
+          "atLeast": 100
+        },
+        {
+          "situation": "a line of an unclaimed test file",
+          "atLeast": 25
+        }
+      ]
     },
     {
       "req_id": "REQ-UNDO",
       "clause": "tree_is_drawn",
       "floors": [
-        { "situation": "a branch", "atLeast": 200 },
-        { "situation": "two branches from one node", "atLeast": 15 },
-        { "situation": "a node made after itself", "atLeast": 600 },
-        { "situation": "a node no row reaches", "atLeast": 1200 }
-      ],
-      "model": {
-        "import": "TraceLean.HistoryView",
-        "function": "TraceLean.HistoryView.historyGraph",
-        "arguments": ["points"]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/surface/history_view.rs::history_graph"
-      }
-    },
-    {
-      "req_id": "REQ-UNDO",
-      "clause": "tree_is_shown",
-      "model": {
-        "import": "TraceLean.HistoryView",
-        "function": "TraceLean.HistoryView.historyView",
-        "arguments": ["points", "filter", "file"]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/surface/history_view.rs::history_view_owned"
-      }
-    },
-    {
-      "req_id": "REQ-UNDO",
-      "clause": "hover_shows_change",
-      "model": {
-        "import": "TraceLean.HistoryView",
-        "function": "TraceLean.HistoryView.changeView",
-        "arguments": ["node", "said", "changed"]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/surface/history_view.rs::change_view_owned"
-      }
+        {
+          "situation": "a branch",
+          "atLeast": 200
+        },
+        {
+          "situation": "two branches from one node",
+          "atLeast": 15
+        },
+        {
+          "situation": "a node made after itself",
+          "atLeast": 600
+        },
+        {
+          "situation": "a node no row reaches",
+          "atLeast": 1200
+        }
+      ]
     },
     {
       "req_id": "REQ-UNDO",
       "clause": "filtered_view",
       "floors": [
-        { "situation": "the position hidden and an ancestor marked", "atLeast": 35 },
-        { "situation": "a node lifted to a further ancestor", "atLeast": 700 },
-        { "situation": "nothing kept", "atLeast": 500 }
-      ],
-      "model": {
-        "import": "TraceLean.HistoryView",
-        "function": "TraceLean.HistoryView.shownPoints",
-        "arguments": ["points", "filter", "file"]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/surface/history_view.rs::shown_points"
-      }
+        {
+          "situation": "the position hidden and an ancestor marked",
+          "atLeast": 35
+        },
+        {
+          "situation": "a node lifted to a further ancestor",
+          "atLeast": 700
+        },
+        {
+          "situation": "nothing kept",
+          "atLeast": 500
+        }
+      ]
     },
     {
       "req_id": "REQ-STRENGTH",
       "clause": "per_input",
       "floors": [
-        { "situation": "a model of no arguments", "atLeast": 50 },
-        { "situation": "a model of several arguments", "atLeast": 300 }
-      ],
-      "model": {
-        "import": "TraceLean.Pinning",
-        "function": "TraceLean.Pinning.statement",
-        "arguments": ["spec", "model", "inputs"]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/trace/pinning.rs::statement"
-      }
+        {
+          "situation": "a model of no arguments",
+          "atLeast": 50
+        },
+        {
+          "situation": "a model of several arguments",
+          "atLeast": 300
+        }
+      ]
     },
     {
       "req_id": "REQ-STRENGTH",
       "clause": "inputs_counted",
       "floors": [
-        { "situation": "a definition by pattern matching", "atLeast": 200 },
-        { "situation": "arguments both named and arrowed", "atLeast": 100 },
-        { "situation": "a proposition", "atLeast": 100 },
-        { "situation": "not a definition", "atLeast": 50 }
-      ],
-      "model": {
-        "import": "TraceLean.Pinning",
-        "function": "TraceLean.Pinning.shape",
-        "arguments": ["declaration"]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/trace/pinning.rs::shape"
-      }
+        {
+          "situation": "a definition by pattern matching",
+          "atLeast": 200
+        },
+        {
+          "situation": "arguments both named and arrowed",
+          "atLeast": 100
+        },
+        {
+          "situation": "a proposition",
+          "atLeast": 100
+        },
+        {
+          "situation": "not a definition",
+          "atLeast": 50
+        }
+      ]
     },
     {
       "req_id": "REQ-STRENGTH",
       "clause": "kernel_decides",
       "floors": [
-        { "situation": "accepted", "atLeast": 40 },
-        { "situation": "rejected for sorry", "atLeast": 20 },
-        { "situation": "rejected for an error", "atLeast": 20 }
+        {
+          "situation": "accepted",
+          "atLeast": 40
+        },
+        {
+          "situation": "rejected for sorry",
+          "atLeast": 20
+        },
+        {
+          "situation": "rejected for an error",
+          "atLeast": 20
+        }
       ],
       "model": {
         "import": "TraceLean.Pinning",
@@ -3886,15 +2558,24 @@
       "implementation": {
         "language": "rust",
         "entry": "crates/core/src/trace/pinning.rs::accepted",
-        "params": { "theoremName": "theorem_name", "exitedOk": "exited_ok" }
+        "params": {
+          "theoremName": "theorem_name",
+          "exitedOk": "exited_ok"
+        }
       }
     },
     {
       "req_id": "REQ-STRENGTH",
       "clause": "verdict_kept",
       "floors": [
-        { "situation": "pinned", "atLeast": 50 },
-        { "situation": "a verdict about other declarations", "atLeast": 100 }
+        {
+          "situation": "pinned",
+          "atLeast": 50
+        },
+        {
+          "situation": "a verdict about other declarations",
+          "atLeast": 100
+        }
       ],
       "model": {
         "import": "TraceLean.Pinning",
@@ -3904,16 +2585,27 @@
       "implementation": {
         "language": "rust",
         "entry": "crates/core/src/trace/pinning.rs::standing",
-        "params": { "theoremName": "theorem_name" }
+        "params": {
+          "theoremName": "theorem_name"
+        }
       }
     },
     {
       "req_id": "REQ-DRT-SCHEMA",
       "clause": "outside_is_error",
       "floors": [
-        { "situation": "paired", "atLeast": 100 },
-        { "situation": "a structure paired", "atLeast": 5 },
-        { "situation": "a mismatch reported", "atLeast": 1000 }
+        {
+          "situation": "paired",
+          "atLeast": 100
+        },
+        {
+          "situation": "a structure paired",
+          "atLeast": 5
+        },
+        {
+          "situation": "a mismatch reported",
+          "atLeast": 1000
+        }
       ],
       "model": {
         "import": "TraceLean.Derive",
@@ -3923,101 +2615,100 @@
       "implementation": {
         "language": "rust",
         "entry": "crates/core/src/drt/derive.rs::pair",
-        "params": { "leanStructs": "lean_structs", "rustStructs": "rust_structs" }
+        "params": {
+          "leanStructs": "lean_structs",
+          "rustStructs": "rust_structs"
+        }
       }
     },
     {
       "req_id": "REQ-DRT-SCHEMA",
       "clause": "derived_from_both",
       "floors": [
-        { "situation": "every argument paired", "atLeast": 50 },
-        { "situation": "arities differ", "atLeast": 50 },
-        { "situation": "an argument refused", "atLeast": 50 },
-        { "situation": "the result refused", "atLeast": 50 },
-        { "situation": "a parameter renamed", "atLeast": 20 }
-      ],
-      "model": {
-        "import": "TraceLean.Derive",
-        "function": "TraceLean.Derive.derive",
-        "arguments": ["model", "implementation", "lean", "rust"]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/drt/derive.rs::derive_of"
-      }
+        {
+          "situation": "every argument paired",
+          "atLeast": 50
+        },
+        {
+          "situation": "arities differ",
+          "atLeast": 50
+        },
+        {
+          "situation": "an argument refused",
+          "atLeast": 50
+        },
+        {
+          "situation": "the result refused",
+          "atLeast": 50
+        },
+        {
+          "situation": "a parameter renamed",
+          "atLeast": 20
+        }
+      ]
     },
     {
       "req_id": "REQ-DRT-RUST",
       "clause": "types_inferred",
       "floors": [
-        { "situation": "an entry taking nothing", "atLeast": 20 },
-        { "situation": "an entry taking several arguments", "atLeast": 100 },
-        { "situation": "an argument read from a renamed field", "atLeast": 100 },
-        { "situation": "a literal needing an escape", "atLeast": 50 }
-      ],
-      "model": {
-        "import": "TraceLean.RustRunner",
-        "function": "TraceLean.RustRunner.callSite",
-        "arguments": ["entry"]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/drt/rust_runner.rs::call_site"
-      }
+        {
+          "situation": "an entry taking nothing",
+          "atLeast": 20
+        },
+        {
+          "situation": "an entry taking several arguments",
+          "atLeast": 100
+        },
+        {
+          "situation": "an argument read from a renamed field",
+          "atLeast": 100
+        },
+        {
+          "situation": "a literal needing an escape",
+          "atLeast": 50
+        }
+      ]
     },
     {
       "req_id": "REQ-LINECOV",
       "clause": "per_test",
       "floors": [
-        { "situation": "a line two tests ran", "atLeast": 30 },
-        { "situation": "a line no test ran", "atLeast": 200 }
-      ],
-      "model": {
-        "import": "TraceLean.Lines",
-        "function": "TraceLean.Lines.merged",
-        "arguments": ["runs", "file"]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/trace/lines.rs::merged"
-      }
-    },
-    {
-      "req_id": "REQ-LINECOV",
-      "clause": "uncovered_shown",
-      "model": {
-        "import": "TraceLean.Lines",
-        "function": "TraceLean.Lines.markers",
-        "arguments": ["lines", "top", "height"]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/trace/lines.rs::markers"
-      }
+        {
+          "situation": "a line two tests ran",
+          "atLeast": 30
+        },
+        {
+          "situation": "a line no test ran",
+          "atLeast": 200
+        }
+      ]
     },
     {
       "req_id": "REQ-LINECOV",
       "clause": "stale_hidden",
       "floors": [
-        { "situation": "measured against the file's text", "atLeast": 200 },
-        { "situation": "measured against other text", "atLeast": 200 }
-      ],
-      "model": {
-        "import": "TraceLean.Lines",
-        "function": "TraceLean.Lines.visible",
-        "arguments": ["measured", "hash"]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/trace/lines.rs::visible"
-      }
+        {
+          "situation": "measured against the file's text",
+          "atLeast": 200
+        },
+        {
+          "situation": "measured against other text",
+          "atLeast": 200
+        }
+      ]
     },
     {
       "req_id": "REQ-LINECOV",
       "clause": "clause_summary",
       "floors": [
-        { "situation": "some lines run and some not", "atLeast": 200 },
-        { "situation": "no executable line inside", "atLeast": 100 }
+        {
+          "situation": "some lines run and some not",
+          "atLeast": 200
+        },
+        {
+          "situation": "no executable line inside",
+          "atLeast": 100
+        }
       ],
       "model": {
         "import": "TraceLean.Lines",
@@ -4027,227 +2718,242 @@
       "implementation": {
         "language": "rust",
         "entry": "crates/core/src/trace/lines.rs::span_coverage",
-        "params": { "stop": "end" }
+        "params": {
+          "stop": "end"
+        }
       }
     },
     {
       "req_id": "REQ-NAV",
       "clause": "declaration_line",
       "floors": [
-        { "situation": "declares a name", "atLeast": 135 },
-        { "situation": "after modifiers", "atLeast": 175 },
-        { "situation": "a path", "atLeast": 60 },
-        { "situation": "declares nothing", "atLeast": 530 }
-      ],
-      "model": {
-        "import": "TraceLean.Nav",
-        "function": "TraceLean.Nav.declaredOn",
-        "arguments": ["line"]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/surface/definition.rs::declared_on"
-      }
+        {
+          "situation": "declares a name",
+          "atLeast": 135
+        },
+        {
+          "situation": "after modifiers",
+          "atLeast": 175
+        },
+        {
+          "situation": "a path",
+          "atLeast": 60
+        },
+        {
+          "situation": "declares nothing",
+          "atLeast": 530
+        }
+      ]
     },
     {
       "req_id": "REQ-NAV",
       "clause": "quick_open",
       "floors": [
-        { "situation": "no letters", "atLeast": 180 },
-        { "situation": "nothing matches", "atLeast": 445 },
-        { "situation": "several ranked", "atLeast": 40 },
-        { "situation": "more than kept", "atLeast": 190 }
-      ],
-      "model": {
-        "import": "TraceLean.Nav",
-        "function": "TraceLean.Nav.quickOpen",
-        "arguments": ["files", "query", "limit"]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/surface/quick.rs::matches"
-      }
+        {
+          "situation": "no letters",
+          "atLeast": 180
+        },
+        {
+          "situation": "nothing matches",
+          "atLeast": 445
+        },
+        {
+          "situation": "several ranked",
+          "atLeast": 40
+        },
+        {
+          "situation": "more than kept",
+          "atLeast": 190
+        }
+      ]
     },
     {
       "req_id": "REQ-NAV",
       "clause": "session_recalled",
       "floors": [
-        { "situation": "a tab removed since", "atLeast": 530 },
-        { "situation": "the front file kept", "atLeast": 330 },
-        { "situation": "the front file removed", "atLeast": 380 }
-      ],
-      "model": {
-        "import": "TraceLean.Nav",
-        "function": "TraceLean.Nav.reopened",
-        "arguments": ["files", "shown", "existing"]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/surface/reopen.rs::reopened"
-      }
+        {
+          "situation": "a tab removed since",
+          "atLeast": 530
+        },
+        {
+          "situation": "the front file kept",
+          "atLeast": 330
+        },
+        {
+          "situation": "the front file removed",
+          "atLeast": 380
+        }
+      ]
     },
     {
       "req_id": "REQ-NAV",
       "clause": "definitions_found",
       "floors": [
-        { "situation": "declared once", "atLeast": 300 },
-        { "situation": "declared several times", "atLeast": 50 },
-        { "situation": "by its last part", "atLeast": 50 },
-        { "situation": "declared nowhere", "atLeast": 3200 }
-      ],
-      "model": {
-        "import": "TraceLean.Nav",
-        "function": "TraceLean.Nav.declarations",
-        "arguments": ["files", "name"]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/surface/definition.rs::declarations"
-      }
+        {
+          "situation": "declared once",
+          "atLeast": 300
+        },
+        {
+          "situation": "declared several times",
+          "atLeast": 50
+        },
+        {
+          "situation": "by its last part",
+          "atLeast": 50
+        },
+        {
+          "situation": "declared nowhere",
+          "atLeast": 3200
+        }
+      ]
     },
     {
       "req_id": "REQ-NAV",
       "clause": "uses_found",
       "floors": [
-        { "situation": "a name's uses", "atLeast": 95 },
-        { "situation": "a search", "atLeast": 240 },
-        { "situation": "cut at the limit", "atLeast": 400 },
-        { "situation": "found nowhere", "atLeast": 3200 }
-      ],
-      "model": {
-        "import": "TraceLean.Nav",
-        "function": "TraceLean.Nav.occurrences",
-        "arguments": ["files", "needle", "whole", "limit"]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/surface/definition.rs::occurrences"
-      }
+        {
+          "situation": "a name's uses",
+          "atLeast": 95
+        },
+        {
+          "situation": "a search",
+          "atLeast": 240
+        },
+        {
+          "situation": "cut at the limit",
+          "atLeast": 400
+        },
+        {
+          "situation": "found nowhere",
+          "atLeast": 3200
+        }
+      ]
     },
     {
       "req_id": "REQ-NAV",
       "clause": "find_by_glob",
       "floors": [
-        { "situation": "a match", "atLeast": 100 },
-        { "situation": "no match", "atLeast": 100 },
-        { "situation": "several matches", "atLeast": 50 },
-        { "situation": "a star that matched", "atLeast": 50 },
-        { "situation": "a question mark that matched", "atLeast": 20 },
-        { "situation": "an empty pattern", "atLeast": 20 },
-        { "situation": "a match in a text of several lines", "atLeast": 50 }
-      ],
-      "model": {
-        "import": "TraceLean.Find",
-        "function": "TraceLean.Find.globMatches",
-        "arguments": ["text", "pattern"]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/surface/find.rs::glob_matches"
-      }
+        {
+          "situation": "a match",
+          "atLeast": 100
+        },
+        {
+          "situation": "no match",
+          "atLeast": 100
+        },
+        {
+          "situation": "several matches",
+          "atLeast": 50
+        },
+        {
+          "situation": "a star that matched",
+          "atLeast": 50
+        },
+        {
+          "situation": "a question mark that matched",
+          "atLeast": 20
+        },
+        {
+          "situation": "an empty pattern",
+          "atLeast": 20
+        },
+        {
+          "situation": "a match in a text of several lines",
+          "atLeast": 50
+        }
+      ]
     },
     {
       "req_id": "REQ-NAV",
       "clause": "find_lists_lines",
       "floors": [
-        { "situation": "some lines match", "atLeast": 50 },
-        { "situation": "no line matches", "atLeast": 100 },
-        { "situation": "every line matches", "atLeast": 20 }
-      ],
-      "model": {
-        "import": "TraceLean.Find",
-        "function": "TraceLean.Find.matchingLines",
-        "arguments": ["text", "pattern"]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/surface/find.rs::matching_lines"
-      }
+        {
+          "situation": "some lines match",
+          "atLeast": 50
+        },
+        {
+          "situation": "no line matches",
+          "atLeast": 100
+        },
+        {
+          "situation": "every line matches",
+          "atLeast": 20
+        }
+      ]
     },
     {
       "req_id": "REQ-NAV",
       "clause": "name_is_asked_for",
       "floors": [
-        { "situation": "a character typed", "atLeast": 50 },
-        { "situation": "a space typed", "atLeast": 20 },
-        { "situation": "backspace", "atLeast": 20 },
-        { "situation": "enter with an answer", "atLeast": 20 },
-        { "situation": "enter with none", "atLeast": 20 },
-        { "situation": "escape", "atLeast": 20 },
-        { "situation": "a key that is not text", "atLeast": 20 }
-      ],
-      "model": {
-        "import": "TraceLean.Ask",
-        "function": "TraceLean.Ask.askStep",
-        "arguments": ["answer", "key"]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/surface/ask.rs::ask_step"
-      }
+        {
+          "situation": "a character typed",
+          "atLeast": 50
+        },
+        {
+          "situation": "a space typed",
+          "atLeast": 20
+        },
+        {
+          "situation": "backspace",
+          "atLeast": 20
+        },
+        {
+          "situation": "enter with an answer",
+          "atLeast": 20
+        },
+        {
+          "situation": "enter with none",
+          "atLeast": 20
+        },
+        {
+          "situation": "escape",
+          "atLeast": 20
+        },
+        {
+          "situation": "a key that is not text",
+          "atLeast": 20
+        }
+      ]
     },
     {
       "req_id": "REQ-LOOK",
       "clause": "setting_edited_in_place",
       "floors": [
-        { "situation": "a colour", "atLeast": 100 },
-        { "situation": "not a colour", "atLeast": 100 }
-      ],
-      "model": {
-        "import": "TraceLean.Setting",
-        "function": "TraceLean.Setting.isColour",
-        "arguments": ["value"]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/surface/setting.rs::is_colour"
-      }
+        {
+          "situation": "a colour",
+          "atLeast": 100
+        },
+        {
+          "situation": "not a colour",
+          "atLeast": 100
+        }
+      ]
     },
     {
       "req_id": "REQ-LSP",
       "clause": "proof_state_shown",
       "floors": [
-        { "situation": "no result", "atLeast": 100 },
-        { "situation": "a result with no list of goals", "atLeast": 50 },
-        { "situation": "an empty list of goals", "atLeast": 50 },
-        { "situation": "several goals", "atLeast": 50 },
-        { "situation": "the server's own rendering", "atLeast": 20 }
-      ],
-      "model": {
-        "import": "TraceLean.ProofState",
-        "function": "TraceLean.ProofState.goalsShown",
-        "arguments": ["answered", "goals", "rendered"]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/lean_server.rs::goals_shown"
-      }
-    },
-    {
-      "req_id": "REQ-LSP",
-      "clause": "goals_open_with_the_file",
-      "model": {
-        "import": "TraceLean.Screen",
-        "function": "TraceLean.Screen.opensGoals",
-        "arguments": ["kind", "opened"]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/surface/screen.rs::opens_goals"
-      }
-    },
-    {
-      "req_id": "REQ-LSP",
-      "clause": "goals_close_with_the_file",
-      "model": {
-        "import": "TraceLean.Screen",
-        "function": "TraceLean.Screen.closedWith",
-        "arguments": ["before", "after"]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/surface/screen.rs::closed_with"
-      }
+        {
+          "situation": "no result",
+          "atLeast": 100
+        },
+        {
+          "situation": "a result with no list of goals",
+          "atLeast": 50
+        },
+        {
+          "situation": "an empty list of goals",
+          "atLeast": 50
+        },
+        {
+          "situation": "several goals",
+          "atLeast": 50
+        },
+        {
+          "situation": "the server's own rendering",
+          "atLeast": 20
+        }
+      ]
     }
   ]
 }

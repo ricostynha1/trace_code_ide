@@ -3,6 +3,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use super::classes;
+use super::config::{Binding, CallSpec, ModelSpec};
 use super::coverage::{level, verdict, Floor, Observed, Verdict};
 use super::derive::{self, Derived};
 use super::lean_runner::{self, LeanEntry};
@@ -23,6 +24,7 @@ pub struct Candidate {
     pub clause: Option<String>,
     pub model: (String, String),
     pub implementation: (String, String),
+    pub call: Option<(Vec<String>, BTreeMap<String, String>)>,
     pub derived: Result<Derived, Vec<String>>,
 }
 
@@ -40,12 +42,12 @@ fn held_runs(index: &Index, held: &[crate::trace::record::Evidence], c: &Candida
     held_for(index, held, &c.req_id, &c.clause)
 }
 
-pub fn suites_due(root: &Path, index: &Index) -> BTreeMap<String, Vec<String>> {
+pub fn suites_due(root: &Path, index: &Index, files: &BTreeMap<String, String>) -> BTreeMap<String, Vec<String>> {
     let held = crate::trace::earn::merge(
         crate::trace::lockfile::read(root).map(|l| l.evidence).unwrap_or_default(),
         crate::trace::store::read_all(root),
     );
-    let bindings = super::config::read(root).unwrap_or_default();
+    let bindings = bindings(root, index, files).unwrap_or_default();
     let live: Vec<String> = index.links.iter().map(|l| l.link_hash.clone()).collect();
     let mut out: BTreeMap<String, Vec<String>> = BTreeMap::new();
     for link in index.links.iter().filter(|l| l.role == Role::Drt) {
@@ -93,7 +95,11 @@ fn declaration(files: &BTreeMap<String, String>, file: &str, start: u32, end: u3
 
 /// @implements REQ-DRT-SCHEMA.derived_from_both
 pub fn candidates(root: &Path, index: &Index, files: &BTreeMap<String, String>) -> Vec<Candidate> {
-    let bound: Vec<String> = super::config::read(root).unwrap_or_default().iter().map(|b| b.op()).collect();
+    let bound: Vec<String> = tested(index, bindings(root, index, files).unwrap_or_default()).iter().flat_map(Binding::clauses).collect();
+    candidates_among(index, files, &bound)
+}
+
+fn candidates_among(index: &Index, files: &BTreeMap<String, String>, skip: &[String]) -> Vec<Candidate> {
     let mut clauses: Vec<(String, Option<String>)> =
         index.links.iter().filter(|l| l.role == Role::Models).map(|l| (l.req_id.clone(), l.clause.clone())).collect();
     clauses.sort();
@@ -101,7 +107,7 @@ pub fn candidates(root: &Path, index: &Index, files: &BTreeMap<String, String>) 
     let mut out = Vec::new();
     for (req_id, clause) in clauses {
         let op = super::qualified_op(&req_id, clause.as_deref());
-        if bound.contains(&op) {
+        if skip.contains(&op) {
             continue;
         }
         let here: Vec<_> = index.links.iter().filter(|l| l.req_id == req_id && l.clause == clause).collect();
@@ -112,7 +118,9 @@ pub fn candidates(root: &Path, index: &Index, files: &BTreeMap<String, String>) 
             (signature.1 != derive::Ty::Named { name: "Prop".into() })
                 .then(|| (l.anchor.file.clone(), symbol_path.replace("::", "."), signature))
         });
-        let implementation = here.iter().filter(|l| l.role == Role::Implements && l.anchor.file.ends_with(".rs")).find_map(|l| {
+        let in_source = |l: &&&crate::trace::index::Link| l.anchor.file.ends_with(".rs") && !l.anchor.file.contains("/tests/");
+        let called = here.iter().filter(|l| l.role == Role::Drt).filter(in_source);
+        let implementation = called.chain(here.iter().filter(|l| l.role == Role::Implements).filter(in_source)).find_map(|l| {
             let AnchorKind::Decl { symbol_path } = &l.anchor.kind else { return None };
             let symbol = symbol_path.rsplit("::").next()?.to_string();
             let signature = derive::rust_signature(files.get(&l.anchor.file)?, &symbol)?;
@@ -123,7 +131,9 @@ pub fn candidates(root: &Path, index: &Index, files: &BTreeMap<String, String>) 
         };
         let lean = files.get(&model_file).map(|t| derive::lean_structs(t)).unwrap_or_default();
         let rust = files.get(&impl_file).map(|t| derive::rust_structs(t)).unwrap_or_default();
+        let call = (theirs.0.len() == ours.0.len()).then(|| (ours.0.iter().map(|(n, _)| n.clone()).collect(), BTreeMap::new()));
         out.push(Candidate {
+            call,
             op,
             req_id: req_id.clone(),
             clause: clause.clone(),
@@ -133,6 +143,59 @@ pub fn candidates(root: &Path, index: &Index, files: &BTreeMap<String, String>) 
         });
     }
     out
+}
+
+fn import_of(root: &Path, file: &str) -> Option<String> {
+    let path = root.join(file);
+    let base = lake_root(root, &path).or_else(|| path.parent().map(Path::to_path_buf))?;
+    path.strip_prefix(&base).ok().map(module_of)
+}
+
+fn binding_of(root: &Path, c: &Candidate) -> Option<Binding> {
+    let (arguments, params) = c.call.clone()?;
+    Some(Binding {
+        req_id: c.req_id.clone(),
+        clause: c.clause.clone(),
+        op: None,
+        also_checks: Vec::new(),
+        model: Some(ModelSpec {
+            import: import_of(root, &c.model.0)?,
+            function: c.model.1.clone(),
+            arguments,
+        }),
+        implementation: CallSpec { language: "rust".into(), entry: format!("{}::{}", c.implementation.0, c.implementation.1), params },
+        also_implemented_by: Vec::new(),
+        floors: Vec::new(),
+        waive: Vec::new(),
+    })
+}
+
+pub fn tested(index: &Index, bindings: Vec<Binding>) -> Vec<Binding> {
+    let claimed: Vec<String> = index
+        .links
+        .iter()
+        .filter(|l| l.role == Role::Drt && l.anchor.file.contains("/tests/"))
+        .map(|l| super::qualified_op(&l.req_id, l.clause.as_deref()))
+        .collect();
+    bindings.into_iter().filter(|b| claimed.contains(&b.op())).collect()
+}
+
+pub fn derived_bindings(root: &Path, index: &Index, files: &BTreeMap<String, String>) -> BTreeMap<String, Binding> {
+    candidates_among(index, files, &[]).iter().filter_map(|c| binding_of(root, c).map(|b| (c.op.clone(), b))).collect()
+}
+
+/// @implements REQ-DRT-BIND.derived_unless_written
+pub fn bindings(root: &Path, index: &Index, files: &BTreeMap<String, String>) -> Result<Vec<Binding>, String> {
+    let mut derived = derived_bindings(root, index, files);
+    let mut out = Vec::new();
+    for entry in super::config::entries(root)? {
+        let op = super::config::entry_op(&entry);
+        let base = derived.remove(&op).map(|b| serde_json::to_value(b).unwrap_or_default());
+        out.push(super::config::overlay(base, entry).map_err(|e| format!("binding {op}: {e}"))?);
+    }
+    let established: Vec<String> = out.iter().flat_map(Binding::clauses).collect();
+    out.extend(derived.into_iter().filter(|(op, _)| !established.contains(op)).map(|(_, b)| b));
+    Ok(out)
 }
 
 fn lake_root(root: &Path, file: &Path) -> Option<PathBuf> {

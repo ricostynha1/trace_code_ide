@@ -4,7 +4,7 @@ use tracelean_core::drt::gen;
 use tracelean_core::drt::protocol::{Case, Reply, RunnerError};
 use tracelean_core::drt::run::{agree, DrtResult, RunOptions};
 use tracelean_core::drt::schema::Schema;
-use tracelean_core::drt::{qualified_op, Binding, CallSpec};
+use tracelean_core::drt::{Binding, CallSpec};
 
 fn every_shape() -> Vec<Schema> {
     vec![
@@ -177,19 +177,12 @@ fn a_reply_carries_exactly_one_of_an_output_and_an_error() {
 #[test]
 fn every_op_in_this_project_is_unique() {
     let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap().parent().unwrap();
-    let text = std::fs::read_to_string(root.join(".tracelean/drt.json")).expect("drt.json");
-    let value: serde_json::Value = serde_json::from_str(&text).expect("readable JSON");
+    let index = tracelean_core::trace::index::build(root);
+    let files = tracelean_core::observe::workspace::snapshot(root).files;
 
     let mut seen: BTreeMap<String, usize> = BTreeMap::new();
-    for binding in value["bindings"].as_array().expect("bindings") {
-        let op = match binding["op"].as_str() {
-            Some(op) => op.to_string(),
-            None => qualified_op(
-                binding["req_id"].as_str().unwrap_or_default(),
-                binding["clause"].as_str(),
-            ),
-        };
-        *seen.entry(op).or_default() += 1;
+    for binding in tracelean_core::drt::auto::bindings(root, &index, &files).expect("the bindings read") {
+        *seen.entry(binding.op()).or_default() += 1;
     }
     let repeated: Vec<&String> = seen.iter().filter(|(_, n)| **n > 1).map(|(op, _)| op).collect();
     assert!(repeated.is_empty(), "two bindings share an op: {repeated:?}");

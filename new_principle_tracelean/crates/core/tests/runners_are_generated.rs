@@ -171,8 +171,10 @@ fn the_lean_runner_is_a_generated_package_that_is_compiled() {
 #[test]
 fn a_binding_describes_a_call_and_nothing_more() {
     let root = project_root();
-    let text = std::fs::read_to_string(root.join(".tracelean/drt.json")).expect("drt.json");
-    let config: serde_json::Value = serde_json::from_str(&text).expect("readable JSON");
+    let index = tracelean_core::trace::index::build(&root);
+    let files = tracelean_core::observe::workspace::snapshot(&root).files;
+    let merged = tracelean_core::drt::auto::bindings(&root, &index, &files).expect("the bindings read");
+    let config = serde_json::json!({ "bindings": merged });
 
     const BINDING_KEYS: &[&str] = &[
         "req_id",

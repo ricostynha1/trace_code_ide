@@ -3211,7 +3211,7 @@ impl Editor {
     }
 
     fn bindings(&self) -> Vec<Event> {
-        match tracelean_core::drt::config::read(&self.root) {
+        match tracelean_core::drt::auto::bindings(&self.root, &self.index(), &self.workspace().files) {
             Err(error) => vec![Event { kind: "unreadable".into(), text: error }],
             Ok(bindings) if bindings.is_empty() => vec![Event {
                 kind: "none".into(),

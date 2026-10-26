@@ -106,7 +106,8 @@ scratch directory, and asks both 2000 cases. Agreement that reached every class
 of every argument (negative, zero, positive; empty and not; …) sets the
 clause's **T** and is counted under `drt` in the requirement. A divergence is shrunk and
 printed; a type the two sides do not share (`Float`, `&str`) is named and left
-untested. A binding in `.tracelean/drt.json` overrides it for its clause.
+untested. A field written in `.tracelean/drt.json` replaces the derived one for
+its clause.
 
 **What a change re-opened.** Every record carries the hashes of what it rests
 on — the requirement's text, the model, the code, the toolchain — so rewording

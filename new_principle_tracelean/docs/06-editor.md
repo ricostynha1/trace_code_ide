@@ -123,7 +123,7 @@ fills it is a read of the tree:
 | `lock` | renders the index and writes `.tracelean/trace.lock` |
 | `rollup` | `rollup::tree` per root, covered where a clause is tested |
 | `stale` | every doclink's state |
-| `drt bindings` | `.tracelean/drt.json` |
+| `drt bindings` | the annotations, with `.tracelean/drt.json` |
 | `history`, `observed` | the history tree, and what watching saw |
 
 A clause's marks past `A` come from the lock and never from the tree: an

@@ -179,7 +179,8 @@ fn main() {
     }
 
     if std::env::args().any(|a| a == "--drt-due") {
-        for (file, due) in tracelean_core::drt::auto::suites_due(&root, &index) {
+        let files = tracelean_core::observe::workspace::snapshot(&root).files;
+        for (file, due) in tracelean_core::drt::auto::suites_due(&root, &index, &files) {
             match due.is_empty() {
                 true => println!("current {file}"),
                 false => println!("due     {file}  {}", due.join(" ")),

@@ -97,11 +97,39 @@ pub fn path_in(root: &Path) -> PathBuf {
     root.join(".tracelean").join("drt.json")
 }
 
-pub fn read(root: &Path) -> Result<Vec<Binding>, String> {
-    let path = path_in(root);
-    let Ok(text) = std::fs::read_to_string(&path) else { return Ok(Vec::new()) };
+pub fn entries(root: &Path) -> Result<Vec<serde_json::Value>, String> {
+    let Ok(text) = std::fs::read_to_string(path_in(root)) else { return Ok(Vec::new()) };
     let value: serde_json::Value =
         serde_json::from_str(&text).map_err(|e| format!("not readable JSON: {e}"))?;
-    let Some(array) = value.get("bindings") else { return Ok(Vec::new()) };
-    serde_json::from_value(array.clone()).map_err(|e| format!("not a binding list: {e}"))
+    match value.get("bindings") {
+        Some(serde_json::Value::Array(items)) => Ok(items.clone()),
+        Some(_) => Err("not a binding list".into()),
+        None => Ok(Vec::new()),
+    }
+}
+
+pub fn entry_op(entry: &serde_json::Value) -> String {
+    let field = |k: &str| entry.get(k).and_then(|v| v.as_str());
+    field("op").map(str::to_string).unwrap_or_else(|| qualified_op(field("req_id").unwrap_or_default(), field("clause")))
+}
+
+/// @implements REQ-DRT-BIND.derived_unless_written
+/// @drt REQ-DRT-BIND.derived_unless_written
+pub fn overlaid(derived: Vec<(String, String)>, written: Vec<(String, String)>) -> Vec<(String, String)> {
+    let mut out: Vec<(String, String)> = derived.into_iter().filter(|(k, _)| !written.iter().any(|(w, _)| w == k)).collect();
+    out.extend(written);
+    out
+}
+
+pub fn overlay(base: Option<serde_json::Value>, entry: serde_json::Value) -> Result<Binding, String> {
+    let fields = |v: Option<serde_json::Value>| match v {
+        Some(serde_json::Value::Object(map)) => map.into_iter().map(|(k, v)| (k, v.to_string())).collect(),
+        _ => Vec::new(),
+    };
+    let merged: serde_json::Map<String, serde_json::Value> = overlaid(fields(base), fields(Some(entry)))
+        .into_iter()
+        .map(|(k, v)| serde_json::from_str(&v).map(|v| (k, v)))
+        .collect::<Result<_, _>>()
+        .map_err(|e| e.to_string())?;
+    serde_json::from_value(serde_json::Value::Object(merged)).map_err(|e| e.to_string())
 }

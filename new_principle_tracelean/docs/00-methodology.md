@@ -24,8 +24,10 @@ filename or directory:
    into *clauses*, and a clause is what everything else attaches to.
 2. **A Lean model** — `@models REQ-X.clause`.
 3. **An implementation** — `@implements REQ-X.clause`.
-4. **A binding** in `.tracelean/drt.json`, making model and implementation answer
-   the same questions.
+4. **A binding**, making model and implementation answer the same questions. It
+   is derived from the `@models` function and the Rust function marked `@drt`
+   (else `@implements`); `.tracelean/drt.json` holds only what cannot be read
+   off them.
 
 Theorems about the model are `@proves`; the theorem that those properties
 *determine* the model is `@pins`. Tests are `@tests`.

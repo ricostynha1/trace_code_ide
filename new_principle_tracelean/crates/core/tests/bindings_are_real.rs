@@ -8,31 +8,13 @@ fn project_root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap().parent().unwrap().to_path_buf()
 }
 
-fn bindings_in_config(root: &Path) -> BTreeSet<String> {
-    let text = std::fs::read_to_string(root.join(".tracelean/drt.json")).expect("drt.json");
-    let value: serde_json::Value = serde_json::from_str(&text).expect("readable JSON");
-    value["bindings"]
-        .as_array()
-        .expect("a bindings array")
-        .iter()
-        .flat_map(|binding| {
-            let req = binding["req_id"].as_str().unwrap_or_default().to_string();
-            let mut names = vec![match binding["clause"].as_str() {
-                Some(clause) => format!("{req}.{clause}"),
-                None => req.clone(),
-            }];
-            if let Some(also) = binding["also_checks"].as_array() {
-                names.extend(also.iter().filter_map(|c| c.as_str()).map(|clause| {
-                    if clause.contains('.') {
-                        clause.to_string()
-                    } else {
-                        format!("{req}.{clause}")
-                    }
-                }));
-            }
-            names
-        })
-        .collect()
+fn merged(root: &Path, index: &tracelean_core::trace::index::Index) -> Vec<tracelean_core::drt::Binding> {
+    let files = tracelean_core::observe::workspace::snapshot(root).files;
+    tracelean_core::drt::auto::bindings(root, index, &files).expect("the bindings read")
+}
+
+fn written(root: &Path) -> BTreeSet<String> {
+    tracelean_core::drt::config::entries(root).expect("drt.json").iter().map(tracelean_core::drt::config::entry_op).collect()
 }
 
 /// @tests REQ-DRT-BIND.binding_is_the_bond
@@ -51,12 +33,13 @@ fn every_drt_annotation_has_a_binding_and_every_binding_has_an_annotation() {
             None => link.req_id.clone(),
         })
         .collect();
-    let configured = bindings_in_config(&root);
+    let configured: BTreeSet<String> = merged(&root, &index).iter().flat_map(|b| b.clauses()).collect();
+    let written = written(&root);
 
     let claimed_but_unconfigured: Vec<&String> =
         annotated.difference(&configured).collect();
     let configured_but_unclaimed: Vec<&String> =
-        configured.difference(&annotated).collect();
+        written.difference(&annotated).collect();
 
     assert!(
         claimed_but_unconfigured.is_empty(),
@@ -72,46 +55,22 @@ fn every_drt_annotation_has_a_binding_and_every_binding_has_an_annotation() {
 /// @tests REQ-DRT-RUST.params_from_source
 #[test]
 fn every_binding_resolves_against_the_source() {
-    use std::collections::BTreeMap;
     use tracelean_core::drt::rust_runner::resolve;
-    use tracelean_core::drt::{Binding, CallSpec};
 
     let root = project_root();
-    let text = std::fs::read_to_string(root.join(".tracelean/drt.json")).expect("drt.json");
-    let value: serde_json::Value = serde_json::from_str(&text).expect("readable JSON");
+    let index = build(&root);
+    let claimed: BTreeSet<String> = index
+        .links
+        .iter()
+        .filter(|link| link.role == Role::Drt)
+        .map(|link| tracelean_core::drt::config::qualified_op(&link.req_id, link.clause.as_deref()))
+        .collect();
 
-    for entry in value["bindings"].as_array().expect("bindings") {
-        let implementation = &entry["implementation"];
-        let params: BTreeMap<String, String> = implementation
-            .get("params")
-            .and_then(|p| p.as_object())
-            .map(|map| {
-                map.iter()
-                    .map(|(k, v)| (k.clone(), v.as_str().unwrap_or_default().to_string()))
-                    .collect()
-            })
-            .unwrap_or_default();
-
-        let binding = Binding {
-            req_id: entry["req_id"].as_str().unwrap_or_default().to_string(),
-            clause: entry["clause"].as_str().map(str::to_string),
-            op: None,
-            also_checks: Vec::new(),
-            also_implemented_by: Vec::new(),
-            floors: Vec::new(),
-            waive: Vec::new(),
-            model: None,
-            implementation: CallSpec {
-                language: implementation["language"].as_str().unwrap_or_default().to_string(),
-                entry: implementation["entry"].as_str().unwrap_or_default().to_string(),
-                params,
-            },
-        };
-
+    for binding in merged(&root, &index).into_iter().filter(|b| claimed.contains(&b.op())) {
         let resolved = resolve(&root, &binding)
             .unwrap_or_else(|e| panic!("binding {}: {e}", binding.op()));
 
-        let declared = entry["model"]["arguments"].as_array().map(|a| a.len()).unwrap_or(0);
+        let declared = binding.model.as_ref().map(|m| m.arguments.len()).unwrap_or(0);
         assert_eq!(
             resolved.parameters.len(),
             declared,

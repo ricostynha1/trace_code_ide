@@ -136,23 +136,20 @@ fn an_implementation_that_throws_answers_and_keeps_going() {
 #[test]
 fn a_second_implementation_is_checked_against_the_model() {
     let root = project_root();
-    let text = std::fs::read_to_string(root.join(".tracelean/drt.json")).expect("drt.json");
-    let config: serde_json::Value = serde_json::from_str(&text).expect("readable JSON");
+    let index = tracelean_core::trace::index::build(&root);
+    let files = tracelean_core::observe::workspace::snapshot(&root).files;
 
     let mut seconds = 0;
-    for binding in config["bindings"].as_array().expect("bindings") {
-        let Some(more) = binding["also_implemented_by"].as_array() else { continue };
+    for binding in tracelean_core::drt::auto::bindings(&root, &index, &files).expect("the bindings read") {
+        let more = &binding.also_implemented_by;
         if more.is_empty() {
             continue;
         }
         seconds += more.len();
-        assert!(
-            binding["model"]["function"].is_string(),
-            "a binding with a second implementation and no model: {binding}"
-        );
+        assert!(binding.model.is_some(), "a binding with a second implementation and no model: {binding:?}");
         for implementation in more {
             assert_ne!(
-                implementation["language"], binding["implementation"]["language"],
+                implementation.language, binding.implementation.language,
                 "a second implementation in the same language is a copy, not a check"
             );
         }

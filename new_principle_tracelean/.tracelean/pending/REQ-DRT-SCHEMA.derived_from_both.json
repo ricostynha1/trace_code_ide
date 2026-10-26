@@ -1,10 +1,5 @@
 {
-  "agreed": {
-    "322": {
-      "cases": 60000,
-      "stamp": "cc5f2c8b7acd592b"
-    }
-  },
-  "covered": "cc5f2c8b7acd592b",
+  "agreed": {},
+  "covered": "5b6cd59e262f6dbb",
   "lines": "cc5f2c8b7acd592b"
 }
