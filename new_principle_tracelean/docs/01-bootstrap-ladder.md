@@ -1,8 +1,8 @@
 ---
 describes: [ARCH-SELFHOST, REQ-DRT-RUST]
 described_hash:
-  ARCH-SELFHOST: 4a50cc455df5b2ad
-  REQ-DRT-RUST: 590a37eb03100b9a
+  ARCH-SELFHOST: 98b27e1040f170e5
+  REQ-DRT-RUST: b16017964c25f175
 ---
 
 # The bootstrap ladder

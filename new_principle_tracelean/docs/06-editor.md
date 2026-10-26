@@ -1,10 +1,10 @@
 ---
 describes: [REQ-SHOW, REQ-ACT, REQ-LOCK, REQ-ROLLUP]
 described_hash:
-  REQ-SHOW: 1dc66ee5133e294d
-  REQ-ACT: 79e056ad0341b89d
-  REQ-LOCK: bac341f63b8d1e71
-  REQ-ROLLUP: 86ff29fed6f52569
+  REQ-SHOW: 34c6ba52a2c5208c
+  REQ-ACT: 9046b0e9fd5b66b7
+  REQ-LOCK: 0a0865a009898e29
+  REQ-ROLLUP: a93cb0f6b8f92bae
 ---
 
 # The editor, end to end

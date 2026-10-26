@@ -5,12 +5,12 @@ refines: [REQ-EVID, ARCH-HONEST]
 status: approved
 decomposition: complete
 clauses:
-  per_test: Coverage shall be gathered one test at a time, so each executable line knows which tests ran it and how often.
-  uncovered_shown: An executable line no test ran shall be marked beside it in the editor, and pointing at any measured line shall say which tests ran it and how often.
-  stale_hidden: Coverage measured against other text of a file shall not be shown for it.
-  clause_summary: A clause shall show how many executable lines of its implementing items some test ran, and by how many tests.
-  requirement_summary: A requirement shall show the same over every item implementing any of its clauses, each line counted once, with the share of lines run.
-  lines_listed: Each such count shall open, item by item, the tests that ran its lines with how often, and every executable line no test ran as a link to that line.
+  per_test: The system shall gather coverage one test at a time, so that each executable line knows which tests ran it and how often.
+  uncovered_shown: The system shall mark in the editor, beside it, an executable line no test ran, and when any measured line is pointed at, shall say which tests ran it and how often.
+  stale_hidden: If coverage was measured against other text of a file, then the system shall not show it for that file.
+  clause_summary: The system shall show for a clause how many executable lines of its implementing items some test ran, and by how many tests.
+  requirement_summary: The system shall show for a requirement the same over every item implementing any of its clauses, each line counted once, with the share of lines run.
+  lines_listed: When such a count is opened, the system shall list, item by item, the tests that ran its lines with how often, and every executable line no test ran as a link to that line.
 ---
 
 # Line coverage, test by test
@@ -18,8 +18,6 @@ clauses:
 `tracelean-trace . --coverage` builds a Rust project's tests with
 `-C instrument-coverage`, runs each test on its own, and keeps per file the
 lines LLVM marks executable with the tests that ran them
-(`.tracelean/coverage.json`, keyed by the file's hash).
-
-A requirement says *what* should be tested; coverage says what the tests
-actually reach. A clause whose implementing function has a line no test runs
-is a clause whose tests could all pass while that line is wrong.
+(`.tracelean/coverage.json`, keyed by the file's hash). A clause whose
+implementing function has a line no test runs is a clause whose tests could all
+pass while that line is wrong.

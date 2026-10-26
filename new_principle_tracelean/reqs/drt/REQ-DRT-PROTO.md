@@ -5,14 +5,14 @@ refines: [REQ-DRT, ARCH-CORE-SHELL]
 status: approved
 decomposition: complete
 clauses:
-  case_one_line: A case shall be written as one JSON object on one line of stdin.
-  reply_one_line: A reply shall be read as one JSON object on one line of stdout.
-  reply_exclusive: A reply shall carry exactly one of an output or an error.
-  case_echoed: A reply shall echo the case number it answers.
-  case_names_op: A case shall name, in its op, the entry point it exercises.
-  ops_unique: An op shall be unique across a project.
-  runner_shared: One runner process shall serve every binding of its language in a project.
-  failure_named: A runner that cannot start, times out, dies or emits a non-reply shall be distinguished from a runner that answered.
+  case_one_line: The system shall write a case as one JSON object on one line of stdin.
+  reply_one_line: The system shall read a reply as one JSON object on one line of stdout.
+  reply_exclusive: The system shall require a reply to carry exactly one of an output or an error.
+  case_echoed: The system shall require a reply to echo the case number it answers.
+  case_names_op: The system shall name, in each case's op, the entry point the case exercises.
+  ops_unique: The system shall keep every op unique across a project.
+  runner_shared: The system shall serve every binding of one language in a project with one runner process.
+  failure_named: If a runner cannot start, times out, dies or emits a non-reply, then the system shall distinguish it from a runner that answered.
 ---
 
 # The conformance protocol
@@ -23,17 +23,9 @@ clauses:
 ← {"case":42,"error":"index out of bounds"}
 ```
 
-This is the entire coupling between TraceLean and the code it checks. Keeping it
-this small is what lets a runner be a shipped script for one language and a
-generated compiled binary for another.
-
-`ops_unique` carries a stage-0 lesson: ops defaulted to `"default"`, so a shared
-runner's dispatch had several arms with the same name, the first won, and every
-other requirement was silently answered by the wrong function.
-
-Writing a case and reading a reply are separate clauses (`case_one_line`,
-`reply_one_line`) because they are separate functions that can each be wrong
-alone; the same for naming the op (`case_names_op`) and the op being unique
-(`ops_unique`). `failure_named` is decided per asked case from what happened —
-no start, no line within the timeout, a broken or closed pipe, or a line — and
-only a line read as an answer is one.
+This is the whole coupling between the system and the code it checks, small
+enough that a runner can be a shipped script for one language and a generated
+binary for another. An op shared by two bindings lets the first arm of a shared
+runner's dispatch answer for both. `failure_named` is decided per asked case
+from what happened: no start, no line within the timeout, a broken or closed
+pipe, or a line; only a line read as an answer is one.

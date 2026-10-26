@@ -1,9 +1,9 @@
 ---
 describes: [ARCH-EFFECT-LAW, ARCH-HONEST, REQ-EVID]
 described_hash:
-  ARCH-EFFECT-LAW: 5fa787559dbeb5d1
-  ARCH-HONEST: cfd9f166b870b9b3
-  REQ-EVID: 081297c90e76bc0b
+  ARCH-EFFECT-LAW: 760deab61fe27500
+  ARCH-HONEST: b38bca7ade9341f0
+  REQ-EVID: 015e7db9658ef75a
 ---
 
 # Methodology
@@ -81,13 +81,14 @@ refines: [ARCH-HONEST, ARCH-CORE-SHELL]
 status: draft
 decomposition: complete
 clauses:
-  marks: A clause shall hold four marks, each on its own.
-  mark_per_bond: Each mark shall be read from its own bond.
+  marks: The system shall record four marks for a clause, each held on its own.
+  mark_per_bond: The system shall read each mark from its own bond.
 ---
 ```
 
 `decomposition: complete` claims the clauses exhaust the requirement, and is the
-denominator of every percentage shown about it. It defaults to `open`, under
+denominator of every percentage shown about it. Clauses are written in EARS
+([ADR-0017](decisions/ADR-0017-clauses-in-ears.md)). It defaults to `open`, under
 which a figure is rendered `≤ x% (provisional)`: an unwritten clause has no
 evidence, so writing it can only lower the figure.
 

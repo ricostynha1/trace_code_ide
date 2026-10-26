@@ -1,7 +1,7 @@
 ---
 describes: [REQ-DRT-TS]
 described_hash:
-  REQ-DRT-TS: 5cb34a563ec4ffe9
+  REQ-DRT-TS: 13d9f4d0995e06bf
 ---
 
 # Two frontends, both checked

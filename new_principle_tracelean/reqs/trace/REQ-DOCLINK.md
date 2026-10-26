@@ -5,33 +5,25 @@ refines: [REQ-STALE, REQ-ANCHOR, ARCH-SELFHOST, ARCH-HONEST]
 status: approved
 decomposition: complete
 clauses:
-  declares_target: A document shall declare what it describes, as an anchor.
-  records_hash: A document shall record what its target hashed to when the document was written.
-  hash_moves_review: A document whose target's hash has changed shall be reported as in review.
-  review_is_not_error: In review shall be a distinct state from both current and dangling, and shall not block.
-  dangling_reported: A document whose target no longer exists shall be reported as dangling.
-  confirmation_is_human: A document shall return to current only by a person re-recording the hash, never automatically.
-  same_anchor_machinery: A document's target shall be resolved by the same anchor mechanism as an annotation's.
-  decisions_exempt: A decision record shall describe a moment rather than a subsystem, and shall declare the requirements it affects instead of a hashed target.
+  declares_target: The system shall require a document to declare what it describes, as an anchor.
+  records_hash: The system shall require a document to record what its target hashed to when the document was written.
+  hash_moves_review: When a document's target's hash has changed, the system shall report the document as in review.
+  review_is_not_error: The system shall keep in review a state distinct from both current and dangling, and shall not block on it.
+  dangling_reported: If a document's target no longer exists, then the system shall report the document as dangling.
+  confirmation_is_human: The system shall return a document to current only when a person re-records the hash, never automatically.
+  same_anchor_machinery: The system shall resolve a document's target by the same anchor mechanism as an annotation's.
+  decisions_exempt: Where a document is a decision record, the system shall take it as describing a moment rather than a subsystem, and shall require it to declare the requirements it affects instead of a hashed target.
 ---
 
 # Documentation is linked and goes stale
 
-Documentation rots because nothing connects it to what it describes. This project
-already has the connection: a requirement carries a hash of its content, a model
-claims to model it, and when the text changes the hash moves and the bond drops
-back to needing review. Nothing in that is specific to requirements and models.
+Documentation rots because nothing connects it to what it describes. A
+requirement already carries a hash and drops back to review when it moves, and
+nothing in that is specific to requirements, so a document is a link too.
 
-So a document is a link. It names what it describes, records what that hashed to,
-and when the hash moves the document is *in review*.
-
-`review_is_not_error` makes the state usable — the document is not known to be
-wrong, only unconfirmed since the thing underneath it changed. Blocking would
-make people stop writing documentation; hiding it would make the documentation
-worthless.
-
-`same_anchor_machinery` is the point of stating this at all. A linter that checks
-names resolve cannot notice that a function still exists and now does something
-else, which is the case where documentation actively misleads. Generated blocks
-protect only content that was a table anyway, leaving the explanation of *why*
-unprotected. The hash covers both, and costs nothing new.
+In review means unconfirmed since the thing underneath changed, not known to be
+wrong: blocking would make people stop writing documentation, and hiding it
+would make the documentation worthless. A linter that checks names resolve
+cannot notice that a function still exists and now does something else, which
+is when documentation actively misleads; the hash covers that and costs nothing
+new.

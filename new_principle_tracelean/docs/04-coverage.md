@@ -1,8 +1,8 @@
 ---
 describes: [REQ-DRT-COVER, ARCH-HONEST]
 described_hash:
-  REQ-DRT-COVER: 05e3ddef88851419
-  ARCH-HONEST: cfd9f166b870b9b3
+  REQ-DRT-COVER: 020533b4a639a6f8
+  ARCH-HONEST: b38bca7ade9341f0
 ---
 
 # Coverage

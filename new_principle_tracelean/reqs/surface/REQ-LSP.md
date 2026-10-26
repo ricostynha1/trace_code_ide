@@ -6,34 +6,27 @@ status: approved
 decomposition: complete
 clauses:
   registry_per_language: The system shall hold a server per language rather than a single server.
-  column_to_offset: A column in the server's encoding shall convert to the byte offset at which a prefix of the line spanning that many units ends, and to none when no prefix ends there.
+  column_to_offset: The system shall convert a column in the server's encoding to the byte offset at which a prefix of the line spanning that many units ends, and to none when no prefix ends there.
   offset_to_column:
-    text: A byte offset shall convert to the number of the server's units in the prefix of the line ending at that byte, and to none when no prefix ends there.
-    round_trip: Converting a byte offset to a column and the column back shall return the offset, and the same the other way round.
-  encoding_declared: The position encoding shall be taken from what the server declared and shall not be assumed.
-  edits_become_commands: A workspace edit received from a server shall be lowered into commands.
-  edits_ordered: Lowered edits shall be applied so that earlier edits do not invalidate the positions of later ones.
-  overlap_refused: Overlapping edits in one workspace edit shall be refused rather than applied in an arbitrary order.
-  proof_state_shown: The goals Lean's own server reports at the cursor of a Lean file shall be shown beside the file and follow the cursor and the edits, a server that cannot be started shall be named, and asking shall never make a key wait for the answer.
-  goals_open_with_the_file: When a Lean file is opened, the editor shall open the goals pane beside it unless the goals pane is already open.
-  goals_close_with_the_file: When the goals pane is closed, the editor shall close every open Lean file; when the last open Lean file is closed, the editor shall close the goals pane.
-  absent_server_named: The absence of a running server shall be reported as such and shall not be presented as an empty result.
+    text: The system shall convert a byte offset to the number of the server's units in the prefix of the line ending at that byte, and to none when no prefix ends there.
+    round_trip: When a byte offset is converted to a column and the column back, the system shall return the offset, and the same the other way round.
+  encoding_declared: The system shall take the position encoding from what the server declared, and shall not assume it.
+  edits_become_commands: When a server sends a workspace edit, the system shall lower it into commands.
+  edits_ordered: The system shall apply lowered edits so that earlier edits do not invalidate the positions of later ones.
+  overlap_refused: If edits in one workspace edit overlap, then the system shall refuse them rather than apply them in an arbitrary order.
+  proof_state_shown: The system shall show the goals Lean's own server reports at the cursor of a Lean file beside the file, following the cursor and the edits, shall name a server that cannot be started, and shall never make a key wait for the answer.
+  goals_open_with_the_file: When a Lean file is opened, the system shall open the goals pane beside it unless the goals pane is already open.
+  goals_close_with_the_file: When the goals pane is closed, the system shall close every open Lean file, and when the last open Lean file is closed, the system shall close the goals pane.
+  absent_server_named: If no server is running, then the system shall report that, and shall not present it as an empty result.
 ---
 
 # Language server integration
 
-A model in one language beside an implementation in another is the premise of the
-project, so a registry keyed by language is the shape from the start.
-
-`column_to_offset` and `offset_to_column` are small clauses covering a large
-class of bugs; both read one relation between a prefix's bytes and its units,
-so together they round-trip exactly. The protocol counts UTF-16 code units,
-editors count bytes or characters, and every mismatch appears as an
-off-by-some on lines containing non-ASCII text — reported as "hover is wrong
-sometimes" and nearly unfindable from that. Each is a pure function, and the
-round trip is a law proved over the pair (`SpecLsp.offset_round_trip`,
-`column_round_trip`).
-
-`absent_server_named` has a sharp instance here: for a proof assistant an empty
-goal list means the proof is complete, so rendering "no server running" that way
-tells the user they have finished when they have not started.
+A model in one language beside an implementation in another is the premise of
+the project, so servers are kept per language. The protocol counts UTF-16 code
+units and editors count bytes or characters, and every mismatch shows as an
+off-by-some on lines holding non-ASCII text; the two conversions read one
+relation, so their round trip is a law proved over the pair
+(`SpecLsp.offset_round_trip`, `column_round_trip`). For a proof assistant an
+empty goal list means the proof is complete, so showing a missing server that
+way would tell a person they have finished when they have not started.

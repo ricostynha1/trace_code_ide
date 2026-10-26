@@ -1,7 +1,7 @@
 ---
 describes: [REQ-DOCLINK]
 described_hash:
-  REQ-DOCLINK: ca9f26ad87c3cd2e
+  REQ-DOCLINK: 340e39cf548225d8
 ---
 
 # Why these documents cannot go stale

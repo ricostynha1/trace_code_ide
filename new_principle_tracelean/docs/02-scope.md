@@ -1,9 +1,9 @@
 ---
 describes: [ARCH-NO-DRIVING, REQ-OBS, REQ-MYTH]
 described_hash:
-  ARCH-NO-DRIVING: 5edd72e90d4b4ed1
-  REQ-OBS: eca97dd76925c485
-  REQ-MYTH: 0120c37ad5d78c7b
+  ARCH-NO-DRIVING: 89e44f677feadb87
+  REQ-OBS: 2dfd132f5c7925d3
+  REQ-MYTH: 38bd35cb6b2d737a
 ---
 
 # Scope: what this port drops
