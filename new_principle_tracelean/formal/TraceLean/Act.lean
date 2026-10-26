@@ -334,4 +334,178 @@ theorem dispatch_reads_only_its_arguments (a a' : String) (f f' : Focus) (w w' :
   subst ha hf hw hws
   rfl
 
+def namedActions : List String :=
+  ["file.open",
+   "file.new",
+   "file.rename",
+   "file.delete",
+   "trace.approve",
+   "file.save",
+   "history.undo",
+   "history.redo",
+   "history.branch",
+   "history.jump",
+   "history.tree",
+   "observe.start",
+   "observe.accept",
+   "observe.reject",
+   "observe.accept_file",
+   "observe.reject_file",
+   "sandbox.new",
+   "sandbox.copy",
+   "sandbox.end",
+   "observe.diff",
+   "trace.check",
+   "trace.evidence",
+   "trace.findings",
+   "definitions.edit",
+   "file.find",
+   "file.find_lines",
+   "trace.lock",
+   "trace.requirement",
+   "trace.context",
+   "trace.coverage",
+   "context.toggle",
+   "context.copy",
+   "history.filter",
+   "design.toggle",
+   "design.expand_all",
+   "design.expand_everything",
+   "design.fold_all",
+   "design.open_only",
+   "trace.judge",
+   "file.copy",
+   "file.copy_line",
+   "file.copy_path",
+   "file.definition",
+   "file.references",
+   "trace.new_requirement",
+   "trace.rollup",
+   "trace.stale",
+   "drt.bindings",
+   "drt.coverage",
+   "drt.judge",
+   "drt.run",
+   "drt.shrink",
+   "screen.split.across",
+   "screen.split.down",
+   "screen.close",
+   "screen.focus.left",
+   "screen.focus.right",
+   "screen.focus.up",
+   "screen.focus.down",
+   "screen.grow",
+   "screen.shrink",
+   "screen.show",
+   "screen.strip",
+   "screen.offers"]
+
+theorem dispatch_factors (a b : String) (f : Focus) (w : Workspace) (ws : List Command)
+    (hn : actionName a = actionName b) (ht : actionTarget a = actionTarget b) :
+    dispatch a f w ws = dispatch b f w ws := by
+  simp only [dispatch, hn, ht]
+
+/-- @proves REQ-ACT.unknown_is_refused -/
+theorem an_unnamed_action_is_refused (a : String) (f : Focus) (w : Workspace) (ws : List Command)
+    (unnamed : actionName a ∉ namedActions)
+    (notStation : (actionName a).startsWith "screen.station." = false) :
+    dispatch a f w ws = .refuse (.unknownAction (actionName a)) := by
+  unfold dispatch
+  generalize actionName a = n at *
+  unfold dispatchNamed
+  split <;> simp_all [namedActions]
+
+/-- @proves REQ-ACT.action_to_intent -/
+theorem a_named_action_resolves_to_an_intent (a : String) (f : Focus) (w : Workspace)
+    (ws : List Command) (named : actionName a ∈ namedActions) (x : String) :
+    dispatch a f w ws ≠ .refuse (.unknownAction x) := by
+  unfold dispatch
+  generalize (match actionTarget a with
+    | some target => { f with under := some target }
+    | none => f) = g
+  generalize actionName a = n at *
+  unfold dispatchNamed
+  split <;> simp_all [namedActions, openUnder, newUnder, renameUnder, deleteFocus, approveUnder,
+    diffUnder, requirementUnder, showUnder, report] <;> (repeat' split) <;> simp
+
+def underActions : List String :=
+  ["file.open", "file.new", "observe.diff", "history.jump", "definitions.edit",
+   "trace.requirement", "trace.context", "trace.coverage", "context.toggle", "history.filter",
+   "design.toggle", "design.expand_all", "trace.judge", "trace.new_requirement", "screen.show"]
+
+def fileActions : List String := ["file.rename", "file.delete", "file.copy_path"]
+
+def mutatingActions : List String :=
+  ["file.new", "file.rename", "file.delete", "trace.approve", "trace.new_requirement"]
+
+/-- @proves REQ-ACT.missing_target_is_refused -/
+theorem a_missing_target_is_refused_by_name (a : String) (f : Focus) (w : Workspace)
+    (ws : List Command) (noTarget : actionTarget a = none) :
+    (actionName a ∈ underActions → f.under = none →
+      ∃ what, dispatch a f w ws = .refuse (.needsTarget (actionName a) what)) ∧
+    (actionName a ∈ fileActions → (∀ p, f.kind ≠ .file p) →
+      ∃ what, dispatch a f w ws = .refuse (.needsTarget (actionName a) what)) ∧
+    (actionName a = "observe.accept" → ws = [] →
+      ∃ what, dispatch a f w ws = .refuse (.needsTarget (actionName a) what)) := by
+  simp only [dispatch, noTarget]
+  generalize actionName a = n
+  refine ⟨?_, ?_, ?_⟩
+  · intro needs nothing
+    unfold dispatchNamed
+    split <;> simp_all [underActions, openUnder, newUnder, diffUnder, requirementUnder, showUnder]
+  · intro needs notFile
+    have none_path : focusPath f = none := by
+      unfold focusPath
+      cases h : f.kind <;> simp_all
+    unfold dispatchNamed
+    split <;> simp_all [fileActions, renameUnder, deleteFocus]
+  · intro named empty
+    unfold dispatchNamed
+    split <;> simp_all
+
+/-- @proves REQ-ACT.focus_is_carried -/
+theorem the_named_target_is_the_focus (a t : String) (f : Focus) (w : Workspace)
+    (ws : List Command) (named : actionTarget a = some t) (u : Option String) :
+    dispatch a f w ws = dispatchNamed (actionName a) { f with under := some t } w ws ∧
+    dispatch a f w ws = dispatch a { f with under := u } w ws := by
+  simp [dispatch, named]
+
+/-- @proves REQ-ACT.one_path -/
+theorem a_key_and_an_affordance_agree (key affordance t : String) (f : Focus) (w : Workspace)
+    (ws : List Command) (same : actionName key = actionName affordance)
+    (bare : actionTarget key = none) (carried : actionTarget affordance = some t)
+    (cursor : f.under = some t) :
+    dispatch key f w ws = dispatch affordance f w ws := by
+  have hf : { f with under := some t } = f := by
+    cases f
+    simp_all
+  simp [dispatch, bare, carried, same, hf]
+
+/-- @proves REQ-ACT.edits_are_commands -/
+theorem a_change_carries_a_command (a : String) (f : Focus) (w : Workspace) (ws : List Command) :
+    (actionName a ∈ mutatingActions →
+      (∃ c, dispatch a f w ws = .edit c) ∨ ∃ why, dispatch a f w ws = .refuse why) ∧
+    (actionName a = "observe.accept" →
+      (∃ c, dispatch a f w ws = .observe (.accept c)) ∨ ∃ why, dispatch a f w ws = .refuse why) ∧
+    (actionName a = "observe.accept_file" →
+      (∃ p c, dispatch a f w ws = .observe (.acceptFile p c)) ∨
+        ∃ why, dispatch a f w ws = .refuse why) := by
+  unfold dispatch
+  generalize (match actionTarget a with
+    | some target => { f with under := some target }
+    | none => f) = g
+  dsimp only
+  generalize actionName a = n
+  refine ⟨?_, ?_, ?_⟩
+  · intro m
+    unfold dispatchNamed
+    split <;> simp_all [mutatingActions, newUnder, renameUnder, deleteFocus, approveUnder] <;>
+      (repeat' split) <;> simp
+  · intro m
+    unfold dispatchNamed
+    split <;> simp_all <;> split <;> simp
+  · intro m
+    unfold dispatchNamed
+    split <;> simp_all <;> (repeat' split) <;> simp
+
 end TraceLean.Act

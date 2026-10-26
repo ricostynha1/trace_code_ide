@@ -125,4 +125,72 @@ def marked : Buffer :=
   { id := "d", kind := .menu "design", text := "▸ REQ-A",
     spans := [⟨0, 1, .entry, ["design.toggle REQ-A", "file.explode"]⟩] }
 
+theorem pointedAt_keys (keymap : Keymap) (here : Option String) (actions : List String) :
+    ∀ o ∈ pointedAt keymap here actions, o.keys = keysFor keymap o.action := by
+  induction actions with
+  | nil => simp [pointedAt]
+  | cons a rest ih =>
+    intro o ho
+    simp only [pointedAt, List.cons_append, List.mem_cons, List.mem_append] at ho
+    rcases ho with h | h | h
+    · subst h
+      rfl
+    · split at h <;> simp_all [entry]
+      rcases h with h | h <;> subst h <;> rfl
+    · exact ih o h
+
+theorem pointedAt_offers (keymap : Keymap) (here : Option String) (actions : List String) :
+    ∀ a ∈ actions, ∃ o ∈ pointedAt keymap here actions, o.action = a ∧ o.group = "here" := by
+  induction actions with
+  | nil => simp
+  | cons b rest ih =>
+    intro a ha
+    simp only [List.mem_cons] at ha
+    rcases ha with h | h
+    · subst h
+      exact ⟨_, List.mem_cons_self _ _, rfl, rfl⟩
+    · obtain ⟨o, ho, h1, h2⟩ := ih a h
+      exact ⟨o, by simp [pointedAt, ho], h1, h2⟩
+
+theorem ofBuffer_keys (keymap : Keymap) (kind : BufferKind) :
+    ∀ o ∈ ofBuffer keymap kind, o.keys = keysFor keymap o.action := by
+  cases kind <;> simp [ofBuffer, entry] <;> (repeat' split) <;> simp [or_imp, forall_and]
+
+/-- @proves REQ-ACT.everything_is_offered -/
+theorem every_applicable_action_is_offered (buffer : Buffer) (offset : Nat) (keymap : Keymap) :
+    (∀ o ∈ offers buffer offset keymap, known o.action = true ∧ o.keys = keysFor keymap o.action) ∧
+    (∀ a ∈ actionsAt buffer offset, known a = true →
+      ∃ o ∈ offers buffer offset keymap, o.action = a ∧ o.group = "here") ∧
+    (∀ o ∈ ofBuffer keymap buffer.kind, known o.action = true → o ∈ offers buffer offset keymap) ∧
+    (∀ a ∈ places, known a = true →
+      ∃ o ∈ offers buffer offset keymap, o.action = a ∧ o.group = "go") := by
+  refine ⟨?_, ?_, ?_, ?_⟩
+  · intro o ho
+    simp only [offers, List.mem_filter, List.mem_append, List.mem_map] at ho
+    refine ⟨ho.2, ?_⟩
+    rcases ho.1 with ((((h | h) | h) | h) | h)
+    · exact pointedAt_keys keymap _ _ o h
+    · split at h
+      · simp only [List.mem_map] at h
+        obtain ⟨_, _, rfl⟩ := h
+        rfl
+      · simp at h
+    · exact ofBuffer_keys keymap _ o h
+    · obtain ⟨_, _, rfl⟩ := h
+      rfl
+    · obtain ⟨_, _, rfl⟩ := h
+      rfl
+  · intro a ha hk
+    obtain ⟨o, ho, h1, h2⟩ := pointedAt_offers keymap (under buffer offset) _ a ha
+    refine ⟨o, ?_, h1, h2⟩
+    simp only [offers, List.mem_filter, List.mem_append]
+    exact ⟨Or.inl (Or.inl (Or.inl (Or.inl ho))), h1 ▸ hk⟩
+  · intro o ho hk
+    simp only [offers, List.mem_filter, List.mem_append]
+    exact ⟨Or.inl (Or.inl (Or.inr ho)), hk⟩
+  · intro a ha hk
+    refine ⟨entry keymap "go" a none, ?_, rfl, rfl⟩
+    simp only [offers, List.mem_filter, List.mem_append, List.mem_map]
+    exact ⟨Or.inr ⟨a, ha, rfl⟩, hk⟩
+
 end TraceLean.Offer
