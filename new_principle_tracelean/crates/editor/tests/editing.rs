@@ -360,3 +360,25 @@ fn scrolling_many_lines_at_once_lands_where_asked() {
     assert_eq!(editor.line_and_column().0, 0);
     let _ = std::fs::remove_dir_all(&root);
 }
+
+/// @tests REQ-LSP.proof_state_shown
+#[test]
+#[ignore = "starts Lean's own server on the project's models; run with --ignored"]
+fn the_goals_pane_shows_what_lean_reports_inside_a_proof() {
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..").canonicalize().unwrap();
+    let mut editor = Editor::open(root, keymap());
+    editor.perform(Intent::Display { what: BufferKind::File { path: "formal/TraceLean/Screen.lean".into() } });
+    let text = editor.buffer().text.clone();
+    let at = text.find("theorem goals_open_exactly_with_a_lean_file").unwrap();
+    let inside = at + text[at..].find("cases kind").unwrap() + 1;
+    editor.place("document", inside);
+    let goals = |editor: &Editor| editor.screen.opened.iter().find(|b| b.id == "record:proof").map(|b| b.text.clone()).unwrap_or_default();
+    for _ in 0..900 {
+        if goals(&editor).contains('⊢') {
+            break;
+        }
+        editor.tick();
+        std::thread::sleep(std::time::Duration::from_millis(200));
+    }
+    assert!(goals(&editor).contains('⊢'), "{}", goals(&editor));
+}

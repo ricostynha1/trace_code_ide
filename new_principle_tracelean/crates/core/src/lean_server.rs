@@ -108,14 +108,18 @@ pub struct LeanServer {
 }
 
 impl LeanServer {
-    pub fn start(project: &Path) -> Result<Self, String> {
-        let mut child = Command::new("lake")
-            .args(["env", "lean", "--server"])
-            .current_dir(project)
-            .stdin(Stdio::piped())
-            .stdout(Stdio::piped())
-            .stderr(Stdio::null())
-            .spawn()
+    pub fn start(project: &Path, elan: Option<PathBuf>) -> Result<Self, String> {
+        let spawn = |lake: &Path| {
+            Command::new(lake)
+                .args(["env", "lean", "--server"])
+                .current_dir(project)
+                .stdin(Stdio::piped())
+                .stdout(Stdio::piped())
+                .stderr(Stdio::null())
+                .spawn()
+        };
+        let mut child = spawn(Path::new("lake"))
+            .or_else(|error| elan.as_deref().filter(|lake| lake.exists()).map_or(Err(error), spawn))
             .map_err(|error| format!("`lake env lean --server` did not start ({error}); is Lean installed?"))?;
         let (Some(stdin), Some(stdout)) = (child.stdin.take(), child.stdout.take()) else {
             return Err("the Lean server has no pipes".to_string());

@@ -2769,7 +2769,13 @@ impl Editor {
         if self.lean_project.as_ref() != Some(&project) {
             self.lean = None;
             self.lean_error = None;
-            match tracelean_core::lean_server::LeanServer::start(&project) {
+            match tracelean_core::lean_server::LeanServer::start(
+                &project,
+                std::env::var_os("ELAN_HOME")
+                    .map(PathBuf::from)
+                    .or_else(|| std::env::var_os("HOME").map(|home| PathBuf::from(home).join(".elan")))
+                    .map(|dir| dir.join("bin").join("lake")),
+            ) {
                 Ok(server) => self.lean = Some(server),
                 Err(why) => self.lean_error = Some(format!("{why} (reopen the editor to try again)")),
             }
