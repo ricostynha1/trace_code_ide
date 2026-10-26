@@ -1,9 +1,6 @@
 mod harness;
 
-use tracelean_core::drt::run::{run, RunOptions};
 use tracelean_core::drt::schema::Schema;
-
-mod support;
 
 fn strukt(fields: &[(&str, Schema)]) -> Schema {
     Schema::Struct { fields: fields.iter().map(|(k, v)| (k.to_string(), v.clone())).collect() }
@@ -67,35 +64,9 @@ fn input_schema() -> Schema {
 #[test]
 #[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
 fn model_and_implementation_agree_on_replaying_a_log() {
-    let scratch = harness::scratch("persistence");
     let op = "REQ-PERSIST.replay_exact";
-    let implementation = harness::rust_runner_with_params(
-        "REQ-PERSIST",
-        "replay_exact",
-        "crates/core/src/history/persistence.rs::replay_report",
-        &[("checkpointAt", "checkpoint_at")],
-        &scratch,
-    );
-    let model = harness::lean_runner(
-        "TraceLean.Persistence",
-        "TraceLean.Persistence.replayReport",
-        op,
-        &["base", "lines", "checkpointAt"],
-        &scratch,
-    );
 
-    let result = run(
-        op,
-        &input_schema(),
-        &model,
-        &implementation,
-        RunOptions { seed: 62, cases: 3_000 },
-    )
-    .expect("both runners answer");
-
-    support::agreed(&result);
-
-    let _ = std::fs::remove_dir_all(&scratch);
+    harness::agree(op, &input_schema(), 62, 3_000);
 }
 
 /// @tests REQ-PERSIST.checkpoint_equivalent
@@ -131,7 +102,7 @@ fn the_two_replay_paths_agree_on_every_generated_log() {
             cut += 1;
         }
     }
-    support::covered(
+    harness::covered(
         "REQ-PERSIST.replay_exact",
         &[
             ("a truncated log", truncated),

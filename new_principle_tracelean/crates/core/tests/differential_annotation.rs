@@ -1,7 +1,5 @@
 mod harness;
-mod support;
 
-use tracelean_core::drt::run::{run, RunOptions};
 use tracelean_core::drt::schema::Schema;
 
 fn strukt(fields: &[(&str, Schema)]) -> Schema {
@@ -55,35 +53,9 @@ fn input_schema() -> Schema {
 #[test]
 #[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
 fn model_and_implementation_agree_on_the_grammar() {
-    let scratch = harness::scratch("annotation");
     let op = "REQ-ANNOT.totality";
-    let implementation = harness::rust_runner_with_params(
-        "REQ-ANNOT",
-        "totality",
-        "crates/core/src/trace/annotation.rs::parse_comment_lines",
-        &[("firstLine", "first_line")],
-        &scratch,
-    );
-    let model = harness::lean_runner(
-        "TraceLean.Annotation",
-        "TraceLean.Annotation.parseCommentLines",
-        op,
-        &["lines", "firstLine"],
-        &scratch,
-    );
 
-    let result = run(
-        op,
-        &input_schema(),
-        &model,
-        &implementation,
-        RunOptions { seed: 44, cases: 3_000 },
-    )
-    .expect("both runners answer");
-
-    support::agreed(&result);
-
-    let _ = std::fs::remove_dir_all(&scratch);
+    harness::agree(op, &input_schema(), 44, 3_000);
 }
 
 /// @tests REQ-ANNOT.totality
@@ -151,21 +123,7 @@ fn every_directive_shaped_token_is_accounted_for() {
 #[test]
 #[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
 fn model_and_implementation_agree_on_region_balance() {
-    let scratch = harness::scratch("regions");
     let op = "REQ-ANNOT.region_balanced";
-    let implementation = harness::rust_runner(
-        "REQ-ANNOT",
-        "region_balanced",
-        "crates/core/src/trace/anchor.rs::region_balance",
-        &scratch,
-    );
-    let model = harness::lean_runner(
-        "TraceLean.Annotation",
-        "TraceLean.Annotation.regionBalance",
-        op,
-        &["directives"],
-        &scratch,
-    );
 
     let small = |examples: &[&str]| Schema::Str {
         max_len: Some(0),
@@ -223,16 +181,5 @@ fn model_and_implementation_agree_on_region_balance() {
         Schema::List { inner: Box::new(Schema::Enum { variants: directive }), max_len: Some(5) },
     )]);
 
-    let result = run(
-        op,
-        &schema,
-        &model,
-        &implementation,
-        RunOptions { seed: 107, cases: 2_000 },
-    )
-    .expect("both runners answer");
-
-    support::agreed(&result);
-
-    let _ = std::fs::remove_dir_all(&scratch);
+    harness::agree(op, &schema, 107, 2_000);
 }

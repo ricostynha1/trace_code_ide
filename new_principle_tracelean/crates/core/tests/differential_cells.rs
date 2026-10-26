@@ -3,12 +3,9 @@ mod harness;
 use std::collections::BTreeMap;
 
 use tracelean_core::drt::gen;
-use tracelean_core::drt::run::{run, RunOptions};
 use tracelean_core::drt::schema::Schema;
 use tracelean_core::surface::cells::{drawn_wrong, Look};
 use tracelean_core::surface::view::Buffer;
-
-mod support;
 
 fn strukt(fields: &[(&str, Schema)]) -> Schema {
     Schema::Struct { fields: fields.iter().map(|(k, v)| (k.to_string(), v.clone())).collect() }
@@ -80,20 +77,6 @@ fn buffer() -> Schema {
 #[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
 fn model_and_implementation_agree_on_what_is_drawn_in_the_wrong_look() {
     let op = "REQ-LOOK.roles_drawn_in_theme_colours";
-    let scratch = harness::scratch("cells");
-    let implementation = harness::rust_runner(
-        "REQ-LOOK",
-        "roles_drawn_in_theme_colours",
-        "crates/core/src/surface/cells.rs::drawn_wrong",
-        &scratch,
-    );
-    let model = harness::lean_runner(
-        "TraceLean.Cells",
-        "TraceLean.Cells.drawnWrong",
-        op,
-        &["buffer", "painted", "rows", "columns", "looks"],
-        &scratch,
-    );
     let look = strukt(&[
         ("role", role()),
         ("fg", Schema::Option { inner: Box::new(name(&["#00ff00", "#ff0000"])) }),
@@ -107,10 +90,7 @@ fn model_and_implementation_agree_on_what_is_drawn_in_the_wrong_look() {
         ("columns", Schema::Nat { max: Some(6), edges: vec![0, 1] }),
         ("looks", Schema::List { inner: Box::new(look), max_len: Some(3) }),
     ]);
-    let result = run(op, &schema, &model, &implementation, RunOptions { seed: 410, cases: 3_000 })
-        .expect("both runners answer");
-    support::agreed(&result);
-    let _ = std::fs::remove_dir_all(&scratch);
+    harness::agree(op, &schema, 410, 3_000);
 
     let mut rng = gen::Rng::new(410);
     let (mut right, mut wrong, mut off) = (0u64, 0u64, 0u64);
@@ -135,7 +115,7 @@ fn model_and_implementation_agree_on_what_is_drawn_in_the_wrong_look() {
             off += 1;
         }
     }
-    support::covered(
+    harness::covered(
         op,
         &[
             ("a coloured role drawn in its look", right),

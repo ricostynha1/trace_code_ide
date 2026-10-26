@@ -2,10 +2,7 @@ mod harness;
 
 use std::collections::BTreeMap;
 
-use tracelean_core::drt::run::{run, RunOptions};
 use tracelean_core::drt::schema::Schema;
-
-mod support;
 
 const OP: &str = "REQ-MIRROR.apply_reproduces";
 
@@ -52,33 +49,8 @@ fn input_schema() -> Schema {
 #[test]
 #[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
 fn model_and_implementation_agree_on_mirroring() {
-    let scratch = harness::scratch("mirror");
-    let implementation = harness::rust_runner(
-        "REQ-MIRROR",
-        "apply_reproduces",
-        "crates/core/src/observe/mirror.rs::mirrored",
-        &scratch,
-    );
-    let model = harness::lean_runner(
-        "TraceLean.Mirror",
-        "TraceLean.Mirror.mirrored",
-        OP,
-        &["before", "after"],
-        &scratch,
-    );
 
-    let result = run(
-        OP,
-        &input_schema(),
-        &model,
-        &implementation,
-        RunOptions { seed: 17, cases: 2_000 },
-    )
-    .expect("both runners answer");
-
-    support::agreed(&result);
-
-    let _ = std::fs::remove_dir_all(&scratch);
+    harness::agree(OP, &input_schema(), 17, 2_000);
 }
 
 /// @tests REQ-DRT-COVER.law_coverage
@@ -107,7 +79,7 @@ fn generation_reaches_real_differences_and_excluded_paths() {
             excluded += 1;
         }
     }
-    support::covered(
+    harness::covered(
         "REQ-MIRROR.apply_reproduces",
         &[("the two trees differed", differing), ("the exclusion rule applied", excluded)],
     );
@@ -121,34 +93,9 @@ fn generation_reaches_real_differences_and_excluded_paths() {
 #[test]
 #[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
 fn model_and_implementation_agree_on_the_mutations_themselves() {
-    let scratch = harness::scratch("mutations");
     let op = "REQ-MIRROR.diff_is_pure";
-    let implementation = harness::rust_runner(
-        "REQ-MIRROR",
-        "diff_is_pure",
-        "crates/core/src/observe/mirror.rs::mutations",
-        &scratch,
-    );
-    let model = harness::lean_runner(
-        "TraceLean.Mirror",
-        "TraceLean.Mirror.mutationsOf",
-        op,
-        &["before", "after"],
-        &scratch,
-    );
 
-    let result = run(
-        op,
-        &input_schema(),
-        &model,
-        &implementation,
-        RunOptions { seed: 64, cases: 2_000 },
-    )
-    .expect("both runners answer");
-
-    support::agreed(&result);
-
-    let _ = std::fs::remove_dir_all(&scratch);
+    harness::agree(op, &input_schema(), 64, 2_000);
 }
 
 /// @drt REQ-MIRROR.binary_handled
@@ -156,21 +103,7 @@ fn model_and_implementation_agree_on_the_mutations_themselves() {
 #[test]
 #[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
 fn model_and_implementation_agree_on_what_happens_to_an_opaque_file() {
-    let scratch = harness::scratch("opaque");
     let op = "REQ-MIRROR.binary_handled";
-    let implementation = harness::rust_runner(
-        "REQ-MIRROR",
-        "binary_handled",
-        "crates/core/src/observe/mirror.rs::change_at",
-        &scratch,
-    );
-    let model = harness::lean_runner(
-        "TraceLean.Mirror",
-        "TraceLean.Mirror.changeAt",
-        op,
-        &["path", "before", "after"],
-        &scratch,
-    );
 
     let mut state: std::collections::BTreeMap<String, Option<Box<Schema>>> =
         std::collections::BTreeMap::new();
@@ -223,18 +156,7 @@ fn model_and_implementation_agree_on_what_happens_to_an_opaque_file() {
         .collect(),
     };
 
-    let result = run(
-        op,
-        &schema,
-        &model,
-        &implementation,
-        RunOptions { seed: 131, cases: 2_000 },
-    )
-    .expect("both runners answer");
-
-    support::agreed(&result);
-
-    let _ = std::fs::remove_dir_all(&scratch);
+    harness::agree(op, &schema, 131, 2_000);
 }
 
 /// @drt REQ-OBS.only_what_the_tool_changed
@@ -243,14 +165,6 @@ fn model_and_implementation_agree_on_what_happens_to_an_opaque_file() {
 #[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
 fn model_and_implementation_agree_on_what_the_agent_changed() {
     let op = "REQ-OBS.only_what_the_tool_changed";
-    let scratch = harness::scratch("mirror-changed-since");
-    let implementation = harness::rust_runner(
-        "REQ-OBS",
-        "only_what_the_tool_changed",
-        "crates/core/src/observe/mirror.rs::changed_since_owned",
-        &scratch,
-    );
-    let model = harness::lean_runner("TraceLean.Mirror", "TraceLean.Mirror.changedSince", op, &["base", "project", "agent"], &scratch);
     let hashes = ["", "hi"].iter().map(|t| tracelean_core::trace::hash::text(t)).chain(["0".to_string()]).collect();
     let base = Schema::Option {
         inner: Box::new(Schema::List {
@@ -263,16 +177,5 @@ fn model_and_implementation_agree_on_what_the_agent_changed() {
             .into_iter()
             .collect(),
     };
-    let result = run(
-        op,
-        &schema,
-        &model,
-        &implementation,
-        RunOptions { seed: 211, cases: 2_000 },
-    )
-    .expect("both runners answer");
-
-    support::agreed(&result);
-
-    let _ = std::fs::remove_dir_all(&scratch);
+    harness::agree(op, &schema, 211, 2_000);
 }

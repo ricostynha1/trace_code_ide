@@ -1,9 +1,6 @@
 mod harness;
 
-use tracelean_core::drt::run::{run, RunOptions};
 use tracelean_core::drt::schema::Schema;
-
-mod support;
 
 fn strukt(fields: &[(&str, Schema)]) -> Schema {
     Schema::Struct { fields: fields.iter().map(|(k, v)| (k.to_string(), v.clone())).collect() }
@@ -42,34 +39,9 @@ fn input_schema() -> Schema {
 #[test]
 #[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
 fn model_and_implementation_agree_on_what_is_complete() {
-    let scratch = harness::scratch("transcript");
     let op = "REQ-TRANSCRIPT.partial_line_held";
-    let implementation = harness::rust_runner(
-        "REQ-TRANSCRIPT",
-        "partial_line_held",
-        "crates/core/src/observe/transcript.rs::read_chunks",
-        &scratch,
-    );
-    let model = harness::lean_runner(
-        "TraceLean.Transcript",
-        "TraceLean.Transcript.readChunks",
-        op,
-        &["chunks"],
-        &scratch,
-    );
 
-    let result = run(
-        op,
-        &input_schema(),
-        &model,
-        &implementation,
-        RunOptions { seed: 91, cases: 2_000 },
-    )
-    .expect("both runners answer");
-
-    support::agreed(&result);
-
-    let _ = std::fs::remove_dir_all(&scratch);
+    harness::agree(op, &input_schema(), 91, 2_000);
 }
 
 fn claude_record() -> Vec<&'static str> {
@@ -96,15 +68,7 @@ fn claude_record() -> Vec<&'static str> {
 #[test]
 #[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
 fn model_and_implementation_agree_on_a_claude_code_transcript() {
-    let scratch = harness::scratch("claude-transcript");
     let op = "REQ-TRANSCRIPT.tool_format_read";
-    let implementation = harness::rust_runner(
-        "REQ-TRANSCRIPT",
-        "tool_format_read",
-        "crates/core/src/observe/claude.rs::events_owned",
-        &scratch,
-    );
-    let model = harness::lean_runner("TraceLean.Claude", "TraceLean.Claude.events", op, &["text"], &scratch);
     let records = claude_record();
     let long = format!(r#"{{"type":"assistant","message":{{"content":[{{"type":"text","text":"{}"}}]}}}}"#, "word ".repeat(60));
     let mut texts = vec![format!("{long}\n"), "\r\n".to_string()];
@@ -114,16 +78,7 @@ fn model_and_implementation_agree_on_a_claude_code_transcript() {
             texts.push(format!("{a}\r\n{b}\n"));
         }
     }
-    let result = run(
-        op,
-        &strukt(&[("text", Schema::Str { max_len: Some(0), examples: texts })]),
-        &model,
-        &implementation,
-        RunOptions { seed: 408, cases: 2_000 },
-    )
-    .expect("both runners answer");
-    support::agreed(&result);
-    let _ = std::fs::remove_dir_all(&scratch);
+    harness::agree(op, &strukt(&[("text", Schema::Str { max_len: Some(0), examples: texts })]), 408, 2_000);
 }
 
 /// @tests REQ-DRT-COVER.law_coverage
@@ -147,7 +102,7 @@ fn generation_reaches_events_unrecognised_and_held() {
         }
         if result.held.is_empty() { nothing_held += 1 } else { held += 1 }
     }
-    support::covered(
+    harness::covered(
         "REQ-TRANSCRIPT.partial_line_held",
         &[
             ("a read producing an event", events),

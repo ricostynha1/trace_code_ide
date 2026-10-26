@@ -2,10 +2,7 @@ mod harness;
 
 use std::collections::BTreeMap;
 
-use tracelean_core::drt::run::{run, RunOptions};
 use tracelean_core::drt::schema::Schema;
-
-mod support;
 
 fn name(examples: &[&str]) -> Schema {
     Schema::Str { max_len: Some(0), examples: examples.iter().map(|s| s.to_string()).collect() }
@@ -28,14 +25,6 @@ fn document() -> Schema {
 #[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
 fn model_and_implementation_agree_on_the_marks_beside_clauses() {
     let op = "REQ-SHOW.claims_beside_code";
-    let scratch = harness::scratch("chips");
-    let implementation = harness::rust_runner(
-        "REQ-SHOW",
-        "claims_beside_code",
-        "crates/core/src/surface/chips.rs::clause_chips_owned",
-        &scratch,
-    );
-    let model = harness::lean_runner("TraceLean.Chips", "TraceLean.Chips.clauseChips", op, &["text", "id", "claims"], &scratch);
     let claim = Schema::Tuple {
         items: vec![
             Schema::Option { inner: Box::new(name(&["one", "two", "three"])) },
@@ -46,14 +35,5 @@ fn model_and_implementation_agree_on_the_marks_beside_clauses() {
     fields.insert("text".to_string(), document());
     fields.insert("id".to_string(), name(&["REQ-A"]));
     fields.insert("claims".to_string(), Schema::List { inner: Box::new(claim), max_len: Some(5) });
-    let result = run(
-        op,
-        &Schema::Struct { fields },
-        &model,
-        &implementation,
-        RunOptions { seed: 404, cases: 1_500 },
-    )
-    .expect("both runners answer");
-    support::agreed(&result);
-    let _ = std::fs::remove_dir_all(&scratch);
+    harness::agree(op, &Schema::Struct { fields }, 404, 1_500);
 }

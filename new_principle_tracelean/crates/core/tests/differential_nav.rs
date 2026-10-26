@@ -1,5 +1,4 @@
 mod harness;
-mod support;
 
 use tracelean_core::drt::run::{run, RunOptions};
 use tracelean_core::drt::schema::Schema;
@@ -103,7 +102,7 @@ fn model_and_implementation_agree_on_where_a_name_is_declared() {
     let result =
         run(op, &definitions_input(), &model, &implementation, RunOptions { seed: 83, cases: 4_000 })
             .expect("both runners answer");
-    support::agreed(&result);
+    harness::agreed(&result);
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
@@ -130,7 +129,7 @@ fn generation_reaches_names_declared_once_twice_and_never() {
             dotted += 1;
         }
     }
-    support::covered(
+    harness::covered(
         "REQ-NAV.definitions_found",
         &[("declared once", once), ("declared several times", several), ("by its last part", dotted), ("declared nowhere", never)],
     );
@@ -154,7 +153,7 @@ fn model_and_implementation_agree_on_where_a_name_is_used() {
     );
     let result = run(op, &uses_input(), &model, &implementation, RunOptions { seed: 89, cases: 4_000 })
         .expect("both runners answer");
-    support::agreed(&result);
+    harness::agreed(&result);
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
@@ -184,7 +183,7 @@ fn generation_reaches_uses_searches_and_the_limit() {
             cut += 1;
         }
     }
-    support::covered(
+    harness::covered(
         "REQ-NAV.uses_found",
         &[("a name's uses", uses), ("a search", searches), ("cut at the limit", cut), ("found nowhere", none)],
     );
@@ -212,7 +211,7 @@ fn model_and_implementation_agree_on_what_reopens() {
         harness::lean_runner("TraceLean.Nav", "TraceLean.Nav.reopened", op, &["files", "shown", "existing"], &scratch);
     let result = run(op, &reopen_input(), &model, &implementation, RunOptions { seed: 79, cases: 1_000 })
         .expect("both runners answer");
-    support::agreed(&result);
+    harness::agreed(&result);
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
@@ -244,7 +243,7 @@ fn generation_reaches_removed_tabs_and_the_front_file() {
             None => {}
         }
     }
-    support::covered(
+    harness::covered(
         "REQ-NAV.session_recalled",
         &[("a tab removed since", removed), ("the front file kept", front), ("the front file removed", front_gone)],
     );
@@ -262,7 +261,7 @@ fn model_and_implementation_agree_on_what_a_line_declares() {
     let model = harness::lean_runner("TraceLean.Nav", "TraceLean.Nav.declaredOn", op, &["line"], &scratch);
     let result = run(op, &line_input(), &model, &implementation, RunOptions { seed: 71, cases: 1_000 })
         .expect("both runners answer");
-    support::agreed(&result);
+    harness::agreed(&result);
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
@@ -285,7 +284,7 @@ fn generation_reaches_every_kind_of_line() {
             None => nothing += 1,
         }
     }
-    support::covered(
+    harness::covered(
         "REQ-NAV.declaration_line",
         &[("declares a name", declared), ("after modifiers", modified), ("a path", path), ("declares nothing", nothing)],
     );
@@ -304,7 +303,7 @@ fn model_and_implementation_agree_on_what_quick_open_lists() {
         harness::lean_runner("TraceLean.Nav", "TraceLean.Nav.quickOpen", op, &["files", "query", "limit"], &scratch);
     let result = run(op, &open_input(), &model, &implementation, RunOptions { seed: 73, cases: 1_000 })
         .expect("both runners answer");
-    support::agreed(&result);
+    harness::agreed(&result);
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
@@ -336,7 +335,7 @@ fn generation_reaches_every_kind_of_query() {
             cut += 1;
         }
     }
-    support::covered(
+    harness::covered(
         "REQ-NAV.quick_open",
         &[("no letters", empty), ("nothing matches", none), ("several ranked", ranked), ("more than kept", cut)],
     );

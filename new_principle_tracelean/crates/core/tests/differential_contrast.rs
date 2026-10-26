@@ -5,8 +5,6 @@ use std::collections::BTreeMap;
 use tracelean_core::drt::run::{run, RunOptions};
 use tracelean_core::drt::schema::Schema;
 
-mod support;
-
 fn name(examples: &[&str]) -> Schema {
     Schema::Str { max_len: Some(0), examples: examples.iter().map(|s| s.to_string()).collect() }
 }
@@ -45,6 +43,6 @@ fn model_and_implementation_agree_on_what_contrast_finds() {
         RunOptions { seed: 409, cases: 3_000 },
     )
     .expect("both runners answer");
-    support::agreed(&result);
+    harness::agreed(&result);
     let _ = std::fs::remove_dir_all(&scratch);
 }

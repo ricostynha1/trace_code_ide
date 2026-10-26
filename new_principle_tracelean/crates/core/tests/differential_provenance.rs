@@ -2,10 +2,7 @@ mod harness;
 
 use std::collections::BTreeMap;
 
-use tracelean_core::drt::run::{run, RunOptions};
 use tracelean_core::drt::schema::Schema;
-
-mod support;
 
 fn strukt(fields: &[(&str, Schema)]) -> Schema {
     Schema::Struct { fields: fields.iter().map(|(k, v)| (k.to_string(), v.clone())).collect() }
@@ -105,34 +102,9 @@ fn input_schema() -> Schema {
 #[test]
 #[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
 fn model_and_implementation_agree_on_where_text_came_from() {
-    let scratch = harness::scratch("provenance");
     let op = "REQ-PROV.position_question";
-    let implementation = harness::rust_runner(
-        "REQ-PROV",
-        "position_question",
-        "crates/core/src/history/provenance.rs::origins",
-        &scratch,
-    );
-    let model = harness::lean_runner(
-        "TraceLean.Provenance",
-        "TraceLean.Provenance.origins",
-        op,
-        &["base", "script", "file", "position"],
-        &scratch,
-    );
 
-    let result = run(
-        op,
-        &input_schema(),
-        &model,
-        &implementation,
-        RunOptions { seed: 88, cases: 3_000 },
-    )
-    .expect("both runners answer");
-
-    support::agreed(&result);
-
-    let _ = std::fs::remove_dir_all(&scratch);
+    harness::agree(op, &input_schema(), 88, 3_000);
 }
 
 /// @tests REQ-DRT-COVER.law_coverage
@@ -163,7 +135,7 @@ fn generation_reaches_both_a_written_position_and_an_inherited_one() {
             }
         }
     }
-    support::covered(
+    harness::covered(
         "REQ-PROV.position_question",
         &[("attributed to a recorded edit", written), ("attributed to the base", inherited)],
     );

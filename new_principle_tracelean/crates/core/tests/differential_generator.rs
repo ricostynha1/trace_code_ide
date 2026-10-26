@@ -1,7 +1,5 @@
 mod harness;
-mod support;
 
-use tracelean_core::drt::run::{run, RunOptions};
 use tracelean_core::drt::schema::Schema;
 
 fn strukt(fields: &[(&str, Schema)]) -> Schema {
@@ -25,34 +23,9 @@ fn count() -> Schema {
 #[test]
 #[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
 fn model_and_implementation_agree_on_the_raw_stream() {
-    let scratch = harness::scratch("rawstream");
     let op = "REQ-DRT-GEN.fixed_stream";
-    let implementation = harness::rust_runner(
-        "REQ-DRT-GEN",
-        "fixed_stream",
-        "crates/core/src/drt/gen.rs::raw_stream",
-        &scratch,
-    );
-    let model = harness::lean_runner(
-        "TraceLean.Generator",
-        "TraceLean.Generator.rawStream",
-        op,
-        &["seed", "count"],
-        &scratch,
-    );
 
-    let result = run(
-        op,
-        &strukt(&[("seed", seed()), ("count", count())]),
-        &model,
-        &implementation,
-        RunOptions { seed: 3, cases: 2_000 },
-    )
-    .expect("both runners answer");
-
-    support::agreed(&result);
-
-    let _ = std::fs::remove_dir_all(&scratch);
+    harness::agree(op, &strukt(&[("seed", seed()), ("count", count())]), 3, 2_000);
 }
 
 /// @drt REQ-DRT-GEN.edges_sampled
@@ -61,21 +34,7 @@ fn model_and_implementation_agree_on_the_raw_stream() {
 #[test]
 #[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
 fn model_and_implementation_agree_on_generated_numbers() {
-    let scratch = harness::scratch("natstream");
     let op = "REQ-DRT-GEN.edges_sampled";
-    let implementation = harness::rust_runner(
-        "REQ-DRT-GEN",
-        "edges_sampled",
-        "crates/core/src/drt/gen.rs::nat_stream",
-        &scratch,
-    );
-    let model = harness::lean_runner(
-        "TraceLean.Generator",
-        "TraceLean.Generator.natStream",
-        op,
-        &["seed", "max", "edges", "count"],
-        &scratch,
-    );
 
     let schema = strukt(&[
         ("seed", seed()),
@@ -95,18 +54,7 @@ fn model_and_implementation_agree_on_generated_numbers() {
         ("count", count()),
     ]);
 
-    let result = run(
-        op,
-        &schema,
-        &model,
-        &implementation,
-        RunOptions { seed: 4, cases: 2_000 },
-    )
-    .expect("both runners answer");
-
-    support::agreed(&result);
-
-    let _ = std::fs::remove_dir_all(&scratch);
+    harness::agree(op, &schema, 4, 2_000);
 }
 
 /// @drt REQ-DRT-GEN.seed_reproduces
@@ -114,21 +62,7 @@ fn model_and_implementation_agree_on_generated_numbers() {
 #[test]
 #[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
 fn model_and_implementation_agree_on_every_shape_of_generated_value() {
-    let scratch = harness::scratch("shapestream");
     let op = "REQ-DRT-GEN.seed_reproduces";
-    let implementation = harness::rust_runner(
-        "REQ-DRT-GEN",
-        "seed_reproduces",
-        "crates/core/src/drt/gen.rs::shape_stream",
-        &scratch,
-    );
-    let model = harness::lean_runner(
-        "TraceLean.Generator",
-        "TraceLean.Generator.shapeStream",
-        op,
-        &["seed", "shape", "count"],
-        &scratch,
-    );
 
     let schema = strukt(&[
         ("seed", seed()),
@@ -136,18 +70,7 @@ fn model_and_implementation_agree_on_every_shape_of_generated_value() {
         ("count", count()),
     ]);
 
-    let result = run(
-        op,
-        &schema,
-        &model,
-        &implementation,
-        RunOptions { seed: 8, cases: 2_000 },
-    )
-    .expect("both runners answer");
-
-    support::agreed(&result);
-
-    let _ = std::fs::remove_dir_all(&scratch);
+    harness::agree(op, &schema, 8, 2_000);
 }
 
 /// @tests REQ-DRT-GEN.edges_sampled

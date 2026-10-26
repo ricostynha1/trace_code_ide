@@ -1,8 +1,6 @@
 mod harness;
-mod support;
 
 use tracelean_core::drt::gen;
-use tracelean_core::drt::run::{run, RunOptions};
 use tracelean_core::drt::rust_runner::{call_site, Entry};
 use tracelean_core::drt::schema::Schema;
 
@@ -59,18 +57,7 @@ fn input() -> Schema {
 #[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
 fn model_and_implementation_agree_on_the_generated_call_site() {
     let op = "REQ-DRT-RUST.types_inferred";
-    let scratch = harness::scratch("call-site");
-    let implementation = harness::rust_runner(
-        "REQ-DRT-RUST",
-        "types_inferred",
-        "crates/core/src/drt/rust_runner.rs::call_site",
-        &scratch,
-    );
-    let model = harness::lean_runner("TraceLean.RustRunner", "TraceLean.RustRunner.callSite", op, &["entry"], &scratch);
-    let result = run(op, &input(), &model, &implementation, RunOptions { seed: 4242, cases: 5_000 })
-        .expect("both runners answer");
-    support::agreed(&result);
-    let _ = std::fs::remove_dir_all(&scratch);
+    harness::agree(op, &input(), 4242, 5_000);
 }
 
 /// @tests REQ-DRT-COVER.law_coverage
@@ -98,7 +85,7 @@ fn generation_reaches_every_shape_of_call_site() {
         let arm = call_site(entry);
         assert!(!arm.contains("::<") && !arm.contains("let a:"), "the call site named a type:\n{arm}");
     }
-    support::covered(
+    harness::covered(
         "REQ-DRT-RUST.types_inferred",
         &[
             ("an entry taking nothing", counts[0]),

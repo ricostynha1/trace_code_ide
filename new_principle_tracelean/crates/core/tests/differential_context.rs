@@ -7,8 +7,6 @@ use tracelean_core::drt::run::{run, RunOptions};
 use tracelean_core::drt::schema::Schema;
 use tracelean_core::surface::context::{ancestors, descendants, part_named, parts_shown, Node, Part, ALL_PARTS};
 
-mod support;
-
 fn name() -> Schema {
     Schema::Str { max_len: Some(0), examples: vec!["A".into(), "B".into(), "C".into(), "D".into()] }
 }
@@ -57,7 +55,7 @@ fn check(req: &str, op: &str, function: &str, entry: &str, arguments: &[&str], f
         RunOptions { seed, cases: 2_000 },
     )
     .expect("both runners answer");
-    support::agreed(&result);
+    harness::agreed(&result);
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
@@ -252,7 +250,7 @@ fn generation_reaches_chains_cycles_and_every_kind_of_choice() {
             twice += 1;
         }
     }
-    support::covered(
+    harness::covered(
         "REQ-CONTEXT.neighbourhood_is_closed",
         &[
             ("nothing above", none),
@@ -283,7 +281,7 @@ fn generation_reaches_chains_cycles_and_every_kind_of_choice() {
         let shown = parts_shown(included.clone(), filled.clone());
         assert!(shown.iter().all(|p| included.contains(p) && filled.contains(p)));
     }
-    support::covered(
+    harness::covered(
         "REQ-CONTEXT.person_chooses",
         &[
             ("nothing chosen", nothing),
@@ -302,7 +300,7 @@ fn generation_reaches_chains_cycles_and_every_kind_of_choice() {
             None => unnamed += 1,
         }
     }
-    support::covered(
+    harness::covered(
         "REQ-CONTEXT.part_named",
         &[("a label that names a part", named), ("a name that is no part", unnamed)],
     );
@@ -327,7 +325,7 @@ fn generation_reaches_shell_lists_shared_items_and_unclaimed_uses() {
             ShellParts::Chosen { .. } => {}
         }
     }
-    support::covered(
+    harness::covered(
         "REQ-CONTEXT.from_the_shell",
         &[("nothing asked for", nothing), ("a list of labels", list), ("a name that is no part", unknown)],
     );
@@ -349,7 +347,7 @@ fn generation_reaches_shell_lists_shared_items_and_unclaimed_uses() {
         }
         let _ = claims_on(claims, id, clause);
     }
-    support::covered(
+    harness::covered(
         "REQ-CONTEXT.claims_with_source",
         &[("a clause asked for", asked), ("two claims on one item", shared)],
     );
@@ -375,7 +373,7 @@ fn generation_reaches_shell_lists_shared_items_and_unclaimed_uses() {
             used += 1;
         }
     }
-    support::covered(
+    harness::covered(
         "REQ-CONTEXT.affected_tests",
         &[("a test that names an implementing item", named), ("a line of an unclaimed test file", used)],
     );

@@ -1,5 +1,4 @@
 mod harness;
-mod support;
 
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -12,7 +11,7 @@ fn input_schema() -> Schema {
     let mut fields = BTreeMap::new();
     fields.insert(
         "parts".to_string(),
-        Schema::List { inner: Box::new(support::marks()), max_len: Some(5) },
+        Schema::List { inner: Box::new(harness::marks()), max_len: Some(5) },
     );
     Schema::Struct { fields }
 }
@@ -41,7 +40,7 @@ fn model_and_implementation_agree_on_aggregation() {
     )
     .expect("both runners answer");
 
-    support::agreed(&result);
+    harness::agreed(&result);
 
     let _ = std::fs::remove_dir_all(&scratch);
 }
@@ -79,7 +78,7 @@ fn a_mark_is_held_only_when_every_part_holds_it() {
             beside += 1;
         }
     }
-    support::covered(
+    harness::covered(
         OP,
         &[
             ("parts that do not all hold the same marks", mixed),
@@ -127,14 +126,14 @@ fn graph_input() -> Schema {
                 inner: Box::new(Schema::Tuple {
                     items: vec![
                         Schema::Tuple { items: vec![req_id(), clause_key()] },
-                        support::marks(),
+                        harness::marks(),
                     ],
                 }),
                 max_len: Some(4),
             },
         ),
         ("root", req_id()),
-        ("floor", support::marks()),
+        ("floor", harness::marks()),
     ])
 }
 
@@ -148,34 +147,9 @@ fn graph_input() -> Schema {
 #[test]
 #[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
 fn model_and_implementation_agree_on_rolling_a_graph_up() {
-    let scratch = harness::scratch("rollgraph");
     let op = "REQ-ROLLUP.open_is_lower_bound";
-    let implementation = harness::rust_runner(
-        "REQ-ROLLUP",
-        "open_is_lower_bound",
-        "crates/core/src/trace/rollup.rs::roll_up",
-        &scratch,
-    );
-    let model = harness::lean_runner(
-        "TraceLean.Rollup",
-        "TraceLean.Rollup.rollUp",
-        op,
-        &["nodes", "held", "root", "floor"],
-        &scratch,
-    );
 
-    let result = run(
-        op,
-        &graph_input(),
-        &model,
-        &implementation,
-        RunOptions { seed: 91, cases: 10_000 },
-    )
-    .expect("both runners answer");
-
-    support::agreed(&result);
-
-    let _ = std::fs::remove_dir_all(&scratch);
+    harness::agree(op, &graph_input(), 91, 10_000);
 }
 
 fn figure_input() -> Schema {
@@ -209,7 +183,7 @@ fn model_and_implementation_agree_on_writing_a_figure() {
         RunOptions { seed: 53, cases: 1_000 },
     )
     .expect("both runners answer");
-    support::agreed(&result);
+    harness::agreed(&result);
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
@@ -236,7 +210,7 @@ fn an_open_figure_is_always_marked() {
             open += 1;
         }
     }
-    support::covered(
+    harness::covered(
         "ARCH-HONEST.lower_bound_marked",
         &[("an open figure", open), ("an exact figure", exact), ("nothing counted", empty)],
     );
@@ -315,7 +289,7 @@ fn the_roll_up_is_a_function_of_the_graph_and_never_flatters_it() {
             deep += 1;
         }
     }
-    support::covered(
+    harness::covered(
         "REQ-ROLLUP.open_is_lower_bound",
         &[
             ("a roll-up that is a lower bound", inexact),
@@ -383,34 +357,9 @@ fn file_coverage_input() -> Schema {
 #[test]
 #[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
 fn model_and_implementation_agree_on_coverage_over_files() {
-    let scratch = harness::scratch("file-coverage");
     let op = "REQ-ROLLUP.untraced_counted";
-    let implementation = harness::rust_runner(
-        "REQ-ROLLUP",
-        "untraced_counted",
-        "crates/core/src/trace/rollup.rs::file_coverage",
-        &scratch,
-    );
-    let model = harness::lean_runner(
-        "TraceLean.Rollup",
-        "TraceLean.Rollup.fileCoverage",
-        op,
-        &["scanned", "claimed"],
-        &scratch,
-    );
 
-    let result = run(
-        op,
-        &file_coverage_input(),
-        &model,
-        &implementation,
-        RunOptions { seed: 127, cases: 2_000 },
-    )
-    .expect("both runners answer");
-
-    support::agreed(&result);
-
-    let _ = std::fs::remove_dir_all(&scratch);
+    harness::agree(op, &file_coverage_input(), 127, 2_000);
 }
 
 /// @tests REQ-ROLLUP.untraced_counted
@@ -452,7 +401,7 @@ fn a_claim_about_an_unscanned_file_never_raises_coverage() {
             untraced += 1;
         }
     }
-    support::covered(
+    harness::covered(
         "REQ-ROLLUP.untraced_counted",
         &[
             ("a claim about a file nothing scanned", phantom),

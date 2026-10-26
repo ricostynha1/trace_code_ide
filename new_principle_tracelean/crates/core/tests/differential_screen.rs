@@ -12,8 +12,6 @@ use tracelean_core::surface::screen::{
 };
 use tracelean_core::surface::view::Buffer;
 
-mod support;
-
 fn strukt(fields: &[(&str, Schema)]) -> Schema {
     Schema::Struct {
         fields: fields.iter().map(|(name, s)| (name.to_string(), s.clone())).collect(),
@@ -180,7 +178,7 @@ fn check(clause: &str, function: &str, entry: &str, arguments: &[&str], schema: 
     )
     .expect("both runners answer");
 
-    support::agreed(&result);
+    harness::agreed(&result);
 
     let _ = std::fs::remove_dir_all(&scratch);
 }
@@ -299,7 +297,7 @@ fn generation_reaches_every_way_a_screen_falls_apart() {
             twinned += 1;
         }
     }
-    support::covered(
+    harness::covered(
         "REQ-SCREEN.every_pane_is_opened",
         &[
             ("a coherent screen", whole),
@@ -360,7 +358,7 @@ fn generation_reaches_the_regions_that_cannot_be_divided_evenly() {
             assert!(tiles(rect, &placed), "{rect:?} not tiled by {placed:?}");
         }
     }
-    support::covered(
+    harness::covered(
         "REQ-SCREEN.layout_tiles_the_region",
         &[
             ("a region divided at least once", divided),
@@ -411,7 +409,7 @@ fn generation_reaches_showing_what_is_held_and_what_is_not() {
         assert_eq!(after.opened, s.opened);
         assert_eq!(pane_ids(&after.layout), pane_ids(&s.layout));
     }
-    support::covered(
+    harness::covered(
         "REQ-SCREEN.opened_outlives_shown",
         &[
             ("shown a buffer the session holds", held),
@@ -463,7 +461,7 @@ fn generation_reaches_opening_something_new_and_something_held() {
             assert_eq!(after.opened.len(), s.opened.len() + 1);
         }
     }
-    support::covered(
+    harness::covered(
         "REQ-SCREEN.station_opens_a_buffer",
         &[("opened something new", fresh), ("opened something already held", again)],
     );
@@ -512,7 +510,7 @@ fn generation_reaches_three_buffers_and_one_offered_twice() {
         assert_eq!(opened.opened.len(), unique);
         assert!(coherent(opened));
     }
-    support::covered(
+    harness::covered(
         "REQ-SCREEN.workbench_has_three_places",
         &[
             ("three different buffers", distinct),
@@ -561,7 +559,7 @@ fn generation_reaches_a_home_that_is_placed_and_one_that_is_gone() {
             assert_eq!(there, s.focus);
         }
     }
-    support::covered(
+    harness::covered(
         "REQ-SCREEN.buffer_goes_home",
         &[
             ("a kind whose home is placed", placed),
@@ -617,7 +615,7 @@ fn generation_reaches_splitting_a_pane_that_is_there_and_one_that_is_not() {
             }
         }
     }
-    support::covered(
+    harness::covered(
         "REQ-SCREEN.split_keeps_the_buffer",
         &[
             ("split a pane that exists", present),
@@ -674,7 +672,7 @@ fn generation_reaches_closing_the_last_buffer_and_one_of_many() {
             assert!(!panes(&after.layout).is_empty(), "no region without a pane");
         }
     }
-    support::covered(
+    harness::covered(
         "REQ-SCREEN.close_collapses_the_pane",
         &[
             ("closed one of several", several),
@@ -760,7 +758,7 @@ fn generation_reaches_the_floor_and_the_far_side_of_a_split() {
             assert!(before == after || *after >= 1, "a resize does not take a part below one");
         }
     }
-    support::covered(
+    harness::covered(
         "REQ-SCREEN.resize_moves_one_divider",
         &[
             ("grew the focused pane", grew),
@@ -858,7 +856,7 @@ fn generation_reaches_every_kind_of_arrangement() {
         };
         assert_eq!(after, directly, "an arrangement is what the one function does");
     }
-    support::covered(
+    harness::covered(
         "REQ-SCREEN.one_arrangement_path",
         &[
             ("split the focused pane", split),
@@ -936,7 +934,7 @@ fn generation_reaches_a_neighbour_an_edge_and_a_pane_nothing_places() {
             }
         }
     }
-    support::covered(
+    harness::covered(
         "REQ-SCREEN.focus_follows_geometry",
         &[
             ("moved to a neighbour", moved),
@@ -1007,7 +1005,7 @@ fn generation_reaches_an_empty_strip_and_a_name_outside_ascii() {
             );
         }
     }
-    support::covered(
+    harness::covered(
         "REQ-SCREEN.strip_is_the_opened_set",
         &[
             ("several buffers opened", several),
@@ -1043,5 +1041,5 @@ fn generation_asks_for_the_stations_from_every_kind_of_screen() {
         assert_eq!(stations(screen_of(value)), first);
         asked += 1;
     }
-    support::covered("REQ-SCREEN.stations_are_constant", &[("asked of some screen", asked)]);
+    harness::covered("REQ-SCREEN.stations_are_constant", &[("asked of some screen", asked)]);
 }

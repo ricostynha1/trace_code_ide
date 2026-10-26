@@ -2,10 +2,7 @@ mod harness;
 
 use std::collections::BTreeMap;
 
-use tracelean_core::drt::run::{run, RunOptions};
 use tracelean_core::drt::schema::Schema;
-
-mod support;
 
 fn strukt(fields: &[(&str, Schema)]) -> Schema {
     Schema::Struct { fields: fields.iter().map(|(k, v)| (k.to_string(), v.clone())).collect() }
@@ -46,7 +43,7 @@ fn buffer() -> Schema {
     let span = strukt(&[
         ("start", Schema::Nat { max: Some(8), edges: vec![0] }),
         ("stop", Schema::Nat { max: Some(12), edges: vec![0, 20] }),
-        ("role", support::role()),
+        ("role", harness::role()),
         ("actions", Schema::List { inner: Box::new(declared()), max_len: Some(2) }),
     ]);
     strukt(&[
@@ -102,33 +99,10 @@ fn keymap() -> Schema {
 #[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
 fn model_and_implementation_agree_on_what_a_position_offers() {
     let op = "REQ-ACT.everything_is_offered";
-    let scratch = harness::scratch("offer");
-    let implementation = harness::rust_runner(
-        "REQ-ACT",
-        "everything_is_offered",
-        "crates/core/src/surface/offer.rs::offered_owned",
-        &scratch,
-    );
-    let model = harness::lean_runner(
-        "TraceLean.Offer",
-        "TraceLean.Offer.offers",
-        op,
-        &["buffer", "offset", "keymap"],
-        &scratch,
-    );
     let schema = strukt(&[
         ("buffer", buffer()),
         ("offset", Schema::Nat { max: Some(10), edges: vec![0] }),
         ("keymap", keymap()),
     ]);
-    let result = run(
-        op,
-        &schema,
-        &model,
-        &implementation,
-        RunOptions { seed: 402, cases: 1_500 },
-    )
-    .expect("both runners answer");
-    support::agreed(&result);
-    let _ = std::fs::remove_dir_all(&scratch);
+    harness::agree(op, &schema, 402, 1_500);
 }

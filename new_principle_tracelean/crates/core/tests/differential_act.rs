@@ -5,8 +5,6 @@ use std::collections::BTreeMap;
 use tracelean_core::drt::run::{run, RunOptions};
 use tracelean_core::drt::schema::Schema;
 
-mod support;
-
 fn kind() -> Schema {
     let mut variants = BTreeMap::new();
     let path = Schema::Str { max_len: Some(4), examples: vec!["src".into(), "a.rs".into()] };
@@ -134,7 +132,7 @@ fn check(op: &str, function: &str, entry: &str, arguments: &[&str], schema: Sche
     )
     .expect("both runners answer");
 
-    support::agreed(&result);
+    harness::agreed(&result);
 
     let _ = std::fs::remove_dir_all(&scratch);
 }
@@ -262,6 +260,6 @@ fn a_key_and_a_button_reach_the_same_dispatch() {
             pairs += 1;
         }
     }
-    support::each_occurred(&[("a key and a row carrying the same action", pairs)]);
+    harness::each_occurred(&[("a key and a row carrying the same action", pairs)]);
     assert!(pairs > 15, "only {pairs} actions were reachable by key and by row");
 }

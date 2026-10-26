@@ -2,10 +2,7 @@ mod harness;
 
 use std::collections::BTreeMap;
 
-use tracelean_core::drt::run::{run, RunOptions};
 use tracelean_core::drt::schema::Schema;
-
-mod support;
 
 fn strukt(fields: &[(&str, Schema)]) -> Schema {
     Schema::Struct { fields: fields.iter().map(|(k, v)| (k.to_string(), v.clone())).collect() }
@@ -82,34 +79,9 @@ fn input_schema() -> Schema {
 #[test]
 #[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
 fn model_and_implementation_agree_on_a_history() {
-    let scratch = harness::scratch("tree");
     let op = "REQ-UNDO.jump_equivalence";
-    let implementation = harness::rust_runner(
-        "REQ-UNDO",
-        "jump_equivalence",
-        "crates/core/src/history/tree.rs::run_script",
-        &scratch,
-    );
-    let model = harness::lean_runner(
-        "TraceLean.Tree",
-        "TraceLean.Tree.runScript",
-        op,
-        &["base", "script"],
-        &scratch,
-    );
 
-    let result = run(
-        op,
-        &input_schema(),
-        &model,
-        &implementation,
-        RunOptions { seed: 77, cases: 3_000 },
-    )
-    .expect("both runners answer");
-
-    support::agreed(&result);
-
-    let _ = std::fs::remove_dir_all(&scratch);
+    harness::agree(op, &input_schema(), 77, 3_000);
 }
 
 /// @tests REQ-UNDO.jump_equivalence
@@ -141,7 +113,7 @@ fn travelling_and_replaying_agree_on_every_generated_history() {
             branched += 1;
         }
     }
-    support::covered(
+    harness::covered(
         "REQ-UNDO.jump_equivalence",
         &[
             ("a history with more than one node", nonempty),

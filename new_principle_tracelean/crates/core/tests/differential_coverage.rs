@@ -2,10 +2,7 @@ mod harness;
 
 use std::collections::BTreeMap;
 
-use tracelean_core::drt::run::{run, RunOptions};
 use tracelean_core::drt::schema::Schema;
-
-mod support;
 
 fn strukt(fields: &[(&str, Schema)]) -> Schema {
     Schema::Struct { fields: fields.iter().map(|(k, v)| (k.to_string(), v.clone())).collect() }
@@ -67,34 +64,9 @@ fn verdict_input() -> Schema {
 #[test]
 #[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
 fn model_and_implementation_agree_on_what_a_run_covered() {
-    let scratch = harness::scratch("coverage");
     let op = "REQ-DRT-COVER.floor_stated";
-    let implementation = harness::rust_runner(
-        "REQ-DRT-COVER",
-        "floor_stated",
-        "crates/core/src/drt/coverage.rs::verdict",
-        &scratch,
-    );
-    let model = harness::lean_runner(
-        "TraceLean.Coverage",
-        "TraceLean.Coverage.coverageVerdict",
-        op,
-        &["floors", "observed", "waivers"],
-        &scratch,
-    );
 
-    let result = run(
-        op,
-        &verdict_input(),
-        &model,
-        &implementation,
-        RunOptions { seed: 97, cases: 2_000 },
-    )
-    .expect("both runners answer");
-
-    support::agreed(&result);
-
-    let _ = std::fs::remove_dir_all(&scratch);
+    harness::agree(op, &verdict_input(), 97, 2_000);
 }
 
 /// @drt REQ-DRT-COVER.floor_unmet_is_not_pass
@@ -102,21 +74,7 @@ fn model_and_implementation_agree_on_what_a_run_covered() {
 #[test]
 #[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
 fn model_and_implementation_agree_that_an_uncovered_run_is_not_evidence() {
-    let scratch = harness::scratch("coverage-level");
     let op = "REQ-DRT-COVER.floor_unmet_is_not_pass";
-    let implementation = harness::rust_runner(
-        "REQ-DRT-COVER",
-        "floor_unmet_is_not_pass",
-        "crates/core/src/drt/coverage.rs::level",
-        &scratch,
-    );
-    let model = harness::lean_runner(
-        "TraceLean.Coverage",
-        "TraceLean.Coverage.coverageLevel",
-        op,
-        &["agreed", "verdict"],
-        &scratch,
-    );
 
     let mut variants: BTreeMap<String, Option<Box<Schema>>> = BTreeMap::new();
     let mut gap: BTreeMap<String, Option<Box<Schema>>> = BTreeMap::new();
@@ -144,18 +102,7 @@ fn model_and_implementation_agree_that_an_uncovered_run_is_not_evidence() {
         ("verdict", Schema::Enum { variants }),
     ]);
 
-    let result = run(
-        op,
-        &schema,
-        &model,
-        &implementation,
-        RunOptions { seed: 101, cases: 1_000 },
-    )
-    .expect("both runners answer");
-
-    support::agreed(&result);
-
-    let _ = std::fs::remove_dir_all(&scratch);
+    harness::agree(op, &schema, 101, 1_000);
 }
 
 /// @tests REQ-DRT-COVER.law_coverage
@@ -188,7 +135,7 @@ fn generation_reaches_every_coverage_verdict() {
         .iter()
         .map(|name| (*name, seen.get(name).copied().unwrap_or(0)))
         .collect();
-    support::covered("REQ-DRT-COVER.floor_stated", &counts);
+    harness::covered("REQ-DRT-COVER.floor_stated", &counts);
 }
 
 /// @drt REQ-DRT-COVER.waiver_unused_reported
@@ -196,31 +143,8 @@ fn generation_reaches_every_coverage_verdict() {
 #[test]
 #[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
 fn model_and_implementation_agree_on_which_waivers_are_unused() {
-    let scratch = harness::scratch("coverage-waivers");
     let op = "REQ-DRT-COVER.waiver_unused_reported";
-    let implementation = harness::rust_runner(
-        "REQ-DRT-COVER",
-        "waiver_unused_reported",
-        "crates/core/src/drt/coverage.rs::unused_waivers",
-        &scratch,
-    );
-    let model = harness::lean_runner(
-        "TraceLean.Coverage",
-        "TraceLean.Coverage.unusedWaivers",
-        op,
-        &["floors", "observed", "waivers"],
-        &scratch,
-    );
-    let result = run(
-        op,
-        &verdict_input(),
-        &model,
-        &implementation,
-        RunOptions { seed: 131, cases: 2_000 },
-    )
-    .expect("both runners answer");
-    support::agreed(&result);
-    let _ = std::fs::remove_dir_all(&scratch);
+    harness::agree(op, &verdict_input(), 131, 2_000);
 }
 
 /// @drt REQ-DRT-COVER.lines_run
@@ -228,21 +152,7 @@ fn model_and_implementation_agree_on_which_waivers_are_unused() {
 #[test]
 #[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
 fn model_and_implementation_agree_on_how_often_each_line_ran() {
-    let scratch = harness::scratch("coverage-lines");
     let op = "REQ-DRT-COVER.lines_run";
-    let implementation = harness::rust_runner(
-        "REQ-DRT-COVER",
-        "lines_run",
-        "crates/core/src/drt/coverage.rs::line_reach",
-        &scratch,
-    );
-    let model = harness::lean_runner(
-        "TraceLean.Coverage",
-        "TraceLean.Coverage.lineReach",
-        op,
-        &["hits", "item"],
-        &scratch,
-    );
     let line = || Schema::Nat { max: Some(5), edges: vec![0, 1] };
     let schema = strukt(&[
         (
@@ -270,16 +180,7 @@ fn model_and_implementation_agree_on_how_often_each_line_ran() {
             },
         ),
     ]);
-    let result = run(
-        op,
-        &schema,
-        &model,
-        &implementation,
-        RunOptions { seed: 137, cases: 2_000 },
-    )
-    .expect("both runners answer");
-    support::agreed(&result);
-    let _ = std::fs::remove_dir_all(&scratch);
+    harness::agree(op, &schema, 137, 2_000);
 }
 
 /// @drt REQ-DRT-COVER.classes_reached
@@ -287,34 +188,11 @@ fn model_and_implementation_agree_on_how_often_each_line_ran() {
 #[test]
 #[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
 fn model_and_implementation_agree_on_which_classes_a_stream_reaches() {
-    let scratch = harness::scratch("coverage-classes");
     let op = "REQ-DRT-COVER.classes_reached";
-    let implementation = harness::rust_runner(
-        "REQ-DRT-COVER",
-        "classes_reached",
-        "crates/core/src/drt/classes.rs::reached_shape",
-        &scratch,
-    );
-    let model = harness::lean_runner(
-        "TraceLean.Coverage",
-        "TraceLean.Coverage.reachedShape",
-        op,
-        &["shape", "seed", "cases"],
-        &scratch,
-    );
     let schema = strukt(&[
         ("shape", Schema::Nat { max: Some(9), edges: vec![0, 9] }),
         ("seed", Schema::Nat { max: Some(1_000), edges: vec![0, 1] }),
         ("cases", Schema::Nat { max: Some(30), edges: vec![0, 1] }),
     ]);
-    let result = run(
-        op,
-        &schema,
-        &model,
-        &implementation,
-        RunOptions { seed: 139, cases: 1_000 },
-    )
-    .expect("both runners answer");
-    support::agreed(&result);
-    let _ = std::fs::remove_dir_all(&scratch);
+    harness::agree(op, &schema, 139, 1_000);
 }

@@ -1,9 +1,6 @@
 mod harness;
 
-use tracelean_core::drt::run::{run, RunOptions};
 use tracelean_core::drt::schema::Schema;
-
-mod support;
 
 fn strukt(fields: &[(&str, Schema)]) -> Schema {
     Schema::Struct { fields: fields.iter().map(|(k, v)| (k.to_string(), v.clone())).collect() }
@@ -45,34 +42,9 @@ fn input_schema() -> Schema {
 #[test]
 #[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
 fn model_and_implementation_agree_on_document_state() {
-    let scratch = harness::scratch("doclink");
     let op = "REQ-DOCLINK.hash_moves_review";
-    let implementation = harness::rust_runner(
-        "REQ-DOCLINK",
-        "hash_moves_review",
-        "crates/core/src/trace/doclink.rs::state",
-        &scratch,
-    );
-    let model = harness::lean_runner(
-        "TraceLean.DocLink",
-        "TraceLean.DocLink.docState",
-        op,
-        &["link", "current"],
-        &scratch,
-    );
 
-    let result = run(
-        op,
-        &input_schema(),
-        &model,
-        &implementation,
-        RunOptions { seed: 5, cases: 2_000 },
-    )
-    .expect("both runners answer");
-
-    support::agreed(&result);
-
-    let _ = std::fs::remove_dir_all(&scratch);
+    harness::agree(op, &input_schema(), 5, 2_000);
 }
 
 /// @tests REQ-DRT-COVER.law_coverage
@@ -100,7 +72,7 @@ fn generation_reaches_all_three_states() {
         .iter()
         .map(|name| (*name, seen.get(name).copied().unwrap_or(0)))
         .collect();
-    support::covered("REQ-DOCLINK.hash_moves_review", &counts);
+    harness::covered("REQ-DOCLINK.hash_moves_review", &counts);
 }
 
 /// @drt REQ-DOCLINK.review_is_not_error
@@ -108,21 +80,7 @@ fn generation_reaches_all_three_states() {
 #[test]
 #[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
 fn model_and_implementation_agree_on_what_blocks() {
-    let scratch = harness::scratch("doclink-blocks");
     let op = "REQ-DOCLINK.review_is_not_error";
-    let implementation = harness::rust_runner(
-        "REQ-DOCLINK",
-        "review_is_not_error",
-        "crates/core/src/trace/doclink.rs::state_blocks",
-        &scratch,
-    );
-    let model = harness::lean_runner(
-        "TraceLean.DocLink",
-        "TraceLean.DocLink.docBlocks",
-        op,
-        &["state"],
-        &scratch,
-    );
 
     let mut variants: std::collections::BTreeMap<String, Option<Box<Schema>>> = Default::default();
     variants.insert("current".into(), None);
@@ -133,18 +91,7 @@ fn model_and_implementation_agree_on_what_blocks() {
     );
     let schema = strukt(&[("state", Schema::Enum { variants })]);
 
-    let result = run(
-        op,
-        &schema,
-        &model,
-        &implementation,
-        RunOptions { seed: 6, cases: 1_000 },
-    )
-    .expect("both runners answer");
-
-    support::agreed(&result);
-
-    let _ = std::fs::remove_dir_all(&scratch);
+    harness::agree(op, &schema, 6, 1_000);
 }
 
 /// @drt REQ-DOCLINK.declares_target
@@ -154,21 +101,7 @@ fn model_and_implementation_agree_on_what_blocks() {
 #[test]
 #[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
 fn model_and_implementation_agree_on_what_a_document_declares() {
-    let scratch = harness::scratch("declared");
     let op = "REQ-DOCLINK.declares_target";
-    let implementation = harness::rust_runner(
-        "REQ-DOCLINK",
-        "declares_target",
-        "crates/core/src/trace/doclink.rs::declared_in",
-        &scratch,
-    );
-    let model = harness::lean_runner(
-        "TraceLean.DocLink",
-        "TraceLean.DocLink.declaredIn",
-        op,
-        &["lines"],
-        &scratch,
-    );
 
     let line = Schema::Str {
         max_len: Some(0),
@@ -201,18 +134,7 @@ fn model_and_implementation_agree_on_what_a_document_declares() {
         .collect(),
     };
 
-    let result = run(
-        op,
-        &schema,
-        &model,
-        &implementation,
-        RunOptions { seed: 43, cases: 2_000 },
-    )
-    .expect("both runners answer");
-
-    support::agreed(&result);
-
-    let _ = std::fs::remove_dir_all(&scratch);
+    harness::agree(op, &schema, 43, 2_000);
 }
 
 /// @drt REQ-DOCLINK.confirmation_is_human
@@ -220,21 +142,7 @@ fn model_and_implementation_agree_on_what_a_document_declares() {
 #[test]
 #[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
 fn model_and_implementation_agree_on_what_confirming_would_write() {
-    let scratch = harness::scratch("recorded");
     let op = "REQ-DOCLINK.confirmation_is_human";
-    let implementation = harness::rust_runner(
-        "REQ-DOCLINK",
-        "confirmation_is_human",
-        "crates/core/src/trace/doclink.rs::recorded_of",
-        &scratch,
-    );
-    let model = harness::lean_runner(
-        "TraceLean.DocLink",
-        "TraceLean.DocLink.recordedFrontmatter",
-        op,
-        &["targets", "current"],
-        &scratch,
-    );
 
     let target = Schema::Str {
         max_len: Some(1),
@@ -266,18 +174,7 @@ fn model_and_implementation_agree_on_what_confirming_would_write() {
         .collect(),
     };
 
-    let result = run(
-        op,
-        &schema,
-        &model,
-        &implementation,
-        RunOptions { seed: 47, cases: 2_000 },
-    )
-    .expect("both runners answer");
-
-    support::agreed(&result);
-
-    let _ = std::fs::remove_dir_all(&scratch);
+    harness::agree(op, &schema, 47, 2_000);
 }
 
 /// @tests REQ-DOCLINK.review_is_not_error
@@ -320,7 +217,7 @@ fn generation_reaches_every_state_and_only_one_of_them_blocks() {
             }
         }
     }
-    support::covered(
+    harness::covered(
         "REQ-DOCLINK.review_is_not_error",
         &[
             ("a current document", current),
@@ -390,7 +287,7 @@ fn generation_reaches_frontmatter_worth_writing() {
             unknown += 1;
         }
     }
-    support::covered(
+    harness::covered(
         "REQ-DOCLINK.confirmation_is_human",
         &[
             ("more than one target", several),

@@ -2,10 +2,7 @@ mod harness;
 
 use std::collections::BTreeMap;
 
-use tracelean_core::drt::run::{run, RunOptions};
 use tracelean_core::drt::schema::Schema;
-
-mod support;
 
 fn strukt(fields: &[(&str, Schema)]) -> Schema {
     Schema::Struct { fields: fields.iter().map(|(k, v)| (k.to_string(), v.clone())).collect() }
@@ -86,34 +83,9 @@ fn validate_input() -> Schema {
 #[test]
 #[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
 fn model_and_implementation_agree_on_what_is_wrong_with_a_keymap() {
-    let scratch = harness::scratch("validate");
     let op = "REQ-MYTH.modes_defined";
-    let implementation = harness::rust_runner(
-        "REQ-MYTH",
-        "modes_defined",
-        "crates/core/src/surface/keymap.rs::validate_of",
-        &scratch,
-    );
-    let model = harness::lean_runner(
-        "TraceLean.Keymap",
-        "TraceLean.Keymap.validate",
-        op,
-        &["keymap", "actions"],
-        &scratch,
-    );
 
-    let result = run(
-        op,
-        &validate_input(),
-        &model,
-        &implementation,
-        RunOptions { seed: 24, cases: 3_000 },
-    )
-    .expect("both runners answer");
-
-    support::agreed(&result);
-
-    let _ = std::fs::remove_dir_all(&scratch);
+    harness::agree(op, &validate_input(), 24, 3_000);
 }
 
 /// @drt REQ-MYTH.whichkey_is_a_query
@@ -121,34 +93,9 @@ fn model_and_implementation_agree_on_what_is_wrong_with_a_keymap() {
 #[test]
 #[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
 fn model_and_implementation_agree_on_which_keys_are_available() {
-    let scratch = harness::scratch("whichkey");
     let op = "REQ-MYTH.whichkey_is_a_query";
-    let implementation = harness::rust_runner(
-        "REQ-MYTH",
-        "whichkey_is_a_query",
-        "crates/core/src/surface/keymap.rs::which_key_of",
-        &scratch,
-    );
-    let model = harness::lean_runner(
-        "TraceLean.Keymap",
-        "TraceLean.Keymap.whichKey",
-        op,
-        &["keymap", "mode"],
-        &scratch,
-    );
 
-    let result = run(
-        op,
-        &strukt(&[("keymap", keymap()), ("mode", mode_name())]),
-        &model,
-        &implementation,
-        RunOptions { seed: 25, cases: 2_000 },
-    )
-    .expect("both runners answer");
-
-    support::agreed(&result);
-
-    let _ = std::fs::remove_dir_all(&scratch);
+    harness::agree(op, &strukt(&[("keymap", keymap()), ("mode", mode_name())]), 25, 2_000);
 }
 
 /// @tests REQ-MYTH.whichkey_is_a_query
@@ -205,7 +152,7 @@ fn generation_reaches_every_problem_and_the_bar_matches_the_machine() {
     .iter()
     .map(|name| (*name, seen.get(name).copied().unwrap_or(0)))
     .collect();
-    support::covered("REQ-MYTH.modes_defined", &counts);
+    harness::covered("REQ-MYTH.modes_defined", &counts);
 }
 
 /// @tests REQ-MYTH.whichkey_is_a_query
@@ -242,7 +189,7 @@ fn generation_reaches_bars_that_offer_every_kind_of_key() {
             offering += 1;
         }
     }
-    support::covered(
+    harness::covered(
         "REQ-MYTH.whichkey_is_a_query",
         &[
             ("a mode offering at least one key", offering),

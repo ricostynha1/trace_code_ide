@@ -1,11 +1,9 @@
 mod harness;
-mod support;
 
 use std::collections::BTreeMap;
 
 use tracelean_core::drt::derive::{pair, Paired, Structs, Ty};
 use tracelean_core::drt::gen;
-use tracelean_core::drt::run::{run, RunOptions};
 use tracelean_core::drt::schema::Schema;
 
 fn small(examples: &[&str]) -> Schema {
@@ -68,25 +66,7 @@ fn input() -> Schema {
 #[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
 fn model_and_implementation_agree_on_how_two_types_pair() {
     let op = "REQ-DRT-SCHEMA.outside_is_error";
-    let scratch = harness::scratch("derive");
-    let implementation = harness::rust_runner_with_params(
-        "REQ-DRT-SCHEMA",
-        "outside_is_error",
-        "crates/core/src/drt/derive.rs::pair",
-        &[("leanStructs", "lean_structs"), ("rustStructs", "rust_structs")],
-        &scratch,
-    );
-    let model = harness::lean_runner(
-        "TraceLean.Derive",
-        "TraceLean.Derive.pair",
-        op,
-        &["lean", "rust", "leanStructs", "rustStructs", "fuel"],
-        &scratch,
-    );
-    let result = run(op, &input(), &model, &implementation, RunOptions { seed: 321, cases: 20_000 })
-        .expect("both runners answer");
-    support::agreed(&result);
-    let _ = std::fs::remove_dir_all(&scratch);
+    harness::agree(op, &input(), 321, 20_000);
 }
 
 /// @tests REQ-DRT-COVER.law_coverage
@@ -110,7 +90,7 @@ fn generation_reaches_pairs_structures_and_mismatches() {
             Paired::Err(_) => refused += 1,
         }
     }
-    support::covered(
+    harness::covered(
         "REQ-DRT-SCHEMA.outside_is_error",
         &[("paired", paired), ("a structure paired", structure), ("a mismatch reported", refused)],
     );
@@ -160,24 +140,7 @@ fn signatures() -> Schema {
 #[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
 fn model_and_implementation_agree_on_how_two_signatures_pair() {
     let op = "REQ-DRT-SCHEMA.derived_from_both";
-    let scratch = harness::scratch("derive-signatures");
-    let implementation = harness::rust_runner(
-        "REQ-DRT-SCHEMA",
-        "derived_from_both",
-        "crates/core/src/drt/derive.rs::derive_of",
-        &scratch,
-    );
-    let model = harness::lean_runner(
-        "TraceLean.Derive",
-        "TraceLean.Derive.derive",
-        op,
-        &["model", "implementation", "lean", "rust"],
-        &scratch,
-    );
-    let result = run(op, &signatures(), &model, &implementation, RunOptions { seed: 322, cases: 60_000 })
-        .expect("both runners answer");
-    support::agreed(&result);
-    let _ = std::fs::remove_dir_all(&scratch);
+    harness::agree(op, &signatures(), 322, 60_000);
 }
 
 /// @tests REQ-DRT-COVER.law_coverage
@@ -212,7 +175,7 @@ fn generation_reaches_every_way_two_signatures_pair_or_not() {
             }
         }
     }
-    support::covered(
+    harness::covered(
         "REQ-DRT-SCHEMA.derived_from_both",
         &[
             ("every argument paired", counts[0]),

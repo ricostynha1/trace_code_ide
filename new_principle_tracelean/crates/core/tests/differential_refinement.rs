@@ -1,9 +1,6 @@
 mod harness;
 
-use tracelean_core::drt::run::{run, RunOptions};
 use tracelean_core::drt::schema::Schema;
-
-mod support;
 
 fn strukt(fields: &[(&str, Schema)]) -> Schema {
     Schema::Struct { fields: fields.iter().map(|(k, v)| (k.to_string(), v.clone())).collect() }
@@ -41,34 +38,9 @@ fn input_schema() -> Schema {
 #[test]
 #[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
 fn model_and_implementation_agree_on_the_refinement_graph() {
-    let scratch = harness::scratch("refinement");
     let op = "REQ-REQDOC.refines_dag";
-    let implementation = harness::rust_runner(
-        "REQ-REQDOC",
-        "refines_dag",
-        "crates/core/src/trace/requirement.rs::graph_report",
-        &scratch,
-    );
-    let model = harness::lean_runner(
-        "TraceLean.Refinement",
-        "TraceLean.Refinement.graphReport",
-        op,
-        &["edges"],
-        &scratch,
-    );
 
-    let result = run(
-        op,
-        &input_schema(),
-        &model,
-        &implementation,
-        RunOptions { seed: 71, cases: 3_000 },
-    )
-    .expect("both runners answer");
-
-    support::agreed(&result);
-
-    let _ = std::fs::remove_dir_all(&scratch);
+    harness::agree(op, &input_schema(), 71, 3_000);
 }
 
 /// @tests REQ-REQDOC.refines_dag
@@ -110,7 +82,7 @@ fn generation_reaches_cycles_dangling_parents_and_clean_graphs() {
             assert!(graph.contains_key(id), "{id} is not a declared requirement");
         }
     }
-    support::covered(
+    harness::covered(
         "REQ-REQDOC.refines_dag",
         &[
             ("a graph with a cycle", cyclic),

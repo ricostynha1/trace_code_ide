@@ -5,8 +5,6 @@ use std::collections::BTreeMap;
 use tracelean_core::drt::run::{run, RunOptions};
 use tracelean_core::drt::schema::Schema;
 
-mod support;
-
 fn strukt(fields: &[(&str, Schema)]) -> Schema {
     Schema::Struct { fields: fields.iter().map(|(k, v)| (k.to_string(), v.clone())).collect() }
 }
@@ -82,35 +80,9 @@ fn judges_schema() -> Schema {
 #[test]
 #[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
 fn model_and_implementation_agree_on_what_a_judgement_records() {
-    let scratch = harness::scratch("judge");
     let op = "REQ-JUDGE.caps_at_judgement";
-    let implementation = harness::rust_runner_with_params(
-        "REQ-JUDGE",
-        "caps_at_judgement",
-        "crates/core/src/judge.rs::record",
-        &[("linkHash", "link_hash")],
-        &scratch,
-    );
-    let model = harness::lean_runner(
-        "TraceLean.Judge",
-        "TraceLean.Judge.record",
-        op,
-        &["material", "judgement", "judges", "linkHash"],
-        &scratch,
-    );
 
-    let result = run(
-        op,
-        &input_schema(),
-        &model,
-        &implementation,
-        RunOptions { seed: 17, cases: 2_000 },
-    )
-    .expect("both runners answer");
-
-    support::agreed(&result);
-
-    let _ = std::fs::remove_dir_all(&scratch);
+    harness::agree(op, &input_schema(), 17, 2_000);
 }
 
 /// @tests REQ-JUDGE.caps_at_judgement
@@ -163,7 +135,7 @@ fn generation_reaches_every_verdict_and_none_exceeds_l2() {
         .iter()
         .map(|name| (*name, seen.get(name).copied().unwrap_or(0)))
         .collect();
-    support::covered("REQ-JUDGE.caps_at_judgement", &counts);
+    harness::covered("REQ-JUDGE.caps_at_judgement", &counts);
 }
 
 /// @drt REQ-JUDGE.invalidated_by_change
@@ -171,21 +143,7 @@ fn generation_reaches_every_verdict_and_none_exceeds_l2() {
 #[test]
 #[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
 fn model_and_implementation_agree_on_when_a_judgement_lapses() {
-    let scratch = harness::scratch("still-applies");
     let op = "REQ-JUDGE.invalidated_by_change";
-    let implementation = harness::rust_runner(
-        "REQ-JUDGE",
-        "invalidated_by_change",
-        "crates/core/src/judge.rs::still_applies_to",
-        &scratch,
-    );
-    let model = harness::lean_runner(
-        "TraceLean.Judge",
-        "TraceLean.Judge.stillApplies",
-        op,
-        &["judgement", "material"],
-        &scratch,
-    );
 
     let Schema::Struct { fields } = input_schema() else { unreachable!() };
     let schema = Schema::Struct {
@@ -195,18 +153,7 @@ fn model_and_implementation_agree_on_when_a_judgement_lapses() {
             .collect(),
     };
 
-    let result = run(
-        op,
-        &schema,
-        &model,
-        &implementation,
-        RunOptions { seed: 18, cases: 2_000 },
-    )
-    .expect("both runners answer");
-
-    support::agreed(&result);
-
-    let _ = std::fs::remove_dir_all(&scratch);
+    harness::agree(op, &schema, 18, 2_000);
 }
 
 fn ceiling_input() -> Schema {
@@ -243,34 +190,9 @@ fn ceiling_input() -> Schema {
 #[test]
 #[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
 fn model_and_implementation_agree_on_what_each_backend_can_establish() {
-    let scratch = harness::scratch("ceiling");
     let op = "REQ-EVID.judgement_caps";
-    let implementation = harness::rust_runner(
-        "REQ-EVID",
-        "judgement_caps",
-        "crates/core/src/trace/record.rs::detail_ceiling",
-        &scratch,
-    );
-    let model = harness::lean_runner(
-        "TraceLean.Judge",
-        "TraceLean.Judge.Detail.ceiling",
-        op,
-        &["detail"],
-        &scratch,
-    );
 
-    let result = run(
-        op,
-        &ceiling_input(),
-        &model,
-        &implementation,
-        RunOptions { seed: 19, cases: 1_000 },
-    )
-    .expect("both runners answer");
-
-    support::agreed(&result);
-
-    let _ = std::fs::remove_dir_all(&scratch);
+    harness::agree(op, &ceiling_input(), 19, 1_000);
 }
 
 /// @drt REQ-JUDGE.prompt_exported
@@ -303,7 +225,7 @@ fn model_and_implementation_agree_on_the_prompt() {
     )
     .expect("both runners answer");
 
-    support::agreed(&result);
+    harness::agreed(&result);
 
     let _ = std::fs::remove_dir_all(&scratch);
 }
@@ -339,7 +261,7 @@ fn generation_reaches_prompts_with_and_without_a_divergence() {
             _ => without += 1,
         }
     }
-    support::covered(
+    harness::covered(
         "REQ-JUDGE.prompt_exported",
         &[("a prompt carrying a divergence", with), ("a prompt carrying none", without)],
     );
@@ -375,7 +297,7 @@ fn generation_reaches_every_backend_and_none_exceeds_its_method() {
             }
         }
     }
-    support::covered(
+    harness::covered(
         "REQ-EVID.judgement_caps",
         &[
             ("a judgement's ceiling", judged),
@@ -424,7 +346,7 @@ fn model_and_implementation_agree_on_how_a_judgement_reads() {
         RunOptions { seed: 23, cases: 1_000 },
     )
     .expect("both runners answer");
-    support::agreed(&result);
+    harness::agreed(&result);
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
@@ -452,7 +374,7 @@ fn generation_reaches_every_kind_of_judgement_shown() {
             delegated += 1;
         }
     }
-    support::covered(
+    harness::covered(
         "REQ-JUDGE.judgement_shown",
         &[
             ("an agreement", agreed),
@@ -475,31 +397,8 @@ fn rests_on_input() -> Schema {
 #[test]
 #[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
 fn model_and_implementation_agree_on_what_a_judgement_rests_on() {
-    let scratch = harness::scratch("rests-on");
     let op = "REQ-JUDGE.structural_judged";
-    let implementation = harness::rust_runner(
-        "REQ-JUDGE",
-        "structural_judged",
-        "crates/core/src/trace/material.rs::rests_on",
-        &scratch,
-    );
-    let model = harness::lean_runner(
-        "TraceLean.Judge",
-        "TraceLean.Judge.restsOn",
-        op,
-        &["models", "checks"],
-        &scratch,
-    );
-    let result = run(
-        op,
-        &rests_on_input(),
-        &model,
-        &implementation,
-        RunOptions { seed: 67, cases: 1_000 },
-    )
-    .expect("both runners answer");
-    support::agreed(&result);
-    let _ = std::fs::remove_dir_all(&scratch);
+    harness::agree(op, &rests_on_input(), 67, 1_000);
 }
 
 /// @tests REQ-JUDGE.structural_judged
@@ -532,7 +431,7 @@ fn generation_reaches_clauses_judged_against_a_test() {
             repeated += 1;
         }
     }
-    support::covered(
+    harness::covered(
         "REQ-JUDGE.structural_judged",
         &[
             ("checked only structurally", structural),

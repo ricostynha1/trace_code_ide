@@ -1,9 +1,7 @@
 mod harness;
-mod support;
 
 use std::collections::BTreeMap;
 
-use tracelean_core::drt::run::{run, RunOptions};
 use tracelean_core::drt::schema::Schema;
 
 fn strukt(fields: &[(&str, Schema)]) -> Schema {
@@ -84,34 +82,9 @@ fn input_schema() -> Schema {
 #[test]
 #[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
 fn model_and_implementation_agree_on_what_a_run_got_wrong() {
-    let scratch = harness::scratch("effects");
     let op = "REQ-OBS.workspace_is_a_copy";
-    let implementation = harness::rust_runner(
-        "REQ-OBS",
-        "workspace_is_a_copy",
-        "crates/core/src/observe/effects.rs::run_violations",
-        &scratch,
-    );
-    let model = harness::lean_runner(
-        "TraceLean.Effects",
-        "TraceLean.Effects.runViolations",
-        op,
-        &["witness"],
-        &scratch,
-    );
 
-    let result = run(
-        op,
-        &input_schema(),
-        &model,
-        &implementation,
-        RunOptions { seed: 53, cases: 2_000 },
-    )
-    .expect("both runners answer");
-
-    support::agreed(&result);
-
-    let _ = std::fs::remove_dir_all(&scratch);
+    harness::agree(op, &input_schema(), 53, 2_000);
 }
 
 /// @tests REQ-DRT-COVER.law_coverage
@@ -148,7 +121,7 @@ fn generation_reaches_every_violation() {
         }
     }
 
-    support::covered(
+    harness::covered(
         "REQ-OBS.workspace_is_a_copy",
         &[
             ("missing from copy", missing),

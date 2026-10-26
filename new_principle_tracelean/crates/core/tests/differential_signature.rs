@@ -1,9 +1,6 @@
 mod harness;
 
-use tracelean_core::drt::run::{run, RunOptions};
 use tracelean_core::drt::schema::Schema;
-
-mod support;
 
 fn strukt(fields: &[(&str, Schema)]) -> Schema {
     Schema::Struct { fields: fields.iter().map(|(k, v)| (k.to_string(), v.clone())).collect() }
@@ -65,34 +62,9 @@ fn input_schema() -> Schema {
 #[test]
 #[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
 fn model_and_implementation_agree_on_a_signature() {
-    let scratch = harness::scratch("signature");
     let op = "REQ-DRT-RUST.params_from_source";
-    let implementation = harness::rust_runner(
-        "REQ-DRT-RUST",
-        "params_from_source",
-        "crates/core/src/drt/signature.rs::parameters_of",
-        &scratch,
-    );
-    let model = harness::lean_runner(
-        "TraceLean.Signature",
-        "TraceLean.Signature.parameters",
-        op,
-        &["source", "symbol"],
-        &scratch,
-    );
 
-    let result = run(
-        op,
-        &input_schema(),
-        &model,
-        &implementation,
-        RunOptions { seed: 64, cases: 4_000 },
-    )
-    .expect("both runners answer");
-
-    support::agreed(&result);
-
-    let _ = std::fs::remove_dir_all(&scratch);
+    harness::agree(op, &input_schema(), 64, 4_000);
 }
 
 /// @tests REQ-DRT-COVER.law_coverage
@@ -123,7 +95,7 @@ fn generation_reaches_every_answer_the_parser_can_give() {
             None => absent += 1,
         }
     }
-    support::covered(
+    harness::covered(
         "REQ-DRT-RUST.params_from_source",
         &[
             ("a signature yielding names", named),

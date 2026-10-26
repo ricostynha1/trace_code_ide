@@ -1,10 +1,10 @@
+mod harness;
 use tracelean_core::drt::frontend::{capture, check, Screen, Verdict};
 use tracelean_core::drt::run::RunnerSpec;
 use tracelean_core::surface::view::{
     directory_buffer, Breach, Buffer, BufferKind, Role, Span,
 };
 
-mod support;
 
 fn frontend(flags: &[&str]) -> RunnerSpec {
     let mut cmd = vec![env!("CARGO_BIN_EXE_tracelean-render-text").to_string()];
@@ -210,7 +210,7 @@ fn the_buffers_shown_reach_the_shapes_that_break_renderers() {
         }
     }
     assert_eq!(kinds.len(), 5, "not every buffer kind was shown");
-    support::covered(
+    harness::covered(
         "REQ-VIEW.frontend_adds_nothing",
         &[
             ("a buffer with no text at all", empty),

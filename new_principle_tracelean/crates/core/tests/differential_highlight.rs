@@ -2,10 +2,7 @@ mod harness;
 
 use std::collections::BTreeMap;
 
-use tracelean_core::drt::run::{run, RunOptions};
 use tracelean_core::drt::schema::Schema;
-
-mod support;
 
 const FRAGMENTS: &[&str] = &[
     "REQ-SHOW", "REQ-DRT-PROTO.ops_unique", "ARCH-NO-DRIVING", "REQ-X", "R-X", "REQ-", "REQ-Xyz",
@@ -32,30 +29,7 @@ fn comment() -> Schema {
 #[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
 fn model_and_implementation_agree_on_the_names_a_comment_holds() {
     let op = "REQ-SHOW.references_are_links";
-    let scratch = harness::scratch("highlight-names");
-    let implementation = harness::rust_runner(
-        "REQ-SHOW",
-        "references_are_links",
-        "crates/core/src/surface/highlight.rs::requirement_names",
-        &scratch,
-    );
-    let model = harness::lean_runner(
-        "TraceLean.Highlight",
-        "TraceLean.Highlight.requirementNames",
-        op,
-        &["text", "start", "stop"],
-        &scratch,
-    );
-    let result = run(
-        op,
-        &comment(),
-        &model,
-        &implementation,
-        RunOptions { seed: 401, cases: 2_000 },
-    )
-    .expect("both runners answer");
-    support::agreed(&result);
-    let _ = std::fs::remove_dir_all(&scratch);
+    harness::agree(op, &comment(), 401, 2_000);
 }
 
 /// @drt REQ-SHOW.findings_lead_somewhere
@@ -64,20 +38,6 @@ fn model_and_implementation_agree_on_the_names_a_comment_holds() {
 #[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
 fn model_and_implementation_agree_on_where_findings_lead() {
     let op = "REQ-SHOW.findings_lead_somewhere";
-    let scratch = harness::scratch("findings-view");
-    let implementation = harness::rust_runner(
-        "REQ-SHOW",
-        "findings_lead_somewhere",
-        "crates/core/src/surface/findings_view.rs::findings_view_owned",
-        &scratch,
-    );
-    let model = harness::lean_runner(
-        "TraceLean.FindingsView",
-        "TraceLean.FindingsView.findingsView",
-        op,
-        &["title", "found"],
-        &scratch,
-    );
     let Schema::Struct { fields: comment } = comment() else { unreachable!() };
     let mut found = BTreeMap::new();
     found.insert("kind".to_string(), Schema::Str { max_len: Some(0), examples: vec!["unmodeled".into(), "".into()] });
@@ -87,14 +47,5 @@ fn model_and_implementation_agree_on_where_findings_lead() {
     let mut fields = BTreeMap::new();
     fields.insert("title".to_string(), Schema::Str { max_len: Some(0), examples: vec!["findings".into(), "check".into()] });
     fields.insert("found".to_string(), Schema::List { inner: Box::new(Schema::Struct { fields: found }), max_len: Some(3) });
-    let result = run(
-        op,
-        &Schema::Struct { fields },
-        &model,
-        &implementation,
-        RunOptions { seed: 403, cases: 1_500 },
-    )
-    .expect("both runners answer");
-    support::agreed(&result);
-    let _ = std::fs::remove_dir_all(&scratch);
+    harness::agree(op, &Schema::Struct { fields }, 403, 1_500);
 }

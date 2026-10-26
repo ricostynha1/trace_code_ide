@@ -11,8 +11,6 @@ use tracelean_core::drt::run::{run, RunOptions, RunnerSpec};
 use tracelean_core::drt::schema::Schema;
 use tracelean_core::drt::{Binding, CallSpec};
 
-mod support;
-
 const OP: &str = "REQ-EVID.mark_per_bond";
 
 fn project_root() -> PathBuf {
@@ -96,7 +94,7 @@ fn model_and_implementation_agree_on_the_marks() {
     let options = RunOptions { seed: 7, cases: 2_000 };
     let result = run(OP, &input_schema(), &model, &implementation, options).expect("both runners answer");
 
-    support::agreed(&result);
+    harness::agreed(&result);
     assert_eq!(result.cases, 2_000);
     assert_eq!(result.seed, 7);
 
@@ -150,7 +148,7 @@ fn a_real_disagreement_is_found_and_reduced() {
     let model = build_lean_runner(&root, &scratch);
 
     let mut fields = BTreeMap::new();
-    fields.insert("marks".to_string(), support::marks());
+    fields.insert("marks".to_string(), harness::marks());
     let result = run(
         "REQ-EVID.marks_written",
         &Schema::Struct { fields },
@@ -193,7 +191,7 @@ fn generation_reaches_marks_held_out_of_order() {
             skipped += 1;
         }
     }
-    support::covered(
+    harness::covered(
         OP,
         &[("exercised all three bonds", full), ("a mark held without the one before it", skipped)],
     );
@@ -201,7 +199,7 @@ fn generation_reaches_marks_held_out_of_order() {
 
 fn written_input() -> Schema {
     let mut fields = BTreeMap::new();
-    fields.insert("marks".to_string(), support::marks());
+    fields.insert("marks".to_string(), harness::marks());
     Schema::Struct { fields }
 }
 
@@ -225,7 +223,7 @@ fn model_and_implementation_agree_on_writing_the_marks() {
     )
     .expect("both runners answer");
 
-    support::agreed(&result);
+    harness::agreed(&result);
 
     let _ = std::fs::remove_dir_all(&scratch);
 }
@@ -255,7 +253,7 @@ fn model_and_implementation_agree_on_a_structural_clause() {
     )
     .expect("both runners answer");
 
-    support::agreed(&result);
+    harness::agreed(&result);
 
     let _ = std::fs::remove_dir_all(&scratch);
 }
@@ -283,7 +281,7 @@ fn generation_reaches_structural_clauses_holding_what_cannot_apply() {
             judged += 1;
         }
     }
-    support::covered(
+    harness::covered(
         "REQ-EVID.structural_not_applicable",
         &[
             ("a test or proof held, and dropped", dropped),
@@ -321,7 +319,7 @@ fn generation_reaches_gaps_between_marks() {
             neither += 1;
         }
     }
-    support::covered(
+    harness::covered(
         "REQ-EVID.marks_written",
         &[
             ("marks with a gap between two held", gap),

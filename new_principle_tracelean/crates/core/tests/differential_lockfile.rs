@@ -1,9 +1,6 @@
 mod harness;
 
-use tracelean_core::drt::run::{run, RunOptions};
 use tracelean_core::drt::schema::Schema;
-
-mod support;
 
 fn strukt(fields: &[(&str, Schema)]) -> Schema {
     Schema::Struct { fields: fields.iter().map(|(k, v)| (k.to_string(), v.clone())).collect() }
@@ -39,34 +36,9 @@ fn input_schema() -> Schema {
 #[test]
 #[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
 fn model_and_implementation_agree_on_the_order_links_are_written_in() {
-    let scratch = harness::scratch("lockfile");
     let op = "REQ-LOCK.deterministic_bytes";
-    let implementation = harness::rust_runner(
-        "REQ-LOCK",
-        "deterministic_bytes",
-        "crates/core/src/trace/lockfile.rs::ordered_links",
-        &scratch,
-    );
-    let model = harness::lean_runner(
-        "TraceLean.Lockfile",
-        "TraceLean.Lockfile.orderedLinks",
-        op,
-        &["links"],
-        &scratch,
-    );
 
-    let result = run(
-        op,
-        &input_schema(),
-        &model,
-        &implementation,
-        RunOptions { seed: 12, cases: 2_000 },
-    )
-    .expect("both runners answer");
-
-    support::agreed(&result);
-
-    let _ = std::fs::remove_dir_all(&scratch);
+    harness::agree(op, &input_schema(), 12, 2_000);
 }
 
 /// @tests REQ-LOCK.deterministic_bytes
@@ -105,7 +77,7 @@ fn the_order_is_a_function_of_the_links_alone() {
             }
         }
     }
-    support::covered(
+    harness::covered(
         "REQ-LOCK.deterministic_bytes",
         &[("two links agreeing up to their hashes", tied)],
     );
@@ -116,21 +88,7 @@ fn the_order_is_a_function_of_the_links_alone() {
 #[test]
 #[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
 fn model_and_implementation_agree_on_which_versions_are_readable() {
-    let scratch = harness::scratch("lock-version");
     let op = "REQ-LOCK.version_stamped";
-    let implementation = harness::rust_runner(
-        "REQ-LOCK",
-        "version_stamped",
-        "crates/core/src/trace/lockfile.rs::version_verdict",
-        &scratch,
-    );
-    let model = harness::lean_runner(
-        "TraceLean.Lockfile",
-        "TraceLean.Lockfile.versionVerdict",
-        op,
-        &["version"],
-        &scratch,
-    );
 
     let schema = Schema::Struct {
         fields: [(
@@ -143,18 +101,7 @@ fn model_and_implementation_agree_on_which_versions_are_readable() {
         .collect(),
     };
 
-    let result = run(
-        op,
-        &schema,
-        &model,
-        &implementation,
-        RunOptions { seed: 11, cases: 2_000 },
-    )
-    .expect("both runners answer");
-
-    support::agreed(&result);
-
-    let _ = std::fs::remove_dir_all(&scratch);
+    harness::agree(op, &schema, 11, 2_000);
 }
 
 /// @drt REQ-LOCK.evidence_preserved
@@ -162,34 +109,9 @@ fn model_and_implementation_agree_on_which_versions_are_readable() {
 #[test]
 #[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
 fn model_and_implementation_agree_that_evidence_passes_through() {
-    let scratch = harness::scratch("lock-evidence");
     let op = "REQ-LOCK.evidence_preserved";
-    let implementation = harness::rust_runner(
-        "REQ-LOCK",
-        "evidence_preserved",
-        "crates/core/src/trace/lockfile.rs::carried_evidence",
-        &scratch,
-    );
-    let model = harness::lean_runner(
-        "TraceLean.Lockfile",
-        "TraceLean.Lockfile.carriedEvidence",
-        op,
-        &["evidence"],
-        &scratch,
-    );
 
-    let result = run(
-        op,
-        &evidence_list_schema(),
-        &model,
-        &implementation,
-        RunOptions { seed: 13, cases: 2_000 },
-    )
-    .expect("both runners answer");
-
-    support::agreed(&result);
-
-    let _ = std::fs::remove_dir_all(&scratch);
+    harness::agree(op, &evidence_list_schema(), 13, 2_000);
 }
 
 fn evidence_list_schema() -> Schema {
@@ -313,7 +235,7 @@ fn generation_reaches_every_backend_and_rendering_reads_nothing() {
             }
         }
     }
-    support::covered(
+    harness::covered(
         "REQ-LOCK.evidence_preserved",
         &[
             ("a judged record", judge),
@@ -372,21 +294,7 @@ fn the_bytes_move_when_the_repository_moves_and_not_otherwise() {
 #[test]
 #[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
 fn model_and_implementation_agree_on_whether_a_record_can_be_reproduced() {
-    let scratch = harness::scratch("reproducibility");
     let op = "REQ-EVID.record_reproducible";
-    let implementation = harness::rust_runner(
-        "REQ-EVID",
-        "record_reproducible",
-        "crates/core/src/trace/record.rs::reproducibility",
-        &scratch,
-    );
-    let model = harness::lean_runner(
-        "TraceLean.Record",
-        "TraceLean.Record.reproducibility",
-        op,
-        &["record"],
-        &scratch,
-    );
 
     let Schema::Struct { fields } = evidence_list_schema() else { panic!("a struct") };
     let Schema::List { inner, .. } = fields["evidence"].clone() else { panic!("a list") };
@@ -394,18 +302,7 @@ fn model_and_implementation_agree_on_whether_a_record_can_be_reproduced() {
         fields: [("record".to_string(), *inner)].into_iter().collect(),
     };
 
-    let result = run(
-        op,
-        &schema,
-        &model,
-        &implementation,
-        RunOptions { seed: 113, cases: 2_000 },
-    )
-    .expect("both runners answer");
-
-    support::agreed(&result);
-
-    let _ = std::fs::remove_dir_all(&scratch);
+    harness::agree(op, &schema, 113, 2_000);
 }
 
 /// @tests REQ-EVID.record_reproducible
@@ -450,7 +347,7 @@ fn generation_reaches_both_ways_a_record_fails_to_be_reproducible() {
         3,
         "only {backends_missing_an_input:?} were ever asked for a missing input"
     );
-    support::covered(
+    harness::covered(
         "REQ-EVID.record_reproducible",
         &[
             ("a record that can be reproduced", fine),

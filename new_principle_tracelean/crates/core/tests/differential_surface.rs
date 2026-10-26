@@ -5,8 +5,6 @@ use std::collections::BTreeMap;
 use tracelean_core::drt::run::{run, RunOptions};
 use tracelean_core::drt::schema::Schema;
 
-mod support;
-
 fn strukt(fields: &[(&str, Schema)]) -> Schema {
     Schema::Struct { fields: fields.iter().map(|(k, v)| (k.to_string(), v.clone())).collect() }
 }
@@ -81,34 +79,9 @@ fn keymap_input() -> Schema {
 #[test]
 #[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
 fn model_and_implementation_agree_on_every_key() {
-    let scratch = harness::scratch("keymap");
     let op = "REQ-MYTH.totality";
-    let implementation = harness::rust_runner(
-        "REQ-MYTH",
-        "totality",
-        "crates/core/src/surface/keymap.rs::step",
-        &scratch,
-    );
-    let model = harness::lean_runner(
-        "TraceLean.Keymap",
-        "TraceLean.Keymap.step",
-        op,
-        &["keymap", "mode", "key"],
-        &scratch,
-    );
 
-    let result = run(
-        op,
-        &keymap_input(),
-        &model,
-        &implementation,
-        RunOptions { seed: 23, cases: 3_000 },
-    )
-    .expect("both runners answer");
-
-    support::agreed(&result);
-
-    let _ = std::fs::remove_dir_all(&scratch);
+    harness::agree(op, &keymap_input(), 23, 3_000);
 }
 
 /// @tests REQ-DRT-COVER.law_coverage
@@ -138,7 +111,7 @@ fn generation_reaches_all_four_outcomes() {
         .iter()
         .map(|name| (*name, seen.get(name).copied().unwrap_or(0)))
         .collect();
-    support::covered("REQ-MYTH.totality", &counts);
+    harness::covered("REQ-MYTH.totality", &counts);
 }
 
 fn staleness_input() -> Schema {
@@ -180,35 +153,9 @@ fn staleness_input() -> Schema {
 #[test]
 #[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
 fn model_and_implementation_agree_on_staleness() {
-    let scratch = harness::scratch("staleness");
     let op = "REQ-STALE.change_invalidates";
-    let implementation = harness::rust_runner_with_params(
-        "REQ-STALE",
-        "change_invalidates",
-        "crates/core/src/trace/record.rs::staleness_of",
-        &[("liveLinkHashes", "live_link_hashes")],
-        &scratch,
-    );
-    let model = harness::lean_runner(
-        "TraceLean.Staleness",
-        "TraceLean.Staleness.staleness",
-        op,
-        &["record", "liveLinkHashes", "current"],
-        &scratch,
-    );
 
-    let result = run(
-        op,
-        &staleness_input(),
-        &model,
-        &implementation,
-        RunOptions { seed: 29, cases: 3_000 },
-    )
-    .expect("both runners answer");
-
-    support::agreed(&result);
-
-    let _ = std::fs::remove_dir_all(&scratch);
+    harness::agree(op, &staleness_input(), 29, 3_000);
 }
 
 /// @drt REQ-STALE.agreed_not_rerun
@@ -236,7 +183,7 @@ fn model_and_implementation_agree_on_running_a_clause_again() {
     ]);
     let result = run(op, &schema, &model, &implementation, RunOptions { seed: 31, cases: 3_000 })
         .expect("both runners answer");
-    support::agreed(&result);
+    harness::agreed(&result);
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
@@ -267,7 +214,7 @@ fn generation_reaches_valid_retargeted_and_changed() {
         .iter()
         .map(|name| (*name, seen.get(name).copied().unwrap_or(0)))
         .collect();
-    support::covered("REQ-STALE.change_invalidates", &counts);
+    harness::covered("REQ-STALE.change_invalidates", &counts);
 }
 
 fn encoding_input() -> Schema {
@@ -300,35 +247,9 @@ fn encoding_input() -> Schema {
 #[test]
 #[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
 fn model_and_implementation_agree_on_position_encoding() {
-    let scratch = harness::scratch("lsp");
     let op = "REQ-LSP.column_to_offset";
-    let implementation = harness::rust_runner_with_params(
-        "REQ-LSP",
-        "column_to_offset",
-        "crates/core/src/surface/lsp.rs::to_byte_offset",
-        &[("lineText", "line_text")],
-        &scratch,
-    );
-    let model = harness::lean_runner(
-        "TraceLean.Lsp",
-        "TraceLean.Lsp.toByteOffset",
-        op,
-        &["lineText", "character", "encoding"],
-        &scratch,
-    );
 
-    let result = run(
-        op,
-        &encoding_input(),
-        &model,
-        &implementation,
-        RunOptions { seed: 31, cases: 2_000 },
-    )
-    .expect("both runners answer");
-
-    support::agreed(&result);
-
-    let _ = std::fs::remove_dir_all(&scratch);
+    harness::agree(op, &encoding_input(), 31, 2_000);
 }
 
 /// @tests REQ-DRT-COVER.law_coverage
@@ -353,7 +274,7 @@ fn generation_reaches_positions_where_the_encodings_differ() {
             inside += 1;
         }
     }
-    support::covered(
+    harness::covered(
         "REQ-LSP.column_to_offset",
         &[
             ("the encodings disagreed", differing),
@@ -374,35 +295,9 @@ fn offset_input() -> Schema {
 #[test]
 #[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
 fn model_and_implementation_agree_on_columns_for_offsets() {
-    let scratch = harness::scratch("lsp-column");
     let op = "REQ-LSP.offset_to_column";
-    let implementation = harness::rust_runner_with_params(
-        "REQ-LSP",
-        "offset_to_column",
-        "crates/core/src/surface/lsp.rs::to_character",
-        &[("lineText", "line_text")],
-        &scratch,
-    );
-    let model = harness::lean_runner(
-        "TraceLean.Lsp",
-        "TraceLean.Lsp.toCharacter",
-        op,
-        &["lineText", "offset", "encoding"],
-        &scratch,
-    );
 
-    let result = run(
-        op,
-        &offset_input(),
-        &model,
-        &implementation,
-        RunOptions { seed: 32, cases: 2_000 },
-    )
-    .expect("both runners answer");
-
-    support::agreed(&result);
-
-    let _ = std::fs::remove_dir_all(&scratch);
+    harness::agree(op, &offset_input(), 32, 2_000);
 }
 
 /// @tests REQ-LSP.offset_to_column
@@ -433,7 +328,7 @@ fn generation_reaches_offsets_inside_characters_and_they_round_trip() {
             None => inside += 1,
         }
     }
-    support::covered(
+    harness::covered(
         "REQ-LSP.offset_to_column",
         &[
             ("an offset inside a character", inside),
@@ -471,34 +366,9 @@ fn lower_input() -> Schema {
 #[test]
 #[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
 fn model_and_implementation_agree_on_lowering_edits() {
-    let scratch = harness::scratch("lower");
     let op = "REQ-LSP.edits_ordered";
-    let implementation = harness::rust_runner(
-        "REQ-LSP",
-        "edits_ordered",
-        "crates/core/src/surface/lsp.rs::lower_outcome",
-        &scratch,
-    );
-    let model = harness::lean_runner(
-        "TraceLean.Lsp",
-        "TraceLean.Lsp.lower",
-        op,
-        &["file", "content", "edits"],
-        &scratch,
-    );
 
-    let result = run(
-        op,
-        &lower_input(),
-        &model,
-        &implementation,
-        RunOptions { seed: 53, cases: 2_000 },
-    )
-    .expect("both runners answer");
-
-    support::agreed(&result);
-
-    let _ = std::fs::remove_dir_all(&scratch);
+    harness::agree(op, &lower_input(), 53, 2_000);
 }
 
 /// @tests REQ-DRT-COVER.law_coverage
@@ -542,7 +412,7 @@ fn generation_reaches_every_lowering_outcome() {
         .map(|name| (*name, seen.get(name).copied().unwrap_or(0)))
         .collect();
     counts.push(("more than one edit lowered successfully", multi));
-    support::covered("REQ-LSP.edits_ordered", &counts);
+    harness::covered("REQ-LSP.edits_ordered", &counts);
 }
 
 /// @drt REQ-STALE.scanner_never_writes
@@ -551,22 +421,7 @@ fn generation_reaches_every_lowering_outcome() {
 #[test]
 #[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
 fn model_and_implementation_agree_on_a_whole_sweep() {
-    let scratch = harness::scratch("sweep");
     let op = "REQ-STALE.scanner_never_writes";
-    let implementation = harness::rust_runner_with_params(
-        "REQ-STALE",
-        "scanner_never_writes",
-        "crates/core/src/trace/record.rs::sweep",
-        &[("liveLinkHashes", "live_link_hashes")],
-        &scratch,
-    );
-    let model = harness::lean_runner(
-        "TraceLean.Staleness",
-        "TraceLean.Staleness.sweep",
-        op,
-        &["records", "liveLinkHashes", "current"],
-        &scratch,
-    );
 
     let Schema::Struct { fields } = staleness_input() else { panic!("a struct") };
     let schema = strukt(&[
@@ -578,18 +433,7 @@ fn model_and_implementation_agree_on_a_whole_sweep() {
         ("current", fields["current"].clone()),
     ]);
 
-    let result = run(
-        op,
-        &schema,
-        &model,
-        &implementation,
-        RunOptions { seed: 31, cases: 2_000 },
-    )
-    .expect("both runners answer");
-
-    support::agreed(&result);
-
-    let _ = std::fs::remove_dir_all(&scratch);
+    harness::agree(op, &schema, 31, 2_000);
 }
 
 /// @drt REQ-STALE.no_silent_revalidation
@@ -625,21 +469,7 @@ fn a_stale_record_never_revives_itself() {
 #[test]
 #[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
 fn model_and_implementation_agree_on_what_comes_back() {
-    let scratch = harness::scratch("revalidated");
     let op = "REQ-STALE.no_silent_revalidation";
-    let implementation = harness::rust_runner(
-        "REQ-STALE",
-        "no_silent_revalidation",
-        "crates/core/src/trace/record.rs::revalidated",
-        &scratch,
-    );
-    let model = harness::lean_runner(
-        "TraceLean.Staleness",
-        "TraceLean.Staleness.revalidated",
-        op,
-        &["stale", "produced"],
-        &scratch,
-    );
 
     let Schema::Struct { fields } = staleness_input() else { panic!("a struct") };
     let record = fields["record"].clone();
@@ -648,18 +478,7 @@ fn model_and_implementation_agree_on_what_comes_back() {
         ("produced", Schema::List { inner: Box::new(record), max_len: Some(3) }),
     ]);
 
-    let result = run(
-        op,
-        &schema,
-        &model,
-        &implementation,
-        RunOptions { seed: 37, cases: 2_000 },
-    )
-    .expect("both runners answer");
-
-    support::agreed(&result);
-
-    let _ = std::fs::remove_dir_all(&scratch);
+    harness::agree(op, &schema, 37, 2_000);
 }
 
 fn server_state() -> Schema {
@@ -691,21 +510,7 @@ fn server_state() -> Schema {
 #[test]
 #[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
 fn model_and_implementation_agree_on_what_to_show_without_a_server() {
-    let scratch = harness::scratch("lsp-present");
     let op = "REQ-LSP.absent_server_named";
-    let implementation = harness::rust_runner(
-        "REQ-LSP",
-        "absent_server_named",
-        "crates/core/src/surface/lsp.rs::present_text",
-        &scratch,
-    );
-    let model = harness::lean_runner(
-        "TraceLean.Lsp",
-        "TraceLean.Lsp.presentText",
-        op,
-        &["state", "answer"],
-        &scratch,
-    );
 
     let schema = strukt(&[
         ("state", server_state()),
@@ -720,18 +525,7 @@ fn model_and_implementation_agree_on_what_to_show_without_a_server() {
         ),
     ]);
 
-    let result = run(
-        op,
-        &schema,
-        &model,
-        &implementation,
-        RunOptions { seed: 67, cases: 2_000 },
-    )
-    .expect("both runners answer");
-
-    support::agreed(&result);
-
-    let _ = std::fs::remove_dir_all(&scratch);
+    harness::agree(op, &schema, 67, 2_000);
 }
 
 /// @drt REQ-LSP.registry_per_language
@@ -740,21 +534,7 @@ fn model_and_implementation_agree_on_what_to_show_without_a_server() {
 #[test]
 #[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
 fn model_and_implementation_agree_on_which_encoding_a_language_uses() {
-    let scratch = harness::scratch("lsp-registry");
     let op = "REQ-LSP.registry_per_language";
-    let implementation = harness::rust_runner(
-        "REQ-LSP",
-        "registry_per_language",
-        "crates/core/src/surface/lsp.rs::encoding_for",
-        &scratch,
-    );
-    let model = harness::lean_runner(
-        "TraceLean.Lsp",
-        "TraceLean.Lsp.encodingFor",
-        op,
-        &["registry", "language"],
-        &scratch,
-    );
 
     let language =
         Schema::Str { max_len: Some(0), examples: vec!["rust".into(), "lean".into(), "".into()] };
@@ -771,18 +551,7 @@ fn model_and_implementation_agree_on_which_encoding_a_language_uses() {
         ("language", language),
     ]);
 
-    let result = run(
-        op,
-        &schema,
-        &model,
-        &implementation,
-        RunOptions { seed: 71, cases: 2_000 },
-    )
-    .expect("both runners answer");
-
-    support::agreed(&result);
-
-    let _ = std::fs::remove_dir_all(&scratch);
+    harness::agree(op, &schema, 71, 2_000);
 }
 
 /// @tests REQ-DRT-COVER.law_coverage
@@ -828,7 +597,7 @@ fn generation_reaches_every_server_state_and_both_lookups() {
         }
     }
     assert_eq!(states.len(), 4, "not every server state was generated");
-    support::covered(
+    harness::covered(
         "REQ-LSP.registry_per_language",
         &[
             ("a lookup finding a running server", answered),

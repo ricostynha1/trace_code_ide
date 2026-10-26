@@ -7,8 +7,6 @@ use tracelean_core::drt::run::{run, RunOptions};
 use tracelean_core::drt::schema::Schema;
 use tracelean_core::surface::history_view::{history_graph, shown_points, Filter, Point};
 
-mod support;
-
 fn number() -> Schema {
     Schema::Nat { max: Some(3), edges: vec![0, 1, 2, 3] }
 }
@@ -53,7 +51,7 @@ fn check(op: &str, function: &str, entry: &str, arguments: &[&str], fields: BTre
         RunOptions { seed, cases: 2_000 },
     )
     .expect("both runners answer");
-    support::agreed(&result);
+    harness::agreed(&result);
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
@@ -169,7 +167,7 @@ fn generation_reaches_branches_loops_and_hidden_positions() {
             short += 1;
         }
     }
-    support::covered(
+    harness::covered(
         "REQ-UNDO.tree_is_drawn",
         &[("a branch", branch), ("two branches from one node", two), ("a node made after itself", looped), ("a node no row reaches", short)],
     );
@@ -193,7 +191,7 @@ fn generation_reaches_branches_loops_and_hidden_positions() {
             none += 1;
         }
     }
-    support::covered(
+    harness::covered(
         "REQ-UNDO.filtered_view",
         &[("the position hidden and an ancestor marked", hidden), ("a node lifted to a further ancestor", lifted), ("nothing kept", none)],
     );

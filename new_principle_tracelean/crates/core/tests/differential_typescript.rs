@@ -5,10 +5,8 @@ use std::collections::BTreeMap;
 use tracelean_core::drt::run::{run, RunOptions};
 use tracelean_core::drt::schema::Schema;
 
-mod support;
-
 fn role() -> Schema {
-    support::role()
+    harness::role()
 }
 
 fn kind() -> Schema {
@@ -86,7 +84,7 @@ fn check(op: &str, function: &str, entry: &str, arguments: &[&str], schema: Sche
     )
     .expect("both runners answer");
 
-    support::agreed(&result);
+    harness::agreed(&result);
 
     let _ = std::fs::remove_dir_all(&scratch);
 }
@@ -263,7 +261,7 @@ fn generation_reaches_every_way_a_typescript_signature_can_mislead() {
             None => absent += 1,
         }
     }
-    support::covered(
+    harness::covered(
         "REQ-DRT-TS.params_from_source",
         &[
             ("a signature yielding names", named),
@@ -305,7 +303,7 @@ fn model_and_implementation_agree_on_a_typescript_signature() {
         RunOptions { seed: 109, cases: 3_000 },
     )
     .expect("both runners answer");
-    support::agreed(&result);
+    harness::agreed(&result);
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
@@ -334,7 +332,7 @@ fn generation_reaches_text_where_characters_and_code_units_differ() {
             multiline += 1;
         }
     }
-    support::covered(
+    harness::covered(
         "REQ-VIEW.rendering_is_total",
         &[
             ("text outside the basic plane", astral),

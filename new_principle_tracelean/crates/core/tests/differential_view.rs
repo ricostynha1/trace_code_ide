@@ -5,10 +5,8 @@ use std::collections::BTreeMap;
 use tracelean_core::drt::run::{run, RunOptions};
 use tracelean_core::drt::schema::Schema;
 
-mod support;
-
 fn role() -> Schema {
-    support::role()
+    harness::role()
 }
 
 fn kind() -> Schema {
@@ -94,7 +92,7 @@ fn check(op: &str, function: &str, entry: &str, arguments: &[&str], schema: Sche
     )
     .expect("both runners answer");
 
-    support::agreed(&result);
+    harness::agreed(&result);
 
     let _ = std::fs::remove_dir_all(&scratch);
 }
@@ -247,7 +245,7 @@ fn generation_reaches_faulty_spans_and_real_changes() {
             }
         }
     }
-    support::covered(
+    harness::covered(
         "REQ-VIEW.text_is_the_content",
         &[
             ("a span past the end of the text", past),
@@ -257,7 +255,7 @@ fn generation_reaches_faulty_spans_and_real_changes() {
             ("a buffer whose spans are all well formed", clean),
         ],
     );
-    support::covered(
+    harness::covered(
         "REQ-VIEW.changes_are_deltas",
         &[
             ("a change to the text", text_changed),
@@ -416,7 +414,7 @@ fn generation_reaches_rows_painted_as_themselves_and_as_symbols() {
             named += 1;
         }
     }
-    support::covered(
+    harness::covered(
         "REQ-VIEW.presentation_may_be_symbolic",
         &[
             ("a row with nothing in it", empty),
@@ -476,7 +474,7 @@ fn generation_reaches_positions_covered_by_none_one_and_several_spans() {
             offered += 1;
         }
     }
-    support::covered(
+    harness::covered(
         "REQ-VIEW.affordances_named",
         &[
             ("a position no span covers", none),

@@ -6,7 +6,6 @@ use tracelean_core::drt::run::{run, RunOptions, RunnerSpec};
 use tracelean_core::drt::schema::Schema;
 
 mod harness;
-mod support;
 
 fn project_root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap().parent().unwrap().to_path_buf()
@@ -142,7 +141,7 @@ fn model_and_implementation_agree_on_the_round_trip() {
     )
     .expect("both runners answer");
 
-    support::agreed(&result);
+    harness::agreed(&result);
     assert_eq!(result.cases, 3_000);
 
     let _ = std::fs::remove_dir_all(&scratch);
@@ -173,7 +172,7 @@ fn model_and_implementation_agree_on_applying() {
     )
     .expect("both runners answer");
 
-    support::agreed(&result);
+    harness::agreed(&result);
 
     let _ = std::fs::remove_dir_all(&scratch);
 }
@@ -198,7 +197,7 @@ fn generation_reaches_successful_applications() {
             ok += 1;
         }
     }
-    support::covered(
+    harness::covered(
         "REQ-CMD.total_or_refused",
         &[("applied successfully", ok), ("was a batch", batches)],
     );
@@ -236,7 +235,7 @@ fn generation_reaches_round_trips_that_actually_returned() {
             }
         }
     }
-    support::covered(
+    harness::covered(
         "REQ-CMD.round_trip",
         &[
             ("a round trip that returned", returned),
@@ -268,7 +267,7 @@ fn model_and_implementation_agree_on_inverses() {
     )
     .expect("both runners answer");
 
-    support::agreed(&result);
+    harness::agreed(&result);
 
     let _ = std::fs::remove_dir_all(&scratch);
 }
@@ -306,7 +305,7 @@ fn generation_reaches_batches_that_would_catch_a_wrong_inverse() {
             _ => single += 1,
         }
     }
-    support::covered(
+    harness::covered(
         "REQ-CMD.batch_reverses",
         &[
             ("a single command", single),

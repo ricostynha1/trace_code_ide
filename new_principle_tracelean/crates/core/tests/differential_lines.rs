@@ -1,5 +1,4 @@
 mod harness;
-mod support;
 
 use std::collections::BTreeMap;
 
@@ -61,7 +60,7 @@ fn check(clause: &str, function: &str, entry: &str, arguments: &[&str], params: 
     let model = harness::lean_runner("TraceLean.Lines", function, &op, arguments, &scratch);
     let result = run(&op, &Schema::Struct { fields }, &model, &implementation, RunOptions { seed, cases: 3_000 })
         .expect("both runners answer");
-    support::agreed(&result);
+    harness::agreed(&result);
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
@@ -104,7 +103,7 @@ fn model_and_implementation_agree_on_a_requirements_lines() {
     let schema = Schema::Struct { fields: fields(vec![("items", Schema::List { inner: Box::new(item), max_len: Some(3) })]) };
     let result = run(op, &schema, &model, &implementation, RunOptions { seed: 333, cases: 3_000 })
         .expect("both runners answer");
-    support::agreed(&result);
+    harness::agreed(&result);
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
@@ -136,7 +135,7 @@ fn model_and_implementation_agree_on_when_coverage_is_measured_again() {
     };
     let result = run(op, &schema, &model, &implementation, RunOptions { seed: 334, cases: 3_000 })
         .expect("both runners answer");
-    support::agreed(&result);
+    harness::agreed(&result);
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
@@ -172,7 +171,7 @@ fn model_and_implementation_agree_on_the_lines_a_count_opens() {
     };
     let result = run(op, &schema, &model, &implementation, RunOptions { seed: 335, cases: 3_000 })
         .expect("both runners answer");
-    support::agreed(&result);
+    harness::agreed(&result);
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
@@ -248,7 +247,7 @@ fn generation_reaches_shared_unrun_and_partial_lines() {
             unrun += 1;
         }
     }
-    support::covered("REQ-LINECOV.per_test", &[("a line two tests ran", shared), ("a line no test ran", unrun)]);
+    harness::covered("REQ-LINECOV.per_test", &[("a line two tests ran", shared), ("a line no test ran", unrun)]);
 
     let mut rng = gen::Rng::new(332);
     let (mut partial, mut empty) = (0u64, 0u64);
@@ -263,7 +262,7 @@ fn generation_reaches_shared_unrun_and_partial_lines() {
             empty += 1;
         }
     }
-    support::covered("REQ-LINECOV.clause_summary", &[("some lines run and some not", partial), ("no executable line inside", empty)]);
+    harness::covered("REQ-LINECOV.clause_summary", &[("some lines run and some not", partial), ("no executable line inside", empty)]);
 
     let mut rng = gen::Rng::new(333);
     let (mut same, mut other) = (0u64, 0u64);
@@ -277,7 +276,7 @@ fn generation_reaches_shared_unrun_and_partial_lines() {
             }
         }
     }
-    support::covered(
+    harness::covered(
         "REQ-LINECOV.stale_hidden",
         &[("measured against the file's text", same), ("measured against other text", other)],
     );

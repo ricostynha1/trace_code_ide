@@ -5,8 +5,6 @@ use std::collections::BTreeMap;
 use tracelean_core::drt::run::{run, RunOptions};
 use tracelean_core::drt::schema::Schema;
 
-mod support;
-
 fn node() -> Schema {
     let name = |examples: Vec<String>| Schema::Str { max_len: Some(0), examples };
     let mut fields = BTreeMap::new();
@@ -19,7 +17,7 @@ fn node() -> Schema {
             max_len: Some(2),
         },
     );
-    fields.insert("marks".to_string(), support::marks());
+    fields.insert("marks".to_string(), harness::marks());
     fields.insert("clauses".to_string(), Schema::Nat { max: Some(3), edges: vec![0, 4] });
     fields.insert("modelled".to_string(), Schema::Nat { max: Some(3), edges: vec![0, 4] });
     let mut held = BTreeMap::new();
@@ -127,7 +125,7 @@ fn check(
     )
     .expect("both runners answer");
 
-    support::agreed(&result);
+    harness::agreed(&result);
 
     let _ = std::fs::remove_dir_all(&scratch);
 }
@@ -294,7 +292,7 @@ fn model_and_implementation_agree_on_an_opened_requirement() {
         ("key", option(text(&["holds", "keeps_order"]))),
         ("text", text(&["It holds.", "A clause long enough to be wrapped at the narrowest width a pane can have."])),
         ("narrowings", list(Schema::Tuple { items: vec![text(&["when"]), text(&["always", ""])] }, 1)),
-        ("marks", support::marks()),
+        ("marks", harness::marks()),
         ("claims", list(claim, 3)),
         ("pins", option(Schema::Tuple { items: vec![text(&["pinned", "open"]), text(&["theorem t", ""])] })),
         ("tested", Schema::Bool),
@@ -516,7 +514,7 @@ fn generation_reaches_the_graphs_that_are_hard_to_draw() {
             cyclic += 1;
         }
     }
-    support::covered(
+    harness::covered(
         "REQ-SHOW.index_from_requirements",
         &[
             ("no requirements at all", empty),
@@ -528,7 +526,7 @@ fn generation_reaches_the_graphs_that_are_hard_to_draw() {
             ("only what is open, something finished hidden", hidden),
         ],
     );
-    support::covered(
+    harness::covered(
         "REQ-SHOW.graph_from_refinement",
         &[
             ("nothing to draw", nothing),
@@ -618,7 +616,7 @@ fn generation_reaches_unpriced_models_and_every_kind_of_token() {
             }
         }
     }
-    support::covered(
+    harness::covered(
         "REQ-COST.cost_from_usage",
         &[
             ("no usage at all", none),
@@ -627,7 +625,7 @@ fn generation_reaches_unpriced_models_and_every_kind_of_token() {
             ("the same unpriced model twice", repeated),
         ],
     );
-    support::covered(
+    harness::covered(
         "REQ-COST.cache_priced_apart",
         &[
             ("ordinary input only", only_input),
@@ -683,7 +681,7 @@ fn generation_reaches_unpriced_models_and_every_kind_of_token() {
             unpriced_shown += 1;
         }
     }
-    support::covered(
+    harness::covered(
         "REQ-COST.estimate_is_labelled",
         &[
             ("nothing spent", nil),
@@ -692,7 +690,7 @@ fn generation_reaches_unpriced_models_and_every_kind_of_token() {
             ("several models unpriced", many),
         ],
     );
-    support::covered(
+    harness::covered(
         "REQ-SHOW.sandbox_from_observation",
         &[
             ("nothing changed and nothing said", quiet),
@@ -752,7 +750,7 @@ fn generation_reaches_every_station_and_a_name_that_is_none() {
             None => absent += 1,
         }
     }
-    support::covered(
+    harness::covered(
         "REQ-SCREEN.station_produces_a_buffer",
         &[
             ("a station that exists", real),

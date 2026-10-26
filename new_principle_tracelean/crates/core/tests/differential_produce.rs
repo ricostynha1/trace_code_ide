@@ -5,14 +5,12 @@ use std::collections::BTreeMap;
 use tracelean_core::drt::run::{run, RunOptions};
 use tracelean_core::drt::schema::Schema;
 
-mod support;
-
 fn role() -> Schema {
-    support::role()
+    harness::role()
 }
 
 fn any_role() -> Schema {
-    let Schema::Enum { mut variants } = support::role() else { unreachable!() };
+    let Schema::Enum { mut variants } = harness::role() else { unreachable!() };
     let mut kind = BTreeMap::new();
     kind.insert("kind".to_string(), Schema::simple_enum(&["keyword", "comment"]));
     variants.insert("token".to_string(), Some(Box::new(Schema::Struct { fields: kind })));
@@ -104,7 +102,7 @@ fn check_in(
     )
     .expect("both runners answer");
 
-    support::agreed(&result);
+    harness::agreed(&result);
 
     let _ = std::fs::remove_dir_all(&scratch);
 }
@@ -179,7 +177,7 @@ fn generation_reaches_every_role_and_the_one_that_affords_nothing() {
         }
     }
     assert_eq!(roles.len(), 23, "only {roles:?} of the twenty-three roles were generated");
-    support::covered(
+    harness::covered(
         "REQ-SHOW.actions_by_role",
         &[
             ("a role that affords something", affords),
@@ -263,7 +261,7 @@ fn generation_reaches_listings_worth_drawing() {
             }
         }
     }
-    support::covered(
+    harness::covered(
         "REQ-SHOW.listing_from_entries",
         &[
             ("an empty directory", empty),
@@ -338,7 +336,7 @@ fn generation_reaches_the_texts_a_file_buffer_has_to_survive() {
             overhanging += 1;
         }
     }
-    support::covered(
+    harness::covered(
         "REQ-SHOW.file_from_text",
         &[
             ("no text at all", empty),
@@ -430,7 +428,7 @@ fn a_review_buffer_is_the_same_every_time_it_is_asked() {
             empty += 1;
         }
     }
-    support::covered(
+    harness::covered(
         "REQ-SHOW.producer_is_pure",
         &[
             ("two texts that are the same", same),
@@ -480,7 +478,7 @@ fn model_and_implementation_agree_on_a_menu_row() {
             keys += 1;
         }
     }
-    support::covered("REQ-LOOK.row_fits", &[("fits with its descriptions", described), ("only the keys fit", keys)]);
+    harness::covered("REQ-LOOK.row_fits", &[("fits with its descriptions", described), ("only the keys fit", keys)]);
 }
 
 fn menu_row_input() -> Schema {
@@ -586,7 +584,7 @@ fn generation_reaches_menu_rows_with_and_without_an_action() {
             wide += 1;
         }
     }
-    support::covered(
+    harness::covered(
         "REQ-SHOW.menu_from_keymap",
         &[
             ("a menu with a row that dispatches", dispatching),
@@ -665,7 +663,7 @@ fn generation_reaches_windows_that_fall_off_the_text() {
             inside += 1;
         }
     }
-    support::covered(
+    harness::covered(
         "REQ-SHOW.window_is_a_buffer",
         &[
             ("a window inside the text", inside),
@@ -743,7 +741,7 @@ fn generation_reaches_records_from_nothing_to_a_full_session() {
             wide += 1;
         }
     }
-    support::covered(
+    harness::covered(
         "REQ-SHOW.record_from_events",
         &[
             ("a record of nothing", empty),
@@ -811,7 +809,7 @@ fn generation_reaches_marks_worth_tidying_and_diffs_worth_reading() {
 
     let _ = Mark { start: 0, stop: 1, role: Role::Plain };
 
-    support::covered(
+    harness::covered(
         "REQ-SHOW.well_formed_by_construction",
         &[
             ("a span reaching past the text", clamped),
@@ -821,7 +819,7 @@ fn generation_reaches_marks_worth_tidying_and_diffs_worth_reading() {
             ("spans of which none survive", emptied),
         ],
     );
-    support::covered(
+    harness::covered(
         "REQ-SHOW.review_from_change",
         &[
             ("a diff that keeps context", context),

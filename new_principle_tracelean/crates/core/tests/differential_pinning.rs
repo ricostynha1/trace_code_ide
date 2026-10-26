@@ -1,5 +1,4 @@
 mod harness;
-mod support;
 
 use std::collections::BTreeMap;
 
@@ -70,7 +69,7 @@ fn check(clause: &str, function: &str, entry: &str, arguments: &[&str], fields: 
     let model = harness::lean_runner("TraceLean.Pinning", function, &op, arguments, &scratch);
     let result = run(&op, &Schema::Struct { fields }, &model, &implementation, RunOptions { seed, cases: 2_000 })
         .expect("both runners answer");
-    support::agreed(&result);
+    harness::agreed(&result);
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
@@ -139,7 +138,7 @@ fn generation_reaches_each_answer_and_each_verdict() {
             _ => {}
         }
     }
-    support::covered("REQ-STRENGTH.per_input", &[("a model of no arguments", none), ("a model of several arguments", several)]);
+    harness::covered("REQ-STRENGTH.per_input", &[("a model of no arguments", none), ("a model of several arguments", several)]);
 
     let mut rng = gen::Rng::new(312);
     let (mut yes, mut sorry, mut error) = (0u64, 0u64, 0u64);
@@ -154,7 +153,7 @@ fn generation_reaches_each_answer_and_each_verdict() {
             error += 1;
         }
     }
-    support::covered("REQ-STRENGTH.kernel_decides", &[("accepted", yes), ("rejected for sorry", sorry), ("rejected for an error", error)]);
+    harness::covered("REQ-STRENGTH.kernel_decides", &[("accepted", yes), ("rejected for sorry", sorry), ("rejected for an error", error)]);
 
     let mut rng = gen::Rng::new(313);
     let (mut pinned, mut other) = (0u64, 0u64);
@@ -170,7 +169,7 @@ fn generation_reaches_each_answer_and_each_verdict() {
             pinned += 1;
         }
     }
-    support::covered("REQ-STRENGTH.verdict_kept", &[("pinned", pinned), ("a verdict about other declarations", other)]);
+    harness::covered("REQ-STRENGTH.verdict_kept", &[("pinned", pinned), ("a verdict about other declarations", other)]);
 
     let mut rng = gen::Rng::new(314);
     let (mut matched, mut both, mut prop, mut not_def) = (0u64, 0u64, 0u64, 0u64);
@@ -193,7 +192,7 @@ fn generation_reaches_each_answer_and_each_verdict() {
             }
         }
     }
-    support::covered(
+    harness::covered(
         "REQ-STRENGTH.inputs_counted",
         &[
             ("a definition by pattern matching", matched),

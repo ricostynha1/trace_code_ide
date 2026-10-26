@@ -2,10 +2,7 @@ mod harness;
 
 use std::collections::BTreeMap;
 
-use tracelean_core::drt::run::{run, RunOptions};
 use tracelean_core::drt::schema::Schema;
-
-mod support;
 
 fn strukt(fields: &[(&str, Schema)]) -> Schema {
     Schema::Struct { fields: fields.iter().map(|(k, v)| (k.to_string(), v.clone())).collect() }
@@ -77,34 +74,9 @@ fn session() -> Schema {
 #[test]
 #[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
 fn model_and_implementation_agree_on_what_a_sequence_of_keys_does() {
-    let scratch = harness::scratch("drive");
     let op = "REQ-DRIVE.session_is_a_value";
-    let implementation = harness::rust_runner(
-        "REQ-DRIVE",
-        "session_is_a_value",
-        "crates/core/src/surface/drive.rs::drive_of",
-        &scratch,
-    );
-    let model = harness::lean_runner(
-        "TraceLean.Drive",
-        "TraceLean.Drive.drive",
-        op,
-        &["keymap", "mode", "keys"],
-        &scratch,
-    );
 
-    let result = run(
-        op,
-        &session(),
-        &model,
-        &implementation,
-        RunOptions { seed: 27, cases: 2_000 },
-    )
-    .expect("both runners answer");
-
-    support::agreed(&result);
-
-    let _ = std::fs::remove_dir_all(&scratch);
+    harness::agree(op, &session(), 27, 2_000);
 }
 
 /// @tests REQ-DRIVE.walk_follows_the_machine
@@ -158,7 +130,7 @@ fn generation_reaches_every_kind_of_key_and_the_walk_is_the_machine() {
         }
     }
 
-    support::covered(
+    harness::covered(
         "REQ-DRIVE.session_is_a_value",
         &[
             ("a session of no keys", empty),

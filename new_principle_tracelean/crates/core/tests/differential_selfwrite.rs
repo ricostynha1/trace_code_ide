@@ -1,9 +1,6 @@
 mod harness;
 
-use tracelean_core::drt::run::{run, RunOptions};
 use tracelean_core::drt::schema::Schema;
-
-mod support;
 
 fn strukt(fields: &[(&str, Schema)]) -> Schema {
     Schema::Struct { fields: fields.iter().map(|(k, v)| (k.to_string(), v.clone())).collect() }
@@ -43,34 +40,9 @@ fn input_schema() -> Schema {
 #[test]
 #[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
 fn model_and_implementation_agree_on_suppression() {
-    let scratch = harness::scratch("selfwrite");
     let op = "REQ-SELFWRITE.own_writes_ignored";
-    let implementation = harness::rust_runner(
-        "REQ-SELFWRITE",
-        "own_writes_ignored",
-        "crates/core/src/observe/mirror.rs::suppress",
-        &scratch,
-    );
-    let model = harness::lean_runner(
-        "TraceLean.Mirror",
-        "TraceLean.Mirror.suppress",
-        op,
-        &["pending", "path", "content"],
-        &scratch,
-    );
 
-    let result = run(
-        op,
-        &input_schema(),
-        &model,
-        &implementation,
-        RunOptions { seed: 37, cases: 2_000 },
-    )
-    .expect("both runners answer");
-
-    support::agreed(&result);
-
-    let _ = std::fs::remove_dir_all(&scratch);
+    harness::agree(op, &input_schema(), 37, 2_000);
 }
 
 /// @tests REQ-DRT-COVER.law_coverage
@@ -104,7 +76,7 @@ fn generation_reaches_suppression_and_passthrough() {
             miss += 1;
         }
     }
-    support::covered(
+    harness::covered(
         "REQ-SELFWRITE.own_writes_ignored",
         &[
             ("a suppressed observation", hit),
@@ -120,39 +92,14 @@ fn generation_reaches_suppression_and_passthrough() {
 #[test]
 #[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
 fn model_and_implementation_agree_on_expiry() {
-    let scratch = harness::scratch("expire");
     let op = "REQ-SELFWRITE.no_deadlock";
-    let implementation = harness::rust_runner(
-        "REQ-SELFWRITE",
-        "no_deadlock",
-        "crates/core/src/observe/mirror.rs::expire",
-        &scratch,
-    );
-    let model = harness::lean_runner(
-        "TraceLean.Mirror",
-        "TraceLean.Mirror.expire",
-        op,
-        &["pending"],
-        &scratch,
-    );
 
-    let result = run(
-        op,
-        &Schema::Struct {
+    harness::agree(op, &Schema::Struct {
             fields: [(
                 "pending".to_string(),
                 Schema::List { inner: Box::new(self_write()), max_len: Some(4) },
             )]
             .into_iter()
             .collect(),
-        },
-        &model,
-        &implementation,
-        RunOptions { seed: 38, cases: 2_000 },
-    )
-    .expect("both runners answer");
-
-    support::agreed(&result);
-
-    let _ = std::fs::remove_dir_all(&scratch);
+        }, 38, 2_000);
 }

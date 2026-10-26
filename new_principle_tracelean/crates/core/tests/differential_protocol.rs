@@ -5,8 +5,6 @@ use std::collections::BTreeMap;
 use tracelean_core::drt::run::{run, RunOptions};
 use tracelean_core::drt::schema::Schema;
 
-mod support;
-
 fn strukt(fields: &[(&str, Schema)]) -> Schema {
     Schema::Struct { fields: fields.iter().map(|(k, v)| (k.to_string(), v.clone())).collect() }
 }
@@ -50,34 +48,9 @@ fn input_schema() -> Schema {
 #[test]
 #[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
 fn model_and_implementation_agree_on_what_a_line_says() {
-    let scratch = harness::scratch("protocol");
     let op = "REQ-DRT-PROTO.reply_one_line";
-    let implementation = harness::rust_runner(
-        "REQ-DRT-PROTO",
-        "reply_one_line",
-        "crates/core/src/drt/protocol.rs::hear",
-        &scratch,
-    );
-    let model = harness::lean_runner(
-        "TraceLean.Protocol",
-        "TraceLean.Protocol.hear",
-        op,
-        &["expected", "line"],
-        &scratch,
-    );
 
-    let result = run(
-        op,
-        &input_schema(),
-        &model,
-        &implementation,
-        RunOptions { seed: 17, cases: 2_000 },
-    )
-    .expect("both runners answer");
-
-    support::agreed(&result);
-
-    let _ = std::fs::remove_dir_all(&scratch);
+    harness::agree(op, &input_schema(), 17, 2_000);
 }
 
 /// @drt REQ-DRT-PROTO.ops_unique
@@ -85,34 +58,9 @@ fn model_and_implementation_agree_on_what_a_line_says() {
 #[test]
 #[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
 fn model_and_implementation_agree_on_which_ops_collide() {
-    let scratch = harness::scratch("protocol-ops");
     let op = "REQ-DRT-PROTO.ops_unique";
-    let implementation = harness::rust_runner(
-        "REQ-DRT-PROTO",
-        "ops_unique",
-        "crates/core/src/drt/protocol.rs::duplicate_ops",
-        &scratch,
-    );
-    let model = harness::lean_runner(
-        "TraceLean.Protocol",
-        "TraceLean.Protocol.duplicateOps",
-        op,
-        &["ops"],
-        &scratch,
-    );
 
-    let result = run(
-        op,
-        &ops_input(),
-        &model,
-        &implementation,
-        RunOptions { seed: 23, cases: 2_000 },
-    )
-    .expect("both runners answer");
-
-    support::agreed(&result);
-
-    let _ = std::fs::remove_dir_all(&scratch);
+    harness::agree(op, &ops_input(), 23, 2_000);
 }
 
 fn ops_input() -> Schema {
@@ -146,7 +94,7 @@ fn generation_reaches_collisions_and_their_absence() {
             collided += 1;
         }
     }
-    support::covered("REQ-DRT-PROTO.ops_unique", &[("a collision", collided), ("no collision", clean)]);
+    harness::covered("REQ-DRT-PROTO.ops_unique", &[("a collision", collided), ("no collision", clean)]);
 }
 
 /// @drt REQ-DRT-PROTO.reply_exclusive
@@ -154,31 +102,8 @@ fn generation_reaches_collisions_and_their_absence() {
 #[test]
 #[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
 fn model_and_implementation_agree_on_what_is_exclusive() {
-    let scratch = harness::scratch("protocol-exclusive");
     let op = "REQ-DRT-PROTO.reply_exclusive";
-    let implementation = harness::rust_runner(
-        "REQ-DRT-PROTO",
-        "reply_exclusive",
-        "crates/core/src/drt/protocol.rs::is_exclusive",
-        &scratch,
-    );
-    let model = harness::lean_runner(
-        "TraceLean.Protocol",
-        "TraceLean.Protocol.isExclusive",
-        op,
-        &["output", "error"],
-        &scratch,
-    );
-    let result = run(
-        op,
-        &exclusive_input(),
-        &model,
-        &implementation,
-        RunOptions { seed: 29, cases: 1_000 },
-    )
-    .expect("both runners answer");
-    support::agreed(&result);
-    let _ = std::fs::remove_dir_all(&scratch);
+    harness::agree(op, &exclusive_input(), 29, 1_000);
 }
 
 fn exclusive_input() -> Schema {
@@ -211,7 +136,7 @@ fn generation_reaches_every_shape_of_reply() {
         };
         counts[at] += 1;
     }
-    support::covered(
+    harness::covered(
         "REQ-DRT-PROTO.reply_exclusive",
         &[
             ("an output only", counts[0]),
@@ -257,31 +182,8 @@ fn event_input() -> Schema {
 #[test]
 #[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
 fn model_and_implementation_agree_on_what_a_case_came_to() {
-    let scratch = harness::scratch("protocol-outcome");
     let op = "REQ-DRT-PROTO.failure_named";
-    let implementation = harness::rust_runner(
-        "REQ-DRT-PROTO",
-        "failure_named",
-        "crates/core/src/drt/protocol.rs::outcome",
-        &scratch,
-    );
-    let model = harness::lean_runner(
-        "TraceLean.Protocol",
-        "TraceLean.Protocol.outcome",
-        op,
-        &["event"],
-        &scratch,
-    );
-    let result = run(
-        op,
-        &event_input(),
-        &model,
-        &implementation,
-        RunOptions { seed: 31, cases: 2_000 },
-    )
-    .expect("both runners answer");
-    support::agreed(&result);
-    let _ = std::fs::remove_dir_all(&scratch);
+    harness::agree(op, &event_input(), 31, 2_000);
 }
 
 /// @tests REQ-DRT-PROTO.failure_named
@@ -305,7 +207,7 @@ fn generation_reaches_every_outcome() {
         };
         counts[at] += 1;
     }
-    support::covered(
+    harness::covered(
         "REQ-DRT-PROTO.failure_named",
         &[
             ("cannot start", counts[0]),
@@ -351,31 +253,8 @@ fn case_input() -> Schema {
 #[test]
 #[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
 fn model_and_implementation_agree_on_how_a_case_is_written() {
-    let scratch = harness::scratch("protocol-case");
     let op = "REQ-DRT-PROTO.case_one_line";
-    let implementation = harness::rust_runner(
-        "REQ-DRT-PROTO",
-        "case_one_line",
-        "crates/core/src/drt/protocol.rs::case_line",
-        &scratch,
-    );
-    let model = harness::lean_runner(
-        "TraceLean.Protocol",
-        "TraceLean.Protocol.caseLine",
-        op,
-        &["number", "op", "input"],
-        &scratch,
-    );
-    let result = run(
-        op,
-        &case_input(),
-        &model,
-        &implementation,
-        RunOptions { seed: 37, cases: 2_000 },
-    )
-    .expect("both runners answer");
-    support::agreed(&result);
-    let _ = std::fs::remove_dir_all(&scratch);
+    harness::agree(op, &case_input(), 37, 2_000);
 }
 
 /// @tests REQ-DRT-PROTO.case_one_line
@@ -393,7 +272,7 @@ fn generation_reaches_every_character_that_needs_escaping() {
         counts[1] += u64::from(text.contains("\\\"") || text.contains("\\\\"));
         counts[2] += u64::from(text.contains("\\t") || text.contains("\\u0001") || text.contains("\\b"));
     }
-    support::covered(
+    harness::covered(
         "REQ-DRT-PROTO.case_one_line",
         &[
             ("an input with a line break", counts[0]),
@@ -427,31 +306,8 @@ fn placed_input() -> Schema {
 #[test]
 #[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
 fn model_and_implementation_agree_on_which_runners_a_project_needs() {
-    let scratch = harness::scratch("protocol-shared");
     let op = "REQ-DRT-PROTO.runner_shared";
-    let implementation = harness::rust_runner(
-        "REQ-DRT-PROTO",
-        "runner_shared",
-        "crates/core/src/drt/protocol.rs::shared_runners",
-        &scratch,
-    );
-    let model = harness::lean_runner(
-        "TraceLean.Protocol",
-        "TraceLean.Protocol.sharedRunners",
-        op,
-        &["placed"],
-        &scratch,
-    );
-    let result = run(
-        op,
-        &placed_input(),
-        &model,
-        &implementation,
-        RunOptions { seed: 41, cases: 2_000 },
-    )
-    .expect("both runners answer");
-    support::agreed(&result);
-    let _ = std::fs::remove_dir_all(&scratch);
+    harness::agree(op, &placed_input(), 41, 2_000);
 }
 
 /// @tests REQ-DRT-PROTO.runner_shared
@@ -473,7 +329,7 @@ fn generation_reaches_mixed_languages_and_repeated_ops() {
             placed.iter().map(|p| (p.op.as_str(), p.language.as_str())).collect();
         repeated += u64::from(pairs.len() < placed.len());
     }
-    support::covered(
+    harness::covered(
         "REQ-DRT-PROTO.runner_shared",
         &[("two languages", mixed), ("an op placed twice", repeated)],
     );
@@ -503,7 +359,7 @@ fn generation_reaches_every_conclusion() {
         }
     }
 
-    support::covered(
+    harness::covered(
         "REQ-DRT-PROTO.reply_one_line",
         &[
             ("an answer", answered),
@@ -559,7 +415,7 @@ fn model_and_implementation_agree_on_when_two_answers_agree() {
     )
     .expect("both runners answer");
 
-    support::agreed(&result);
+    harness::agreed(&result);
 
     let _ = std::fs::remove_dir_all(&scratch);
 }
@@ -589,7 +445,7 @@ fn model_and_implementation_agree_that_finding_nothing_is_not_a_proof() {
     )
     .expect("both runners answer");
 
-    support::agreed(&result);
+    harness::agreed(&result);
 
     let _ = std::fs::remove_dir_all(&scratch);
 }

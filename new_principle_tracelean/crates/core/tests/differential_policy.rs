@@ -5,8 +5,6 @@ use std::collections::BTreeMap;
 use tracelean_core::drt::run::{run, RunOptions};
 use tracelean_core::drt::schema::Schema;
 
-mod support;
-
 const OP: &str = "REQ-SBX.classification_total";
 
 fn input_schema() -> Schema {
@@ -68,7 +66,7 @@ fn model_and_implementation_agree_on_classification() {
     )
     .expect("both runners answer");
 
-    support::agreed(&result);
+    harness::agreed(&result);
 
     let _ = std::fs::remove_dir_all(&scratch);
 }
@@ -96,5 +94,5 @@ fn generation_reaches_every_classification() {
         .iter()
         .map(|name| (name.as_str(), seen.get(name).copied().unwrap_or(0)))
         .collect();
-    support::covered("REQ-SBX.classification_total", &counts);
+    harness::covered("REQ-SBX.classification_total", &counts);
 }

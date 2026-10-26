@@ -1,5 +1,4 @@
 mod harness;
-mod support;
 
 use tracelean_core::drt::run::{run, RunOptions};
 use tracelean_core::drt::schema::Schema;
@@ -46,7 +45,7 @@ fn model_and_implementation_agree_on_where_a_pattern_matches() {
     let model = harness::lean_runner("TraceLean.Find", "TraceLean.Find.globMatches", op, &["text", "pattern"], &scratch);
     let result = run(op, &glob_input(), &model, &implementation, RunOptions { seed: 97, cases: 4_000 })
         .expect("both runners answer");
-    support::agreed(&result);
+    harness::agreed(&result);
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
@@ -85,7 +84,7 @@ fn generation_reaches_matches_stars_and_lines() {
             lines += 1;
         }
     }
-    support::covered(
+    harness::covered(
         "REQ-NAV.find_by_glob",
         &[
             ("a match", found),
@@ -112,7 +111,7 @@ fn model_and_implementation_agree_on_which_lines_match() {
         harness::lean_runner("TraceLean.Find", "TraceLean.Find.matchingLines", op, &["text", "pattern"], &scratch);
     let result = run(op, &glob_input(), &model, &implementation, RunOptions { seed: 101, cases: 4_000 })
         .expect("both runners answer");
-    support::agreed(&result);
+    harness::agreed(&result);
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
@@ -136,7 +135,7 @@ fn generation_reaches_some_none_and_every_line() {
             _ => some += 1,
         }
     }
-    support::covered(
+    harness::covered(
         "REQ-NAV.find_lists_lines",
         &[("some lines match", some), ("no line matches", none), ("every line matches", every)],
     );
@@ -164,7 +163,7 @@ fn model_and_implementation_agree_on_what_a_key_does_to_an_answer() {
     let model = harness::lean_runner("TraceLean.Ask", "TraceLean.Ask.askStep", op, &["answer", "key"], &scratch);
     let result = run(op, &ask_input(), &model, &implementation, RunOptions { seed: 103, cases: 3_000 })
         .expect("both runners answer");
-    support::agreed(&result);
+    harness::agreed(&result);
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
@@ -195,7 +194,7 @@ fn generation_reaches_every_way_a_key_goes() {
             }
         }
     }
-    support::covered(
+    harness::covered(
         "REQ-NAV.name_is_asked_for",
         &[
             ("a character typed", typed),
@@ -234,7 +233,7 @@ fn model_and_implementation_agree_on_what_a_colour_is() {
     let model = harness::lean_runner("TraceLean.Setting", "TraceLean.Setting.isColour", op, &["value"], &scratch);
     let result = run(op, &setting_input(), &model, &implementation, RunOptions { seed: 107, cases: 2_000 })
         .expect("both runners answer");
-    support::agreed(&result);
+    harness::agreed(&result);
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
@@ -255,7 +254,7 @@ fn generation_reaches_colours_and_values_that_are_none() {
             not += 1;
         }
     }
-    support::covered("REQ-LOOK.setting_edited_in_place", &[("a colour", colour), ("not a colour", not)]);
+    harness::covered("REQ-LOOK.setting_edited_in_place", &[("a colour", colour), ("not a colour", not)]);
 }
 
 fn goals_input() -> Schema {
@@ -289,7 +288,7 @@ fn model_and_implementation_agree_on_what_the_panel_says() {
     );
     let result = run(op, &goals_input(), &model, &implementation, RunOptions { seed: 109, cases: 2_000 })
         .expect("both runners answer");
-    support::agreed(&result);
+    harness::agreed(&result);
     let _ = std::fs::remove_dir_all(&scratch);
 }
 
@@ -324,7 +323,7 @@ fn generation_reaches_each_thing_a_server_can_answer() {
             _ => {}
         }
     }
-    support::covered(
+    harness::covered(
         "REQ-LSP.proof_state_shown",
         &[
             ("no result", no_result),

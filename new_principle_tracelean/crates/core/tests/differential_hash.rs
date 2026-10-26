@@ -3,8 +3,6 @@ mod harness;
 use tracelean_core::drt::run::{run, RunOptions};
 use tracelean_core::drt::schema::Schema;
 
-mod support;
-
 fn strukt(fields: &[(&str, Schema)]) -> Schema {
     Schema::Struct { fields: fields.iter().map(|(k, v)| (k.to_string(), v.clone())).collect() }
 }
@@ -48,34 +46,9 @@ fn input_schema() -> Schema {
 #[test]
 #[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
 fn model_and_implementation_agree_on_the_normalised_body() {
-    let scratch = harness::scratch("normalize");
     let op = "REQ-ANCHOR.whitespace_normalised";
-    let implementation = harness::rust_runner(
-        "REQ-ANCHOR",
-        "whitespace_normalised",
-        "crates/core/src/trace/hash.rs::normalize_of",
-        &scratch,
-    );
-    let model = harness::lean_runner(
-        "TraceLean.Hash",
-        "TraceLean.Hash.normalize",
-        op,
-        &["source", "removed", "protected"],
-        &scratch,
-    );
 
-    let result = run(
-        op,
-        &input_schema(),
-        &model,
-        &implementation,
-        RunOptions { seed: 55, cases: 3_000 },
-    )
-    .expect("both runners answer");
-
-    support::agreed(&result);
-
-    let _ = std::fs::remove_dir_all(&scratch);
+    harness::agree(op, &input_schema(), 55, 3_000);
 }
 
 /// @drt REQ-ANCHOR.hash_tracks_body
@@ -83,34 +56,9 @@ fn model_and_implementation_agree_on_the_normalised_body() {
 #[test]
 #[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
 fn model_and_implementation_agree_on_the_body_hash() {
-    let scratch = harness::scratch("bodyhash");
     let op = "REQ-ANCHOR.hash_tracks_body";
-    let implementation = harness::rust_runner(
-        "REQ-ANCHOR",
-        "hash_tracks_body",
-        "crates/core/src/trace/hash.rs::body_of",
-        &scratch,
-    );
-    let model = harness::lean_runner(
-        "TraceLean.Hash",
-        "TraceLean.Hash.bodyHash",
-        op,
-        &["source", "removed", "protected"],
-        &scratch,
-    );
 
-    let result = run(
-        op,
-        &input_schema(),
-        &model,
-        &implementation,
-        RunOptions { seed: 56, cases: 2_000 },
-    )
-    .expect("both runners answer");
-
-    support::agreed(&result);
-
-    let _ = std::fs::remove_dir_all(&scratch);
+    harness::agree(op, &input_schema(), 56, 2_000);
 }
 
 /// @drt REQ-REQDOC.clause_addressable
@@ -177,7 +125,7 @@ fn clause_hash_agrees(req: &str, clause: &str) {
     )
     .expect("both runners answer");
 
-    support::agreed(&result);
+    harness::agreed(&result);
 
     let _ = std::fs::remove_dir_all(&scratch);
 }
@@ -218,7 +166,7 @@ fn the_hash_moves_exactly_when_the_normalised_body_moves() {
         assert_ne!(body_of(extended, vec![], vec![]), hash, "a real change left the hash alone");
         moved += 1;
     }
-    support::covered(
+    harness::covered(
         "REQ-ANCHOR.hash_tracks_body",
         &[("a body reindented without a range", held), ("a body extended", moved)],
     );
@@ -276,34 +224,9 @@ fn anchor_ident_input() -> Schema {
 #[test]
 #[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
 fn model_and_implementation_agree_on_an_anchors_identity() {
-    let scratch = harness::scratch("anchor-ident");
     let op = "REQ-ANCHOR.symbol_not_line";
-    let implementation = harness::rust_runner(
-        "REQ-ANCHOR",
-        "symbol_not_line",
-        "crates/core/src/trace/anchor.rs::anchor_ident",
-        &scratch,
-    );
-    let model = harness::lean_runner(
-        "TraceLean.Anchor",
-        "TraceLean.Anchor.anchorIdent",
-        op,
-        &["file", "kind"],
-        &scratch,
-    );
 
-    let result = run(
-        op,
-        &anchor_ident_input(),
-        &model,
-        &implementation,
-        RunOptions { seed: 73, cases: 2_000 },
-    )
-    .expect("both runners answer");
-
-    support::agreed(&result);
-
-    let _ = std::fs::remove_dir_all(&scratch);
+    harness::agree(op, &anchor_ident_input(), 73, 2_000);
 }
 
 /// @drt REQ-ANCHOR.imprecise_capped
@@ -311,21 +234,7 @@ fn model_and_implementation_agree_on_an_anchors_identity() {
 #[test]
 #[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
 fn model_and_implementation_agree_on_the_cap_for_an_imprecise_anchor() {
-    let scratch = harness::scratch("anchor-cap");
     let op = "REQ-ANCHOR.imprecise_capped";
-    let implementation = harness::rust_runner(
-        "REQ-ANCHOR",
-        "imprecise_capped",
-        "crates/core/src/trace/anchor.rs::anchor_ceiling",
-        &scratch,
-    );
-    let model = harness::lean_runner(
-        "TraceLean.Anchor",
-        "TraceLean.Anchor.anchorCeiling",
-        op,
-        &["precise", "claimed"],
-        &scratch,
-    );
 
     let schema = Schema::Struct {
         fields: [
@@ -336,18 +245,7 @@ fn model_and_implementation_agree_on_the_cap_for_an_imprecise_anchor() {
         .collect(),
     };
 
-    let result = run(
-        op,
-        &schema,
-        &model,
-        &implementation,
-        RunOptions { seed: 79, cases: 500 },
-    )
-    .expect("both runners answer");
-
-    support::agreed(&result);
-
-    let _ = std::fs::remove_dir_all(&scratch);
+    harness::agree(op, &schema, 79, 500);
 }
 
 /// @tests REQ-ANCHOR.imprecise_capped
@@ -387,7 +285,7 @@ fn generation_reaches_both_branches_of_the_cap() {
             }
         }
     }
-    support::covered(
+    harness::covered(
         "REQ-ANCHOR.imprecise_capped",
         &[
             ("a precise anchor", precise),
@@ -430,7 +328,7 @@ fn generation_reaches_every_shape_an_anchor_can_take() {
             AnchorKind::File => whole += 1,
         }
     }
-    support::covered(
+    harness::covered(
         "REQ-ANCHOR.symbol_not_line",
         &[
             ("an anchor on a declaration", decl),

@@ -1,9 +1,6 @@
 mod harness;
 
-use tracelean_core::drt::run::{run, RunOptions};
 use tracelean_core::drt::schema::Schema;
-
-mod support;
 
 fn strukt(fields: &[(&str, Schema)]) -> Schema {
     Schema::Struct { fields: fields.iter().map(|(k, v)| (k.to_string(), v.clone())).collect() }
@@ -81,34 +78,9 @@ fn input_schema() -> Schema {
 #[test]
 #[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
 fn model_and_implementation_agree_on_what_a_document_declares() {
-    let scratch = harness::scratch("requirement");
     let op = "REQ-REQDOC.id_is_identity";
-    let implementation = harness::rust_runner(
-        "REQ-REQDOC",
-        "id_is_identity",
-        "crates/core/src/trace/requirement.rs::parse_lines",
-        &scratch,
-    );
-    let model = harness::lean_runner(
-        "TraceLean.Requirement",
-        "TraceLean.Requirement.parseLines",
-        op,
-        &["lines"],
-        &scratch,
-    );
 
-    let result = run(
-        op,
-        &input_schema(),
-        &model,
-        &implementation,
-        RunOptions { seed: 61, cases: 2_000 },
-    )
-    .expect("both runners answer");
-
-    support::agreed(&result);
-
-    let _ = std::fs::remove_dir_all(&scratch);
+    harness::agree(op, &input_schema(), 61, 2_000);
 }
 
 /// @tests REQ-DRT-COVER.law_coverage
@@ -148,7 +120,7 @@ fn generation_reaches_requirements_and_every_fault() {
         }
     }
 
-    support::covered(
+    harness::covered(
         "REQ-REQDOC.id_is_identity",
         &[
             ("a document that was a requirement", requirements),
@@ -166,21 +138,7 @@ fn generation_reaches_requirements_and_every_fault() {
 #[test]
 #[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
 fn model_and_implementation_agree_on_which_identifiers_are_redeclared() {
-    let scratch = harness::scratch("duplicate-ids");
     let op = "REQ-REQDOC.id_unique";
-    let implementation = harness::rust_runner(
-        "REQ-REQDOC",
-        "id_unique",
-        "crates/core/src/trace/requirement.rs::duplicate_ids",
-        &scratch,
-    );
-    let model = harness::lean_runner(
-        "TraceLean.Requirement",
-        "TraceLean.Requirement.duplicateIds",
-        op,
-        &["declared"],
-        &scratch,
-    );
 
     let small = |examples: &[&str]| Schema::Str {
         max_len: Some(0),
@@ -199,16 +157,5 @@ fn model_and_implementation_agree_on_which_identifiers_are_redeclared() {
         },
     )]);
 
-    let result = run(
-        op,
-        &schema,
-        &model,
-        &implementation,
-        RunOptions { seed: 109, cases: 2_000 },
-    )
-    .expect("both runners answer");
-
-    support::agreed(&result);
-
-    let _ = std::fs::remove_dir_all(&scratch);
+    harness::agree(op, &schema, 109, 2_000);
 }

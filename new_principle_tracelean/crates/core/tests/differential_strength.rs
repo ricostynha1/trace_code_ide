@@ -2,10 +2,7 @@ mod harness;
 
 use std::collections::BTreeMap;
 
-use tracelean_core::drt::run::{run, RunOptions};
 use tracelean_core::drt::schema::Schema;
-
-mod support;
 
 fn strukt(fields: &[(&str, Schema)]) -> Schema {
     Schema::Struct { fields: fields.iter().map(|(k, v)| (k.to_string(), v.clone())).collect() }
@@ -51,34 +48,9 @@ fn input_schema() -> Schema {
 #[test]
 #[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
 fn model_and_implementation_agree_on_what_a_proof_is_worth() {
-    let scratch = harness::scratch("strength");
     let op = "REQ-STRENGTH.qualifies_proof";
-    let implementation = harness::rust_runner(
-        "REQ-STRENGTH",
-        "qualifies_proof",
-        "crates/core/src/trace/strength.rs::obligations_from",
-        &scratch,
-    );
-    let model = harness::lean_runner(
-        "TraceLean.Strength",
-        "TraceLean.Strength.obligationsFrom",
-        op,
-        &["links"],
-        &scratch,
-    );
 
-    let result = run(
-        op,
-        &input_schema(),
-        &model,
-        &implementation,
-        RunOptions { seed: 33, cases: 3_000 },
-    )
-    .expect("both runners answer");
-
-    support::agreed(&result);
-
-    let _ = std::fs::remove_dir_all(&scratch);
+    harness::agree(op, &input_schema(), 33, 3_000);
 }
 
 /// @tests REQ-STRENGTH.not_proved_by_us
@@ -118,7 +90,7 @@ fn generation_reaches_every_state_that_links_alone_may_produce() {
         .map(|name| (*name, seen.get(name).copied().unwrap_or(0)))
         .collect();
     counts.push(("an obligation carrying a theorem", with_theorems));
-    support::covered("REQ-STRENGTH.qualifies_proof", &counts);
+    harness::covered("REQ-STRENGTH.qualifies_proof", &counts);
 }
 
 /// @drt REQ-STRENGTH.obligation_generated
@@ -127,21 +99,7 @@ fn generation_reaches_every_state_that_links_alone_may_produce() {
 #[test]
 #[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
 fn model_and_implementation_agree_on_the_obligation_text() {
-    let scratch = harness::scratch("obligation");
     let op = "REQ-STRENGTH.obligation_generated";
-    let implementation = harness::rust_runner(
-        "REQ-STRENGTH",
-        "obligation_generated",
-        "crates/core/src/trace/strength.rs::obligation_source",
-        &scratch,
-    );
-    let model = harness::lean_runner(
-        "TraceLean.Strength",
-        "TraceLean.Strength.obligationSource",
-        op,
-        &["obligation"],
-        &scratch,
-    );
 
     let mut strength: BTreeMap<String, Option<Box<Schema>>> = BTreeMap::new();
     strength.insert("open".into(), None);
@@ -182,16 +140,5 @@ fn model_and_implementation_agree_on_the_obligation_text() {
         ]),
     )]);
 
-    let result = run(
-        op,
-        &schema,
-        &model,
-        &implementation,
-        RunOptions { seed: 103, cases: 2_000 },
-    )
-    .expect("both runners answer");
-
-    support::agreed(&result);
-
-    let _ = std::fs::remove_dir_all(&scratch);
+    harness::agree(op, &schema, 103, 2_000);
 }

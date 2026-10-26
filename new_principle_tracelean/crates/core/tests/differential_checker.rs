@@ -2,10 +2,7 @@ mod harness;
 
 use std::collections::BTreeMap;
 
-use tracelean_core::drt::run::{run, RunOptions};
 use tracelean_core::drt::schema::Schema;
-
-mod support;
 
 fn strukt(fields: &[(&str, Schema)]) -> Schema {
     Schema::Struct { fields: fields.iter().map(|(k, v)| (k.to_string(), v.clone())).collect() }
@@ -34,34 +31,9 @@ fn coverage_input() -> Schema {
 #[test]
 #[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
 fn model_and_implementation_agree_on_what_roles_imply() {
-    let scratch = harness::scratch("coverage");
     let op = "REQ-CHECK.exactly_once";
-    let implementation = harness::rust_runner(
-        "REQ-CHECK",
-        "exactly_once",
-        "crates/core/src/trace/checker.rs::coverage_kinds",
-        &scratch,
-    );
-    let model = harness::lean_runner(
-        "TraceLean.Checker",
-        "TraceLean.Checker.coverageKinds",
-        op,
-        &["roles", "exempt", "structural"],
-        &scratch,
-    );
 
-    let result = run(
-        op,
-        &coverage_input(),
-        &model,
-        &implementation,
-        RunOptions { seed: 41, cases: 2_000 },
-    )
-    .expect("both runners answer");
-
-    support::agreed(&result);
-
-    let _ = std::fs::remove_dir_all(&scratch);
+    harness::agree(op, &coverage_input(), 41, 2_000);
 }
 
 fn kind() -> Schema {
@@ -84,34 +56,9 @@ fn kind() -> Schema {
 #[test]
 #[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
 fn model_and_implementation_agree_on_what_each_kind_means() {
-    let scratch = harness::scratch("kinds");
     let op = "REQ-CHECK.named_kinds";
-    let implementation = harness::rust_runner(
-        "REQ-CHECK",
-        "named_kinds",
-        "crates/core/src/trace/checker.rs::facts",
-        &scratch,
-    );
-    let model = harness::lean_runner(
-        "TraceLean.Checker",
-        "TraceLean.Checker.facts",
-        op,
-        &["kind"],
-        &scratch,
-    );
 
-    let result = run(
-        op,
-        &strukt(&[("kind", kind())]),
-        &model,
-        &implementation,
-        RunOptions { seed: 42, cases: 1_000 },
-    )
-    .expect("both runners answer");
-
-    support::agreed(&result);
-
-    let _ = std::fs::remove_dir_all(&scratch);
+    harness::agree(op, &strukt(&[("kind", kind())]), 42, 1_000);
 }
 
 fn qualifier() -> Schema {
@@ -153,21 +100,7 @@ fn qualifier() -> Schema {
 #[test]
 #[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
 fn model_and_implementation_agree_on_unsound_qualifiers() {
-    let scratch = harness::scratch("qualifiers");
     let op = "REQ-CHECK.qualifier_soundness";
-    let implementation = harness::rust_runner(
-        "REQ-CHECK",
-        "qualifier_soundness",
-        "crates/core/src/trace/checker.rs::qualifier_kinds",
-        &scratch,
-    );
-    let model = harness::lean_runner(
-        "TraceLean.Checker",
-        "TraceLean.Checker.qualifierKinds",
-        op,
-        &["qualifier", "today"],
-        &scratch,
-    );
     let today = Schema::Option {
         inner: Box::new(Schema::Str {
             max_len: Some(0),
@@ -175,18 +108,7 @@ fn model_and_implementation_agree_on_unsound_qualifiers() {
         }),
     };
 
-    let result = run(
-        op,
-        &strukt(&[("qualifier", Schema::Option { inner: Box::new(qualifier()) }), ("today", today)]),
-        &model,
-        &implementation,
-        RunOptions { seed: 43, cases: 1_000 },
-    )
-    .expect("both runners answer");
-
-    support::agreed(&result);
-
-    let _ = std::fs::remove_dir_all(&scratch);
+    harness::agree(op, &strukt(&[("qualifier", Schema::Option { inner: Box::new(qualifier()) }), ("today", today)]), 43, 1_000);
 }
 
 /// @tests REQ-CHECK.exactly_once
@@ -235,7 +157,7 @@ fn at_most_one_chain_finding_and_no_progress_ever_blocks() {
         .iter()
         .map(|name| (*name, seen.get(*name).copied().unwrap_or(0)))
         .collect();
-    support::covered("REQ-CHECK.exactly_once", &counts);
+    harness::covered("REQ-CHECK.exactly_once", &counts);
 }
 
 fn crowded_input() -> Schema {
@@ -247,34 +169,9 @@ fn crowded_input() -> Schema {
 #[test]
 #[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
 fn model_and_implementation_agree_on_which_roles_are_crowded() {
-    let scratch = harness::scratch("crowded");
     let op = "REQ-CHECK.one_of_each_role";
-    let implementation = harness::rust_runner(
-        "REQ-CHECK",
-        "one_of_each_role",
-        "crates/core/src/trace/checker.rs::crowded_kinds",
-        &scratch,
-    );
-    let model = harness::lean_runner(
-        "TraceLean.Checker",
-        "TraceLean.Checker.crowdedKinds",
-        op,
-        &["roles"],
-        &scratch,
-    );
 
-    let result = run(
-        op,
-        &crowded_input(),
-        &model,
-        &implementation,
-        RunOptions { seed: 44, cases: 2_000 },
-    )
-    .expect("both runners answer");
-
-    support::agreed(&result);
-
-    let _ = std::fs::remove_dir_all(&scratch);
+    harness::agree(op, &crowded_input(), 44, 2_000);
 }
 
 /// @tests REQ-CHECK.one_of_each_role
@@ -310,5 +207,5 @@ fn every_crowded_role_is_reached_and_counted() {
         .iter()
         .map(|name| (*name, seen.get(*name).copied().unwrap_or(0)))
         .collect();
-    support::covered("REQ-CHECK.one_of_each_role", &counts);
+    harness::covered("REQ-CHECK.one_of_each_role", &counts);
 }
