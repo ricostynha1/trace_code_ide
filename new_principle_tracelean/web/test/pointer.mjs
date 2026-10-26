@@ -31,7 +31,7 @@ const BRIDGE = `
       case "shown": return [
         { pane: "explorer", at: { left: 0, top: 0, width: 30, height: 10 }, buffer: buffers.explorer, focused: false },
         { pane: "document", at: { left: 30, top: 0, width: 60, height: 10 }, buffer: buffers.document, focused: true,
-          top: 0, chips: [[0, "I", "REQ-A.x"]] } ];
+          top: 0, lines: window.__lines || 0, chips: [[0, "I", "REQ-A.x"]] } ];
       case "cursor": return [0, 6];
       case "bars": return [empty("stations"), { ...empty("opened"), text: "1  x.rs",
         spans: [ { start: 0, stop: 7, role: "entry", actions: ["screen.show"] } ] }];
@@ -193,6 +193,25 @@ try {
   await sleep(250);
   check("dragging a pane's edge sends the columns moved before the release",
     held.length > 0 && held.every((a) => a.pane === "explorer") && held.reduce((s, a) => s + a.amount, 0) >= 3, JSON.stringify(held));
+
+  await evaluate("window.__lines = 200; window.dispatchEvent(new Event('resize'))");
+  await sleep(250);
+  await reset();
+  const right = await evaluate(`(() => { const p = [...document.querySelectorAll(".pane")][1];
+    const d = p.querySelector(".divider").getBoundingClientRect();
+    return { x: d.right - 2, y: d.top + 20, ch: p.getBoundingClientRect().width / 60, bar: !!p.querySelector(".scrollbar") }; })()`);
+  await cdp.send("Input.dispatchMouseEvent", { type: "mouseMoved", x: right.x, y: right.y });
+  await cdp.send("Input.dispatchMouseEvent", { type: "mousePressed", x: right.x, y: right.y, button: "left", clickCount: 1 });
+  await cdp.send("Input.dispatchMouseEvent", { type: "mouseMoved", x: right.x - right.ch * 4, y: right.y, button: "left" });
+  await sleep(250);
+  await cdp.send("Input.dispatchMouseEvent", { type: "mouseReleased", x: right.x - right.ch * 4, y: right.y, button: "left", clickCount: 1 });
+  await sleep(250);
+  const pulled = (await calls()).filter(([c]) => c === "grab").map(([, a]) => a);
+  check("a pane with a scrollbar can still be resized from its edge",
+    right.bar && pulled.length > 0 && pulled.every((a) => a.pane === "document") && !(await calls()).some(([c]) => c === "scroll"),
+    JSON.stringify({ right, calls: await calls() }));
+  await evaluate("window.__lines = 0; window.dispatchEvent(new Event('resize'))");
+  await sleep(250);
 
   await reset();
   const w = await charAt(1, 6);  await mouse(w.x - 2, w.y);

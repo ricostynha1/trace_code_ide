@@ -301,7 +301,7 @@ button.item {
   height: 100%;
   cursor: col-resize;
   transition: background 0.15s;
-  z-index: 1;
+  z-index: 4;
 }
 
 .divider:hover,
@@ -770,7 +770,7 @@ button.actionable:focus {
 .pane .scrollbar {
   position: absolute;
   top: 0;
-  right: 0;
+  right: 6px;
   bottom: 0;
   width: 10px;
   background: transparent;
