@@ -215,14 +215,14 @@ mutual
       (weight, setBuffer pane buffer layout) :: setBufferParts pane buffer rest
 end
 
+/-- @models REQ-SCREEN.opened_outlives_shown -/
 def showBuffer (id : String) (screen : Screen) : Screen :=
   if isOpened screen id then
     { screen with layout := setBuffer screen.focus id screen.layout }
   else
     screen
 
-/-- @models REQ-SCREEN.opened_outlives_shown
-@models REQ-SCREEN.station_opens_a_buffer -/
+/-- @models REQ-SCREEN.station_opens_a_buffer -/
 def openBuffer (buffer : Buffer) (screen : Screen) : Screen :=
   if isOpened screen buffer.id then
     showBuffer buffer.id screen
@@ -570,12 +570,12 @@ def stationKind (station : String) : Option BufferKind :=
 /-- @proves REQ-SCREEN.stations_are_constant -/
 theorem stations_constant (a b : Screen) : stations a = stations b := rfl
 
+/-- @proves REQ-SCREEN.opened_outlives_shown -/
 theorem show_keeps_opened (id : String) (screen : Screen) :
     (showBuffer id screen).opened = screen.opened := by
   unfold showBuffer
   split <;> rfl
 
-/-- @proves REQ-SCREEN.opened_outlives_shown -/
 theorem open_twice_holds_one (buffer : Buffer) (screen : Screen) :
     isOpened screen buffer.id = true →
     (openBuffer buffer screen).opened = screen.opened := by

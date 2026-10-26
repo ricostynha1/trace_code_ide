@@ -7,16 +7,16 @@
   "level": "L3",
   "detail": {
     "drt": {
-      "seed": 91,
-      "cases": 10000,
-      "op": "REQ-ROLLUP.open_is_lower_bound"
+      "seed": 38,
+      "cases": 1000,
+      "op": "REQ-ROLLUP.never_complete_when_open"
     }
   },
-  "linkHash": "753b16df3d369bf6",
+  "linkHash": "2fb5c54d07605d84",
   "inputs": [
     [
       "implementation",
-      "e33a44d720f5aa31+ff1792d9b61997f1"
+      "de89371e4f54bc4c+e33a44d720f5aa31"
     ],
     [
       "model",

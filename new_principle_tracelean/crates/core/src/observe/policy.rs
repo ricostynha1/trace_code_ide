@@ -28,7 +28,6 @@ pub const PASS_THROUGH_AT_ROOT: &[&str] = &["build", "dist", "venv"];
 /// @drt REQ-SBX.classification_total
 /// @drt REQ-SBX.protected_never_mirrored
 /// @drt REQ-SBX.passthrough_not_mirrored
-/// @drt REQ-SBX.escape_is_not_silent
 pub fn classify(path: String) -> Class {
     if path.is_empty() || path.starts_with('/') || path.contains('\0') {
         return Class::Outside;

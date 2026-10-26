@@ -116,6 +116,7 @@ def declaredActions (buffer : Buffer) : List String :=
   (all.foldl (fun seen a => if seen.contains a then seen else seen ++ [a]) []).mergeSort
     (fun a b => decide (a ≤ b))
 
+/-- @models REQ-VIEW.rendering_is_total -/
 def plainText (buffer : Buffer) : List String :=
   buffer.text.splitOn "\n"
 
@@ -201,8 +202,7 @@ private def lineBreaches (at_ : Nat) : List String → List String → List Brea
     let here := if shown == expected then [] else [Breach.lineDiffers at_ shown expected]
     here ++ lineBreaches (at_ + 1) restShown restExpected
 
-/-- @models REQ-VIEW.rendering_is_total
-@models REQ-VIEW.frontend_adds_nothing
+/-- @models REQ-VIEW.frontend_adds_nothing
 @models REQ-VIEW.one_representation -/
 def conformance (buffer : Buffer) (rendering : Rendering) : List Breach :=
   let lines := lineBreaches 0 rendering.lines (plainText buffer)
@@ -274,6 +274,10 @@ private theorem no_breach_between_equal_lines (at_ : Nat) (lines : List String) 
   | cons line rest ih => simp [lineBreaches, ih]
 
 /-- @proves REQ-VIEW.rendering_is_total -/
+theorem every_kind_renders_as_its_text (buffer : Buffer) (kind : BufferKind) :
+    plainText { buffer with kind := kind } = plainText buffer ∧ plainText buffer = buffer.text.splitOn "\n" :=
+  ⟨rfl, rfl⟩
+
 theorem drawing_the_text_always_conforms (buffer : Buffer) :
     conformance buffer { lines := plainText buffer, offered := [] } = [] := by
   simp [conformance, no_breach_between_equal_lines]

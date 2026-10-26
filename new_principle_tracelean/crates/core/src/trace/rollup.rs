@@ -14,14 +14,19 @@ pub struct Figure {
     pub exact: bool,
 }
 
+/// @implements REQ-ROLLUP.never_complete_when_open
+/// @drt REQ-ROLLUP.never_complete_when_open
+pub fn complete(figure: Figure) -> bool {
+    figure.exact && figure.total > 0 && figure.met == figure.total
+}
+
 impl Figure {
     pub fn render(&self) -> String {
         render_figure(*self)
     }
 
-    /// @implements REQ-ROLLUP.never_complete_when_open
     pub fn is_complete(&self) -> bool {
-        self.exact && self.total > 0 && self.met == self.total
+        complete(*self)
     }
 }
 
@@ -122,7 +127,6 @@ fn own(node: &Node, levels: &BTreeMap<(String, Option<String>), Marks>, floor: M
 /// @implements REQ-ROLLUP.deterministic_order
 /// @implements REQ-ROLLUP.counted_once
 /// @drt REQ-ROLLUP.open_is_lower_bound
-/// @drt REQ-ROLLUP.never_complete_when_open
 /// @drt REQ-ROLLUP.exempt_leaves_denominator
 /// @drt REQ-ROLLUP.partial_capped
 /// @drt REQ-ROLLUP.deterministic_order

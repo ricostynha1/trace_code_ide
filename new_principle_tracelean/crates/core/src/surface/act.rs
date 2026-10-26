@@ -158,6 +158,7 @@ fn name_at(focus: &Focus, w: &Workspace) -> Option<String> {
 /// @drt REQ-ACT.missing_target_is_refused
 /// @drt REQ-ACT.edits_are_commands
 /// @drt REQ-ACT.dispatch_is_pure
+/// @drt REQ-ACT.unknown_is_refused
 pub fn dispatch(action: String, focus: Focus, w: Workspace, waiting: Vec<Command>) -> Intent {
     let focus = match crate::surface::view::action_target(&action) {
         Some(target) => Focus { under: Some(target.to_string()), ..focus },
@@ -356,7 +357,6 @@ pub fn dispatch(action: String, focus: Focus, w: Workspace, waiting: Vec<Command
 }
 
 /// @implements REQ-ACT.unknown_is_refused
-/// @drt REQ-ACT.unknown_is_refused
 pub fn acts(intent: Intent) -> bool {
     !matches!(intent, Intent::Refuse { .. })
 }

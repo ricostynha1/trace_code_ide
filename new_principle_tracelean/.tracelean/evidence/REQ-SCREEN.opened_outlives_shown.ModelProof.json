@@ -7,15 +7,15 @@
   "level": "L4",
   "detail": {
     "proof": {
-      "theoremName": "TraceLean.Screen.open_twice_holds_one",
+      "theoremName": "TraceLean.Screen.show_keeps_opened",
       "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
     }
   },
-  "linkHash": "574d130396297b4a",
+  "linkHash": "0e3ee5d106b29f1d",
   "inputs": [
     [
       "model",
-      "c06eb9b1d8f88429"
+      "5e3581c3e17298a5"
     ],
     [
       "requirement",

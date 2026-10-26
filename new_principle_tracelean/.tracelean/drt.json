@@ -116,7 +116,7 @@
           "atLeast": 1
         }
       ],
-      "also_checks": ["protected_never_mirrored", "passthrough_not_mirrored", "escape_is_not_silent"]
+      "also_checks": ["protected_never_mirrored", "passthrough_not_mirrored"]
     },
     {
       "req_id": "REQ-MIRROR",
@@ -931,7 +931,7 @@
           "atLeast": 50
         }
       ],
-      "also_checks": ["never_complete_when_open", "exempt_leaves_denominator", "partial_capped", "deterministic_order", "counted_once"]
+      "also_checks": ["exempt_leaves_denominator", "partial_capped", "deterministic_order", "counted_once"]
     },
     {
       "req_id": "REQ-ROLLUP",
@@ -2011,20 +2011,7 @@
     {
       "req_id": "REQ-ACT",
       "clause": "action_to_intent",
-      "also_checks": ["one_path", "focus_is_carried", "missing_target_is_refused", "edits_are_commands", "dispatch_is_pure"]
-    },
-    {
-      "req_id": "REQ-ACT",
-      "clause": "unknown_is_refused",
-      "model": {
-        "import": "TraceLean.Act",
-        "function": "TraceLean.Act.acts",
-        "arguments": ["intent"]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/surface/act.rs::acts"
-      }
+      "also_checks": ["one_path", "focus_is_carried", "missing_target_is_refused", "edits_are_commands", "dispatch_is_pure", "unknown_is_refused"]
     },
     {
       "req_id": "REQ-DRIVE",

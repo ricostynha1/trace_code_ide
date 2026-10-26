@@ -161,46 +161,6 @@ fn model_and_implementation_agree_on_what_an_action_means() {
     );
 }
 
-/// @drt REQ-ACT.unknown_is_refused
-/// @tests REQ-ACT.unknown_is_refused
-#[test]
-#[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
-fn model_and_implementation_agree_on_whether_anything_happens() {
-    let mut travel = BTreeMap::new();
-    travel.insert("move".to_string(), Schema::simple_enum(&["back", "forward", "branch"]));
-    let mut observe = BTreeMap::new();
-    observe.insert("watch".to_string(), Schema::simple_enum(&["start", "reject", "create"]));
-    let mut display = BTreeMap::new();
-    display.insert("what".to_string(), kind());
-    let mut unknown = BTreeMap::new();
-    unknown.insert(
-        "action".to_string(),
-        Schema::Str { max_len: None, examples: vec!["file.explode".into()] },
-    );
-    let mut blocked = BTreeMap::new();
-    blocked.insert("unknownAction".to_string(), Some(Box::new(Schema::Struct { fields: unknown })));
-    let mut why = BTreeMap::new();
-    why.insert("why".to_string(), Schema::Enum { variants: blocked });
-
-    let mut variants = BTreeMap::new();
-    variants.insert("display".to_string(), Some(Box::new(Schema::Struct { fields: display })));
-    variants.insert("travel".to_string(), Some(Box::new(Schema::Struct { fields: travel })));
-    variants.insert("observe".to_string(), Some(Box::new(Schema::Struct { fields: observe })));
-    variants.insert("persist".to_string(), None);
-    variants.insert("refuse".to_string(), Some(Box::new(Schema::Struct { fields: why })));
-
-    let mut fields = BTreeMap::new();
-    fields.insert("intent".to_string(), Schema::Enum { variants });
-    check(
-        "REQ-ACT.unknown_is_refused",
-        "TraceLean.Act.acts",
-        "crates/core/src/surface/act.rs::acts",
-        &["intent"],
-        Schema::Struct { fields },
-        89,
-    );
-}
-
 /// @tests REQ-ACT.one_path
 #[test]
 fn a_key_and_a_button_reach_the_same_dispatch() {

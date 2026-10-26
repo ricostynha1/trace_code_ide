@@ -80,3 +80,68 @@ fn every_binding_resolves_against_the_source() {
         );
     }
 }
+
+const REACH: &str = r##"
+open Lean Elab Command Term in
+elab "#tracelean_reach " f:ident g:ident : command => liftTermElabM do
+  let env ← getEnv
+  let bound ← TraceLeanCheck.resolve f.getId
+  let model ← TraceLeanCheck.resolve g.getId
+  let found := env.contains bound && env.contains model
+  IO.println s!"tracelean-reach {f.getId} {g.getId} {found && TraceLeanCheck.reaches env model [bound] {}}"
+"##;
+
+/// @tests REQ-DRT-BIND.binding_is_the_bond
+#[test]
+#[ignore = "runs Lean on the built models"]
+fn every_binding_compares_the_code_with_a_model_that_computes_the_clauses_model() {
+    use tracelean_core::trace::anchor::AnchorKind;
+    let root = project_root();
+    let index = build(&root);
+    let mut pairs: BTreeSet<(String, String, String)> = BTreeSet::new();
+    let mut imports: BTreeSet<String> = BTreeSet::new();
+    for binding in merged(&root, &index) {
+        let Some(model) = binding.model.as_ref().filter(|m| m.import.starts_with("TraceLean.")) else { continue };
+        imports.insert(model.import.clone());
+        for op in binding.clauses() {
+            let (req_id, clause) = tracelean_core::drt::config::split_op(&op);
+            for link in index.links.iter().filter(|l| l.role == Role::Models && l.req_id == req_id && l.clause.as_deref() == clause) {
+                let (AnchorKind::Decl { symbol_path }, Some(module)) =
+                    (&link.anchor.kind, link.anchor.file.strip_prefix("formal/").and_then(|f| f.strip_suffix(".lean")))
+                else {
+                    continue;
+                };
+                imports.insert(module.replace('/', "."));
+                pairs.insert((op.clone(), model.function.clone(), symbol_path.replace("::", ".")));
+            }
+        }
+    }
+    let mut text = String::from("import Lean\n");
+    for module in &imports {
+        text.push_str(&format!("import {module}\n"));
+    }
+    text.push_str(tracelean_core::trace::proofcheck::PRELUDE);
+    text.push_str(REACH);
+    for (_, bound, model) in &pairs {
+        text.push_str(&format!("#tracelean_reach {bound} {model}\n"));
+    }
+    let file = std::env::temp_dir().join(format!("tracelean-reach-{}.lean", std::process::id()));
+    std::fs::write(&file, text).unwrap();
+    let ran = std::process::Command::new("lake").args(["env", "lean"]).arg(&file).current_dir(root.join("formal")).output().expect("lake runs");
+    let _ = std::fs::remove_file(&file);
+    let said = String::from_utf8_lossy(&ran.stdout).to_string();
+    let reaches: BTreeSet<(String, String)> = said
+        .lines()
+        .filter_map(|l| match l.split_whitespace().collect::<Vec<_>>().as_slice() {
+            ["tracelean-reach", bound, model, "true"] => Some((bound.to_string(), model.to_string())),
+            _ => None,
+        })
+        .collect();
+    assert!(said.lines().filter(|l| l.starts_with("tracelean-reach ")).count() == pairs.len(), "Lean did not answer for every pair:\n{said}{}", String::from_utf8_lossy(&ran.stderr));
+    let wrong: Vec<String> = pairs
+        .iter()
+        .filter(|(_, bound, model)| !reaches.contains(&(bound.clone(), model.clone())))
+        .map(|(op, bound, model)| format!("{op}: bound to {bound}, which never computes {model}"))
+        .collect();
+    assert!(wrong.is_empty(), "these bindings compare the code with something other than the clause's model: {wrong:#?}");
+}

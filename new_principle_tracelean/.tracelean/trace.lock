@@ -1100,19 +1100,9 @@
       "req": "REQ-ACT",
       "clause": "unknown_is_refused",
       "file": "crates/core/src/surface/act.rs",
-      "anchor": "crates/core/src/surface/act.rs::acts",
-      "body_hash": "e97d177bdd02cd31",
-      "link_hash": "6686a50090f548f2",
-      "qualifier": null
-    },
-    {
-      "role": "drt",
-      "req": "REQ-ACT",
-      "clause": "unknown_is_refused",
-      "file": "crates/core/tests/differential_act.rs",
-      "anchor": "crates/core/tests/differential_act.rs::model_and_implementation_agree_on_whether_anything_happens",
-      "body_hash": "6e0a7f192fb3e643",
-      "link_hash": "521865500fb480da",
+      "anchor": "crates/core/src/surface/act.rs::dispatch",
+      "body_hash": "75cd03e8fdbcd42f",
+      "link_hash": "d3addbba70a38a6d",
       "qualifier": null
     },
     {
@@ -3860,9 +3850,19 @@
       "req": "REQ-ROLLUP",
       "clause": "never_complete_when_open",
       "file": "crates/core/src/trace/rollup.rs",
-      "anchor": "crates/core/src/trace/rollup.rs::roll_up",
-      "body_hash": "344b5dc81a82dd4d",
-      "link_hash": "753b16df3d369bf6",
+      "anchor": "crates/core/src/trace/rollup.rs::complete",
+      "body_hash": "de89371e4f54bc4c",
+      "link_hash": "2fb5c54d07605d84",
+      "qualifier": null
+    },
+    {
+      "role": "drt",
+      "req": "REQ-ROLLUP",
+      "clause": "never_complete_when_open",
+      "file": "crates/core/tests/differential_rollup.rs",
+      "anchor": "crates/core/tests/differential_rollup.rs::model_and_implementation_agree_on_when_a_figure_is_complete",
+      "body_hash": "adb2b5e44809c049",
+      "link_hash": "ab91c29583708826",
       "qualifier": null
     },
     {
@@ -3953,16 +3953,6 @@
       "anchor": "crates/core/src/observe/effects.rs::run_violations",
       "body_hash": "6a949cb88e92bfcb",
       "link_hash": "db4f449134930f27",
-      "qualifier": null
-    },
-    {
-      "role": "drt",
-      "req": "REQ-SBX",
-      "clause": "escape_is_not_silent",
-      "file": "crates/core/src/observe/policy.rs",
-      "anchor": "crates/core/src/observe/policy.rs::classify",
-      "body_hash": "29a6661d3fbf41b8",
-      "link_hash": "cd95fe45786ad4d7",
       "qualifier": null
     },
     {
@@ -10460,9 +10450,9 @@
       "req": "REQ-ROLLUP",
       "clause": "never_complete_when_open",
       "file": "crates/core/src/trace/rollup.rs",
-      "anchor": "crates/core/src/trace/rollup.rs::Figure::is_complete",
-      "body_hash": "ff1792d9b61997f1",
-      "link_hash": "9c7f801fccd47479",
+      "anchor": "crates/core/src/trace/rollup.rs::complete",
+      "body_hash": "de89371e4f54bc4c",
+      "link_hash": "92e1be5712fb1e20",
       "qualifier": null
     },
     {
@@ -15040,9 +15030,9 @@
       "req": "REQ-SCREEN",
       "clause": "opened_outlives_shown",
       "file": "formal/TraceLean/Screen.lean",
-      "anchor": "formal/TraceLean/Screen.lean::TraceLean.Screen::openBuffer",
-      "body_hash": "c06eb9b1d8f88429",
-      "link_hash": "9e9ed886d22575d4",
+      "anchor": "formal/TraceLean/Screen.lean::TraceLean.Screen::showBuffer",
+      "body_hash": "5e3581c3e17298a5",
+      "link_hash": "d8f0d801f3433273",
       "qualifier": null
     },
     {
@@ -15870,9 +15860,9 @@
       "req": "REQ-VIEW",
       "clause": "rendering_is_total",
       "file": "formal/TraceLean/View.lean",
-      "anchor": "formal/TraceLean/View.lean::TraceLean.View::conformance",
-      "body_hash": "b9f69cf500f6df83",
-      "link_hash": "14c022447f87a97d",
+      "anchor": "formal/TraceLean/View.lean::TraceLean.View::plainText",
+      "body_hash": "75cafef92d87592c",
+      "link_hash": "6f1507a677170da7",
       "qualifier": null
     },
     {
@@ -18280,9 +18270,9 @@
       "req": "REQ-SCREEN",
       "clause": "opened_outlives_shown",
       "file": "formal/TraceLean/Screen.lean",
-      "anchor": "formal/TraceLean/Screen.lean::TraceLean.Screen::open_twice_holds_one",
-      "body_hash": "ef70f139e08e9b42",
-      "link_hash": "574d130396297b4a",
+      "anchor": "formal/TraceLean/Screen.lean::TraceLean.Screen::show_keeps_opened",
+      "body_hash": "46f37faf8962febd",
+      "link_hash": "0e3ee5d106b29f1d",
       "qualifier": null
     },
     {
@@ -19110,9 +19100,9 @@
       "req": "REQ-VIEW",
       "clause": "rendering_is_total",
       "file": "formal/TraceLean/View.lean",
-      "anchor": "formal/TraceLean/View.lean::TraceLean.View::drawing_the_text_always_conforms",
-      "body_hash": "5d7875cb5358a828",
-      "link_hash": "4c459f0b0a32c4ed",
+      "anchor": "formal/TraceLean/View.lean::TraceLean.View::every_kind_renders_as_its_text",
+      "body_hash": "23b6b8d7b7d13f9e",
+      "link_hash": "f620b318ced5ad59",
       "qualifier": null
     },
     {
@@ -20103,16 +20093,6 @@
       "anchor": "crates/core/src/surface/act.rs::tests::a_name_no_keymap_dispatches_is_refused_by_name",
       "body_hash": "e4748570bdd3a971",
       "link_hash": "54d27c06e4bbc89d",
-      "qualifier": null
-    },
-    {
-      "role": "tests",
-      "req": "REQ-ACT",
-      "clause": "unknown_is_refused",
-      "file": "crates/core/tests/differential_act.rs",
-      "anchor": "crates/core/tests/differential_act.rs::model_and_implementation_agree_on_whether_anything_happens",
-      "body_hash": "6e0a7f192fb3e643",
-      "link_hash": "3dd4c1bb38765173",
       "qualifier": null
     },
     {
@@ -21974,6 +21954,16 @@
       "body_hash": "ca863aef7bfc44b4",
       "link_hash": "5005b15379144506",
       "qualifier": "structural"
+    },
+    {
+      "role": "tests",
+      "req": "REQ-DRT-BIND",
+      "clause": "binding_is_the_bond",
+      "file": "crates/core/tests/bindings_are_real.rs",
+      "anchor": "crates/core/tests/bindings_are_real.rs::every_binding_compares_the_code_with_a_model_that_computes_the_clauses_model",
+      "body_hash": "09a33db46e94d461",
+      "link_hash": "120628156453610a",
+      "qualifier": null
     },
     {
       "role": "tests",
@@ -27370,6 +27360,16 @@
       "req": "REQ-ROLLUP",
       "clause": "never_complete_when_open",
       "file": "crates/core/tests/differential_rollup.rs",
+      "anchor": "crates/core/tests/differential_rollup.rs::model_and_implementation_agree_on_when_a_figure_is_complete",
+      "body_hash": "adb2b5e44809c049",
+      "link_hash": "d6a7db3cb16fb0f7",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-ROLLUP",
+      "clause": "never_complete_when_open",
+      "file": "crates/core/tests/differential_rollup.rs",
       "anchor": "crates/core/tests/differential_rollup.rs::the_roll_up_is_a_function_of_the_graph_and_never_flatters_it",
       "body_hash": "28912c8bd9dc0b41",
       "link_hash": "866eb482a62d86c0",
@@ -31983,12 +31983,12 @@
       "level": "L3",
       "detail": {
         "drt": {
-          "seed": 89,
+          "seed": 83,
           "cases": 8000,
-          "op": "REQ-ACT.unknown_is_refused"
+          "op": "REQ-ACT.action_to_intent"
         }
       },
-      "linkHash": "521865500fb480da",
+      "linkHash": "d3addbba70a38a6d",
       "inputs": [
         [
           "implementation",
@@ -48864,16 +48864,16 @@
       "level": "L3",
       "detail": {
         "drt": {
-          "seed": 91,
-          "cases": 10000,
-          "op": "REQ-ROLLUP.open_is_lower_bound"
+          "seed": 38,
+          "cases": 1000,
+          "op": "REQ-ROLLUP.never_complete_when_open"
         }
       },
-      "linkHash": "753b16df3d369bf6",
+      "linkHash": "2fb5c54d07605d84",
       "inputs": [
         [
           "implementation",
-          "e33a44d720f5aa31+ff1792d9b61997f1"
+          "de89371e4f54bc4c+e33a44d720f5aa31"
         ],
         [
           "model",
@@ -49377,12 +49377,12 @@
       "level": "L3",
       "detail": {
         "drt": {
-          "seed": 13,
+          "seed": 53,
           "cases": 2000,
-          "op": "REQ-SBX.classification_total"
+          "op": "REQ-OBS.workspace_is_a_copy"
         }
       },
-      "linkHash": "cd95fe45786ad4d7",
+      "linkHash": "db4f449134930f27",
       "inputs": [
         [
           "implementation",
@@ -50354,10 +50354,10 @@
           "judgedBy": "claude-review",
           "delegatedBy": "ricostynha",
           "promptVersion": "1",
-          "note": "An opened buffer is shown again without being added a second time."
+          "note": "Showing an identity only points the focused pane at a buffer already opened, never adds one, and leaves the opened set as it was."
         }
       },
-      "linkHash": "9e9ed886d22575d4",
+      "linkHash": "d8f0d801f3433273",
       "inputs": [
         [
           "requirement",
@@ -50365,7 +50365,7 @@
         ],
         [
           "model",
-          "c06eb9b1d8f88429"
+          "5e3581c3e17298a5"
         ]
       ]
     },
@@ -50391,7 +50391,7 @@
         ],
         [
           "model",
-          "c06eb9b1d8f88429"
+          "5e3581c3e17298a5"
         ],
         [
           "requirement",
@@ -50408,15 +50408,15 @@
       "level": "L4",
       "detail": {
         "proof": {
-          "theoremName": "TraceLean.Screen.open_twice_holds_one",
+          "theoremName": "TraceLean.Screen.show_keeps_opened",
           "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
         }
       },
-      "linkHash": "574d130396297b4a",
+      "linkHash": "0e3ee5d106b29f1d",
       "inputs": [
         [
           "model",
-          "c06eb9b1d8f88429"
+          "5e3581c3e17298a5"
         ],
         [
           "requirement",
@@ -57832,10 +57832,10 @@
           "judgedBy": "claude-review",
           "delegatedBy": "ricostynha",
           "promptVersion": "1",
-          "note": "conformance requires every line of the buffer's text to be drawn, whatever the kind."
+          "note": "The fallback rendering is the buffer's text as lines, defined for every buffer whatever its kind."
         }
       },
-      "linkHash": "14c022447f87a97d",
+      "linkHash": "6f1507a677170da7",
       "inputs": [
         [
           "requirement",
@@ -57843,7 +57843,7 @@
         ],
         [
           "model",
-          "b9f69cf500f6df83"
+          "75cafef92d87592c"
         ]
       ]
     },
@@ -57869,7 +57869,7 @@
         ],
         [
           "model",
-          "b9f69cf500f6df83"
+          "75cafef92d87592c"
         ],
         [
           "requirement",
@@ -57886,15 +57886,15 @@
       "level": "L4",
       "detail": {
         "proof": {
-          "theoremName": "TraceLean.View.drawing_the_text_always_conforms",
+          "theoremName": "TraceLean.View.every_kind_renders_as_its_text",
           "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
         }
       },
-      "linkHash": "4c459f0b0a32c4ed",
+      "linkHash": "f620b318ced5ad59",
       "inputs": [
         [
           "model",
-          "b9f69cf500f6df83"
+          "75cafef92d87592c"
         ],
         [
           "requirement",

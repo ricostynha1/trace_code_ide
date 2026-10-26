@@ -11,10 +11,10 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "conformance requires every line of the buffer's text to be drawn, whatever the kind."
+      "note": "The fallback rendering is the buffer's text as lines, defined for every buffer whatever its kind."
     }
   },
-  "linkHash": "14c022447f87a97d",
+  "linkHash": "6f1507a677170da7",
   "inputs": [
     [
       "requirement",
@@ -22,7 +22,7 @@
     ],
     [
       "model",
-      "b9f69cf500f6df83"
+      "75cafef92d87592c"
     ]
   ]
 }

@@ -411,3 +411,16 @@ fn a_claim_about_an_unscanned_file_never_raises_coverage() {
         ],
     );
 }
+
+/// @drt REQ-ROLLUP.never_complete_when_open
+/// @tests REQ-ROLLUP.never_complete_when_open
+#[test]
+#[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
+fn model_and_implementation_agree_on_when_a_figure_is_complete() {
+    let figure = harness::strukt(&[
+        ("met", Schema::Nat { max: Some(4), edges: vec![0, 4] }),
+        ("total", Schema::Nat { max: Some(4), edges: vec![0, 4] }),
+        ("exact", Schema::Bool),
+    ]);
+    harness::agree("REQ-ROLLUP.never_complete_when_open", &harness::strukt(&[("figure", figure)]), 38, 1_000);
+}

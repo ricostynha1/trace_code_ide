@@ -11,10 +11,10 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "An opened buffer is shown again without being added a second time."
+      "note": "Showing an identity only points the focused pane at a buffer already opened, never adds one, and leaves the opened set as it was."
     }
   },
-  "linkHash": "9e9ed886d22575d4",
+  "linkHash": "d8f0d801f3433273",
   "inputs": [
     [
       "requirement",
@@ -22,7 +22,7 @@
     ],
     [
       "model",
-      "c06eb9b1d8f88429"
+      "5e3581c3e17298a5"
     ]
   ]
 }

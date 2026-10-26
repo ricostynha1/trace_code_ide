@@ -7,15 +7,15 @@
   "level": "L4",
   "detail": {
     "proof": {
-      "theoremName": "TraceLean.View.drawing_the_text_always_conforms",
+      "theoremName": "TraceLean.View.every_kind_renders_as_its_text",
       "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
     }
   },
-  "linkHash": "4c459f0b0a32c4ed",
+  "linkHash": "f620b318ced5ad59",
   "inputs": [
     [
       "model",
-      "b9f69cf500f6df83"
+      "75cafef92d87592c"
     ],
     [
       "requirement",
