@@ -129,4 +129,65 @@ theorem the_answer_is_exact (file text : String) (offset position : Nat) :
     · exact Or.inr (Or.inl rfl)
     · exact Or.inr (Or.inr rfl)
 
+
+def Wrote (t : Tree) (n : Nat) : Prop :=
+  ∃ nd name p, t.node? n = some nd ∧ (back nd.command name p = .writtenHere ∨ back nd.command name p = .fileCreatedHere)
+
+theorem origin_found_stays (t : Tree) (o : Origin) :
+    ∀ l : List Nat, l.foldl (originStep t) (.inr o) = .inr o
+  | [] => rfl
+  | _ :: rest => origin_found_stays t o rest
+
+theorem origin_fold_sound (t : Tree) (L : List Nat) :
+    ∀ (l : List Nat) (acc : Sum (String × Nat) Origin), (∀ x ∈ l, x ∈ L) →
+      (∀ n, acc = .inr (.node n) → n ∈ L ∧ Wrote t n) →
+      ∀ n, l.foldl (originStep t) acc = .inr (.node n) → n ∈ L ∧ Wrote t n
+  | [], _, _, h => h
+  | x :: rest, acc, hl, h => by
+    apply origin_fold_sound t L rest _ (fun y hy => hl y (List.mem_cons_of_mem _ hy))
+    intro n hn
+    have hx : x ∈ L := hl x (List.mem_cons_self _ _)
+    unfold originStep at hn
+    split at hn
+    · exact h n (by simp_all)
+    · rename_i name current
+      split at hn
+      · cases hn
+      · rename_i nd hnd
+        split at hn
+        · rename_i hb
+          cases hn
+          exact ⟨hx, nd, name, current, hnd, Or.inl hb⟩
+        · rename_i hb
+          cases hn
+          exact ⟨hx, nd, name, current, hnd, Or.inr hb⟩
+        · cases hn
+        · cases hn
+
+/-- @proves REQ-PROV.position_question -/
+theorem the_writer_of_a_position_is_named (t : Tree) (atNode : Nat) (file : String) (position : Nat) :
+    (∀ n, origin t atNode file position = .node n →
+      n ∈ t.ancestry atNode ∧ Wrote t n) ∧
+    (∀ nd, t.node? atNode = some nd → back nd.command file position = .writtenHere →
+      origin t atNode file position = .node atNode) := by
+  constructor
+  · intro n h
+    unfold origin at h
+    split at h
+    · rename_i r hr
+      subst h
+      exact origin_fold_sound t (t.ancestry atNode).reverse _ _ (fun x hx => hx)
+        (fun _ h => by cases h) n hr |>.imp_left List.mem_reverse.mp
+    · cases h
+  · intro nd hnd hb
+    have ha : t.ancestry atNode = Tree.ancestryFrom t.nodes.length t nd.parent ++ [atNode] := by
+      simp only [Tree.ancestry, Tree.ancestryFrom, hnd]
+    unfold origin
+    rw [ha, List.reverse_append]
+    simp only [List.reverse_cons, List.reverse_nil, List.nil_append, List.singleton_append,
+      List.foldl_cons]
+    have hs : originStep t (Sum.inl (file, position)) atNode = .inr (.node atNode) := by
+      simp only [originStep, hnd, hb]
+    rw [hs, origin_found_stays]
+
 end TraceLean.Provenance

@@ -151,4 +151,35 @@ theorem testing_and_proving_do_not_apply_by_reading (m other : Marks) (h : other
   · simp [structural, Marks.both, h]
   · simp [structural, Marks.both, h]
 
+
+def recordsFor (j t p : Bool) : List Record :=
+  (if j then [⟨.requirementModel, .L2⟩] else []) ++ (if t then [⟨.modelImpl, .L3⟩] else []) ++
+    (if p then [⟨.modelProof, .L4⟩] else [])
+
+/-- @proves REQ-EVID.marks -/
+theorem every_combination_of_marks_is_reachable (a j t p : Bool) :
+    (∃ m : Marks, m.annotated = a ∧ m.judged = j ∧ m.tested = t ∧ m.proved = p) ∧
+    ∃ records, (marks records a).annotated = a ∧ (marks records a).judged = j ∧
+      (marks records a).tested = t ∧ (marks records a).proved = p := by
+  refine ⟨⟨⟨a, j, t, p, false⟩, rfl, rfl, rfl, rfl⟩, recordsFor j t p, rfl, ?_⟩
+  cases j <;> cases t <;> cases p <;> exact ⟨rfl, rfl, rfl⟩
+
+/-- @proves REQ-EVID.marks_written -/
+theorem marks_written_in_fixed_positions (m : Marks) :
+    (written m).toList =
+      [if m.annotated then 'A' else '-', if m.judged then 'J' else '-',
+       if m.structural then '·' else if m.tested then 'T' else '-',
+       if m.structural then '·' else if m.proved then 'P' else '-'] ∧
+    (written m).length = 4 := by
+  have h : (written m).toList =
+      [if m.annotated then 'A' else '-', if m.judged then 'J' else '-',
+       if m.structural then '·' else if m.tested then 'T' else '-',
+       if m.structural then '·' else if m.proved then 'P' else '-'] := by
+    cases m with
+    | mk a j t p s => cases s <;> rfl
+  refine ⟨h, ?_⟩
+  show (written m).toList.length = 4
+  rw [h]
+  rfl
+
 end TraceLean.Evidence
