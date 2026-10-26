@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-STRENGTH",
+    "clause": "proof_is_direct",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "verdict refuses missing, type, sorry or undeclared axioms, silent, example, indirect and vacuous theorems in that order, and accepts with the sorted declared axioms."
+    }
+  },
+  "linkHash": "b37a7ff430b5832c",
+  "inputs": [
+    [
+      "requirement",
+      "3b99b06ebef3276c"
+    ],
+    [
+      "model",
+      "fadf42714a8c5485"
+    ]
+  ]
+}

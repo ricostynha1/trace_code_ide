@@ -48,21 +48,24 @@ fn requirement(root: &Path) -> String {
 /// @tests REQ-STRENGTH.kernel_decides
 /// @tests REQ-STRENGTH.verdict_kept
 /// @tests REQ-STRENGTH.qualifies_proof
+/// @tests REQ-STRENGTH.pinned_by_theorem
+/// @tests REQ-STRENGTH.strength_per_model
 #[test]
 #[ignore = "runs Lean; run with --ignored"]
-fn a_clause_is_pinned_once_lean_accepts_its_theorem_and_until_it_changes() {
+fn a_model_is_pinned_once_lean_accepts_its_obligation_and_until_it_changes() {
     let root = thermo();
     let shown = requirement(&root);
-    assert!(shown.contains("attempted\n    Thermo.to_fahrenheit_pinned  not yet checked"), "{shown}");
+    assert!(shown.contains("attempted\n    Thermo::to_fahrenheit_pinned: changed since it was checked"), "{shown}");
 
-    let index = tracelean_core::trace::index::build(&root);
-    let files = tracelean_core::observe::workspace::snapshot(&root).files;
-    for plan in tracelean_core::trace::pinning::plans(&index, &files) {
-        tracelean_core::drt::pins::check(&root, &plan);
-    }
+    let check = |root: &Path| {
+        let index = tracelean_core::trace::index::build(root);
+        let report = tracelean_core::drt::proofs::check(root, &index).expect("Lean runs");
+        tracelean_core::drt::proofs::save(root, &report).unwrap();
+    };
+    check(&root);
     let shown = requirement(&root);
-    assert!(shown.contains("pinned\n    Thermo.to_fahrenheit_pinned"), "{shown}");
-    assert!(shown.contains("pinned\n    Thermo.to_celsius_pinned"), "{shown}");
+    assert!(shown.contains("pinned\n    Thermo::to_fahrenheit_pinned"), "{shown}");
+    assert!(shown.contains("pinned\n    Thermo::to_celsius_pinned"), "{shown}");
 
     let spec = root.join("specs/Thermo.lean");
     let text = std::fs::read_to_string(&spec)
@@ -71,7 +74,7 @@ fn a_clause_is_pinned_once_lean_accepts_its_theorem_and_until_it_changes() {
         .replace("@pins REQ-THERMO.to_celsius", "");
     std::fs::write(&spec, text).unwrap();
     let shown = requirement(&root);
-    assert!(shown.contains("attempted\n    Thermo.to_fahrenheit_pinned"), "{shown}");
-    assert!(shown.contains("open\n    owes a theorem annotated @pins: (∀ x1, Thermo.ToCelsius x1"), "{shown}");
+    assert!(shown.contains("attempted\n    Thermo::to_fahrenheit_pinned"), "{shown}");
+    assert!(shown.contains("open\n    owes a theorem annotated @pins for Thermo::toCelsius"), "{shown}");
     let _ = std::fs::remove_dir_all(&root);
 }

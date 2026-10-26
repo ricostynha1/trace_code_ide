@@ -7,11 +7,11 @@
   "level": "L4",
   "detail": {
     "proof": {
-      "theoremName": "TraceLean.Checker::progress_never_blocks",
+      "theoremName": "TraceLean.Checker.work_not_done_is_never_a_fault",
       "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
     }
   },
-  "linkHash": "d31bbd7ae7ae60c9",
+  "linkHash": "16b610673269c87f",
   "inputs": [
     [
       "model",
@@ -24,6 +24,10 @@
     [
       "toolchain",
       "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ],
+    [
+      "rules",
+      "80c8c2e339df1610"
     ]
   ]
 }

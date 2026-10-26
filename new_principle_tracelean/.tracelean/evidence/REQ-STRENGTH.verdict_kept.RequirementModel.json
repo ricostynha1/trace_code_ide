@@ -11,18 +11,18 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "A verdict counts only for the same theorem and key; otherwise the clause is attempted."
+      "note": "standing: a declared reason excludes; a pin accepted under the current key pins; a stated but unaccepted pin is attempted; no pin is open."
     }
   },
-  "linkHash": "01d147a9e079b29e",
+  "linkHash": "901f2db45bf9303c",
   "inputs": [
     [
       "requirement",
-      "635227f0a1934c23"
+      "1f303a92f6533038"
     ],
     [
       "model",
-      "6199f5bbe7357785"
+      "e14fd3ebd3dc53ab"
     ]
   ]
 }

@@ -11,10 +11,10 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "Buffer is an identity, a kind and text, with spans."
+      "note": "A directory listing becomes a buffer with an id, a kind and text; the Buffer type gives files, diffs and menus the same three."
     }
   },
-  "linkHash": "737887498cb87b1b",
+  "linkHash": "6a32c10d5f367e44",
   "inputs": [
     [
       "requirement",
@@ -22,7 +22,7 @@
     ],
     [
       "model",
-      "1893cd03055540ab"
+      "2c4a79afd9285f01"
     ]
   ]
 }

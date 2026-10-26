@@ -17,7 +17,7 @@ command -v tracelean-trace tracelean-view lean lake cargo node; echo "skills: $T
 |---|---|---|
 | `tracelean-trace` | everything | `tracelean-trace . \| tail -1` |
 | `tracelean-view` | the editor's views, as text | `tracelean-view . requirements` |
-| `lean`, `lake` (elan) | building models, `--drt`, `--pins` | `lean --version` |
+| `lean`, `lake` (elan) | building models, `--drt`, `--proofs` | `lean --version` |
 | `cargo`, `rustc` | `--drt` on Rust code, the project's tests | `cargo --version` |
 | `llvm-tools` (rustup) | `--coverage`, the line rule (`TRACELEAN_DRT_LINES=1`) | `ls $(rustc --print sysroot)/lib/rustlib/*/bin/llvm-cov` |
 | `node`, Chrome | only the TraceLean tree's own page tests | `node --version` |

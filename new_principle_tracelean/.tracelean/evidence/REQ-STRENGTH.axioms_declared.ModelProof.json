@@ -1,0 +1,33 @@
+{
+  "key": {
+    "reqId": "REQ-STRENGTH",
+    "clause": "axioms_declared",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Proofcheck.only_lean_axioms_and_declared_ones_are_accepted",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "fbb029cd10c49d1a",
+  "inputs": [
+    [
+      "model",
+      "fadf42714a8c5485"
+    ],
+    [
+      "requirement",
+      "ec4eed3da9dbad3b"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ],
+    [
+      "rules",
+      "80c8c2e339df1610"
+    ]
+  ]
+}

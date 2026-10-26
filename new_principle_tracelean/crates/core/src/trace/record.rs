@@ -62,7 +62,7 @@ pub fn required_inputs(detail: &Detail) -> &'static [&'static str] {
     match detail {
         Detail::Judge { .. } => &["requirement", "model"],
         Detail::Drt { .. } => &["model", "implementation"],
-        Detail::Proof { .. } => &["model", "toolchain"],
+        Detail::Proof { .. } => &["model", "toolchain", "rules"],
     }
 }
 

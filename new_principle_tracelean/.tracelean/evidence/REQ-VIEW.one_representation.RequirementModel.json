@@ -11,10 +11,10 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "Buffer is the one type every frontend is given."
+      "note": "A frontend's rendering conforms only if its lines and offered actions are the core buffer's, with nothing invented or dropped."
     }
   },
-  "linkHash": "9a30174b644a2f86",
+  "linkHash": "8fbd729d0edb4869",
   "inputs": [
     [
       "requirement",
@@ -22,7 +22,7 @@
     ],
     [
       "model",
-      "1893cd03055540ab"
+      "b9f69cf500f6df83"
     ]
   ]
 }

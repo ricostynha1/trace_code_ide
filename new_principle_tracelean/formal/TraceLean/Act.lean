@@ -327,13 +327,6 @@ def acts : Intent → Bool
 private def same (a b : Intent) : Bool :=
   Lean.toJson a == Lean.toJson b
 
-/-- @proves REQ-ACT.dispatch_is_pure -/
-theorem dispatch_reads_only_its_arguments (a a' : String) (f f' : Focus) (w w' : Workspace)
-    (ws ws' : List Command) (ha : a = a') (hf : f = f') (hw : w = w') (hws : ws = ws') :
-    dispatch a f w ws = dispatch a' f' w' ws' := by
-  subst ha hf hw hws
-  rfl
-
 def namedActions : List String :=
   ["file.open",
    "file.new",

@@ -11,18 +11,18 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "With no pins and no declaration a model is open."
+      "note": "standing: a declared reason excludes; a pin accepted under the current key pins; a stated but unaccepted pin is attempted; no pin is open."
     }
   },
-  "linkHash": "cb7fd4ceb0e99238",
+  "linkHash": "b80fa215829163b9",
   "inputs": [
     [
       "requirement",
-      "7cec149dc54cf764"
+      "d2abaf6b3b4de3ca"
     ],
     [
       "model",
-      "87d4da9d465362f8"
+      "e14fd3ebd3dc53ab"
     ]
   ]
 }

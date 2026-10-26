@@ -30,7 +30,6 @@ def remove (w : Workspace) (path : String) : Workspace :=
 
 end Workspace
 
-/-- @models REQ-CMD.witness_carried -/
 inductive Command where
   | insert (file : String) (offset : Nat) (text : String)
   | delete (file : String) (offset : Nat) (deleted : String)
@@ -112,7 +111,8 @@ decreasing_by
   exact Nat.lt_trans (List.sizeOf_lt_of_mem c.property) (by omega)
 
 /-- @models REQ-CMD.inverse_exists
-@models REQ-CMD.batch_reverses -/
+@models REQ-CMD.batch_reverses
+@models REQ-CMD.witness_carried -/
 def inverse : Command → Command
   | .insert file offset text => .delete file offset text
   | .delete file offset deleted => .insert file offset deleted
@@ -831,13 +831,15 @@ theorem a_command_that_does_not_fit_is_refused_with_its_reason (w : Workspace) (
 theorem a_destructive_command_carries_what_it_destroys (w w' : Workspace) (f : String) (o : Nat)
     (d p c : String) :
     (apply w (.delete f o d) = .ok w' →
-      ∃ cs : List Char, w.get f = some ⟨cs⟩ ∧ String.mk ((cs.drop o).take d.length) = d) ∧
-    (apply w (.deleteFile p c) = .ok w' → w.get p = some c) := by
+      ∃ cs : List Char, w.get f = some ⟨cs⟩ ∧ String.mk ((cs.drop o).take d.length) = d ∧
+        inverse (.delete f o d) = .insert f o d) ∧
+    (apply w (.deleteFile p c) = .ok w' →
+      w.get p = some c ∧ inverse (.deleteFile p c) = .batch [.createFile p, .insert p 0 c]) := by
   constructor
   · intro h
     obtain ⟨cs, hg, _, hw, _⟩ := apply_delete_inv w w' f o d h
-    exact ⟨cs, hg, hw⟩
+    exact ⟨cs, hg, hw, by simp [inverse]⟩
   · intro h
-    exact (apply_delete_file_inv w w' p c h).1
+    exact ⟨(apply_delete_file_inv w w' p c h).1, by simp [inverse]⟩
 
 end TraceLean.Command

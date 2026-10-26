@@ -570,7 +570,6 @@ def stationKind (station : String) : Option BufferKind :=
 /-- @proves REQ-SCREEN.stations_are_constant -/
 theorem stations_constant (a b : Screen) : stations a = stations b := rfl
 
-/-- @proves REQ-SCREEN.opened_outlives_shown -/
 theorem show_keeps_opened (id : String) (screen : Screen) :
     (showBuffer id screen).opened = screen.opened := by
   unfold showBuffer
@@ -867,7 +866,6 @@ theorem layout_tiles_region (rect : Rect) (layout : Layout) (h : panes layout �
     ∀ x y, coverCount (place rect layout) x y = if covers rect x y then 1 else 0 :=
   ⟨place_ids layout rect, fun x y => count_place layout rect x y h⟩
 
-/-- @proves REQ-SCREEN.screen_is_a_value -/
 theorem screen_is_one_value (a b : Screen) :
     a = b ↔ a.opened = b.opened ∧ a.layout = b.layout ∧ a.focus = b.focus ∧
       a.nextPane = b.nextPane := by

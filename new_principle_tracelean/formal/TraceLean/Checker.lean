@@ -27,6 +27,7 @@ inductive Kind where
   | severalModels
   | severalSpecs
   | severalPins
+  | proofRefused
   deriving Repr, DecidableEq, Inhabited, ToJson, FromJson
 
 def Kind.progress : Kind → Bool
@@ -42,6 +43,7 @@ def Kind.severity : Kind → Severity
   | .unbound => .warn
   | .unsoundQualifier => .warn
   | .imprecise => .warn
+  | .proofRefused => .warn
   | _ => .error
 
 def Kind.blocksByDefault : Kind → Bool
@@ -124,11 +126,15 @@ theorem the_chain_reports_at_most_one (roles : List Role) (exempt structural : B
     cases roles.contains Role.tests <;>
     simp
 
-/-- @proves REQ-CHECK.progress_not_fault
-@proves REQ-CHECK.severity_policy -/
-theorem progress_never_blocks (kind : Kind) (h : kind.progress = true) :
-    kind.blocksByDefault = false := by
-  cases kind <;> simp_all [Kind.progress, Kind.blocksByDefault]
+/-- @proves REQ-CHECK.progress_not_fault -/
+theorem work_not_done_is_never_a_fault (kind : Kind) (h : (facts kind).progress = true) :
+    (facts kind).severity = .info ∧ (facts kind).blocksByDefault = false := by
+  cases kind <;> simp_all [facts, Kind.progress, Kind.blocksByDefault, Kind.severity]
+
+/-- @proves REQ-CHECK.severity_policy -/
+theorem only_a_fault_blocks_by_default (kind : Kind) (h : (facts kind).blocksByDefault = true) :
+    (facts kind).severity = .error ∧ (facts kind).progress = false := by
+  cases kind <;> simp_all [facts, Kind.progress, Kind.blocksByDefault, Kind.severity]
 
 /-- @proves REQ-CHECK.unbound_reported -/
 theorem model_and_code_unbound_is_reported (roles : List Role)

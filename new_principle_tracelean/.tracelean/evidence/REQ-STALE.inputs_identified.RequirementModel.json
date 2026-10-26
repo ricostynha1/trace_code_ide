@@ -11,10 +11,10 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "A record missing the fields that identify its inputs is refused."
+      "note": "A record missing any input its kind requires is classed missingInput, naming it."
     }
   },
-  "linkHash": "5e1dde18de8ae945",
+  "linkHash": "15a41a0060dce4db",
   "inputs": [
     [
       "requirement",
@@ -22,7 +22,7 @@
     ],
     [
       "model",
-      "3c303b7e5462a2e6"
+      "bd66b93d24bbfb5e"
     ]
   ]
 }

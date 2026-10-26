@@ -7,7 +7,7 @@
   "level": "L4",
   "detail": {
     "proof": {
-      "theoremName": "TraceLean.Evidence::every_combination_of_marks_is_reachable",
+      "theoremName": "TraceLean.Evidence.every_combination_of_marks_is_reachable",
       "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
     }
   },
@@ -15,7 +15,7 @@
   "inputs": [
     [
       "model",
-      "3bd29cdfa957e905"
+      "1272c4a23358fb47"
     ],
     [
       "requirement",
@@ -24,6 +24,10 @@
     [
       "toolchain",
       "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ],
+    [
+      "rules",
+      "80c8c2e339df1610"
     ]
   ]
 }

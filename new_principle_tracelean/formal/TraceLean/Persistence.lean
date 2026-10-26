@@ -58,7 +58,7 @@ def checkpoint (base : Workspace) (commands : List Command) (entries : Nat)
   | .ok w => .ok { workspace := w, entries := entries }
 
 def replayFrom (point : Checkpoint) (commands : List Command) : Except Refusal Workspace :=
-  replay point.workspace (commands.drop point.entries)
+  (commands.drop point.entries).foldl replayStep (.ok point.workspace)
 
 structure ReplayReport where
   commands : List Command
@@ -86,20 +86,43 @@ def replayReport (base : Workspace) (lines : List String) (checkpointAt : Nat) :
   { commands := log.commands, truncatedAfter := log.truncatedAfter,
     direct := direct, viaCheckpoint := viaCheckpoint }
 
+theorem replay_step_error (rest : List Command) (e : Refusal) :
+    rest.foldl replayStep (.error e) = .error e := by
+  induction rest with
+  | nil => rfl
+  | cons c rest ih => simpa [List.foldl, replayStep] using ih
+
 /-- @proves REQ-PERSIST.checkpoint_equivalent -/
-theorem a_checkpoint_over_the_whole_log_replays_nothing
-    (w : Workspace) (commands : List Command) :
-    replayFrom { workspace := w, entries := commands.length } commands = .ok w.canon := by
-  simp [replayFrom, replay]
+theorem replaying_from_a_checkpoint_reaches_the_direct_state
+    (base : Workspace) (lines : List String) (checkpointAt : Nat) :
+    (replayReport base lines checkpointAt).viaCheckpoint =
+      (replayReport base lines checkpointAt).direct := by
+  simp only [replayReport, checkpoint, replayFrom]
+  generalize (parseLog lines).commands = cs
+  generalize min checkpointAt cs.length = n
+  have split : replay base cs = (cs.drop n).foldl replayStep (replay base (cs.take n)) := by
+    simp only [replay]
+    rw [← List.foldl_append, List.take_append_drop]
+  rw [split]
+  cases h : replay base (cs.take n) with
+  | error e => simp [replay_step_error, outcomeOfExcept]
+  | ok w => rfl
 
 /-- @proves REQ-PERSIST.replay_exact
 @proves ARCH-DETERMINISM.replay_exact -/
-theorem replay_is_each_command_in_turn (base : Workspace) (commands : List Command) (last : Command) :
-    replay base [] = .ok base.canon ∧
-    replay base (commands ++ [last]) = replayStep (replay base commands) last := by
-  constructor
-  · simp [replay]
-  · simp [replay, List.foldl_append]
+theorem a_replay_applies_every_recorded_command_in_order
+    (base : Workspace) (lines : List String) (checkpointAt : Nat) :
+    (replayReport base lines checkpointAt).direct =
+      outcomeOfExcept ((replayReport base lines checkpointAt).commands.foldl
+        (fun acc c => acc.bind (fun w => apply w c)) (.ok base.canon)) := by
+  have e : (fun (acc : Except Refusal Workspace) c => acc.bind (fun w => apply w c)) =
+      (fun acc c => match acc with
+        | .error e => .error e
+        | .ok w => apply w c) := by
+    funext acc c
+    cases acc <;> rfl
+  rw [e]
+  rfl
 
 theorem parse_step_extends (acc : Log × Nat × Bool) (line : String) :
     acc.1.commands <+: (parseLogStep acc line).1.commands := by

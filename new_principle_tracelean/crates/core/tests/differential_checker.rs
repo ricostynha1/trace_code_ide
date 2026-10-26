@@ -40,7 +40,7 @@ fn kind() -> Schema {
         "dangling", "danglingRefines", "refinesCycle", "duplicateId", "unmodeled",
         "unimplemented", "unbound", "untested", "contested", "unsoundExemption",
         "unsoundQualifier", "malformed", "imprecise", "severalModels", "severalSpecs",
-        "severalPins",
+        "severalPins", "proofRefused",
     ] {
         variants.insert(name.into(), None);
     }
@@ -122,7 +122,7 @@ fn at_most_one_chain_finding_and_no_progress_ever_blocks() {
         Kind::Dangling, Kind::DanglingRefines, Kind::RefinesCycle, Kind::DuplicateId,
         Kind::Unmodeled, Kind::Unimplemented, Kind::Unbound, Kind::Untested, Kind::Contested,
         Kind::UnsoundExemption, Kind::UnsoundQualifier, Kind::Malformed, Kind::Imprecise,
-        Kind::SeveralModels, Kind::SeveralSpecs, Kind::SeveralPins,
+        Kind::SeveralModels, Kind::SeveralSpecs, Kind::SeveralPins, Kind::ProofRefused,
     ];
     for kind in all {
         let f = facts(kind);

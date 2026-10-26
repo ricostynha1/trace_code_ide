@@ -211,7 +211,6 @@ theorem an_empty_history_has_nothing_to_disagree_about (base : Workspace) :
 
 def one : Workspace := ⟨[("a.rs", "hello")]⟩
 
-/-- @proves REQ-UNDO.reachable -/
 theorem no_node_is_ever_dropped (t : Tree) (c : Command) :
     ((t.push c).ids = t.ids ∨ (t.push c).ids = t.ids ++ [t.nextId]) ∧
     t.undo.ids = t.ids ∧ t.redo.ids = t.ids ∧ (t.jumpTo 0).2.ids = t.ids := by
@@ -300,7 +299,6 @@ theorem sharedPrefix_common : ∀ (a b : List Nat),
       subst ha; subst hb
       simpa using hxy
 
-/-- @proves REQ-UNDO.path_via_ancestor -/
 theorem jump_via_nearest_common_ancestor (t : Tree) (target : Nat) :
     let from_ := (match t.current with
       | none => []
@@ -327,5 +325,70 @@ theorem jump_via_nearest_common_ancestor (t : Tree) (target : Nat) :
           t.state) := by
   intro from_ to shared
   exact ⟨(sharedPrefix_common from_ to).1, (sharedPrefix_common from_ to).2, rfl⟩
+
+theorem jump_keeps_ids (t : Tree) (n : Nat) : (t.jumpTo n).2.ids = t.ids := by
+  unfold Tree.jumpTo
+  simp only
+  split <;> rfl
+
+/-- @proves REQ-UNDO.reachable -/
+theorem no_step_drops_a_node (base : Workspace) (script : List Step) (step : Step) :
+    (runScript base script).nodes <+: (runScript base (script ++ [step])).nodes := by
+  simp only [runScript, fromScript, List.foldl_append, List.foldl_cons, List.foldl_nil]
+  generalize script.foldl _ (Tree.mk' base) = t
+  match step with
+  | .push c =>
+    rcases (no_node_is_ever_dropped t c).1 with h | h
+    · simp only [h]; exact List.prefix_refl _
+    · simp only [h]; exact List.prefix_append _ _
+  | .move .undo => simp only [(no_node_is_ever_dropped t (.batch [])).2.1]; exact List.prefix_refl _
+  | .move .redo => simp only [(no_node_is_ever_dropped t (.batch [])).2.2.1]; exact List.prefix_refl _
+  | .move (.jump n) => simp only [jump_keeps_ids]; exact List.prefix_refl _
+
+def Tree.viaAncestor (t : Tree) (target : Nat) : Except Refusal Workspace :=
+  let from_ := (match t.current with
+    | none => []
+    | some id => t.ancestry id)
+  let to := t.ancestry target
+  let shared := Tree.sharedPrefix from_ to
+  (to.drop shared).foldl
+    (fun acc nodeId =>
+      match acc with
+      | .error e => .error e
+      | .ok w => match t.node? nodeId with
+        | none => .ok w
+        | some n => apply w n.command)
+    ((from_.drop shared).reverse.foldl
+      (fun acc nodeId =>
+        match acc with
+        | .error e => .error e
+        | .ok w => match t.node? nodeId with
+          | none => .ok w
+          | some n => apply w n.inverse)
+      t.state)
+
+/-- @proves REQ-UNDO.path_via_ancestor -/
+theorem every_jump_goes_via_the_nearest_common_ancestor (base : Workspace) (script : List Step) :
+    (runScript base script).travelled =
+      (fromScript base script).ids.map (fun target => outcomeOf ((fromScript base script).viaAncestor target)) ∧
+    ∀ target from_ to, from_ = ((fromScript base script).current.map (fromScript base script).ancestry).getD [] →
+      to = (fromScript base script).ancestry target →
+      from_.take (Tree.sharedPrefix from_ to) = to.take (Tree.sharedPrefix from_ to) ∧
+      (∀ x y, from_[Tree.sharedPrefix from_ to]? = some x → to[Tree.sharedPrefix from_ to]? = some y → x ≠ y) := by
+  refine ⟨?_, fun target from_ to hf ht => ?_⟩
+  · simp only [runScript]
+    apply List.map_congr_left
+    intro target _
+    rw [(jump_via_nearest_common_ancestor (fromScript base script) target).2.2]
+    rfl
+  · have j := jump_via_nearest_common_ancestor (fromScript base script) target
+    have e : ((fromScript base script).current.map (fromScript base script).ancestry).getD [] =
+        (match (fromScript base script).current with
+          | none => []
+          | some id => (fromScript base script).ancestry id) := by
+      cases (fromScript base script).current <;> rfl
+    rw [e] at hf
+    subst hf ht
+    exact ⟨j.1, j.2.1⟩
 
 end TraceLean.Tree

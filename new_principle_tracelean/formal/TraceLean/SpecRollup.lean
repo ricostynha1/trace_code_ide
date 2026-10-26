@@ -112,8 +112,12 @@ theorem every_part_holds_pinned :
       · rw [m1.2.2.2.2, m2.2.2.2.2]
       · rw [m1.2.2.1, m2.2.2.1]
 
-/-- @proves REQ-ROLLUP.counted_once
-@proves ARCH-HONEST.weakest_link -/
+/-- @proves ARCH-HONEST.weakest_link -/
+theorem combine_holds_what_every_part_holds (parts : List Marks) :
+    EveryPartHolds parts (combine parts) :=
+  every_part_holds_pinned.1 parts
+
+/-- @proves REQ-ROLLUP.counted_once -/
 theorem rollUp_holds_what_every_clause_holds (nodes : List Node)
     (held : List ((String × Option String) × Marks)) (root : String) (floor : Marks) :
     EveryPartHolds (reachMarks (canonNodes nodes) (canonHeld held) root)

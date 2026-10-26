@@ -7,11 +7,11 @@
   "level": "L4",
   "detail": {
     "proof": {
-      "theoremName": "TraceLean.Policy::regenerable_is_not_mirrored",
+      "theoremName": "TraceLean.Policy.a_regenerable_directory_is_passed_through",
       "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
     }
   },
-  "linkHash": "26308e18c4dbcd66",
+  "linkHash": "0b3d2ed723fbd6c8",
   "inputs": [
     [
       "model",
@@ -24,6 +24,10 @@
     [
       "toolchain",
       "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ],
+    [
+      "rules",
+      "80c8c2e339df1610"
     ]
   ]
 }

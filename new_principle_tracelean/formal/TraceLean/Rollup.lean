@@ -341,25 +341,58 @@ def fileCoverage (scanned claimed : List String) : Figure :=
   let claimed := (dedupe claimed).filter (scanned.contains ·)
   { met := claimed.length, total := scanned.length, exact := true }
 
+theorem covered_of_rollUp (nodes : List Node) (held : List ((String × Option String) × Marks))
+    (root : String) (floor : Marks) :
+    (rollUp nodes held root floor).covered = figureOf (canonNodes nodes) (canonHeld held) floor root := by
+  simp [rollUp, rollUpTree, RollUp.covered]
+
 /-- @proves REQ-ROLLUP.exempt_leaves_denominator -/
-theorem an_exempt_clause_is_not_counted (held : List ((String × Option String) × Marks)) :
-    ownMarks held { id := "R", complete := true, clauses := [some "a", some "b"],
-                    exempt := [some "b"], partialClauses := [], refines := [] }
-      = [(marksAt held ("R", some "a")).getD Marks.empty] := by
-  simp [ownMarks]
+theorem an_exempt_clause_is_not_counted (nodes : List Node)
+    (held : List ((String × Option String) × Marks)) (root : String) (floor : Marks) :
+    (rollUp nodes held root floor).covered.total =
+      ((members (canonNodes nodes) root).bind
+        (fun n => n.clauses.filter (fun c => !(n.exempt.contains c)))).length := by
+  rw [covered_of_rollUp]
+  simp only [figureOf, reachMarks]
+  generalize members (canonNodes nodes) root = ns
+  induction ns with
+  | nil => rfl
+  | cons n rest ih => simp only [List.cons_bind, List.length_append, ownMarks, List.length_map, ih]
+
+theorem filter_shorter {α : Type} (p : α → Bool) :
+    ∀ (l : List α) (x : α), x ∈ l → p x = false → (l.filter p).length < l.length
+  | [], _, h, _ => absurd h (List.not_mem_nil _)
+  | y :: rest, x, h, hp => by
+    rcases List.mem_cons.mp h with rfl | h
+    · simp only [List.filter_cons, hp]
+      exact Nat.lt_succ_of_le (List.length_filter_le p rest)
+    · have ih := filter_shorter p rest x h hp
+      by_cases hy : p y = true
+      · simp only [List.filter_cons, hy, if_true, List.length_cons]
+        omega
+      · have hy' : p y = false := by simpa using hy
+        simp only [List.filter_cons, hy', List.length_cons]
+        simp only [Bool.false_eq_true, if_false]
+        omega
 
 /-- @proves REQ-ROLLUP.partial_capped -/
-theorem a_partial_clause_is_never_tested_or_proved (reached : Marks) :
-    ownMarks [(("R", some "a"), reached)]
-        { id := "R", complete := true, clauses := [some "a"], exempt := [],
-          partialClauses := [some "a"], refines := [] }
-      = [partialCap reached] ∧
-    (partialCap reached).holds ⟨false, false, true, false, false⟩ = false ∧
-    (partialCap reached).holds ⟨false, false, false, true, false⟩ = false := by
-  refine ⟨?_, ?_, ?_⟩
-  · simp [ownMarks, marksAt]
-  · simp [partialCap, Marks.holds]
-  · simp [partialCap, Marks.holds]
+theorem a_partial_clause_is_never_tested_or_proved (nodes : List Node)
+    (held : List ((String × Option String) × Marks)) (root : String) (floor : Marks)
+    (n : Node) (c : Option String) (hn : n ∈ members (canonNodes nodes) root) (hc : c ∈ n.clauses)
+    (he : n.exempt.contains c = false) (hp : n.partialClauses.contains c = true)
+    (hf : (floor.tested || floor.proved) = true) :
+    (rollUp nodes held root floor).covered.met < (rollUp nodes held root floor).covered.total := by
+  rw [covered_of_rollUp]
+  simp only [figureOf]
+  apply filter_shorter _ _ (partialCap ((marksAt (canonHeld held) (n.id, c)).getD Marks.empty))
+  · simp only [reachMarks, List.mem_bind]
+    refine ⟨n, hn, ?_⟩
+    have he' : c ∉ n.exempt := by simpa using he
+    have hp' : c ∈ n.partialClauses := by simpa using hp
+    simp only [ownMarks, List.mem_map, List.mem_filter]
+    exact ⟨c, ⟨hc, by simpa using he'⟩, by simp [hp']⟩
+  · rcases floor with ⟨_, _, t, p, _⟩
+    cases t <;> cases p <;> simp_all [partialCap, Marks.holds]
 
 def partHolds (floor p : Marks) : Prop :=
   (floor.annotated = true → p.annotated = true) ∧ (floor.judged = true → p.judged = true) ∧

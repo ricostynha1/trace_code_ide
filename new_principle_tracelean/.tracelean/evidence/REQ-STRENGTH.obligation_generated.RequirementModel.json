@@ -4,25 +4,25 @@
     "clause": "obligation_generated",
     "bond": "requirementModel"
   },
-  "level": "L1",
+  "level": "L2",
   "detail": {
     "judge": {
-      "verdict": "drift",
+      "verdict": "agrees",
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "The generated Spec is a conjunction of True placeholders naming the proved theorems in comments, not their statements, so the obligation as written does not say that those properties determine the model until a person fills them in."
+      "note": "accepted selects exactly the accepted theorems of each model, whose statements the obligation is built from."
     }
   },
-  "linkHash": "4443ca811974a39b",
+  "linkHash": "f3260cf9eeb8df15",
   "inputs": [
     [
       "requirement",
-      "00ecdbdf11e24ade"
+      "dae0c440231d5d6d"
     ],
     [
       "model",
-      "9772b5a355704b31"
+      "4363ad1cb6640039"
     ]
   ]
 }

@@ -7,23 +7,27 @@
   "level": "L4",
   "detail": {
     "proof": {
-      "theoremName": "TraceLean.Pinning::no_theorem_is_open",
+      "theoremName": "TraceLean.Proofcheck.with_no_pinning_theorem_a_model_is_open",
       "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
     }
   },
-  "linkHash": "2d75b17203b3055a",
+  "linkHash": "c32917c92572eb3f",
   "inputs": [
     [
       "model",
-      "87d4da9d465362f8"
+      "e14fd3ebd3dc53ab"
     ],
     [
       "requirement",
-      "7cec149dc54cf764"
+      "d2abaf6b3b4de3ca"
     ],
     [
       "toolchain",
       "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ],
+    [
+      "rules",
+      "80c8c2e339df1610"
     ]
   ]
 }

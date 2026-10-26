@@ -1,0 +1,33 @@
+{
+  "key": {
+    "reqId": "REQ-STRENGTH",
+    "clause": "strength_per_model",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Proofcheck.every_planned_clause_is_modelled_by_its_plan",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "c53ed8162e929939",
+  "inputs": [
+    [
+      "model",
+      "e9ffc40f6519ec23"
+    ],
+    [
+      "requirement",
+      "795d67a50251bf88"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ],
+    [
+      "rules",
+      "80c8c2e339df1610"
+    ]
+  ]
+}

@@ -183,11 +183,11 @@ fn evidence_list_schema() -> Schema {
                 Schema::List {
                     inner: Box::new(Schema::Tuple {
                         items: vec![
-                            names(&["model", "implementation", "requirement", "toolchain"]),
+                            names(&["model", "implementation", "requirement", "toolchain", "rules"]),
                             names(&["h1", "h2"]),
                         ],
                     }),
-                    max_len: Some(8),
+                    max_len: Some(12),
                 },
             ),
         ]

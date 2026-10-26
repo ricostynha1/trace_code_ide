@@ -7,15 +7,15 @@
   "level": "L4",
   "detail": {
     "proof": {
-      "theoremName": "TraceLean.Strength::proofs_are_presented_with_their_strength",
+      "theoremName": "TraceLean.Proofcheck.a_pinned_model_names_a_pin_it_was_checked_with",
       "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
     }
   },
-  "linkHash": "2818bc6a5b3b3a66",
+  "linkHash": "84025135f59f3029",
   "inputs": [
     [
       "model",
-      "87d4da9d465362f8"
+      "e14fd3ebd3dc53ab"
     ],
     [
       "requirement",
@@ -24,6 +24,10 @@
     [
       "toolchain",
       "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ],
+    [
+      "rules",
+      "80c8c2e339df1610"
     ]
   ]
 }

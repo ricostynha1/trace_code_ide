@@ -176,6 +176,7 @@ pub fn proof_record(
             ("model".to_string(), model),
             ("requirement".to_string(), requirement_hash(index, req_id, clause)?),
             ("toolchain".to_string(), toolchain.to_string()),
+            ("rules".to_string(), crate::trace::proofcheck::rules_hash()),
         ],
     })
 }
@@ -244,6 +245,7 @@ pub fn current_inputs(index: &Index, record: &Evidence) -> Vec<(String, String)>
                 "implementation" => anchor_hash(index, req, clause, Role::Implements),
                 "requirement" => index.requirements.get(req).and_then(|r| r.clause_hash(clause)),
                 "toolchain" => Some(was.clone()),
+                "rules" => Some(crate::trace::proofcheck::rules_hash()),
                 _ => None,
             };
             now.map(|hash| (name.clone(), hash))

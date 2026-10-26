@@ -386,7 +386,6 @@ def graph : List Node :=
    ⟨"REQ-A", "Mid", ["ARCH-X"], ⟨true, true, true, false, false⟩, 2, 2, ⟨1, 2, 2, 2, 0⟩, some (3, 4)⟩,
    ⟨"REQ-B", "Leaf", ["REQ-A"], ⟨true, false, false, false, true⟩, 1, 0, ⟨0, 1, 0, 0, 0⟩, some (0, 2)⟩]
 
-/-- @proves REQ-SHOW.actions_by_role -/
 theorem a_role_offers_its_actions (marks : List Mark) :
     (spansOfMarks marks).map (·.actions) = marks.map (fun m => actionsFor m.role) := by
   simp [spansOfMarks]
@@ -1124,7 +1123,6 @@ theorem a_review_reads_only_what_it_is_given (target other before after : String
     faults (reviewBuffer target before after) = [] :=
   ⟨rfl, rfl, rfl, rfl, tidy_leaves_no_fault _ _ _ _⟩
 
-/-- @proves REQ-SHOW.producers_are_total -/
 theorem every_kind_has_a_producer_that_answers :
     (∀ kind : BufferKind, ∃ b : Buffer, b.kind = kind ∧ faults b = []) ∧
     (∀ path text marks, (fileBuffer path text marks).kind = BufferKind.file path ∧
@@ -1697,5 +1695,11 @@ theorem only_open_requirements_when_asked (nodes : List Node) (opened : List Str
     apply List.filter_eq_self.mpr
     intro _ _
     rfl
+
+/-- @proves REQ-SHOW.producers_are_total -/
+theorem tidying_answers_every_span_list_with_ordered_spans_inside_the_text (size : Nat)
+    (spans : List Span) :
+    Fits 0 (tidy size spans) size ∧ ∀ s ∈ tidy size spans, s.start < s.stop :=
+  every_kind_has_a_producer_that_answers.2.2.2.2.2.2 size spans
 
 end TraceLean.Produce

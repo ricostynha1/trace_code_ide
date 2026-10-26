@@ -578,8 +578,7 @@ theorem a_malformed_document_is_reported (lines fm body : List String) :
     rw [if_pos he]
     simp [problem]
 
-/-- @proves REQ-REQDOC.clause_unique -/
-theorem a_repeated_clause_or_narrowing_is_reported (f : Fields) (n : Nat) (raw k v : String)
+theorem a_repeated_clause_or_narrowing_is_reported_on_its_line (f : Fields) (n : Nat) (raw k v : String)
     (hblank : ((trimEnd raw).trim.isEmpty || (trimStart (trimEnd raw)).startsWith "#") = false)
     (hind : ((trimEnd raw).startsWith " " || (trimEnd raw).startsWith "\t") = true)
     (hcur : f.current = some "clauses")
@@ -651,6 +650,158 @@ theorem a_repeated_clause_or_narrowing_is_reported (f : Fields) (n : Nat) (raw k
     unfold setText
     dsimp only
     simp [had, problem]
+
+theorem problem_prefix (f : Fields) (n : Nat) (k : FrontmatterKind) :
+    f.problems <+: (problem f n k).problems := List.prefix_append _ _
+
+theorem closeBlock_prefix (f : Fields) : f.problems <+: (closeBlock f).problems := by
+  unfold closeBlock
+  split
+  · exact List.prefix_refl _
+  · dsimp only
+    split
+    · exact problem_prefix _ _ _
+    · exact List.prefix_refl _
+
+theorem setText_prefix (f : Fields) (b : Block) (n : Nat) (v : String) :
+    f.problems <+: (setText f b n v).problems := by
+  unfold setText
+  dsimp only
+  split
+  · exact problem_prefix _ _ _
+  · exact List.prefix_refl _
+
+theorem addNarrowing_prefix (f : Fields) (b : Block) (n : Nat) (k v : String) :
+    f.problems <+: (addNarrowing f b n k v).problems := by
+  unfold addNarrowing
+  dsimp only
+  split
+  · exact problem_prefix _ _ _
+  · exact List.prefix_refl _
+
+theorem checked_prefix (f : Fields) (n : Nat) (c : Bool) :
+    f.problems <+: (if c then f else problem f n .invalidKey).problems := by
+  split
+  · exact List.prefix_refl _
+  · exact problem_prefix _ _ _
+
+theorem readNarrowing_prefix (f : Fields) (b : Block) (n : Nat) (line : String) :
+    f.problems <+: (readNarrowing f b n line).problems := by
+  unfold readNarrowing
+  split
+  · exact problem_prefix _ _ _
+  · dsimp only
+    split
+    · exact (checked_prefix f n _).trans (setText_prefix _ _ _ _)
+    · exact (checked_prefix f n _).trans (addNarrowing_prefix _ _ _ _ _)
+
+theorem readClause_prefix (f : Fields) (n i : Nat) (k v : String) :
+    f.problems <+: (readClause f n i k v).problems := by
+  unfold readClause
+  dsimp only
+  refine (checked_prefix f n (validKey k)).trans ?_
+  generalize (if validKey k = true then f else problem f n .invalidKey) = g
+  split
+  · exact problem_prefix _ _ _
+  · exact List.prefix_refl _
+
+theorem readEntry_prefix (f : Fields) (key : String) (n : Nat) (line : String) :
+    f.problems <+: (readEntry f key n line).problems := by
+  unfold readEntry
+  split
+  · exact problem_prefix _ _ _
+  · split
+    · exact readClause_prefix _ _ _ _ _
+    · exact List.prefix_refl _
+
+theorem readLine_prefix (f : Fields) (n : Nat) (raw : String) :
+    f.problems <+: (readLine f n raw).problems := by
+  unfold readLine
+  dsimp only
+  split
+  · exact List.prefix_refl _
+  · split
+    · unfold readIndented
+      split
+      · exact problem_prefix _ _ _
+      · unfold readNested
+        split
+        · split
+          · exact readNarrowing_prefix _ _ _ _
+          · exact (closeBlock_prefix f).trans (readEntry_prefix _ _ _ _)
+        · exact readEntry_prefix _ _ _ _
+    · unfold readKeyValue
+      have hc : f.problems <+: ({ closeBlock f with current := none } : Fields).problems :=
+        closeBlock_prefix f
+      split
+      · exact hc.trans (List.prefix_append _ _)
+      · dsimp only
+        have hu : ∀ g : Fields, ∀ k, g.problems <+: (noteUnknown g n k).problems := by
+          intro g k
+          unfold noteUnknown
+          split <;> exact List.prefix_refl _
+        split
+        · exact hc.trans (hu _ _)
+        · split
+          · exact hc.trans (hu _ _)
+          · exact hc.trans (hu _ _)
+
+theorem fold_prefix (pairs : List (Nat × String)) (f : Fields) :
+    f.problems <+: (pairs.foldl (fun fields pair => readLine fields (pair.1 + 2) pair.2) f).problems := by
+  induction pairs generalizing f with
+  | nil => exact List.prefix_refl _
+  | cons pair rest ih => exact (readLine_prefix f _ _).trans (ih _)
+
+def stateBefore (pre : List String) : Fields :=
+  (pre.enum).foldl (fun fields pair => readLine fields (pair.1 + 2) pair.2) {}
+
+theorem a_line_problem_reaches_the_frontmatter (pre post : List String) (raw : String)
+    (p : Nat × FrontmatterKind) (h : p ∈ (readLine (stateBefore pre) (pre.length + 2) raw).problems) :
+    p ∈ (readFrontmatter (pre ++ raw :: post)).problems := by
+  unfold readFrontmatter
+  rw [List.enum_append, List.foldl_append]
+  simp only [List.enumFrom_cons, List.foldl_cons]
+  unfold stateBefore at h
+  exact List.IsPrefix.subset (closeBlock_prefix _) (List.IsPrefix.subset (fold_prefix _ _) h)
+
+theorem a_frontmatter_problem_reaches_the_parse (lines front body : List String)
+    (hs : splitFrontmatter ((String.intercalate "\n" lines).splitOn "\n") = some (front, body))
+    (p : Nat × FrontmatterKind) (h : p ∈ (readFrontmatter front).problems) :
+    p ∈ (parseLines lines).problems := by
+  unfold parseLines
+  simp only [hs]
+  split
+  · exact List.mem_append_left _ h
+  · split
+    · exact List.mem_append_left _ (List.mem_append_left _ h)
+    · exact List.mem_append_left _ h
+
+/-- @proves REQ-REQDOC.clause_unique -/
+theorem a_repeated_clause_or_narrowing_is_reported (lines front body pre post : List String)
+    (raw k v : String)
+    (hs : splitFrontmatter ((String.intercalate "\n" lines).splitOn "\n") = some (front, body))
+    (hf : front = pre ++ raw :: post)
+    (hblank : ((trimEnd raw).trim.isEmpty || (trimStart (trimEnd raw)).startsWith "#") = false)
+    (hind : ((trimEnd raw).startsWith " " || (trimEnd raw).startsWith "\t") = true)
+    (hcur : (stateBefore pre).current = some "clauses")
+    (hsplit : splitOnFirst (trimEnd raw).trim ':' = some (k, v)) :
+    ((∀ b, (stateBefore pre).block = some b → ¬ indentOf (trimEnd raw) > b.indent) →
+      (mapEntry (stateBefore pre).maps "clauses").any (·.1 == k.trim) = true →
+      (pre.length + 2, FrontmatterKind.duplicateClause) ∈ (parseLines lines).problems) ∧
+    (∀ b, (stateBefore pre).block = some b → indentOf (trimEnd raw) > b.indent → k.trim ≠ "text" →
+      (narrowingsOf (stateBefore pre) b.clause).any (·.1 == k.trim) = true →
+      (pre.length + 2, FrontmatterKind.duplicateNarrowing) ∈ (parseLines lines).problems) ∧
+    (∀ b, (stateBefore pre).block = some b → indentOf (trimEnd raw) > b.indent → k.trim = "text" →
+      b.hasText = true →
+      (pre.length + 2, FrontmatterKind.duplicateNarrowing) ∈ (parseLines lines).problems) := by
+  have line := a_repeated_clause_or_narrowing_is_reported_on_its_line (stateBefore pre)
+    (pre.length + 2) raw k v hblank hind hcur hsplit
+  have lift : ∀ q, q ∈ (readLine (stateBefore pre) (pre.length + 2) raw).problems →
+      q ∈ (parseLines lines).problems := fun q hq =>
+    a_frontmatter_problem_reaches_the_parse lines front body hs q
+      (hf ▸ a_line_problem_reaches_the_frontmatter pre post raw q hq)
+  exact ⟨fun a b => lift _ (line.1 a b), fun b h1 h2 h3 h4 => lift _ (line.2.1 b h1 h2 h3 h4),
+    fun b h1 h2 h3 h4 => lift _ (line.2.2 b h1 h2 h3 h4)⟩
 
 def clauseKeys (f : Fields) : List String := (mapEntry f.maps "clauses").map (·.1)
 

@@ -11,10 +11,10 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "The three bonds are distinct constructors and each is graded from its own records."
+      "note": "Each bond's mark is decided from that bond's records alone."
     }
   },
-  "linkHash": "eaf97597ddfe7db6",
+  "linkHash": "9eefbeb4a3a8c1f5",
   "inputs": [
     [
       "requirement",
@@ -22,7 +22,7 @@
     ],
     [
       "model",
-      "117f01dc544b094f"
+      "1272c4a23358fb47"
     ]
   ]
 }

@@ -1,0 +1,33 @@
+{
+  "key": {
+    "reqId": "REQ-THERMO",
+    "clause": "to_celsius",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "Thermo.to_celsius_meets_its_specification",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "6c2c4fbc92b1fac9",
+  "inputs": [
+    [
+      "model",
+      "01d2366e2d3c6be5"
+    ],
+    [
+      "requirement",
+      "717af8d493eaedc0"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ],
+    [
+      "rules",
+      "80c8c2e339df1610"
+    ]
+  ]
+}

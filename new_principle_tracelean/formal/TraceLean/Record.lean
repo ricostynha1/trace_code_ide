@@ -81,10 +81,8 @@ inductive Reproducibility where
 def requiredInputs : Verdict → List String
   | .judge .. => ["requirement", "model"]
   | .drt _ _ _ => ["model", "implementation"]
-  | .proof _ _ => ["model", "toolchain"]
+  | .proof _ _ => ["model", "toolchain", "rules"]
 
-/-- @models REQ-EVID.record_reproducible
-@models REQ-STALE.inputs_identified -/
 private def missingField (detail : Verdict) : Option String :=
   match detail with
   | Verdict.judge verdict judgedBy _ promptVersion _ =>
@@ -99,6 +97,8 @@ private def missingField (detail : Verdict) : Option String :=
     else if toolchain.isEmpty then some "toolchain"
     else none
 
+/-- @models REQ-EVID.record_reproducible
+@models REQ-STALE.inputs_identified -/
 def reproducibility (record : Evidence) : Reproducibility :=
   match missingField record.detail with
   | some field => .incomplete field

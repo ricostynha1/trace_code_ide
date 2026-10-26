@@ -86,10 +86,44 @@ def origins (base : Workspace) (script : List Step) (file : String) (position : 
   let t := fromScript base script
   t.ids.map (fun id => origin t id file position)
 
+def OnlyMoves (c : Command) : Prop :=
+  ∀ name current, back c name current ≠ .writtenHere ∧ back c name current ≠ .fileCreatedHere
+
+private theorem origin_steps_stay_unwritten (t : Tree) :
+    ∀ (ids : List Nat) (acc : Sum (String × Nat) Origin),
+      (acc = .inr .base ∨ ∃ x, acc = .inl x) →
+      (∀ id ∈ ids, ∀ n, t.node? id = some n → OnlyMoves n.command) →
+      (ids.foldl (originStep t) acc = .inr .base ∨ ∃ x, ids.foldl (originStep t) acc = .inl x)
+  | [], acc, hacc, _ => hacc
+  | id :: rest, acc, hacc, hall => by
+    rw [List.foldl_cons]
+    apply origin_steps_stay_unwritten t rest
+    · rcases hacc with rfl | ⟨⟨name, current⟩, rfl⟩
+      · exact Or.inl rfl
+      · unfold originStep
+        cases hn : t.node? id with
+        | none => exact Or.inl rfl
+        | some n =>
+          have hm := hall id (List.mem_cons_self _ _) n hn name current
+          simp only []
+          cases hb : back n.command name current with
+          | writtenHere => exact absurd hb hm.1
+          | fileCreatedHere => exact absurd hb hm.2
+          | moved next => exact Or.inr ⟨_, rfl⟩
+          | renamed previous => exact Or.inr ⟨_, rfl⟩
+    · exact fun i hi => hall i (List.mem_cons_of_mem _ hi)
+
 /-- @proves REQ-PROV.base_is_honest -/
-theorem nothing_recorded_means_nothing_written (base : Workspace) (file : String) (p : Nat) :
-    origins base [] file p = [] := by
-  rfl
+theorem text_no_recorded_edit_wrote_comes_from_the_base (t : Tree) (atNode : Nat) (file : String)
+    (position : Nat)
+    (h : ∀ id ∈ t.ancestry atNode, ∀ n, t.node? id = some n → OnlyMoves n.command) :
+    origin t atNode file position = .base := by
+  unfold origin
+  have hr : ∀ id ∈ (t.ancestry atNode).reverse, ∀ n, t.node? id = some n → OnlyMoves n.command :=
+    fun id hi => h id (List.mem_reverse.mp hi)
+  rcases origin_steps_stay_unwritten t _ (.inl (file, position)) (Or.inr ⟨_, rfl⟩) hr with he | ⟨x, he⟩
+  · rw [he]
+  · rw [he]
 
 /-- @proves REQ-PROV.mapping_before -/
 theorem before_an_edit_is_unchanged (file text : String) (offset position : Nat)

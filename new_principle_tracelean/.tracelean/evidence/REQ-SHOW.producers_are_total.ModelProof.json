@@ -7,11 +7,11 @@
   "level": "L4",
   "detail": {
     "proof": {
-      "theoremName": "TraceLean.Produce::every_kind_has_a_producer_that_answers",
+      "theoremName": "TraceLean.Produce.tidying_answers_every_span_list_with_ordered_spans_inside_the_text",
       "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
     }
   },
-  "linkHash": "e51e7353327515ec",
+  "linkHash": "dff5924bb3078f02",
   "inputs": [
     [
       "model",
@@ -24,6 +24,10 @@
     [
       "toolchain",
       "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ],
+    [
+      "rules",
+      "80c8c2e339df1610"
     ]
   ]
 }

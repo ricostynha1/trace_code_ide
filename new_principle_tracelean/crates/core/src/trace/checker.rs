@@ -33,6 +33,7 @@ pub enum Kind {
     SeveralModels,
     SeveralSpecs,
     SeveralPins,
+    ProofRefused,
 }
 
 impl Kind {
@@ -44,7 +45,7 @@ impl Kind {
     pub fn severity(self) -> Severity {
         match self {
             Kind::Unmodeled | Kind::Unimplemented | Kind::Untested => Severity::Info,
-            Kind::Unbound | Kind::UnsoundQualifier | Kind::Imprecise => Severity::Warn,
+            Kind::Unbound | Kind::UnsoundQualifier | Kind::Imprecise | Kind::ProofRefused => Severity::Warn,
             Kind::SeveralModels
             | Kind::SeveralSpecs
             | Kind::SeveralPins
@@ -206,6 +207,32 @@ pub fn crowded_kinds(roles: Vec<Role>) -> Vec<Kind> {
         .into_iter()
         .filter(|(role, _)| count(*role) > 1)
         .map(|(_, kind)| kind)
+        .collect()
+}
+
+/// @implements REQ-STRENGTH.refusal_reported
+pub fn refused(report: &super::proofcheck::ProofReport, policy: &Policy) -> Vec<Finding> {
+    report
+        .proofs
+        .iter()
+        .filter_map(|entry| match &entry.verdict {
+            super::proofcheck::Verdict::Refused { refusal } => Some(
+                Finding::new(
+                    Kind::ProofRefused,
+                    format!(
+                        "`{}` earns no proof for {}: {}",
+                        entry.theorem,
+                        crate::drt::qualified_op(&entry.req_id, entry.clause.as_deref()),
+                        refusal.message()
+                    ),
+                    &entry.file,
+                    entry.line,
+                    policy,
+                )
+                .about(&entry.req_id, entry.clause.as_deref()),
+            ),
+            super::proofcheck::Verdict::Accepted { .. } => None,
+        })
         .collect()
 }
 

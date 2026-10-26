@@ -11,10 +11,10 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "The marks are independent booleans; no field is computed from another."
+      "note": "Four marks, each read from its own bond's records and none from another's."
     }
   },
-  "linkHash": "f9ad64f1cb5668dd",
+  "linkHash": "9b60e91f03ac06bd",
   "inputs": [
     [
       "requirement",
@@ -22,7 +22,7 @@
     ],
     [
       "model",
-      "3bd29cdfa957e905"
+      "1272c4a23358fb47"
     ]
   ]
 }

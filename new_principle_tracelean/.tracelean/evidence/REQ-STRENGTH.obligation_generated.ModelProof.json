@@ -7,23 +7,27 @@
   "level": "L4",
   "detail": {
     "proof": {
-      "theoremName": "TraceLean.Strength::obligation_states_that_the_spec_determines_the_model",
+      "theoremName": "TraceLean.Proofcheck.the_obligation_is_built_from_exactly_the_accepted_statements",
       "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
     }
   },
-  "linkHash": "35822fedc2764b1f",
+  "linkHash": "667620798766b820",
   "inputs": [
     [
       "model",
-      "9772b5a355704b31"
+      "4363ad1cb6640039"
     ],
     [
       "requirement",
-      "00ecdbdf11e24ade"
+      "dae0c440231d5d6d"
     ],
     [
       "toolchain",
       "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ],
+    [
+      "rules",
+      "80c8c2e339df1610"
     ]
   ]
 }

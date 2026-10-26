@@ -11,10 +11,10 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "Each obligation carries its strength beside the theorems that earned the proof."
+      "note": "standing: a declared reason excludes; a pin accepted under the current key pins; a stated but unaccepted pin is attempted; no pin is open."
     }
   },
-  "linkHash": "49ceb3e6f6ad0d21",
+  "linkHash": "19fe46f97e87aa34",
   "inputs": [
     [
       "requirement",
@@ -22,7 +22,7 @@
     ],
     [
       "model",
-      "87d4da9d465362f8"
+      "e14fd3ebd3dc53ab"
     ]
   ]
 }

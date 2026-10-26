@@ -1,0 +1,30 @@
+{
+  "key": {
+    "reqId": "REQ-STRENGTH",
+    "clause": "strength_per_model",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 75,
+      "cases": 2000,
+      "op": "REQ-STRENGTH.strength_per_model"
+    }
+  },
+  "linkHash": "15d64c8626e1147f",
+  "inputs": [
+    [
+      "implementation",
+      "81dae90c2f5ecf33+a4c74407ef4e4e1e"
+    ],
+    [
+      "model",
+      "e9ffc40f6519ec23"
+    ],
+    [
+      "requirement",
+      "795d67a50251bf88"
+    ]
+  ]
+}

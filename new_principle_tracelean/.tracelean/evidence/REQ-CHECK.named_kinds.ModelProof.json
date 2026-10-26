@@ -7,7 +7,7 @@
   "level": "L4",
   "detail": {
     "proof": {
-      "theoremName": "TraceLean.Checker::every_kind_is_reported_by_its_own_name",
+      "theoremName": "TraceLean.Checker.every_kind_is_reported_by_its_own_name",
       "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
     }
   },
@@ -24,6 +24,10 @@
     [
       "toolchain",
       "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ],
+    [
+      "rules",
+      "80c8c2e339df1610"
     ]
   ]
 }

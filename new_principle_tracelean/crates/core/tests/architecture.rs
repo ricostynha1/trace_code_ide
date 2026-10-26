@@ -254,7 +254,7 @@ const SHELLS: &[&str] = &[
     "core/src/drt/ts_runner.rs",
     "core/src/drt/run.rs",
     "core/src/drt/config.rs",
-    "core/src/drt/pins.rs",
+    "core/src/drt/proofs.rs",
     "core/src/drt/auto.rs",
     "core/src/drt/lines_run.rs",
     "core/src/bin/tracelean-trace.rs",

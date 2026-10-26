@@ -55,23 +55,54 @@ def classify (path : String) : Class :=
 def isMirrored (path : String) : Bool :=
   classify path == .mirrored
 
-/-- @proves REQ-SBX.protected_never_mirrored -/
 theorem protected_is_not_mirrored (path : String) :
     classify path = Class.«protected» -> isMirrored path = false := by
   intro h
   simp [isMirrored, h]
 
-/-- @proves REQ-SBX.classification_total -/
-theorem every_path_has_one_of_four_classes (path : String) :
-    classify path = Class.«protected» ∨ classify path = Class.mirrored ∨
-      classify path = Class.passThrough ∨ classify path = Class.outside := by
-  cases classify path
-  all_goals simp
+def Inside (path : String) : Prop :=
+  path ≠ "" ∧ path.startsWith "/" = false ∧ path.startsWith (String.mk [Char.ofNat 92]) = false ∧
+    path.toList.contains (Char.ofNat 0) = false ∧
+    (path.length >= 2 && path.toList.getD 1 ' ' == ':') = false
+
+/-- @proves REQ-SBX.protected_never_mirrored -/
+theorem a_path_under_a_protected_root_is_protected (path first : String) (rest : List String)
+    (inside : Inside path) (resolved : resolveFrom (path.splitOn "/") = some (first :: rest))
+    (root : protectedRoots.contains first = true) :
+    classify path = Class.«protected» := by
+  obtain ⟨h1, h2, h3, h4, h5⟩ := inside
+  unfold classify
+  simp only [beq_iff_eq, h1, if_false, h2, h3, h4, h5, Bool.false_eq_true, resolved, root, if_true]
 
 /-- @proves REQ-SBX.passthrough_not_mirrored -/
-theorem regenerable_is_not_mirrored (path : String) :
-    classify path = .passThrough → isMirrored path = false := by
-  intro h
-  simp [isMirrored, h]
+theorem a_regenerable_directory_is_passed_through (path first : String) (rest : List String)
+    (inside : Inside path) (resolved : resolveFrom (path.splitOn "/") = some (first :: rest))
+    (notProtected : protectedRoots.contains first = false)
+    (regenerable : passThroughAtRoot.contains first = true ∨
+      (first :: rest).any (fun s => passThroughAnywhere.contains s) = true) :
+    classify path = .passThrough := by
+  obtain ⟨h1, h2, h3, h4, h5⟩ := inside
+  unfold classify
+  simp only [beq_iff_eq, h1, if_false, h2, h3, h4, h5, Bool.false_eq_true, resolved, notProtected]
+  rcases regenerable with h | h
+  · have hm : first ∈ passThroughAtRoot := by simpa using h
+    simp [hm]
+  · by_cases hr : passThroughAtRoot.contains first = true
+    · have hm : first ∈ passThroughAtRoot := by simpa using hr
+      simp [hm]
+    · simp only [hr, Bool.false_eq_true, if_false, h, if_true]
+
+/-- @proves REQ-SBX.passthrough_not_mirrored -/
+theorem a_source_directory_named_like_a_build_one_is_mirrored_below_the_root
+    (path first : String) (rest : List String)
+    (inside : Inside path) (resolved : resolveFrom (path.splitOn "/") = some (first :: rest))
+    (notProtected : protectedRoots.contains first = false)
+    (notAtRoot : passThroughAtRoot.contains first = false)
+    (noneAnywhere : (first :: rest).any (fun s => passThroughAnywhere.contains s) = false) :
+    classify path = .mirrored := by
+  obtain ⟨h1, h2, h3, h4, h5⟩ := inside
+  unfold classify
+  simp only [beq_iff_eq, h1, if_false, h2, h3, h4, h5, Bool.false_eq_true, resolved, notProtected,
+    notAtRoot, noneAnywhere]
 
 end TraceLean.Policy

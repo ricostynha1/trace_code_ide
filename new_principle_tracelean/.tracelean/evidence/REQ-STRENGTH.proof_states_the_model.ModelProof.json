@@ -1,0 +1,33 @@
+{
+  "key": {
+    "reqId": "REQ-STRENGTH",
+    "clause": "proof_states_the_model",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Proofcheck.a_proof_that_never_applies_the_model_earns_nothing",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "4e4ef2d2dd06ee1e",
+  "inputs": [
+    [
+      "model",
+      "fadf42714a8c5485"
+    ],
+    [
+      "requirement",
+      "ebfe3aee3897c612"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ],
+    [
+      "rules",
+      "80c8c2e339df1610"
+    ]
+  ]
+}

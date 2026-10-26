@@ -7,11 +7,11 @@
   "level": "L4",
   "detail": {
     "proof": {
-      "theoremName": "TraceLean.SpecRollup::rollUp_holds_what_every_clause_holds",
+      "theoremName": "TraceLean.SpecRollup.combine_holds_what_every_part_holds",
       "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
     }
   },
-  "linkHash": "4213f3eae49ddb75",
+  "linkHash": "6680f72b15e14288",
   "inputs": [
     [
       "model",
@@ -24,6 +24,10 @@
     [
       "toolchain",
       "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ],
+    [
+      "rules",
+      "80c8c2e339df1610"
     ]
   ]
 }

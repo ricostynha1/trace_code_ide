@@ -12,8 +12,15 @@ structure. Moving a file changes nothing.
 | `@implements` | code | this realises the clause |
 | `@tests` | a test | this exercises the clause |
 | `@drt` | a differential comparison's entry | compared by generated cases |
-| `@proves` | a theorem | discharges the clause as a property |
-| `@pins` | a proof that the spec pins the model | the model is pinned |
+| `@proves` | a theorem stated about the clause's model, for every input | earns `P` once Lean accepts it (REQ-STRENGTH) |
+| `@pins` | a theorem stating exactly the model's generated obligation | the model is pinned |
+
+A `@proves` theorem earns nothing if it never applies the model, applies it
+only to fixed values, reaches it through another definition, holds of every
+function in place of the model, or rests on `sorry`, `native_decide` or an
+undeclared axiom. An axiom standing for something outside Lean carries
+`@assumes REQ-X.clause` in its doc comment, and every `P` resting on it lists
+it.
 
 At most one `@models`, one `@specifies` and one `@pins` per clause (ADR-0014);
 more is reported as `SeveralModels`/`SeveralSpecs`/`SeveralPins`.

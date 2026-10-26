@@ -7,23 +7,27 @@
   "level": "L4",
   "detail": {
     "proof": {
-      "theoremName": "TraceLean.Pinning::another_key_does_not_pin",
+      "theoremName": "TraceLean.Proofcheck.a_verdict_about_other_sources_never_pins",
       "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
     }
   },
-  "linkHash": "8ca9649489718a7e",
+  "linkHash": "b66af49db2a776a4",
   "inputs": [
     [
       "model",
-      "6199f5bbe7357785"
+      "e14fd3ebd3dc53ab"
     ],
     [
       "requirement",
-      "635227f0a1934c23"
+      "1f303a92f6533038"
     ],
     [
       "toolchain",
       "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ],
+    [
+      "rules",
+      "80c8c2e339df1610"
     ]
   ]
 }

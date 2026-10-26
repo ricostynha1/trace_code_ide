@@ -2495,15 +2495,16 @@ impl Editor {
             .map(|l| l.evidence)
             .unwrap_or_default();
         let held = marks_of(&index, &records);
-        let plans = tracelean_core::trace::pinning::plans(&index, &self.workspace().files);
+        let strengths = tracelean_core::trace::proofcheck::strengths(
+            &index,
+            &tracelean_core::drt::proofs::load(&self.root),
+            &self.workspace().files,
+        );
         let clauses = requirement
             .clause_keys()
             .into_iter()
             .map(|clause| {
-                let pins = plans.iter().find(|p| p.req_id == id && p.clause == clause).map(|plan| {
-                    use tracelean_core::{drt::pins::read_record, trace::pinning::shown};
-                    shown(plan, read_record(&self.root, id, clause.as_deref()))
-                });
+                let pins = strengths.get(&(id.to_string(), clause.clone())).map(tracelean_core::trace::proofcheck::described);
                 let mut claims: Vec<Claim> = index
                     .links
                     .iter()
@@ -3251,10 +3252,12 @@ impl Editor {
     }
 
     fn found(&self) -> Vec<tracelean_core::surface::findings_view::Found> {
-        use tracelean_core::trace::checker::{check, Policy};
+        use tracelean_core::trace::checker::{check, refused, Policy};
         let index = self.index();
+        let report = tracelean_core::drt::proofs::load(&self.root);
         check(&index, &Policy::default())
             .iter()
+            .chain(refused(&report, &Policy::default()).iter())
             .map(|finding| tracelean_core::surface::findings_view::Found {
                 kind: format!("{:?}", finding.kind).to_lowercase(),
                 file: finding.file.clone(),

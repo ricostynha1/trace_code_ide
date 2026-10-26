@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-STRENGTH",
+    "clause": "strength_per_model",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "plans groups every modelled clause under its model, so one strength is shown for all of them."
+    }
+  },
+  "linkHash": "2148386c97c24989",
+  "inputs": [
+    [
+      "requirement",
+      "795d67a50251bf88"
+    ],
+    [
+      "model",
+      "e9ffc40f6519ec23"
+    ]
+  ]
+}

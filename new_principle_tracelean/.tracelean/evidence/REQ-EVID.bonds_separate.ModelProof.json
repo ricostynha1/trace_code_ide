@@ -7,15 +7,15 @@
   "level": "L4",
   "detail": {
     "proof": {
-      "theoremName": "TraceLean.Evidence::a_record_moves_only_its_own_bond",
+      "theoremName": "TraceLean.Evidence.a_record_moves_only_the_mark_of_its_own_bond",
       "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
     }
   },
-  "linkHash": "993e79aa30f9d257",
+  "linkHash": "97182978ca9e5907",
   "inputs": [
     [
       "model",
-      "117f01dc544b094f"
+      "1272c4a23358fb47"
     ],
     [
       "requirement",
@@ -24,6 +24,10 @@
     [
       "toolchain",
       "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ],
+    [
+      "rules",
+      "80c8c2e339df1610"
     ]
   ]
 }

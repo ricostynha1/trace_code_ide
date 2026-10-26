@@ -1,0 +1,33 @@
+{
+  "key": {
+    "reqId": "REQ-STRENGTH",
+    "clause": "pinned_by_theorem",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Proofcheck.a_pin_counts_only_when_it_states_the_obligation",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "7158567bec21ae80",
+  "inputs": [
+    [
+      "model",
+      "00549d51ca5f9b3d"
+    ],
+    [
+      "requirement",
+      "0b38f5d1e057d92c"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ],
+    [
+      "rules",
+      "80c8c2e339df1610"
+    ]
+  ]
+}

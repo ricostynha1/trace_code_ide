@@ -11,18 +11,18 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "A model is open with no pins, attempted with one, and nondeterministic when declared; pinned is the separate kernel verdict."
+      "note": "standing: a declared reason excludes; a pin accepted under the current key pins; a stated but unaccepted pin is attempted; no pin is open."
     }
   },
-  "linkHash": "e42377348aa6c654",
+  "linkHash": "7cb881da92c7ede5",
   "inputs": [
     [
       "requirement",
-      "e282424e21740fd4"
+      "92dfd8135d3827ff"
     ],
     [
       "model",
-      "87d4da9d465362f8"
+      "e14fd3ebd3dc53ab"
     ]
   ]
 }

@@ -7,7 +7,7 @@
   "level": "L4",
   "detail": {
     "proof": {
-      "theoremName": "TraceLean.Act::a_missing_target_is_refused_by_name",
+      "theoremName": "TraceLean.Act.a_missing_target_is_refused_by_name",
       "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
     }
   },
@@ -24,6 +24,10 @@
     [
       "toolchain",
       "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ],
+    [
+      "rules",
+      "80c8c2e339df1610"
     ]
   ]
 }

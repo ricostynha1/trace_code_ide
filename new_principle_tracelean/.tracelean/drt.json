@@ -665,26 +665,13 @@
     },
     {
       "req_id": "REQ-STRENGTH",
+      "clause": "proof_states_the_model",
+      "also_checks": ["proof_is_general", "proof_is_direct", "proof_not_vacuous", "model_is_a_function", "axioms_declared", "assumptions_shown"]
+    },
+    {
+      "req_id": "REQ-STRENGTH",
       "clause": "qualifies_proof",
-      "floors": [
-        {
-          "situation": "attempted",
-          "atLeast": 1
-        },
-        {
-          "situation": "open",
-          "atLeast": 1
-        },
-        {
-          "situation": "nondeterministic",
-          "atLeast": 1
-        },
-        {
-          "situation": "an obligation carrying a theorem",
-          "atLeast": 150
-        }
-      ],
-      "also_checks": ["open_is_the_default", "attempted_distinguished", "nondeterministic_declared"]
+      "also_checks": ["open_is_the_default", "attempted_distinguished", "nondeterministic_declared", "verdict_kept"]
     },
     {
       "req_id": "REQ-CHECK",
@@ -1329,11 +1316,6 @@
           "reason": "`shape_at` answers None only for an empty `SHAPES`, which is a constant with ten shapes; no input reaches it"
         }
       ]
-    },
-    {
-      "req_id": "REQ-STRENGTH",
-      "clause": "obligation_generated",
-      "also_checks": ["not_proved_by_us"]
     },
     {
       "req_id": "REQ-EVID",
@@ -2496,99 +2478,6 @@
           "atLeast": 500
         }
       ]
-    },
-    {
-      "req_id": "REQ-STRENGTH",
-      "clause": "per_input",
-      "floors": [
-        {
-          "situation": "a model of no arguments",
-          "atLeast": 50
-        },
-        {
-          "situation": "a model of several arguments",
-          "atLeast": 300
-        }
-      ]
-    },
-    {
-      "req_id": "REQ-STRENGTH",
-      "clause": "inputs_counted",
-      "floors": [
-        {
-          "situation": "a definition by pattern matching",
-          "atLeast": 200
-        },
-        {
-          "situation": "arguments both named and arrowed",
-          "atLeast": 100
-        },
-        {
-          "situation": "a proposition",
-          "atLeast": 100
-        },
-        {
-          "situation": "not a definition",
-          "atLeast": 50
-        }
-      ]
-    },
-    {
-      "req_id": "REQ-STRENGTH",
-      "clause": "kernel_decides",
-      "floors": [
-        {
-          "situation": "accepted",
-          "atLeast": 40
-        },
-        {
-          "situation": "rejected for sorry",
-          "atLeast": 20
-        },
-        {
-          "situation": "rejected for an error",
-          "atLeast": 20
-        }
-      ],
-      "model": {
-        "import": "TraceLean.Pinning",
-        "function": "TraceLean.Pinning.accepted",
-        "arguments": ["theoremName", "output", "exitedOk"]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/trace/pinning.rs::accepted",
-        "params": {
-          "theoremName": "theorem_name",
-          "exitedOk": "exited_ok"
-        }
-      }
-    },
-    {
-      "req_id": "REQ-STRENGTH",
-      "clause": "verdict_kept",
-      "floors": [
-        {
-          "situation": "pinned",
-          "atLeast": 50
-        },
-        {
-          "situation": "a verdict about other declarations",
-          "atLeast": 100
-        }
-      ],
-      "model": {
-        "import": "TraceLean.Pinning",
-        "function": "TraceLean.Pinning.standing",
-        "arguments": ["theoremName", "record", "key"]
-      },
-      "implementation": {
-        "language": "rust",
-        "entry": "crates/core/src/trace/pinning.rs::standing",
-        "params": {
-          "theoremName": "theorem_name"
-        }
-      }
     },
     {
       "req_id": "REQ-DRT-SCHEMA",

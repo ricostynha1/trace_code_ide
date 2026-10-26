@@ -11,10 +11,10 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "A model declared nondeterministic with a reason is given that standing instead of open."
+      "note": "standing: a declared reason excludes; a pin accepted under the current key pins; a stated but unaccepted pin is attempted; no pin is open."
     }
   },
-  "linkHash": "4cfd8dbf007b4579",
+  "linkHash": "a4a883c717871c1c",
   "inputs": [
     [
       "requirement",
@@ -22,7 +22,7 @@
     ],
     [
       "model",
-      "87d4da9d465362f8"
+      "e14fd3ebd3dc53ab"
     ]
   ]
 }

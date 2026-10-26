@@ -7,7 +7,7 @@
   "level": "L4",
   "detail": {
     "proof": {
-      "theoremName": "TraceLean.Evidence::no_records_set_no_mark",
+      "theoremName": "TraceLean.Evidence.no_records_set_no_mark",
       "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
     }
   },
@@ -15,7 +15,7 @@
   "inputs": [
     [
       "model",
-      "e09d0d6a6454a4f9"
+      "1272c4a23358fb47"
     ],
     [
       "requirement",
@@ -24,6 +24,10 @@
     [
       "toolchain",
       "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ],
+    [
+      "rules",
+      "80c8c2e339df1610"
     ]
   ]
 }

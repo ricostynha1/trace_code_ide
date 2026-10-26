@@ -72,8 +72,8 @@ All take the project root first (`.`). "Writes" is under `.tracelean/`.
 | `--judge X` | prints the judging prompt for a person | — |
 | `--judge X --verdict agrees\|drift\|unmodelable --by <who> [--delegated-by <who>] [--note …]` | records **a person's** verdict ([05](05-evidence.md)) | evidence, lock |
 | `--hashes` | what each requirement hashes to now, for a document's `described_hash` ([03](03-requirements.md)) | — |
-| `--pins` | asks Lean whether each `@pins` theorem pins its clause | pins |
-| `--strength [symbol]` | what each model owes toward L4, and the statement to prove | — |
+| `--proofs` | asks Lean about every `@proves` and `@pins` theorem; writes `P` for the accepted ones and the reason for each refused one (`ProofRefused` findings) | proofs.json, evidence |
+| `--pins` / `--strength [model]` | each model's strength (pinned, attempted, open, nondeterministic), and the obligation `∀ g, S₁ g → … → g = model` to prove for one | — |
 | `--coverage [--again]` | runs each Rust test alone under coverage: which tests ran which lines; `cached` while no `.rs` or `Cargo` file changed | coverage |
 | `--unparsed <file>` | where the grammar stopped reading a file | — |
 

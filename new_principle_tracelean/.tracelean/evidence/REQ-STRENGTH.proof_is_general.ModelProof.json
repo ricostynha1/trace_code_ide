@@ -1,0 +1,33 @@
+{
+  "key": {
+    "reqId": "REQ-STRENGTH",
+    "clause": "proof_is_general",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "TraceLean.Proofcheck.an_example_earns_nothing",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "633b397e78a84285",
+  "inputs": [
+    [
+      "model",
+      "fadf42714a8c5485"
+    ],
+    [
+      "requirement",
+      "8797301db10e2111"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ],
+    [
+      "rules",
+      "80c8c2e339df1610"
+    ]
+  ]
+}

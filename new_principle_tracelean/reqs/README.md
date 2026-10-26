@@ -33,7 +33,7 @@ something anyone can claim to have exhausted.
 | [REQ-CHECK](trace/REQ-CHECK.md) | 8 | Findings |
 | [REQ-ROLLUP](trace/REQ-ROLLUP.md) | 6 | Roll-up and coverage reporting |
 | [REQ-LOCK](trace/REQ-LOCK.md) | 5 | The committed index |
-| [REQ-STRENGTH](trace/REQ-STRENGTH.md) | 6 | Spec strength |
+| [REQ-STRENGTH](trace/REQ-STRENGTH.md) | 18 | Proof honesty and spec strength |
 | [REQ-DOCLINK](trace/REQ-DOCLINK.md) | 8 | Documentation is linked and goes stale |
 
 ## Differential testing — how a model and an implementation are compared

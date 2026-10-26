@@ -199,12 +199,6 @@ def nested : Keymap :=
       ("Leader", { parent := some "Normal", bindings := [("g", .enter "Design" "design")] }),
       ("Design", { parent := some "Leader", bindings := [("o", .dispatch "design.toggle" "fold")] })] }
 
-/-- @proves REQ-MYTH.outcomes_closed -/
-theorem every_outcome_is_one_of_four (keymap : Keymap) (mode key : String) :
-    (∃ t, step keymap mode key = .enter t) ∨ (∃ a, step keymap mode key = .dispatch a) ∨
-    (∃ t, step keymap mode key = .leave t) ∨ step keymap mode key = .passThrough := by
-  cases step keymap mode key <;> simp
-
 theorem mode_mem {k : Keymap} {name : String} {m : Mode} (h : k.mode name = some m) :
     (name, m) ∈ k.modes := by
   unfold Keymap.mode at h
@@ -492,16 +486,18 @@ theorem only_an_unbound_key_at_a_parentless_mode_passes_through (k : Keymap) (mo
 theorem unbound_escape_goes_to_the_parent_and_others_to_the_root (k : Keymap) (mode key : String)
     (m : Mode) (p : String) (hm : k.mode mode = some m) (hb : m.binding key = none)
     (hp : m.parent = some p) :
-    step k mode key = (if key = leaveKey then .leave p else .leave k.root) ∧
+    step k mode key = (if key = leaveKey then .leave p else .leave k.root) := by
+  unfold step
+  rw [hm]
+  simp only [hb, hp]
+  by_cases hk : key = leaveKey <;> simp [hk]
+
+theorem unbound_escape_moves_to_the_parent_and_others_to_the_root (k : Keymap) (mode key : String)
+    (m : Mode) (p : String) (hm : k.mode mode = some m) (hb : m.binding key = none)
+    (hp : m.parent = some p) :
     nextMode k mode key = (if key = leaveKey then p else k.root) := by
-  have hs : step k mode key = (if key = leaveKey then .leave p else .leave k.root) := by
-    unfold step
-    rw [hm]
-    simp only [hb, hp]
-    by_cases hk : key = leaveKey <;> simp [hk]
-  refine ⟨hs, ?_⟩
   unfold nextMode
-  rw [hs]
+  rw [unbound_escape_goes_to_the_parent_and_others_to_the_root k mode key m p hm hb hp]
   by_cases hk : key = leaveKey <;> simp [hk]
 
 /-- @proves REQ-MYTH.modes_defined -/

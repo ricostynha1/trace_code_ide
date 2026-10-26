@@ -101,7 +101,6 @@ def runViolations (witness : RunWitness) : List Violation :=
     ++ escapeViolations witness.writes
     ++ capabilityViolations witness.containment
 
-/-- @proves REQ-SBX.protected_never_mirrored -/
 theorem a_protected_path_is_never_a_copy_violation
     (before workspace : Workspace) (path content : String)
     (h : classify path = Class.«protected») (seen : workspace.get path = some content) :

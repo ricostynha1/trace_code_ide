@@ -8,7 +8,6 @@ inductive Level where
   | L1 | L2 | L3 | L4
   deriving Repr, DecidableEq, Inhabited, ToJson, FromJson
 
-/-- @models REQ-EVID.bonds_separate -/
 inductive Bond where
   | requirementModel
   | modelImpl
@@ -34,11 +33,9 @@ def min (a b : Level) : Level := if a.toNat ≤ b.toNat then a else b
 
 end Level
 
-/-- @models REQ-EVID.absent_is_unset -/
 def bondLevel (records : List Record) (b : Bond) : Level :=
   records.foldl (fun acc r => if r.bond = b then Level.max acc r.level else acc) Level.L1
 
-/-- @models REQ-EVID.marks -/
 structure Marks where
   annotated : Bool
   judged : Bool
@@ -79,7 +76,10 @@ def both (a b : Marks) : Marks :=
 end Marks
 
 /-- @models REQ-EVID.mark_per_bond
-@models REQ-EVID.monotone -/
+@models REQ-EVID.monotone
+@models REQ-EVID.marks
+@models REQ-EVID.bonds_separate
+@models REQ-EVID.absent_is_unset -/
 def marks (records : List Record) (annotated : Bool) : Marks :=
   ⟨annotated,
    decide (2 ≤ (bondLevel records .requirementModel).toNat),
@@ -132,11 +132,20 @@ theorem adding_a_record_never_clears_a_mark (records : List Record) (r : Record)
 theorem no_records_set_no_mark (a : Bool) : marks [] a = ⟨a, false, false, false, false⟩ := by
   cases a <;> rfl
 
-/-- @proves REQ-EVID.bonds_separate -/
 theorem a_record_moves_only_its_own_bond (records : List Record) (b other : Bond) (l : Level)
     (h : other ≠ b) :
     bondLevel (records ++ [⟨other, l⟩]) b = bondLevel records b := by
   simp [bondLevel, List.foldl_append, h]
+
+/-- @proves REQ-EVID.bonds_separate -/
+theorem a_record_moves_only_the_mark_of_its_own_bond (records : List Record) (r : Record)
+    (a : Bool) :
+    (r.bond ≠ .requirementModel → (marks (records ++ [r]) a).judged = (marks records a).judged) ∧
+    (r.bond ≠ .modelImpl → (marks (records ++ [r]) a).tested = (marks records a).tested) ∧
+    (r.bond ≠ .modelProof → (marks (records ++ [r]) a).proved = (marks records a).proved) := by
+  obtain ⟨other, l⟩ := r
+  refine ⟨fun h => ?_, fun h => ?_, fun h => ?_⟩ <;>
+    simp only [marks, a_record_moves_only_its_own_bond records _ other l h]
 
 /-- @proves REQ-EVID.structural_not_applicable -/
 theorem testing_and_proving_do_not_apply_by_reading (m other : Marks) (h : other.structural = false) :

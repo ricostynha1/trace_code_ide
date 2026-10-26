@@ -11,10 +11,10 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "A bond with no record stays at L1, below every mark's threshold, so its mark is unset."
+      "note": "With no record a bond's level is none, so its mark is false."
     }
   },
-  "linkHash": "10a8ba661b21de36",
+  "linkHash": "fb738347b41fbd27",
   "inputs": [
     [
       "requirement",
@@ -22,7 +22,7 @@
     ],
     [
       "model",
-      "e09d0d6a6454a4f9"
+      "1272c4a23358fb47"
     ]
   ]
 }

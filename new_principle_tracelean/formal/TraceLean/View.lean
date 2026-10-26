@@ -66,8 +66,6 @@ def actionTarget (action : String) : Option String :=
   | [_] => none
   | _ :: rest => some (" ".intercalate rest)
 
-/-- @models REQ-VIEW.one_representation
-@models REQ-VIEW.everything_is_a_buffer -/
 structure Buffer where
   id : String
   kind : BufferKind
@@ -136,7 +134,8 @@ private def listingSpans (entries : List (Nat × String)) (at_ : Nat) : List Spa
     span :: listingSpans rest (at_ + line.length + 1)
 
 /-- @models REQ-VIEW.structure_has_one_type
-@models REQ-SHOW.listing_from_entries -/
+@models REQ-SHOW.listing_from_entries
+@models REQ-VIEW.everything_is_a_buffer -/
 def directoryBuffer (path : String) (entries : List (Nat × String)) : Buffer :=
   { id := "dir:" ++ path,
     kind := BufferKind.directory path,
@@ -203,7 +202,8 @@ private def lineBreaches (at_ : Nat) : List String → List String → List Brea
     here ++ lineBreaches (at_ + 1) restShown restExpected
 
 /-- @models REQ-VIEW.rendering_is_total
-@models REQ-VIEW.frontend_adds_nothing -/
+@models REQ-VIEW.frontend_adds_nothing
+@models REQ-VIEW.one_representation -/
 def conformance (buffer : Buffer) (rendering : Rendering) : List Breach :=
   let lines := lineBreaches 0 rendering.lines (plainText buffer)
   let invented := rendering.offered.foldl
@@ -252,6 +252,11 @@ private theorem lines_ignore_painting (glyph : String) (rows : List (List Presen
   | cons row rest ih => simp [accessible_ignores_painting, ih]
 
 /-- @proves REQ-VIEW.presentation_may_be_symbolic -/
+theorem a_row_is_read_as_its_names_whatever_is_painted (row : List Presented) (glyph : String) :
+    accessible (row.map (fun piece => { piece with painted := glyph })) = accessible row ∧
+      ∀ piece rest, accessible (piece :: rest) = piece.name ++ accessible rest :=
+  ⟨accessible_ignores_painting glyph row, fun _ _ => rfl⟩
+
 theorem a_symbol_is_read_as_its_name (buffer : Buffer) (rows : List (List Presented))
     (offered : List (Nat × String)) (glyph : String) :
     presentedConformance buffer

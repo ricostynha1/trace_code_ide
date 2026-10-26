@@ -11,10 +11,10 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "delete and deleteFile carry what they remove, and rename carries both names, so no inverse needs another source."
+      "note": "Every destructive command's inverse is built from the command alone: delete and deleteFile carry the text they remove."
     }
   },
-  "linkHash": "51b2605de54c2acc",
+  "linkHash": "0b09f4cbb2458f45",
   "inputs": [
     [
       "requirement",
@@ -22,7 +22,7 @@
     ],
     [
       "model",
-      "854a6245d289ba86"
+      "cae5fdf85c845a1b"
     ]
   ]
 }

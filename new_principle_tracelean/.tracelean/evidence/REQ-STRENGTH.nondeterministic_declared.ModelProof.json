@@ -7,15 +7,15 @@
   "level": "L4",
   "detail": {
     "proof": {
-      "theoremName": "TraceLean.Strength::declared_nondeterministic_is_excluded",
+      "theoremName": "TraceLean.Proofcheck.a_declared_nondeterministic_model_is_excluded",
       "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
     }
   },
-  "linkHash": "ec4aa1dd5a1bd311",
+  "linkHash": "30e96025adb57d41",
   "inputs": [
     [
       "model",
-      "87d4da9d465362f8"
+      "e14fd3ebd3dc53ab"
     ],
     [
       "requirement",
@@ -24,6 +24,10 @@
     [
       "toolchain",
       "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ],
+    [
+      "rules",
+      "80c8c2e339df1610"
     ]
   ]
 }

@@ -1,8 +1,7 @@
 # Judging advice — REQ-STRENGTH
 
 Produced by claude-review, simulating the human approver, reading each clause
-against every `@models` declaration that claims it (`Strength.lean`,
-`Pinning.lean`). Verdicts were recorded with `--by "claude-review (simulated
+against every `@models` declaration that claims it (`Proofcheck.lean`). Verdicts were recorded with `--by "claude-review (simulated
 human)"`; under `REQ-JUDGE.advice_is_not_evidence` a person should re-enter any
 verdict they want to own.
 

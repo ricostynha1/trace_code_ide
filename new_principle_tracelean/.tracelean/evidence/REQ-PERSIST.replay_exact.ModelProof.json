@@ -7,11 +7,11 @@
   "level": "L4",
   "detail": {
     "proof": {
-      "theoremName": "TraceLean.Persistence::replay_is_each_command_in_turn",
+      "theoremName": "TraceLean.Persistence.a_replay_applies_every_recorded_command_in_order",
       "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
     }
   },
-  "linkHash": "0d41bcb7ad646e7b",
+  "linkHash": "03e123753b5725f9",
   "inputs": [
     [
       "model",
@@ -24,6 +24,10 @@
     [
       "toolchain",
       "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ],
+    [
+      "rules",
+      "80c8c2e339df1610"
     ]
   ]
 }

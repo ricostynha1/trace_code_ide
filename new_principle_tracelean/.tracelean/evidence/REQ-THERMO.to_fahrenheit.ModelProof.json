@@ -1,0 +1,33 @@
+{
+  "key": {
+    "reqId": "REQ-THERMO",
+    "clause": "to_fahrenheit",
+    "bond": "modelProof"
+  },
+  "level": "L4",
+  "detail": {
+    "proof": {
+      "theoremName": "Thermo.to_fahrenheit_meets_its_specification",
+      "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    }
+  },
+  "linkHash": "d6233ab7fdd49c1d",
+  "inputs": [
+    [
+      "model",
+      "aa60593053f8af5a"
+    ],
+    [
+      "requirement",
+      "5b03d83d98149872"
+    ],
+    [
+      "toolchain",
+      "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
+    ],
+    [
+      "rules",
+      "80c8c2e339df1610"
+    ]
+  ]
+}

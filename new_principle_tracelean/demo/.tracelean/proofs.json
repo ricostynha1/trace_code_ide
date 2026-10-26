@@ -1,0 +1,75 @@
+{
+  "rules": "80c8c2e339df1610",
+  "proofs": [
+    {
+      "theorem": "Thermo::to_celsius_meets_its_specification",
+      "model": "Thermo::toCelsius",
+      "reqId": "REQ-THERMO",
+      "clause": "to_celsius",
+      "file": "specs/Thermo.lean",
+      "line": 47,
+      "verdict": {
+        "verdict": "accepted",
+        "assumed": []
+      }
+    },
+    {
+      "theorem": "Thermo::to_fahrenheit_meets_its_specification",
+      "model": "Thermo::toFahrenheit",
+      "reqId": "REQ-THERMO",
+      "clause": "to_fahrenheit",
+      "file": "specs/Thermo.lean",
+      "line": 30,
+      "verdict": {
+        "verdict": "accepted",
+        "assumed": []
+      }
+    }
+  ],
+  "models": [
+    {
+      "model": "Thermo::toCelsius",
+      "clauses": [
+        [
+          "REQ-THERMO",
+          "to_celsius"
+        ]
+      ],
+      "statement": "∀ (g : Int → Int), (∀ (f : Int), Thermo.ToCelsius f (g f)) → g = Thermo.toCelsius",
+      "key": "01d2366e2d3c6be5+02de267e11a919b9",
+      "pins": [
+        {
+          "theorem": "Thermo::to_celsius_pinned",
+          "reqId": "REQ-THERMO",
+          "clause": "to_celsius",
+          "verdict": {
+            "verdict": "accepted",
+            "assumed": []
+          }
+        }
+      ]
+    },
+    {
+      "model": "Thermo::toFahrenheit",
+      "clauses": [
+        [
+          "REQ-THERMO",
+          "to_fahrenheit"
+        ]
+      ],
+      "statement": "∀ (g : Int → Int), (∀ (c : Int), Thermo.ToFahrenheit c (g c)) → g = Thermo.toFahrenheit",
+      "key": "aa60593053f8af5a+9d9fb44633006272",
+      "pins": [
+        {
+          "theorem": "Thermo::to_fahrenheit_pinned",
+          "reqId": "REQ-THERMO",
+          "clause": "to_fahrenheit",
+          "verdict": {
+            "verdict": "accepted",
+            "assumed": []
+          }
+        }
+      ]
+    }
+  ]
+}

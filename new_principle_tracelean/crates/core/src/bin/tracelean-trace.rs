@@ -261,13 +261,38 @@ fn main() {
             };
             println!("{what:<18} {name}: {why}\n    redo: {redo}");
         }
-        for plan in trace::pinning::plans(&index, &files) {
-            let Some(theorem) = &plan.theorem else { continue };
-            let record = tracelean_core::drt::pins::read_record(&root, &plan.req_id, plan.clause.as_deref());
-            if record.as_ref().is_some_and(|r| r.pinned && (&r.theorem_name != theorem || r.key != plan.key)) {
+        let report = tracelean_core::drt::proofs::load(&root);
+        if report.rules != trace::proofcheck::rules_hash() && !report.proofs.is_empty() {
+            found += 1;
+            println!("proof check        the rules changed since the proofs were checked\n    redo: tracelean-trace . --proofs");
+        }
+        let checked: std::collections::BTreeSet<&String> = report.proofs.iter().map(|p| &p.theorem).collect();
+        let modelled: std::collections::BTreeSet<(&String, &Option<String>)> = index
+            .links
+            .iter()
+            .filter(|l| l.role == trace::annotation::Role::Models && l.anchor.file.ends_with(".lean"))
+            .map(|l| (&l.req_id, &l.clause))
+            .collect();
+        for link in index
+            .links
+            .iter()
+            .filter(|l| l.role == trace::annotation::Role::Proves && modelled.contains(&(&l.req_id, &l.clause)))
+        {
+            if let trace::anchor::AnchorKind::Decl { symbol_path } = &link.anchor.kind {
+                if link.anchor.file.ends_with(".lean") && !checked.contains(symbol_path) {
+                    found += 1;
+                    println!("proof check        {symbol_path}: never checked\n    redo: tracelean-trace . --proofs");
+                }
+            }
+        }
+        for (clause, shown) in trace::proofcheck::strengths(&index, &report, &files) {
+            let held = report.models.iter().find(|m| m.model == shown.model);
+            if held.is_some_and(|m| m.pins.iter().any(|p| p.verdict.is_accepted()))
+                && !matches!(shown.strength, trace::strength::Strength::Pinned { .. })
+            {
                 found += 1;
-                let name = format!("{}{}", plan.req_id, plan.clause.as_deref().map(|c| format!(".{c}")).unwrap_or_default());
-                println!("pinning            {name}: the specification, model or theorem changed\n    redo: tracelean-trace . --pins");
+                let name = format!("{}{}", clause.0, clause.1.as_deref().map(|c| format!(".{c}")).unwrap_or_default());
+                println!("pinning            {name}: the model or a theorem about it changed\n    redo: tracelean-trace . --proofs");
             }
         }
         let hashes = trace::doclink::pairs(&trace::doclink::current_hashes(&index));
@@ -323,60 +348,65 @@ fn main() {
         return;
     }
 
-    if std::env::args().any(|a| a == "--pins") {
-        use trace::pinning::{plans, statement};
-        let files = tracelean_core::observe::workspace::snapshot(&root).files;
-        for plan in plans(&index, &files) {
-            let name = match &plan.clause {
-                Some(clause) => format!("{}.{clause}", plan.req_id),
-                None => plan.req_id.clone(),
-            };
-            match tracelean_core::drt::pins::check(&root, &plan) {
-                Some(record) if record.pinned => println!("pinned     {name}  {}", record.theorem_name),
-                Some(record) => {
-                    println!("attempted  {name}  {}: Lean did not accept it", record.theorem_name);
-                    for line in record.said.lines().take(12) {
-                        println!("    {line}");
-                    }
-                }
-                None => match (&plan.spec, &plan.model) {
-                    (Some(spec), Some(model)) => println!(
-                        "open       {name}  owes, annotated @pins {name}:\n    theorem … : {}",
-                        statement(spec.clone(), model.clone(), plan.inputs)
-                    ),
-                    _ => println!("open       {name}  {}", trace::pinning::OPEN_WITHOUT_BOTH),
-                },
+    if std::env::args().any(|a| a == "--proofs") {
+        use tracelean_core::drt::proofs;
+        let report = match proofs::check(&root, &index) {
+            Ok(report) => report,
+            Err(why) => {
+                eprintln!("{why}");
+                std::process::exit(2);
+            }
+        };
+        if let Err(error) = tracelean_core::drt::proofs::save(&root, &report) {
+            eprintln!("cannot keep the verdicts: {error}");
+        }
+        let (written, removed) = proofs::earn_all(&root, &index, &report, &proofs::toolchain());
+        let accepted = report.proofs.iter().filter(|p| p.verdict.is_accepted()).count();
+        println!("{accepted} of {} theorems accepted; {written} proof records written, {removed} withdrawn", report.proofs.len());
+        for entry in report.proofs.iter().filter(|p| !p.verdict.is_accepted()) {
+            if let trace::proofcheck::Verdict::Refused { refusal } = &entry.verdict {
+                let name = match &entry.clause {
+                    Some(clause) => format!("{}.{clause}", entry.req_id),
+                    None => entry.req_id.clone(),
+                };
+                println!("refused  {name}  {}:{}  {}\n    {}", entry.file, entry.line, entry.theorem, refusal.message());
             }
         }
+        let pinned = report.models.iter().filter(|m| m.pins.iter().any(|p| p.verdict.is_accepted())).count();
+        println!("{pinned} of {} models pinned (tracelean-trace . --pins)", report.models.len());
         return;
     }
 
-    if std::env::args().any(|a| a == "--strength") {
-        let obligations = trace::strength::obligations(&index);
-        let mut counts: std::collections::BTreeMap<&str, usize> = Default::default();
-        for obligation in &obligations {
-            *counts.entry(obligation.strength.as_str()).or_default() += 1;
+    if std::env::args().any(|a| a == "--pins") || std::env::args().any(|a| a == "--strength") {
+        let report = tracelean_core::drt::proofs::load(&root);
+        let files = tracelean_core::observe::workspace::snapshot(&root).files;
+        let shown = trace::proofcheck::strengths(&index, &report, &files);
+        let wanted = std::env::args().skip_while(|a| a != "--pins" && a != "--strength").nth(1);
+        let mut models: std::collections::BTreeMap<String, (&trace::proofcheck::Shown, Vec<String>)> = Default::default();
+        for ((req, clause), s) in &shown {
+            let name = match clause {
+                Some(c) => format!("{req}.{c}"),
+                None => req.clone(),
+            };
+            models.entry(s.model.clone()).or_insert((s, Vec::new())).1.push(name);
         }
-        println!("== strength ({}) ==", obligations.len());
+        let mut counts: std::collections::BTreeMap<&str, usize> = Default::default();
+        for (model, (s, clauses)) in &models {
+            *counts.entry(s.strength.as_str()).or_default() += 1;
+            let detail = match &s.strength {
+                trace::strength::Strength::Pinned { theorem_name } => theorem_name.clone(),
+                trace::strength::Strength::Attempted { theorem_name } => format!("{theorem_name}: not accepted"),
+                trace::strength::Strength::Nondeterministic { reason } => reason.clone(),
+                trace::strength::Strength::Open => "owes a theorem annotated @pins".into(),
+            };
+            println!("{:<17} {model}  [{}]  {detail}", s.strength.as_str(), clauses.join(" "));
+            if wanted.as_deref().is_some_and(|w| model.contains(w) || clauses.iter().any(|c| c.contains(w))) {
+                println!("    obligation:\n{}", s.statement.lines().map(|l| format!("      {l}")).collect::<Vec<_>>().join("\n"));
+            }
+        }
+        println!("== strength ({} models) ==", models.len());
         for (state, n) in &counts {
             println!("  {state:<18} {n}");
-        }
-        for obligation in &obligations {
-            if !matches!(obligation.strength, trace::strength::Strength::Open) {
-                println!(
-                    "  {:<10} {}  ({} theorem(s))",
-                    obligation.strength.as_str(),
-                    obligation.symbol,
-                    obligation.theorems.len()
-                );
-            }
-        }
-        if let Some(at) = std::env::args().position(|a| a == "--strength") {
-            if let Some(wanted) = std::env::args().nth(at + 1) {
-                if let Some(obligation) = obligations.iter().find(|o| o.symbol.contains(&wanted)) {
-                    println!("\n{}", obligation.lean_source());
-                }
-            }
         }
         return;
     }
@@ -484,7 +514,8 @@ fn main() {
     }
 
     let policy = trace::checker::Policy { today: value_after(&args, "--today"), ..Default::default() };
-    let findings = trace::checker::check(&index, &policy);
+    let mut findings = trace::checker::check(&index, &policy);
+    findings.extend(trace::checker::refused(&tracelean_core::drt::proofs::load(&root), &policy));
     let mut by_kind: std::collections::BTreeMap<String, usize> = Default::default();
     for f in &findings {
         *by_kind.entry(format!("{:?}", f.kind)).or_default() += 1;

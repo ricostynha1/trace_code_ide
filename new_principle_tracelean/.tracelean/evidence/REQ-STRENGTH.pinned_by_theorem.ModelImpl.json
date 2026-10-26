@@ -1,0 +1,30 @@
+{
+  "key": {
+    "reqId": "REQ-STRENGTH",
+    "clause": "pinned_by_theorem",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 72,
+      "cases": 2000,
+      "op": "REQ-STRENGTH.pinned_by_theorem"
+    }
+  },
+  "linkHash": "72fa1ee643a73bae",
+  "inputs": [
+    [
+      "implementation",
+      "ee3691d0b5295369"
+    ],
+    [
+      "model",
+      "00549d51ca5f9b3d"
+    ],
+    [
+      "requirement",
+      "0b38f5d1e057d92c"
+    ]
+  ]
+}

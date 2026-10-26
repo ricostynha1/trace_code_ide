@@ -205,16 +205,15 @@ private theorem hear_answered (expected : Nat) (line : String) (n : Nat)
             · cases h
 
 /-- @proves REQ-DRT-PROTO.reply_exclusive -/
-theorem a_reply_carries_exactly_one (expected : Nat) (line : String) (n : Nat)
-    (output : Option Json) (error : Option String) :
-    (isExclusive output error = true ↔
-      (output.isSome = true ∧ error = none) ∨ (output = none ∧ error.isSome = true)) ∧
-    (hear expected line = .answered n output error →
-      (output.isSome = true ∧ error = none) ∨ (output = none ∧ error.isSome = true)) := by
-  have iff : isExclusive output error = true ↔
+theorem a_reply_carries_exactly_one (output : Option Json) (error : Option String) :
+    isExclusive output error = true ↔
       (output.isSome = true ∧ error = none) ∨ (output = none ∧ error.isSome = true) := by
-    cases output <;> cases error <;> simp [isExclusive]
-  exact ⟨iff, fun h => iff.mp (hear_answered expected line n output error h).2.1⟩
+  cases output <;> cases error <;> simp [isExclusive]
+
+theorem an_answer_carries_exactly_one (expected : Nat) (line : String) (n : Nat)
+    (output : Option Json) (error : Option String) (h : hear expected line = .answered n output error) :
+    (output.isSome = true ∧ error = none) ∨ (output = none ∧ error.isSome = true) :=
+  (a_reply_carries_exactly_one output error).mp (hear_answered expected line n output error h).2.1
 
 /-- @proves REQ-DRT-PROTO.case_echoed -/
 theorem a_reply_answers_the_case_asked (expected : Nat) (line : String) :
