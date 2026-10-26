@@ -97,6 +97,9 @@ const CONSTRUCTS: &[(&str, &str)] = &[
     ("else at the indent of the block", "def f (c : Bool) : Nat :=\n  let g := fun (x : Nat) =>\n    if c then x\n    else x + 1\n  g 0\n"),
     ("a location after simp", "theorem t (h : 0 = 0) : True := by\n  simp only [Nat.add_zero] at h ⊢\n  cases h\n  case refl => trivial\n"),
     ("let rec", "def f (n : Nat) : Nat :=\n  let rec go (m : Nat) : Nat := m\n  go n\n"),
+    ("a named match subject", "def f (xs : List Nat) : Nat :=\n  match h : xs with\n  | [] => 0\n  | _ :: _ => 1\n"),
+    ("bind", "def f (x : Option Nat) : Option Nat := x >>= fun n => some n\n"),
+    ("a tactic declared and extended", "syntax \"step\" : tactic\nmacro_rules | `(tactic| step) => `(tactic| first | rfl | trivial)\nmacro \"steps\" : tactic => `(tactic| repeat step)\n"),
 ];
 
 /// @tests REQ-ANNOT.totality

@@ -95,6 +95,21 @@ needs a computable size the derived `SizeOf` does not give, and `partial` would
 not reduce, so the round-trip theorems could not be stated. So that one file's
 annotations stay capped at L1, and this is the reason.
 
+## Later: the grammar is vendored and extended
+
+The grammar now lives in `vendor/tree-sitter-lean4` and is extended rather than
+written around. A proof after `by` is read as one opaque token: anchoring needs
+the declaration, not the tactics inside it, and tactic syntax was most of what
+the grammar could not read. `crates/core/tests/lean_grammar.rs` names each
+construct the grammar was extended for and fails while any file of `formal/`
+has a region it cannot parse, so the table above is history rather than a rule.
+Two spellings remain written around:
+
+| Not read | Written instead |
+|---|---|
+| `fun a b : T =>` | `fun (a : T) (b : T) =>` |
+| `let`s on lines of their own in a theorem's statement | `let`s ended by `;` |
+
 ## Rejected
 
 *Fall back to a line-based scan for files that fail to parse.* It would recover

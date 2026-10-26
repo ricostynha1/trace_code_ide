@@ -315,8 +315,9 @@ theorem mem_sortedUnique {α : Type} [BEq α] [LawfulBEq α] (le : α → α →
         · exact Or.inr h
   exact this xs [] (Or.inr h)
 
-abbrev StrengthAcc := List (String × List (String × Option String))
-  × List (String × List String) × List (String × String) × List (String × String)
+abbrev StrengthAcc :=
+  List (String × List (String × Option String)) × List (String × List String) × List (String × String) ×
+    List (String × String)
 
 def strengthStep (links : List StrengthLink) (acc : StrengthAcc) (link : StrengthLink) :
     StrengthAcc :=

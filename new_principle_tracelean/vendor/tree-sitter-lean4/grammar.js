@@ -48,6 +48,7 @@ module.exports = grammar({
     $._match_body_start,        // Like _layout_start but only for match arm bodies
     $._syntax_quotation_body,   // Inner content of `` `( ... ) `` (balanced)
     $._branch_start,            // A layout after `then`/`else`, only when the line ends there
+    $._by_body,
   ],
 
   // Keyword extraction improves error detection and compile time
@@ -71,7 +72,6 @@ module.exports = grammar({
     // are valid top-level alternatives.  GLR resolves at runtime.
     [$.have, $._pattern],
     [$._atom, $._name],
-    [$._binding_body, $.tactic_have],
     // `public`/`meta` can prefix either an `import` (only in the module header)
     // or a declaration via `_modifier`. GLR resolves at runtime by lookahead
     // for `import` vs a declaration keyword. This mirrors lean4's `atomic`
@@ -79,7 +79,6 @@ module.exports = grammar({
     [$.import, $._modifier],
     [$._syntax_atom, $._atom],
     [$.return, $.do_return],
-    [$._atom, $.tactic_by_cases],
   ],
 
   rules: {
@@ -109,10 +108,7 @@ module.exports = grammar({
     // A single top-level element in a code fragment (hover popup, docstring).
     // Tactics are tried first (higher precedence) so that `intro x`, `simp`,
     // `rw [...]` etc. produce proper tactic nodes instead of bare applications.
-    _fragment_element: $ => choice(
-      $._tactic,
-      $._expression,
-    ),
+    _fragment_element: $ => $._expression,
 
     prelude: _ => 'prelude',
 
@@ -159,6 +155,7 @@ module.exports = grammar({
       'set_option',
       field('name', $._name),
       field('value', $._expression),
+      optional(seq('in', $._command)),
     )),
 
     // Modifier keywords consumed transparently (no node created)
@@ -253,8 +250,7 @@ module.exports = grammar({
     notation: $ => prec.left(seq(
       choice('notation', 'macro_rules', 'syntax', 'macro', 'elab',
              'prefix', 'infix', 'infixl', 'infixr', 'postfix'),
-      optional(seq(':', $.number)),  // priority
-      repeat(choice($._expression, '=>', ':=')),
+      repeat(choice($._expression, '=>', ':=', '|', ':')),
     )),
 
     // `#check`, `#eval`, `#print`, etc.
@@ -338,12 +334,7 @@ module.exports = grammar({
       optional(seq('=>', $._expression)),
     ),
 
-    decreasing_by: $ => seq(
-      'decreasing_by',
-      $._layout_start,
-      $._tactic_seq,
-      optional($._layout_end),
-    ),
+    decreasing_by: $ => seq('decreasing_by', $._by_body),
 
     // Local definitions after a body: `def f := go 1  where go (n : Nat) := n`.
     _where_clause: $ => seq(
@@ -475,7 +466,13 @@ module.exports = grammar({
     // Bare identifiers can have a trailing `: Type` annotation
     _quantifier_binders: $ => seq(
       repeat1(choice($.identifier, $._bracketed_binder)),
-      optional($._type_spec),
+      optional(choice(
+        $._type_spec,
+        seq(
+          field('bound_operator', choice('∈', '∉', '⊆', '<', '≤', '>', '≥', '≠')),
+          field('bound', $._expression),
+        ),
+      )),
     ),
 
     _bracketed_binder: $ => choice(
@@ -646,10 +643,10 @@ module.exports = grammar({
       // 6 levels (reduced from 9) to minimize parser states.
       // Merged: or+$ → low, cons+add+product → add.
       const leftAssoc = [
-        [PREC.low, choice('||', '∨', '<|>', '<$>', '<*>', '*>', '<*')],
+        [PREC.low, choice('||', '∨', '<|>', '<$>', '<*>', '*>', '<*', '>>=', '>=>')],
         [PREC.and, choice('&&', '∧')],
         [PREC.compare, choice('==', '!=', '=', '<', '>', '<=', '>=', '≤', '≥', '≠',
-                               '∣', '↔', '⊢')],
+                               '∣', '↔', '⊢', '∈', '∉', '⊆', '⊂', '<+:', '<:+', '<:+:', '<+', '≈')],
         [PREC.add, choice('+', '-', '++', '∪', '∩', '×', '\\', '|||', '^^^')],
         [PREC.mul, choice('*', '/', '%', '&&&')],
         [PREC.app + 1, choice('|>', '|>.')],
@@ -659,7 +656,7 @@ module.exports = grammar({
       const rightAssoc = [
         [PREC.low, '$'],
         [PREC.add, choice('::', '⊕')],
-        [PREC.mul, choice('^', '∘')],
+        [PREC.mul, choice('^', '∘', '▸')],
         [PREC.app + 1, '<|'],
       ];
 
@@ -742,175 +739,7 @@ module.exports = grammar({
       )),
     )),
 
-    // ============================================================
-    // Tactic mode (entered via `by`)
-    // Tactics are a separate syntactic category from expressions.
-    // Expressions can contain `by` blocks, but never raw tactics.
-    // ============================================================
-
-    // `by` is the only entry point from expression world into tactic world.
-    by: $ => prec.right(seq(
-      'by',
-      $._layout_start,
-      $._tactic_seq,
-      optional($._layout_end),
-    )),
-
-    // Tactics separated by `;`, `<;>` (broadcast), or newlines
-    _tactic_seq: $ => prec.right(seq(
-      $._tactic,
-      repeat(seq(
-        choice($._layout_semicolon, ';', '<;>', '<;'),
-        $._tactic,
-      )),
-      optional(';'),
-    )),
-
-    // ── Tactic primitives ─────────────────────────────────────
-    // Each rule here lives exclusively inside `by` blocks.
-    // None of these appear in `_expression`.
-
-    _tactic: $ => choice(
-      $.tactic_apply,
-      $.tactic_focus,
-      $.tactic_case,
-      $.tactic_rewrite,
-      $.tactic_have,
-      $.tactic_let,
-      $.tactic_show,
-      $.tactic_calc,
-      $.tactic_by_cases,
-      $.tactic_match,
-      $.tactic_first,
-      $.tactic_combinator,
-    ),
-
-    // `try t`, `all_goals t`, `any_goals t`: a tactic run on some goals, or
-    // allowed to fail.
-    tactic_combinator: $ => prec.right(seq(
-      choice('try', 'all_goals', 'any_goals'),
-      $._tactic,
-    )),
-
-    // `by_cases h : p`
-    tactic_by_cases: $ => prec.right(seq(
-      'by_cases',
-      optional(seq(field('name', $.identifier), ':')),
-      $._expression,
-    )),
-
-    // One alternative of `cases … with` / `induction … with` / a tactic `match`:
-    // `| cons a rest ih => tactics`.
-    tactic_alt: $ => prec.right(seq(
-      '|',
-      field('patterns', commaSep1($._expression)),
-      '=>',
-      $._layout_start,
-      $._tactic_seq,
-      optional($._layout_end),
-    )),
-
-    // `match n with | 0 => tactics | k + 1 => tactics`
-    tactic_match: $ => prec.right(seq(
-      'match',
-      commaSep1($._expression),
-      'with',
-      repeat1($.tactic_alt),
-    )),
-
-    // `first | tactics | tactics`
-    tactic_first: $ => prec.right(seq(
-      'first',
-      repeat1(seq('|', $._tactic_seq)),
-    )),
-
-    // Most tactics: `intro n`, `simp [lemma]`, `apply foo`, `exact bar`, `omega`
-    // Also `induction xs with | nil => … | cons a r ih => …` and
-    // `rcases h with _ | a`: the tactic stays an identifier (so `cases h` on its
-    // own, followed by `case …`, reads as before) and `with` adds alternatives.
-    tactic_apply: $ => prec.right(PREC.app, seq(
-      field('tactic', $.identifier),
-      repeat(field('arg', choice(
-        $._expression, $.tactic_config,
-      ))),
-      optional($.tactic_location),
-      optional(seq('with', choice(
-        repeat1($.tactic_alt),
-        seq($._expression, repeat(seq('|', $._expression))),
-      ))),
-    )),
-
-    // Configuration list: `[lemma1, ←lemma2, *]`
-    // The ← before lemmas is handled by unary_expression.
-    tactic_config: $ => prec(1, seq(
-      '[', commaSep($._expression), ']',
-    )),
-
-    // Focus: `· tactic1; tactic2`
-    tactic_focus: $ => prec.right(seq(
-      '·',
-      $._layout_start,
-      $._tactic_seq,
-      optional($._layout_end),
-    )),
-
-    // Case split: `case name => ...` or `next => ...`
-    tactic_case: $ => prec.right(seq(
-      choice('case', 'next'),
-      repeat($.identifier),
-      '=>',
-      $._layout_start,
-      $._tactic_seq,
-      optional($._layout_end),
-    )),
-
-    // `rw`/`rewrite` always take a config list, optionally with `at`
-    tactic_rewrite: $ => prec.right(PREC.app, seq(
-      choice('rw', 'rewrite'),
-      choice(
-        $.tactic_config,
-        repeat1(field('arg', $._expression)),
-      ),
-      optional($.tactic_location),
-    )),
-
-    // `at h`, `at h ⊢`, `at *`: where `rw`, `simp`, `unfold` act.
-    tactic_location: $ => prec.right(seq('at', repeat1(choice($.identifier, '*', '⊢')))),
-
-    // `have h : T := proof` in tactic mode
-    tactic_have: $ => prec.right(seq(
-      choice('have', 'obtain', 'suffices'),
-      optional(field('name', choice($._pattern, $.anonymous_constructor))),
-      optional($._type_spec),
-      ':=',
-      field('value', $._expression),
-    )),
-
-    // `let x := e` in tactic mode
-    tactic_let: $ => prec(1, seq(
-      'let',
-      field('pattern', $._pattern),
-      optional($._type_spec),
-      ':=',
-      field('value', $._expression),
-    )),
-
-    // `show T`
-    tactic_show: $ => seq('show', $._expression),
-
-    // `calc` block with steps
-    tactic_calc: $ => prec.right(seq(
-      'calc',
-      $._layout_start,
-      repeat1($.calc_step),
-      optional($._layout_end),
-    )),
-
-    calc_step: $ => prec.right(seq(
-      $._expression,
-      ':=',
-      $._expression,
-    )),
+    by: $ => seq('by', $._by_body),
 
     // Let binding: modeled after Lean's letDecl.
     // Lean tries letIdDecl first (identifier + optional binders), then letPatDecl.
@@ -1004,10 +833,12 @@ module.exports = grammar({
     // match's later arms.
     match: $ => prec.right(seq(
       'match',
-      field('scrutinees', commaSep1($._expression)),
+      field('scrutinees', commaSep1($._scrutinee)),
       'with',
       repeat1($.match_arm),
     )),
+
+    _scrutinee: $ => seq(optional(seq(field('name', $.identifier), ':')), $._expression),
 
     match_arm: $ => prec.right(seq(
       '|',
@@ -1154,7 +985,7 @@ module.exports = grammar({
     // before `|` so that _do_seq doesn't consume it.
     do_match: $ => prec.left(1, seq(
       'match',
-      field('scrutinees', commaSep1($._expression)),
+      field('scrutinees', commaSep1($._scrutinee)),
       'with',
       repeat1($.do_match_arm),
     )),
@@ -1310,7 +1141,7 @@ module.exports = grammar({
 
     // Identifier with optional dot-separated parts: `Foo.Bar.baz`
     // Simple identifier without dots - projection handles qualified access
-    identifier: _ => /[_a-zA-Zα-ωΑ-Ωℕℤℚℝℂ∇][_a-zA-Z0-9'α-ωΑ-Ωℕℤℚℝℂ∇?!]*/,
+    identifier: _ => /[_a-zA-Zα-ωΑ-Ωℕℤℚℝℂ∇][_a-zA-Z0-9'α-ωΑ-Ωℕℤℚℝℂ∇?!₀-₉ₐ-ₜ]*/,
 
     // Escaped identifier: `«name with spaces»`
     escaped_identifier: _ => /«[^»]*»/,

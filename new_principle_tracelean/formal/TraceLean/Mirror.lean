@@ -317,7 +317,7 @@ theorem good_remove (w : Workspace) (hg : Good w.files) (p : String) :
       exact ⟨h, hq⟩
 
 theorem dedup_distinct (xs : List (String × String)) : ∀ acc : List (String × String), Distinct acc →
-    Distinct (xs.foldl (fun acc (x : String × String) => (acc.filter (·.1 != x.1)) ++ [x]) acc) := by
+    Distinct (xs.foldl (fun (acc : List (String × String)) (x : String × String) => (acc.filter (·.1 != x.1)) ++ [x]) acc) := by
   induction xs with
   | nil => intro acc h; exact h
   | cons x _ ih =>

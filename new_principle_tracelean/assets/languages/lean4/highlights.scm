@@ -27,7 +27,6 @@
   "do"
   "let"
   "have"
-  "show"
   "if"
   "then"
   "else"

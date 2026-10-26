@@ -302,11 +302,11 @@ theorem sharedPrefix_common : ∀ (a b : List Nat),
 
 /-- @proves REQ-UNDO.path_via_ancestor -/
 theorem jump_via_nearest_common_ancestor (t : Tree) (target : Nat) :
-    let from_ := match t.current with
+    let from_ := (match t.current with
       | none => []
-      | some id => t.ancestry id
-    let to := t.ancestry target
-    let shared := Tree.sharedPrefix from_ to
+      | some id => t.ancestry id);
+    let to := t.ancestry target;
+    let shared := Tree.sharedPrefix from_ to;
     from_.take shared = to.take shared ∧
     (∀ x y, from_[shared]? = some x → to[shared]? = some y → x ≠ y) ∧
     (t.jumpTo target).1 =

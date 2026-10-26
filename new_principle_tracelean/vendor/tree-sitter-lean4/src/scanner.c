@@ -33,6 +33,7 @@ enum TokenType {
   MATCH_BODY_START,
   SYNTAX_QUOTATION_BODY,  // content inside `` `( ... ) `` up to matching `)`
   BRANCH_START,           // layout after `then`/`else` when the line ends there
+  BY_BODY,
 };
 
 #define MAX_DEPTH 64
@@ -175,6 +176,141 @@ static void push_layout_indent(Scanner *s, TSLexer *lexer) {
   s->queued_indent = NO_QUEUED;
 }
 
+static bool is_opener(int32_t c) {
+  return c == '(' || c == '[' || c == '{' || c == 0x27E8 || c == 0x2983 || c == 0x2039;
+}
+
+static bool is_closer(int32_t c) {
+  return c == ')' || c == ']' || c == '}' || c == 0x27E9 || c == 0x2984 || c == 0x203A;
+}
+
+static bool is_name_char(int32_t c) {
+  return c == '_' || c == '\'' || c == '!' || c == '?' || c == '.' ||
+         (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') ||
+         (c >= 0x80 && !is_opener(c) && !is_closer(c));
+}
+
+static void skip_block_comment(TSLexer *lexer) {
+  int nesting = 1;
+  while (!lexer->eof(lexer) && nesting > 0) {
+    int32_t c = lexer->lookahead;
+    lexer->advance(lexer, false);
+    if (c == '/' && lexer->lookahead == '-') {
+      lexer->advance(lexer, false);
+      nesting++;
+    } else if (c == '-' && lexer->lookahead == '/') {
+      lexer->advance(lexer, false);
+      nesting--;
+    }
+  }
+}
+
+static void skip_to_line_end(TSLexer *lexer) {
+  while (!lexer->eof(lexer) && !is_nl(lexer->lookahead))
+    lexer->advance(lexer, false);
+}
+
+static bool scan_by_body(TSLexer *lexer) {
+  int depth = 0;
+  bool seen = false;
+  bool block = false;
+  bool col_set = false;
+  bool prev_name = false;
+  uint32_t col = 0;
+  for (;;) {
+    if (lexer->eof(lexer)) break;
+    int32_t c = lexer->lookahead;
+    if (is_nl(c)) {
+      if (!seen) block = true;
+      bool stop = false;
+      for (;;) {
+        while (is_nl(lexer->lookahead) || lexer->lookahead == ' ' || lexer->lookahead == '\t')
+          lexer->advance(lexer, false);
+        if (lexer->eof(lexer)) { stop = true; break; }
+        uint32_t indent = lexer->get_column(lexer);
+        if (indent == 0) { stop = true; break; }
+        if (lexer->lookahead == '-') {
+          lexer->advance(lexer, false);
+          if (lexer->lookahead == '-') { skip_to_line_end(lexer); continue; }
+          if (!col_set) { col = indent; col_set = true; }
+          else if (depth == 0 && indent < col) { stop = true; break; }
+          seen = true;
+          prev_name = false;
+          lexer->mark_end(lexer);
+          break;
+        }
+        if (lexer->lookahead == '/') {
+          lexer->advance(lexer, false);
+          if (lexer->lookahead == '-') { skip_block_comment(lexer); continue; }
+          if (!col_set) { col = indent; col_set = true; }
+          else if (depth == 0 && indent < col) { stop = true; break; }
+          seen = true;
+          prev_name = false;
+          lexer->mark_end(lexer);
+          break;
+        }
+        if (!col_set) { col = indent; col_set = true; }
+        else if (depth == 0 && indent < col) { stop = true; break; }
+        break;
+      }
+      if (stop) break;
+      continue;
+    }
+    if (c == ' ' || c == '\t') {
+      lexer->advance(lexer, false);
+      continue;
+    }
+    if (!col_set) { col = lexer->get_column(lexer); col_set = true; }
+    if (c == '-') {
+      lexer->advance(lexer, false);
+      if (lexer->lookahead == '-') { skip_to_line_end(lexer); continue; }
+      prev_name = false;
+    } else if (c == '/') {
+      lexer->advance(lexer, false);
+      if (lexer->lookahead == '-') { skip_block_comment(lexer); continue; }
+      prev_name = false;
+    } else if (is_closer(c)) {
+      if (depth == 0) break;
+      depth--;
+      lexer->advance(lexer, false);
+      prev_name = false;
+    } else if (is_opener(c)) {
+      depth++;
+      lexer->advance(lexer, false);
+      prev_name = false;
+    } else if (c == ',' && depth == 0 && !block) {
+      break;
+    } else if (c == '"') {
+      lexer->advance(lexer, false);
+      while (!lexer->eof(lexer) && lexer->lookahead != '"') {
+        if (lexer->lookahead == '\\') lexer->advance(lexer, false);
+        if (!lexer->eof(lexer)) lexer->advance(lexer, false);
+      }
+      if (!lexer->eof(lexer)) lexer->advance(lexer, false);
+      prev_name = false;
+    } else if (c == '\'' && !prev_name) {
+      lexer->advance(lexer, false);
+      if (lexer->lookahead == '\\') lexer->advance(lexer, false);
+      if (!lexer->eof(lexer) && !is_nl(lexer->lookahead)) lexer->advance(lexer, false);
+      if (lexer->lookahead == '\'') lexer->advance(lexer, false);
+      prev_name = false;
+    } else if (c == 0xAB) {
+      while (!lexer->eof(lexer) && lexer->lookahead != 0xBB && !is_nl(lexer->lookahead))
+        lexer->advance(lexer, false);
+      if (lexer->lookahead == 0xBB) lexer->advance(lexer, false);
+      prev_name = true;
+    } else {
+      prev_name = is_name_char(c);
+      lexer->advance(lexer, false);
+    }
+    seen = true;
+    lexer->mark_end(lexer);
+  }
+  if (!seen) return false;
+  lexer->result_symbol = BY_BODY;
+  return true;
+}
+
 /* ── main scan ─────────────────────────────────────────────────── */
 
 bool tree_sitter_lean_external_scanner_scan(
@@ -188,6 +324,10 @@ bool tree_sitter_lean_external_scanner_scan(
       valid_symbols[LAYOUT_SEMICOLON] &&
       valid_symbols[LAYOUT_END]) {
     return false;
+  }
+
+  if (valid_symbols[BY_BODY]) {
+    return scan_by_body(lexer);
   }
 
   /* 1z. SYNTAX_QUOTATION_BODY — the parser has just consumed `` `( `` and

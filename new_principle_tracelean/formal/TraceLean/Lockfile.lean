@@ -99,17 +99,17 @@ def IsAntisymm {α : Type} (r : α → α → Bool) : Prop := ∀ a b, r a b = t
 def lexStep {α β : Type} [BEq β] (f : α → β) (le : β → β → Bool) (rest : α → α → Bool) (a b : α) : Bool :=
   if f a != f b then le (f a) (f b) else rest a b
 
-theorem strLe_trans : IsTrans (fun a b : String => decide (a ≤ b)) := by
+theorem strLe_trans : IsTrans (fun (a : String) (b : String) => decide (a ≤ b)) := by
   intro a b c h1 h2
   simp only [decide_eq_true_eq] at *
   exact str_le_trans h1 h2
 
-theorem strLe_total : IsTotal (fun a b : String => decide (a ≤ b)) := by
+theorem strLe_total : IsTotal (fun (a : String) (b : String) => decide (a ≤ b)) := by
   intro a b
   simp only [decide_eq_true_eq]
   exact str_le_total a b
 
-theorem strLe_antisymm : IsAntisymm (fun a b : String => decide (a ≤ b)) := by
+theorem strLe_antisymm : IsAntisymm (fun (a : String) (b : String) => decide (a ≤ b)) := by
   intro a b h1 h2
   simp only [decide_eq_true_eq] at *
   exact str_antisymm h2 h1
