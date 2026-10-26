@@ -862,3 +862,11 @@ pub fn agree(op: &str, schema: &Schema, seed: u64, cases: u64) -> DrtResult {
     let _ = std::fs::remove_dir_all(&scratch);
     result
 }
+
+pub fn strukt(fields: &[(&str, Schema)]) -> Schema {
+    Schema::Struct { fields: fields.iter().map(|(k, v)| (k.to_string(), v.clone())).collect() }
+}
+
+pub fn name(examples: &[&str]) -> Schema {
+    Schema::Str { max_len: Some(0), examples: examples.iter().map(|s| s.to_string()).collect() }
+}

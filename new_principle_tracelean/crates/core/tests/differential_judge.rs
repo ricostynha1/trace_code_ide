@@ -1,13 +1,11 @@
 mod harness;
 
+use harness::strukt;
+
 use std::collections::BTreeMap;
 
 use tracelean_core::drt::run::{run, RunOptions};
 use tracelean_core::drt::schema::Schema;
-
-fn strukt(fields: &[(&str, Schema)]) -> Schema {
-    Schema::Struct { fields: fields.iter().map(|(k, v)| (k.to_string(), v.clone())).collect() }
-}
 
 fn text(examples: &[&str]) -> Schema {
     Schema::Str {

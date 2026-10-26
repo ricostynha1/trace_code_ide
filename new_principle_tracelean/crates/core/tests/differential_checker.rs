@@ -1,12 +1,10 @@
 mod harness;
 
+use harness::strukt;
+
 use std::collections::BTreeMap;
 
 use tracelean_core::drt::schema::Schema;
-
-fn strukt(fields: &[(&str, Schema)]) -> Schema {
-    Schema::Struct { fields: fields.iter().map(|(k, v)| (k.to_string(), v.clone())).collect() }
-}
 
 fn role() -> Schema {
     let mut variants: BTreeMap<String, Option<Box<Schema>>> = BTreeMap::new();

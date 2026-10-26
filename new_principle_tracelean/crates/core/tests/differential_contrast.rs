@@ -1,13 +1,11 @@
 mod harness;
 
+use harness::name;
+
 use std::collections::BTreeMap;
 
 use tracelean_core::drt::run::{run, RunOptions};
 use tracelean_core::drt::schema::Schema;
-
-fn name(examples: &[&str]) -> Schema {
-    Schema::Str { max_len: Some(0), examples: examples.iter().map(|s| s.to_string()).collect() }
-}
 
 /// @drt REQ-LOOK.contrast_sufficient
 /// @tests REQ-LOOK.contrast_sufficient

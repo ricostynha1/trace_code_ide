@@ -1,10 +1,8 @@
 mod harness;
 
-use tracelean_core::drt::schema::Schema;
+use harness::strukt;
 
-fn strukt(fields: &[(&str, Schema)]) -> Schema {
-    Schema::Struct { fields: fields.iter().map(|(k, v)| (k.to_string(), v.clone())).collect() }
-}
+use tracelean_core::drt::schema::Schema;
 
 fn path_name() -> Schema {
     Schema::Str { max_len: Some(0), examples: vec!["a".into(), "b".into()] }

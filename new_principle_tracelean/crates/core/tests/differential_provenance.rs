@@ -1,12 +1,10 @@
 mod harness;
 
+use harness::strukt;
+
 use std::collections::BTreeMap;
 
 use tracelean_core::drt::schema::Schema;
-
-fn strukt(fields: &[(&str, Schema)]) -> Schema {
-    Schema::Struct { fields: fields.iter().map(|(k, v)| (k.to_string(), v.clone())).collect() }
-}
 
 fn path_name() -> Schema {
     Schema::Str { max_len: Some(0), examples: vec!["a".into(), "b".into()] }

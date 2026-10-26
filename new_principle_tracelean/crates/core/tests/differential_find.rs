@@ -1,11 +1,9 @@
 mod harness;
 
+use harness::strukt;
+
 use tracelean_core::drt::run::{run, RunOptions};
 use tracelean_core::drt::schema::Schema;
-
-fn strukt(fields: &[(&str, Schema)]) -> Schema {
-    Schema::Struct { fields: fields.iter().map(|(k, v)| (k.to_string(), v.clone())).collect() }
-}
 
 fn text(max_len: usize, examples: &[&str]) -> Schema {
     Schema::Str { max_len: Some(max_len), examples: examples.iter().map(|s| s.to_string()).collect() }

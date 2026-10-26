@@ -1,5 +1,7 @@
 mod harness;
 
+use harness::strukt;
+
 use std::collections::BTreeMap;
 
 use tracelean_core::drt::gen;
@@ -11,12 +13,6 @@ use tracelean_core::surface::screen::{
     Screen,
 };
 use tracelean_core::surface::view::Buffer;
-
-fn strukt(fields: &[(&str, Schema)]) -> Schema {
-    Schema::Struct {
-        fields: fields.iter().map(|(name, s)| (name.to_string(), s.clone())).collect(),
-    }
-}
 
 fn axis() -> Schema {
     Schema::simple_enum(&["across", "down"])

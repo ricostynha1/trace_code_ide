@@ -1,19 +1,13 @@
 mod harness;
 
+use harness::{strukt, name};
+
 use std::collections::BTreeMap;
 
 use tracelean_core::drt::gen;
 use tracelean_core::drt::schema::Schema;
 use tracelean_core::surface::cells::{drawn_wrong, Look};
 use tracelean_core::surface::view::Buffer;
-
-fn strukt(fields: &[(&str, Schema)]) -> Schema {
-    Schema::Struct { fields: fields.iter().map(|(k, v)| (k.to_string(), v.clone())).collect() }
-}
-
-fn name(examples: &[&str]) -> Schema {
-    Schema::Str { max_len: Some(0), examples: examples.iter().map(|s| s.to_string()).collect() }
-}
 
 fn role() -> Schema {
     let mut variants: BTreeMap<String, Option<Box<Schema>>> = BTreeMap::new();

@@ -7,14 +7,10 @@ use tracelean_core::drt::schema::Schema;
 
 mod harness;
 
+use harness::strukt;
+
 fn project_root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap().parent().unwrap().to_path_buf()
-}
-
-fn strukt(fields: &[(&str, Schema)]) -> Schema {
-    Schema::Struct {
-        fields: fields.iter().map(|(k, v)| (k.to_string(), v.clone())).collect(),
-    }
 }
 
 fn path_name() -> Schema {
