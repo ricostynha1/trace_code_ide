@@ -110,4 +110,80 @@ theorem no_newline_is_all_held (text : String) (h : text.splitOn "\n" = [text]) 
 
 def said : String := (Json.mkObj [("type", Json.str "user"), ("text", Json.str "hi")]).compress
 
+theorem foldl_collects {α X : Type} (f : α → String → α) (g : α → List X) (P : String → X → Prop)
+    (keeps : ∀ acc line x, x ∈ g acc → x ∈ g (f acc line))
+    (adds : ∀ acc line x, P line x → x ∈ g (f acc line)) :
+    ∀ (lines : List String) (acc : α) (x : X),
+      (x ∈ g acc ∨ ∃ line ∈ lines, P line x) → x ∈ g (lines.foldl f acc)
+  | [], acc, x, h => by
+    rcases h with h | ⟨_, hl, _⟩
+    · exact h
+    · simp at hl
+  | line :: rest, acc, x, h => by
+    apply foldl_collects f g P keeps adds rest (f acc line) x
+    rcases h with h | ⟨l, hl, hp⟩
+    · exact Or.inl (keeps acc line x h)
+    · simp only [List.mem_cons] at hl
+      rcases hl with hl | hl
+      · subst hl; exact Or.inl (adds acc l x hp)
+      · exact Or.inr ⟨l, hl, hp⟩
+
+def completeLines (text : String) : List String :=
+  (((text.splitOn "\n").dropLast).map stripCR).filter (fun l => l.trim != "")
+
+/-- @proves REQ-TRANSCRIPT.unknown_preserved -/
+theorem unknown_reported_and_read_continues (text line : String)
+    (hl : line ∈ completeLines text) :
+    ((classify line).event = none →
+      ((classify line).claimed = true ∨ (classify line).usage = none) →
+      line ∈ (readTranscript text).unrecognised) ∧
+    (∀ e, (classify line).event = some e → e ∈ (readTranscript text).events) ∧
+    (∀ u, (classify line).usage = some u → u ∈ (readTranscript text).usage) := by
+  unfold readTranscript completeLines at *
+  simp only
+  refine ⟨?_, ?_, ?_⟩
+  · intro hev hk
+    refine foldl_collects _ (fun (acc : List Event × List String × List Usage) => acc.2.1)
+      (fun l x => x = l ∧ (classify l).event = none ∧
+        ((classify l).claimed = true ∨ (classify l).usage = none)) ?_ ?_ _ _ _ ?_
+    · intro acc l x hx
+      simp only
+      split <;> simp_all
+    · intro acc l x ⟨hx, he, hc⟩
+      subst hx
+      simp only [he, Option.isNone_none, Bool.true_and]
+      rcases hc with hc | hc <;> simp [hc]
+    · exact Or.inr ⟨line, hl, rfl, hev, hk⟩
+  · intro e he
+    refine foldl_collects _ (fun (acc : List Event × List String × List Usage) => acc.1) (fun l x => (classify l).event = some x)
+      ?_ ?_ _ _ _ ?_
+    · intro acc l x hx
+      simp only
+      split <;> simp_all
+    · intro acc l x hx
+      simp [hx]
+    · exact Or.inr ⟨line, hl, he⟩
+  · intro u hu
+    refine foldl_collects _ (fun (acc : List Event × List String × List Usage) => acc.2.2) (fun l x => (classify l).usage = some x)
+      ?_ ?_ _ _ _ ?_
+    · intro acc l x hx
+      simp only
+      split <;> simp_all
+    · intro acc l x hx
+      simp [hx]
+    · exact Or.inr ⟨line, hl, hu⟩
+
+/-- @proves REQ-TRANSCRIPT.absent_is_fine -/
+theorem no_records_reads_empty (text : String)
+    (h : ∀ l ∈ (text.splitOn "\n").dropLast, (stripCR l).trim = "") :
+    readTranscript text =
+      { events := [], unrecognised := [], held := (text.splitOn "\n").getLast!, usage := [] } := by
+  have hnil : (((text.splitOn "\n").dropLast).map stripCR).filter (fun l => l.trim != "") = [] := by
+    rw [List.filter_eq_nil]
+    intro a ha
+    obtain ⟨l, hl, rfl⟩ := List.mem_map.mp ha
+    simp [h l hl]
+  unfold readTranscript
+  simp only [hnil, List.foldl_nil]
+
 end TraceLean.Transcript

@@ -244,4 +244,88 @@ theorem previewing_moves_nothing (base : Workspace) (script : List Step) :
     (runScript base script).currentAfterPreviews = (runScript base script).current := by
   rfl
 
+theorem push_ids_grow (t : Tree) (c : Command) :
+    (t.push c).ids = t.ids ∨ (t.push c).ids = t.ids ++ [t.nextId] :=
+  (no_node_is_ever_dropped t c).1
+
+theorem push_branches (t : Tree) (c : Command) :
+    (t.push c).current = t.current ∨
+      ∃ n ∈ (t.push c).nodes, (t.push c).current = some n.id ∧ n.parent = t.current := by
+  unfold Tree.push
+  split
+  · left; rfl
+  · split
+    · left; rfl
+    · right
+      exact ⟨_, List.mem_append_right _ (List.mem_singleton_self _), rfl, rfl⟩
+
+/-- @proves REQ-UNDO.no_loss_on_branch -/
+theorem undo_then_edit_keeps_everything (base : Workspace) (script : List Step) (c : Command) :
+    (∃ extra, (runScript base (script ++ [Step.move Movement.undo, Step.push c])).nodes =
+      (runScript base script).nodes ++ extra) ∧
+    (((fromScript base script).undo.push c).current = (fromScript base script).undo.current ∨
+      ∃ n ∈ ((fromScript base script).undo.push c).nodes,
+        ((fromScript base script).undo.push c).current = some n.id ∧
+        n.parent = (fromScript base script).undo.current) := by
+  have hscript : fromScript base (script ++ [Step.move Movement.undo, Step.push c]) =
+      ((fromScript base script).undo).push c := by
+    simp [fromScript, List.foldl_append]
+  refine ⟨?_, push_branches _ c⟩
+  simp only [runScript, hscript]
+  have hu := (no_node_is_ever_dropped (fromScript base script) c).2.1
+  rcases push_ids_grow ((fromScript base script).undo) c with h | h
+  · exact ⟨[], by rw [h, hu]; simp⟩
+  · exact ⟨_, by rw [h, hu]⟩
+
+theorem sharedPrefix_common : ∀ (a b : List Nat),
+    a.take (Tree.sharedPrefix a b) = b.take (Tree.sharedPrefix a b) ∧
+    ∀ x y, a[Tree.sharedPrefix a b]? = some x → b[Tree.sharedPrefix a b]? = some y → x ≠ y
+  | [], b => by simp [Tree.sharedPrefix]
+  | _ :: _, [] => by simp [Tree.sharedPrefix]
+  | x :: xs, y :: ys => by
+    obtain ⟨h1, h2⟩ := sharedPrefix_common xs ys
+    unfold Tree.sharedPrefix
+    split
+    · rename_i hxy
+      have hxy : x = y := by simpa using hxy
+      subst hxy
+      rw [Nat.add_comm]
+      refine ⟨by simp [h1], ?_⟩
+      intro a b ha hb
+      exact h2 a b (by simpa using ha) (by simpa using hb)
+    · rename_i hxy
+      refine ⟨by simp, ?_⟩
+      intro a b ha hb
+      simp at ha hb
+      subst ha; subst hb
+      simpa using hxy
+
+/-- @proves REQ-UNDO.path_via_ancestor -/
+theorem jump_via_nearest_common_ancestor (t : Tree) (target : Nat) :
+    let from_ := match t.current with
+      | none => []
+      | some id => t.ancestry id
+    let to := t.ancestry target
+    let shared := Tree.sharedPrefix from_ to
+    from_.take shared = to.take shared ∧
+    (∀ x y, from_[shared]? = some x → to[shared]? = some y → x ≠ y) ∧
+    (t.jumpTo target).1 =
+      (to.drop shared).foldl
+        (fun acc nodeId =>
+          match acc with
+          | .error e => .error e
+          | .ok w => match t.node? nodeId with
+            | none => .ok w
+            | some n => apply w n.command)
+        ((from_.drop shared).reverse.foldl
+          (fun acc nodeId =>
+            match acc with
+            | .error e => .error e
+            | .ok w => match t.node? nodeId with
+              | none => .ok w
+              | some n => apply w n.inverse)
+          t.state) := by
+  intro from_ to shared
+  exact ⟨(sharedPrefix_common from_ to).1, (sharedPrefix_common from_ to).2, rfl⟩
+
 end TraceLean.Tree
