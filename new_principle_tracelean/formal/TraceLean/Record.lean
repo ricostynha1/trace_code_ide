@@ -110,4 +110,89 @@ def reproducibility (record : Evidence) : Reproducibility :=
       | some name => .missingInput name
       | none => .reproducible
 
+
+def Complete : Verdict → Prop
+  | .judge verdict judgedBy _ promptVersion _ =>
+    verdict.isEmpty = false ∧ judgedBy.isEmpty = false ∧ promptVersion.isEmpty = false
+  | .drt _ cases op => cases ≠ 0 ∧ op.isEmpty = false
+  | .proof theoremName toolchain => theoremName.isEmpty = false ∧ toolchain.isEmpty = false
+
+private theorem missingField_none (detail : Verdict) : missingField detail = none ↔ Complete detail := by
+  cases detail with
+  | judge v j d p n =>
+    simp only [missingField, Complete]
+    cases v.isEmpty <;> cases j.isEmpty <;> cases p.isEmpty <;> simp
+  | drt s c o =>
+    simp only [missingField, Complete]
+    by_cases hc : c = 0
+    · simp [hc]
+    · cases ho : o.isEmpty <;> simp [hc, ho]
+  | proof t tc =>
+    simp only [missingField, Complete]
+    cases t.isEmpty <;> cases tc.isEmpty <;> simp
+
+/-- @proves REQ-EVID.record_reproducible -/
+theorem a_record_is_reproducible_only_when_complete (record : Evidence) :
+    reproducibility record = .reproducible ↔
+      Complete record.detail ∧ record.linkHash.isEmpty = false ∧
+      ∀ name ∈ requiredInputs record.detail, ∃ i ∈ record.inputs, i.1 = name := by
+  rw [← missingField_none]
+  unfold reproducibility
+  cases _hm : missingField record.detail with
+  | some field => simp
+  | none =>
+    cases _hl : record.linkHash.isEmpty with
+    | true => simp
+    | false =>
+      rw [if_neg (by decide)]
+      simp only [true_and]
+      cases hf : (requiredInputs record.detail).find? (fun name => !(record.inputs.any (·.1 == name))) with
+      | some name =>
+        have hmem := List.mem_of_find?_eq_some hf
+        have hp := List.find?_some hf
+        constructor
+        · intro h; cases h
+        · intro hall
+          obtain ⟨i, hi, e⟩ := hall name hmem
+          have : record.inputs.any (fun x => x.1 == name) = true :=
+            List.any_eq_true.mpr ⟨i, hi, by simp [e]⟩
+          simp [this] at hp
+      | none =>
+        constructor
+        · intro _ name hname
+          rw [List.find?_eq_none] at hf
+          have := hf name hname
+          simp only [Bool.not_eq_true', Bool.not_eq_false, List.any_eq_true, beq_iff_eq] at this
+          exact this
+        · intro _; rfl
+
+/-- @proves REQ-STALE.inputs_identified -/
+theorem a_record_names_every_input (record : Evidence) :
+    (reproducibility record = .reproducible →
+      ∀ name ∈ requiredInputs record.detail, ∃ hash, (name, hash) ∈ record.inputs) ∧
+    "model" ∈ requiredInputs record.detail ∧
+    (∀ name, reproducibility record = .missingInput name →
+      name ∈ requiredInputs record.detail ∧ ∀ i ∈ record.inputs, i.1 ≠ name) := by
+  refine ⟨?_, ?_, ?_⟩
+  · intro h name hname
+    obtain ⟨_, _, hall⟩ := (a_record_is_reproducible_only_when_complete record).mp h
+    obtain ⟨⟨n, hash⟩, hi, e⟩ := hall name hname
+    exact ⟨hash, by simp only at e; rw [← e]; exact hi⟩
+  · cases record.detail <;> simp [requiredInputs]
+  · intro name h
+    unfold reproducibility at h
+    split at h
+    · cases h
+    · split at h
+      · cases h
+      · split at h
+        · rename_i hf
+          cases h
+          have hp := List.find?_some hf
+          refine ⟨List.mem_of_find?_eq_some hf, fun i hi e => ?_⟩
+          have : record.inputs.any (fun x => x.1 == name) = true :=
+            List.any_eq_true.mpr ⟨i, hi, by simp [e]⟩
+          simp [this] at hp
+        · cases h
+
 end TraceLean.Record
