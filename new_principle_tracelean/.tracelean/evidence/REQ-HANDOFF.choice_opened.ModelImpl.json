@@ -1,0 +1,30 @@
+{
+  "key": {
+    "reqId": "REQ-HANDOFF",
+    "clause": "choice_opened",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 137,
+      "cases": 2000,
+      "op": "REQ-HANDOFF.choice_opened"
+    }
+  },
+  "linkHash": "3a2afe8ba0a35275",
+  "inputs": [
+    [
+      "implementation",
+      "6d9a14bfd8abfca9+b2e4444c7a6af2d2"
+    ],
+    [
+      "model",
+      "dc17bc5719fd519f"
+    ],
+    [
+      "requirement",
+      "74ea544aaa87afdc"
+    ]
+  ]
+}

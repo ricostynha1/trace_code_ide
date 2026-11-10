@@ -1,0 +1,30 @@
+{
+  "key": {
+    "reqId": "REQ-STRENGTH",
+    "clause": "proved_only_when_pinned",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 76,
+      "cases": 1000,
+      "op": "REQ-STRENGTH.proved_only_when_pinned"
+    }
+  },
+  "linkHash": "2bd36689d562034e",
+  "inputs": [
+    [
+      "implementation",
+      "61c84c6578f4ba99+f3fc9f73084a1706"
+    ],
+    [
+      "model",
+      "99194636bbe53df3"
+    ],
+    [
+      "requirement",
+      "adb4e4dec443032a"
+    ]
+  ]
+}

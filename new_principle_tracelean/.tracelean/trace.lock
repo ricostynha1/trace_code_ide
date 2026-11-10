@@ -61,7 +61,7 @@
         "observation_only",
         "user_runs_it"
       ],
-      "content_hash": "89e44f677feadb87",
+      "content_hash": "c1630bb27cd987d9",
       "file": "reqs/arch/ARCH-NO-DRIVING.md",
       "refines": [],
       "decomposition": "open"
@@ -444,6 +444,52 @@
       ],
       "decomposition": "complete"
     },
+    "REQ-FIGURE": {
+      "clauses": [
+        "card_on_hover",
+        "graph_filtered",
+        "impact_before_saving",
+        "runs_listed",
+        "treemap_areas"
+      ],
+      "content_hash": "66ac23b0ddd7cc65",
+      "file": "reqs/surface/REQ-FIGURE.md",
+      "refines": [
+        "REQ-LOOK",
+        "REQ-SHOW"
+      ],
+      "decomposition": "open"
+    },
+    "REQ-GUIDE": {
+      "clauses": [
+        "sections_unfold",
+        "tutorial_in_the_editor"
+      ],
+      "content_hash": "841a3b691182a867",
+      "file": "reqs/surface/REQ-GUIDE.md",
+      "refines": [
+        "REQ-SHOW",
+        "REQ-ACT"
+      ],
+      "decomposition": "open"
+    },
+    "REQ-HANDOFF": {
+      "clauses": [
+        "choice_opened",
+        "failure_named",
+        "file_to_vscode",
+        "folder_picked",
+        "report_to_browser",
+        "started_not_driven"
+      ],
+      "content_hash": "0f75430e73b1da54",
+      "file": "reqs/surface/REQ-HANDOFF.md",
+      "refines": [
+        "ARCH-NO-DRIVING",
+        "ARCH-CORE-SHELL"
+      ],
+      "decomposition": "complete"
+    },
     "REQ-JUDGE": {
       "clauses": [
         "advice_is_not_evidence",
@@ -469,14 +515,16 @@
     },
     "REQ-LINECOV": {
       "clauses": [
+        "children_counted",
         "clause_summary",
+        "ignored_included",
         "lines_listed",
         "per_test",
         "requirement_summary",
         "stale_hidden",
         "uncovered_shown"
       ],
-      "content_hash": "46456950971ae190",
+      "content_hash": "68f68b10cca394ce",
       "file": "reqs/trace/REQ-LINECOV.md",
       "refines": [
         "REQ-EVID",
@@ -507,12 +555,18 @@
         "contrast_sufficient",
         "focus_visible",
         "journeys_replay",
+        "menu_bar_lists_leader",
+        "overview_drawn",
+        "pointer_reaches_actions",
         "regions_present",
         "roles_drawn_in_theme_colours",
         "row_fits",
-        "setting_edited_in_place"
+        "scroll_is_one_draw_per_frame",
+        "setting_edited_in_place",
+        "theme_switched",
+        "zoom_steps"
       ],
-      "content_hash": "02122e00510a770e",
+      "content_hash": "2f1e815ac0f647a7",
       "file": "reqs/surface/REQ-LOOK.md",
       "refines": [
         "REQ-VIEW",
@@ -527,14 +581,11 @@
         "edits_become_commands",
         "edits_ordered",
         "encoding_declared",
-        "goals_close_with_the_file",
-        "goals_open_with_the_file",
         "offset_to_column",
         "overlap_refused",
-        "proof_state_shown",
         "registry_per_language"
       ],
-      "content_hash": "d430d2b830323205",
+      "content_hash": "d74ca889a5184c06",
       "file": "reqs/surface/REQ-LSP.md",
       "refines": [
         "ARCH-CORE-SHELL",
@@ -845,13 +896,15 @@
         "proof_is_direct",
         "proof_is_general",
         "proof_not_vacuous",
+        "proof_rests_on_the_specification",
         "proof_states_the_model",
+        "proved_only_when_pinned",
         "qualifies_proof",
         "refusal_reported",
         "strength_per_model",
         "verdict_kept"
       ],
-      "content_hash": "18a48bfc35bd55c1",
+      "content_hash": "f063a8086daa44df",
       "file": "reqs/trace/REQ-STRENGTH.md",
       "refines": [
         "ARCH-HONEST",
@@ -1011,7 +1064,7 @@
       "clause": "action_to_intent",
       "file": "crates/core/src/surface/act.rs",
       "anchor": "crates/core/src/surface/act.rs::dispatch",
-      "body_hash": "75cd03e8fdbcd42f",
+      "body_hash": "23fad2e464e61901",
       "link_hash": "a44e238bdd253940",
       "qualifier": null
     },
@@ -1031,7 +1084,7 @@
       "clause": "dispatch_is_pure",
       "file": "crates/core/src/surface/act.rs",
       "anchor": "crates/core/src/surface/act.rs::dispatch",
-      "body_hash": "75cd03e8fdbcd42f",
+      "body_hash": "23fad2e464e61901",
       "link_hash": "993f8b829c3cf11f",
       "qualifier": null
     },
@@ -1041,7 +1094,7 @@
       "clause": "edits_are_commands",
       "file": "crates/core/src/surface/act.rs",
       "anchor": "crates/core/src/surface/act.rs::dispatch",
-      "body_hash": "75cd03e8fdbcd42f",
+      "body_hash": "23fad2e464e61901",
       "link_hash": "a1da268e8d4508a2",
       "qualifier": null
     },
@@ -1071,7 +1124,7 @@
       "clause": "focus_is_carried",
       "file": "crates/core/src/surface/act.rs",
       "anchor": "crates/core/src/surface/act.rs::dispatch",
-      "body_hash": "75cd03e8fdbcd42f",
+      "body_hash": "23fad2e464e61901",
       "link_hash": "67d080eb318b03a5",
       "qualifier": null
     },
@@ -1081,7 +1134,7 @@
       "clause": "missing_target_is_refused",
       "file": "crates/core/src/surface/act.rs",
       "anchor": "crates/core/src/surface/act.rs::dispatch",
-      "body_hash": "75cd03e8fdbcd42f",
+      "body_hash": "23fad2e464e61901",
       "link_hash": "aed4f39f65aae04b",
       "qualifier": null
     },
@@ -1091,7 +1144,7 @@
       "clause": "one_path",
       "file": "crates/core/src/surface/act.rs",
       "anchor": "crates/core/src/surface/act.rs::dispatch",
-      "body_hash": "75cd03e8fdbcd42f",
+      "body_hash": "23fad2e464e61901",
       "link_hash": "f64e22402333a72b",
       "qualifier": null
     },
@@ -1101,7 +1154,7 @@
       "clause": "unknown_is_refused",
       "file": "crates/core/src/surface/act.rs",
       "anchor": "crates/core/src/surface/act.rs::dispatch",
-      "body_hash": "75cd03e8fdbcd42f",
+      "body_hash": "23fad2e464e61901",
       "link_hash": "d3addbba70a38a6d",
       "qualifier": null
     },
@@ -2557,6 +2610,86 @@
     },
     {
       "role": "drt",
+      "req": "REQ-HANDOFF",
+      "clause": "choice_opened",
+      "file": "crates/core/src/surface/handoff.rs",
+      "anchor": "crates/core/src/surface/handoff.rs::picked_folder",
+      "body_hash": "6d9a14bfd8abfca9",
+      "link_hash": "3a2afe8ba0a35275",
+      "qualifier": null
+    },
+    {
+      "role": "drt",
+      "req": "REQ-HANDOFF",
+      "clause": "choice_opened",
+      "file": "crates/core/tests/handoff.rs",
+      "anchor": "crates/core/tests/handoff.rs::model_and_implementation_agree_on_what_the_picker_chose",
+      "body_hash": "b16a78a4f260ce79",
+      "link_hash": "b4748650a3275b45",
+      "qualifier": null
+    },
+    {
+      "role": "drt",
+      "req": "REQ-HANDOFF",
+      "clause": "file_to_vscode",
+      "file": "crates/core/src/surface/handoff.rs",
+      "anchor": "crates/core/src/surface/handoff.rs::in_vscode",
+      "body_hash": "fe30338b20c59b5d",
+      "link_hash": "e85b8e044585dc80",
+      "qualifier": null
+    },
+    {
+      "role": "drt",
+      "req": "REQ-HANDOFF",
+      "clause": "file_to_vscode",
+      "file": "crates/core/tests/handoff.rs",
+      "anchor": "crates/core/tests/handoff.rs::model_and_implementation_agree_on_how_vscode_is_started",
+      "body_hash": "9d05333f83cc7405",
+      "link_hash": "b8191bb19a115f21",
+      "qualifier": null
+    },
+    {
+      "role": "drt",
+      "req": "REQ-HANDOFF",
+      "clause": "folder_picked",
+      "file": "crates/core/src/surface/handoff.rs",
+      "anchor": "crates/core/src/surface/handoff.rs::folder_picker",
+      "body_hash": "67fd0c8ed293dd3f",
+      "link_hash": "58237603cccb6f7b",
+      "qualifier": null
+    },
+    {
+      "role": "drt",
+      "req": "REQ-HANDOFF",
+      "clause": "folder_picked",
+      "file": "crates/core/tests/handoff.rs",
+      "anchor": "crates/core/tests/handoff.rs::model_and_implementation_agree_on_the_folder_picker",
+      "body_hash": "fd7ee664de5a9678",
+      "link_hash": "86455b4a98243b82",
+      "qualifier": null
+    },
+    {
+      "role": "drt",
+      "req": "REQ-HANDOFF",
+      "clause": "report_to_browser",
+      "file": "crates/core/src/surface/handoff.rs",
+      "anchor": "crates/core/src/surface/handoff.rs::in_browser",
+      "body_hash": "6c5b57f0a3bd7ad3",
+      "link_hash": "95e05fc79acaabfa",
+      "qualifier": null
+    },
+    {
+      "role": "drt",
+      "req": "REQ-HANDOFF",
+      "clause": "report_to_browser",
+      "file": "crates/core/tests/handoff.rs",
+      "anchor": "crates/core/tests/handoff.rs::model_and_implementation_agree_on_how_the_browser_is_started",
+      "body_hash": "768b09f054779ba7",
+      "link_hash": "8620142315d9332d",
+      "qualifier": null
+    },
+    {
+      "role": "drt",
       "req": "REQ-JUDGE",
       "clause": "advice_is_not_evidence",
       "file": "crates/core/src/judge.rs",
@@ -3038,46 +3171,6 @@
     {
       "role": "drt",
       "req": "REQ-LSP",
-      "clause": "goals_close_with_the_file",
-      "file": "crates/core/src/surface/screen.rs",
-      "anchor": "crates/core/src/surface/screen.rs::closed_with",
-      "body_hash": "e239955a4acd1299",
-      "link_hash": "97e760f1fd5d69aa",
-      "qualifier": null
-    },
-    {
-      "role": "drt",
-      "req": "REQ-LSP",
-      "clause": "goals_close_with_the_file",
-      "file": "crates/core/tests/differential_screen.rs",
-      "anchor": "crates/core/tests/differential_screen.rs::model_and_implementation_agree_on_what_closes_with_the_goals",
-      "body_hash": "b1267b8164e5bf5f",
-      "link_hash": "2558e35c2e671d3a",
-      "qualifier": null
-    },
-    {
-      "role": "drt",
-      "req": "REQ-LSP",
-      "clause": "goals_open_with_the_file",
-      "file": "crates/core/src/surface/screen.rs",
-      "anchor": "crates/core/src/surface/screen.rs::opens_goals",
-      "body_hash": "35f0731fd0802dea",
-      "link_hash": "aba6237d082aacc9",
-      "qualifier": null
-    },
-    {
-      "role": "drt",
-      "req": "REQ-LSP",
-      "clause": "goals_open_with_the_file",
-      "file": "crates/core/tests/differential_screen.rs",
-      "anchor": "crates/core/tests/differential_screen.rs::model_and_implementation_agree_on_when_the_goals_open",
-      "body_hash": "74f1b9c7083c3506",
-      "link_hash": "3e1125708ea2600c",
-      "qualifier": null
-    },
-    {
-      "role": "drt",
-      "req": "REQ-LSP",
       "clause": "offset_to_column",
       "file": "crates/core/src/surface/lsp.rs",
       "anchor": "crates/core/src/surface/lsp.rs::to_character",
@@ -3103,16 +3196,6 @@
       "anchor": "crates/core/src/surface/lsp.rs::lower_outcome",
       "body_hash": "56aebc6eb641620a",
       "link_hash": "f1bbfa70f11f4c27",
-      "qualifier": null
-    },
-    {
-      "role": "drt",
-      "req": "REQ-LSP",
-      "clause": "proof_state_shown",
-      "file": "crates/core/tests/differential_find.rs",
-      "anchor": "crates/core/tests/differential_find.rs::model_and_implementation_agree_on_what_the_panel_says",
-      "body_hash": "234466982cfc2f1a",
-      "link_hash": "2ea0e46e9abb9254",
       "qualifier": null
     },
     {
@@ -3651,7 +3734,7 @@
       "clause": "why_not_held",
       "file": "crates/core/tests/report.rs",
       "anchor": "crates/core/tests/report.rs::model_and_implementation_agree_on_why_a_mark_is_not_held",
-      "body_hash": "d1ce7e6d69430f02",
+      "body_hash": "f36b7a75313a7f9b",
       "link_hash": "aeb3548ffdee63b9",
       "qualifier": null
     },
@@ -4231,7 +4314,7 @@
       "clause": "station_produces_a_buffer",
       "file": "crates/core/src/surface/screen.rs",
       "anchor": "crates/core/src/surface/screen.rs::station_kind",
-      "body_hash": "44122e038999dd0e",
+      "body_hash": "9a9477223cbb5fdb",
       "link_hash": "7736100dc45ba88b",
       "qualifier": null
     },
@@ -5103,6 +5186,26 @@
       "anchor": "crates/core/tests/differential_proofcheck.rs::model_and_implementation_agree_on_what_a_theorem_earns",
       "body_hash": "749259b4a7eeae9c",
       "link_hash": "e8533152ab10409f",
+      "qualifier": null
+    },
+    {
+      "role": "drt",
+      "req": "REQ-STRENGTH",
+      "clause": "proved_only_when_pinned",
+      "file": "crates/core/src/trace/proofcheck.rs",
+      "anchor": "crates/core/src/trace/proofcheck.rs::earns_proof",
+      "body_hash": "61c84c6578f4ba99",
+      "link_hash": "59149a8a85d3d71d",
+      "qualifier": null
+    },
+    {
+      "role": "drt",
+      "req": "REQ-STRENGTH",
+      "clause": "proved_only_when_pinned",
+      "file": "crates/core/tests/differential_proofcheck.rs",
+      "anchor": "crates/core/tests/differential_proofcheck.rs::model_and_implementation_agree_on_when_a_clause_is_proved",
+      "body_hash": "b2075aae3252842c",
+      "link_hash": "2bd36689d562034e",
       "qualifier": null
     },
     {
@@ -5991,7 +6094,7 @@
       "clause": "no_model_call",
       "file": "crates/editor/src/lib.rs",
       "anchor": "crates/editor/src/lib.rs::Editor",
-      "body_hash": "57559ebfe7a27275",
+      "body_hash": "0229db08c17a0e0d",
       "link_hash": "5ac20c184925b114",
       "qualifier": null
     },
@@ -6011,7 +6114,7 @@
       "clause": "no_model_call",
       "file": "crates/editor/src/lib.rs",
       "anchor": "crates/editor/src/lib.rs::Editor::report",
-      "body_hash": "a374e6c7ad60512d",
+      "body_hash": "0c1a092b47abbd4f",
       "link_hash": "4927166d5b45648e",
       "qualifier": null
     },
@@ -6071,7 +6174,7 @@
       "clause": "action_to_intent",
       "file": "crates/core/src/surface/act.rs",
       "anchor": "crates/core/src/surface/act.rs::dispatch",
-      "body_hash": "75cd03e8fdbcd42f",
+      "body_hash": "23fad2e464e61901",
       "link_hash": "307b3f1e79bb86cc",
       "qualifier": null
     },
@@ -6081,7 +6184,7 @@
       "clause": "action_to_intent",
       "file": "crates/editor/src/lib.rs",
       "anchor": "crates/editor/src/lib.rs::Editor::perform",
-      "body_hash": "921bc0c5a94aaab7",
+      "body_hash": "07d17bdf22ef13ba",
       "link_hash": "c3cc923ce2b5d247",
       "qualifier": null
     },
@@ -6091,7 +6194,7 @@
       "clause": "dispatch_is_pure",
       "file": "crates/core/src/surface/act.rs",
       "anchor": "crates/core/src/surface/act.rs::dispatch",
-      "body_hash": "75cd03e8fdbcd42f",
+      "body_hash": "23fad2e464e61901",
       "link_hash": "848f6d01fa47c7a1",
       "qualifier": null
     },
@@ -6101,7 +6204,7 @@
       "clause": "edits_are_commands",
       "file": "crates/core/src/surface/act.rs",
       "anchor": "crates/core/src/surface/act.rs::dispatch",
-      "body_hash": "75cd03e8fdbcd42f",
+      "body_hash": "23fad2e464e61901",
       "link_hash": "2b349208a48219be",
       "qualifier": null
     },
@@ -6181,7 +6284,7 @@
       "clause": "everything_is_offered",
       "file": "crates/core/src/surface/offer.rs",
       "anchor": "crates/core/src/surface/offer.rs::offers",
-      "body_hash": "842024db8f8f9252",
+      "body_hash": "c08185bb3a69f3f1",
       "link_hash": "b68a5fd339626536",
       "qualifier": null
     },
@@ -6201,7 +6304,7 @@
       "clause": "focus_is_carried",
       "file": "crates/core/src/surface/act.rs",
       "anchor": "crates/core/src/surface/act.rs::dispatch",
-      "body_hash": "75cd03e8fdbcd42f",
+      "body_hash": "23fad2e464e61901",
       "link_hash": "bd006af3ee2e2367",
       "qualifier": null
     },
@@ -6221,7 +6324,7 @@
       "clause": "missing_target_is_refused",
       "file": "crates/core/src/surface/act.rs",
       "anchor": "crates/core/src/surface/act.rs::dispatch",
-      "body_hash": "75cd03e8fdbcd42f",
+      "body_hash": "23fad2e464e61901",
       "link_hash": "023a773ff31b87dd",
       "qualifier": null
     },
@@ -6231,7 +6334,7 @@
       "clause": "one_path",
       "file": "crates/core/src/surface/act.rs",
       "anchor": "crates/core/src/surface/act.rs::dispatch",
-      "body_hash": "75cd03e8fdbcd42f",
+      "body_hash": "23fad2e464e61901",
       "link_hash": "0253b342bd52813d",
       "qualifier": null
     },
@@ -6291,7 +6394,7 @@
       "clause": "unknown_is_refused",
       "file": "crates/core/src/surface/act.rs",
       "anchor": "crates/core/src/surface/act.rs::dispatch",
-      "body_hash": "75cd03e8fdbcd42f",
+      "body_hash": "23fad2e464e61901",
       "link_hash": "025891c70740734f",
       "qualifier": null
     },
@@ -6811,7 +6914,7 @@
       "clause": "from_the_shell",
       "file": "crates/core/src/bin/tracelean-trace.rs",
       "anchor": "crates/core/src/bin/tracelean-trace.rs::main",
-      "body_hash": "5d1634792fc24eed",
+      "body_hash": "51218b2efde1dc23",
       "link_hash": "cfb1dd6e6161c477",
       "qualifier": null
     },
@@ -8511,7 +8614,7 @@
       "clause": "record_reproducible",
       "file": "crates/core/src/trace/earn.rs",
       "anchor": "crates/core/src/trace/earn.rs::proof_record",
-      "body_hash": "2a7b716e8647a9ca",
+      "body_hash": "a74a6ea39f733701",
       "link_hash": "5e2b5f8e9840da39",
       "qualifier": null
     },
@@ -8563,6 +8666,186 @@
       "anchor": "crates/editor/src/lib.rs::marks_of",
       "body_hash": "11494694f5a6ef9e",
       "link_hash": "7116c31abcdaf04b",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-FIGURE",
+      "clause": "card_on_hover",
+      "file": "crates/editor/src/lib.rs",
+      "anchor": "crates/editor/src/lib.rs::Editor::card",
+      "body_hash": "1b20552208c419c7",
+      "link_hash": "2e92fc95dc3c568e",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-FIGURE",
+      "clause": "card_on_hover",
+      "file": "web/src/app.ts",
+      "anchor": "web/src/app.ts::showCard",
+      "body_hash": "7750a57cf2c0f91b",
+      "link_hash": "edea4bd15292453e",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-FIGURE",
+      "clause": "graph_filtered",
+      "file": "web/src/overview.ts",
+      "anchor": "web/src/overview.ts::filtered",
+      "body_hash": "6b7b4d6c4e229e0c",
+      "link_hash": "e2f558dc3f25d815",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-FIGURE",
+      "clause": "impact_before_saving",
+      "file": "crates/editor/src/lib.rs",
+      "anchor": "crates/editor/src/lib.rs::Editor::impact",
+      "body_hash": "2e395db3082f0a40",
+      "link_hash": "287a5236b81f601a",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-FIGURE",
+      "clause": "impact_before_saving",
+      "file": "crates/editor/src/lib.rs",
+      "anchor": "crates/editor/src/lib.rs::impact_of",
+      "body_hash": "9ab85f4f70954cf4",
+      "link_hash": "2c2d9056010183e9",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-FIGURE",
+      "clause": "runs_listed",
+      "file": "crates/editor/src/lib.rs",
+      "anchor": "crates/editor/src/lib.rs::Editor::runs",
+      "body_hash": "126ca1292abcf5e8",
+      "link_hash": "69958019a93ea2ff",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-FIGURE",
+      "clause": "treemap_areas",
+      "file": "web/src/overview.ts",
+      "anchor": "web/src/overview.ts::treemap",
+      "body_hash": "ca951169c231a1a8",
+      "link_hash": "7d5049498247372d",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-GUIDE",
+      "clause": "sections_unfold",
+      "file": "crates/core/src/surface/tutorial.rs",
+      "anchor": "crates/core/src/surface/tutorial.rs::unfold",
+      "body_hash": "afeb1ba04bf7673c",
+      "link_hash": "57fbd2364c05dd92",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-GUIDE",
+      "clause": "sections_unfold",
+      "file": "crates/editor/src/lib.rs",
+      "anchor": "crates/editor/src/lib.rs::Editor::tutorial_buffer",
+      "body_hash": "a91524c368d2002a",
+      "link_hash": "f20ce11eff156bf9",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-GUIDE",
+      "clause": "tutorial_in_the_editor",
+      "file": "crates/editor/src/lib.rs",
+      "anchor": "crates/editor/src/lib.rs::Editor::tutorial_buffer",
+      "body_hash": "a91524c368d2002a",
+      "link_hash": "eb178ca45f0e0b08",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-HANDOFF",
+      "clause": "choice_opened",
+      "file": "crates/core/src/surface/handoff.rs",
+      "anchor": "crates/core/src/surface/handoff.rs::picked_folder",
+      "body_hash": "6d9a14bfd8abfca9",
+      "link_hash": "de5b52ee5de449b7",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-HANDOFF",
+      "clause": "choice_opened",
+      "file": "crates/editor/src/lib.rs",
+      "anchor": "crates/editor/src/lib.rs::Editor::follow_picker",
+      "body_hash": "b2e4444c7a6af2d2",
+      "link_hash": "8c9ab90f0ef03fe2",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-HANDOFF",
+      "clause": "failure_named",
+      "file": "crates/editor/src/lib.rs",
+      "anchor": "crates/editor/src/lib.rs::Editor::hand_off",
+      "body_hash": "0f9f32abbf92092d",
+      "link_hash": "95c6eb72c73c65fa",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-HANDOFF",
+      "clause": "file_to_vscode",
+      "file": "crates/core/src/surface/handoff.rs",
+      "anchor": "crates/core/src/surface/handoff.rs::in_vscode",
+      "body_hash": "fe30338b20c59b5d",
+      "link_hash": "a720cabbc7a8f30c",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-HANDOFF",
+      "clause": "folder_picked",
+      "file": "crates/core/src/surface/handoff.rs",
+      "anchor": "crates/core/src/surface/handoff.rs::folder_picker",
+      "body_hash": "67fd0c8ed293dd3f",
+      "link_hash": "0c051efb270042cd",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-HANDOFF",
+      "clause": "report_to_browser",
+      "file": "crates/core/src/surface/handoff.rs",
+      "anchor": "crates/core/src/surface/handoff.rs::in_browser",
+      "body_hash": "6c5b57f0a3bd7ad3",
+      "link_hash": "91b0ca1fcd96d5d6",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-HANDOFF",
+      "clause": "started_not_driven",
+      "file": "crates/core/src/launch.rs",
+      "anchor": "crates/core/src/launch.rs::ask",
+      "body_hash": "5f432971d2c4d03d",
+      "link_hash": "bf950439546a378d",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-HANDOFF",
+      "clause": "started_not_driven",
+      "file": "crates/core/src/launch.rs",
+      "anchor": "crates/core/src/launch.rs::start",
+      "body_hash": "bd4e3eb33ed28d7d",
+      "link_hash": "d204e73c53693a6e",
       "qualifier": null
     },
     {
@@ -8661,7 +8944,7 @@
       "clause": "human_decides",
       "file": "crates/core/src/bin/tracelean-trace.rs",
       "anchor": "crates/core/src/bin/tracelean-trace.rs::main",
-      "body_hash": "5d1634792fc24eed",
+      "body_hash": "51218b2efde1dc23",
       "link_hash": "642e3a15ac658d39",
       "qualifier": null
     },
@@ -8771,7 +9054,7 @@
       "clause": "no_call",
       "file": "crates/core/src/bin/tracelean-trace.rs",
       "anchor": "crates/core/src/bin/tracelean-trace.rs::main",
-      "body_hash": "5d1634792fc24eed",
+      "body_hash": "51218b2efde1dc23",
       "link_hash": "9832a41f49e5f574",
       "qualifier": null
     },
@@ -8801,7 +9084,7 @@
       "clause": "prompt_exported",
       "file": "crates/core/src/bin/tracelean-trace.rs",
       "anchor": "crates/core/src/bin/tracelean-trace.rs::main",
-      "body_hash": "5d1634792fc24eed",
+      "body_hash": "51218b2efde1dc23",
       "link_hash": "375f03d31121ea8c",
       "qualifier": null
     },
@@ -8878,6 +9161,16 @@
     {
       "role": "implements",
       "req": "REQ-LINECOV",
+      "clause": "children_counted",
+      "file": "crates/core/src/drt/lines_run.rs",
+      "anchor": "crates/core/src/drt/lines_run.rs::measure",
+      "body_hash": "41ac2669a6e94bca",
+      "link_hash": "c450c6cfa6c8b2a9",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-LINECOV",
       "clause": "clause_summary",
       "file": "crates/core/src/trace/lines.rs",
       "anchor": "crates/core/src/trace/lines.rs::span_coverage",
@@ -8893,6 +9186,16 @@
       "anchor": "crates/editor/src/lib.rs::Editor::clause_lines",
       "body_hash": "0a25c3417def96f4",
       "link_hash": "30c7f3b5067d60a4",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-LINECOV",
+      "clause": "ignored_included",
+      "file": "crates/core/src/drt/lines_run.rs",
+      "anchor": "crates/core/src/drt/lines_run.rs::measure",
+      "body_hash": "41ac2669a6e94bca",
+      "link_hash": "617415e8cb677056",
       "qualifier": null
     },
     {
@@ -8921,7 +9224,7 @@
       "clause": "per_test",
       "file": "crates/core/src/drt/lines_run.rs",
       "anchor": "crates/core/src/drt/lines_run.rs::measure",
-      "body_hash": "db12d852c9c77f19",
+      "body_hash": "41ac2669a6e94bca",
       "link_hash": "241602f44bf219b7",
       "qualifier": null
     },
@@ -9158,6 +9461,86 @@
     {
       "role": "implements",
       "req": "REQ-LOOK",
+      "clause": "menu_bar_lists_leader",
+      "file": "crates/editor/src/lib.rs",
+      "anchor": "crates/editor/src/lib.rs::Editor::leader",
+      "body_hash": "e2520a649c04cbfa",
+      "link_hash": "e56fb67dfce5d7cc",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-LOOK",
+      "clause": "menu_bar_lists_leader",
+      "file": "web/src/app.ts",
+      "anchor": "web/src/app.ts::openGroup",
+      "body_hash": "8c72882835add51b",
+      "link_hash": "518f5ffb2bbbebdb",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-LOOK",
+      "clause": "overview_drawn",
+      "file": "crates/editor/src/lib.rs",
+      "anchor": "crates/editor/src/lib.rs::Editor::overview",
+      "body_hash": "9f53e15b0a4db599",
+      "link_hash": "ecd098aa8f325af5",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-LOOK",
+      "clause": "overview_drawn",
+      "file": "web/src/overview.ts",
+      "anchor": "web/src/overview.ts::Tally",
+      "body_hash": "30c02e409a275afa",
+      "link_hash": "104926327b1877e1",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-LOOK",
+      "clause": "pointer_reaches_actions",
+      "file": "crates/tui/src/main.rs",
+      "anchor": "crates/tui/src/main.rs::offset_at",
+      "body_hash": "774c3e3adc681cdd",
+      "link_hash": "61457d1d7e64b8de",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-LOOK",
+      "clause": "pointer_reaches_actions",
+      "file": "crates/tui/src/main.rs",
+      "anchor": "crates/tui/src/main.rs::pointed",
+      "body_hash": "cd5df4b77a09c3b2",
+      "link_hash": "c76ee08179b4ac60",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-LOOK",
+      "clause": "pointer_reaches_actions",
+      "file": "web/src/app.ts",
+      "anchor": "web/src/app.ts::openContext",
+      "body_hash": "eb1566b8b19170a4",
+      "link_hash": "2b5bf05555a3f2e7",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-LOOK",
+      "clause": "pointer_reaches_actions",
+      "file": "web/src/app.ts",
+      "anchor": "web/src/app.ts::start::[x, y]",
+      "body_hash": "f3c662d4e0e923c6",
+      "link_hash": "eca02eff83167299",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-LOOK",
       "clause": "roles_drawn_in_theme_colours",
       "file": "crates/core/src/surface/cells.rs",
       "anchor": "crates/core/src/surface/cells.rs::Cell",
@@ -9181,7 +9564,7 @@
       "clause": "roles_drawn_in_theme_colours",
       "file": "crates/editor/src/theme.rs",
       "anchor": "crates/editor/src/theme.rs::load",
-      "body_hash": "9fc68c8689b422d4",
+      "body_hash": "b2c24e08c3bd59ce",
       "link_hash": "4566daf05b034619",
       "qualifier": null
     },
@@ -9198,11 +9581,71 @@
     {
       "role": "implements",
       "req": "REQ-LOOK",
+      "clause": "scroll_is_one_draw_per_frame",
+      "file": "web/src/app.ts",
+      "anchor": "web/src/app.ts::wheel",
+      "body_hash": "8b1bd4763169f86f",
+      "link_hash": "8eb56f9f79981474",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-LOOK",
       "clause": "setting_edited_in_place",
       "file": "crates/core/src/surface/setting.rs",
       "anchor": "crates/core/src/surface/setting.rs::is_colour",
       "body_hash": "fb789a33b7a52705",
       "link_hash": "e0ce24965d4f160d",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-LOOK",
+      "clause": "setting_edited_in_place",
+      "file": "crates/core/src/surface/setting.rs",
+      "anchor": "crates/core/src/surface/setting.rs::takes",
+      "body_hash": "e09e3cba06bd61e8",
+      "link_hash": "07e92db521f9e0ba",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-LOOK",
+      "clause": "theme_switched",
+      "file": "crates/editor/src/theme.rs",
+      "anchor": "crates/editor/src/theme.rs::switch_base",
+      "body_hash": "1b737675d2831baa",
+      "link_hash": "bf0051abb6784cf8",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-LOOK",
+      "clause": "zoom_steps",
+      "file": "crates/core/src/surface/setting.rs",
+      "anchor": "crates/core/src/surface/setting.rs::zoomed",
+      "body_hash": "39356d5a88f62812",
+      "link_hash": "dd42524c0d808751",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-LOOK",
+      "clause": "zoom_steps",
+      "file": "crates/desktop/src/main.rs",
+      "anchor": "crates/desktop/src/main.rs::theme",
+      "body_hash": "f317a078f4d2323d",
+      "link_hash": "ca869aa851c28e90",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-LOOK",
+      "clause": "zoom_steps",
+      "file": "crates/editor/src/lib.rs",
+      "anchor": "crates/editor/src/lib.rs::Editor::zoom",
+      "body_hash": "a6ec2df400633db6",
+      "link_hash": "15556ac2ab2ae176",
       "qualifier": null
     },
     {
@@ -9308,26 +9751,6 @@
     {
       "role": "implements",
       "req": "REQ-LSP",
-      "clause": "goals_close_with_the_file",
-      "file": "crates/core/src/surface/screen.rs",
-      "anchor": "crates/core/src/surface/screen.rs::closed_with",
-      "body_hash": "e239955a4acd1299",
-      "link_hash": "13089bfa919bd046",
-      "qualifier": null
-    },
-    {
-      "role": "implements",
-      "req": "REQ-LSP",
-      "clause": "goals_open_with_the_file",
-      "file": "crates/core/src/surface/screen.rs",
-      "anchor": "crates/core/src/surface/screen.rs::opens_goals",
-      "body_hash": "35f0731fd0802dea",
-      "link_hash": "eefefa6d3692284b",
-      "qualifier": null
-    },
-    {
-      "role": "implements",
-      "req": "REQ-LSP",
       "clause": "offset_to_column",
       "file": "crates/core/src/surface/lsp.rs",
       "anchor": "crates/core/src/surface/lsp.rs::to_character",
@@ -9343,16 +9766,6 @@
       "anchor": "crates/core/src/surface/lsp.rs::lower",
       "body_hash": "df41c9b26fe45147",
       "link_hash": "fb73d71b025eccca",
-      "qualifier": null
-    },
-    {
-      "role": "implements",
-      "req": "REQ-LSP",
-      "clause": "proof_state_shown",
-      "file": "crates/core/src/lean_server.rs",
-      "anchor": "crates/core/src/lean_server.rs::goals_shown",
-      "body_hash": "18eaeeebd53ae99c",
-      "link_hash": "fdc047f108c6871e",
       "qualifier": null
     },
     {
@@ -9491,7 +9904,7 @@
       "clause": "actions_defined",
       "file": "crates/core/src/surface/keymap.rs",
       "anchor": "crates/core/src/surface/keymap.rs::ACTIONS",
-      "body_hash": "13e219159f57086b",
+      "body_hash": "68b264cb0d47cda2",
       "link_hash": "66bc084cf5b91b88",
       "qualifier": null
     },
@@ -10071,8 +10484,18 @@
       "clause": "card_per_clause",
       "file": "crates/core/src/surface/report.rs",
       "anchor": "crates/core/src/surface/report.rs::card",
-      "body_hash": "0e11dbe21104dfcd",
+      "body_hash": "0853cd6aa155408f",
       "link_hash": "e3fbdd8b468a5e37",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-REPORT",
+      "clause": "changes_marked",
+      "file": "crates/core/src/observe/report.rs",
+      "anchor": "crates/core/src/observe/report.rs::write",
+      "body_hash": "568924fb3be37b1b",
+      "link_hash": "cfd9a504cdb52b4f",
       "qualifier": null
     },
     {
@@ -10081,7 +10504,7 @@
       "clause": "changes_marked",
       "file": "crates/core/src/surface/report.rs",
       "anchor": "crates/core/src/surface/report.rs::card",
-      "body_hash": "0e11dbe21104dfcd",
+      "body_hash": "0853cd6aa155408f",
       "link_hash": "532939b39a2abc1b",
       "qualifier": null
     },
@@ -10091,7 +10514,7 @@
       "clause": "evidence_on_card",
       "file": "crates/core/src/surface/report.rs",
       "anchor": "crates/core/src/surface/report.rs::card",
-      "body_hash": "0e11dbe21104dfcd",
+      "body_hash": "0853cd6aa155408f",
       "link_hash": "30a72a7dc8707637",
       "qualifier": null
     },
@@ -10101,8 +10524,18 @@
       "clause": "findings_on_card",
       "file": "crates/core/src/surface/report.rs",
       "anchor": "crates/core/src/surface/report.rs::card",
-      "body_hash": "0e11dbe21104dfcd",
+      "body_hash": "0853cd6aa155408f",
       "link_hash": "3d4384a03f2b71e0",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-REPORT",
+      "clause": "static_page",
+      "file": "crates/core/src/observe/report.rs",
+      "anchor": "crates/core/src/observe/report.rs::write",
+      "body_hash": "568924fb3be37b1b",
+      "link_hash": "1adcd4d5fef0a72d",
       "qualifier": null
     },
     {
@@ -10113,6 +10546,16 @@
       "anchor": "crates/core/src/surface/report.rs::page",
       "body_hash": "138141f4c1f4c009",
       "link_hash": "7bafaa76a0772f5a",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-REPORT",
+      "clause": "static_page",
+      "file": "crates/editor/src/lib.rs",
+      "anchor": "crates/editor/src/lib.rs::Editor::report_buffer",
+      "body_hash": "7be788a11bf18a04",
+      "link_hash": "758260c9cc66d3c2",
       "qualifier": null
     },
     {
@@ -10841,7 +11284,7 @@
       "clause": "screen_is_a_value",
       "file": "crates/editor/src/lib.rs",
       "anchor": "crates/editor/src/lib.rs::Editor",
-      "body_hash": "57559ebfe7a27275",
+      "body_hash": "0229db08c17a0e0d",
       "link_hash": "db3d01c8f8161b40",
       "qualifier": null
     },
@@ -10871,7 +11314,7 @@
       "clause": "station_produces_a_buffer",
       "file": "crates/core/src/surface/screen.rs",
       "anchor": "crates/core/src/surface/screen.rs::station_kind",
-      "body_hash": "44122e038999dd0e",
+      "body_hash": "9a9477223cbb5fdb",
       "link_hash": "1e4b9f11a9b8631d",
       "qualifier": null
     },
@@ -11051,7 +11494,7 @@
       "clause": "core_produces",
       "file": "web/src/app.ts",
       "anchor": "web/src/app.ts::draw",
-      "body_hash": "e10c8f7719abbf54",
+      "body_hash": "f91f44a1f4bb0dfd",
       "link_hash": "a5b8e014305fc374",
       "qualifier": null
     },
@@ -11161,7 +11604,7 @@
       "clause": "menu_from_keymap",
       "file": "crates/editor/src/lib.rs",
       "anchor": "crates/editor/src/lib.rs::Editor",
-      "body_hash": "57559ebfe7a27275",
+      "body_hash": "0229db08c17a0e0d",
       "link_hash": "de0b79b73c58d1c6",
       "qualifier": null
     },
@@ -11531,7 +11974,7 @@
       "clause": "inputs_identified",
       "file": "crates/core/src/trace/earn.rs",
       "anchor": "crates/core/src/trace/earn.rs::proof_record",
-      "body_hash": "2a7b716e8647a9ca",
+      "body_hash": "a74a6ea39f733701",
       "link_hash": "6faefada4a966657",
       "qualifier": null
     },
@@ -11571,7 +12014,7 @@
       "clause": "listed_for_a_script",
       "file": "crates/core/src/bin/tracelean-trace.rs",
       "anchor": "crates/core/src/bin/tracelean-trace.rs::main",
-      "body_hash": "5d1634792fc24eed",
+      "body_hash": "51218b2efde1dc23",
       "link_hash": "24d049892b205e19",
       "qualifier": null
     },
@@ -12018,11 +12461,41 @@
     {
       "role": "implements",
       "req": "REQ-STRENGTH",
+      "clause": "proof_rests_on_the_specification",
+      "file": "crates/core/src/trace/earn.rs",
+      "anchor": "crates/core/src/trace/earn.rs::specification_hash",
+      "body_hash": "7d105b3bcc0139ba",
+      "link_hash": "03fc034f30c6aa1e",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-STRENGTH",
       "clause": "proof_states_the_model",
       "file": "crates/core/src/trace/proofcheck.rs",
       "anchor": "crates/core/src/trace/proofcheck.rs::verdict",
       "body_hash": "65ad92caf60ccce7",
       "link_hash": "60abf71bf00c17aa",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-STRENGTH",
+      "clause": "proved_only_when_pinned",
+      "file": "crates/core/src/drt/proofs.rs",
+      "anchor": "crates/core/src/drt/proofs.rs::earn_all",
+      "body_hash": "f3fc9f73084a1706",
+      "link_hash": "bea3d628c87be717",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-STRENGTH",
+      "clause": "proved_only_when_pinned",
+      "file": "crates/core/src/trace/proofcheck.rs",
+      "anchor": "crates/core/src/trace/proofcheck.rs::earns_proof",
+      "body_hash": "61c84c6578f4ba99",
+      "link_hash": "97917bdb247945ff",
       "qualifier": null
     },
     {
@@ -12581,7 +13054,7 @@
       "clause": "frontend_adds_nothing",
       "file": "crates/tui/src/draw.rs",
       "anchor": "crates/tui/src/draw.rs::THEME",
-      "body_hash": "cdfbab14ffefc0c0",
+      "body_hash": "3a8f2bec7277e6b8",
       "link_hash": "3126af2844f03597",
       "qualifier": null
     },
@@ -12721,7 +13194,7 @@
       "clause": "one_representation",
       "file": "web/src/app.ts",
       "anchor": "web/src/app.ts::draw",
-      "body_hash": "e10c8f7719abbf54",
+      "body_hash": "f91f44a1f4bb0dfd",
       "link_hash": "8b24978ebdc73c63",
       "qualifier": null
     },
@@ -12761,7 +13234,7 @@
       "clause": "presentation_may_be_symbolic",
       "file": "web/src/render.ts",
       "anchor": "web/src/render.ts::EMBLEMS",
-      "body_hash": "2f2c6d6c0e8b7681",
+      "body_hash": "d14df40e367839e5",
       "link_hash": "87c9da57883090ea",
       "qualifier": null
     },
@@ -12991,7 +13464,7 @@
       "clause": "text_is_the_content",
       "file": "crates/tui/src/draw.rs",
       "anchor": "crates/tui/src/draw.rs::THEME",
-      "body_hash": "cdfbab14ffefc0c0",
+      "body_hash": "3a8f2bec7277e6b8",
       "link_hash": "135b9bf02a25082a",
       "qualifier": null
     },
@@ -14017,6 +14490,46 @@
     },
     {
       "role": "models",
+      "req": "REQ-HANDOFF",
+      "clause": "choice_opened",
+      "file": "formal/TraceLean/Handoff.lean",
+      "anchor": "formal/TraceLean/Handoff.lean::TraceLean.Handoff::pickedFolder",
+      "body_hash": "dc17bc5719fd519f",
+      "link_hash": "b6bd1fdfc9817752",
+      "qualifier": null
+    },
+    {
+      "role": "models",
+      "req": "REQ-HANDOFF",
+      "clause": "file_to_vscode",
+      "file": "formal/TraceLean/Handoff.lean",
+      "anchor": "formal/TraceLean/Handoff.lean::TraceLean.Handoff::inVscode",
+      "body_hash": "15a8bc0706c87c85",
+      "link_hash": "bdb2ef3964390545",
+      "qualifier": null
+    },
+    {
+      "role": "models",
+      "req": "REQ-HANDOFF",
+      "clause": "folder_picked",
+      "file": "formal/TraceLean/Handoff.lean",
+      "anchor": "formal/TraceLean/Handoff.lean::TraceLean.Handoff::folderPicker",
+      "body_hash": "a541641d15dcf27c",
+      "link_hash": "8047a4e5e6e539f4",
+      "qualifier": null
+    },
+    {
+      "role": "models",
+      "req": "REQ-HANDOFF",
+      "clause": "report_to_browser",
+      "file": "formal/TraceLean/Handoff.lean",
+      "anchor": "formal/TraceLean/Handoff.lean::TraceLean.Handoff::inBrowser",
+      "body_hash": "732ddfad7331fd23",
+      "link_hash": "cdab0878fea1b243",
+      "qualifier": null
+    },
+    {
+      "role": "models",
       "req": "REQ-JUDGE",
       "clause": "advice_is_not_evidence",
       "file": "formal/TraceLean/Judge.lean",
@@ -14298,26 +14811,6 @@
     {
       "role": "models",
       "req": "REQ-LSP",
-      "clause": "goals_close_with_the_file",
-      "file": "formal/TraceLean/Screen.lean",
-      "anchor": "formal/TraceLean/Screen.lean::TraceLean.Screen::closedWith",
-      "body_hash": "585af878a1f84ebd",
-      "link_hash": "617924dc875f1a4d",
-      "qualifier": null
-    },
-    {
-      "role": "models",
-      "req": "REQ-LSP",
-      "clause": "goals_open_with_the_file",
-      "file": "formal/TraceLean/Screen.lean",
-      "anchor": "formal/TraceLean/Screen.lean::TraceLean.Screen::opensGoals",
-      "body_hash": "4a85df64501fdf40",
-      "link_hash": "8536180141d10d6e",
-      "qualifier": null
-    },
-    {
-      "role": "models",
-      "req": "REQ-LSP",
       "clause": "offset_to_column",
       "file": "formal/TraceLean/Lsp.lean",
       "anchor": "formal/TraceLean/Lsp.lean::TraceLean.Lsp::toCharacter",
@@ -14333,16 +14826,6 @@
       "anchor": "formal/TraceLean/Lsp.lean::TraceLean.Lsp::lower",
       "body_hash": "2598b04e1b26dfde",
       "link_hash": "34b649564d8ca48f",
-      "qualifier": null
-    },
-    {
-      "role": "models",
-      "req": "REQ-LSP",
-      "clause": "proof_state_shown",
-      "file": "formal/TraceLean/ProofState.lean",
-      "anchor": "formal/TraceLean/ProofState.lean::TraceLean.ProofState::goalsShown",
-      "body_hash": "9c6f2d0e5df500d8",
-      "link_hash": "7c054bb915ed3195",
       "qualifier": null
     },
     {
@@ -15101,7 +15584,7 @@
       "clause": "station_produces_a_buffer",
       "file": "formal/TraceLean/Screen.lean",
       "anchor": "formal/TraceLean/Screen.lean::TraceLean.Screen::stationKind",
-      "body_hash": "d7e41fd4db172b62",
+      "body_hash": "cfc5cf76b01ecf0d",
       "link_hash": "41b41ef0c2e83404",
       "qualifier": null
     },
@@ -15613,6 +16096,16 @@
       "anchor": "formal/TraceLean/Proofcheck.lean::TraceLean.Proofcheck::verdict",
       "body_hash": "fadf42714a8c5485",
       "link_hash": "6f3993c76bb20db4",
+      "qualifier": null
+    },
+    {
+      "role": "models",
+      "req": "REQ-STRENGTH",
+      "clause": "proved_only_when_pinned",
+      "file": "formal/TraceLean/Proofcheck.lean",
+      "anchor": "formal/TraceLean/Proofcheck.lean::TraceLean.Proofcheck::earnsProof",
+      "body_hash": "99194636bbe53df3",
+      "link_hash": "d8f917c1d9a00a86",
       "qualifier": null
     },
     {
@@ -17061,7 +17554,7 @@
       "clause": "types_inferred",
       "file": "formal/TraceLean/RustRunner.lean",
       "anchor": "formal/TraceLean/RustRunner.lean::TraceLean.RustRunner::a_call_site_leaves_types_to_inference",
-      "body_hash": "00dea98623cb3399",
+      "body_hash": "a7a5ba9e18333093",
       "link_hash": "960d37a78488cc4d",
       "qualifier": null
     },
@@ -17183,6 +17676,26 @@
       "anchor": "formal/TraceLean/Evidence.lean::TraceLean.Evidence::testing_and_proving_do_not_apply_by_reading",
       "body_hash": "68fa7ff3898405fa",
       "link_hash": "1d5689d2559407f9",
+      "qualifier": null
+    },
+    {
+      "role": "proves",
+      "req": "REQ-HANDOFF",
+      "clause": "file_to_vscode",
+      "file": "formal/TraceLean/Handoff.lean",
+      "anchor": "formal/TraceLean/Handoff.lean::TraceLean.Handoff::vscode_goes_to_the_cursor_counted_from_one",
+      "body_hash": "5ea00d8ee3b1d262",
+      "link_hash": "5fdc7fa27ae23444",
+      "qualifier": null
+    },
+    {
+      "role": "proves",
+      "req": "REQ-HANDOFF",
+      "clause": "report_to_browser",
+      "file": "formal/TraceLean/Handoff.lean",
+      "anchor": "formal/TraceLean/Handoff.lean::TraceLean.Handoff::the_browser_is_given_the_page",
+      "body_hash": "bc0986add94ad473",
+      "link_hash": "53a2611a950a2012",
       "qualifier": null
     },
     {
@@ -17401,7 +17914,7 @@
       "clause": "row_fits",
       "file": "formal/TraceLean/Produce.lean",
       "anchor": "formal/TraceLean/Produce.lean::TraceLean.Produce::a_row_fits_its_width",
-      "body_hash": "e71536f33217604c",
+      "body_hash": "6c50609739ea9382",
       "link_hash": "7083d394eef2116b",
       "qualifier": null
     },
@@ -17478,46 +17991,6 @@
     {
       "role": "proves",
       "req": "REQ-LSP",
-      "clause": "goals_close_with_the_file",
-      "file": "formal/TraceLean/Screen.lean",
-      "anchor": "formal/TraceLean/Screen.lean::TraceLean.Screen::closing_other_buffers_closes_nothing",
-      "body_hash": "f130aab4fed7bda1",
-      "link_hash": "338d0b36f28d5822",
-      "qualifier": null
-    },
-    {
-      "role": "proves",
-      "req": "REQ-LSP",
-      "clause": "goals_close_with_the_file",
-      "file": "formal/TraceLean/Screen.lean",
-      "anchor": "formal/TraceLean/Screen.lean::TraceLean.Screen::closing_the_goals_closes_every_lean_file",
-      "body_hash": "3e354fa5a27423d0",
-      "link_hash": "4b97ba9f4f8a6922",
-      "qualifier": null
-    },
-    {
-      "role": "proves",
-      "req": "REQ-LSP",
-      "clause": "goals_close_with_the_file",
-      "file": "formal/TraceLean/Screen.lean",
-      "anchor": "formal/TraceLean/Screen.lean::TraceLean.Screen::closing_the_last_lean_file_closes_the_goals",
-      "body_hash": "0972ac1644d44b59",
-      "link_hash": "f0ec96fb0b62bbb1",
-      "qualifier": null
-    },
-    {
-      "role": "proves",
-      "req": "REQ-LSP",
-      "clause": "goals_open_with_the_file",
-      "file": "formal/TraceLean/Screen.lean",
-      "anchor": "formal/TraceLean/Screen.lean::TraceLean.Screen::goals_open_exactly_with_a_lean_file",
-      "body_hash": "f90f39fb54eaab03",
-      "link_hash": "576f74f2c85a965d",
-      "qualifier": null
-    },
-    {
-      "role": "proves",
-      "req": "REQ-LSP",
       "clause": "offset_to_column",
       "file": "formal/TraceLean/SpecLsp.lean",
       "anchor": "formal/TraceLean/SpecLsp.lean::TraceLean.SpecLsp::offset_round_trip",
@@ -17533,16 +18006,6 @@
       "anchor": "formal/TraceLean/Lsp.lean::TraceLean.Lsp::lowered_edits_never_overlap",
       "body_hash": "2d43fab67280512b",
       "link_hash": "ba30876607ad29f6",
-      "qualifier": null
-    },
-    {
-      "role": "proves",
-      "req": "REQ-LSP",
-      "clause": "proof_state_shown",
-      "file": "formal/TraceLean/ProofState.lean",
-      "anchor": "formal/TraceLean/ProofState.lean::TraceLean.ProofState::the_reported_goals_are_what_is_shown",
-      "body_hash": "2b2ffefa36f96812",
-      "link_hash": "2faa6bc865e2e638",
       "qualifier": null
     },
     {
@@ -17931,7 +18394,7 @@
       "clause": "why_not_held",
       "file": "formal/TraceLean/Report.lean",
       "anchor": "formal/TraceLean/Report.lean::TraceLean.Report::the_reason_is_the_first_missing_step",
-      "body_hash": "b527e67178d80339",
+      "body_hash": "589b5b35533a4b79",
       "link_hash": "7d60ba1a3d050f6c",
       "qualifier": null
     },
@@ -18511,7 +18974,7 @@
       "clause": "menu_from_keymap",
       "file": "formal/TraceLean/Produce.lean",
       "anchor": "formal/TraceLean/Produce.lean::TraceLean.Produce::a_menu_shows_each_key_with_its_action",
-      "body_hash": "4713c22f675e0f04",
+      "body_hash": "eb7fcb5ff6a2b72e",
       "link_hash": "cd5d1a87fb5ca52c",
       "qualifier": null
     },
@@ -18838,6 +19301,16 @@
     {
       "role": "proves",
       "req": "REQ-STRENGTH",
+      "clause": "proved_only_when_pinned",
+      "file": "formal/TraceLean/Proofcheck.lean",
+      "anchor": "formal/TraceLean/Proofcheck.lean::TraceLean.Proofcheck::a_clause_is_proved_only_when_its_model_is_pinned",
+      "body_hash": "5776ee03412cb19f",
+      "link_hash": "7629474e5c730472",
+      "qualifier": null
+    },
+    {
+      "role": "proves",
+      "req": "REQ-STRENGTH",
       "clause": "qualifies_proof",
       "file": "formal/TraceLean/Proofcheck.lean",
       "anchor": "formal/TraceLean/Proofcheck.lean::TraceLean.Proofcheck::a_pinned_model_names_a_pin_it_was_checked_with",
@@ -18961,7 +19434,7 @@
       "clause": "hover_shows_change",
       "file": "formal/TraceLean/HistoryView.lean",
       "anchor": "formal/TraceLean/HistoryView.lean::TraceLean.HistoryView::pointing_shows_every_added_and_removed_line",
-      "body_hash": "d27d74d1998d2b13",
+      "body_hash": "8654c6986cec79a7",
       "link_hash": "3a65d7cdd7051cd8",
       "qualifier": null
     },
@@ -19741,7 +20214,7 @@
       "clause": "no_launch",
       "file": "crates/core/tests/architecture.rs",
       "anchor": "crates/core/tests/architecture.rs::nothing_here_launches_a_coding_agent",
-      "body_hash": "ac1a404c3a1e74c3",
+      "body_hash": "43ddbd8c935c6df9",
       "link_hash": "ca989c5c09b20e2f",
       "qualifier": "structural"
     },
@@ -19761,7 +20234,7 @@
       "clause": "observation_only",
       "file": "crates/core/tests/architecture.rs",
       "anchor": "crates/core/tests/architecture.rs::nothing_here_launches_a_coding_agent",
-      "body_hash": "ac1a404c3a1e74c3",
+      "body_hash": "43ddbd8c935c6df9",
       "link_hash": "0469bfd3aef8e007",
       "qualifier": "structural"
     },
@@ -19771,7 +20244,7 @@
       "clause": "user_runs_it",
       "file": "crates/core/tests/architecture.rs",
       "anchor": "crates/core/tests/architecture.rs::nothing_here_launches_a_coding_agent",
-      "body_hash": "ac1a404c3a1e74c3",
+      "body_hash": "43ddbd8c935c6df9",
       "link_hash": "899e1f0090785230",
       "qualifier": "structural"
     },
@@ -20189,6 +20662,26 @@
       "role": "tests",
       "req": "REQ-ANCHOR",
       "clause": "imprecise_capped",
+      "file": "crates/core/src/trace/anchor.rs",
+      "anchor": "crates/core/src/trace/anchor.rs::tests::lean_that_the_term_grammar_could_not_read_is_read_precisely",
+      "body_hash": "ec8096738f0fa8d8",
+      "link_hash": "b7962e2853450d0b",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-ANCHOR",
+      "clause": "imprecise_capped",
+      "file": "crates/core/tests/command_line.rs",
+      "anchor": "crates/core/tests/command_line.rs::a_file_is_said_to_parse_or_its_broken_lines_are_named",
+      "body_hash": "cfd4a0842c236383",
+      "link_hash": "88286fe25e60ab74",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-ANCHOR",
+      "clause": "imprecise_capped",
       "file": "crates/core/tests/differential_hash.rs",
       "anchor": "crates/core/tests/differential_hash.rs::generation_reaches_both_branches_of_the_cap",
       "body_hash": "f3134c61a11f8406",
@@ -20230,6 +20723,16 @@
       "req": "REQ-ANCHOR",
       "clause": "symbol_not_line",
       "file": "crates/core/src/trace/anchor.rs",
+      "anchor": "crates/core/src/trace/anchor.rs::tests::a_comment_after_a_scope_command_is_read_and_the_scope_still_closes",
+      "body_hash": "fc77d13b679af326",
+      "link_hash": "33084656fb22af05",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-ANCHOR",
+      "clause": "symbol_not_line",
+      "file": "crates/core/src/trace/anchor.rs",
       "anchor": "crates/core/src/trace/anchor.rs::tests::a_constructor_doc_comment_binds_to_its_inductive",
       "body_hash": "2274808ec9926c9b",
       "link_hash": "32f35419fbcb0475",
@@ -20259,6 +20762,16 @@
       "role": "tests",
       "req": "REQ-ANCHOR",
       "clause": "symbol_not_line",
+      "file": "crates/core/src/trace/anchor.rs",
+      "anchor": "crates/core/src/trace/anchor.rs::tests::lean_that_the_term_grammar_could_not_read_is_read_precisely",
+      "body_hash": "ec8096738f0fa8d8",
+      "link_hash": "31db1748d04c11b5",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-ANCHOR",
+      "clause": "symbol_not_line",
       "file": "crates/core/tests/differential_hash.rs",
       "anchor": "crates/core/tests/differential_hash.rs::generation_reaches_every_shape_an_anchor_can_take",
       "body_hash": "1fc2bc8111c0122c",
@@ -20273,6 +20786,16 @@
       "anchor": "crates/core/tests/differential_hash.rs::model_and_implementation_agree_on_an_anchors_identity",
       "body_hash": "53861c7acfd5ac44",
       "link_hash": "5bfa1e6e58bd925c",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-ANCHOR",
+      "clause": "symbol_not_line",
+      "file": "crates/core/tests/lean_grammar.rs",
+      "anchor": "crates/core/tests/lean_grammar.rs::lean_s_own_sources_parse_and_every_declaration_is_found",
+      "body_hash": "c08203e40d24ab6f",
+      "link_hash": "8ce6d00d6d744c14",
       "qualifier": null
     },
     {
@@ -20293,6 +20816,16 @@
       "anchor": "crates/core/tests/differential_hash.rs::model_and_implementation_agree_on_the_normalised_body",
       "body_hash": "ee4d5008d01e9f1b",
       "link_hash": "aafaa1b2cbfcfbc9",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-ANNOT",
+      "clause": "comments_only",
+      "file": "crates/core/src/trace/anchor.rs",
+      "anchor": "crates/core/src/trace/anchor.rs::tests::a_comment_after_a_scope_command_is_read_and_the_scope_still_closes",
+      "body_hash": "fc77d13b679af326",
+      "link_hash": "40e9660b58900bcc",
       "qualifier": null
     },
     {
@@ -20469,6 +21002,16 @@
       "role": "tests",
       "req": "REQ-ANNOT",
       "clause": "totality",
+      "file": "crates/core/tests/lean_grammar.rs",
+      "anchor": "crates/core/tests/lean_grammar.rs::lean_s_own_sources_parse_and_every_declaration_is_found",
+      "body_hash": "c08203e40d24ab6f",
+      "link_hash": "896f908e96662dbc",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-ANNOT",
+      "clause": "totality",
       "file": "crates/core/tests/properties.rs",
       "anchor": "crates/core/tests/properties.rs::a_malformed_annotation_is_reported_and_not_dropped",
       "body_hash": "da1675055266a259",
@@ -20553,6 +21096,16 @@
       "anchor": "crates/core/tests/differential_checker.rs::model_and_implementation_agree_on_what_roles_imply",
       "body_hash": "5b84bc7597ca5a1a",
       "link_hash": "e937b3f65d8544a2",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-CHECK",
+      "clause": "named_kinds",
+      "file": "crates/core/tests/command_line.rs",
+      "anchor": "crates/core/tests/command_line.rs::the_listing_names_requirements_links_documents_and_findings_by_kind",
+      "body_hash": "dec4ea6755362054",
+      "link_hash": "211baa6cdef9cd9f",
       "qualifier": null
     },
     {
@@ -20811,7 +21364,7 @@
       "clause": "structural_rejects",
       "file": "crates/core/tests/lean_grammar.rs",
       "anchor": "crates/core/tests/lean_grammar.rs::a_malformed_declaration_is_still_reported",
-      "body_hash": "fb3d39570d7c96ba",
+      "body_hash": "855c7609dbcd40a3",
       "link_hash": "c22ef1aa309e47af",
       "qualifier": null
     },
@@ -21079,6 +21632,16 @@
       "role": "tests",
       "req": "REQ-CONTEXT",
       "clause": "from_the_shell",
+      "file": "crates/core/tests/command_line.rs",
+      "anchor": "crates/core/tests/command_line.rs::the_context_of_a_clause_is_printed_and_an_unknown_one_is_refused",
+      "body_hash": "8f6e9da9d4f2f346",
+      "link_hash": "64c3423033d672f8",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-CONTEXT",
+      "clause": "from_the_shell",
       "file": "crates/core/tests/differential_context.rs",
       "anchor": "crates/core/tests/differential_context.rs::model_and_implementation_agree_on_the_parts_a_shell_asks_for",
       "body_hash": "910418523e6ddb09",
@@ -21319,6 +21882,16 @@
       "role": "tests",
       "req": "REQ-DIFF",
       "clause": "base_from_history",
+      "file": "crates/core/tests/command_line.rs",
+      "anchor": "crates/core/tests/command_line.rs::the_difference_and_the_report_are_taken_against_a_revision",
+      "body_hash": "ca348b3dde94add0",
+      "link_hash": "64b5b0520e7142bc",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-DIFF",
+      "clause": "base_from_history",
       "file": "crates/core/tests/evidence_diff.rs",
       "anchor": "crates/core/tests/evidence_diff.rs::a_revision_is_compared_without_being_checked_out",
       "body_hash": "cff050aec834fab3",
@@ -21373,6 +21946,16 @@
       "anchor": "crates/core/tests/differential_diff.rs::model_and_implementation_agree_on_what_a_change_did",
       "body_hash": "dd1aa82abdee02e3",
       "link_hash": "3182c3962e4fa297",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-DIFF",
+      "clause": "text_shown",
+      "file": "crates/core/tests/command_line.rs",
+      "anchor": "crates/core/tests/command_line.rs::the_difference_and_the_report_are_taken_against_a_revision",
+      "body_hash": "ca348b3dde94add0",
+      "link_hash": "a857edad1c576108",
       "qualifier": null
     },
     {
@@ -21449,6 +22032,16 @@
       "role": "tests",
       "req": "REQ-DOCLINK",
       "clause": "dangling_reported",
+      "file": "crates/core/tests/command_line.rs",
+      "anchor": "crates/core/tests/command_line.rs::the_listing_names_requirements_links_documents_and_findings_by_kind",
+      "body_hash": "dec4ea6755362054",
+      "link_hash": "08c68e406b65a62a",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-DOCLINK",
+      "clause": "dangling_reported",
       "file": "crates/core/tests/doclink_drift.rs",
       "anchor": "crates/core/tests/doclink_drift.rs::no_document_describes_something_that_does_not_exist",
       "body_hash": "20046175f529eb76",
@@ -21503,6 +22096,16 @@
       "anchor": "crates/core/src/trace/doclink.rs::tests::a_moved_hash_puts_the_document_in_review",
       "body_hash": "356b8ffbef85349e",
       "link_hash": "3effac66f06a5caf",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-DOCLINK",
+      "clause": "hash_moves_review",
+      "file": "crates/core/tests/command_line.rs",
+      "anchor": "crates/core/tests/command_line.rs::the_listing_names_requirements_links_documents_and_findings_by_kind",
+      "body_hash": "dec4ea6755362054",
+      "link_hash": "bcb9febba951a4ee",
       "qualifier": null
     },
     {
@@ -21713,6 +22316,16 @@
       "anchor": "crates/tui/tests/driving.rs::a_key_nothing_binds_is_refused_where_a_person_can_see_it",
       "body_hash": "fc1f7a082f7e37da",
       "link_hash": "3db47ae5b20a8ceb",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-DRIVE",
+      "clause": "screen_answers_for_the_frontend",
+      "file": "crates/tui/tests/driving.rs",
+      "anchor": "crates/tui/tests/driving.rs::a_question_takes_a_correction_switches_its_scope_and_answers",
+      "body_hash": "1965792b5e1e30fe",
+      "link_hash": "eae2151e7f03616d",
       "qualifier": null
     },
     {
@@ -22373,16 +22986,6 @@
       "anchor": "crates/core/tests/differential_find.rs::generation_reaches_colours_and_values_that_are_none",
       "body_hash": "5555d6ce99ba2e60",
       "link_hash": "ab478cc6526cc102",
-      "qualifier": null
-    },
-    {
-      "role": "tests",
-      "req": "REQ-DRT-COVER",
-      "clause": "law_coverage",
-      "file": "crates/core/tests/differential_find.rs",
-      "anchor": "crates/core/tests/differential_find.rs::generation_reaches_each_thing_a_server_can_answer",
-      "body_hash": "ac79cdecd5281d9c",
-      "link_hash": "9c10ea225dfe7114",
       "qualifier": null
     },
     {
@@ -24377,6 +24980,276 @@
     },
     {
       "role": "tests",
+      "req": "REQ-FIGURE",
+      "clause": "card_on_hover",
+      "file": "crates/editor/tests/figures.rs",
+      "anchor": "crates/editor/tests/figures.rs::a_card_holds_the_clause_its_words_and_who_claims_it",
+      "body_hash": "0adcccc5fc76576b",
+      "link_hash": "f45b3270e385291c",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-FIGURE",
+      "clause": "graph_filtered",
+      "file": "crates/editor/tests/pointer.rs",
+      "anchor": "crates/editor/tests/pointer.rs::the_page_in_a_browser_passes_its_checks",
+      "body_hash": "49d448f6651a4505",
+      "link_hash": "729b8b86284127b5",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-FIGURE",
+      "clause": "impact_before_saving",
+      "file": "crates/editor/tests/figures.rs",
+      "anchor": "crates/editor/tests/figures.rs::impact_is_once_per_file_for_changed_files_only_and_sorted",
+      "body_hash": "16c4ab89c9f66420",
+      "link_hash": "53c50aca104bab77",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-FIGURE",
+      "clause": "runs_listed",
+      "file": "crates/editor/tests/figures.rs",
+      "anchor": "crates/editor/tests/figures.rs::each_compared_operation_with_a_run_on_record_is_listed",
+      "body_hash": "897dbb112339e322",
+      "link_hash": "b65e594f2afb5c8f",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-FIGURE",
+      "clause": "treemap_areas",
+      "file": "crates/editor/tests/pointer.rs",
+      "anchor": "crates/editor/tests/pointer.rs::the_page_in_a_browser_passes_its_checks",
+      "body_hash": "49d448f6651a4505",
+      "link_hash": "d2f641ada7706048",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-GUIDE",
+      "clause": "sections_unfold",
+      "file": "crates/core/src/surface/tutorial.rs",
+      "anchor": "crates/core/src/surface/tutorial.rs::tests::a_folded_section_is_one_row_and_an_unfolded_one_shows_its_lines",
+      "body_hash": "2ed1c379b92b03dd",
+      "link_hash": "89ff713ea084cb4e",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-GUIDE",
+      "clause": "sections_unfold",
+      "file": "crates/core/src/surface/tutorial.rs",
+      "anchor": "crates/core/src/surface/tutorial.rs::tests::the_shipped_tutorial_folds_and_every_fold_closes",
+      "body_hash": "f409923d276db571",
+      "link_hash": "d443477629da910b",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-GUIDE",
+      "clause": "sections_unfold",
+      "file": "crates/editor/tests/figures.rs",
+      "anchor": "crates/editor/tests/figures.rs::a_folded_tutorial_section_unfolds_and_folds_again",
+      "body_hash": "0494820ed42c2511",
+      "link_hash": "178a709dfd1a6940",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-GUIDE",
+      "clause": "tutorial_in_the_editor",
+      "file": "crates/editor/tests/figures.rs",
+      "anchor": "crates/editor/tests/figures.rs::a_folded_tutorial_section_unfolds_and_folds_again",
+      "body_hash": "0494820ed42c2511",
+      "link_hash": "4a373f5ffd2fa7db",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-HANDOFF",
+      "clause": "choice_opened",
+      "file": "crates/core/src/surface/handoff.rs",
+      "anchor": "crates/core/src/surface/handoff.rs::tests::the_picker_is_the_desktop_own_and_its_line_is_the_folder",
+      "body_hash": "592dac69dd6db8aa",
+      "link_hash": "28b9d9f3e685997b",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-HANDOFF",
+      "clause": "choice_opened",
+      "file": "crates/core/tests/handoff.rs",
+      "anchor": "crates/core/tests/handoff.rs::a_question_is_answered_away_from_the_keys",
+      "body_hash": "1ffd5565ee96ad79",
+      "link_hash": "f7576284155e3f34",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-HANDOFF",
+      "clause": "choice_opened",
+      "file": "crates/core/tests/handoff.rs",
+      "anchor": "crates/core/tests/handoff.rs::model_and_implementation_agree_on_what_the_picker_chose",
+      "body_hash": "b16a78a4f260ce79",
+      "link_hash": "b1170c7a1b0d8460",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-HANDOFF",
+      "clause": "choice_opened",
+      "file": "crates/editor/tests/editing.rs",
+      "anchor": "crates/editor/tests/editing.rs::space_p_opens_the_folder_the_picker_chose_and_nothing_when_closed",
+      "body_hash": "81e900ea146eb648",
+      "link_hash": "c9383f940001c0fc",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-HANDOFF",
+      "clause": "failure_named",
+      "file": "crates/core/tests/handoff.rs",
+      "anchor": "crates/core/tests/handoff.rs::a_program_that_cannot_start_is_named",
+      "body_hash": "dd0e64cf93a827c5",
+      "link_hash": "7299880b81cd1d95",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-HANDOFF",
+      "clause": "failure_named",
+      "file": "crates/editor/tests/editing.rs",
+      "anchor": "crates/editor/tests/editing.rs::a_hand_off_that_fails_is_named_on_the_status_line",
+      "body_hash": "9377e753a588d114",
+      "link_hash": "aadaa21470164347",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-HANDOFF",
+      "clause": "file_to_vscode",
+      "file": "crates/core/src/surface/handoff.rs",
+      "anchor": "crates/core/src/surface/handoff.rs::tests::vscode_is_sent_to_the_cursor_counted_from_one",
+      "body_hash": "598380bb8508217f",
+      "link_hash": "f63e5a7fd362ff26",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-HANDOFF",
+      "clause": "file_to_vscode",
+      "file": "crates/core/tests/handoff.rs",
+      "anchor": "crates/core/tests/handoff.rs::model_and_implementation_agree_on_how_vscode_is_started",
+      "body_hash": "9d05333f83cc7405",
+      "link_hash": "fb51104b9a00a394",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-HANDOFF",
+      "clause": "file_to_vscode",
+      "file": "crates/editor/tests/editing.rs",
+      "anchor": "crates/editor/tests/editing.rs::space_f_v_hands_the_file_to_vscode_at_the_cursor",
+      "body_hash": "883a8b693c4909a0",
+      "link_hash": "5e5fc140d3a4e450",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-HANDOFF",
+      "clause": "folder_picked",
+      "file": "crates/core/src/surface/handoff.rs",
+      "anchor": "crates/core/src/surface/handoff.rs::tests::the_picker_is_the_desktop_own_and_its_line_is_the_folder",
+      "body_hash": "592dac69dd6db8aa",
+      "link_hash": "53180ff3d25b336b",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-HANDOFF",
+      "clause": "folder_picked",
+      "file": "crates/core/tests/handoff.rs",
+      "anchor": "crates/core/tests/handoff.rs::model_and_implementation_agree_on_the_folder_picker",
+      "body_hash": "fd7ee664de5a9678",
+      "link_hash": "4686009784adf6db",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-HANDOFF",
+      "clause": "folder_picked",
+      "file": "crates/editor/tests/editing.rs",
+      "anchor": "crates/editor/tests/editing.rs::space_p_opens_the_folder_the_picker_chose_and_nothing_when_closed",
+      "body_hash": "81e900ea146eb648",
+      "link_hash": "8ab3092796f756ac",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-HANDOFF",
+      "clause": "report_to_browser",
+      "file": "crates/core/src/surface/handoff.rs",
+      "anchor": "crates/core/src/surface/handoff.rs::tests::the_page_goes_to_the_system_browser",
+      "body_hash": "5d2de74dab113912",
+      "link_hash": "844c3bec37505651",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-HANDOFF",
+      "clause": "report_to_browser",
+      "file": "crates/core/tests/handoff.rs",
+      "anchor": "crates/core/tests/handoff.rs::model_and_implementation_agree_on_how_the_browser_is_started",
+      "body_hash": "768b09f054779ba7",
+      "link_hash": "080e912f9a049408",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-HANDOFF",
+      "clause": "report_to_browser",
+      "file": "crates/editor/tests/editing.rs",
+      "anchor": "crates/editor/tests/editing.rs::the_report_opens_in_the_browser_from_the_editor_and_not_from_a_view",
+      "body_hash": "dfed8e5c5ce3535b",
+      "link_hash": "c67bd918e3f3c9e1",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-HANDOFF",
+      "clause": "started_not_driven",
+      "file": "crates/core/tests/handoff.rs",
+      "anchor": "crates/core/tests/handoff.rs::a_handed_off_program_is_given_no_input",
+      "body_hash": "3a0d6d9dc63a80d2",
+      "link_hash": "f0dd3215f0b89740",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-HANDOFF",
+      "clause": "started_not_driven",
+      "file": "crates/core/tests/handoff.rs",
+      "anchor": "crates/core/tests/handoff.rs::a_handed_off_program_is_not_waited_for",
+      "body_hash": "f2984336e20ff8f6",
+      "link_hash": "22d224dbdb4c80cc",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-HANDOFF",
+      "clause": "started_not_driven",
+      "file": "crates/core/tests/handoff.rs",
+      "anchor": "crates/core/tests/handoff.rs::a_question_is_answered_away_from_the_keys",
+      "body_hash": "1ffd5565ee96ad79",
+      "link_hash": "3fcb891021e41b7d",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
       "req": "REQ-JUDGE",
       "clause": "advice_is_not_evidence",
       "file": "crates/core/tests/differential_judge.rs",
@@ -24469,6 +25342,16 @@
       "role": "tests",
       "req": "REQ-JUDGE",
       "clause": "drift_recorded",
+      "file": "crates/core/tests/command_line.rs",
+      "anchor": "crates/core/tests/command_line.rs::a_judgement_needs_a_clause_a_model_a_verdict_and_a_name",
+      "body_hash": "a05ea1792d4cf12d",
+      "link_hash": "5bb8dd9dd42ee30f",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-JUDGE",
+      "clause": "drift_recorded",
       "file": "crates/core/tests/differential_judge.rs",
       "anchor": "crates/core/tests/differential_judge.rs::generation_reaches_every_verdict_and_none_exceeds_l2",
       "body_hash": "aa39dbbe8e472460",
@@ -24523,6 +25406,16 @@
       "anchor": "crates/core/src/judge.rs::tests::agreement_records_a_judgement_and_nothing_more",
       "body_hash": "dfda0abcac74031d",
       "link_hash": "54e759b2516e8af1",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-JUDGE",
+      "clause": "human_decides",
+      "file": "crates/core/tests/command_line.rs",
+      "anchor": "crates/core/tests/command_line.rs::a_judgement_needs_a_clause_a_model_a_verdict_and_a_name",
+      "body_hash": "a05ea1792d4cf12d",
+      "link_hash": "ef4f8c2126289748",
       "qualifier": null
     },
     {
@@ -24669,6 +25562,16 @@
       "role": "tests",
       "req": "REQ-JUDGE",
       "clause": "prompt_exported",
+      "file": "crates/core/tests/command_line.rs",
+      "anchor": "crates/core/tests/command_line.rs::a_judgement_needs_a_clause_a_model_a_verdict_and_a_name",
+      "body_hash": "a05ea1792d4cf12d",
+      "link_hash": "bc6855b4dd5476fb",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-JUDGE",
+      "clause": "prompt_exported",
       "file": "crates/core/tests/differential_judge.rs",
       "anchor": "crates/core/tests/differential_judge.rs::model_and_implementation_agree_on_the_prompt",
       "body_hash": "199f16040da7f5b7",
@@ -24693,6 +25596,16 @@
       "anchor": "crates/core/src/judge.rs::tests::unmodelable_produces_a_proposal_and_changes_nothing",
       "body_hash": "86166ecf9500b5ed",
       "link_hash": "68bb378509756ebe",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-JUDGE",
+      "clause": "proposal_not_mutation",
+      "file": "crates/core/tests/command_line.rs",
+      "anchor": "crates/core/tests/command_line.rs::a_judgement_needs_a_clause_a_model_a_verdict_and_a_name",
+      "body_hash": "a05ea1792d4cf12d",
+      "link_hash": "4e2c269727a33ee9",
       "qualifier": null
     },
     {
@@ -24738,6 +25651,16 @@
     {
       "role": "tests",
       "req": "REQ-LINECOV",
+      "clause": "children_counted",
+      "file": "crates/editor/tests/coverage.rs",
+      "anchor": "crates/editor/tests/coverage.rs::the_lines_a_test_runs_through_the_built_program_count_as_run",
+      "body_hash": "6097051f919e95e2",
+      "link_hash": "02677ac6003c326b",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-LINECOV",
       "clause": "clause_summary",
       "file": "crates/core/src/trace/lines.rs",
       "anchor": "crates/core/src/trace/lines.rs::tests::a_span_counts_its_executable_lines",
@@ -24768,6 +25691,16 @@
     {
       "role": "tests",
       "req": "REQ-LINECOV",
+      "clause": "ignored_included",
+      "file": "crates/editor/tests/coverage.rs",
+      "anchor": "crates/editor/tests/coverage.rs::an_ignored_test_counts_only_when_the_ignored_tests_are_asked_for",
+      "body_hash": "c55751693166726a",
+      "link_hash": "1b7575ad819db707",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-LINECOV",
       "clause": "lines_listed",
       "file": "crates/core/src/surface/coverage_view.rs",
       "anchor": "crates/core/src/surface/coverage_view.rs::tests::the_tests_behind_an_item_and_its_unrun_lines_are_listed",
@@ -24791,7 +25724,7 @@
       "clause": "lines_listed",
       "file": "crates/editor/tests/coverage.rs",
       "anchor": "crates/editor/tests/coverage.rs::uncovered_lines_and_the_tests_behind_each_line_are_shown",
-      "body_hash": "3b7b473565946d0a",
+      "body_hash": "b73000bbdaef9733",
       "link_hash": "48bc37623d41730c",
       "qualifier": null
     },
@@ -24821,7 +25754,7 @@
       "clause": "per_test",
       "file": "crates/editor/tests/coverage.rs",
       "anchor": "crates/editor/tests/coverage.rs::uncovered_lines_and_the_tests_behind_each_line_are_shown",
-      "body_hash": "3b7b473565946d0a",
+      "body_hash": "b73000bbdaef9733",
       "link_hash": "fddb7fb2b7d999f1",
       "qualifier": null
     },
@@ -24851,7 +25784,7 @@
       "clause": "requirement_summary",
       "file": "crates/editor/tests/coverage.rs",
       "anchor": "crates/editor/tests/coverage.rs::uncovered_lines_and_the_tests_behind_each_line_are_shown",
-      "body_hash": "3b7b473565946d0a",
+      "body_hash": "b73000bbdaef9733",
       "link_hash": "53ff591b6934a35f",
       "qualifier": null
     },
@@ -24891,7 +25824,7 @@
       "clause": "stale_hidden",
       "file": "crates/editor/tests/coverage.rs",
       "anchor": "crates/editor/tests/coverage.rs::uncovered_lines_and_the_tests_behind_each_line_are_shown",
-      "body_hash": "3b7b473565946d0a",
+      "body_hash": "b73000bbdaef9733",
       "link_hash": "68b433260cf42f9f",
       "qualifier": null
     },
@@ -24921,7 +25854,7 @@
       "clause": "uncovered_shown",
       "file": "crates/editor/tests/coverage.rs",
       "anchor": "crates/editor/tests/coverage.rs::uncovered_lines_and_the_tests_behind_each_line_are_shown",
-      "body_hash": "3b7b473565946d0a",
+      "body_hash": "b73000bbdaef9733",
       "link_hash": "840e5cbf5bbf9bc2",
       "qualifier": null
     },
@@ -25009,6 +25942,16 @@
       "role": "tests",
       "req": "REQ-LOCK",
       "clause": "evidence_preserved",
+      "file": "crates/core/tests/command_line.rs",
+      "anchor": "crates/core/tests/command_line.rs::a_change_is_listed_as_stale_and_the_lock_drops_what_lost_its_link",
+      "body_hash": "7496a8eb093ca49d",
+      "link_hash": "99d3bdc29e680935",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-LOCK",
+      "clause": "evidence_preserved",
       "file": "crates/core/tests/differential_lockfile.rs",
       "anchor": "crates/core/tests/differential_lockfile.rs::generation_reaches_every_backend_and_evidence_is_carried",
       "body_hash": "69aad0c15a7182df",
@@ -25048,6 +25991,16 @@
     {
       "role": "tests",
       "req": "REQ-LOCK",
+      "clause": "evidence_preserved",
+      "file": "crates/editor/tests/reports.rs",
+      "anchor": "crates/editor/tests/reports.rs::the_plain_reports_name_their_empty_state",
+      "body_hash": "832bbad4509ec5be",
+      "link_hash": "6bdb87d5e48749ea",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-LOCK",
       "clause": "pure_render",
       "file": "crates/core/tests/properties.rs",
       "anchor": "crates/core/tests/properties.rs::rendering_the_index_reads_nothing_and_invents_nothing",
@@ -25081,7 +26034,7 @@
       "clause": "accessible_structure",
       "file": "crates/editor/tests/pointer.rs",
       "anchor": "crates/editor/tests/pointer.rs::the_page_in_a_browser_passes_its_checks",
-      "body_hash": "4a3b8c19be59eb57",
+      "body_hash": "49d448f6651a4505",
       "link_hash": "f1e85346d5ee24a4",
       "qualifier": "structural"
     },
@@ -25093,6 +26046,16 @@
       "anchor": "crates/core/src/surface/contrast.rs::tests::an_unreadable_pair_an_unknown_colour_and_a_stale_waiver_are_found",
       "body_hash": "737bdd0eeb64e6f8",
       "link_hash": "b802f81a952acf68",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-LOOK",
+      "clause": "contrast_sufficient",
+      "file": "crates/core/src/surface/contrast.rs",
+      "anchor": "crates/core/src/surface/contrast.rs::tests::the_light_theme_is_readable_with_no_waiver",
+      "body_hash": "acc0bf56f8154aff",
+      "link_hash": "e2df1f1a0a3ccdf7",
       "qualifier": null
     },
     {
@@ -25121,7 +26084,7 @@
       "clause": "focus_visible",
       "file": "crates/editor/tests/pointer.rs",
       "anchor": "crates/editor/tests/pointer.rs::the_page_in_a_browser_passes_its_checks",
-      "body_hash": "4a3b8c19be59eb57",
+      "body_hash": "49d448f6651a4505",
       "link_hash": "aeb697c3b938e109",
       "qualifier": null
     },
@@ -25141,7 +26104,7 @@
       "clause": "journeys_replay",
       "file": "crates/editor/tests/pointer.rs",
       "anchor": "crates/editor/tests/pointer.rs::the_page_in_a_browser_passes_its_checks",
-      "body_hash": "4a3b8c19be59eb57",
+      "body_hash": "49d448f6651a4505",
       "link_hash": "cd97dcd8bfb3c849",
       "qualifier": null
     },
@@ -25158,10 +26121,40 @@
     {
       "role": "tests",
       "req": "REQ-LOOK",
+      "clause": "menu_bar_lists_leader",
+      "file": "crates/editor/tests/figures.rs",
+      "anchor": "crates/editor/tests/figures.rs::the_menu_bar_has_a_group_per_leader_entry_and_only_real_actions",
+      "body_hash": "5af5e2685f1579b0",
+      "link_hash": "ec30d2320535b7d5",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-LOOK",
+      "clause": "overview_drawn",
+      "file": "crates/editor/tests/pointer.rs",
+      "anchor": "crates/editor/tests/pointer.rs::the_page_in_a_browser_passes_its_checks",
+      "body_hash": "49d448f6651a4505",
+      "link_hash": "4e42e448bcc14b4c",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-LOOK",
+      "clause": "pointer_reaches_actions",
+      "file": "crates/tui/src/main.rs",
+      "anchor": "crates/tui/src/main.rs::tests::a_cell_names_the_character_drawn_there_or_the_end_of_its_row",
+      "body_hash": "f393cedab09dc009",
+      "link_hash": "8827d9dc84f02ad6",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-LOOK",
       "clause": "regions_present",
       "file": "crates/editor/tests/pointer.rs",
       "anchor": "crates/editor/tests/pointer.rs::the_page_in_a_browser_passes_its_checks",
-      "body_hash": "4a3b8c19be59eb57",
+      "body_hash": "49d448f6651a4505",
       "link_hash": "88594d140acf6dbd",
       "qualifier": null
     },
@@ -25248,11 +26241,31 @@
     {
       "role": "tests",
       "req": "REQ-LOOK",
+      "clause": "scroll_is_one_draw_per_frame",
+      "file": "crates/editor/tests/pointer.rs",
+      "anchor": "crates/editor/tests/pointer.rs::the_page_in_a_browser_passes_its_checks",
+      "body_hash": "49d448f6651a4505",
+      "link_hash": "52ee7fc9bee13756",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-LOOK",
       "clause": "setting_edited_in_place",
       "file": "crates/core/src/surface/setting.rs",
       "anchor": "crates/core/src/surface/setting.rs::tests::a_colour_is_a_hash_and_three_to_eight_hex_digits",
       "body_hash": "17a1543ab4d1d79f",
       "link_hash": "584ca5953f5bc6cc",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-LOOK",
+      "clause": "setting_edited_in_place",
+      "file": "crates/core/src/surface/setting.rs",
+      "anchor": "crates/core/src/surface/setting.rs::tests::a_layout_setting_takes_only_its_own_choices",
+      "body_hash": "ce6ff3f503496c03",
+      "link_hash": "b54850ad2dcd0e3c",
       "qualifier": null
     },
     {
@@ -25283,6 +26296,36 @@
       "anchor": "crates/editor/tests/editing.rs::a_setting_is_written_to_the_override_and_a_bad_value_is_refused",
       "body_hash": "bee4bb64adad364f",
       "link_hash": "7942ca67f4bf59dc",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-LOOK",
+      "clause": "setting_edited_in_place",
+      "file": "crates/editor/tests/reports.rs",
+      "anchor": "crates/editor/tests/reports.rs::a_setting_is_asked_for_with_its_value_and_saved_on_enter",
+      "body_hash": "e847e202ef43aeaa",
+      "link_hash": "7b911539d66ed2fa",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-LOOK",
+      "clause": "theme_switched",
+      "file": "crates/editor/src/theme.rs",
+      "anchor": "crates/editor/src/theme.rs::tests::switching_flips_the_base_and_keeps_the_projects_own_colours",
+      "body_hash": "dcc89f0ea4b61cbe",
+      "link_hash": "d6bef23a16863c4e",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-LOOK",
+      "clause": "zoom_steps",
+      "file": "crates/core/src/surface/setting.rs",
+      "anchor": "crates/core/src/surface/setting.rs::tests::zoom_steps_by_ten_and_stops_at_its_ends",
+      "body_hash": "e61e6ca9362250d1",
+      "link_hash": "1d80879538d46032",
       "qualifier": null
     },
     {
@@ -25388,46 +26431,6 @@
     {
       "role": "tests",
       "req": "REQ-LSP",
-      "clause": "goals_close_with_the_file",
-      "file": "crates/core/tests/differential_screen.rs",
-      "anchor": "crates/core/tests/differential_screen.rs::model_and_implementation_agree_on_what_closes_with_the_goals",
-      "body_hash": "b1267b8164e5bf5f",
-      "link_hash": "133bee4881c207d3",
-      "qualifier": null
-    },
-    {
-      "role": "tests",
-      "req": "REQ-LSP",
-      "clause": "goals_close_with_the_file",
-      "file": "crates/editor/tests/editing.rs",
-      "anchor": "crates/editor/tests/editing.rs::the_goals_open_and_close_with_the_lean_file",
-      "body_hash": "e6a1d14e62240ad1",
-      "link_hash": "5ae7b5a98bd030f2",
-      "qualifier": null
-    },
-    {
-      "role": "tests",
-      "req": "REQ-LSP",
-      "clause": "goals_open_with_the_file",
-      "file": "crates/core/tests/differential_screen.rs",
-      "anchor": "crates/core/tests/differential_screen.rs::model_and_implementation_agree_on_when_the_goals_open",
-      "body_hash": "74f1b9c7083c3506",
-      "link_hash": "50c6616b3dd36891",
-      "qualifier": null
-    },
-    {
-      "role": "tests",
-      "req": "REQ-LSP",
-      "clause": "goals_open_with_the_file",
-      "file": "crates/editor/tests/editing.rs",
-      "anchor": "crates/editor/tests/editing.rs::the_goals_open_and_close_with_the_lean_file",
-      "body_hash": "e6a1d14e62240ad1",
-      "link_hash": "d1fd561007d3cb7c",
-      "qualifier": null
-    },
-    {
-      "role": "tests",
-      "req": "REQ-LSP",
       "clause": "offset_to_column",
       "file": "crates/core/src/surface/lsp.rs",
       "anchor": "crates/core/src/surface/lsp.rs::tests::positions_round_trip_in_every_encoding",
@@ -25483,86 +26486,6 @@
       "anchor": "crates/core/tests/differential_surface.rs::model_and_implementation_agree_on_lowering_edits",
       "body_hash": "8944bbccafc8db53",
       "link_hash": "5f6daf9bb79ae48c",
-      "qualifier": null
-    },
-    {
-      "role": "tests",
-      "req": "REQ-LSP",
-      "clause": "proof_state_shown",
-      "file": "crates/core/src/lean_server.rs",
-      "anchor": "crates/core/src/lean_server.rs::tests::a_column_counts_utf16_units",
-      "body_hash": "0c216e9491939be2",
-      "link_hash": "104e2ad11f9a5d6a",
-      "qualifier": null
-    },
-    {
-      "role": "tests",
-      "req": "REQ-LSP",
-      "clause": "proof_state_shown",
-      "file": "crates/core/src/lean_server.rs",
-      "anchor": "crates/core/src/lean_server.rs::tests::a_message_is_framed_by_its_length_in_bytes",
-      "body_hash": "cbdb6ef1d3c3a67f",
-      "link_hash": "14bdaf53cd2ad380",
-      "qualifier": null
-    },
-    {
-      "role": "tests",
-      "req": "REQ-LSP",
-      "clause": "proof_state_shown",
-      "file": "crates/core/src/lean_server.rs",
-      "anchor": "crates/core/src/lean_server.rs::tests::goals_are_read_from_the_answer",
-      "body_hash": "88ffa3d23383a9c4",
-      "link_hash": "bbfa3fcaf6ee0668",
-      "qualifier": null
-    },
-    {
-      "role": "tests",
-      "req": "REQ-LSP",
-      "clause": "proof_state_shown",
-      "file": "crates/core/src/lean_server.rs",
-      "anchor": "crates/core/src/lean_server.rs::tests::the_project_is_the_nearest_folder_with_a_toolchain",
-      "body_hash": "1508c25bb3f26be0",
-      "link_hash": "b1c6e8047a3bbd9d",
-      "qualifier": null
-    },
-    {
-      "role": "tests",
-      "req": "REQ-LSP",
-      "clause": "proof_state_shown",
-      "file": "crates/core/tests/differential_find.rs",
-      "anchor": "crates/core/tests/differential_find.rs::generation_reaches_each_thing_a_server_can_answer",
-      "body_hash": "ac79cdecd5281d9c",
-      "link_hash": "a25d1adab37f70d0",
-      "qualifier": null
-    },
-    {
-      "role": "tests",
-      "req": "REQ-LSP",
-      "clause": "proof_state_shown",
-      "file": "crates/core/tests/differential_find.rs",
-      "anchor": "crates/core/tests/differential_find.rs::model_and_implementation_agree_on_what_the_panel_says",
-      "body_hash": "234466982cfc2f1a",
-      "link_hash": "c6bee717119f6439",
-      "qualifier": null
-    },
-    {
-      "role": "tests",
-      "req": "REQ-LSP",
-      "clause": "proof_state_shown",
-      "file": "crates/editor/tests/editing.rs",
-      "anchor": "crates/editor/tests/editing.rs::the_goals_pane_shows_what_lean_reports_inside_a_proof",
-      "body_hash": "f252ff55a8c57c3f",
-      "link_hash": "9df939cbc6e10de6",
-      "qualifier": null
-    },
-    {
-      "role": "tests",
-      "req": "REQ-LSP",
-      "clause": "proof_state_shown",
-      "file": "crates/editor/tests/editing.rs",
-      "anchor": "crates/editor/tests/editing.rs::the_proof_panel_names_why_a_lean_file_has_no_goals",
-      "body_hash": "024f59c0b89cb96e",
-      "link_hash": "4112829cf748c1a3",
       "qualifier": null
     },
     {
@@ -25833,6 +26756,16 @@
       "anchor": "crates/core/tests/shipped_keymap.rs::the_keymap_the_project_ships_holds_together",
       "body_hash": "bec39d7ee47ee802",
       "link_hash": "1b15ce10afaca33e",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-MYTH",
+      "clause": "actions_reachable",
+      "file": "crates/tui/src/main.rs",
+      "anchor": "crates/tui/src/main.rs::tests::every_chord_is_named_as_the_keymap_names_it",
+      "body_hash": "f096a36af355cfe2",
+      "link_hash": "cc06587d3d75c0c3",
       "qualifier": null
     },
     {
@@ -26498,10 +27431,20 @@
     {
       "role": "tests",
       "req": "REQ-OBS",
+      "clause": "effects_become_commands",
+      "file": "crates/editor/tests/reports.rs",
+      "anchor": "crates/editor/tests/reports.rs::what_changed_on_disk_is_observed_listed_and_rejected_or_accepted",
+      "body_hash": "440b814749bb3cd6",
+      "link_hash": "62c749127720f681",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-OBS",
       "clause": "no_instruction_channel",
       "file": "crates/core/tests/observation_is_one_way.rs",
       "anchor": "crates/core/tests/observation_is_one_way.rs::nothing_writes_towards_the_tool",
-      "body_hash": "c8056f39e7388583",
+      "body_hash": "b1dea70ab2978645",
       "link_hash": "e2ec44675be7a413",
       "qualifier": "structural"
     },
@@ -26554,6 +27497,16 @@
       "body_hash": "c358546e3e27a927",
       "link_hash": "4f0033716de7eb25",
       "qualifier": "structural"
+    },
+    {
+      "role": "tests",
+      "req": "REQ-OBS",
+      "clause": "visible_while_running",
+      "file": "crates/editor/tests/reports.rs",
+      "anchor": "crates/editor/tests/reports.rs::what_changed_on_disk_is_observed_listed_and_rejected_or_accepted",
+      "body_hash": "440b814749bb3cd6",
+      "link_hash": "7cc9786445dbd1e8",
+      "qualifier": null
     },
     {
       "role": "tests",
@@ -26849,6 +27802,16 @@
       "role": "tests",
       "req": "REQ-REPORT",
       "clause": "changes_marked",
+      "file": "crates/core/tests/command_line.rs",
+      "anchor": "crates/core/tests/command_line.rs::the_difference_and_the_report_are_taken_against_a_revision",
+      "body_hash": "ca348b3dde94add0",
+      "link_hash": "347b186e58c72904",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-REPORT",
+      "clause": "changes_marked",
       "file": "crates/core/tests/report.rs",
       "anchor": "crates/core/tests/report.rs::every_clause_gets_a_card_with_its_evidence_findings_and_changes",
       "body_hash": "e5f4e6b6bdc7bbf3",
@@ -26879,6 +27842,16 @@
       "role": "tests",
       "req": "REQ-REPORT",
       "clause": "static_page",
+      "file": "crates/core/tests/command_line.rs",
+      "anchor": "crates/core/tests/command_line.rs::the_difference_and_the_report_are_taken_against_a_revision",
+      "body_hash": "ca348b3dde94add0",
+      "link_hash": "162c24f507dd81b6",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-REPORT",
+      "clause": "static_page",
       "file": "crates/core/tests/report.rs",
       "anchor": "crates/core/tests/report.rs::every_clause_gets_a_card_with_its_evidence_findings_and_changes",
       "body_hash": "e5f4e6b6bdc7bbf3",
@@ -26888,10 +27861,30 @@
     {
       "role": "tests",
       "req": "REQ-REPORT",
+      "clause": "static_page",
+      "file": "crates/editor/tests/editing.rs",
+      "anchor": "crates/editor/tests/editing.rs::the_report_names_its_page_by_an_absolute_path_when_the_project_is_relative",
+      "body_hash": "559a2e07e97f09da",
+      "link_hash": "d91181af448dd288",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-REPORT",
+      "clause": "static_page",
+      "file": "crates/editor/tests/editing.rs",
+      "anchor": "crates/editor/tests/editing.rs::the_report_station_writes_the_page_and_offers_the_revisions_to_compare",
+      "body_hash": "12eff2ea6414c712",
+      "link_hash": "a29fe48994d0324c",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-REPORT",
       "clause": "why_not_held",
       "file": "crates/core/tests/report.rs",
       "anchor": "crates/core/tests/report.rs::model_and_implementation_agree_on_why_a_mark_is_not_held",
-      "body_hash": "d1ce7e6d69430f02",
+      "body_hash": "f36b7a75313a7f9b",
       "link_hash": "19e191d250157f0c",
       "qualifier": null
     },
@@ -27868,6 +28861,16 @@
     {
       "role": "tests",
       "req": "REQ-SCREEN",
+      "clause": "station_produces_a_buffer",
+      "file": "crates/editor/tests/editing.rs",
+      "anchor": "crates/editor/tests/editing.rs::the_report_station_writes_the_page_and_offers_the_revisions_to_compare",
+      "body_hash": "12eff2ea6414c712",
+      "link_hash": "3cdc0e0fd8fa371b",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-SCREEN",
       "clause": "stations_are_constant",
       "file": "crates/core/tests/differential_screen.rs",
       "anchor": "crates/core/tests/differential_screen.rs::model_and_implementation_agree_on_the_stations",
@@ -28508,6 +29511,16 @@
     {
       "role": "tests",
       "req": "REQ-SHOW",
+      "clause": "requirement_opened",
+      "file": "crates/editor/tests/reports.rs",
+      "anchor": "crates/editor/tests/reports.rs::a_requirement_file_traces_each_clause_and_what_claims_it",
+      "body_hash": "3b46dc07330f64ec",
+      "link_hash": "884e18acaadde594",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-SHOW",
       "clause": "review_from_change",
       "file": "crates/core/src/surface/produce.rs",
       "anchor": "crates/core/src/surface/produce.rs::tests::a_review_shows_what_went_and_what_came_between_what_stayed",
@@ -28679,6 +29692,16 @@
       "role": "tests",
       "req": "REQ-STALE",
       "clause": "agreed_not_rerun",
+      "file": "crates/core/tests/command_line.rs",
+      "anchor": "crates/core/tests/command_line.rs::coverage_and_bindings_are_measured_once_and_then_held",
+      "body_hash": "db6e2911de0ec9b0",
+      "link_hash": "75acabeef581a3ac",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-STALE",
+      "clause": "agreed_not_rerun",
       "file": "crates/core/tests/differential_surface.rs",
       "anchor": "crates/core/tests/differential_surface.rs::model_and_implementation_agree_on_running_a_clause_again",
       "body_hash": "6f8eeb309ae28832",
@@ -28759,6 +29782,16 @@
       "role": "tests",
       "req": "REQ-STALE",
       "clause": "listed_for_a_script",
+      "file": "crates/core/tests/command_line.rs",
+      "anchor": "crates/core/tests/command_line.rs::a_change_is_listed_as_stale_and_the_lock_drops_what_lost_its_link",
+      "body_hash": "7496a8eb093ca49d",
+      "link_hash": "fdc6c2d91af9a13c",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-STALE",
+      "clause": "listed_for_a_script",
       "file": "crates/core/tests/stale_listing.rs",
       "anchor": "crates/core/tests/stale_listing.rs::the_exit_status_says_whether_anything_must_be_redone",
       "body_hash": "b75a28c2fad0aa87",
@@ -28773,6 +29806,16 @@
       "anchor": "crates/core/src/trace/lines.rs::sources_tests::the_sources_hash_moves_with_rust_files_and_manifests_only",
       "body_hash": "69702b664dc59095",
       "link_hash": "7d98a872f524a289",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-STALE",
+      "clause": "measured_not_retaken",
+      "file": "crates/core/tests/command_line.rs",
+      "anchor": "crates/core/tests/command_line.rs::coverage_and_bindings_are_measured_once_and_then_held",
+      "body_hash": "db6e2911de0ec9b0",
+      "link_hash": "02c1a486ec68c776",
       "qualifier": null
     },
     {
@@ -28929,6 +29972,16 @@
       "role": "tests",
       "req": "REQ-STALE",
       "clause": "stale_is_visible",
+      "file": "crates/core/tests/command_line.rs",
+      "anchor": "crates/core/tests/command_line.rs::a_change_is_listed_as_stale_and_the_lock_drops_what_lost_its_link",
+      "body_hash": "7496a8eb093ca49d",
+      "link_hash": "63d79378fa2451de",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-STALE",
+      "clause": "stale_is_visible",
       "file": "crates/core/tests/differential_surface.rs",
       "anchor": "crates/core/tests/differential_surface.rs::model_and_implementation_agree_on_a_whole_sweep",
       "body_hash": "2578ff2fe99f7fe0",
@@ -29059,6 +30112,16 @@
       "role": "tests",
       "req": "REQ-STRENGTH",
       "clause": "obligation_generated",
+      "file": "crates/core/tests/command_line.rs",
+      "anchor": "crates/core/tests/command_line.rs::the_strength_of_each_model_is_listed_with_the_obligation_asked_for",
+      "body_hash": "8b35aa9d2cde5cf2",
+      "link_hash": "05a2248af8071979",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-STRENGTH",
+      "clause": "obligation_generated",
       "file": "crates/core/tests/differential_proofcheck.rs",
       "anchor": "crates/core/tests/differential_proofcheck.rs::model_and_implementation_agree_on_which_statements_enter_the_obligation",
       "body_hash": "7f0dc8a71e745d9b",
@@ -29168,6 +30231,26 @@
     {
       "role": "tests",
       "req": "REQ-STRENGTH",
+      "clause": "proof_rests_on_the_specification",
+      "file": "crates/core/tests/proofs_are_earned.rs",
+      "anchor": "crates/core/tests/proofs_are_earned.rs::only_a_pinned_model_earns_its_clause_p_and_a_changed_theorem_takes_it_back",
+      "body_hash": "3ca9a47184baf752",
+      "link_hash": "ef1c2464f73ba8ce",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-STRENGTH",
+      "clause": "proof_states_the_model",
+      "file": "crates/core/tests/command_line.rs",
+      "anchor": "crates/core/tests/command_line.rs::the_proof_check_names_each_refused_theorem_with_its_reason",
+      "body_hash": "9cbd28d52820b128",
+      "link_hash": "18411afff3d0a418",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-STRENGTH",
       "clause": "proof_states_the_model",
       "file": "crates/core/tests/differential_proofcheck.rs",
       "anchor": "crates/core/tests/differential_proofcheck.rs::model_and_implementation_agree_on_what_a_theorem_earns",
@@ -29183,6 +30266,36 @@
       "anchor": "crates/core/tests/proofs_are_earned.rs::each_way_of_proving_nothing_is_refused_by_name",
       "body_hash": "22d1b3bada3ec285",
       "link_hash": "aed876dac43b362e",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-STRENGTH",
+      "clause": "proved_only_when_pinned",
+      "file": "crates/core/tests/command_line.rs",
+      "anchor": "crates/core/tests/command_line.rs::the_proof_check_names_each_refused_theorem_with_its_reason",
+      "body_hash": "9cbd28d52820b128",
+      "link_hash": "7caed0b8bfd2ef76",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-STRENGTH",
+      "clause": "proved_only_when_pinned",
+      "file": "crates/core/tests/differential_proofcheck.rs",
+      "anchor": "crates/core/tests/differential_proofcheck.rs::model_and_implementation_agree_on_when_a_clause_is_proved",
+      "body_hash": "b2075aae3252842c",
+      "link_hash": "d854c900d2db065f",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-STRENGTH",
+      "clause": "proved_only_when_pinned",
+      "file": "crates/core/tests/proofs_are_earned.rs",
+      "anchor": "crates/core/tests/proofs_are_earned.rs::only_a_pinned_model_earns_its_clause_p_and_a_changed_theorem_takes_it_back",
+      "body_hash": "3ca9a47184baf752",
+      "link_hash": "5481f9e0f6e280cf",
       "qualifier": null
     },
     {
@@ -29213,6 +30326,16 @@
       "anchor": "crates/core/tests/proofs_are_earned.rs::a_refused_theorem_is_a_finding_naming_it_its_clause_and_why",
       "body_hash": "cc7d94718dde07f1",
       "link_hash": "1bbebcb51a6abc41",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-STRENGTH",
+      "clause": "strength_per_model",
+      "file": "crates/core/tests/command_line.rs",
+      "anchor": "crates/core/tests/command_line.rs::the_strength_of_each_model_is_listed_with_the_obligation_asked_for",
+      "body_hash": "8b35aa9d2cde5cf2",
+      "link_hash": "7f0873edcb074702",
       "qualifier": null
     },
     {
@@ -31093,34 +32216,6 @@
     {
       "key": {
         "reqId": "ARCH-NO-DRIVING",
-        "clause": "no_launch",
-        "bond": "requirementModel"
-      },
-      "level": "L2",
-      "detail": {
-        "judge": {
-          "verdict": "agrees",
-          "judgedBy": "claude-review",
-          "delegatedBy": "ricostynha",
-          "promptVersion": "1",
-          "note": "Process spawning is refused outside the differential toolchain and Lean's own server, so no coding agent can be launched, prompted, steered or stopped."
-        }
-      },
-      "linkHash": "ca989c5c09b20e2f",
-      "inputs": [
-        [
-          "requirement",
-          "dff0e9ef281598df"
-        ],
-        [
-          "model",
-          "ac1a404c3a1e74c3"
-        ]
-      ]
-    },
-    {
-      "key": {
-        "reqId": "ARCH-NO-DRIVING",
         "clause": "no_model_call",
         "bond": "requirementModel"
       },
@@ -31143,62 +32238,6 @@
         [
           "model",
           "c5b1fedc3bbe403c"
-        ]
-      ]
-    },
-    {
-      "key": {
-        "reqId": "ARCH-NO-DRIVING",
-        "clause": "observation_only",
-        "bond": "requirementModel"
-      },
-      "level": "L2",
-      "detail": {
-        "judge": {
-          "verdict": "agrees",
-          "judgedBy": "claude-review",
-          "delegatedBy": "ricostynha",
-          "promptVersion": "1",
-          "note": "With no process launched toward a tool, what reaches the editor from it can only be what it left in a workspace."
-        }
-      },
-      "linkHash": "0469bfd3aef8e007",
-      "inputs": [
-        [
-          "requirement",
-          "3786f8d395b201e8"
-        ],
-        [
-          "model",
-          "ac1a404c3a1e74c3"
-        ]
-      ]
-    },
-    {
-      "key": {
-        "reqId": "ARCH-NO-DRIVING",
-        "clause": "user_runs_it",
-        "bond": "requirementModel"
-      },
-      "level": "L2",
-      "detail": {
-        "judge": {
-          "verdict": "agrees",
-          "judgedBy": "claude-review",
-          "delegatedBy": "ricostynha",
-          "promptVersion": "1",
-          "note": "No launch site exists, so starting a tool is left to the user."
-        }
-      },
-      "linkHash": "899e1f0090785230",
-      "inputs": [
-        [
-          "requirement",
-          "b596e1d36e0b8a2f"
-        ],
-        [
-          "model",
-          "ac1a404c3a1e74c3"
         ]
       ]
     },
@@ -31374,36 +32413,6 @@
       "key": {
         "reqId": "REQ-ACT",
         "clause": "action_to_intent",
-        "bond": "modelImpl"
-      },
-      "level": "L3",
-      "detail": {
-        "drt": {
-          "seed": 83,
-          "cases": 8000,
-          "op": "REQ-ACT.action_to_intent"
-        }
-      },
-      "linkHash": "5999d375102f7ca3",
-      "inputs": [
-        [
-          "implementation",
-          "08f6b323f2b1b27d+75cd03e8fdbcd42f+921bc0c5a94aaab7+d58ed6a8bf877a2b"
-        ],
-        [
-          "model",
-          "43418699da34631e"
-        ],
-        [
-          "requirement",
-          "0949f486f567c3a9"
-        ]
-      ]
-    },
-    {
-      "key": {
-        "reqId": "REQ-ACT",
-        "clause": "action_to_intent",
         "bond": "modelProof"
       },
       "level": "L4",
@@ -31464,36 +32473,6 @@
     {
       "key": {
         "reqId": "REQ-ACT",
-        "clause": "dispatch_is_pure",
-        "bond": "modelImpl"
-      },
-      "level": "L3",
-      "detail": {
-        "drt": {
-          "seed": 83,
-          "cases": 8000,
-          "op": "REQ-ACT.action_to_intent"
-        }
-      },
-      "linkHash": "993f8b829c3cf11f",
-      "inputs": [
-        [
-          "implementation",
-          "75cd03e8fdbcd42f"
-        ],
-        [
-          "model",
-          "43418699da34631e"
-        ],
-        [
-          "requirement",
-          "8eb7159745a8def9"
-        ]
-      ]
-    },
-    {
-      "key": {
-        "reqId": "REQ-ACT",
         "clause": "edits_are_commands",
         "bond": "requirementModel"
       },
@@ -31516,36 +32495,6 @@
         [
           "model",
           "43418699da34631e"
-        ]
-      ]
-    },
-    {
-      "key": {
-        "reqId": "REQ-ACT",
-        "clause": "edits_are_commands",
-        "bond": "modelImpl"
-      },
-      "level": "L3",
-      "detail": {
-        "drt": {
-          "seed": 83,
-          "cases": 8000,
-          "op": "REQ-ACT.action_to_intent"
-        }
-      },
-      "linkHash": "a1da268e8d4508a2",
-      "inputs": [
-        [
-          "implementation",
-          "452a3d8cf7029039+5eb0c3e8abe417bd+75cd03e8fdbcd42f+9833bc65d26a76b6+c52f7146bb505c39+f0bb0530e1d1994f+fd7e8532f0f2fcbc"
-        ],
-        [
-          "model",
-          "43418699da34631e"
-        ],
-        [
-          "requirement",
-          "cf525a4e16234eef"
         ]
       ]
     },
@@ -31628,7 +32577,7 @@
       "inputs": [
         [
           "implementation",
-          "842024db8f8f9252+8bef1d3af783a496+c19fbb227a2aa364"
+          "8bef1d3af783a496+c08185bb3a69f3f1+c19fbb227a2aa364"
         ],
         [
           "model",
@@ -31705,36 +32654,6 @@
       "key": {
         "reqId": "REQ-ACT",
         "clause": "focus_is_carried",
-        "bond": "modelImpl"
-      },
-      "level": "L3",
-      "detail": {
-        "drt": {
-          "seed": 83,
-          "cases": 8000,
-          "op": "REQ-ACT.action_to_intent"
-        }
-      },
-      "linkHash": "67d080eb318b03a5",
-      "inputs": [
-        [
-          "implementation",
-          "2c31155911d38353+75cd03e8fdbcd42f"
-        ],
-        [
-          "model",
-          "43418699da34631e"
-        ],
-        [
-          "requirement",
-          "66b2f6066318fe9f"
-        ]
-      ]
-    },
-    {
-      "key": {
-        "reqId": "REQ-ACT",
-        "clause": "focus_is_carried",
         "bond": "modelProof"
       },
       "level": "L4",
@@ -31789,36 +32708,6 @@
         [
           "model",
           "43418699da34631e"
-        ]
-      ]
-    },
-    {
-      "key": {
-        "reqId": "REQ-ACT",
-        "clause": "missing_target_is_refused",
-        "bond": "modelImpl"
-      },
-      "level": "L3",
-      "detail": {
-        "drt": {
-          "seed": 83,
-          "cases": 8000,
-          "op": "REQ-ACT.action_to_intent"
-        }
-      },
-      "linkHash": "aed4f39f65aae04b",
-      "inputs": [
-        [
-          "implementation",
-          "75cd03e8fdbcd42f"
-        ],
-        [
-          "model",
-          "43418699da34631e"
-        ],
-        [
-          "requirement",
-          "19186cced9e81a81"
         ]
       ]
     },
@@ -31887,36 +32776,6 @@
       "key": {
         "reqId": "REQ-ACT",
         "clause": "one_path",
-        "bond": "modelImpl"
-      },
-      "level": "L3",
-      "detail": {
-        "drt": {
-          "seed": 83,
-          "cases": 8000,
-          "op": "REQ-ACT.action_to_intent"
-        }
-      },
-      "linkHash": "f64e22402333a72b",
-      "inputs": [
-        [
-          "implementation",
-          "085e49548b450f02+4b9dc77791161952+75cd03e8fdbcd42f+d321371ace8bc556"
-        ],
-        [
-          "model",
-          "43418699da34631e"
-        ],
-        [
-          "requirement",
-          "f5a1dd55461f390c"
-        ]
-      ]
-    },
-    {
-      "key": {
-        "reqId": "REQ-ACT",
-        "clause": "one_path",
         "bond": "modelProof"
       },
       "level": "L4",
@@ -31971,36 +32830,6 @@
         [
           "model",
           "43418699da34631e"
-        ]
-      ]
-    },
-    {
-      "key": {
-        "reqId": "REQ-ACT",
-        "clause": "unknown_is_refused",
-        "bond": "modelImpl"
-      },
-      "level": "L3",
-      "detail": {
-        "drt": {
-          "seed": 83,
-          "cases": 8000,
-          "op": "REQ-ACT.action_to_intent"
-        }
-      },
-      "linkHash": "d3addbba70a38a6d",
-      "inputs": [
-        [
-          "implementation",
-          "0408c11f8f2edb60+75cd03e8fdbcd42f+e97d177bdd02cd31"
-        ],
-        [
-          "model",
-          "43418699da34631e"
-        ],
-        [
-          "requirement",
-          "d3db168ac5b9d9a4"
         ]
       ]
     },
@@ -34680,7 +35509,7 @@
       "inputs": [
         [
           "implementation",
-          "560440270dd7dc8e+5d1634792fc24eed+69b717aadb840d9c"
+          "51218b2efde1dc23+560440270dd7dc8e+69b717aadb840d9c"
         ],
         [
           "model",
@@ -40945,7 +41774,7 @@
       "inputs": [
         [
           "implementation",
-          "267e36d836fa13bb+2a7b716e8647a9ca+5f97e741b1189529+95cbdb4e6ad99141"
+          "267e36d836fa13bb+5f97e741b1189529+95cbdb4e6ad99141+a74a6ea39f733701"
         ],
         [
           "model",
@@ -41078,6 +41907,126 @@
         [
           "rules",
           "80c8c2e339df1610"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-HANDOFF",
+        "clause": "choice_opened",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 137,
+          "cases": 2000,
+          "op": "REQ-HANDOFF.choice_opened"
+        }
+      },
+      "linkHash": "3a2afe8ba0a35275",
+      "inputs": [
+        [
+          "implementation",
+          "6d9a14bfd8abfca9+b2e4444c7a6af2d2"
+        ],
+        [
+          "model",
+          "dc17bc5719fd519f"
+        ],
+        [
+          "requirement",
+          "74ea544aaa87afdc"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-HANDOFF",
+        "clause": "file_to_vscode",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 113,
+          "cases": 2000,
+          "op": "REQ-HANDOFF.file_to_vscode"
+        }
+      },
+      "linkHash": "b8191bb19a115f21",
+      "inputs": [
+        [
+          "implementation",
+          "fe30338b20c59b5d"
+        ],
+        [
+          "model",
+          "15a8bc0706c87c85"
+        ],
+        [
+          "requirement",
+          "adb2b19540b14007"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-HANDOFF",
+        "clause": "folder_picked",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 131,
+          "cases": 2000,
+          "op": "REQ-HANDOFF.folder_picked"
+        }
+      },
+      "linkHash": "58237603cccb6f7b",
+      "inputs": [
+        [
+          "implementation",
+          "67fd0c8ed293dd3f"
+        ],
+        [
+          "model",
+          "a541641d15dcf27c"
+        ],
+        [
+          "requirement",
+          "b7639e9d6056b110"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-HANDOFF",
+        "clause": "report_to_browser",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 127,
+          "cases": 2000,
+          "op": "REQ-HANDOFF.report_to_browser"
+        }
+      },
+      "linkHash": "8620142315d9332d",
+      "inputs": [
+        [
+          "implementation",
+          "6c5b57f0a3bd7ad3"
+        ],
+        [
+          "model",
+          "732ddfad7331fd23"
+        ],
+        [
+          "requirement",
+          "a009033db18972e4"
         ]
       ]
     },
@@ -41491,7 +42440,7 @@
       "inputs": [
         [
           "implementation",
-          "3e85a7d5b06f305d+448cb95e43510bf3+5d1634792fc24eed+79e8f4b682a14a28+95cbdb4e6ad99141"
+          "3e85a7d5b06f305d+448cb95e43510bf3+51218b2efde1dc23+79e8f4b682a14a28+95cbdb4e6ad99141"
         ],
         [
           "model",
@@ -41792,7 +42741,7 @@
       "inputs": [
         [
           "implementation",
-          "0bfb42630f56bb5b+20aa6e203b9f9046+5d1634792fc24eed+7c945938216fc55c"
+          "0bfb42630f56bb5b+20aa6e203b9f9046+51218b2efde1dc23+7c945938216fc55c"
         ],
         [
           "model",
@@ -42247,7 +43196,7 @@
       "inputs": [
         [
           "implementation",
-          "ba1f6cafcafe8048+db12d852c9c77f19"
+          "41ac2669a6e94bca+ba1f6cafcafe8048"
         ],
         [
           "model",
@@ -42897,34 +43846,6 @@
     {
       "key": {
         "reqId": "REQ-LOOK",
-        "clause": "accessible_structure",
-        "bond": "requirementModel"
-      },
-      "level": "L2",
-      "detail": {
-        "judge": {
-          "verdict": "agrees",
-          "judgedBy": "claude-review",
-          "delegatedBy": "ricostynha",
-          "promptVersion": "1",
-          "note": "The page is built and its browser checks run against the accessibility tree the browser itself reports."
-        }
-      },
-      "linkHash": "f1e85346d5ee24a4",
-      "inputs": [
-        [
-          "requirement",
-          "539a13f02eda6d02"
-        ],
-        [
-          "model",
-          "4a3b8c19be59eb57"
-        ]
-      ]
-    },
-    {
-      "key": {
-        "reqId": "REQ-LOOK",
         "clause": "contrast_sufficient",
         "bond": "requirementModel"
       },
@@ -43129,36 +44050,6 @@
       "key": {
         "reqId": "REQ-LOOK",
         "clause": "roles_drawn_in_theme_colours",
-        "bond": "modelImpl"
-      },
-      "level": "L3",
-      "detail": {
-        "drt": {
-          "seed": 410,
-          "cases": 3000,
-          "op": "REQ-LOOK.roles_drawn_in_theme_colours"
-        }
-      },
-      "linkHash": "8e63b8f7836345ae",
-      "inputs": [
-        [
-          "implementation",
-          "732d1d682c84ddaa+738457d588ba2d70+9fc68c8689b422d4"
-        ],
-        [
-          "model",
-          "be1b38068a75470e"
-        ],
-        [
-          "requirement",
-          "88455e8d72a7668b"
-        ]
-      ]
-    },
-    {
-      "key": {
-        "reqId": "REQ-LOOK",
-        "clause": "roles_drawn_in_theme_colours",
         "bond": "modelProof"
       },
       "level": "L4",
@@ -43276,36 +44167,6 @@
         [
           "rules",
           "80c8c2e339df1610"
-        ]
-      ]
-    },
-    {
-      "key": {
-        "reqId": "REQ-LOOK",
-        "clause": "setting_edited_in_place",
-        "bond": "modelImpl"
-      },
-      "level": "L3",
-      "detail": {
-        "drt": {
-          "seed": 107,
-          "cases": 2000,
-          "op": "REQ-LOOK.setting_edited_in_place"
-        }
-      },
-      "linkHash": "285ce54a54d7f63c",
-      "inputs": [
-        [
-          "implementation",
-          "fb789a33b7a52705"
-        ],
-        [
-          "model",
-          "b3d3ff1d832d3fab"
-        ],
-        [
-          "requirement",
-          "8162daa0366efd83"
         ]
       ]
     },
@@ -43800,132 +44661,6 @@
     {
       "key": {
         "reqId": "REQ-LSP",
-        "clause": "goals_close_with_the_file",
-        "bond": "modelImpl"
-      },
-      "level": "L3",
-      "detail": {
-        "drt": {
-          "seed": 37,
-          "cases": 3000,
-          "op": "REQ-LSP.goals_close_with_the_file"
-        }
-      },
-      "linkHash": "2558e35c2e671d3a",
-      "inputs": [
-        [
-          "implementation",
-          "e239955a4acd1299"
-        ],
-        [
-          "model",
-          "585af878a1f84ebd"
-        ],
-        [
-          "requirement",
-          "6285b8f8ea0a204f"
-        ]
-      ]
-    },
-    {
-      "key": {
-        "reqId": "REQ-LSP",
-        "clause": "goals_close_with_the_file",
-        "bond": "modelProof"
-      },
-      "level": "L4",
-      "detail": {
-        "proof": {
-          "theoremName": "TraceLean.Screen.closing_other_buffers_closes_nothing",
-          "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
-        }
-      },
-      "linkHash": "338d0b36f28d5822",
-      "inputs": [
-        [
-          "model",
-          "585af878a1f84ebd"
-        ],
-        [
-          "requirement",
-          "6285b8f8ea0a204f"
-        ],
-        [
-          "toolchain",
-          "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
-        ],
-        [
-          "rules",
-          "80c8c2e339df1610"
-        ]
-      ]
-    },
-    {
-      "key": {
-        "reqId": "REQ-LSP",
-        "clause": "goals_open_with_the_file",
-        "bond": "modelImpl"
-      },
-      "level": "L3",
-      "detail": {
-        "drt": {
-          "seed": 31,
-          "cases": 2000,
-          "op": "REQ-LSP.goals_open_with_the_file"
-        }
-      },
-      "linkHash": "3e1125708ea2600c",
-      "inputs": [
-        [
-          "implementation",
-          "35f0731fd0802dea"
-        ],
-        [
-          "model",
-          "4a85df64501fdf40"
-        ],
-        [
-          "requirement",
-          "45816b6d6d3f1071"
-        ]
-      ]
-    },
-    {
-      "key": {
-        "reqId": "REQ-LSP",
-        "clause": "goals_open_with_the_file",
-        "bond": "modelProof"
-      },
-      "level": "L4",
-      "detail": {
-        "proof": {
-          "theoremName": "TraceLean.Screen.goals_open_exactly_with_a_lean_file",
-          "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
-        }
-      },
-      "linkHash": "576f74f2c85a965d",
-      "inputs": [
-        [
-          "model",
-          "4a85df64501fdf40"
-        ],
-        [
-          "requirement",
-          "45816b6d6d3f1071"
-        ],
-        [
-          "toolchain",
-          "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
-        ],
-        [
-          "rules",
-          "80c8c2e339df1610"
-        ]
-      ]
-    },
-    {
-      "key": {
-        "reqId": "REQ-LSP",
         "clause": "offset_to_column",
         "bond": "requirementModel"
       },
@@ -44094,69 +44829,6 @@
         [
           "requirement",
           "33449fad7167bbac"
-        ],
-        [
-          "toolchain",
-          "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
-        ],
-        [
-          "rules",
-          "80c8c2e339df1610"
-        ]
-      ]
-    },
-    {
-      "key": {
-        "reqId": "REQ-LSP",
-        "clause": "proof_state_shown",
-        "bond": "modelImpl"
-      },
-      "level": "L3",
-      "detail": {
-        "drt": {
-          "seed": 109,
-          "cases": 2000,
-          "op": "REQ-LSP.proof_state_shown"
-        }
-      },
-      "linkHash": "2ea0e46e9abb9254",
-      "inputs": [
-        [
-          "implementation",
-          "18eaeeebd53ae99c"
-        ],
-        [
-          "model",
-          "9c6f2d0e5df500d8"
-        ],
-        [
-          "requirement",
-          "a53813324f9f9616"
-        ]
-      ]
-    },
-    {
-      "key": {
-        "reqId": "REQ-LSP",
-        "clause": "proof_state_shown",
-        "bond": "modelProof"
-      },
-      "level": "L4",
-      "detail": {
-        "proof": {
-          "theoremName": "TraceLean.ProofState.the_reported_goals_are_what_is_shown",
-          "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
-        }
-      },
-      "linkHash": "2faa6bc865e2e638",
-      "inputs": [
-        [
-          "model",
-          "9c6f2d0e5df500d8"
-        ],
-        [
-          "requirement",
-          "a53813324f9f9616"
         ],
         [
           "toolchain",
@@ -44858,36 +45530,6 @@
         [
           "model",
           "4596c45eb436aa93"
-        ]
-      ]
-    },
-    {
-      "key": {
-        "reqId": "REQ-MYTH",
-        "clause": "actions_defined",
-        "bond": "modelImpl"
-      },
-      "level": "L3",
-      "detail": {
-        "drt": {
-          "seed": 24,
-          "cases": 3000,
-          "op": "REQ-MYTH.modes_defined"
-        }
-      },
-      "linkHash": "413430c7183f0729",
-      "inputs": [
-        [
-          "implementation",
-          "13e219159f57086b+2bf6d6b7b990cea5+3f40b5440f1ddcd2"
-        ],
-        [
-          "model",
-          "4596c45eb436aa93"
-        ],
-        [
-          "requirement",
-          "688c3734209150be"
         ]
       ]
     },
@@ -46288,34 +46930,6 @@
         [
           "model",
           "348b05903eeb3884"
-        ]
-      ]
-    },
-    {
-      "key": {
-        "reqId": "REQ-OBS",
-        "clause": "no_instruction_channel",
-        "bond": "requirementModel"
-      },
-      "level": "L2",
-      "detail": {
-        "judge": {
-          "verdict": "agrees",
-          "judgedBy": "claude-review",
-          "delegatedBy": "ricostynha",
-          "promptVersion": "1",
-          "note": "Nothing outside the differential toolchain and Lean's own server writes towards a process, and the observation module has no driver; Lean's server is not the observed tool."
-        }
-      },
-      "linkHash": "e2ec44675be7a413",
-      "inputs": [
-        [
-          "requirement",
-          "f61dda2e43598c38"
-        ],
-        [
-          "model",
-          "c8056f39e7388583"
         ]
       ]
     },
@@ -50736,36 +51350,6 @@
     {
       "key": {
         "reqId": "REQ-SCREEN",
-        "clause": "screen_is_a_value",
-        "bond": "modelImpl"
-      },
-      "level": "L3",
-      "detail": {
-        "drt": {
-          "seed": 41,
-          "cases": 2000,
-          "op": "REQ-SCREEN.every_pane_is_opened"
-        }
-      },
-      "linkHash": "972b164f2b337446",
-      "inputs": [
-        [
-          "implementation",
-          "1ca96acd04f1c6d8+57559ebfe7a27275+d04b064eff46abd8+f6b045588164b437"
-        ],
-        [
-          "model",
-          "8f043133e986f1ae"
-        ],
-        [
-          "requirement",
-          "3c773f81c6ff79b8"
-        ]
-      ]
-    },
-    {
-      "key": {
-        "reqId": "REQ-SCREEN",
         "clause": "split_keeps_the_buffer",
         "bond": "requirementModel"
       },
@@ -50958,7 +51542,7 @@
           "judgedBy": "claude-review",
           "delegatedBy": "ricostynha",
           "promptVersion": "1",
-          "note": "stationKind gives each of the seven stations the kind of buffer it stands for and none for any other name."
+          "note": "stationKind adds report -> record report; the editor builds that record by writing the page"
         }
       },
       "linkHash": "41b41ef0c2e83404",
@@ -50969,7 +51553,7 @@
         ],
         [
           "model",
-          "d7e41fd4db172b62"
+          "cfc5cf76b01ecf0d"
         ]
       ]
     },
@@ -50991,48 +51575,15 @@
       "inputs": [
         [
           "implementation",
-          "44122e038999dd0e"
+          "9a9477223cbb5fdb"
         ],
         [
           "model",
-          "d7e41fd4db172b62"
+          "cfc5cf76b01ecf0d"
         ],
         [
           "requirement",
           "f705ddbcb58f41a3"
-        ]
-      ]
-    },
-    {
-      "key": {
-        "reqId": "REQ-SCREEN",
-        "clause": "station_produces_a_buffer",
-        "bond": "modelProof"
-      },
-      "level": "L4",
-      "detail": {
-        "proof": {
-          "theoremName": "TraceLean.Screen.station_produces",
-          "toolchain": "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
-        }
-      },
-      "linkHash": "5a986549dc5af4d9",
-      "inputs": [
-        [
-          "model",
-          "d7e41fd4db172b62"
-        ],
-        [
-          "requirement",
-          "f705ddbcb58f41a3"
-        ],
-        [
-          "toolchain",
-          "Lean (version 4.12.0, x86_64-unknown-linux-gnu, commit dc2533473114, Release)"
-        ],
-        [
-          "rules",
-          "80c8c2e339df1610"
         ]
       ]
     },
@@ -52610,36 +53161,6 @@
       "key": {
         "reqId": "REQ-SHOW",
         "clause": "menu_from_keymap",
-        "bond": "modelImpl"
-      },
-      "level": "L3",
-      "detail": {
-        "drt": {
-          "seed": 73,
-          "cases": 2000,
-          "op": "REQ-SHOW.menu_from_keymap"
-        }
-      },
-      "linkHash": "42ffbf6802b4c5da",
-      "inputs": [
-        [
-          "implementation",
-          "3ee59ad610e968c9+57559ebfe7a27275"
-        ],
-        [
-          "model",
-          "dd1183891445ce98"
-        ],
-        [
-          "requirement",
-          "93c51156a8bee53c"
-        ]
-      ]
-    },
-    {
-      "key": {
-        "reqId": "REQ-SHOW",
-        "clause": "menu_from_keymap",
         "bond": "modelProof"
       },
       "level": "L4",
@@ -53989,7 +54510,7 @@
       "inputs": [
         [
           "implementation",
-          "267e36d836fa13bb+2a7b716e8647a9ca+5f97e741b1189529+96a150126213ae5b+9cc2c50bbd1966ed"
+          "267e36d836fa13bb+5f97e741b1189529+96a150126213ae5b+9cc2c50bbd1966ed+a74a6ea39f733701"
         ],
         [
           "model",
@@ -55670,6 +56191,64 @@
     {
       "key": {
         "reqId": "REQ-STRENGTH",
+        "clause": "proved_only_when_pinned",
+        "bond": "requirementModel"
+      },
+      "level": "L2",
+      "detail": {
+        "judge": {
+          "verdict": "agrees",
+          "judgedBy": "claude-review",
+          "delegatedBy": "ricostynha",
+          "promptVersion": "1",
+          "note": "earnsProof is true exactly when Lean accepted a theorem and the strength is pinned"
+        }
+      },
+      "linkHash": "d8f917c1d9a00a86",
+      "inputs": [
+        [
+          "requirement",
+          "adb4e4dec443032a"
+        ],
+        [
+          "model",
+          "99194636bbe53df3"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-STRENGTH",
+        "clause": "proved_only_when_pinned",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 76,
+          "cases": 1000,
+          "op": "REQ-STRENGTH.proved_only_when_pinned"
+        }
+      },
+      "linkHash": "2bd36689d562034e",
+      "inputs": [
+        [
+          "implementation",
+          "61c84c6578f4ba99+f3fc9f73084a1706"
+        ],
+        [
+          "model",
+          "99194636bbe53df3"
+        ],
+        [
+          "requirement",
+          "adb4e4dec443032a"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-STRENGTH",
         "clause": "qualifies_proof",
         "bond": "requirementModel"
       },
@@ -55944,6 +56523,36 @@
       "key": {
         "reqId": "REQ-THERMO",
         "clause": "to_celsius",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 1,
+          "cases": 2000,
+          "op": "REQ-THERMO.to_celsius"
+        }
+      },
+      "linkHash": "e67e0a6ac2c3a32d",
+      "inputs": [
+        [
+          "implementation",
+          "596cfa44067bfd62"
+        ],
+        [
+          "model",
+          "01d2366e2d3c6be5"
+        ],
+        [
+          "requirement",
+          "717af8d493eaedc0"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-THERMO",
+        "clause": "to_celsius",
         "bond": "modelProof"
       },
       "level": "L4",
@@ -55970,6 +56579,40 @@
         [
           "rules",
           "80c8c2e339df1610"
+        ],
+        [
+          "specification",
+          "36892f83cbe9addf"
+        ]
+      ]
+    },
+    {
+      "key": {
+        "reqId": "REQ-THERMO",
+        "clause": "to_fahrenheit",
+        "bond": "modelImpl"
+      },
+      "level": "L3",
+      "detail": {
+        "drt": {
+          "seed": 1,
+          "cases": 2000,
+          "op": "REQ-THERMO.to_fahrenheit"
+        }
+      },
+      "linkHash": "661f646ef503aead",
+      "inputs": [
+        [
+          "implementation",
+          "6b9f318c2e01a1ce"
+        ],
+        [
+          "model",
+          "aa60593053f8af5a"
+        ],
+        [
+          "requirement",
+          "5b03d83d98149872"
         ]
       ]
     },
@@ -56003,6 +56646,10 @@
         [
           "rules",
           "80c8c2e339df1610"
+        ],
+        [
+          "specification",
+          "c995cc78b8a83b8a"
         ]
       ]
     },
@@ -57550,36 +58197,6 @@
       "key": {
         "reqId": "REQ-VIEW",
         "clause": "frontend_adds_nothing",
-        "bond": "modelImpl"
-      },
-      "level": "L3",
-      "detail": {
-        "drt": {
-          "seed": 43,
-          "cases": 2000,
-          "op": "REQ-VIEW.frontend_adds_nothing"
-        }
-      },
-      "linkHash": "12fc0c764e85d0b3",
-      "inputs": [
-        [
-          "implementation",
-          "12a2057b4b3b9df0+22234f4cd24e24ba+894078ce43905a46+aeedc3763e6c475a+b7d96de5ff4aa6e8+cbd18457dec9045d+cdfbab14ffefc0c0"
-        ],
-        [
-          "model",
-          "b9f69cf500f6df83"
-        ],
-        [
-          "requirement",
-          "194a37657cf96d79"
-        ]
-      ]
-    },
-    {
-      "key": {
-        "reqId": "REQ-VIEW",
-        "clause": "frontend_adds_nothing",
         "bond": "modelProof"
       },
       "level": "L4",
@@ -57669,36 +58286,6 @@
       "key": {
         "reqId": "REQ-VIEW",
         "clause": "one_representation",
-        "bond": "modelImpl"
-      },
-      "level": "L3",
-      "detail": {
-        "drt": {
-          "seed": 43,
-          "cases": 2000,
-          "op": "REQ-VIEW.frontend_adds_nothing"
-        }
-      },
-      "linkHash": "31676964d696f88e",
-      "inputs": [
-        [
-          "implementation",
-          "085e49548b450f02+4e51ed5c840c7596+cbd18457dec9045d+e10c8f7719abbf54"
-        ],
-        [
-          "model",
-          "b9f69cf500f6df83"
-        ],
-        [
-          "requirement",
-          "15ee6bbe4145b035"
-        ]
-      ]
-    },
-    {
-      "key": {
-        "reqId": "REQ-VIEW",
-        "clause": "one_representation",
         "bond": "modelProof"
       },
       "level": "L4",
@@ -57774,7 +58361,7 @@
       "inputs": [
         [
           "implementation",
-          "0b7421b36800890c+0f3341750199e01d+2f2c6d6c0e8b7681+972a445aadadc158+a931091c2c8f9b58+af76740c2ac366c9"
+          "0b7421b36800890c+0f3341750199e01d+972a445aadadc158+a931091c2c8f9b58+af76740c2ac366c9+d14df40e367839e5"
         ],
         [
           "model",
@@ -58208,36 +58795,6 @@
         [
           "model",
           "e713a595e72505b2"
-        ]
-      ]
-    },
-    {
-      "key": {
-        "reqId": "REQ-VIEW",
-        "clause": "text_is_the_content",
-        "bond": "modelImpl"
-      },
-      "level": "L3",
-      "detail": {
-        "drt": {
-          "seed": 23,
-          "cases": 2000,
-          "op": "REQ-VIEW.text_is_the_content"
-        }
-      },
-      "linkHash": "4053c2b038460631",
-      "inputs": [
-        [
-          "implementation",
-          "4f18850bc2ccc9a6+b7d96de5ff4aa6e8+cdfbab14ffefc0c0+cf3e6cd9677bc49c+f82ce5be11c6371f"
-        ],
-        [
-          "model",
-          "e713a595e72505b2"
-        ],
-        [
-          "requirement",
-          "c54eda910b082dee"
         ]
       ]
     },

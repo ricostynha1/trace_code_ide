@@ -1,0 +1,30 @@
+{
+  "key": {
+    "reqId": "REQ-HANDOFF",
+    "clause": "file_to_vscode",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 113,
+      "cases": 2000,
+      "op": "REQ-HANDOFF.file_to_vscode"
+    }
+  },
+  "linkHash": "b8191bb19a115f21",
+  "inputs": [
+    [
+      "implementation",
+      "fe30338b20c59b5d"
+    ],
+    [
+      "model",
+      "15a8bc0706c87c85"
+    ],
+    [
+      "requirement",
+      "adb2b19540b14007"
+    ]
+  ]
+}

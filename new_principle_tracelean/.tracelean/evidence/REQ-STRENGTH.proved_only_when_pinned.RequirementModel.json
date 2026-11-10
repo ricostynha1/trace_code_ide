@@ -1,0 +1,28 @@
+{
+  "key": {
+    "reqId": "REQ-STRENGTH",
+    "clause": "proved_only_when_pinned",
+    "bond": "requirementModel"
+  },
+  "level": "L2",
+  "detail": {
+    "judge": {
+      "verdict": "agrees",
+      "judgedBy": "claude-review",
+      "delegatedBy": "ricostynha",
+      "promptVersion": "1",
+      "note": "earnsProof is true exactly when Lean accepted a theorem and the strength is pinned"
+    }
+  },
+  "linkHash": "d8f917c1d9a00a86",
+  "inputs": [
+    [
+      "requirement",
+      "adb4e4dec443032a"
+    ],
+    [
+      "model",
+      "99194636bbe53df3"
+    ]
+  ]
+}

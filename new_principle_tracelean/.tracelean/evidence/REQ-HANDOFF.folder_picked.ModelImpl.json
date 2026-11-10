@@ -1,0 +1,30 @@
+{
+  "key": {
+    "reqId": "REQ-HANDOFF",
+    "clause": "folder_picked",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 131,
+      "cases": 2000,
+      "op": "REQ-HANDOFF.folder_picked"
+    }
+  },
+  "linkHash": "58237603cccb6f7b",
+  "inputs": [
+    [
+      "implementation",
+      "67fd0c8ed293dd3f"
+    ],
+    [
+      "model",
+      "a541641d15dcf27c"
+    ],
+    [
+      "requirement",
+      "b7639e9d6056b110"
+    ]
+  ]
+}

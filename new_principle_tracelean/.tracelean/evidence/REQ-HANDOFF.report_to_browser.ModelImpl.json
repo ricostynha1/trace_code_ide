@@ -1,0 +1,30 @@
+{
+  "key": {
+    "reqId": "REQ-HANDOFF",
+    "clause": "report_to_browser",
+    "bond": "modelImpl"
+  },
+  "level": "L3",
+  "detail": {
+    "drt": {
+      "seed": 127,
+      "cases": 2000,
+      "op": "REQ-HANDOFF.report_to_browser"
+    }
+  },
+  "linkHash": "8620142315d9332d",
+  "inputs": [
+    [
+      "implementation",
+      "6c5b57f0a3bd7ad3"
+    ],
+    [
+      "model",
+      "732ddfad7331fd23"
+    ],
+    [
+      "requirement",
+      "a009033db18972e4"
+    ]
+  ]
+}

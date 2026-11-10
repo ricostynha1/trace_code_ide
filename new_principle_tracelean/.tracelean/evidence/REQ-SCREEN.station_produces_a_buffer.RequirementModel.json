@@ -11,7 +11,7 @@
       "judgedBy": "claude-review",
       "delegatedBy": "ricostynha",
       "promptVersion": "1",
-      "note": "stationKind gives each of the seven stations the kind of buffer it stands for and none for any other name."
+      "note": "stationKind adds report -> record report; the editor builds that record by writing the page"
     }
   },
   "linkHash": "41b41ef0c2e83404",
@@ -22,7 +22,7 @@
     ],
     [
       "model",
-      "d7e41fd4db172b62"
+      "cfc5cf76b01ecf0d"
     ]
   ]
 }

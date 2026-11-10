@@ -2813,32 +2813,6 @@
           "atLeast": 100
         }
       ]
-    },
-    {
-      "req_id": "REQ-LSP",
-      "clause": "proof_state_shown",
-      "floors": [
-        {
-          "situation": "no result",
-          "atLeast": 100
-        },
-        {
-          "situation": "a result with no list of goals",
-          "atLeast": 50
-        },
-        {
-          "situation": "an empty list of goals",
-          "atLeast": 50
-        },
-        {
-          "situation": "several goals",
-          "atLeast": 50
-        },
-        {
-          "situation": "the server's own rendering",
-          "atLeast": 20
-        }
-      ]
     }
   ]
 }
