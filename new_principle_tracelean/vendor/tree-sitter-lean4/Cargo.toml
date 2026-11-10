@@ -1,9 +1,9 @@
 [package]
 name = "tree-sitter-lean4"
-version = "0.3.1"
+version = "0.4.0"
 edition = "2021"
 build = "build.rs"
-description = "tree-sitter-lean4 0.3.0, vendored and extended for the Lean this project writes (action plan §8)"
+description = "Lean 4 read at the level of its commands: declarations, scopes, comments and literals"
 license = "MIT"
 publish = false
 

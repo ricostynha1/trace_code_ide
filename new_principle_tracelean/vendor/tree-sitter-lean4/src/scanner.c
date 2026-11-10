@@ -1,499 +1,255 @@
-/**
- * External scanner for Lean 4 tree-sitter grammar.
- * Handles layout/indentation-sensitive parsing.
+/*
+ * Where a Lean command ends.
  *
- * Lean uses indentation to delimit blocks after `do`, `where`, `:=`, `=>`.
- * The scanner maintains a stack of indent levels and emits:
- *   LAYOUT_START     — pushed when grammar enters a layout context
- *   LAYOUT_SEMICOLON — same-indent newline within a layout block
- *   LAYOUT_END       — indent decreased below current layout level
- *   MATCH_BODY_START — like LAYOUT_START but dedicated to match arm bodies
+ * A command's body is a run of tokens; it ends where the next command begins.
+ * Lean marks that by layout: a command starts on a line of its own. So the end
+ * is decided at a line break, by the first word of the next line:
  *
- * MATCH_BODY_START is a separate token so match_arm can open a layout
- * block without creating grammar conflicts with _do_element.  It pushes
- * the same indent stack as LAYOUT_START and is closed by LAYOUT_END.
+ *   at column 0, any word except those that continue a body there (`where`,
+ *   `termination_by`, `deriving` without `instance`, …), and `@[`, `#…` or a
+ *   doc comment;
+ *   indented (as inside `mutual` or an indented `section`), a declaration
+ *   keyword after any attributes and modifiers, a scoping command, or `open`,
+ *   `set_option` or `attribute` unless the line ends in `in` (which a proof
+ *   writes as `open Classical in`).
  *
- * Key design: a `queued_indent` field persists across scanner calls so that
- * a single newline can produce multiple LAYOUT_END tokens (one per popped
- * level) followed by a LAYOUT_SEMICOLON, across successive scanner invocations.
+ * The end is a zero-width token at the start of the next command. A
+ * declaration's extent is read from its last token, not from this end, so the
+ * blank lines and comments before the next command are not part of it.
  *
- * Special case: `|` at the start of a line does NOT get a LAYOUT_SEMICOLON.
- * This matches Lean 4's parser where match arms are delimited by `|` tokens
- * rather than by the indentation-based semicolon mechanism.
+ * Comments are read here too, because Lean's block comments nest. A doc
+ * comment at column 0 followed by `|` documents a constructor; that one is
+ * left to the grammar's own rule for comments.
  */
 
 #include "tree_sitter/parser.h"
-#include "tree_sitter/alloc.h"
+
+#include <stdbool.h>
 #include <string.h>
 
-enum TokenType {
-  LAYOUT_START,
-  LAYOUT_SEMICOLON,
-  LAYOUT_END,
-  MATCH_BODY_START,
-  SYNTAX_QUOTATION_BODY,  // content inside `` `( ... ) `` up to matching `)`
-  BRANCH_START,           // layout after `then`/`else` when the line ends there
-  BY_BODY,
+enum TokenType { COMMAND_END, COMMENT, ERROR_SENTINEL };
+
+void *tree_sitter_lean_external_scanner_create(void) { return NULL; }
+void tree_sitter_lean_external_scanner_destroy(void *payload) { (void)payload; }
+unsigned tree_sitter_lean_external_scanner_serialize(void *payload, char *buffer) {
+  (void)payload;
+  (void)buffer;
+  return 0;
+}
+void tree_sitter_lean_external_scanner_deserialize(void *payload, const char *buffer, unsigned length) {
+  (void)payload;
+  (void)buffer;
+  (void)length;
+}
+
+static void advance(TSLexer *lexer) { lexer->advance(lexer, false); }
+static void skip(TSLexer *lexer) { lexer->advance(lexer, true); }
+
+static bool is_word_char(int32_t c) {
+  return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_' || c == '\'' ||
+         c == '!' || c == '?' || c == '.' || c >= 0x80;
+}
+
+static bool is_word_start(int32_t c) { return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_'; }
+
+#define WORD_MAX 32
+
+/* Reads a word; a word longer than WORD_MAX, or with a non-ASCII letter, is
+   returned as "" so it matches no keyword. */
+static void read_word(TSLexer *lexer, char *word) {
+  unsigned n = 0;
+  bool plain = true;
+  while (!lexer->eof(lexer) && is_word_char(lexer->lookahead)) {
+    if (lexer->lookahead >= 0x80 || n + 1 >= WORD_MAX) {
+      plain = false;
+    } else {
+      word[n++] = (char)lexer->lookahead;
+    }
+    advance(lexer);
+  }
+  word[plain ? n : 0] = '\0';
+}
+
+static bool one_of(const char *word, const char *const *words) {
+  for (unsigned i = 0; words[i]; i++) {
+    if (strcmp(word, words[i]) == 0) return true;
+  }
+  return false;
+}
+
+static const char *const DECLARATIONS[] = {
+  "def", "theorem", "lemma", "abbrev", "instance", "example", "structure", "class",
+  "inductive", "axiom", "opaque", NULL,
 };
 
-#define MAX_DEPTH 64
-#define NO_QUEUED UINT32_MAX
+static const char *const MODIFIERS[] = {
+  "noncomputable", "partial", "protected", "private", "public", "meta", "unsafe", "scoped", "local", "nonrec", NULL,
+};
 
-typedef struct {
-  uint32_t indents[MAX_DEPTH];
-  uint8_t  depth;
-  uint32_t queued_indent; // indent of next non-blank line, or NO_QUEUED
-} Scanner;
+/* Commands that also start a command when indented. */
+static const char *const SCOPING[] = {
+  "variable", "universe", "section", "namespace", "end", "mutual", "export", "include", "omit", NULL,
+};
 
-/* ── lifecycle ─────────────────────────────────────────────────── */
+/* Commands that, indented, may instead be a body's `… in`. */
+static const char *const PREFIXING[] = { "open", "set_option", "attribute", NULL };
 
-void *tree_sitter_lean_external_scanner_create(void) {
-  Scanner *s = ts_calloc(1, sizeof(Scanner));
-  s->depth = 0;
-  s->queued_indent = NO_QUEUED;
-  return s;
-}
-
-void tree_sitter_lean_external_scanner_destroy(void *payload) {
-  ts_free(payload);
-}
-
-unsigned tree_sitter_lean_external_scanner_serialize(void *payload, char *buffer) {
-  Scanner *s = (Scanner *)payload;
-  unsigned pos = 0;
-  memcpy(buffer + pos, &s->depth, sizeof(s->depth));       pos += sizeof(s->depth);
-  memcpy(buffer + pos, &s->queued_indent, sizeof(s->queued_indent)); pos += sizeof(s->queued_indent);
-  unsigned indent_bytes = s->depth * sizeof(uint32_t);
-  memcpy(buffer + pos, s->indents, indent_bytes);           pos += indent_bytes;
-  return pos;
-}
-
-void tree_sitter_lean_external_scanner_deserialize(void *payload, const char *buffer, unsigned length) {
-  Scanner *s = (Scanner *)payload;
-  if (length == 0) {
-    s->depth = 0;
-    s->queued_indent = NO_QUEUED;
-    return;
-  }
-  unsigned pos = 0;
-  memcpy(&s->depth, buffer + pos, sizeof(s->depth));        pos += sizeof(s->depth);
-  memcpy(&s->queued_indent, buffer + pos, sizeof(s->queued_indent)); pos += sizeof(s->queued_indent);
-  if (s->depth > MAX_DEPTH) { s->depth = 0; s->queued_indent = NO_QUEUED; return; }
-  memcpy(s->indents, buffer + pos, s->depth * sizeof(uint32_t));
-}
-
-/* ── helpers ───────────────────────────────────────────────────── */
-
-static inline uint32_t top_indent(Scanner *s) {
-  return s->depth > 0 ? s->indents[s->depth - 1] : 0;
-}
-
-/* The layout column just below the top — what we'd see after one pop. */
-static inline uint32_t penultimate_indent(Scanner *s) {
-  return s->depth > 1 ? s->indents[s->depth - 2] : 0;
-}
-
-static inline void push(Scanner *s, uint32_t indent) {
-  if (s->depth < MAX_DEPTH) {
-    s->indents[s->depth++] = indent;
-  }
-}
-
-static inline void pop(Scanner *s) {
-  if (s->depth > 0) s->depth--;
-}
+/* Words that continue a body even at column 0. */
+static const char *const CONTINUING[] = {
+  "where", "termination_by", "decreasing_by", "with", "then", "else", "do", "by", "fun", "at", "from",
+  "in", "using", "show", "match", "let", "have", "if", "calc", NULL,
+};
 
 static void skip_spaces(TSLexer *lexer) {
-  while (lexer->lookahead == ' ' || lexer->lookahead == '\t')
-    lexer->advance(lexer, true);
+  while (!lexer->eof(lexer) && (lexer->lookahead == ' ' || lexer->lookahead == '\t')) advance(lexer);
 }
 
-static bool is_nl(int32_t c) { return c == '\n' || c == '\r'; }
-
-/**
- * Skip newlines + leading whitespace, return column of first non-blank char.
- * If EOF is reached, return 0 (dedent everything).
- * After this call, lexer->lookahead is the first non-blank character.
- */
-static uint32_t measure_indent(TSLexer *lexer) {
-  while (is_nl(lexer->lookahead))
-    lexer->advance(lexer, true);
-  skip_spaces(lexer);
-  if (lexer->eof(lexer)) return 0;
-  return lexer->get_column(lexer);
-}
-
-/**
- * In Lean 4, match arms are delimited by `|` without semicolons.
- * A `|` at the start of a line should also not trigger LAYOUT_END,
- * because match arms may appear at a column lower than the enclosing
- * binding's layout (e.g. `def f := match x with | ...` puts arms
- * below the `match` column).
- */
-static bool starts_with_pipe(TSLexer *lexer) {
-  return lexer->lookahead == '|';
-}
-
-/**
- * Whether the input continues with the keyword `word` (and not a longer
- * identifier). Consumes what it compares, so the caller must have marked the
- * token's end already.
- */
-static bool starts_with_keyword(TSLexer *lexer, const char *word) {
-  for (const char *c = word; *c; c++) {
-    if (lexer->lookahead != *c) return false;
-    lexer->advance(lexer, false);
+/* Skips `[ … ]` with nesting; the lexer is on `[`. */
+static void skip_brackets(TSLexer *lexer) {
+  unsigned depth = 0;
+  while (!lexer->eof(lexer)) {
+    if (lexer->lookahead == '[') depth++;
+    if (lexer->lookahead == ']' && --depth == 0) {
+      advance(lexer);
+      return;
+    }
+    if (lexer->lookahead == '\n') return;
+    advance(lexer);
   }
-  int32_t next = lexer->lookahead;
-  return !(next == '_' || next == '\'' || next == '!' || next == '?' ||
-           (next >= 'a' && next <= 'z') || (next >= 'A' && next <= 'Z') ||
-           (next >= '0' && next <= '9'));
 }
 
-/**
- * A line starting with `then` or `else` continues the `if` above it, even
- * at the indent of the block the `if` sits in, so it is not a new item.
- */
-static bool should_suppress_semicolon(TSLexer *lexer) {
-  if (starts_with_pipe(lexer)) return true;
-  if (lexer->lookahead == 't') return starts_with_keyword(lexer, "then");
-  if (lexer->lookahead == 'e') return starts_with_keyword(lexer, "else");
-  return false;
-}
-
-/**
- * Push indent for a layout-start-like token (shared by LAYOUT_START
- * and MATCH_BODY_START).
- */
-static void push_layout_indent(Scanner *s, TSLexer *lexer) {
-  skip_spaces(lexer);
-  if (is_nl(lexer->lookahead)) {
-    uint32_t indent = measure_indent(lexer);
-    push(s, indent);
-  } else {
-    push(s, lexer->get_column(lexer));
-  }
-  s->queued_indent = NO_QUEUED;
-}
-
-static bool is_opener(int32_t c) {
-  return c == '(' || c == '[' || c == '{' || c == 0x27E8 || c == 0x2983 || c == 0x2039;
-}
-
-static bool is_closer(int32_t c) {
-  return c == ')' || c == ']' || c == '}' || c == 0x27E9 || c == 0x2984 || c == 0x203A;
-}
-
-static bool is_name_char(int32_t c) {
-  return c == '_' || c == '\'' || c == '!' || c == '?' || c == '.' ||
-         (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') ||
-         (c >= 0x80 && !is_opener(c) && !is_closer(c));
-}
-
-static void skip_block_comment(TSLexer *lexer) {
-  int nesting = 1;
-  while (!lexer->eof(lexer) && nesting > 0) {
+/* Skips a block comment, nested; the lexer is just past its `/-`. False when
+   the file ends before the comment does. */
+static bool skip_block_comment(TSLexer *lexer) {
+  unsigned depth = 1;
+  while (!lexer->eof(lexer) && depth > 0) {
     int32_t c = lexer->lookahead;
-    lexer->advance(lexer, false);
+    advance(lexer);
     if (c == '/' && lexer->lookahead == '-') {
-      lexer->advance(lexer, false);
-      nesting++;
-    } else if (c == '-' && lexer->lookahead == '/') {
-      lexer->advance(lexer, false);
-      nesting--;
-    }
-  }
-}
-
-static void skip_to_line_end(TSLexer *lexer) {
-  while (!lexer->eof(lexer) && !is_nl(lexer->lookahead))
-    lexer->advance(lexer, false);
-}
-
-static bool scan_by_body(TSLexer *lexer) {
-  int depth = 0;
-  bool seen = false;
-  bool block = false;
-  bool col_set = false;
-  bool prev_name = false;
-  uint32_t col = 0;
-  for (;;) {
-    if (lexer->eof(lexer)) break;
-    int32_t c = lexer->lookahead;
-    if (is_nl(c)) {
-      if (!seen) block = true;
-      bool stop = false;
-      for (;;) {
-        while (is_nl(lexer->lookahead) || lexer->lookahead == ' ' || lexer->lookahead == '\t')
-          lexer->advance(lexer, false);
-        if (lexer->eof(lexer)) { stop = true; break; }
-        uint32_t indent = lexer->get_column(lexer);
-        if (indent == 0) { stop = true; break; }
-        if (lexer->lookahead == '-') {
-          lexer->advance(lexer, false);
-          if (lexer->lookahead == '-') { skip_to_line_end(lexer); continue; }
-          if (!col_set) { col = indent; col_set = true; }
-          else if (depth == 0 && indent < col) { stop = true; break; }
-          seen = true;
-          prev_name = false;
-          lexer->mark_end(lexer);
-          break;
-        }
-        if (lexer->lookahead == '/') {
-          lexer->advance(lexer, false);
-          if (lexer->lookahead == '-') { skip_block_comment(lexer); continue; }
-          if (!col_set) { col = indent; col_set = true; }
-          else if (depth == 0 && indent < col) { stop = true; break; }
-          seen = true;
-          prev_name = false;
-          lexer->mark_end(lexer);
-          break;
-        }
-        if (!col_set) { col = indent; col_set = true; }
-        else if (depth == 0 && indent < col) { stop = true; break; }
-        break;
-      }
-      if (stop) break;
-      continue;
-    }
-    if (c == ' ' || c == '\t') {
-      lexer->advance(lexer, false);
-      continue;
-    }
-    if (!col_set) { col = lexer->get_column(lexer); col_set = true; }
-    if (c == '-') {
-      lexer->advance(lexer, false);
-      if (lexer->lookahead == '-') { skip_to_line_end(lexer); continue; }
-      prev_name = false;
-    } else if (c == '/') {
-      lexer->advance(lexer, false);
-      if (lexer->lookahead == '-') { skip_block_comment(lexer); continue; }
-      prev_name = false;
-    } else if (is_closer(c)) {
-      if (depth == 0) break;
-      depth--;
-      lexer->advance(lexer, false);
-      prev_name = false;
-    } else if (is_opener(c)) {
+      advance(lexer);
       depth++;
-      lexer->advance(lexer, false);
-      prev_name = false;
-    } else if (c == ',' && depth == 0 && !block) {
-      break;
-    } else if (c == '"') {
-      lexer->advance(lexer, false);
-      while (!lexer->eof(lexer) && lexer->lookahead != '"') {
-        if (lexer->lookahead == '\\') lexer->advance(lexer, false);
-        if (!lexer->eof(lexer)) lexer->advance(lexer, false);
-      }
-      if (!lexer->eof(lexer)) lexer->advance(lexer, false);
-      prev_name = false;
-    } else if (c == '\'' && !prev_name) {
-      lexer->advance(lexer, false);
-      if (lexer->lookahead == '\\') lexer->advance(lexer, false);
-      if (!lexer->eof(lexer) && !is_nl(lexer->lookahead)) lexer->advance(lexer, false);
-      if (lexer->lookahead == '\'') lexer->advance(lexer, false);
-      prev_name = false;
-    } else if (c == 0xAB) {
-      while (!lexer->eof(lexer) && lexer->lookahead != 0xBB && !is_nl(lexer->lookahead))
-        lexer->advance(lexer, false);
-      if (lexer->lookahead == 0xBB) lexer->advance(lexer, false);
-      prev_name = true;
-    } else {
-      prev_name = is_name_char(c);
-      lexer->advance(lexer, false);
+    } else if (c == '-' && lexer->lookahead == '/') {
+      advance(lexer);
+      depth--;
     }
-    seen = true;
-    lexer->mark_end(lexer);
   }
-  if (!seen) return false;
-  lexer->result_symbol = BY_BODY;
-  return true;
+  return depth == 0;
 }
 
-/* ── main scan ─────────────────────────────────────────────────── */
-
-bool tree_sitter_lean_external_scanner_scan(
-    void *payload, TSLexer *lexer, const bool *valid_symbols) {
-
-  Scanner *s = (Scanner *)payload;
-
-  /* 0. Error recovery: if all layout symbols are valid simultaneously
-        the parser is in error recovery mode — don't interfere. */
-  if (valid_symbols[LAYOUT_START] &&
-      valid_symbols[LAYOUT_SEMICOLON] &&
-      valid_symbols[LAYOUT_END]) {
-    return false;
-  }
-
-  if (valid_symbols[BY_BODY]) {
-    return scan_by_body(lexer);
-  }
-
-  /* 1z. SYNTAX_QUOTATION_BODY — the parser has just consumed `` `( `` and
-         expects the body of a syntax quotation. Greedily read until the
-         matching `)`, tracking nested parens, brackets, and braces.
-         Stops just before the closing `)` so the grammar can consume it. */
-  if (valid_symbols[SYNTAX_QUOTATION_BODY]) {
-    int paren_depth = 0;
-    int bracket_depth = 0;
-    int brace_depth = 0;
-    bool consumed_any = false;
-    while (!lexer->eof(lexer)) {
-      int32_t c = lexer->lookahead;
-      if (c == ')' && paren_depth == 0 && bracket_depth == 0 && brace_depth == 0) {
-        break;
-      }
-      if (c == '(') paren_depth++;
-      else if (c == ')') { if (paren_depth > 0) paren_depth--; }
-      else if (c == '[') bracket_depth++;
-      else if (c == ']') { if (bracket_depth > 0) bracket_depth--; }
-      else if (c == '{') brace_depth++;
-      else if (c == '}') { if (brace_depth > 0) brace_depth--; }
-      lexer->advance(lexer, false);
-      consumed_any = true;
-    }
-    if (consumed_any) {
-      lexer->mark_end(lexer);
-      lexer->result_symbol = SYNTAX_QUOTATION_BODY;
-      return true;
-    }
-    return false;
-  }
-
-  /* 1y. BRANCH_START — grammar just saw `then` or `else`. A branch on the
-         lines below is a layout block at their indent; one continuing on
-         the same line is an ordinary expression, so nothing is pushed. In
-         a `do` block the branch is a do-sequence, opened by LAYOUT_START. */
-  if (valid_symbols[BRANCH_START] && !valid_symbols[LAYOUT_START]) {
-    skip_spaces(lexer);
-    if (is_nl(lexer->lookahead)) {
-      uint32_t indent = measure_indent(lexer);
-      push(s, indent);
-      s->queued_indent = NO_QUEUED;
-      lexer->result_symbol = BRANCH_START;
-      return true;
-    }
-  }
-
-  /* 1a. LAYOUT_START — grammar just saw `do`, `where`, `:=`, `=>`
-         and wants to open a new layout block. */
-  if (valid_symbols[LAYOUT_START]) {
-    push_layout_indent(s, lexer);
-    lexer->result_symbol = LAYOUT_START;
-    return true;
-  }
-
-  /* 1b. MATCH_BODY_START — grammar just saw `=>` in a match arm.
-         Pushes indent identically to LAYOUT_START, but uses a
-         distinct token so the parser can distinguish match arm
-         context from general layout (avoiding conflicts with
-         _do_element).  Closed by the same LAYOUT_END mechanism. */
-  if (valid_symbols[MATCH_BODY_START]) {
-    push_layout_indent(s, lexer);
-    lexer->result_symbol = MATCH_BODY_START;
-    return true;
-  }
-
-  /* 2. Process queued indent from a previous newline.
-        Each call pops at most one layout level (LAYOUT_END) or emits
-        LAYOUT_SEMICOLON, then returns so tree-sitter can re-enter. */
-  if (s->queued_indent != NO_QUEUED && s->depth > 0) {
-    uint32_t qi = s->queued_indent;
-    uint32_t ci = top_indent(s);
-
-    if (qi < ci && valid_symbols[LAYOUT_END]) {
-      // Top-level match arms below the body's indent (`def f := match X with
-      // | ...`): when `:=` is the only layout open and the next token is `|`,
-      // the arms belong to the match. Closing the layout would terminate the
-      // match prematurely. Deeper stacks pop normally so nested matches still
-      // work — there an inner match needs LAYOUT_END to fire so the outer
-      // match's arm at a lower column can fire.
-      if (s->depth == 1) {
-        lexer->mark_end(lexer);
-        skip_spaces(lexer);
-        while (is_nl(lexer->lookahead)) {
-          lexer->advance(lexer, true);
-          skip_spaces(lexer);
-        }
-        if (starts_with_pipe(lexer)) {
-          s->queued_indent = NO_QUEUED;
-          return false;
-        }
-      }
-      pop(s);
-      lexer->result_symbol = LAYOUT_END;
-      return true;
-    }
-    if (qi == ci && valid_symbols[LAYOUT_SEMICOLON]) {
-      // Peek ahead past newlines+whitespace to see the actual next token.
-      // Don't emit semicolon before `|` — match arms are delimited
-      // by `|` tokens, not by layout semicolons.
-      skip_spaces(lexer);
-      while (is_nl(lexer->lookahead)) {
-        lexer->advance(lexer, true);
-        skip_spaces(lexer);
-      }
-      lexer->mark_end(lexer);
-      if (should_suppress_semicolon(lexer)) {
-        s->queued_indent = NO_QUEUED;
-        return false;
-      }
-      s->queued_indent = NO_QUEUED;
-      lexer->result_symbol = LAYOUT_SEMICOLON;
-      return true;
-    }
-    s->queued_indent = NO_QUEUED;
-  }
-
-  /* 3. Skip horizontal whitespace before inspecting the character. */
-  skip_spaces(lexer);
-
-  /* 4. Newline — measure indent of next line and start processing. */
-  if (is_nl(lexer->lookahead) && s->depth > 0) {
-    lexer->mark_end(lexer);
-    uint32_t next = measure_indent(lexer);
-    uint32_t ci   = top_indent(s);
-
-    if (next < ci && valid_symbols[LAYOUT_END]) {
-      // Mirror of the depth==1 / `|` guard in step 2.
-      if (s->depth == 1 && starts_with_pipe(lexer)) {
-        return false;
-      }
-      pop(s);
-      s->queued_indent = next;
-      lexer->result_symbol = LAYOUT_END;
-      return true;
-    }
-    if (next == ci && valid_symbols[LAYOUT_SEMICOLON]) {
-      // Suppress semicolon before `|`
-      if (should_suppress_semicolon(lexer)) {
-        s->queued_indent = NO_QUEUED;
-        return false;
-      }
-      s->queued_indent = NO_QUEUED;
-      lexer->result_symbol = LAYOUT_SEMICOLON;
-      return true;
-    }
-    return false;
-  }
-
-  /* 5. EOF while in layout — emit LAYOUT_END to close all open blocks. */
-  if (lexer->eof(lexer) && s->depth > 0 && valid_symbols[LAYOUT_END]) {
-    pop(s);
-    lexer->result_symbol = LAYOUT_END;
-    return true;
-  }
-
-  /* 6. Closing bracket/paren/brace — force-close one layout level. */
-  if (valid_symbols[LAYOUT_END] && s->depth > 0) {
+/* Does the rest of the line, before any `--` comment, end in the word `in`? */
+static bool ends_in_in(TSLexer *lexer) {
+  bool in = false;
+  while (!lexer->eof(lexer) && lexer->lookahead != '\n') {
     int32_t c = lexer->lookahead;
-    if (c == ')' || c == ']' || c == '}') {
-      pop(s);
-      lexer->result_symbol = LAYOUT_END;
-      return true;
+    if (c == ' ' || c == '\t' || c == '\r') {
+      advance(lexer);
+    } else if (is_word_start(c)) {
+      char word[WORD_MAX];
+      read_word(lexer, word);
+      in = strcmp(word, "in") == 0;
+    } else {
+      advance(lexer);
+      if (c == '-' && lexer->lookahead == '-') break;
+      in = false;
     }
   }
+  return in;
+}
 
-  return false;
+/* The first word of an indented line, after attributes and modifiers: does
+   it start a command? The lexer is on the line's first character. */
+static bool declares(TSLexer *lexer, char *word) {
+  for (;;) {
+    if (lexer->lookahead == '@') {
+      advance(lexer);
+      if (lexer->lookahead != '[') return false;
+      skip_brackets(lexer);
+      skip_spaces(lexer);
+      continue;
+    }
+    if (!is_word_start(lexer->lookahead)) return false;
+    read_word(lexer, word);
+    if (one_of(word, MODIFIERS)) {
+      skip_spaces(lexer);
+      continue;
+    }
+    if (one_of(word, DECLARATIONS) || one_of(word, SCOPING)) return true;
+    return one_of(word, PREFIXING) && !ends_in_in(lexer);
+  }
+}
+
+static bool skip_whitespace(TSLexer *lexer) {
+  bool new_line = false;
+  while (!lexer->eof(lexer)) {
+    int32_t c = lexer->lookahead;
+    if (c == '\n') {
+      new_line = true;
+    } else if (c != ' ' && c != '\t' && c != '\r' && c != '\f') {
+      break;
+    }
+    skip(lexer);
+  }
+  return new_line;
+}
+
+bool tree_sitter_lean_external_scanner_scan(void *payload, TSLexer *lexer, const bool *valid_symbols) {
+  (void)payload;
+  if (valid_symbols[ERROR_SENTINEL]) return false;
+  bool ending = valid_symbols[COMMAND_END];
+
+  bool new_line = skip_whitespace(lexer);
+  if (lexer->eof(lexer)) {
+    lexer->result_symbol = COMMAND_END;
+    return ending;
+  }
+  bool first = new_line && lexer->get_column(lexer) == 0;
+  int32_t c = lexer->lookahead;
+
+  if (c == '-') {
+    advance(lexer);
+    if (lexer->lookahead != '-' || !valid_symbols[COMMENT]) return false;
+    while (!lexer->eof(lexer) && lexer->lookahead != '\n') advance(lexer);
+    lexer->mark_end(lexer);
+    lexer->result_symbol = COMMENT;
+    return true;
+  }
+
+  if (c == '/') {
+    lexer->mark_end(lexer);
+    advance(lexer);
+    if (lexer->lookahead != '-') return false;
+    advance(lexer);
+    bool doc = lexer->lookahead == '-' || lexer->lookahead == '!';
+    if (!skip_block_comment(lexer)) return false;
+    if (ending && first && doc) {
+      skip_whitespace(lexer);
+      if (lexer->lookahead == '|') return false;
+      lexer->result_symbol = COMMAND_END;
+      return true;
+    }
+    if (!valid_symbols[COMMENT]) return false;
+    lexer->mark_end(lexer);
+    lexer->result_symbol = COMMENT;
+    return true;
+  }
+
+  if (!ending || !new_line) return false;
+  lexer->result_symbol = COMMAND_END;
+  lexer->mark_end(lexer);
+
+  char word[WORD_MAX];
+  if (!first) return declares(lexer, word);
+  if (c == '#') return true;
+  if (c == '@') {
+    advance(lexer);
+    return lexer->lookahead == '[';
+  }
+  if (!is_word_start(c)) return false;
+  read_word(lexer, word);
+  if (strcmp(word, "deriving") == 0) {
+    skip_spaces(lexer);
+    read_word(lexer, word);
+    return strcmp(word, "instance") == 0;
+  }
+  return word[0] != '\0' && !one_of(word, CONTINUING);
 }

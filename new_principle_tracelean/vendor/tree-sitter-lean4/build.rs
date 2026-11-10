@@ -1,8 +1,7 @@
 //! Builds the parser from `grammar.js`.
 //!
-//! Generating `parser.c` takes the tree-sitter CLI about ten minutes and some
-//! 24 GB of memory for this grammar, so the generated parser is kept beside the
-//! grammar, compressed, with the hash of the grammar it came from. It is used
+//! The generated parser is kept beside the grammar, compressed, with the hash
+//! of the grammar it came from, so a build needs no tree-sitter CLI. It is used
 //! when that hash matches; otherwise the parser is generated again, and
 //! `src/parser.c.gz` and `src/grammar.hash` should be refreshed from the output
 //! (see `README.md`).
@@ -55,10 +54,9 @@ fn main() {
     let grammar = fs::read("grammar.js").expect("read grammar.js");
     let stored = fs::read_to_string("src/grammar.hash").unwrap_or_default();
     let current = stored.trim() == grammar_hash(&grammar);
-    // Generating is asked for, never started by an editor's background check:
-    // two at once do not fit in memory. A stored parser older than the grammar
-    // is used with a warning, and `tests/lean_grammar.rs` fails until it is
-    // refreshed.
+    // Generating is asked for, so a build never needs the tree-sitter CLI. A
+    // stored parser older than the grammar is used with a warning, and
+    // `tests/lean_grammar.rs` fails until it is refreshed.
     let asked = std::env::var_os("TRACELEAN_GENERATE_LEAN_PARSER").is_some();
     if !current && !asked {
         println!(

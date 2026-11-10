@@ -1,135 +1,45 @@
-# Tree-Sitter-Lean4
+# tree-sitter-lean4, as TraceLean reads Lean
 
-Lean4 is a programming language, commonly used for mathematical theorem proving as a [proof assistant](https://en.wikipedia.org/wiki/Proof_assistant).
+A tree-sitter grammar that reads Lean 4 at the level of its commands: which
+declarations a file makes, where each begins and ends, under which name and
+namespace, and where its comments and string literals are. A command's body is
+a run of tokens up to the next command, so a body parses whatever notation,
+tactics or macros it uses. Why, and what is still unreadable, is in
+[ADR-0008](../../docs/decisions/ADR-0008-lean-grammar-limits.md).
 
-This project contains a Lean parser definition:
+- `grammar.js`: the commands, the tokens a body is made of, and syntax
+  quotations `` `(…) ``, whose parentheses are matched.
+- `src/scanner.c`: where a body ends (the first word of the next line decides),
+  and nested block comments.
+- `src/parser.c.gz`, `src/grammar.hash`: the generated parser and the FNV-1a of
+  the `grammar.js` it came from.
 
-- Tree-Sitter grammar for parsing [Lean 4](github.com/leanprover/lean4) source code.
-- Tree-Sitter queries for usage in the modal text editor [Helix](https://helix-editor.vercel.app/).
-- Rust library pushed to Crates.io for parsing Lean in a Rust program
-
-**Important**: Lean is a very extensible language. Therefore, the Tree-Sitter grammar is of limited use. For parsing advanced Lean programs you will need to use the Lean kernel. See also [Metaprogramming in Lean](https://github.com/leanprover-community/lean4-metaprogramming-book).
-
-## Usage
-
-### Rust
-
-Add this crate as a normal dependency in your `Cargo.toml` file.
-
-```bash
-cargo add tree-sitter-lean4
-```
-
-During the first build, you need these binaries in your path:
-
-- C code generator `tree-sitter` (only if the `src/parser.c` is missing)
-- C compiler `cc`
-
-Then instantiate the parser:
-
-```rust
-use tree_sitter::{InputEdit, Language, Parser, Point};
-
-let mut parser = Parser::new();
-parser.set_language(&tree_sitter_lean4::LANGUAGE.into()).expect("Error loading Rust grammar");
-```
-
-See [Tree-Sitter-Rust](https://github.com/tree-sitter/tree-sitter/tree/master/lib/binding_rust).
-
-### Nix Flake
-
-This is the recommended approach for reproducible builds.
-
-```nix
-{
-  inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    tree-sitter-lean.url = "github:wvhulle/tree-sitter-lean";
-  };
-
-  outputs = { nixpkgs, tree-sitter-lean, ... }:
-    let
-      system = "x86_64-linux";
-      pkgs = nixpkgs.legacyPackages.${system};
-    in
-    {
-      devShells.${system}.default = pkgs.mkShell {
-        # If you want to use ast-grep (see next section)
-        packages = [ pkgs.ast-grep ];
-        shellHook = ''
-          # Create a symlink in the working directory for easy access (add to .gitignore)
-          ln -sf ${tree-sitter-lean.packages.${system}.grammar}/parser tree-sitter-lean.so
-        '';
-      };
-    };
-}
-```
-
-See [`nixpkgs` tree-sitter documentation](https://nixos.org/manual/nixpkgs/stable/#tree-sitter) for more Tree-Sitter with Nix examples.
-
-Push build cache to public cache server:
+## Changing the grammar
 
 ```bash
-nix build . --print-out-paths | cachix push wvhulle
+cp grammar.js tree-sitter.json "$work"/ && mkdir -p "$work/src" && cp src/scanner.c "$work/src/"
+(cd "$work" && tree-sitter generate)          # under a second
+gzip -9 -c "$work/src/parser.c" > src/parser.c.gz
 ```
 
-## Development
+then write the new hash to `src/grammar.hash` (the FNV-1a that `build.rs`
+computes; `crates/core/tests/lean_grammar.rs` fails while they disagree). A
+build with `TRACELEAN_GENERATE_LEAN_PARSER=1` generates the parser itself and
+names where it put it.
 
-Read [writing the grammar](https://tree-sitter.github.io/tree-sitter/creating-parsers/3-writing-the-grammar.html). Be careful of adding conflicts in the grammar as they cause exponential growth of the state space.
-
-Use the `tree-sitter` CLI:
+`tree-sitter parse File.lean` in `$work` shows the tree of one file. The
+measure of a change is Lean's own sources:
 
 ```bash
-tree-sitter generate # Re-run this after every grammar rule change
-tree-sitter parse Test.lean # A long Lean file that needs to be parsed correctly
+cargo test -p tracelean-core --test lean_grammar -- --include-ignored
 ```
 
-## Tests
+parses every file of the toolchain named by `formal/lean-toolchain` and checks
+that each line starting a named declaration (outside comments, strings and
+quotations) is one the grammar found, and that it found no other.
 
-Add tests for the Tree-Sitter grammar to [./test/corpus](./test/corpus).
-
-Tests are run with
-
-```bash
-tree-sitter test
-```
-
-Check the amount of failures with:
-
-```bash
-tree-sitter test --overview-only | grep ✗ | lines | length
-```
-
-Tests can be updated automatically when you change the grammar:
-
-```bash
-tree-sitter test --update
-```
-
-See [writing tests](https://tree-sitter.github.io/tree-sitter/creating-parsers/5-writing-tests.html)
-
-You should also test the queries from `./queries`:
-
-```bash
-tree-sitter query higlights.scm Test.lean
-```
-
-This will report any errors such as incorrect node names in the query file.
-
-## Vendored in TraceLean
-
-Extended to cover the Lean that TraceLean's models are written in. Generating `parser.c`
-takes about ten minutes and 24 GB, so it is stored as `src/parser.c.gz` with
-`src/grammar.hash`, the FNV-1a of the `grammar.js` it came from. After changing
-the grammar, build once with `TRACELEAN_GENERATE_LEAN_PARSER=1`, gzip the
-generated `parser.c` the build names into `src/parser.c.gz` and write the new
-hash; `crates/core/tests/lean_grammar.rs` fails while they disagree.
-
-Known limit: a `then` branch on lines of its own, inside a match arm followed
-by another arm, leaves the arm's layout open; write such a branch on one line.
+The highlighting queries are `assets/languages/lean4/highlights.scm`.
 
 ## License
 
-Based on <https://github.com/Julian/lean.nvim>. Grammar was completely rewritten to be simpler.
-
-MIT
+MIT.
