@@ -52,6 +52,8 @@ tracelean-view . trace src/file.rs            # what a file claims, and what els
 tracelean-view . coverage REQ-X               # lines its code runs, by which tests, and which none run
 tracelean-view . findings                     # every finding (Unmodeled, Unbound, …), one a line
 tracelean-view . evidence                     # each clause's evidence chain
+tracelean-view . overview                     # marks, where work is left, runs, modules, as Markdown
+tracelean-view . modules                      # each directory of Rust: what it uses, what it serves
 tracelean-view                                # the full list
 ```
 
@@ -74,7 +76,7 @@ All take the project root first (`.`). "Writes" is under `.tracelean/`.
 | `--judge X` | prints the judging prompt for a person | — |
 | `--judge X --verdict agrees\|drift\|unmodelable --by <who> [--delegated-by <who>] [--note …]` | records **a person's** verdict ([05](05-evidence.md)) | evidence, lock |
 | `--hashes` | what each requirement hashes to now, for a document's `described_hash` ([03](03-requirements.md)) | — |
-| `--proofs` | asks Lean about every `@proves` and `@pins` theorem; writes `P` for the accepted ones and the reason for each refused one (`ProofRefused` findings) | proofs.json, evidence |
+| `--proofs` | asks Lean about every `@proves` and `@pins` theorem; writes `P` for the accepted ones whose model is pinned and the reason for each refused one (`ProofRefused` findings) | proofs.json, evidence |
 | `--pins` / `--strength [model]` | each model's strength (pinned, attempted, open, nondeterministic), and the obligation `∀ g, S₁ g → … → g = model` to prove for one | — |
 | `--coverage [--again]` | runs each Rust test alone under coverage: which tests ran which lines; `cached` while no `.rs` or `Cargo` file changed | coverage |
 | `--unparsed <file>` | where the grammar stopped reading a file | — |

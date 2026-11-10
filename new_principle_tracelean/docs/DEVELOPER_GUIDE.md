@@ -166,6 +166,7 @@ window command, and saves a screenshot — without opening a window.
 cargo test --workspace -- --include-ignored   # unit, architecture, every Rust↔Lean suite
 cd formal && lake build                       # the Lean models and proofs
 node web/build.mjs && node web/test/pointer.mjs   # the page in a real browser
+node web/test/overview.mjs                       # the overview figures in a real browser
 cargo run -p tracelean-core --bin tracelean-trace -- .   # must say blocking: false
 ```
 

@@ -157,8 +157,9 @@ cursor onto one and press `.` (or click it in the window) to open it.
 │🔗│ (the files)      │ (the file you edit)        │ (trace, design,  │
 │🧪│ letters show     │ chips in the gutter:       │  findings,       │
 │🕸│ what each file   │ I T M P D                  │  sandbox,        │
-│🔍│ claims           │ coverage bar beside lines  │  history, proof) │
+│🔍│ claims           │ coverage bar beside lines  │  history)        │
 │⚙ │                  │                            │                  │
+│📊│                  │                            │                  │
 │🌳│                  │                            │                  │
 ├──┴──────────── which-key bar: what you can do here, keys first ─────┤
 └──────────────────────────── status line ────────────────────────────┘
@@ -169,8 +170,7 @@ cursor onto one and press `.` (or click it in the window) to open it.
   files implement, test, model or prove something before opening any.
 - **Document (middle).** The file you are reading or editing.
 - **Side panel (right).** Whatever a station opens: the trace of the current
-  file, the design graph, findings, the sandbox, the undo tree, or the proof
-  goals of a Lean file.
+  file, the design graph, findings, the sandbox or the undo tree.
 - **Station icons (far left, window only).** One click opens each station; the
   terminal reaches the same stations with `Space w t …` (see
   [section 10](#10-panes-and-stations)).
@@ -244,6 +244,7 @@ mode quits and `Ctrl+C` quits from anywhere.
 | `c` | copy the whole buffer |
 | `l` | copy this line |
 | `p` | copy the file's path |
+| `v` | open the file in VS Code at the cursor's line and column |
 | `e` | edit the setting under the cursor (in the Definitions station) |
 
 **History: `Space h …`**
@@ -272,6 +273,8 @@ mode quits and `Ctrl+C` quits from anywhere.
 | `s` | what went stale |
 | `l` | write the lock file |
 | `j` | the judge's prompt for this clause |
+| `p` | write the evidence report, a card per clause ([16.2](#162-the-report-a-card-per-clause)) |
+| `P` | write the report, marking what changed since the revision under the cursor |
 
 **Design: `Space g …`** (in the design graph)
 
@@ -290,6 +293,13 @@ mode quits and `Ctrl+C` quits from anywhere.
 | `o` | open the context an agent needs to change the requirement here |
 | `t` | include this part or leave it out |
 | `y` | copy the context to the clipboard |
+
+**Help: `Space …`**
+
+| Key | Action |
+|---|---|
+| `?` | the tutorial |
+| `m` | in the tutorial: unfold or fold the section under the cursor |
 
 **Differential testing: `Space d …`**
 
@@ -342,6 +352,9 @@ never starts processes itself.
 | `h` | the undo tree |
 | `s` | the sandbox |
 | `c` | definitions: what can be configured |
+| `e` | the report: writes the evidence report and opens it in your browser |
+| `o` | the overview as text: counts, marks, where work is left, runs, unsaved edits, the agent's waiting changes, modules |
+| `m` | the modules: what each directory of Rust uses and which requirements it serves |
 
 ### 7.2 Direct keys (chords)
 
@@ -394,8 +407,77 @@ bottom:
 
 - **Click** a file to open it; click a folder to open or close it.
 - **Click into** a file to put the cursor there and type.
-- **Right-click anything** for every action available there, with the keys
-  that reach it.
+- **Right-click anything** for a menu at the pointer listing every action
+  available there, with the keys that reach it: the same list the bottom bar
+  shows. Arrow keys and `Enter` work inside it; `Escape` closes it. Outside a
+  pane (menu bar, stations, tabs) it lists the leader groups instead.
+- **Menu bar (top).** The leader menu as a classic menu: one entry per group
+  (File, Trace, …), each listing its actions and keys. On its right: search
+  every command, open a file by name, switch theme, list every key.
+- **Themes.** Dark and light ship. `Space w c`, the **Theme** button or
+  `[ switch theme ]` in the settings station (⚙) flips between them; the choice
+  is `"base"` in `.tracelean/theme.json` and colours you set survive it.
+- **Layout settings** (`Space w t c`, section `layout`): `layout.menuBar` =
+  `shown` or `hidden`; `layout.stations` = `hidden` (default: the stations
+  are the **Stations** menu), `left` or `top`; `layout.zoom` = 60 to 200.
+- **Zoom.** `Ctrl +` / `Ctrl -` (or **A+** / **A−**) scale everything by 10%;
+  `Ctrl 0` resets.
+- **Overview** (menu bar). The design as figures: a tile row, a bar per mark
+  (how many clauses are implemented, annotated, judged, tested, proved), the
+  requirements as a graph (roots on top; hover lights a node's links; click
+  opens it) and a matrix of requirement × mark, most work left first.
+  `Escape` closes it.
+- **Copy as Markdown** (top of the overview). Puts the whole overview on the
+  clipboard as Markdown, for a pull request or a note; the button says
+  `Copied`, or `Could not copy`. The same text is the **Overview** station
+  (`Space w t o`) and `tracelean-view . overview > overview.md` writes it to a
+  file.
+- **The agent's waiting changes.** While a sandboxed agent has changes waiting
+  ([section 17](#17-working-with-an-ai-agent)), the overview has a section
+  with a row per file, in the order the changes came: created, deleted or
+  modified, the lines added and removed, and each clause the file claims with
+  the marks it holds now (accepting puts J, T and P in question). A file
+  claiming no clause says so. With nothing waiting the section is absent.
+- **Modules.** A row per directory of Rust: its files, what it uses, what
+  uses it and the requirements it serves, modules that use others first. A
+  module whose files claim no requirement says `claims no requirement`: code
+  nothing asked for, or nothing says so. Edges come from `crate::` paths and
+  from other crates' names in code (never comments); it is Rust only, and a
+  table, not a drawn graph. As text: `Space w t m`.
+- **Station icons.** Each station in the station bar is a drawn icon, not
+  words; point at it for its name.
+- **Tutorial.** `Space ?`, or the first **Start here** row of the welcome
+  page: a five-minute walk through the editor. Rows that start with `▸` hold
+  more: click one, or put the cursor on it and press `Space m`, to
+  unfold it (`▾`); again to fold it.
+- **Clause card.** Rest the pointer on a chip, a requirement name, or a node,
+  treemap tile or row in the overview: after a short pause a card shows the
+  requirement's title, what it refines, its clauses (the first six) with
+  their A J T P marks, and which files claim it. It goes away when the pointer
+  leaves or you click.
+- **Unsaved edits: `Δ n`.** When files with unsaved edits claim clauses, the
+  status bar shows `Δ n`, `n` being the number of clauses claimed by those
+  files. Click it to open the overview filtered to what they touch, before you
+  save. The overview then also has a **Your unsaved edits** section: each
+  clause, the marks it holds now (saving puts J, T and P in question) and the
+  file that claims it.
+- **Overview filters.** Above the requirement figure: **All**, **Work left**,
+  **Not implemented** and **Touched by unsaved edits (n)**; a root selector
+  (`every root` or `under <id>`); a name filter; and **Graph** / **Treemap**.
+  The treemap gives each requirement a tile whose area is its number of
+  clauses and whose colour is how much is held (red little, green all); click
+  a tile to open the requirement.
+- **Test runs.** The overview ends with **Test runs on record**: the buttons
+  **Run differential tests**, **Check the tree** and **Measure coverage**
+  (each runs its action and shows `running…`), and a table of the compared
+  operations on record: clauses carried, cases, seed and how long ago.
+- **Scrolling.** Wheel ticks are added up and sent as one scroll per frame;
+  only the panes are redrawn while the wheel turns, the rest once it stops.
+- **Tabs** carry a **×**; middle-click closes too.
+
+The terminal takes the mouse too: click places the cursor (or acts on a
+station or tab in the two top rows), right-click lists what can be done there
+in the bottom bar, the wheel scrolls the pane under it.
 - **Click** a button row (an action carried by a row, such as `[ expand all ]`).
 - **Point** at a chip or a coverage mark to read what it means.
 - **Ctrl+click** a name to go to its definition.
@@ -424,6 +506,7 @@ computed from the same keymap that dispatches them.
 | Go to a definition | `F12`, `Ctrl+click` or `Space f g`; come back with `Alt+Left` |
 | Find the uses of a name | `Space f u` |
 | Copy | select with `Shift+arrows`, then `Ctrl+C` (window); or `Space f c` / `Space f l` / `Space f p` |
+| Open in VS Code | `Space f v`, at the cursor's line and column |
 
 Definitions and uses are found by reading the files with each language's
 grammar; no language server is needed. Syntax colouring comes from the core's
@@ -476,8 +559,15 @@ home is gone (you closed that pane), a buffer opens where the focus is.
 | Design | 🕸 | `Space w t r` | the requirements as their refinement graph |
 | Findings | 🔍 | `Space w t f` | what the checker found, each with what to create |
 | Definitions | ⚙ | `Space w t c` | every setting, colour by colour, editable in place |
+| Report | 📊 | `Space w t e` or `Space t p` | writes the evidence report ([16.2](#162-the-report-a-card-per-clause)) to `target/tracelean-report/index.html`, opens it in your browser and shows its absolute path, the marks held and the findings; click `HEAD` or `main` to write it again marking what changed since |
 | Undo tree | 🌳 | `Space w t h` or `Space h t` | the history tree |
-| Proof | ∴ | opens by itself with a `.lean` file | the goals Lean reports at the cursor, following the cursor and your edits |
+| Overview | 📈 | `Space w t o` | the overview (see 7.4) as Markdown text, in the document pane |
+| Modules | 🧩 | `Space w t m` | the module graph as a table, in the document pane |
+
+In the window the station bar draws an icon on each station (when
+`layout.stations` is `left` or `top`; the default hides the bar and lists the
+stations under **Stations**). The icon's name is read out by screen readers; a
+station without an icon keeps its words. The emoji above are the terminal's.
 
 ---
 
@@ -565,7 +655,7 @@ Four marks, in fixed positions, with a dash for each one missing:
 | **A** annotated | something in the tree claims the clause |
 | **J** judged | a person judged the Lean model to say what the clause says, and neither changed since |
 | **T** tested | differential testing of model against code agreed over a stated number of cases, reaching every situation the binding declared, and nothing changed since |
-| **P** proved | Lean accepted a theorem about the clause's model that is honest (see [14.3](#143-p-proved-honest-theorems)) |
+| **P** proved | Lean accepted a theorem about the clause's model that is honest (see [14.3](#143-p-proved-honest-theorems)), **and the model is pinned** ([14.4](#144-strength-does-the-specification-pin-the-model)) |
 
 - `AJTP`: fully backed.
 - `A-TP`: tested and proved, but nobody has judged the model against the
@@ -623,11 +713,12 @@ its coverage until it is measured again, so the gutter never shows stale
 numbers. `Space t v` lists, for the requirement under the cursor, which of its
 lines the tests run.
 
-### 11.9 Proof goals ∴
+### 11.9 Proof goals
 
-Opening a `.lean` file opens the proof panel. It shows the goals Lean reports
-at the cursor and follows the cursor and your edits. Closing the last Lean file
-closes it.
+To watch a proof's goals, press `Space f v` in the Lean file: VS Code opens on
+it at the cursor, and the Lean 4 extension's infoview shows the goals there.
+This needs VS Code's `code` command on your `PATH`; if it cannot be started,
+the status line says why.
 
 ---
 
@@ -813,10 +904,11 @@ assumption, so a reviewer sees it.
 
 ### 13.5 When a file does not parse
 
-If the grammar cannot read part of a file, annotations after that point anchor
-to the whole file and are capped (`Imprecise`).
-`tracelean-trace . --unparsed path/to/File.lean` shows where it stopped.
-Rewrite that declaration more plainly, without changing its meaning.
+Lean files are read at the level of their commands (ADR-0008), so any Lean that
+Lean accepts is read, whatever notation its proofs use. A file malformed at that
+level (a declaration with no name, a comment or quotation never closed) anchors
+the annotations after the problem to the whole file, capped (`Imprecise`).
+`tracelean-trace . --unparsed path/to/File.lean` shows where.
 
 ---
 
@@ -907,6 +999,13 @@ earns **P** only when it really says something about the clause's model. It is
 Each refusal shows as a `ProofRefused` finding, and on the requirement view and
 the report, with what to do about it.
 
+An accepted theorem is not enough on its own: **P** is given only when the
+model is also *pinned* (next section). A clause whose theorems are accepted
+but whose model is open or attempted reads `AJT-`, and its card says "its
+theorems are accepted, but they do not pin the model". P rests on the model,
+its specification, every theorem about it and its pinning theorem: change any
+of them and P is withdrawn until `--proofs` earns it again.
+
 ### 14.4 Strength: does the specification pin the model?
 
 A proof says the model *has* a property, not that the property leaves only one
@@ -939,6 +1038,9 @@ theorem to_fahrenheit_pinned :
 | **open** | no pinning theorem yet; the obligation it owes is shown |
 | **nondeterministic** | declared with `@nondeterministic reason="…"`; excluded |
 
+Only a **pinned** model gives its clauses **P**: a property that also holds of
+the function that always returns 0 does not prove the clause.
+
 `tracelean-trace . --pins` lists every model's strength, and
 `tracelean-trace . --strength toCelsius` (a model's name or a clause, matched
 by substring) prints the obligation to prove for that model.
@@ -950,7 +1052,11 @@ tracelean-trace . --coverage
 ```
 
 Builds the Rust tests with coverage instrumentation, runs each test alone and
-records which tests ran which lines. It needs `llvm-tools`. The editor then
+records which tests ran which lines. It needs `llvm-tools`. Add `--ignored` to
+run the ignored suites too (the differential and Lean ones, slow because each
+builds a package); without it, a line only they reach reads as never run. A
+test that starts a built program (the terminal frontend, the command line)
+counts the lines that program ran. The editor then
 shows the coverage gutter ([11.8](#118-coverage-in-the-gutter)) and per-clause
 line counts.
 
@@ -1055,6 +1161,11 @@ email. It has:
     it assumes and its statement, the strength with the obligation, and the
     judgement with who made it and their note;
 - **a Removed section** for clauses that no longer exist.
+
+In the editor, the Report station (📊, `Space w t e`, or `Space t p`) writes
+the same page to `target/tracelean-report/index.html` through the same code,
+opens it in your default browser and shows its absolute path with the counts; clicking `HEAD` or `main` in it (or
+`Space t P` on a revision) writes it again with the changes since.
 
 A typical review: run `--report … --diff main`, tick **lost a mark**, then
 **changed**, and read those cards.
@@ -1163,6 +1274,8 @@ tracelean-view . coverage REQ-THERMO.to_celsius
 tracelean-view . trace src/celsius.rs         # what a file claims, and what else claims the same clauses
 tracelean-view . context REQ-THERMO
 tracelean-view . findings
+tracelean-view . overview                     # the overview as Markdown; > overview.md writes the file
+tracelean-view . modules                      # what each directory of Rust uses and serves
 tracelean-view . evidence
 tracelean-view . rollup
 tracelean-view . stale
@@ -1405,10 +1518,10 @@ changed (the clause, its model, its code or the toolchain). Run
 the model, mentions it only on fixed values, or would be true of any function.
 Restate it about the model, for every input.
 
-**`Imprecise` on a Lean file.** The vendored grammar could not parse a
-declaration, often an inline `match` or `let` inside a theorem's statement.
-`tracelean-trace . --unparsed <file>` shows where. Restate it with a helper or
-with `Option.map`/`Except.bind`.
+**`Imprecise` on a Lean file.** The file is malformed at the level of its
+commands: a declaration with no name, or a block comment or syntax quotation
+that is never closed. `tracelean-trace . --unparsed <file>` shows where; `lake
+build` names the same mistake.
 
 **`--diff` says there is no lock at the revision.** That revision has no
 `.tracelean/trace.lock`. Compare against a later one, or commit a lock first.
