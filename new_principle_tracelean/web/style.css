@@ -85,9 +85,11 @@ button.item {
 
 #strip .close {
   margin-left: 8px;
-  padding: 0 3px;
+  padding: 0 4px;
   border-radius: 3px;
-  opacity: 0;
+  opacity: 0.55;
+  font-size: 1.15em;
+  line-height: 1;
 }
 
 #strip .item:hover .close,
@@ -789,4 +791,675 @@ button.actionable:focus {
   border-radius: 3px;
   background: var(--ui-scrollbar);
   cursor: grab;
+}
+
+/* ── menu bar ─────────────────────────────────────────────────────────── */
+
+body {
+  grid-template-rows: auto auto minmax(0, 1fr) auto auto;
+  grid-template-areas:
+    "menubar  menubar"
+    "stations strip"
+    "stations buffer"
+    "menu     menu"
+    "status   status";
+}
+
+#menubar {
+  grid-area: menubar;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+  padding: 2px 6px;
+  background: var(--ui-activityBar);
+  border-bottom: 1px solid var(--ui-border);
+  font-family: var(--fonts-chrome);
+  font-size: var(--fonts-chromeSize);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+body.menubar-hidden #menubar {
+  display: none;
+}
+
+.menubar-item,
+.menubar-tool {
+  flex: none;
+  padding: 3px 9px;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  color: var(--ui-sidebarText);
+  font: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 90ms ease, color 90ms ease;
+}
+
+.menubar-item::first-letter {
+  text-transform: uppercase;
+}
+
+.menubar-item:hover,
+.menubar-tool:hover {
+  background: var(--ui-hover);
+  color: var(--ui-activityIconActive);
+}
+
+.menubar-spacer {
+  flex: 1;
+}
+
+.menubar-tool.search,
+.menubar-tool.open {
+  padding: 2px 12px;
+  border: 1px solid var(--ui-border);
+  background: var(--ui-input);
+  color: var(--ui-muted);
+  font-size: var(--fonts-panelSize);
+}
+
+/* The stations along the top instead of down the left (layout.stations = top). */
+body.stations-top {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto auto auto minmax(0, 1fr) auto auto;
+  grid-template-areas: "menubar" "stations" "strip" "buffer" "menu" "status";
+}
+
+body.stations-top #stations {
+  flex-direction: row;
+  padding: 0 6px;
+}
+
+body.stations-top #stations .item {
+  padding-left: 10px;
+  padding-right: 10px;
+}
+
+/* ── the menu at the pointer ──────────────────────────────────────────── */
+
+#context.at-pointer {
+  max-width: min(460px, calc(100vw - 8px));
+  max-height: calc(100vh - 8px);
+  padding: 4px;
+  border-radius: 6px;
+  animation: pop 90ms ease-out;
+}
+
+#context.at-pointer .context-entry {
+  flex-direction: row-reverse;
+  border-radius: 4px;
+  padding: 4px 10px;
+}
+
+#context.at-pointer .context-column + .context-column {
+  margin-top: 4px;
+  border-top: 1px solid var(--ui-contextMenuBorder);
+}
+
+#context.at-pointer .context-group::first-letter {
+  text-transform: uppercase;
+}
+
+@keyframes pop {
+  from { opacity: 0; transform: translateY(-3px); }
+}
+
+/* ── feedback: every control answers the pointer and the keyboard ─────── */
+
+button {
+  transition: background-color 90ms ease, color 90ms ease, border-color 90ms ease;
+}
+
+button:focus-visible,
+input:focus-visible {
+  outline: 1px solid var(--ui-focus);
+  outline-offset: -1px;
+}
+
+#context.at-pointer .context-keys {
+  padding: 0 5px;
+  border: 1px solid var(--ui-contextMenuBorder);
+  border-radius: 3px;
+}
+
+.context-keys:empty {
+  visibility: hidden;
+}
+
+#status {
+  transition: background-color 150ms ease;
+}
+
+/* ── narrow windows ───────────────────────────────────────────────────── */
+
+@media (max-width: 900px) {
+  .menubar-tool.search,
+  .menubar-tool.open {
+    display: none;
+  }
+
+  #menu.which-key {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  body:not(.stations-top) {
+    grid-template-columns: 36px minmax(0, 1fr);
+  }
+
+  #menu {
+    height: min(110px, 24vh);
+  }
+
+  #status {
+    padding-right: 120px;
+  }
+}
+
+@media (max-height: 520px) {
+  #menu {
+    height: min(84px, 22vh);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* ── zoom: everything scales together (layout.zoom, Ctrl + / Ctrl -) ──── */
+
+body.stations-hidden {
+  grid-template-columns: 0 minmax(0, 1fr);
+}
+
+body.stations-hidden #stations {
+  display: none;
+}
+
+.menubar-tool.overview {
+  margin-left: 10px;
+  padding: 2px 12px;
+  background: var(--ui-button);
+  color: var(--ui-buttonText);
+  font-weight: 600;
+}
+
+.menubar-tool.overview:hover {
+  background: var(--ui-accent);
+  color: var(--ui-buttonText);
+}
+
+.menubar-tool.zoom {
+  font-weight: 600;
+}
+
+/* ── the overview: the design as figures ──────────────────────────────── */
+
+#overview {
+  grid-area: 2 / 1 / 4 / 3;
+  z-index: 5;
+  overflow: auto;
+  padding: 14px 22px 28px;
+  background: var(--ui-document);
+  color: var(--ui-documentText);
+  font-family: var(--fonts-chrome);
+  font-size: var(--fonts-chromeSize);
+  animation: pop 120ms ease-out;
+}
+
+.ov-head {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+}
+
+.ov-head h1 {
+  margin: 0;
+  font-size: 1.5em;
+  color: var(--roles-heading);
+}
+
+.ov-hint {
+  color: var(--ui-muted);
+  font-size: var(--fonts-panelSize);
+  font-weight: 400;
+}
+
+.ov-close {
+  margin-left: auto;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  color: inherit;
+  font-size: 1.5em;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.ov-close:hover {
+  background: var(--ui-hover);
+}
+
+.ov-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+  margin: 14px 0 6px;
+}
+
+.ov-tile {
+  padding: 10px 14px;
+  border: 1px solid var(--ui-border);
+  border-left: 4px solid var(--ui-accent);
+  border-radius: 6px;
+  background: var(--ui-sidebar);
+}
+
+.ov-tile.good, .ov-tile.full { border-left-color: var(--ui-success); }
+.ov-tile.some { border-left-color: var(--ui-warning); }
+.ov-tile.none { border-left-color: var(--ui-error); }
+
+.ov-value {
+  font-size: 1.7em;
+  font-weight: 700;
+  color: var(--ui-tabActiveText);
+}
+
+.ov-label {
+  color: var(--ui-muted);
+  font-size: var(--fonts-panelSize);
+}
+
+.ov-section h2 {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin: 22px 0 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--ui-border);
+  font-size: 1.1em;
+  color: var(--roles-requirement);
+}
+
+.ov-bar-row {
+  display: grid;
+  grid-template-columns: 130px minmax(80px, 1fr) 130px;
+  align-items: center;
+  gap: 12px;
+  padding: 3px 0;
+}
+
+.ov-bar-name {
+  font-family: var(--fonts-code);
+  white-space: pre;
+}
+
+.ov-track {
+  height: 14px;
+  border-radius: 7px;
+  background: var(--ui-selection);
+  overflow: hidden;
+}
+
+.ov-fill {
+  height: 100%;
+  border-radius: 7px;
+  transition: width 300ms ease;
+}
+
+.ov-bar-count {
+  color: var(--ui-muted);
+  font-size: var(--fonts-panelSize);
+  text-align: right;
+}
+
+.mark-I { background: var(--chips-implements); fill: var(--chips-implements); stroke: var(--chips-implements); }
+.mark-A { background: var(--roles-markAnnotated); fill: var(--roles-markAnnotated); stroke: var(--roles-markAnnotated); }
+.mark-J { background: var(--roles-markJudged); fill: var(--roles-markJudged); stroke: var(--roles-markJudged); }
+.mark-T { background: var(--roles-markTested); fill: var(--roles-markTested); stroke: var(--roles-markTested); }
+.mark-P { background: var(--roles-markProved); fill: var(--roles-markProved); stroke: var(--roles-markProved); }
+
+.ov-graph {
+  overflow-x: auto;
+  padding: 4px 0;
+}
+
+.ov-graph svg {
+  display: block;
+  margin: 0 auto;
+}
+
+.ov-edges path {
+  fill: none;
+  stroke: var(--ui-muted);
+  stroke-opacity: 0.22;
+  stroke-width: 1.2;
+  transition: stroke 120ms ease, stroke-width 120ms ease;
+}
+
+.ov-edges path.lit {
+  stroke-opacity: 1;
+  stroke: var(--ui-accent);
+  stroke-width: 2.4;
+}
+
+.ov-node {
+  cursor: pointer;
+  outline: none;
+}
+
+.ov-box {
+  fill: var(--ui-sidebar);
+  stroke: var(--ui-border);
+  stroke-width: 1.5;
+  transition: stroke 120ms ease, fill 120ms ease;
+}
+
+.ov-node.full .ov-box { stroke: var(--ui-success); }
+.ov-node.none .ov-box { stroke: var(--ui-error); stroke-dasharray: 4 3; }
+
+.ov-node:hover .ov-box,
+.ov-node:focus-visible .ov-box {
+  fill: var(--ui-hover);
+  stroke: var(--ui-accent);
+  stroke-width: 2.2;
+}
+
+.ov-progress { fill: var(--chips-implements); }
+
+.ov-id {
+  fill: var(--ui-tabActiveText);
+  font-family: var(--fonts-code);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.ov-count {
+  fill: var(--ui-muted);
+  font-size: 11px;
+}
+
+.ov-dot { stroke-width: 1.6; }
+.ov-dot.some { fill-opacity: 0.3; }
+.ov-dot.none, .ov-dot.empty { fill: none; stroke: var(--ui-muted); stroke-opacity: 0.6; }
+
+.ov-matrix {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fonts-panelSize);
+}
+
+.ov-matrix th {
+  position: sticky;
+  top: -14px;
+  padding: 5px 8px;
+  background: var(--ui-document);
+  color: var(--ui-muted);
+  text-align: left;
+  border-bottom: 1px solid var(--ui-border);
+}
+
+.ov-matrix td {
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--ui-border);
+}
+
+.ov-matrix tr {
+  cursor: pointer;
+}
+
+.ov-matrix tr:hover td {
+  background: var(--ui-hover);
+}
+
+.ov-req {
+  font-family: var(--fonts-code);
+  color: var(--roles-requirement);
+  white-space: nowrap;
+}
+
+.ov-title {
+  color: var(--ui-muted);
+}
+
+.ov-cell {
+  width: 62px;
+  text-align: center;
+  font-family: var(--fonts-code);
+  font-weight: 600;
+}
+
+.ov-cell.full { color: var(--ui-success); box-shadow: inset 0 -3px 0 var(--ui-success); }
+.ov-cell.some { color: var(--ui-warning); box-shadow: inset 0 -3px 0 var(--ui-warning); }
+.ov-cell.none { color: var(--ui-error); box-shadow: inset 0 -3px 0 var(--ui-error); }
+.ov-cell.empty { color: var(--ui-muted); }
+
+.ov-empty {
+  margin-top: 30px;
+  color: var(--ui-muted);
+}
+
+/* ── the card of a requirement or clause, on hover ────────────────────── */
+
+#card {
+  position: fixed;
+  z-index: 20;
+  width: min(520px, calc(100vw - 12px));
+  padding: 10px 12px;
+  border: 1px solid var(--ui-contextMenuBorder);
+  border-left: 4px solid var(--roles-requirement);
+  border-radius: 6px;
+  background: var(--ui-contextMenu);
+  color: var(--ui-contextMenuText);
+  box-shadow: 0 8px 26px var(--ui-shadow);
+  font-family: var(--fonts-chrome);
+  font-size: var(--fonts-panelSize);
+  line-height: 1.45;
+  pointer-events: none;
+  animation: pop 100ms ease-out;
+}
+
+.card-id {
+  font-family: var(--fonts-code);
+  font-weight: 700;
+  color: var(--roles-requirement);
+}
+
+.card-title {
+  font-size: 1.1em;
+  font-weight: 600;
+  color: var(--ui-tabActiveText);
+}
+
+.card-refines,
+.card-more,
+.card-claims {
+  color: var(--ui-muted);
+}
+
+.card-claims {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--ui-contextMenuBorder);
+}
+
+.card-claims.none {
+  color: var(--ui-warning);
+}
+
+.card-clause {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0 8px;
+  margin-top: 6px;
+}
+
+.card-clause b {
+  font-family: var(--fonts-code);
+  color: var(--ui-tabActiveText);
+}
+
+.card-clause > span:last-child {
+  grid-column: 1 / -1;
+}
+
+.card-marks {
+  display: inline-flex;
+  gap: 2px;
+  font-family: var(--fonts-code);
+  font-weight: 700;
+}
+
+.card-marks span {
+  width: 1.5em;
+  border-radius: 3px;
+  text-align: center;
+}
+
+.card-marks .mark-on {
+  color: var(--ui-document);
+}
+
+.card-marks .mark-off {
+  color: var(--ui-muted);
+  opacity: 0.55;
+  box-shadow: inset 0 0 0 1px var(--ui-contextMenuBorder);
+}
+
+.card-file {
+  font-family: var(--fonts-code);
+  color: var(--roles-path);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── overview: filters, treemap, runs, impact ─────────────────────────── */
+
+.ov-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 4px 0 10px;
+}
+
+.ov-gap {
+  flex: 1;
+}
+
+.ov-pick,
+.ov-root,
+.ov-search {
+  padding: 3px 10px;
+  border: 1px solid var(--ui-border);
+  border-radius: 14px;
+  background: var(--ui-sidebar);
+  color: var(--ui-sidebarText);
+  font: inherit;
+  font-size: var(--fonts-panelSize);
+}
+
+.ov-pick {
+  cursor: pointer;
+}
+
+.ov-pick:hover {
+  background: var(--ui-hover);
+}
+
+.ov-pick.on {
+  background: var(--ui-button);
+  border-color: var(--ui-button);
+  color: var(--ui-buttonText);
+}
+
+.ov-pick:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.ov-search {
+  width: 170px;
+  border-radius: 4px;
+}
+
+.ov-node.risk .ov-box,
+.ov-tilebox.risk rect {
+  stroke: var(--ui-warning);
+  stroke-width: 2.6;
+}
+
+.ov-tilebox {
+  cursor: pointer;
+  outline: none;
+}
+
+.ov-tilebox rect {
+  stroke: var(--ui-document);
+  stroke-width: 1;
+  transition: fill-opacity 120ms ease;
+}
+
+.ov-tilebox.step-0 rect { fill: var(--ui-error); fill-opacity: 0.55; }
+.ov-tilebox.step-1 rect { fill: var(--ui-warning); fill-opacity: 0.55; }
+.ov-tilebox.step-2 rect { fill: var(--ui-success); fill-opacity: 0.35; }
+.ov-tilebox.step-3 rect { fill: var(--ui-success); fill-opacity: 0.75; }
+
+.ov-tilebox:hover rect,
+.ov-tilebox:focus-visible rect {
+  fill-opacity: 0.95;
+}
+
+.ov-runs .ov-matrix td {
+  font-family: var(--fonts-code);
+}
+
+#position .problems.impact {
+  background: var(--ui-warning);
+  color: var(--ui-document);
+  font-weight: 700;
+}
+
+/* ── station icons, and the overview's agent and module tables ─────────── */
+
+.station-icon {
+  width: 1.45rem;
+  height: 1.45rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vertical-align: middle;
+}
+
+.ov-copy {
+  margin-left: auto;
+}
+
+.ov-chip {
+  display: inline-block;
+  margin: 1px 4px 1px 0;
+  padding: 0 7px;
+  border: 1px solid var(--ui-border);
+  border-radius: 10px;
+  font-family: var(--fonts-code);
+  white-space: nowrap;
+}
+
+.ov-idle td {
+  color: var(--ui-muted);
+  font-style: italic;
+}
+
+.ov-copy + .ov-close {
+  margin-left: 0;
 }

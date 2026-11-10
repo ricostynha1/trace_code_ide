@@ -102,7 +102,18 @@ try {
   await send("Page.enable");
   await send("Emulation.setDeviceMetricsOverride", { width, height, deviceScaleFactor: 1, mobile: false });
   await send("Page.navigate", { url });
-  await sleep(2500);
+  for (let i = 0; i < 300; i++) {
+    const loading = await send("Runtime.evaluate", {
+      expression: `document.getElementById("status")?.textContent === "Loading."`, returnByValue: true });
+    if (loading?.result?.value === false) break;
+    await sleep(200);
+  }
+  await sleep(1200);
+  if (process.env.EVAL) {
+    const done = await send("Runtime.evaluate", { expression: process.env.EVAL, awaitPromise: true, returnByValue: true });
+    console.log("eval →", JSON.stringify(done?.result?.value ?? done?.exceptionDetails ?? null));
+    await sleep(Number(process.env.SETTLE ?? 800));
+  }
   const shot = await send("Page.captureScreenshot", { format: "png" });
   writeFileSync(out, Buffer.from(shot.data, "base64"));
   console.log("wrote", out);

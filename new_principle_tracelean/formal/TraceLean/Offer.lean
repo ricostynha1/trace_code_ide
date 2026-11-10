@@ -79,7 +79,8 @@ def ofBuffer (keymap : Keymap) (kind : BufferKind) : List Offered :=
   | .file path =>
     [e "file.definition" none, e "file.references" none, e "file.save" none,
      e "history.undo" none, e "history.redo" none, e "trace.evidence" none,
-     e "file.rename" (some path), e "file.delete" (some path), e "file.copy_path" (some path)]
+     e "file.rename" (some path), e "file.delete" (some path), e "file.copy_path" (some path),
+     e "file.open_in_vscode" (some path)]
   | .directory path => [e "file.new" none, e "file.open" (some path)]
   | .review target =>
     [e "observe.accept" none, e "observe.reject" none,

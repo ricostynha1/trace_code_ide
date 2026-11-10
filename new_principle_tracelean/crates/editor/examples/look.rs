@@ -153,6 +153,18 @@ fn answer(editor: &mut Editor, command: &str, args: &Value) -> Value {
             said(editor)
         }
         "theme" => tracelean_editor::theme::load(&editor.root),
+        "leader" => json!(editor.leader()),
+        "overview" => json!(editor.overview()),
+        "card" => json!(editor.card(&text(args, "name"))),
+        "impact" => json!(editor.impact()),
+        "runs" => json!(editor.runs()),
+        "modules" => json!(editor.modules()),
+        "agent_steps" => json!(editor.agent_steps()),
+        "overview_markdown" => json!(editor.overview_markdown()),
+        "zoom" => {
+            editor.zoom(signed(args, "steps"));
+            said(editor)
+        }
         _ => json!(format!("no command {command}")),
     }
 }

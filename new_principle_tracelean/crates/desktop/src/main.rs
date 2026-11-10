@@ -67,6 +67,7 @@ macro_rules! mutating {
         fn $name(held: State<'_, Held>, $($arg: $ty),*) -> String {
             let mut $e = held.0.lock().expect("the editor");
             $body;
+            $e.hand_off(tracelean_core::launch::start, tracelean_core::launch::ask);
             said(&$e)
         }
     )*};
@@ -99,6 +100,7 @@ mutating! {
     search(text: String) => |e| e.list_occurrences(&text, false);
     paste(text: String) => |e| e.paste(&text);
     grab(pane: String, amount: i64) => |e| e.grab(&pane, amount);
+    zoom(steps: i64) => |e| e.zoom(steps);
 }
 
 query! {
@@ -118,12 +120,22 @@ query! {
     brackets() -> Option<(usize, usize)> => |e| e.bracket_pair();
     requirement_text(name: String) -> Option<String> => |e| e.requirement_text(&name);
     quick(query: String) -> Vec<String> => |e| e.quick_open(&query);
+    overview() -> (Vec<tracelean_core::surface::produce::Node>, Option<usize>) => |e| e.overview();
+    card(name: String) -> Option<tracelean_editor::Card> => |e| e.card(&name);
+    impact() -> Vec<tracelean_editor::Impact> => |e| e.impact();
+    runs() -> Vec<tracelean_editor::Run> => |e| e.runs();
+    modules() -> Vec<tracelean_core::surface::figures::Module> => |e| e.modules();
+    agent_steps() -> Vec<tracelean_core::surface::figures::Step> => |e| e.agent_steps();
+    overview_markdown() -> String => |e| e.overview_markdown();
+    leader() -> Vec<(String, Vec<(String, String, String)>)> => |e| e.leader();
 }
 
 #[tauri::command]
 fn tick(held: State<'_, Held>) -> Option<String> {
     let mut editor = held.0.lock().expect("the editor");
-    editor.tick().then(|| said(&editor))
+    let changed = editor.tick();
+    editor.hand_off(tracelean_core::launch::start, tracelean_core::launch::ask);
+    changed.then(|| said(&editor))
 }
 
 #[tauri::command]
@@ -131,10 +143,17 @@ fn take_clipboard(held: State<'_, Held>) -> Option<String> {
     held.0.lock().expect("the editor").clipboard.take()
 }
 
+/// The theme in use. The zoom is the webview's own, so everything drawn scales together
+/// and every position the page measures stays true.
+///
+/// @implements REQ-LOOK.zoom_steps
 #[tauri::command]
-fn theme(held: State<'_, Held>) -> serde_json::Value {
+fn theme(held: State<'_, Held>, window: tauri::WebviewWindow) -> serde_json::Value {
     let root = held.0.lock().expect("the editor").root.clone();
-    tracelean_editor::theme::load(&root)
+    let theme = tracelean_editor::theme::load(&root);
+    let percent = theme["layout"]["zoom"].as_str().and_then(|zoom| zoom.parse::<f64>().ok()).unwrap_or(100.0);
+    let _ = window.set_zoom(percent.clamp(60.0, 200.0) / 100.0);
+    theme
 }
 
 fn said(editor: &Editor) -> String {
@@ -172,7 +191,8 @@ fn main() {
             shown, cursor, menu, press, act, grab, bars, act_in_bar, theme, place, offers, choose,
             chord, scroll, paste, act_here, tick, take_clipboard, find, described, cut, quick, search,
             requirement_text, over_lines, brackets, mode, select, selection, replace,
-            problems, palette, selected, symbols, occurrences, offers_here, history_preview
+            problems, palette, selected, symbols, occurrences, offers_here, history_preview, leader, zoom, overview, card, impact, runs,
+            modules, agent_steps, overview_markdown
         ])
         .run(tauri::generate_context!())
         .expect("the window opens");

@@ -239,8 +239,10 @@ pub fn workbench(listing: Buffer, document: Buffer, side: Buffer) -> Screen {
     }
 }
 
-pub const DOCUMENT_RECORDS: [&str; 8] =
-    ["requirement ", "judge ", "context ", "coverage ", "definitions of ", "uses of ", "search ", "keys"];
+pub const DOCUMENT_RECORDS: [&str; 11] = [
+    "requirement ", "judge ", "context ", "coverage ", "definitions of ", "uses of ", "search ", "keys", "tutorial",
+    "overview", "modules",
+];
 
 pub fn home_of(kind: &BufferKind) -> &'static str {
     match kind {
@@ -645,6 +647,9 @@ pub fn station_entries() -> Vec<MenuEntry> {
         ("history", "The undo tree"),
         ("findings", "What the checker found, and what to create"),
         ("definitions", "What can be configured: colours, keys, languages"),
+        ("report", "Write the evidence report: a card per clause"),
+        ("overview", "The overview as text: marks, work left, runs, modules"),
+        ("modules", "The module dependency graph, and what each module serves"),
     ]
     .into_iter()
     .map(|(key, description)| MenuEntry {
@@ -673,32 +678,10 @@ pub fn station_kind(station: String) -> Option<BufferKind> {
         "trace" => Some(BufferKind::Record { title: "trace".to_string() }),
         "findings" => Some(BufferKind::Record { title: "findings".to_string() }),
         "definitions" => Some(BufferKind::Record { title: "definitions".to_string() }),
+        "report" => Some(BufferKind::Record { title: "report".to_string() }),
+        "overview" => Some(BufferKind::Record { title: "overview".to_string() }),
+        "modules" => Some(BufferKind::Record { title: "modules".to_string() }),
         _ => None,
-    }
-}
-
-pub const GOALS: &str = "record:proof";
-
-fn is_lean(id: &str) -> bool {
-    id.starts_with("file:") && id.ends_with(".lean")
-}
-
-/// @implements REQ-LSP.goals_open_with_the_file
-/// @drt REQ-LSP.goals_open_with_the_file
-pub fn opens_goals(kind: BufferKind, opened: Vec<String>) -> bool {
-    matches!(&kind, BufferKind::File { path } if path.ends_with(".lean")) && !opened.iter().any(|id| id == GOALS)
-}
-
-/// @implements REQ-LSP.goals_close_with_the_file
-/// @drt REQ-LSP.goals_close_with_the_file
-pub fn closed_with(before: Vec<String>, after: Vec<String>) -> Vec<String> {
-    let closed: Vec<&String> = before.iter().filter(|id| !after.contains(id)).collect();
-    if closed.iter().any(|id| *id == GOALS) {
-        after.into_iter().filter(|id| is_lean(id)).collect()
-    } else if closed.iter().any(|id| is_lean(id)) && !after.iter().any(|id| is_lean(id)) && after.iter().any(|id| id == GOALS) {
-        vec![GOALS.to_string()]
-    } else {
-        Vec::new()
     }
 }
 

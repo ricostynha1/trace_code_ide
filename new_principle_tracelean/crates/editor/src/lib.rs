@@ -69,9 +69,13 @@ pub struct Editor {
     pub session: Option<tracelean_core::observe::sandbox::Session>,
     agent_tree: Option<Workspace>,
     pub clipboard: Option<String>,
+    pub handed: Vec<Vec<String>>,
+    pub picker: Option<Vec<String>>,
+    picking: Option<std::sync::mpsc::Receiver<Result<String, String>>>,
     pub open_folders: BTreeSet<String>,
     pub context_parts: BTreeSet<tracelean_core::surface::context::Part>,
     pub design_open: BTreeSet<String>,
+    pub tutorial_open: BTreeSet<String>,
     pub open_only: bool,
     typed: Vec<String>,
     pub history_filter: tracelean_core::surface::history_view::Filter,
@@ -79,11 +83,6 @@ pub struct Editor {
     pub last_find: Option<String>,
     offering: Option<(String, usize, Vec<tracelean_core::surface::offer::Offer>)>,
     asking: Option<Asking>,
-    lean: Option<tracelean_core::lean_server::LeanServer>,
-    lean_project: Option<PathBuf>,
-    lean_error: Option<String>,
-    goal: String,
-    goal_asked: Option<(String, String, usize)>,
     index_cache: std::cell::RefCell<Option<std::sync::Arc<tracelean_core::trace::index::Index>>>,
     problems: std::cell::Cell<Option<usize>>,
     problems_stale: std::cell::Cell<bool>,
@@ -99,7 +98,6 @@ const OFFER_KEYS: [&str; 35] = [
 
 const SMALL_PROJECT: usize = 40;
 
-use tracelean_core::surface::screen::{self, GOALS as PROOF};
 
 /// @implements REQ-ACT.focus_is_carried
 pub fn focus_in(buffer: &Buffer, offset: usize) -> Focus {
@@ -121,7 +119,71 @@ pub struct Placed {
     pub focused: bool,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CardClause {
+    pub clause: String,
+    pub text: String,
+    pub marks: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Card {
+    pub id: String,
+    pub title: String,
+    pub refines: Vec<String>,
+    pub clauses: Vec<CardClause>,
+    pub claims: Vec<(String, String, u32)>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Impact {
+    pub req_id: String,
+    pub clause: Option<String>,
+    pub file: String,
+    pub marks: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Run {
+    pub op: String,
+    pub clauses: usize,
+    pub seed: u64,
+    pub cases: u64,
+    pub age: Option<u64>,
+}
+
+/// The clauses the changed files claim, once each per file, with the marks each holds.
+///
+/// @implements REQ-FIGURE.impact_before_saving
+pub fn impact_of(
+    changed: &[String],
+    claims: Vec<(String, String, Option<String>)>,
+    held: &BTreeMap<(String, Option<String>), Marks>,
+) -> Vec<Impact> {
+    let mut seen = BTreeSet::new();
+    let mut out = Vec::new();
+    for (file, req_id, clause) in claims {
+        if !changed.contains(&file) || !seen.insert((file.clone(), req_id.clone(), clause.clone())) {
+            continue;
+        }
+        let marks = held.get(&(req_id.clone(), clause.clone())).copied().unwrap_or(Marks::NONE);
+        let marks: String = [(marks.annotated, 'A'), (marks.judged, 'J'), (marks.tested, 'T'), (marks.proved, 'P')]
+            .iter()
+            .map(|(has, letter)| if *has { *letter } else { '-' })
+            .collect();
+        out.push(Impact { req_id, clause, file, marks });
+    }
+    out.sort_by(|a, b| (&a.req_id, &a.clause, &a.file).cmp(&(&b.req_id, &b.clause, &b.file)));
+    out
+}
+
 pub const INSERT: &str = "Insert";
+
+pub const TUTORIAL: &str = include_str!("../../../assets/tutorial.md");
 
 const CHORDS: &[(&str, &str)] = &[
     ("Ctrl+S", "save"),
@@ -294,9 +356,13 @@ impl Editor {
             session: None,
             agent_tree: None,
             clipboard: None,
+            handed: Vec::new(),
+            picker: None,
+            picking: None,
             open_folders: BTreeSet::new(),
             context_parts: tracelean_core::surface::context::default_parts(),
             design_open: BTreeSet::new(),
+            tutorial_open: BTreeSet::new(),
             open_only: false,
             history_filter: tracelean_core::surface::history_view::Filter::File,
             typed: Vec::new(),
@@ -304,11 +370,6 @@ impl Editor {
             last_find: None,
             offering: None,
             asking: None,
-            lean: None,
-            lean_project: None,
-            lean_error: None,
-            goal: String::new(),
-            goal_asked: None,
             index_cache: std::cell::RefCell::new(None),
             problems: std::cell::Cell::new(None),
             problems_stale: std::cell::Cell::new(true),
@@ -388,6 +449,34 @@ impl Editor {
         let (id, after) = self.tree.push_from(&state, command)?;
         *self.held_state.borrow_mut() = Some((Some(id), after));
         Ok(id)
+    }
+
+    /// @implements REQ-HANDOFF.failure_named
+    pub fn hand_off(
+        &mut self,
+        mut start: impl FnMut(&[String]) -> Result<(), String>,
+        ask: impl FnOnce(&[String]) -> std::sync::mpsc::Receiver<Result<String, String>>,
+    ) {
+        for argv in std::mem::take(&mut self.handed) {
+            if let Err(why) = start(&argv) {
+                self.say("not started", &why);
+            }
+        }
+        if let Some(argv) = self.picker.take() {
+            self.picking = Some(ask(&argv));
+        }
+    }
+
+    /// @implements REQ-HANDOFF.choice_opened
+    fn follow_picker(&mut self) -> bool {
+        let Some(said) = self.picking.as_ref().and_then(|answer| answer.try_recv().ok()) else { return false };
+        self.picking = None;
+        match said.map(tracelean_core::surface::handoff::picked_folder) {
+            Ok(Some(folder)) => self.reopen(PathBuf::from(folder)),
+            Ok(None) => self.say("not opened", "no folder was chosen"),
+            Err(why) => self.say("not started", &why),
+        }
+        true
     }
 
     pub fn say(&mut self, kind: &str, text: &str) {
@@ -1051,7 +1140,7 @@ impl Editor {
                 }
                 focus.under = answer;
             }
-            "file.delete" | "file.copy_path" => {
+            "file.delete" | "file.copy_path" | "file.open_in_vscode" => {
                 if let Some(path) = target {
                     focus.kind = BufferKind::File { path };
                 }
@@ -1310,6 +1399,64 @@ impl Editor {
                     .then(|| (format!("{path}:{}", n + 1), format!("{name}  :{}", n + 1)))
             })
             .collect()
+    }
+
+    /// The leader menu as a menu bar: each group the leader enters, with the entries of its
+    /// mode and of the modes under it, each as the keys that reach it, what it does and its action.
+    ///
+    /// @implements REQ-LOOK.menu_bar_lists_leader
+    pub fn leader(&self) -> Vec<(String, Vec<(String, String, String)>)> {
+        use tracelean_core::surface::keymap::Binding;
+        fn gather(keymap: &Keymap, mode: &str, keys: &str, depth: usize, out: &mut Vec<(String, String, String)>) {
+            let Some(found) = keymap.mode(mode) else { return };
+            for (key, binding) in &found.bindings {
+                let keys = format!("{keys} {key}");
+                match binding {
+                    Binding::Dispatch { action, description } => out.push((keys, description.clone(), action.clone())),
+                    Binding::Enter { mode, .. } if depth < 4 => gather(keymap, mode, &keys, depth + 1, out),
+                    Binding::Enter { .. } => {}
+                }
+            }
+        }
+        let Some((leader_key, leader)) = self.keymap.mode(&self.keymap.root).and_then(|root| {
+            root.bindings.iter().find_map(|(key, binding)| match binding {
+                Binding::Enter { mode, .. } if self.keymap.mode(mode).is_some_and(|m| m.parent.is_some()) => {
+                    Some((key.clone(), mode.clone()))
+                }
+                _ => None,
+            })
+        }) else {
+            return Vec::new();
+        };
+        let mut groups = Vec::new();
+        let mut loose = Vec::new();
+        for (key, binding) in self.keymap.mode(&leader).map(|m| m.bindings.clone()).unwrap_or_default() {
+            let keys = format!("{leader_key} {key}");
+            match binding {
+                Binding::Enter { mode, description } => {
+                    let mut entries = Vec::new();
+                    let mut under = Vec::new();
+                    for (inner, binding) in self.keymap.mode(&mode).map(|m| m.bindings.clone()).unwrap_or_default() {
+                        let keys = format!("{keys} {inner}");
+                        match binding {
+                            Binding::Dispatch { action, description } => entries.push((keys, description, action)),
+                            Binding::Enter { mode, description } => {
+                                let mut nested = Vec::new();
+                                gather(&self.keymap, &mode, &keys, 1, &mut nested);
+                                under.push((description, nested));
+                            }
+                        }
+                    }
+                    groups.push((description, entries));
+                    groups.extend(under);
+                }
+                Binding::Dispatch { action, description } => loose.push((keys, description, action)),
+            }
+        }
+        if !loose.is_empty() {
+            groups.push(("project".to_string(), loose));
+        }
+        groups
     }
 
     pub fn palette(&self, query: &str) -> Vec<(String, String)> {
@@ -2233,11 +2380,14 @@ impl Editor {
                         self.open_folders.extend(explorer::holders(path));
                     }
                 }
-                let lean = matches!(&what, BufferKind::File { path } if path.ends_with(".lean"));
+                let report = matches!(&what, BufferKind::Record { title } if title == "report" || title.starts_with("report since "));
                 let buffer = self.produce(what);
+                let written = buffer.text.starts_with("written ");
                 self.show(buffer);
-                if lean {
-                    self.goals_beside();
+                if report && written {
+                    let page = self.report_dir().join("index.html");
+                    let page = page.canonicalize().unwrap_or(page).display().to_string();
+                    self.handed.push(tracelean_core::surface::handoff::in_browser(std::env::consts::OS.into(), page));
                 }
                 if self.screen.opened.iter().any(|b| self.is_tree(b)) {
                     self.refresh_views();
@@ -2271,33 +2421,9 @@ impl Editor {
         }
     }
 
-    fn goals_beside(&mut self) {
-        let opened: Vec<String> = self.screen.opened.iter().map(|held| held.id.clone()).collect();
-        let document = self.screen.focus.clone();
-        let Some(BufferKind::File { path }) = self.screen.opened.iter().find(|held| held.id == self.buffer().id).map(|held| held.kind.clone()) else { return };
-        if !screen::opens_goals(BufferKind::File { path }, opened) {
-            return;
-        }
-        if destination(BufferKind::Record { title: "proof".into() }, self.screen.clone()) == document {
-            let before = panes(&self.screen.layout);
-            self.rearrange(Arrangement::Split { axis: screen::Axis::Across });
-            if let Some((fresh, _)) = panes(&self.screen.layout).into_iter().find(|p| !before.contains(p)) {
-                self.rearrange(Arrangement::FocusPane { pane: fresh });
-            }
-        }
-        let proof = self.proof_buffer();
-        self.show(proof);
-        self.rearrange(Arrangement::FocusPane { pane: document });
-    }
-
     fn rearrange(&mut self, how: Arrangement) {
         let was = self.screen.focus.clone();
-        let before: Vec<String> = self.screen.opened.iter().map(|held| held.id.clone()).collect();
         self.screen = arrange(how, self.region, self.screen.clone());
-        let after: Vec<String> = self.screen.opened.iter().map(|held| held.id.clone()).collect();
-        for id in screen::closed_with(before, after) {
-            self.screen = close_buffer(id, self.screen.clone());
-        }
         if self.screen.focus != was {
             self.parked.insert(was, (self.offset, self.top));
             let (offset, top) = self.parked.remove(&self.screen.focus).unwrap_or((0, 0));
@@ -2387,9 +2513,19 @@ impl Editor {
             BufferKind::Record { title } if title.starts_with("coverage ") => {
                 self.coverage(&title["coverage ".len()..])
             }
+            BufferKind::Record { title } if title == "tutorial" => self.tutorial_buffer(),
+            BufferKind::Record { title } if title == "overview" => {
+                self.markdown_record("overview", tracelean_core::surface::figures::overview(&self.figures()))
+            }
+            BufferKind::Record { title } if title == "modules" => {
+                self.markdown_record("modules", tracelean_core::surface::figures::module_lines(&self.modules()))
+            }
             BufferKind::Record { title } if title == "keys" => make::record_buffer(title, self.keys()),
             BufferKind::Record { title } if title == "definitions" => self.definitions_buffer(),
-            BufferKind::Record { title } if title == "proof" => self.proof_buffer(),
+            BufferKind::Record { title } if title == "report" => self.report_buffer(None),
+            BufferKind::Record { title } if title.starts_with("report since ") => {
+                self.report_buffer(Some(&title["report since ".len()..]))
+            }
             BufferKind::Record { title } => {
                 let events = self.report(&title);
                 make::record_buffer(title, events)
@@ -2715,6 +2851,8 @@ impl Editor {
             self.recent.iter().flatten().filter(|p| **p != here).cloned().collect();
         tracelean_core::surface::welcome::welcome(
             vec![
+                row("help.tutorial", "Take the tutorial: five minutes, on this project"),
+                row("project.pick", "Open a project folder"),
                 row("sandbox.new", "Start a sandbox for an agent (Claude Code, …)"),
                 row("screen.station.design", "Requirements and their evidence, as the refinement graph"),
                 row("trace.check", "Check the tree"),
@@ -2744,93 +2882,15 @@ impl Editor {
             .unwrap_or(60)
     }
 
-    fn follow_proof(&mut self) -> bool {
-        if !self.screen.opened.iter().any(|held| held.id == PROOF) {
-            return false;
-        }
-        let mut changed = false;
-        if let Some(said) = self.lean.as_mut().and_then(|server| server.poll()) {
-            self.goal = said;
-            changed = true;
-        }
-        let Some((path, offset)) = self.document_place().filter(|(path, _)| path.ends_with(".lean")) else {
-            return self.refresh_proof(changed);
-        };
-        let text = self.workspace().files.get(&path).cloned().unwrap_or_default();
-        let asked = (path.clone(), text.clone(), offset);
-        if self.goal_asked.as_ref() == Some(&asked) {
-            return self.refresh_proof(changed);
-        }
-        let file = self.root.join(&path);
-        let Some(project) = tracelean_core::lean_server::project_of(&file, &self.root) else {
-            self.lean_error = Some(format!("{path} is in no Lean project (no lean-toolchain or lakefile above it)"));
-            self.goal_asked = Some(asked);
-            return self.refresh_proof(true);
-        };
-        if self.lean_project.as_ref() != Some(&project) {
-            self.lean = None;
-            self.lean_error = None;
-            match tracelean_core::lean_server::LeanServer::start(
-                &project,
-                std::env::var_os("ELAN_HOME")
-                    .map(PathBuf::from)
-                    .or_else(|| std::env::var_os("HOME").map(|home| PathBuf::from(home).join(".elan")))
-                    .map(|dir| dir.join("bin").join("lake")),
-            ) {
-                Ok(server) => self.lean = Some(server),
-                Err(why) => self.lean_error = Some(format!("{why} (reopen the editor to try again)")),
-            }
-            self.lean_project = Some(project);
-        }
-        if self.lean.is_none() {
-            self.goal_asked = Some(asked);
-            return self.refresh_proof(true);
-        }
-        let before: String = text.chars().take(offset).collect();
-        let line = before.matches('\n').count();
-        let column = before.rsplit('\n').next().map_or(0, |last| last.chars().count());
-        if let Some(server) = self.lean.as_mut() {
-            self.lean_error = server.ask(&file, &text, line, column).err();
-        }
-        if self.lean_error.is_some() {
-            self.lean = None;
-        }
-        self.goal_asked = Some(asked);
-        self.refresh_proof(changed || self.lean_error.is_some())
-    }
-
-    fn refresh_proof(&mut self, changed: bool) -> bool {
-        if !changed {
-            return false;
-        }
-        let fresh = self.proof_buffer();
-        if let Some(held) = self.screen.opened.iter_mut().find(|held| held.id == PROOF) {
-            *held = fresh;
-        }
-        true
-    }
-
-    fn proof_buffer(&self) -> Buffer {
-        let text = match (&self.lean_error, self.goal.is_empty()) {
-            (Some(why), _) => why.clone(),
-            (None, true) => "Open a Lean file; the goals at the cursor are shown here.".to_string(),
-            (None, false) => self.goal.clone(),
-        };
-        Buffer {
-            id: PROOF.into(),
-            kind: BufferKind::Record { title: "proof".into() },
-            text,
-            spans: Vec::new(),
-        }
-    }
-
     pub fn tick(&mut self) -> bool {
         self.remember();
         if self.follow_disk() {
             return true;
         }
+        if self.follow_picker() {
+            return true;
+        }
         let mut recounted = self.recount_chips();
-        recounted |= self.follow_proof();
         if self.problems_stale.replace(false) {
             let count = Some(self.found().len());
             recounted |= self.problems.replace(count) != count;
@@ -2988,10 +3048,14 @@ impl Editor {
             format!("Definitions — Space f e (or a click) changes the setting under the cursor; it is saved to {} at once", theme::OVERRIDE),
             "keys       assets/keymap.json: every binding is data; invalid ones are reported at load".to_string(),
             "languages  assets/languages/: the grammar and the declaring words of each language".to_string(),
-            String::new(),
         ];
         let mut spans = Vec::new();
         let mut at: usize = lines.iter().map(|line| line.chars().count() + 1).sum();
+        let switch = "[ switch theme ]";
+        spans.push(Span { start: at, stop: at + switch.chars().count(), role: Role::Path, actions: vec!["look.theme".into()] });
+        lines.push(format!("{switch}  now {} — dark and light ship; colours set here survive the switch", theme::base(&self.root)));
+        lines.push(String::new());
+        at = lines.iter().map(|line| line.chars().count() + 1).sum();
         if let serde_json::Value::Object(sections) = &theme {
             for (section, entries) in sections {
                 let serde_json::Value::Object(entries) = entries else { continue };
@@ -3018,6 +3082,50 @@ impl Editor {
         }
     }
 
+    fn report_dir(&self) -> PathBuf {
+        self.root.join("target").join("tracelean-report")
+    }
+
+    /// @implements REQ-REPORT.static_page
+    fn report_buffer(&self, base: Option<&str>) -> Buffer {
+        use tracelean_core::surface::view::{Role, Span};
+        let title = base.map_or("report".to_string(), |b| format!("report since {b}"));
+        let index = self.index();
+        let out = self.report_dir();
+        let mut lines = match tracelean_core::observe::report::write(&self.root, &index, &out, base) {
+            Err(why) => vec![format!("not written — {why}")],
+            Ok(written) => {
+                let [a, j, t, p] = written.held;
+                let mut lines = vec![
+                    format!("written  {}", written.page.display()),
+                    format!("open     file://{}", written.page.display()),
+                    format!("clauses  {}: A {a}  J {j}  T {t}  P {p}", written.clauses),
+                    format!("findings {}", written.findings),
+                ];
+                if let (Some(base), Some((changed, lost))) = (base, written.changed) {
+                    lines.push(format!("since {base}  {changed} clauses changed, {lost} lost evidence"));
+                }
+                lines
+            }
+        };
+        lines.push(String::new());
+        lines.push("what changed since (a click writes the report again, marking the changes):".to_string());
+        let mut spans = Vec::new();
+        let mut at: usize = lines.iter().map(|line| line.chars().count() + 1).sum();
+        for revision in ["HEAD", "main"] {
+            let line = format!("  {revision}");
+            spans.push(Span {
+                start: at + 2,
+                stop: at + line.chars().count(),
+                role: Role::Path,
+                actions: vec!["trace.report_since".into()],
+            });
+            at += line.chars().count() + 1;
+            lines.push(line);
+        }
+        Buffer { id: format!("record:{title}"), kind: BufferKind::Record { title }, text: lines.join("\n"), spans }
+    }
+
     fn ask_to_edit_setting(&mut self, name: &str) {
         let current = theme::load(&self.root)
             .get(name.split('.').next().unwrap_or_default())
@@ -3038,12 +3146,257 @@ impl Editor {
         self.show_question();
     }
 
+    /// The tutorial as it stands: markdown, with the sections asked for unfolded and each
+    /// fold's row carrying the action that turns it.
+    ///
+    /// @implements REQ-GUIDE.sections_unfold
+    /// @implements REQ-GUIDE.tutorial_in_the_editor
+    fn tutorial_buffer(&self) -> Buffer {
+        use tracelean_core::surface::tutorial::{unfold, MORE};
+        use tracelean_core::surface::view::{Role, Span};
+        let open: Vec<String> = self.tutorial_open.iter().cloned().collect();
+        let (text, rows) = unfold(TUTORIAL, &open);
+        let marks = tracelean_core::surface::highlight::markdown(&text);
+        let mut shown = make::file_buffer("tutorial.md".into(), text, marks);
+        let mut spans: Vec<Span> = rows
+            .into_iter()
+            .map(|(start, stop)| Span { start, stop, role: Role::Path, actions: vec![MORE.to_string()] })
+            .collect();
+        let folds: Vec<(usize, usize)> = spans.iter().map(|s| (s.start, s.stop)).collect();
+        spans.extend(shown.spans.into_iter().filter(|s| !folds.iter().any(|(a, b)| s.start < *b && *a < s.stop)));
+        shown.spans = make::tidy(shown.text.chars().count(), spans);
+        shown.id = "record:tutorial".into();
+        shown.kind = BufferKind::Record { title: "tutorial".into() };
+        shown
+    }
+
+    fn markdown_record(&self, title: &str, lines: Vec<String>) -> Buffer {
+        let text = lines.join("\n") + "\n";
+        let marks = tracelean_core::surface::highlight::markdown(&text);
+        let mut shown = make::file_buffer(format!("{title}.md"), text, marks);
+        shown.id = format!("record:{title}");
+        shown.kind = BufferKind::Record { title: title.to_string() };
+        shown
+    }
+
+    /// The module dependency graph of the tree as it stands in the editor, unsaved edits
+    /// included: one module per directory of Rust source.
+    ///
+    /// @implements REQ-MODULES.shown_as_text
+    pub fn modules(&self) -> Vec<tracelean_core::surface::figures::Module> {
+        let files: Vec<(String, String)> =
+            self.workspace().files.iter().map(|(path, text)| (path.clone(), text.clone())).collect();
+        let index = self.index();
+        let claims: Vec<(String, String)> =
+            index.links.iter().map(|link| (link.anchor.file.clone(), link.req_id.clone())).collect();
+        tracelean_core::surface::figures::modules(&files, &claims)
+    }
+
+    /// What a sandboxed agent changed and is waiting to have accepted: one step per file,
+    /// in the order its first change arrived, with the clauses that file claims and the
+    /// marks each holds now.
+    ///
+    /// @implements REQ-FIGURE.agent_steps_listed
+    pub fn agent_steps(&self) -> Vec<tracelean_core::surface::figures::Step> {
+        use tracelean_core::surface::view::Role;
+        let mut paths: Vec<(String, &'static str)> = Vec::new();
+        for command in &self.pending {
+            let path = touched(command);
+            if paths.iter().any(|(had, _)| *had == path) {
+                continue;
+            }
+            let kind = match command {
+                Command::CreateFile { .. } => "created",
+                Command::DeleteFile { .. } => "deleted",
+                _ => "modified",
+            };
+            paths.push((path, kind));
+        }
+        if paths.is_empty() {
+            return Vec::new();
+        }
+        let index = self.index();
+        let lock = tracelean_core::trace::lockfile::read(&self.root);
+        let held = marks_of(&index, lock.as_ref().map(|l| &l.evidence[..]).unwrap_or(&[]));
+        let claims: Vec<(String, String, Option<String>)> =
+            index.links.iter().map(|link| (link.anchor.file.clone(), link.req_id.clone(), link.clause.clone())).collect();
+        let current = self.workspace();
+        let lines = |text: Option<&String>| -> Vec<String> {
+            text.map(|t| t.lines().map(String::from).collect()).unwrap_or_default()
+        };
+        paths
+            .into_iter()
+            .enumerate()
+            .map(|(at, (path, kind))| {
+                let before = lines(current.files.get(&path));
+                let after = lines(self.agent_tree.as_ref().and_then(|t| t.files.get(&path)));
+                let diff = make::diff_lines(before, after);
+                let count = |role: Role| diff.iter().filter(|d| d.role == role).count();
+                let clauses = impact_of(&[path.clone()], claims.clone(), &held)
+                    .into_iter()
+                    .map(|hit| {
+                        let name = match &hit.clause {
+                            Some(clause) => format!("{}.{clause}", hit.req_id),
+                            None => hit.req_id.clone(),
+                        };
+                        (name, hit.marks)
+                    })
+                    .collect();
+                tracelean_core::surface::figures::Step {
+                    order: at + 1,
+                    kind: kind.to_string(),
+                    file: path,
+                    added: count(Role::Added),
+                    removed: count(Role::Removed),
+                    clauses,
+                }
+            })
+            .collect()
+    }
+
+    /// Everything the overview shows, as values: the window draws them, the `overview`
+    /// station writes them as text.
+    ///
+    /// @implements REQ-FIGURE.overview_as_text
+    pub fn figures(&self) -> tracelean_core::surface::figures::Figures {
+        use tracelean_core::surface::figures::{Figures, RiskRow, RunRow};
+        Figures {
+            nodes: self.nodes(),
+            findings: self.problems(),
+            runs: self
+                .runs()
+                .into_iter()
+                .map(|run| RunRow { op: run.op, clauses: run.clauses, seed: run.seed, cases: run.cases, age: run.age })
+                .collect(),
+            unsaved: self
+                .impact()
+                .into_iter()
+                .map(|hit| RiskRow {
+                    clause: match &hit.clause {
+                        Some(clause) => format!("{}.{clause}", hit.req_id),
+                        None => hit.req_id.clone(),
+                    },
+                    marks: hit.marks,
+                    file: hit.file,
+                })
+                .collect(),
+            agent: self.agent_steps(),
+            modules: self.modules(),
+        }
+    }
+
+    /// The overview as Markdown, for copying out of the window or writing to a file.
+    ///
+    /// @implements REQ-FIGURE.exported_as_markdown
+    pub fn overview_markdown(&self) -> String {
+        tracelean_core::surface::figures::overview(&self.figures()).join("\n") + "\n"
+    }
+
+    /// What a requirement or one of its clauses is, for a card: its words, the marks each
+    /// clause holds, and every place that claims it.
+    ///
+    /// @implements REQ-FIGURE.card_on_hover
+    pub fn card(&self, name: &str) -> Option<Card> {
+        let (id, clause) = tracelean_core::drt::config::split_op(name);
+        let index = self.index();
+        let requirement = index.requirements.get(id)?;
+        let lock = tracelean_core::trace::lockfile::read(&self.root);
+        let held = marks_of(&index, lock.as_ref().map(|l| &l.evidence[..]).unwrap_or(&[]));
+        let wanted = clause.filter(|c| requirement.clauses.contains_key(*c));
+        let letters = |marks: Marks| {
+            [(marks.annotated, 'A'), (marks.judged, 'J'), (marks.tested, 'T'), (marks.proved, 'P')]
+                .iter()
+                .map(|(has, letter)| if *has { *letter } else { '-' })
+                .collect::<String>()
+        };
+        let clauses = requirement
+            .clauses
+            .iter()
+            .filter(|(key, _)| wanted.is_none_or(|w| w == key.as_str()))
+            .map(|(key, said)| CardClause {
+                clause: key.clone(),
+                text: said.clone(),
+                marks: letters(held.get(&(id.to_string(), Some(key.clone()))).copied().unwrap_or(Marks::NONE)),
+            })
+            .collect();
+        let claims = index
+            .links
+            .iter()
+            .filter(|link| link.req_id == id && (wanted.is_none() || link.clause.as_deref() == wanted))
+            .map(|link| (format!("{:?}", link.role).to_lowercase(), link.anchor.file.clone(), link.line))
+            .collect();
+        Some(Card { id: id.to_string(), title: requirement.title.clone(), refines: requirement.refines.clone(), clauses, claims })
+    }
+
+    /// The clauses an unsaved edit touches: every clause some unsaved file claims, with the
+    /// marks it holds now, which are what saving puts in question.
+    ///
+    /// @implements REQ-FIGURE.impact_before_saving
+    pub fn impact(&self) -> Vec<Impact> {
+        let unsaved = self.unsaved();
+        if unsaved.is_empty() {
+            return Vec::new();
+        }
+        let index = self.index();
+        let lock = tracelean_core::trace::lockfile::read(&self.root);
+        let held = marks_of(&index, lock.as_ref().map(|l| &l.evidence[..]).unwrap_or(&[]));
+        impact_of(
+            &unsaved,
+            index.links.iter().map(|link| (link.anchor.file.clone(), link.req_id.clone(), link.clause.clone())).collect(),
+            &held,
+        )
+    }
+
+    /// The differential runs on record: for each compared operation, how many clauses it
+    /// carries, with what seed and how many cases, and when the newest record was written.
+    ///
+    /// @implements REQ-FIGURE.runs_listed
+    pub fn runs(&self) -> Vec<Run> {
+        let mut found: BTreeMap<String, Run> = BTreeMap::new();
+        for (record, age) in tracelean_core::trace::store::read_all_aged(&self.root) {
+            let tracelean_core::trace::record::Detail::Drt { seed, cases, op } = record.detail else { continue };
+            let run = found.entry(op.clone()).or_insert(Run { op, clauses: 0, seed, cases, age });
+            run.clauses += 1;
+            run.age = match (run.age, age) {
+                (Some(a), Some(b)) => Some(a.min(b)),
+                (a, b) => a.or(b),
+            };
+        }
+        found.into_values().collect()
+    }
+
+    /// Steps the zoom of the whole window, or returns it to 100% when `steps` is 0.
+    ///
+    /// @implements REQ-LOOK.zoom_steps
+    pub fn zoom(&mut self, steps: i64) {
+        let now = theme::load(&self.root)["layout"]["zoom"].as_str().unwrap_or("100").to_string();
+        let now = if steps == 0 { "100".to_string() } else { now };
+        let next = tracelean_core::surface::setting::zoomed(&now, steps).unwrap_or(100);
+        match theme::write_setting(&self.root, "layout", "zoom", &next.to_string()) {
+            Ok(()) => self.say("setting saved", &format!("zoom = {next}%")),
+            Err(error) => self.say("could not save", &error),
+        }
+    }
+
+    /// What the overview draws: every requirement with its marks, tallies and coverage,
+    /// and how many findings the checker has.
+    ///
+    /// @implements REQ-LOOK.overview_drawn
+    pub fn overview(&self) -> (Vec<make::Node>, Option<usize>) {
+        (self.nodes(), self.problems())
+    }
+
     pub fn set_setting(&mut self, name: &str, value: &str) {
         let Some((section, key)) = name.split_once('.') else {
             return self.say("not a setting", name);
         };
-        if !tracelean_core::surface::setting::is_colour(value.to_string()) {
-            return self.say("refused", &format!("`{value}` is not a colour like #1e90ff; nothing changed"));
+        if !tracelean_core::surface::setting::takes(name.to_string(), value.to_string()) {
+            let wanted = match tracelean_core::surface::setting::choices(name) {
+                Some(allowed) => format!("one of {}", allowed.join(", ")),
+                None if name == "layout.zoom" => "a percentage from 60 to 200, in tens".to_string(),
+                None => "a colour like #1e90ff".to_string(),
+            };
+            return self.say("refused", &format!("`{value}` is not {wanted}; nothing changed"));
         }
         let written = theme::write_setting(&self.root, section, key, value);
         match written {
@@ -3058,8 +3411,6 @@ impl Editor {
     /// @implements ARCH-NO-DRIVING.no_model_call
     fn report(&self, title: &str) -> Vec<Event> {
         match title {
-            "check" | "findings" => self.findings(),
-            "history" => self.history(),
             "observed" => self.observed(),
             "evidence" => self.evidence(),
             "lock" => self.lock(),
@@ -3240,17 +3591,6 @@ impl Editor {
         }
     }
 
-    fn findings(&self) -> Vec<Event> {
-        let found = self.found();
-        if found.is_empty() {
-            return vec![Event { kind: "clean".into(), text: "nothing to report".into() }];
-        }
-        found
-            .into_iter()
-            .map(|f| Event { kind: f.kind, text: format!("{}:{} {}", f.file, f.line, f.message) })
-            .collect()
-    }
-
     fn found(&self) -> Vec<tracelean_core::surface::findings_view::Found> {
         use tracelean_core::trace::checker::{check, refused, Policy};
         let index = self.index();
@@ -3314,22 +3654,6 @@ impl Editor {
             })
             .collect();
         Some(tracelean_core::surface::history_view::change_view(node, &said, &changed))
-    }
-
-    fn history(&self) -> Vec<Event> {
-        if self.tree.ids().is_empty() {
-            return vec![Event {
-                kind: "base".into(),
-                text: "nothing has been changed yet; this is the tree as it was opened".into(),
-            }];
-        }
-        self.points()
-            .into_iter()
-            .map(|p| Event {
-                kind: if p.here { "here".into() } else { "node".into() },
-                text: format!("{}  {}", tracelean_core::surface::history_view::point_name(Some(p.node)), p.said),
-            })
-            .collect()
     }
 
     fn observed(&self) -> Vec<Event> {
@@ -3473,6 +3797,39 @@ impl Editor {
             Watch::CopyPath { path } => {
                 self.say("copied", &path);
                 self.clipboard = Some(path);
+            }
+            Watch::TutorialToggle { title } => {
+                let title = tracelean_core::surface::tutorial::title_of(&title).to_string();
+                if !tracelean_core::surface::tutorial::folds(TUTORIAL).contains(&title) {
+                    return self.say("nothing happened", "the cursor is not on a section that unfolds (a ▸ row of the tutorial)");
+                }
+                let opened = !self.tutorial_open.remove(&title);
+                if opened {
+                    self.tutorial_open.insert(title.clone());
+                }
+                let fresh = self.tutorial_buffer();
+                if let Some(held) = self.screen.opened.iter_mut().find(|held| held.id == fresh.id) {
+                    *held = fresh;
+                }
+                self.say(if opened { "unfolded" } else { "folded" }, &title);
+            }
+            Watch::SwitchTheme => match theme::switch_base(&self.root) {
+                Ok(base) => self.say("setting saved", &format!("theme = {base}")),
+                Err(error) => self.say("could not save", &error),
+            },
+            Watch::PickProject => {
+                let start = std::path::absolute(&self.root).unwrap_or(self.root.clone()).display().to_string();
+                let desktop = std::env::var("XDG_CURRENT_DESKTOP").unwrap_or_default();
+                self.say("choose", "a project folder, in the window that opened");
+                self.picker = Some(tracelean_core::surface::handoff::folder_picker(std::env::consts::OS.into(), desktop, start));
+            }
+            Watch::OpenInVscode { path } => {
+                let here = matches!(&self.buffer().kind, BufferKind::File { path: open } if *open == path);
+                let (line, column) = if here { self.line_and_column() } else { (0, 0) };
+                let file = self.root.join(&path);
+                let file = file.canonicalize().unwrap_or(file).display().to_string();
+                self.say("VS Code", &format!("{path}:{}:{}", line + 1, column + 1));
+                self.handed.push(tracelean_core::surface::handoff::in_vscode(std::env::consts::OS.into(), file, line, column));
             }
             Watch::AcceptFile { path, command } => self.accept_file(&path, command),
             Watch::RejectFile { path } => self.reject_file(&path),

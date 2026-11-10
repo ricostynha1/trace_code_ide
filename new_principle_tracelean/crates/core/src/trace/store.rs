@@ -29,6 +29,11 @@ pub fn write(root: &Path, record: &Evidence) -> std::io::Result<PathBuf> {
 }
 
 pub fn read_all(root: &Path) -> Vec<Evidence> {
+    read_all_aged(root).into_iter().map(|(record, _)| record).collect()
+}
+
+/// Every record, each with the seconds since its file was last written.
+pub fn read_all_aged(root: &Path) -> Vec<(Evidence, Option<u64>)> {
     let Ok(entries) = std::fs::read_dir(dir_in(root)) else { return Vec::new() };
     let mut files: Vec<PathBuf> = entries
         .flatten()
@@ -38,8 +43,16 @@ pub fn read_all(root: &Path) -> Vec<Evidence> {
     files.sort();
     files
         .iter()
-        .filter_map(|path| std::fs::read_to_string(path).ok())
-        .filter_map(|text| serde_json::from_str::<Evidence>(&text).ok())
+        .filter_map(|path| {
+            let text = std::fs::read_to_string(path).ok()?;
+            let record = serde_json::from_str::<Evidence>(&text).ok()?;
+            let age = std::fs::metadata(path)
+                .and_then(|m| m.modified())
+                .ok()
+                .and_then(|at| at.elapsed().ok())
+                .map(|gone| gone.as_secs());
+            Some((record, age))
+        })
         .collect()
 }
 

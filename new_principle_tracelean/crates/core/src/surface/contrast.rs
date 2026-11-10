@@ -122,6 +122,17 @@ mod tests {
 
     /// @tests REQ-LOOK.contrast_sufficient
     #[test]
+    fn the_light_theme_is_readable_with_no_waiver() {
+        let light: serde_json::Value =
+            serde_json::from_str(include_str!("../../../../assets/theme-light.json")).unwrap();
+        let (pairs, colours) = of_theme(&light);
+        assert!(pairs.len() > 20 && pairs.iter().all(|p| p.waived.is_none()));
+        let found = findings(pairs, colours);
+        assert!(found.is_empty(), "{found:#?}");
+    }
+
+    /// @tests REQ-LOOK.contrast_sufficient
+    #[test]
     fn an_unreadable_pair_an_unknown_colour_and_a_stale_waiver_are_found() {
         let colours = vec![
             ("ui.document".to_string(), "#282c34".to_string()),

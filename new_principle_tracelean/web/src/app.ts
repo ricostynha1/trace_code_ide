@@ -1,3 +1,4 @@
+import { drawOverview, showing, type Design, type Node as DesignNode } from "./overview.ts";
 import { classOf, pieces, shown } from "./render.ts";
 import type { Buffer, Pane } from "./view.ts";
 
@@ -60,7 +61,7 @@ export function draw(into: HTMLElement, buffer: Buffer, act: (action: string, at
       button.textContent = piece.text;
       button.title = `${piece.actions.map((a) => hover[a] ?? a).join(" · ")}  (right-click for more)`;
       if (button.classList.contains("role-requirement")) {
-        button.addEventListener("mouseenter", () => void sayRequirement(button, piece.text.trim()), { once: true });
+        cardOn(button, piece.text.trim());
       }
       button.addEventListener("click", (event) => {
         event.stopPropagation();
@@ -160,7 +161,7 @@ function drawChips(box: HTMLElement, pane: Pane) {
     chip.className = `chip chip-${CLAIMED[letter] ?? "other"}`;
     chip.textContent = letter;
     chip.title = `${CLAIMED[letter] ?? letter} ${requirement}`;
-    chip.addEventListener("mouseenter", () => void sayRequirement(chip, requirement), { once: true });
+    cardOn(chip, requirement);
     chip.addEventListener("mousedown", (event) => event.stopPropagation());
     chip.addEventListener("click", (event) => {
       event.stopPropagation();
@@ -272,6 +273,34 @@ function syncPanes(into: HTMLElement, panes: Pane[]) {
   while (into.children.length > panes.length) into.lastElementChild?.remove();
 }
 
+// Wheel ticks arrive faster than a draw. They are added up and sent as one scroll per
+// frame, only the panes are redrawn while the wheel turns, and everything else (bars,
+// what can be done here, the counts) is drawn once, when it stops.
+//
+// @implements REQ-LOOK.scroll_is_one_draw_per_frame
+const wheel = { pane: "", lines: 0, busy: false, settle: 0 as ReturnType<typeof setTimeout> | 0 };
+
+async function pumpWheel() {
+  if (wheel.busy || !ctx) return;
+  wheel.busy = true;
+  try {
+    while (wheel.lines !== 0) {
+      const lines = wheel.lines;
+      wheel.lines = 0;
+      await ctx.invoke("scroll", { pane: wheel.pane, lines });
+      await show(ctx.invoke, ctx.into, ctx.status, true);
+      await new Promise((next) => requestAnimationFrame(next));
+    }
+  } finally {
+    wheel.busy = false;
+  }
+  if (wheel.settle) clearTimeout(wheel.settle);
+  wheel.settle = setTimeout(() => {
+    wheel.settle = 0;
+    if (ctx && !wheel.busy) void show(ctx.invoke, ctx.into, ctx.status);
+  }, 140);
+}
+
 function drawPane(into: HTMLElement, pane: Pane) {
   const box = document.createElement("div");
   const kind = Object.keys(pane.buffer.kind)[0] ?? "file";
@@ -322,6 +351,7 @@ function drawPane(into: HTMLElement, pane: Pane) {
   });
   box.addEventListener("contextmenu", (event) => {
     event.preventDefault();
+    event.stopPropagation();
     const at = offsetAt(event) ?? 0;
     void openContext(pane.pane, at, event.clientX, event.clientY);
   });
@@ -335,7 +365,9 @@ function drawPane(into: HTMLElement, pane: Pane) {
       const lines = Math.trunc(wheeling / 40);
       if (lines === 0) return;
       wheeling -= lines * 40;
-      void run("scroll", { pane: pane.pane, lines });
+      wheel.lines = wheel.pane === pane.pane ? wheel.lines + lines : lines;
+      wheel.pane = pane.pane;
+      void pumpWheel();
     },
     { passive: false },
   );
@@ -369,6 +401,36 @@ function drawPane(into: HTMLElement, pane: Pane) {
   into.appendChild(box);
 }
 
+/** A drawn icon per station: the shapes inside a 24×24 box, stroked in the text colour. */
+const STATION_ICONS: Record<string, string> = {
+  project: '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
+  trace: '<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>',
+  sandbox: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9l3 3-3 3M13 15h4"/>',
+  design: '<rect x="9" y="3" width="6" height="5" rx="1"/><rect x="3" y="16" width="6" height="5" rx="1"/><rect x="15" y="16" width="6" height="5" rx="1"/><path d="M12 8v4M6 16v-4h12v4"/>',
+  history: '<path d="M4 12a8 8 0 1 0 2.5-5.8L4 8.5"/><path d="M4 4v4.5h4.5M12 8v4.5l3 1.5"/>',
+  findings: '<path d="M12 4l9 16H3z"/><path d="M12 10v4.5M12 17.2v.3"/>',
+  definitions: '<path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/>',
+  report: '<path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M9 12h6M9 16h6"/>',
+  overview: '<path d="M4 20V4M4 20h16"/><path d="M8 16v-4M12 16V8M16 16v-6"/>',
+  modules: '<rect x="4" y="4" width="7" height="7" rx="1"/><rect x="13" y="13" width="7" height="7" rx="1"/><path d="M11 7.5h5.5V13"/>',
+};
+
+/**
+ * The icon of a station, or nothing when the action is not a station's.
+ *
+ * @implements REQ-LOOK.stations_have_icons
+ */
+export function stationIcon(action: string): SVGElement | null {
+  const shapes = STATION_ICONS[action.replace("screen.station.", "")];
+  if (!action.startsWith("screen.station.") || !shapes) return null;
+  const icon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  icon.setAttribute("viewBox", "0 0 24 24");
+  icon.setAttribute("class", "station-icon");
+  icon.setAttribute("aria-hidden", "true");
+  icon.innerHTML = shapes;
+  return icon;
+}
+
 function drawBar(
   into: HTMLElement | null,
   buffer: Buffer,
@@ -381,7 +443,11 @@ function drawBar(
     for (const { piece, presented } of line) {
       const item = document.createElement(piece.actions.length ? "button" : "span");
       item.className = `${classOf(piece.role)} item`;
-      if (presented.painted === presented.name) {
+      const icon = station && piece.actions.length ? stationIcon(piece.actions[0]) : null;
+      if (icon) {
+        item.appendChild(icon);
+        item.setAttribute("aria-label", presented.name.trim());
+      } else if (presented.painted === presented.name) {
         item.appendChild(document.createTextNode(presented.name));
       } else {
         const mark = document.createElement("span");
@@ -394,7 +460,7 @@ function drawBar(
       if (piece.actions.length) {
         item.title = presented.name.trim();
         item.addEventListener("click", () => act(station, piece.actions[0], piece.at));
-        if (!station && piece.actions[0] === "screen.show") {
+        if (!station && piece.actions[0].split(" ")[0] === "screen.show") {
           const close = () =>
             void (ctx?.invoke("act_in_bar", { station, action: "screen.show", offset: piece.at }) ?? Promise.resolve())
               .then(() => run("chord", { chord: "C-w" }));
@@ -449,11 +515,275 @@ function closeContext() {
   document.getElementById("context")?.remove();
 }
 
-async function openContext(pane: string, at: number, _x: number, _y: number) {
+// @implements REQ-LOOK.pointer_reaches_actions
+async function openContext(pane: string, at: number, x: number, y: number) {
   closeContext();
   if (!ctx) return;
   const offered = (await ctx.invoke("offers", { pane, offset: at })) as Offer[];
-  document.body.appendChild(overlay(offered, pane, at));
+  const menu = overlay(offered, pane, at);
+  menu.className = "at-pointer";
+  document.body.appendChild(menu);
+  settle(menu, x, y);
+}
+
+function settle(menu: HTMLElement, x: number, y: number) {
+  const box = menu.getBoundingClientRect();
+  const left = Math.max(4, Math.min(x, window.innerWidth - box.width - 4));
+  const top = y + box.height + 4 > window.innerHeight ? Math.max(4, y - box.height) : y;
+  menu.style.left = `${left}px`;
+  menu.style.top = `${top}px`;
+  menu.querySelector<HTMLElement>(".context-entry")?.focus({ preventScroll: true });
+}
+
+function closeOverview() {
+  hideCard();
+  document.getElementById("overview")?.remove();
+}
+
+interface Card {
+  id: string;
+  title: string;
+  refines: string[];
+  clauses: { clause: string; text: string; marks: string }[];
+  claims: [string, string, number][];
+}
+
+let carding = 0;
+
+function hideCard() {
+  carding += 1;
+  document.getElementById("card")?.remove();
+}
+
+// @implements REQ-FIGURE.card_on_hover
+async function showCard(anchor: Element, name: string) {
+  if (!ctx) return;
+  const mine = ++carding;
+  await new Promise((wait) => setTimeout(wait, 220));
+  if (mine !== carding) return;
+  const card = (await ctx.invoke("card", { name })) as Card | null;
+  if (mine !== carding) return;
+  if (!card || typeof card !== "object" || !Array.isArray(card.clauses)) {
+    if (anchor instanceof HTMLElement) void sayRequirement(anchor, name);
+    return;
+  }
+  document.getElementById("card")?.remove();
+  const box = document.createElement("aside");
+  box.id = "card";
+  box.setAttribute("role", "tooltip");
+  const line = (className: string, text: string) => {
+    const made = document.createElement("div");
+    made.className = className;
+    made.textContent = text;
+    box.appendChild(made);
+    return made;
+  };
+  line("card-id", card.id);
+  line("card-title", card.title);
+  if (card.refines.length) line("card-refines", `refines ${card.refines.join(", ")}`);
+  for (const clause of card.clauses.slice(0, 6)) {
+    const row = line("card-clause", "");
+    const marks = document.createElement("span");
+    marks.className = "card-marks";
+    for (const [index, letter] of [...clause.marks].entries()) {
+      const mark = document.createElement("span");
+      mark.className = letter === "-" ? "mark-off" : `mark-on mark-${letter}`;
+      mark.textContent = letter === "-" ? "AJTP"[index] : letter;
+      marks.appendChild(mark);
+    }
+    const name = document.createElement("b");
+    name.textContent = clause.clause;
+    const said = document.createElement("span");
+    said.textContent = clause.text.length > 190 ? `${clause.text.slice(0, 189)}…` : clause.text;
+    row.append(marks, name, said);
+  }
+  if (card.clauses.length > 6) line("card-more", `… and ${card.clauses.length - 6} more clauses`);
+  const roles = new Map<string, number>();
+  for (const [role] of card.claims) roles.set(role, (roles.get(role) ?? 0) + 1);
+  if (roles.size) line("card-claims", [...roles].map(([role, count]) => `${count} ${role}`).join(" · "));
+  for (const [role, file, at] of card.claims.slice(0, 5)) line("card-file", `${role}  ${file}:${at}`);
+  if (!card.claims.length) line("card-claims none", "nothing claims this yet");
+  document.body.appendChild(box);
+  const at = anchor.getBoundingClientRect();
+  const size = box.getBoundingClientRect();
+  const left = Math.max(6, Math.min(at.left, window.innerWidth - size.width - 6));
+  const below = at.bottom + 8 + size.height < window.innerHeight;
+  box.style.left = `${left}px`;
+  box.style.top = `${below ? at.bottom + 8 : Math.max(6, at.top - size.height - 8)}px`;
+}
+
+function cardOn(anchor: Element, name: string) {
+  anchor.addEventListener("mouseenter", () => void showCard(anchor, name));
+  anchor.addEventListener("mouseleave", hideCard);
+  anchor.addEventListener("mousedown", hideCard);
+}
+
+async function openOverview(force = false) {
+  if (!ctx) return;
+  if (document.getElementById("overview") && !force) return closeOverview();
+  const invoke = ctx.invoke;
+  const list = async <T>(command: string): Promise<T[]> => {
+    try {
+      const got = await invoke(command, {});
+      return Array.isArray(got) ? (got as T[]) : [];
+    } catch {
+      return [];
+    }
+  };
+  const [nodes] = ((await invoke("overview", {})) as [DesignNode[], number | null] | null) ?? [[], null];
+  const counted = await invoke("problems", {});
+  const design: Design = {
+    nodes: Array.isArray(nodes) ? nodes : [],
+    problems: typeof counted === "number" ? counted : null,
+    runs: await list("runs"),
+    impact: await list("impact"),
+    modules: await list("modules"),
+    steps: await list("agent_steps"),
+  };
+  closeOverview();
+  const panel = document.createElement("section");
+  panel.id = "overview";
+  panel.setAttribute("aria-label", "overview");
+  panel.addEventListener("click", (event) => event.stopPropagation());
+  panel.addEventListener("contextmenu", (event) => event.stopPropagation());
+  drawOverview(panel, design, {
+    open: (id) => {
+      hideCard();
+      closeOverview();
+      void run("choose", { pane: "explorer", offset: 0, action: "trace.requirement", target: id, answer: null });
+    },
+    close: closeOverview,
+    copy: async () => {
+      try {
+        const text = await invoke("overview_markdown", {});
+        if (typeof text !== "string" || !text) return false;
+        await navigator.clipboard.writeText(text);
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    act: (action) => {
+      hideCard();
+      void run("act_here", { action }).then(() => closeOverview());
+    },
+    card: (anchor, name) => void showCard(anchor, name),
+    uncard: hideCard,
+  });
+  document.body.appendChild(panel);
+}
+
+type Group = [string, [string, string, string][]];
+let leader: Group[] = [];
+
+function menuAt(): HTMLElement {
+  closeContext();
+  const menu = document.createElement("div");
+  menu.id = "context";
+  menu.className = "at-pointer";
+  menu.setAttribute("role", "menu");
+  return menu;
+}
+
+function entry(label: string, keys: string, pick: (event: MouseEvent) => void): HTMLElement {
+  const item = document.createElement("button");
+  item.className = "context-entry";
+  item.setAttribute("role", "menuitem");
+  const hint = document.createElement("span");
+  hint.className = "context-keys";
+  hint.textContent = keys;
+  const said = document.createElement("span");
+  said.textContent = label;
+  item.append(hint, said);
+  item.addEventListener("click", (event) => {
+    event.stopPropagation();
+    pick(event);
+  });
+  return item;
+}
+
+// @implements REQ-LOOK.menu_bar_lists_leader
+function openGroup(group: Group, x: number, y: number, from?: HTMLElement) {
+  const menu = menuAt();
+  if (from) menu.dataset.from = group[0];
+  const heading = document.createElement("div");
+  heading.className = "context-group";
+  heading.textContent = group[0];
+  menu.appendChild(heading);
+  for (const [keys, label, action] of group[1]) {
+    menu.appendChild(entry(label, keys, () => {
+      closeContext();
+      void run("act_here", { action });
+    }));
+  }
+  document.body.appendChild(menu);
+  settle(menu, x, y);
+}
+
+function openLeader(x: number, y: number) {
+  if (!leader.length) return;
+  const menu = menuAt();
+  for (const group of leader) {
+    menu.appendChild(entry(`${group[0]} ›`, group[1][0]?.[0].split(" ").slice(0, 2).join(" ") ?? "", () => openGroup(group, x, y)));
+  }
+  document.body.appendChild(menu);
+  settle(menu, x, y);
+}
+
+async function drawMenubar(invoke: Invoke) {
+  const bar = document.getElementById("menubar");
+  if (!bar) return;
+  try {
+    leader = ((await invoke("leader", {})) as Group[] | null) ?? [];
+  } catch {
+    leader = [];
+  }
+  if (!Array.isArray(leader)) leader = [];
+  bar.textContent = "";
+  for (const group of leader) {
+    const item = document.createElement("button");
+    item.className = "menubar-item";
+    item.textContent = group[0];
+    const open = () => {
+      const at = item.getBoundingClientRect();
+      openGroup(group, at.left, at.bottom, item);
+    };
+    item.addEventListener("click", (event) => {
+      event.stopPropagation();
+      if (document.getElementById("context")?.dataset.from === group[0]) closeContext();
+      else open();
+    });
+    item.addEventListener("mouseenter", () => {
+      const shown = document.getElementById("context")?.dataset.from;
+      if (shown && shown !== group[0]) open();
+    });
+    bar.appendChild(item);
+  }
+  const tool = (text: string, title: string, name: string, pick: () => void) => {
+    const button = document.createElement("button");
+    button.className = `menubar-tool ${name}`;
+    button.textContent = text;
+    button.title = title;
+    button.setAttribute("aria-label", title);
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
+      closeContext();
+      pick();
+    });
+    return button;
+  };
+  const spacer = document.createElement("span");
+  spacer.className = "menubar-spacer";
+  bar.append(
+    tool("Overview", "The design as figures: marks, the requirement graph, where work is left", "overview", () => void openOverview()),
+    spacer,
+    tool("A−", "Smaller text (Ctrl -)", "zoom", () => void run("zoom", { steps: -1 })),
+    tool("A+", "Bigger text (Ctrl +)", "zoom", () => void run("zoom", { steps: 1 })),
+    tool("Search commands", "Search every command (Ctrl+Shift+P)", "search", () => openPalette()),
+    tool("Open file", "Open a file by name (Ctrl+P)", "open", () => openQuick()),
+    tool("Theme", "Switch theme: dark or light (Space w c)", "theme", () => void run("act_here", { action: "look.theme" })),
+    tool("?", "Every key (F1)", "help", () => void run("chord", { chord: "F1" })),
+  );
 }
 
 type Where = number | (() => number);
@@ -754,7 +1084,7 @@ function poll() {
   }, 1500);
 }
 
-async function show(invoke: Invoke, into: HTMLElement, status: HTMLElement) {
+async function show(invoke: Invoke, into: HTMLElement, status: HTMLElement, panesOnly = false) {
   const size = region(into);
   const panes = (await invoke("shown", size)) as Pane[];
   syncPanes(into, panes);
@@ -773,6 +1103,7 @@ async function show(invoke: Invoke, into: HTMLElement, status: HTMLElement) {
       if (Array.isArray(pair)) for (const offset of pair) mark(box, offset, 1, "bracket");
     }
   }
+  if (panesOnly) return;
   const position = document.getElementById("position");
   if (position) {
     const mode = (await invoke("mode", {})) as string | null;
@@ -798,6 +1129,19 @@ async function show(invoke: Invoke, into: HTMLElement, status: HTMLElement) {
         void run("act_here", { action: "trace.findings" });
       });
       position.prepend(count);
+    }
+    const touched = (await invoke("impact", {})) as unknown;
+    if (Array.isArray(touched) && touched.length) {
+      const badge = document.createElement("button");
+      badge.className = "problems impact";
+      badge.textContent = `Δ ${touched.length}`;
+      badge.title = `your unsaved edits touch ${touched.length} clause(s) — click to see which, before saving`;
+      badge.addEventListener("click", (event) => {
+        event.stopPropagation();
+        showing.filter = "risk";
+        void openOverview(true);
+      });
+      position.prepend(badge);
     }
   }
 
@@ -847,6 +1191,11 @@ function place(into: HTMLElement, line: number, column: number) {
 async function paint(invoke: Invoke) {
   const theme = (await invoke("theme", {})) as Record<string, unknown>;
   const root = document.documentElement.style;
+  const layout = (theme.layout ?? {}) as Record<string, unknown>;
+  document.body.classList.toggle("menubar-hidden", layout.menuBar === "hidden");
+  document.body.classList.toggle("stations-top", layout.stations === "top");
+  document.body.classList.toggle("stations-hidden", layout.stations === "hidden");
+  root.colorScheme = theme.base === "light" ? "light" : "dark";
   for (const [section, entries] of Object.entries(theme)) {
     if (typeof entries !== "object" || entries === null) continue;
     for (const [key, value] of Object.entries(entries as Record<string, unknown>)) {
@@ -875,10 +1224,11 @@ export async function start() {
     hover = {};
   }
   await paint(invoke);
+  await drawMenubar(invoke);
   await show(invoke, into, status);
   poll();
   status.textContent =
-    "Click a file to open it · click into it to type · right-click anything for what you can do there";
+    "Space: every command · . or right-click: what works here · Escape: back · F1: every key";
   window.addEventListener("focus", () => {
     void paint(invoke);
   });
@@ -932,9 +1282,28 @@ export async function start() {
   };
   document.addEventListener("keydown", async (event) => {
     if (event.target instanceof HTMLInputElement) return;
+    if (event.key === "Escape" && document.getElementById("overview") && !document.getElementById("context")) {
+      event.preventDefault();
+      closeOverview();
+      return;
+    }
+    if ((event.ctrlKey || event.metaKey) && ["=", "+", "-", "_", "0"].includes(event.key)) {
+      event.preventDefault();
+      await run("zoom", { steps: event.key === "0" ? 0 : event.key === "-" || event.key === "_" ? -1 : 1 });
+      return;
+    }
     if (event.key === "Escape" && document.getElementById("context")) {
       event.preventDefault();
       closeContext();
+      return;
+    }
+    const pointed = document.querySelector<HTMLElement>("#context.at-pointer");
+    if (pointed && ["ArrowDown", "ArrowUp", "Enter"].includes(event.key)) {
+      event.preventDefault();
+      const entries = [...pointed.querySelectorAll<HTMLElement>(".context-entry")];
+      const at = entries.indexOf(document.activeElement as HTMLElement);
+      if (event.key === "Enter") entries[at]?.click();
+      else entries[(at + (event.key === "ArrowDown" ? 1 : entries.length - 1)) % entries.length]?.focus();
       return;
     }
     const letter = event.key.length === 1 ? event.key.toLowerCase() : event.key;
@@ -1014,6 +1383,24 @@ export async function start() {
   });
 
   document.addEventListener("click", () => closeContext());
+
+  // @implements REQ-LOOK.pointer_reaches_actions
+  document.addEventListener("contextmenu", (event) => {
+    if (event.target instanceof HTMLInputElement) return;
+    event.preventDefault();
+    const [x, y] = [event.clientX, event.clientY];
+    const below = event.target instanceof Element && event.target.closest("#menu, #status, #position");
+    if (!below) return openLeader(x, y);
+    void (async () => {
+      const here = (await invoke("offers_here", {})) as [string, number, Offer[]] | null;
+      if (!here) return openLeader(x, y);
+      closeContext();
+      const menu = overlay(here[2], here[0], here[1]);
+      menu.className = "at-pointer";
+      document.body.appendChild(menu);
+      settle(menu, x, y);
+    })();
+  });
 
   document.addEventListener("mouseup", (event) => {
     if (event.button !== 3 && event.button !== 4) return;

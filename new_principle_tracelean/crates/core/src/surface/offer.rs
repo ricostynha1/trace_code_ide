@@ -183,6 +183,7 @@ pub fn offers(buffer: &Buffer, offset: usize, keymap: &Keymap) -> Vec<Offer> {
             ));
             out.push(offer(keymap, "file", format!("Delete {path}"), "file.delete", Some(path.clone()), None));
             out.push(offer(keymap, "file", "Copy the path".into(), "file.copy_path", Some(path.clone()), None));
+            out.push(offer(keymap, "file", "Open in VS Code".into(), "file.open_in_vscode", Some(path.clone()), None));
         }
         BufferKind::Directory { path } => {
             out.push(offer(

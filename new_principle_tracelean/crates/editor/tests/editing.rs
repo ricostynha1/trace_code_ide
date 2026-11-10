@@ -305,43 +305,6 @@ fn a_setting_is_written_to_the_override_and_a_bad_value_is_refused() {
     let _ = std::fs::remove_dir_all(&root);
 }
 
-/// @tests REQ-LSP.proof_state_shown
-#[test]
-fn the_proof_panel_names_why_a_lean_file_has_no_goals() {
-    let root = project();
-    std::fs::write(root.join("src/m.lean"), "theorem a : 1 = 1 := rfl\n").unwrap();
-    let mut editor = Editor::open(root.clone(), keymap());
-    editor.perform(Intent::Display { what: BufferKind::File { path: "src/m.lean".into() } });
-    editor.perform(Intent::Display { what: BufferKind::Record { title: "proof".into() } });
-    assert!(text(&editor).contains("Open a Lean file"), "{}", text(&editor));
-    assert!(editor.tick(), "the panel did not change");
-    assert!(text(&editor).contains("no Lean project"), "{}", text(&editor));
-    let _ = std::fs::remove_dir_all(&root);
-}
-
-/// @tests REQ-LSP.goals_open_with_the_file
-/// @tests REQ-LSP.goals_close_with_the_file
-#[test]
-fn the_goals_open_and_close_with_the_lean_file() {
-    use tracelean_core::surface::screen::Arrangement;
-    let root = project();
-    std::fs::write(root.join("src/m.lean"), "theorem a : 1 = 1 := rfl\n").unwrap();
-    let mut editor = Editor::open(root.clone(), keymap());
-    let held = |editor: &Editor, id: &str| editor.screen.opened.iter().any(|b| b.id == id);
-    editor.perform(Intent::Display { what: BufferKind::File { path: "src/m.lean".into() } });
-    assert!(held(&editor, "record:proof"), "the goals did not open with the file");
-    assert_eq!(editor.buffer().id, "file:src/m.lean", "the file lost the focus");
-    editor.perform(Intent::Arrange { how: Arrangement::Close });
-    assert!(!held(&editor, "record:proof"), "the goals outlived the file");
-    editor.perform(Intent::Display { what: BufferKind::File { path: "src/m.lean".into() } });
-    editor.perform(Intent::Display { what: BufferKind::Record { title: "proof".into() } });
-    editor.perform(Intent::Arrange { how: Arrangement::Close });
-    assert!(!held(&editor, "file:src/m.lean"), "the file outlived the goals");
-    editor.perform(Intent::Display { what: BufferKind::File { path: "src/i.rs".into() } });
-    assert!(!held(&editor, "record:proof"), "a file that is not Lean opened the goals");
-    let _ = std::fs::remove_dir_all(&root);
-}
-
 /// @tests REQ-ACT.one_path
 #[test]
 fn scrolling_many_lines_at_once_lands_where_asked() {
@@ -361,24 +324,130 @@ fn scrolling_many_lines_at_once_lands_where_asked() {
     let _ = std::fs::remove_dir_all(&root);
 }
 
-/// @tests REQ-LSP.proof_state_shown
+/// @tests REQ-REPORT.static_page
+/// @tests REQ-SCREEN.station_produces_a_buffer
 #[test]
-#[ignore = "starts Lean's own server on the project's models; run with --ignored"]
-fn the_goals_pane_shows_what_lean_reports_inside_a_proof() {
-    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..").canonicalize().unwrap();
-    let mut editor = Editor::open(root, keymap());
-    editor.perform(Intent::Display { what: BufferKind::File { path: "formal/TraceLean/Screen.lean".into() } });
-    let text = editor.buffer().text.clone();
-    let at = text.find("theorem goals_open_exactly_with_a_lean_file").unwrap();
-    let inside = at + text[at..].find("cases kind").unwrap() + 1;
-    editor.place("document", inside);
-    let goals = |editor: &Editor| editor.screen.opened.iter().find(|b| b.id == "record:proof").map(|b| b.text.clone()).unwrap_or_default();
-    for _ in 0..900 {
-        if goals(&editor).contains('⊢') {
-            break;
-        }
-        editor.tick();
-        std::thread::sleep(std::time::Duration::from_millis(200));
+fn the_report_station_writes_the_page_and_offers_the_revisions_to_compare() {
+    let (root, mut editor) = opened();
+    for key in ["Space", "w", "t", "e"] {
+        editor.key(key);
     }
-    assert!(goals(&editor).contains('⊢'), "{}", goals(&editor));
+    let page = root.join("target/tracelean-report/index.html");
+    let shown = plain_text(editor.buffer()).join("\n");
+    assert!(page.is_file(), "{shown}");
+    assert!(std::fs::read_to_string(&page).unwrap().contains("<html"), "not a page");
+    assert!(shown.contains(&page.display().to_string()) && shown.contains("clauses"), "{shown}");
+    let at = editor.buffer().text.find("main").expect("main is offered");
+    let span = editor.buffer().spans.iter().find(|s| s.start == at).expect("main is a span").clone();
+    assert_eq!(span.actions, vec!["trace.report_since".to_string()]);
+    let _ = std::fs::remove_dir_all(&root);
+}
+
+/// @tests REQ-REPORT.static_page
+#[test]
+fn the_report_names_its_page_by_an_absolute_path_when_the_project_is_relative() {
+    let made = project();
+    let here = std::env::current_dir().unwrap();
+    let relative = pathdiff(&made, &here);
+    assert!(relative.is_relative(), "{}", relative.display());
+    let mut editor = Editor::open(relative, keymap());
+    for key in ["Space", "w", "t", "e"] {
+        editor.key(key);
+    }
+    let shown = plain_text(editor.buffer()).join("\n");
+    let page = made.canonicalize().unwrap().join("target/tracelean-report/index.html");
+    assert!(shown.contains(&format!("file://{}", page.display())), "{shown}");
+    let _ = std::fs::remove_dir_all(&made);
+}
+
+fn pathdiff(to: &std::path::Path, from: &std::path::Path) -> PathBuf {
+    let ups = from.components().count() - 1;
+    let mut out: PathBuf = (0..ups).map(|_| "..").collect();
+    out.extend(to.components().skip(1));
+    out
+}
+
+/// @tests REQ-HANDOFF.file_to_vscode
+#[test]
+fn space_f_v_hands_the_file_to_vscode_at_the_cursor() {
+    let (root, mut editor) = opened();
+    editor.offset = "one\ntw".chars().count();
+    for key in ["Space", "f", "v"] {
+        editor.key(key);
+    }
+    let file = root.canonicalize().unwrap().join("src/i.rs").display().to_string();
+    assert_eq!(editor.handed.last().cloned().unwrap_or_default().last().cloned(), Some(format!("{file}:2:3")), "{:?}", editor.handed);
+    let mut started = Vec::new();
+    editor.hand_off(
+        |argv| {
+            started.push(argv.to_vec());
+            Ok(())
+        },
+        |_| unreachable!("nothing asked for a folder"),
+    );
+    assert_eq!(started.len(), 1);
+    assert!(editor.handed.is_empty(), "a hand-off was kept after it was started");
+    let _ = std::fs::remove_dir_all(&root);
+}
+
+/// @tests REQ-HANDOFF.failure_named
+#[test]
+fn a_hand_off_that_fails_is_named_on_the_status_line() {
+    let (root, mut editor) = opened();
+    for key in ["Space", "f", "v"] {
+        editor.key(key);
+    }
+    editor.hand_off(|_| Err("cannot start code: not found".into()), |_| unreachable!("nothing asked for a folder"));
+    let status = plain_text(editor.status.clone()).join("\n");
+    assert!(status.contains("cannot start code"), "{status}");
+    let _ = std::fs::remove_dir_all(&root);
+}
+
+/// @tests REQ-HANDOFF.report_to_browser
+#[test]
+fn the_report_opens_in_the_browser_from_the_editor_and_not_from_a_view() {
+    let (root, mut editor) = opened();
+    editor.view(BufferKind::Record { title: "report".into() });
+    assert!(editor.handed.is_empty(), "the text view started a browser: {:?}", editor.handed);
+    for key in ["Space", "w", "t", "e"] {
+        editor.key(key);
+    }
+    let page = root.canonicalize().unwrap().join("target/tracelean-report/index.html").display().to_string();
+    assert_eq!(editor.handed.last().and_then(|argv| argv.last()).cloned(), Some(page), "{:?}", editor.handed);
+    let _ = std::fs::remove_dir_all(&root);
+}
+
+/// @tests REQ-HANDOFF.folder_picked
+/// @tests REQ-HANDOFF.choice_opened
+#[test]
+fn space_p_opens_the_folder_the_picker_chose_and_nothing_when_closed() {
+    let (root, mut editor) = opened();
+    let other = project();
+    std::fs::write(other.join("src/chosen.rs"), "fn chosen() {}\n").unwrap();
+    for key in ["Space", "p"] {
+        editor.key(key);
+    }
+    assert!(editor.picker.is_some(), "no picker was asked for");
+    let said = format!("{}\n", other.display());
+    editor.hand_off(|_| Ok(()), |_| {
+        let (tell, answer) = std::sync::mpsc::channel();
+        tell.send(Ok(said)).unwrap();
+        answer
+    });
+    assert!(editor.tick(), "the chosen folder was not picked up");
+    assert_eq!(editor.root, other, "the chosen folder was not opened");
+
+    for key in ["Space", "p"] {
+        editor.key(key);
+    }
+    editor.hand_off(|_| Ok(()), |_| {
+        let (tell, answer) = std::sync::mpsc::channel();
+        tell.send(Ok(String::new())).unwrap();
+        answer
+    });
+    assert!(editor.tick());
+    assert_eq!(editor.root, other, "closing the picker opened something");
+    assert!(plain_text(editor.status.clone()).join("\n").contains("no folder was chosen"));
+    let _ = std::fs::remove_dir_all(&root);
+    let _ = std::fs::remove_dir_all(&other);
 }

@@ -1176,6 +1176,14 @@ fn a_search_lists_every_line_that_holds_the_text() {
 /// @tests REQ-LOOK.regions_present
 /// @tests REQ-LOOK.focus_visible
 /// @tests REQ-LOOK.accessible_structure
+/// @tests REQ-LOOK.overview_drawn
+/// @tests REQ-LOOK.scroll_is_one_draw_per_frame
+/// @tests REQ-FIGURE.graph_filtered
+/// @tests REQ-FIGURE.treemap_areas
+/// @tests REQ-FIGURE.agent_steps_listed
+/// @tests REQ-FIGURE.exported_as_markdown
+/// @tests REQ-MODULES.drawn_in_overview
+/// @tests REQ-LOOK.stations_have_icons
 /// @structural REQ-LOOK.accessible_structure reason="a claim about the accessibility tree a browser builds from the page; no value either side computes"
 #[test]
 #[ignore = "builds the page and runs it in Chrome with node; run with --ignored"]
@@ -1193,4 +1201,5 @@ fn the_page_in_a_browser_passes_its_checks() {
     run("web/build.mjs");
     run("web/test/pointer.mjs");
     run("web/test/journeys.mjs");
+    run("web/test/overview.mjs");
 }

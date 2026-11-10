@@ -287,6 +287,20 @@ mod tests {
     }
 
     #[test]
+    fn lean_bodies_are_highlighted_whatever_notation_they_use() {
+        let found = kinds("theorem t : f = s!\"a {x}\" := by\n  simp -- c\n", Lang::Lean4);
+        for (text, kind) in [
+            ("theorem", TokenKind::Keyword),
+            ("t", TokenKind::Function),
+            ("\"a {x}\"", TokenKind::String),
+            ("by", TokenKind::Keyword),
+            ("-- c", TokenKind::Comment),
+        ] {
+            assert!(found.contains(&(text.into(), kind)), "{text}: {found:?}");
+        }
+    }
+
+    #[test]
     fn typescript_is_highlighted_too() {
         let found = kinds("// c\nexport function f(a: number): string { return `x`; }\n", Lang::TypeScript);
         for (text, kind) in [

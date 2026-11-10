@@ -21,6 +21,8 @@ const VIEWS: &[(&str, Option<&str>, &str)] = &[
     ("stale", None, "every document link's state"),
     ("bindings", None, "the differential bindings in .tracelean/drt.json"),
     ("keys", None, "every key, by mode"),
+    ("overview", None, "the overview as Markdown: marks, work left, runs on record, modules"),
+    ("modules", None, "the module dependency graph: what each directory of Rust uses and serves"),
 ];
 
 fn usage() -> String {
@@ -44,7 +46,7 @@ fn kind(view: &str, argument: Option<&str>) -> Option<BufferKind> {
         ("coverage", Some(target)) => record(format!("coverage {target}")),
         ("trace", Some(_)) => record("trace".into()),
         ("bindings", None) => record("drt bindings".into()),
-        ("findings" | "evidence" | "rollup" | "stale" | "keys", None) => record(view.to_string()),
+        ("findings" | "evidence" | "rollup" | "stale" | "keys" | "overview" | "modules", None) => record(view.to_string()),
         _ => None,
     }
 }

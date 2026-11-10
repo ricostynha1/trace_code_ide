@@ -33,7 +33,10 @@ const BRIDGE = `
         { pane: "document", at: { left: 30, top: 0, width: 60, height: 10 }, buffer: buffers.document, focused: true,
           top: 0, lines: window.__lines || 0, chips: [[0, "I", "REQ-A.x"]] } ];
       case "cursor": return [0, 6];
-      case "bars": return [empty("stations"), { ...empty("opened"), text: "1  x.rs",
+      case "bars": return [{ ...empty("stations"), text: "Design Modules Nowhere",
+        spans: [ { start: 0, stop: 6, role: "entry", actions: ["screen.station.design"] },
+          { start: 7, stop: 14, role: "entry", actions: ["screen.station.modules"] },
+          { start: 15, stop: 22, role: "entry", actions: ["screen.station.nowhere"] } ] }, { ...empty("opened"), text: "1  x.rs",
         spans: [ { start: 0, stop: 7, role: "entry", actions: ["screen.show"] } ] }];
       case "menu": return null;
       case "offers_here": return ["document", 6, [
@@ -235,10 +238,11 @@ try {
   check("the context menu shows each entry with its keys",
     entries && entries.length === 2 && entries[1].includes("Rename src/b.rs") && entries[1].includes("Space f r"),
     JSON.stringify(entries));
-  const docked = await evaluate(`(() => { const b = document.getElementById("context").getBoundingClientRect();
-    return { left: b.left, width: b.width, gap: window.innerHeight - b.bottom, page: window.innerWidth }; })()`);
-  check("the actions are laid along the bottom, as which-key lays them",
-    docked && docked.left === 0 && docked.width === docked.page && docked.gap > 0 && docked.gap < 40, JSON.stringify(docked));
+  const popped = await evaluate(`(() => { const b = document.getElementById("context").getBoundingClientRect();
+    return { left: b.left, top: b.top, right: b.right, bottom: b.bottom, width: b.width, page: window.innerWidth, tall: window.innerHeight }; })()`);
+  check("the menu opens at the pointer, inside the window, as a menu and not a bar",
+    popped && Math.abs(popped.left - row.x) < 6 && (Math.abs(popped.top - row.y) < 6 || Math.abs(popped.bottom - row.y) < 6)
+      && popped.right <= popped.page && popped.bottom <= popped.tall && popped.width < popped.page / 2, JSON.stringify(popped));
 
   await reset();
   const rename = await evaluate(`(() => { const b = document.querySelectorAll("#context .context-entry")[1].getBoundingClientRect(); return { x: b.left + 10, y: b.top + b.height / 2 }; })()`);
@@ -482,6 +486,51 @@ try {
       && ratio > 1.8 && ratio < 2.2 && all.every((r) => r.left >= 0 && r.right <= regions.width + 0.5),
     JSON.stringify({ crossing, ratio, regions }));
 
+  const station = await evaluate(`[...document.querySelectorAll("#stations button")].map((b) => ({
+    icon: !!b.querySelector("svg.station-icon"), label: b.getAttribute("aria-label"), text: b.textContent.trim() }))`);
+  check("a station is a button holding a drawn icon and named for assistive technology; a station with no icon keeps its words",
+    station.length === 3 && station[0].icon && station[0].label === "Design" && station[0].text === ""
+      && station[1].icon && station[1].label === "Modules" && !station[2].icon && station[2].text === "Nowhere",
+    JSON.stringify(station));
+
+  const drawn = await evaluate(`(async () => {
+    const { drawOverview } = await import("./overview.js");
+    const held = { implemented: 1, annotated: 1, judged: 0, tested: 0, proved: 0 };
+    const design = (extra) => ({ nodes: [{ id: "REQ-A", title: "Middle", refines: [], clauses: 1, modelled: 0, covered: null, held }],
+      problems: 0, runs: [], impact: [], ...extra });
+    const modules = [
+      { name: "src/low", files: 1, uses: [], serves: ["REQ-A"] },
+      { name: "src/high", files: 2, uses: ["src/low"], serves: [] } ];
+    const steps = [{ order: 1, kind: "modified", file: "src/a.rs", added: 2, removed: 1, clauses: [["REQ-A.a", "A---"]] },
+      { order: 2, kind: "created", file: "src/n.rs", added: 3, removed: 0, clauses: [] }];
+    const handlers = (log) => ({ open() {}, close() {}, act() {}, card() {}, uncard() {}, copy: async () => { log.push("copy"); return true; } });
+    const draw = (extra, log = []) => { const box = document.createElement("div"); document.body.appendChild(box);
+      drawOverview(box, design(extra), handlers(log)); return box; };
+    const titles = (box) => [...box.querySelectorAll("h2")].map((h) => h.firstChild.textContent);
+    const bare = draw({}), full = draw({ modules, steps });
+    const rows = [...full.querySelectorAll("table.ov-modules tr")].slice(1).map((r) => [r.cells[0].textContent, r.cells[1].textContent, r.cells[2].textContent, r.cells[3].textContent, r.cells[4].textContent, r.className]);
+    const stepRows = [...full.querySelectorAll("section")].find((x) => x.querySelector("h2").firstChild.textContent === "The agent's waiting changes")
+      .querySelectorAll("tr");
+    const log = []; const clicked = draw({}, log); const button = [...clicked.querySelectorAll("button")].find((b) => b.textContent === "Copy as Markdown");
+    button.click(); await new Promise((r) => setTimeout(r, 50));
+    const result = { bare: titles(bare), full: titles(full), rows, steps: [...stepRows].slice(1).map((r) => [...r.cells].map((c) => c.textContent)),
+      log, after: button.textContent };
+    for (const box of [bare, full, clicked]) box.remove();
+    return result; })()`);
+  check("the modules and the agent's waiting changes are drawn only when there are some",
+    !drawn.bare.includes("Modules") && !drawn.bare.includes("The agent's waiting changes")
+      && drawn.full.includes("Modules") && drawn.full.includes("The agent's waiting changes"), JSON.stringify(drawn));
+  check("each module is a row with its files, what it uses, who uses it and what it serves, users first, and one serving nothing says so",
+    JSON.stringify(drawn.rows) === JSON.stringify([
+      ["src/high", "2", "src/low", "–", "claims no requirement", "ov-idle"],
+      ["src/low", "1", "–", "src/high", "REQ-A", ""]]), JSON.stringify(drawn.rows));
+  check("each waiting change is a row in arrival order, with the clauses its file claims or a word that it claims none",
+    JSON.stringify(drawn.steps) === JSON.stringify([
+      ["1", "modified", "src/a.rs", "+2 −1", "REQ-A.a A---"],
+      ["2", "created", "src/n.rs", "+3 −0", "claims no clause"]]), JSON.stringify(drawn.steps));
+  check("Copy as Markdown asks the editor for the text and says it did",
+    drawn.log.length === 1 && drawn.after === "Copied", JSON.stringify(drawn));
+
   const marks = await evaluate(`[...document.querySelectorAll(".pane")].map((p) => {
     const s = getComputedStyle(p); return { focused: p.classList.contains("focused"), mark: s.boxShadow + "|" + s.outlineStyle + "|" + s.borderTopColor }; })`);
   const focusedMark = marks.filter((m) => m.focused).map((m) => m.mark);
@@ -507,6 +556,19 @@ try {
   const scrolled = await last("scroll");
   check("the wheel scrolls the pane under it", scrolled && scrolled.pane === "document" && scrolled.lines === 3,
     JSON.stringify(await calls()));
+
+  // @tests REQ-LOOK.scroll_is_one_draw_per_frame
+  await reset();
+  const turned = await evaluate(`(() => {
+    const target = document.elementFromPoint(${w.x}, ${w.y});
+    for (let i = 0; i < 8; i++) target.dispatchEvent(new WheelEvent("wheel", { deltaY: 120, bubbles: true, cancelable: true }));
+    return 8;
+  })()`);
+  await sleep(400);
+  const scrolls = (await calls()).filter(([c]) => c === "scroll").map(([, a]) => a);
+  check("a burst of wheel turns is added up into fewer scrolls with the same total",
+    scrolls.length >= 1 && scrolls.length < turned && scrolls.reduce((sum, a) => sum + a.lines, 0) === turned * 3,
+    JSON.stringify({ turned, scrolls }));
 
   cdp.close();
 } finally {

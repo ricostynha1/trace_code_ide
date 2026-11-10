@@ -32,6 +32,9 @@
           ["g", { "enter": { "mode": "Design", "description": "the design graph" } }],
           ["f", { "enter": { "mode": "File", "description": "file" } }],
           ["h", { "enter": { "mode": "History", "description": "history" } }],
+          ["?", { "dispatch": { "action": "help.tutorial", "description": "the tutorial: five minutes, on this project" } }],
+          ["m", { "dispatch": { "action": "help.more", "description": "tutorial: unfold or fold the section under the cursor" } }],
+          ["p", { "dispatch": { "action": "project.pick", "description": "open a project folder" } }],
           ["t", { "enter": { "mode": "Trace", "description": "trace" } }],
           ["w", { "enter": { "mode": "Screen", "description": "panes and stations" } }]
         ]
@@ -42,6 +45,7 @@
       {
         "parent": "Leader",
         "bindings": [
+          ["c", { "dispatch": { "action": "look.theme", "description": "switch theme: dark or light" } }],
           ["h", { "dispatch": { "action": "screen.focus.left", "description": "focus left" } }],
           ["j", { "dispatch": { "action": "screen.focus.down", "description": "focus down" } }],
           ["k", { "dispatch": { "action": "screen.focus.up", "description": "focus up" } }],
@@ -64,9 +68,12 @@
         "bindings": [
           ["c", { "dispatch": { "action": "screen.station.definitions", "description": "definitions: what can be configured" } }],
           ["d", { "dispatch": { "action": "screen.station.design", "description": "the refinement graph" } }],
+          ["e", { "dispatch": { "action": "screen.station.report", "description": "write the evidence report: a card per clause" } }],
           ["f", { "dispatch": { "action": "screen.station.findings", "description": "what the checker found" } }],
           ["h", { "dispatch": { "action": "screen.station.history", "description": "the undo tree" } }],
           ["l", { "dispatch": { "action": "screen.station.trace", "description": "what this file claims, and what else claims it" } }],
+          ["m", { "dispatch": { "action": "screen.station.modules", "description": "the module dependency graph" } }],
+          ["o", { "dispatch": { "action": "screen.station.overview", "description": "the overview, as text" } }],
           ["p", { "dispatch": { "action": "screen.station.project", "description": "open a project" } }],
           ["r", { "dispatch": { "action": "screen.station.design", "description": "the requirements, as the refinement graph" } }],
           ["s", { "dispatch": { "action": "screen.station.sandbox", "description": "watch a sandboxed agent" } }]
@@ -87,6 +94,8 @@
           ["l", { "dispatch": { "action": "trace.lock", "description": "write the lockfile" } }],
           ["n", { "dispatch": { "action": "trace.new_requirement", "description": "new requirement" } }],
           ["o", { "dispatch": { "action": "trace.requirement", "description": "open the requirement here" } }],
+          ["p", { "dispatch": { "action": "trace.report", "description": "write the evidence report: a card per clause" } }],
+          ["P", { "dispatch": { "action": "trace.report_since", "description": "write the report, marking what changed since the revision under the cursor" } }],
           ["r", { "dispatch": { "action": "trace.rollup", "description": "coverage rollup" } }],
           ["s", { "dispatch": { "action": "trace.stale", "description": "what went stale" } }]
         ]
@@ -146,7 +155,8 @@
           ["o", { "dispatch": { "action": "file.open", "description": "open" } }],
           ["r", { "dispatch": { "action": "file.rename", "description": "rename" } }],
           ["s", { "dispatch": { "action": "file.save", "description": "save" } }],
-          ["u", { "dispatch": { "action": "file.references", "description": "where this name is used" } }]
+          ["u", { "dispatch": { "action": "file.references", "description": "where this name is used" } }],
+          ["v", { "dispatch": { "action": "file.open_in_vscode", "description": "open in VS Code at the cursor" } }]
         ]
       }
     ],

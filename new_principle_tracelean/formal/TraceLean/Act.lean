@@ -38,6 +38,10 @@ inductive Watch where
   | copyAll
   | copyLine
   | copyPath (path : String)
+  | openInVscode (path : String)
+  | pickProject
+  | switchTheme
+  | tutorialToggle (title : String)
   | acceptFile (path : String) (command : Command)
   | rejectFile (path : String)
   | contextToggle (part : TraceLean.Context.Part)
@@ -223,6 +227,11 @@ def dispatchNamed (action : String) (focus : Focus) (w : Workspace) (waiting : L
   | "file.find" => report "find"
   | "file.find_lines" => report "find lines"
   | "trace.lock" => report "lock"
+  | "trace.report" => report "report"
+  | "trace.report_since" =>
+    match focus.under with
+    | none => Intent.refuse (Blocked.needsTarget "trace.report_since" "a revision")
+    | some revision => report ("report since " ++ revision)
   | "trace.requirement" => requirementUnder focus
   | "trace.context" =>
     match focus.under with
@@ -245,6 +254,10 @@ def dispatchNamed (action : String) (focus : Focus) (w : Workspace) (waiting : L
     match focus.under with
     | none => Intent.refuse (Blocked.needsTarget "design.toggle" "a requirement")
     | some id => Intent.observe (Watch.designToggle id)
+  | "help.more" =>
+    match focus.under with
+    | none => Intent.refuse (Blocked.needsTarget "help.more" "a section")
+    | some title => Intent.observe (Watch.tutorialToggle title)
   | "design.expand_all" =>
     match focus.under with
     | none => Intent.refuse (Blocked.needsTarget "design.expand_all" "a requirement")
@@ -262,6 +275,13 @@ def dispatchNamed (action : String) (focus : Focus) (w : Workspace) (waiting : L
     match focusPath focus with
     | none => Intent.refuse (Blocked.needsTarget "file.copy_path" "a file")
     | some path => Intent.observe (Watch.copyPath path)
+  | "project.pick" => Intent.observe Watch.pickProject
+  | "look.theme" => Intent.observe Watch.switchTheme
+  | "help.tutorial" => Intent.display (BufferKind.record "tutorial")
+  | "file.open_in_vscode" =>
+    match focusPath focus with
+    | none => Intent.refuse (Blocked.needsTarget "file.open_in_vscode" "a file")
+    | some path => Intent.observe (Watch.openInVscode path)
   | "file.definition" =>
     match nameAt focus w with
     | none => Intent.refuse (Blocked.needsTarget "file.definition" "a name")
@@ -355,6 +375,8 @@ def namedActions : List String :=
    "file.find",
    "file.find_lines",
    "trace.lock",
+   "trace.report",
+   "trace.report_since",
    "trace.requirement",
    "trace.context",
    "trace.coverage",
@@ -370,6 +392,11 @@ def namedActions : List String :=
    "file.copy",
    "file.copy_line",
    "file.copy_path",
+   "file.open_in_vscode",
+   "project.pick",
+   "look.theme",
+   "help.tutorial",
+   "help.more",
    "file.definition",
    "file.references",
    "trace.new_requirement",
@@ -398,6 +425,7 @@ theorem dispatch_factors (a b : String) (f : Focus) (w : Workspace) (ws : List C
     dispatch a f w ws = dispatch b f w ws := by
   simp only [dispatch, hn, ht]
 
+set_option maxHeartbeats 800000 in
 /-- @proves REQ-ACT.unknown_is_refused -/
 theorem an_unnamed_action_is_refused (a : String) (f : Focus) (w : Workspace) (ws : List Command)
     (unnamed : actionName a ∉ namedActions)
@@ -408,6 +436,7 @@ theorem an_unnamed_action_is_refused (a : String) (f : Focus) (w : Workspace) (w
   unfold dispatchNamed
   split <;> simp_all [namedActions]
 
+set_option maxHeartbeats 800000 in
 /-- @proves REQ-ACT.action_to_intent -/
 theorem a_named_action_resolves_to_an_intent (a : String) (f : Focus) (w : Workspace)
     (ws : List Command) (named : actionName a ∈ namedActions) (x : String) :
@@ -424,7 +453,7 @@ theorem a_named_action_resolves_to_an_intent (a : String) (f : Focus) (w : Works
 def underActions : List String :=
   ["file.open", "file.new", "observe.diff", "history.jump", "definitions.edit",
    "trace.requirement", "trace.context", "trace.coverage", "context.toggle", "history.filter",
-   "design.toggle", "design.expand_all", "trace.judge", "trace.new_requirement", "screen.show"]
+   "design.toggle", "design.expand_all", "trace.judge", "trace.new_requirement", "screen.show", "trace.report_since"]
 
 def fileActions : List String := ["file.rename", "file.delete", "file.copy_path"]
 

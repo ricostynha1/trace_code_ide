@@ -64,6 +64,9 @@ fn action() -> Schema {
             "screen.station.nowhere",
             "context.toggle code",
             "file.delete",
+            "file.delete",
+            "file.delete",
+            "file.open_in_vscode",
             "observe.reject_file",
         ] {
             examples.push(weighted.into());

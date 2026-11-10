@@ -8,14 +8,10 @@ open TraceLean.Produce
 def introLines : List String :=
   [ "TraceLean — an editor that knows why your code exists",
     "",
-    "Requirements live in reqs/. Code, tests and Lean models name the clause",
-    "they serve (@implements, @tests, @models, @proves); the gutter chips and",
-    "the letters in the file tree show where each clause is met.",
+    "Space: every command, as a menu          . or right-click: what works here          Escape: back",
     "",
-    "🔗 on the left shows what the open file claims and what else claims it;",
-    "🕸 shows the design, roots first. Put the cursor on a requirement and the",
-    "bar at the bottom offers to open it, or to gather what an agent needs to",
-    "change it (Space c o). Space shows every key; F1 lists them all.",
+    "New here? Take the tutorial below: five minutes, hands on.",
+    "Overview (top bar) draws the design: what is implemented, tested and proved.",
     "",
     "Start here" ]
 

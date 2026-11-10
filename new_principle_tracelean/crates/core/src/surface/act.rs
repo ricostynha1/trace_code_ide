@@ -36,6 +36,10 @@ pub enum Watch {
     CopyAll,
     CopyLine,
     CopyPath { path: String },
+    OpenInVscode { path: String },
+    PickProject,
+    SwitchTheme,
+    TutorialToggle { title: String },
     AcceptFile { path: String, command: Command },
     RejectFile { path: String },
     ContextToggle { part: crate::surface::context::Part },
@@ -251,6 +255,11 @@ pub fn dispatch(action: String, focus: Focus, w: Workspace, waiting: Vec<Command
         "file.find" => report("find"),
         "file.find_lines" => report("find lines"),
         "trace.lock" => report("lock"),
+        "trace.report" => report("report"),
+        "trace.report_since" => match &focus.under {
+            None => needs("trace.report_since", "a revision"),
+            Some(revision) => report(&format!("report since {revision}")),
+        },
         "trace.context" => match &focus.under {
             None => needs("trace.context", "a requirement"),
             Some(id) => report(&format!("context {id}")),
@@ -272,6 +281,10 @@ pub fn dispatch(action: String, focus: Focus, w: Workspace, waiting: Vec<Command
             None => needs("design.toggle", "a requirement"),
             Some(id) => Intent::Observe { watch: Watch::DesignToggle { id: id.clone() } },
         },
+        "help.more" => match &focus.under {
+            None => needs("help.more", "a section"),
+            Some(title) => Intent::Observe { watch: Watch::TutorialToggle { title: title.clone() } },
+        },
         "design.expand_all" => match &focus.under {
             None => needs("design.expand_all", "a requirement"),
             Some(id) => Intent::Observe { watch: Watch::DesignExpand { id: Some(id.clone()) } },
@@ -288,6 +301,13 @@ pub fn dispatch(action: String, focus: Focus, w: Workspace, waiting: Vec<Command
         "file.copy_path" => match focus_path(&focus) {
             None => needs("file.copy_path", "a file"),
             Some(path) => Intent::Observe { watch: Watch::CopyPath { path } },
+        },
+        "project.pick" => Intent::Observe { watch: Watch::PickProject },
+        "look.theme" => Intent::Observe { watch: Watch::SwitchTheme },
+        "help.tutorial" => Intent::Display { what: BufferKind::Record { title: "tutorial".into() } },
+        "file.open_in_vscode" => match focus_path(&focus) {
+            None => needs("file.open_in_vscode", "a file"),
+            Some(path) => Intent::Observe { watch: Watch::OpenInVscode { path } },
         },
         "file.definition" => match name_at(&focus, &w) {
             None => needs("file.definition", "a name"),
