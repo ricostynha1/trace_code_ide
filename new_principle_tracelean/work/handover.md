@@ -1,73 +1,61 @@
-# HANDOVER — GUI usability, slice 3 in progress
+# HANDOVER — GUI usability, after slice 4
 
-*Written 2026-11-10. Repo: `new_principle_tracelean/`. Branch: `gui-usability`. Nothing is committed (the tree had unrelated uncommitted work before this started; ask the user before committing).*
+*Written 2026-11-10 (end of day). Repo: `new_principle_tracelean/`. Branch: `gui-usability`. Everything is committed and pushed, except `demo/.tracelean/theme.json` (untracked; probably written by running the app on `demo`; not ours to decide).*
 
-Read first: `work/ROLLOVER_gui.md` (slices 1–2, done and verified) and `work/plan_gui_usability.md` (the plan). This file covers slice 3 only.
+Read first: `work/ROLLOVER_gui.md` (slices 1–4, each with Done / Next / Gotchas / Key paths) and `work/plan_gui_usability.md` (the plan). This file is only what to do next.
 
-## Goal of slice 3
-Bigger tutorial with sections that unfold; clause card on hover; graph filters + treemap; test-runs panel; edit impact; smoother scrolling; requirements and tests linked to all new features.
+## State
 
-## State: code written, PARTLY verified
+- Slices 1–4 are implemented, tested and committed. `tracelean-trace .` ends `blocking: false` (Unbound 2, Unmodeled 43, Untested 1 = `REQ-THERMO.to_fahrenheit`, not GUI).
+- Evidence is re-earned and locked. `tracelean-trace . --stale` lists only six judgements (a person's): `ARCH-NO-DRIVING.no_launch`, `.observation_only`, `.user_runs_it`, `REQ-LOOK.accessible_structure`, `REQ-OBS.no_instruction_channel`, `REQ-SCREEN.station_produces_a_buffer`.
+- Commits of 2026-11-10, oldest first: `ed0c36c` Lean grammar · `8a5dd91` earlier core work (does not build alone; shares files with the next) · `1cdd3d6` GUI slices 1–4 · `f620bca` evidence · `6b188ee` manual and notes · `0d7314f` wheel scrolls the view only · `f0aeea4` press outside closes a menu · `131e6f1` evidence re-earned and locked · then this handover.
 
-### Verified (ran and passed)
-- `cargo build -p tracelean-desktop -p tracelean-editor --examples` — builds.
-- `node web/build.mjs && node web/test/pointer.mjs` — passes (run before the tutorial rewrite; web code unchanged since except `overview.ts` hint text).
-- `node web/test/overview.mjs` — passes (new; filters, treemap, layers).
-
-### Written but NOT yet run
-1. **Lean**: `formal/TraceLean/Act.lean` gained `Watch.tutorialToggle` and the `"help.more"` dispatch + action-list entry. Run `cd formal && lake build`.
-2. **Core unit tests**: `cargo test -p tracelean-core tutorial` (new `crates/core/src/surface/tutorial.rs`; one test asserts the shipped tutorial has ≥6 folds, every fold closed, and unfolding adds >40 lines).
-3. **Differential tests touched**: `cargo test -p tracelean-core --test differential_act -- --include-ignored` (act.rs/Act.lean changed), `--test differential_screen` (`DOCUMENT_RECORDS` gained `"tutorial"`), and the welcome one (`cargo test -p tracelean-core welcome -- --include-ignored`). Also keymap validation: `cargo test -p tracelean-core keymap` (new binding `Space m` → `help.more`).
-4. **No screenshot taken** of: unfolded tutorial, hover card, treemap, filters, runs table, impact badge. Take them:
-   ```bash
-   node web/build.mjs
-   node web/test/look.mjs /tmp/t.png demo 'act_here={"action":"help.tutorial"}'
-   EVAL='(async()=>{document.querySelector(".menubar-tool.overview").click(); await new Promise(r=>setTimeout(r,700)); return 1})()' node web/test/look.mjs /tmp/o.png .
-   ```
-   (`look.mjs` copies the tree without `.tracelean/`, so marks J/T/P and runs show empty there.)
-
-## What was added in slice 3 (all uncommitted)
+## What slice 4 and the late fixes added
 
 | Feature | Where |
 |---|---|
-| Tutorial folds: `+++ Title` … `+++` in `assets/tutorial.md`; row `▸ Title` carries action `help.more` | `crates/core/src/surface/tutorial.rs` (`unfold`, `folds`, `title_of`); `act.rs` `Watch::TutorialToggle`; editor `tutorial_buffer()`, field `tutorial_open`, handler in `perform` |
-| Tutorial text rewritten: ~15 folds, ASCII schematics, "Vim-inspired but ignorable" | `assets/tutorial.md` (the user or a tool edited it after my last write — re-read it, keep their version) |
-| Clause card on hover (chips, requirement names, overview nodes/rows) | editor `Editor::card` + structs `Card`, `CardClause`; Tauri command `card`; `web/src/app.ts` `showCard`, `cardOn`, `hideCard`; CSS `#card` |
-| Edit impact: clauses claimed by unsaved files | editor `Editor::impact`, pure `impact_of`, struct `Impact`; command `impact`; status badge `Δ n` in `show()`; "Your unsaved edits" section in overview |
-| Test runs on record | editor `Editor::runs` (reads `.tracelean/evidence/*.json` `detail.drt`), struct `Run`; command `runs`; overview section with Run / Check / Coverage buttons |
-| Graph filters + treemap | `web/src/overview.ts`: `filtered`, `under`, `treemap`, `step`, `left`, `showing` state, `controls`, `tree` |
-| Scroll: wheel ticks coalesced, one scroll per frame, panes-only redraw, full redraw 140 ms after stop | `web/src/app.ts` `wheel`, `pumpWheel`, `show(..., panesOnly)` |
-| `serde` dependency for editor crate | `crates/editor/Cargo.toml` |
-| `look.rs` example answers `card`, `impact`, `runs` | `crates/editor/examples/look.rs` |
-
-## Requirements added (frontmatter clauses)
-- `reqs/surface/REQ-GUIDE.md` (new): `tutorial_in_the_editor`, `sections_unfold`.
-- `reqs/surface/REQ-FIGURE.md` (new): `card_on_hover`, `graph_filtered`, `treemap_areas`, `impact_before_saving`, `runs_listed`.
-- `reqs/surface/REQ-LOOK.md`: `theme_switched`, `pointer_reaches_actions`, `menu_bar_lists_leader`, `zoom_steps`, `overview_drawn`, `scroll_is_one_draw_per_frame`.
+| Overview as text / Markdown: station `overview` (`Space w t o`), `tracelean-view . overview` (redirect to a file = the export) | `crates/core/src/surface/figures.rs` `overview`; editor `Editor::figures`, `overview_markdown`, `markdown_record` |
+| Module dependency graph: station `modules` (`Space w t m`), `tracelean-view . modules`, "Modules" table in the window's overview | `figures.rs` `modules`, `serving_nothing`, `module_lines`; editor `Editor::modules`; `web/src/overview.ts` `modules`, `depth` |
+| Agent's waiting changes (one step per file, in order, with clauses claimed and marks held) | editor `Editor::agent_steps`; `overview.ts` `steps` |
+| "Copy as Markdown" button in the overview | `overview.ts` `Handlers.copy`; `web/src/app.ts` `openOverview` |
+| SVG station icons | `app.ts` `STATION_ICONS`, `stationIcon` |
+| Wheel moves the view only; cursor stays; view returns to the cursor when it next moves | editor `Editor::scroll`, field `scrolled`, `follow_cursor` |
+| A press outside an open menu closes it | `app.ts`, capturing `mousedown` listener next to `document.addEventListener("click", …closeContext)` |
+| Requirements | `reqs/surface/REQ-MODULES.md` (new); `REQ-FIGURE` `overview_as_text`, `agent_steps_listed`, `exported_as_markdown`; `REQ-LOOK` `stations_have_icons`, `wheel_moves_the_view_only`, `press_outside_closes_menu` |
 
 ## Next steps, in order
-1. Run the "NOT yet run" list above; fix what fails.
-2. **Tests still missing** (clause has `@implements` but no `@tests`). Add `crates/editor/tests/figures.rs` (copy the `project()` helper from `crates/editor/tests/design.rs`, but give each test its own temp dir — the shared pid-named dir is why `design` is flaky in parallel):
-   - `REQ-GUIDE.sections_unfold` + `tutorial_in_the_editor`: `editor.act_here("help.tutorial")`; put `editor.offset` on a `▸` row; `editor.act_here("help.more")`; assert text grew and row is now `▾`; toggle back.
-   - `REQ-LOOK.menu_bar_lists_leader`: `editor.leader()` has a group per Leader `enter` binding and every entry's action is in `keymap::actions()`.
-   - `REQ-FIGURE.impact_before_saving`: unit-test `tracelean_editor::impact_of` (pure): dedupes per file, ignores unchanged files, sorted.
-   - `REQ-FIGURE.card_on_hover`: tree with a requirement + annotated file; `editor.card("REQ-A.a")` returns that clause and its claim; unknown id → `None`.
-   - `REQ-FIGURE.runs_listed`: write one evidence JSON with `detail.drt`; `editor.runs()` returns it.
-   - `REQ-LOOK.scroll_is_one_draw_per_frame`: add a check in `web/test/pointer.mjs` near "the wheel scrolls the pane under it": dispatch several wheel events at once, assert fewer `scroll` calls than events and summed `lines` equal.
-   - Add `run("web/test/overview.mjs");` to the node runner in `crates/editor/tests/pointer.rs` (~line 1195) and to the list in `docs/DEVELOPER_GUIDE.md` "Tests to keep green".
-3. `cargo run -q -p tracelean-core --bin tracelean-trace -- .` must say `blocking: false`; read findings for `REQ-GUIDE`, `REQ-FIGURE`, `REQ-LOOK` (expect `Unmodeled` — information; no `Dangling`).
-4. Update `user_manual.md` §7.4 (card on hover, Δ badge, filters/treemap, runs, tutorial folds, `Space m`) and append a "slice 3" block to `work/ROLLOVER_gui.md`.
-5. Only then the full suite, once: `cargo test --workspace --no-fail-fast -- --include-ignored`.
-6. User feedback still open: scrolling felt "sickening" — the coalescing fix is untested in the real window; ask the user to try `node web/build.mjs && cargo run -p tracelean-desktop -- demo`. If still rough, next lever: `show()` makes ~11 invokes per draw → add one batched Tauri command; and `Editor::scroll` moves the cursor (`step_lines`), consider scrolling the view only.
-7. Remaining plan items: terminal twin for the figures, module dependency graph (plan §3.8), agent timeline (§3.9), export (§3.10), SVG station icons.
+
+1. **User feedback pending.** The user had not yet confirmed, in the real window, that (a) scrolling is smooth now and the bottom key menu no longer changes while scrolling, (b) top-bar menus close on a click outside. Ask. Run: `node web/build.mjs && cargo run -p tracelean-desktop -- demo`.
+   - If scrolling is still rough: a scroll frame makes 3 invokes with the cursor off screen (`scroll`, `shown`, `cursor`) and 6 with it on screen (plus `selection`, `occurrences`, `brackets`, already sent together). Next lever: one batched Tauri command returning all of them (add it to `crates/desktop/src/main.rs`, `crates/editor/examples/look.rs`, and the stub in `web/test/pointer.mjs`).
+   - The first wheel turn over another pane still focuses that pane (`Editor::scroll` calls `focus_pane`, because `top` belongs to the focused buffer), so the key menu can change once.
+2. **Flaky test.** `crates/editor/tests/design.rs` `the_design_opens_on_its_roots_and_unfolds_on_request` fails in the full parallel run: its tests share one pid-named temp dir. Give each test its own dir (see `project()` in `crates/editor/tests/figures.rs`: pid + atomic counter). Then re-measure coverage (step 6), because a changed test file makes its coverage stale.
+3. **Look at `proofs_are_earned`.** `tools/differential-all.sh` reported the suite failing. The race between two tests sharing a scratch dir was fixed (each calls `fixture("<name>")`). `every_theorem_lean_accepts_earns_its_clause_a_record` was a known failure before this work; whether it is the only one left was not checked. Run `cargo test -p tracelean-core --test proofs_are_earned -- --include-ignored` (it rewrites `.tracelean/evidence` and `proofs.json`).
+4. **Not built from the plan** (`work/plan_gui_usability.md` §3):
+   - §3.8 layer-rule check: declare allowed module dependencies in an `ARCH-*` clause; violations as findings and marked rows. The module graph today is Rust only, a table, not a drawn node-link graph; a `crate::item` path where `item` is not a directory resolves to the crate's root module.
+   - §3.9 accept/reject per hunk with the clause card beside it (the overview only lists the steps; accepting still happens in the sandbox station).
+   - §3.10 static HTML export and a CI badge per mark (Markdown export exists).
+   - Earlier sections never started: §3.3 a sortable matrix with stale cells, §3.5 minimap / inline lens / unclaimed-code highlight, §3.6 live run panel with counter-examples.
+5. **Screenshots never taken**: unfolded tutorial fold, hover card, treemap view, runs table, `Δ` badge, agent section with steps, station bar with icons (the default layout hides the station bar; `layout.stations` must be `left` or `top`).
+6. **Earn and lock after any source change**, in this order:
+   ```bash
+   cargo run -q -p tracelean-core --bin tracelean-trace -- . --coverage   # slow; any .rs change re-runs it
+   bash tools/differential-all.sh                                         # sets TRACELEAN_DRT_LINES=1; skips current ops
+   cargo run -q -p tracelean-core --bin tracelean-trace -- . --lock
+   cargo run -q -p tracelean-core --bin tracelean-trace -- . --stale      # should list only judgements
+   ```
 
 ## Gotchas
-- User rule: while working run only new + impacted tests; full suite once at the end. Be terse, low token use.
-- Known failures unrelated to GUI: `fixpoint` (needs `tools/stage0-trace` built); `proofs_are_earned::every_theorem_lean_accepts_earns_its_clause_a_record`. **`proofs_are_earned` rewrites `.tracelean/evidence` and `proofs.json` in the repo** — do not run it casually.
-- Never `git stash` here: the tree carries the user's uncommitted work.
-- A new Tauri command must also be added to `crates/editor/examples/look.rs`, and tolerated as missing by the stub in `web/test/pointer.mjs` (wrap invokes; see `openOverview`'s `list()` helper).
-- New action = 4 places: `act.rs` match, `keymap.rs` action list, `Act.lean` match + action list; plus a key in `assets/keymap.json` (every action must be reachable).
-- Welcome text lives twice and must be identical: `welcome.rs` `INTRO`, `formal/TraceLean/Welcome.lean` `introLines`.
-- Files not in the editor's workspace snapshot (anything under `.tracelean/`) cannot be opened with `file.open`; that is why the tutorial is a record buffer.
-- Tutorial claims must match the keymap: design station is `Space w t r` (also `d`), context menu is `Space c` (`t` toggle, `y` copy), no `Space c o`.
-- Zoom is the webview's native zoom, set inside the `theme` Tauri command; do not use CSS `zoom` (breaks `region()`).
+
+- User rule: while working run only new + impacted tests; full suite once at the end with `--no-fail-fast`. Be terse. The user wants requirements, tests, annotations and docs delegated to a cheaper subagent (Sonnet) where possible; feature code and verification stay with the main session.
+- A plain `cargo test` does NOT re-earn a differential record: Rust-bound operations need the line half, recorded only with `TRACELEAN_DRT_LINES=1` (`tools/differential-all.sh` sets it). `tracelean-trace . --drt` only covers the auto-compared clauses (2 here).
+- Do not edit source while a coverage or differential run is in flight: the records come out stale again.
+- The full suite and the differential script rewrite files under `.tracelean/`; commit them as their own evidence commit.
+- The checker does not scan `.mjs`. `@tests` links for browser checks live on `the_page_in_a_browser_passes_its_checks` in `crates/editor/tests/pointer.rs`, which runs `web/build.mjs`, `pointer.mjs`, `journeys.mjs`, `overview.mjs`.
+- Only declared shells may touch the filesystem (`crates/core/tests/architecture.rs` `SHELLS`). The editor crate is not one: read evidence through `tracelean_core::trace::store` (`read_all`, `read_all_aged`).
+- A new station = `station_entries` + `station_kind` (+ `DOCUMENT_RECORDS` if it belongs in the document pane) in `crates/core/src/surface/screen.rs`, the same three in `formal/TraceLean/Screen.lean`, the action in `crates/core/src/surface/keymap.rs`, a key in `assets/keymap.json` (Station mode, keys kept sorted), a title match in the editor's `view`, a view name in `crates/editor/src/bin/tracelean-view.rs`, and an icon in `STATION_ICONS`.
+- A new action (not a station) = 4 places: `act.rs` match, `keymap.rs` action list, `Act.lean` match + action list; plus a key in `assets/keymap.json`.
+- A new Tauri command must also be answered by `crates/editor/examples/look.rs` and tolerated as missing by the stub in `web/test/pointer.mjs`.
+- Known failure unrelated to GUI: `fixpoint` (needs `cargo build --release` in `tools/stage0-trace`).
+- Tutorial and manual: sections unfold with a click or `Space m`; `.` opens the "what can be done here" menu, it does not unfold.
+- Zoom is the webview's native zoom, set inside the `theme` Tauri command; do not use CSS `zoom`.
+- `web/test/look.mjs` copies the tree without `.tracelean/`, so marks and runs show empty in its screenshots.
