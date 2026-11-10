@@ -13,10 +13,6 @@ pub enum Strength {
 }
 
 impl Strength {
-    pub fn is_settled(&self) -> bool {
-        matches!(self, Strength::Pinned { .. } | Strength::Nondeterministic { .. })
-    }
-
     pub fn as_str(&self) -> &'static str {
         match self {
             Strength::Pinned { .. } => "pinned",

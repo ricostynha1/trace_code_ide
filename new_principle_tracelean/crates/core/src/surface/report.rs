@@ -17,6 +17,8 @@ pub struct CardFacts {
     pub structural: bool,
     pub roles: Vec<String>,
     pub refused: Vec<String>,
+    pub accepted: bool,
+    pub pinned: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -31,6 +33,7 @@ pub enum Missing {
     NotApplicable,
     NoTheorem,
     AllRefused { reasons: Vec<String> },
+    NotPinned,
     NotChecked,
 }
 
@@ -55,6 +58,8 @@ fn missing_for(facts: &CardFacts, mark: Mark) -> Missing {
         Mark::Tested if !has("drt") => Missing::Unbound,
         Mark::Tested => Missing::NotAgreed,
         _ if !has("proves") => Missing::NoTheorem,
+        _ if facts.accepted && facts.pinned => Missing::NotChecked,
+        _ if facts.accepted => Missing::NotPinned,
         _ if facts.refused.is_empty() => Missing::NotChecked,
         _ => Missing::AllRefused { reasons: facts.refused.clone() },
     }
@@ -81,6 +86,9 @@ pub fn explain(missing: &Missing) -> String {
         Missing::NotApplicable => "not applicable: the clause is about the tree, and a test that reads it answers it".into(),
         Missing::NoTheorem => "no theorem claims it (@proves)".into(),
         Missing::AllRefused { reasons } => format!("Lean refused every theorem: {}", reasons.join("; ")),
+        Missing::NotPinned => {
+            "its theorems are accepted, but they do not pin the model: prove the obligation shown under Strength (@pins)".into()
+        }
         Missing::NotChecked => "no accepted proof for the model as it stands now (--proofs)".into(),
     }
 }
@@ -168,7 +176,16 @@ fn card(shared: &Shared, state: &ClauseState) -> String {
     let mut roles: Vec<String> = links.iter().map(|l| l.role.as_str().to_string()).collect();
     roles.sort();
     roles.dedup();
-    let why = reasons(CardFacts { held: state.held.clone(), structural, roles, refused });
+    let accepted = shared
+        .proofs
+        .proofs
+        .iter()
+        .any(|p| p.req_id == state.req_id && p.clause == state.clause && p.verdict.is_accepted());
+    let pinned = shared
+        .strengths
+        .get(&key)
+        .is_some_and(|s| matches!(s.strength, crate::trace::strength::Strength::Pinned { .. }));
+    let why = reasons(CardFacts { held: state.held.clone(), structural, roles, refused, accepted, pinned });
     let findings: Vec<&Finding> = shared
         .findings
         .iter()

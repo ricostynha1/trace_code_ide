@@ -128,7 +128,10 @@ pub fn check(root: &Path, index: &Index) -> Result<ProofReport, String> {
     Ok(proofcheck::report(plans, heard, proofcheck::rules_hash()))
 }
 
+/// @implements REQ-STRENGTH.proved_only_when_pinned
 pub fn earn_all(root: &Path, index: &Index, report: &ProofReport, toolchain: &str) -> (usize, usize) {
+    let files = crate::observe::workspace::snapshot(root).files;
+    let strengths = proofcheck::strengths(index, report, &files);
     let mut by_clause: BTreeMap<(String, Option<String>), Vec<&proofcheck::ProofEntry>> = BTreeMap::new();
     for entry in &report.proofs {
         by_clause.entry((entry.req_id.clone(), entry.clause.clone())).or_default().push(entry);
@@ -136,7 +139,11 @@ pub fn earn_all(root: &Path, index: &Index, report: &ProofReport, toolchain: &st
     let (mut written, mut removed) = (0, 0);
     for ((req_id, clause), entries) in by_clause {
         let accepted = entries.iter().find(|e| e.verdict.is_accepted());
-        let earned = accepted.and_then(|e| {
+        let strength = strengths
+            .get(&(req_id.clone(), clause.clone()))
+            .map(|s| s.strength.clone())
+            .unwrap_or(crate::trace::strength::Strength::Open);
+        let earned = accepted.filter(|_| proofcheck::earns_proof(true, strength)).and_then(|e| {
             earn::proof_record(index, &req_id, clause.as_deref(), &proofcheck::lean_name(&e.theorem), toolchain).ok()
         });
         match earned {

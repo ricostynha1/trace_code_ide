@@ -73,7 +73,7 @@ const AMBIENT: &[&str] = &[
 fn launches_in(files: &[(String, String)]) -> Vec<String> {
     let mut found = Vec::new();
     for (file, text) in files {
-        if file.contains("/src/drt/") || file.contains("/tests/") || file.ends_with("src/lean_server.rs") {
+        if file.contains("/src/drt/") || file.contains("/tests/") || file.ends_with("src/launch.rs") {
             continue;
         }
         for (line_no, line) in code_lines(text, file) {
@@ -128,8 +128,15 @@ fn nothing_here_launches_a_coding_agent() {
     let found = launches_in(&sources());
     assert!(
         found.is_empty(),
-        "only the differential-testing toolchain may spawn a process:\n{found:#?}"
+        "only the differential-testing toolchain and the hand-off may spawn a process:\n{found:#?}"
     );
+    let handed: Vec<String> = sources()
+        .iter()
+        .flat_map(|(file, text)| code_lines(text, file).into_iter().map(move |(n, line)| (file.clone(), n, line)))
+        .filter(|(_, _, line)| line.contains("handed.push(") && !line.contains("handoff::in_"))
+        .map(|(file, n, line)| format!("{file}:{n}: {line}"))
+        .collect();
+    assert!(handed.is_empty(), "a hand-off that is not VS Code or the browser:\n{handed:#?}");
 }
 
 /// @tests ARCH-DETERMINISM.no_ambient_time
@@ -247,6 +254,7 @@ const SHELLS: &[&str] = &[
     "core/src/observe/watch.rs",
     "core/src/observe/workcopy.rs",
     "core/src/observe/revision.rs",
+    "core/src/observe/report.rs",
     "core/src/trace/index.rs",
     "core/src/trace/lockfile.rs",
     "core/src/trace/store.rs",

@@ -29,11 +29,9 @@ first method inside it, which is the only declaration it could sensibly mean.
 ## Precision belongs to the anchor
 
 The same work exposed a second thing worth fixing. A file whose parse contained
-any error marked *every* annotation in it imprecise and capped them at L1. For
-the Lean models that was almost all of them: `tree-sitter-lean4` 0.3.0 cannot
-read tactic combinators (`<;>`), some unicode operators (`∉`), or several
-`fun (x : T) =>` forms, and recovery wraps a large region — in the worst case
-the whole file — in one error node.
+any error marked *every* annotation in it imprecise and capped them at L1, and
+error recovery can wrap a large region (in the worst case the whole file) in one
+error node.
 
 An anchor is now precise when the declaration it names parsed, and when no
 unparsed region *begins* between the annotation and that declaration. A region
@@ -41,9 +39,7 @@ that merely encloses both says nothing: the declarations inside it were still
 found. A region that starts in the gap is the real risk, because it could be
 hiding the declaration that should have been the target.
 
-This halved the capped annotations, from 124 to 58, with no change to what is
-being claimed. `tree-sitter-lean4` 0.3.0 is the latest published version, so the
-remainder stays until the grammar improves — ADR-0008 records that constraint.
+What a Lean file can still fail to parse, and why that is rare, is in ADR-0008.
 
 ## Also
 

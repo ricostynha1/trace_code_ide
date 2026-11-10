@@ -418,6 +418,12 @@ pub fn heard(output: String) -> Vec<Heard> {
     out
 }
 
+/// @implements REQ-STRENGTH.proved_only_when_pinned
+/// @drt REQ-STRENGTH.proved_only_when_pinned
+pub fn earns_proof(accepted: bool, strength: Strength) -> bool {
+    matches!(strength, Strength::Pinned { .. }) && accepted
+}
+
 /// @implements REQ-STRENGTH.obligation_generated
 /// @drt REQ-STRENGTH.obligation_generated
 pub fn accepted(heard: Vec<Heard>) -> Vec<(String, String)> {

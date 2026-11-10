@@ -144,7 +144,7 @@ reading the tree has nothing to test or prove: `AJ··`.
 | `A` annotated | Something in the tree claims the clause. |
 | `J` judged | A person judged requirement and model consistent (a requirement↔model record at L2). |
 | `T` tested | Differential testing found no disagreement, over a stated case count **that reached the situations the binding declared** ([docs/04-coverage.md](docs/04-coverage.md)) (model↔implementation at L3). |
-| `P` proved | A Lean theorem discharges the property (model-property at L4). |
+| `P` proved | A Lean theorem about the model was accepted **and the model is pinned**: its theorems leave it no other answer (model-property at L4). |
 
 A mark is not a rung: a model can be proved and tested before anyone judged it,
 and reads `A-TP`. An aggregate holds a mark only when **every** part holds it,

@@ -115,6 +115,15 @@ impl Terminal {
 
 impl Drop for Terminal {
     fn drop(&mut self) {
+        use std::io::Write;
+        let _ = self.master.write_all(b"\x03");
+        let _ = self.master.flush();
+        for _ in 0..40 {
+            if self.finished() {
+                return;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(50));
+        }
         let _ = self.child.kill();
         let _ = self.child.wait();
     }

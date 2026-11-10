@@ -42,7 +42,7 @@ impl Lang {
                 "macro_definition",
                 "mod_item",
             ],
-            Lang::Lean4 => &["definition", "inductive", "structure", "abbreviation"],
+            Lang::Lean4 => &["definition", "inductive", "class_inductive", "structure", "abbreviation"],
             Lang::TypeScript => &[
                 "function_declaration",
                 "class_declaration",
@@ -234,12 +234,13 @@ fn collect(
         if let Some(name) = declaration_name(node, content, lang) {
             let mut path = scope.clone();
             path.push(name);
+            let last = last_token(node, lang);
             out.declarations.push(Decl {
                 symbol_path: path.join("::"),
                 start: node.start_byte(),
-                end: node.end_byte(),
+                end: last.end_byte(),
                 start_line: node.start_position().row as u32,
-                end_line: node.end_position().row as u32,
+                end_line: last.end_position().row as u32,
                 precise: !node.has_error(),
             });
             scope.push(path.pop().expect("just pushed"));
@@ -253,6 +254,14 @@ fn collect(
     }
 
     if let Some((open, close)) = lang.sibling_scope() {
+        if kind == open || kind == close {
+            // A scope command runs to the next command, so the comments after
+            // it are its children: they are read like any other.
+            let mut cursor = node.walk();
+            for child in node.children(&mut cursor).filter(|child| COMMENT_KINDS.contains(&child.kind())) {
+                collect(child, content, lang, scope, out);
+            }
+        }
         if kind == open {
             if let Some(name) = declaration_name(node, content, lang) {
                 scope.push(name);
@@ -260,8 +269,10 @@ fn collect(
             return;
         }
         if kind == close {
-            let text = node.utf8_text(content.as_bytes()).unwrap_or_default();
-            let named = text.trim_start_matches("end").trim();
+            let named = node
+                .child_by_field_name("name")
+                .and_then(|name| content.get(name.start_byte()..extended_end(content, name.end_byte(), lang)))
+                .unwrap_or_default();
             for segment in named.split('.').rev() {
                 if segment.is_empty() {
                     continue;
@@ -278,6 +289,21 @@ fn collect(
     for child in node.children(&mut cursor) {
         collect(child, content, lang, scope, out);
     }
+}
+
+/// Where a declaration's text ends. A Lean command runs to the start of the
+/// next one, so its extent ends at its last child that is neither a comment nor
+/// empty: the blank lines and comments before the next command are not part of it.
+fn last_token(node: tree_sitter::Node, lang: Lang) -> tree_sitter::Node {
+    if !matches!(lang, Lang::Lean4) {
+        return node;
+    }
+    let mut cursor = node.walk();
+    let last = node
+        .children(&mut cursor)
+        .filter(|child| !COMMENT_KINDS.contains(&child.kind()) && child.end_byte() > child.start_byte())
+        .last();
+    last.unwrap_or(node)
 }
 
 fn declaration_name(node: tree_sitter::Node, content: &str, lang: Lang) -> Option<String> {
@@ -499,6 +525,34 @@ impl Holder {
             paths.iter().any(|p| p.contains("assurance")),
             "{paths:?}"
         );
+    }
+
+    /// @tests REQ-ANNOT.comments_only
+    /// @tests REQ-ANCHOR.symbol_not_line
+    #[test]
+    fn a_comment_after_a_scope_command_is_read_and_the_scope_still_closes() {
+        let src = "namespace N\n/- notes\n@models REQ-X.c -/\ndef f := 1\n\nend N -- closed\n\ndef g := 2\n";
+        let scanned = scan(src, Some(Lang::Lean4));
+        assert!(scanned.precise);
+        let end = scanned.comment_ranges.iter().find(|(s, e)| src[*s..*e].contains("REQ-X.c")).expect("the comment was read").1;
+        assert_eq!(resolve("f.lean", src, &scanned, &annotation(0), end).kind, AnchorKind::Decl { symbol_path: "N::f".into() });
+        let paths: Vec<&str> = scanned.declarations.iter().map(|d| d.symbol_path.as_str()).collect();
+        assert_eq!(paths, ["N::f", "g"], "the scope did not close at `end N`");
+        assert!(scanned.comment_ranges.iter().any(|(s, e)| &src[*s..*e] == "-- closed"));
+    }
+
+    /// @tests REQ-ANCHOR.symbol_not_line
+    /// @tests REQ-ANCHOR.imprecise_capped
+    #[test]
+    fn lean_that_the_term_grammar_could_not_read_is_read_precisely() {
+        let src = "/-- a /- nested -/ doc -/\ndef s := s!\"a {x} b\"\n\nmutual\n  def a : Nat → Nat\n    | 0 => 0\n    | n+1 => b n\n  termination_by n => n\n  def b (n : Nat) : Nat := a n\nend\n\ndef q := `(def $x : Nat := 1\nnamespace $y)\n\nclass inductive Ne (a : Sort u) : Prop where\n  | intro (v : a) : Ne a\n\ntheorem t : x <<< 0#w\u{2082} = x := by\n  open Foo in -- local\n  simp\n";
+        let scanned = scan(src, Some(Lang::Lean4));
+        assert!(scanned.error_ranges.is_empty(), "{:?}", scanned.error_ranges);
+        let paths: Vec<&str> = scanned.declarations.iter().map(|d| d.symbol_path.as_str()).collect();
+        assert_eq!(paths, ["s", "a", "b", "q", "Ne", "t"]);
+        assert!(scanned.declarations.iter().all(|d| d.precise));
+        let s = &scanned.declarations[0];
+        assert_eq!(&src[s.start..s.end], "def s := s!\"a {x} b\"", "a declaration ends at its last token");
     }
 
     /// @tests REQ-ANCHOR.symbol_not_line

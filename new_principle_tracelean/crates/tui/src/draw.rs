@@ -4,16 +4,20 @@
 use tracelean_core::surface::screen::Rect;
 use tracelean_core::surface::view::{actions_at, plain_text, Buffer, Rendering, Role};
 
-static THEME: std::sync::OnceLock<serde_json::Value> = std::sync::OnceLock::new();
+static THEME: std::sync::RwLock<Option<&'static serde_json::Value>> = std::sync::RwLock::new(None);
 
+/// The theme drawn from now on. A switched theme replaces the one before it; the few
+/// themes a session ever loads are kept for the life of the process.
 pub fn use_theme(theme: serde_json::Value) {
-    let _ = THEME.set(theme);
+    *THEME.write().expect("the theme") = Some(Box::leak(Box::new(theme)));
 }
 
 fn theme() -> &'static serde_json::Value {
-    THEME.get_or_init(|| {
-        serde_json::from_str(tracelean_editor::theme::SHIPPED).expect("the shipped theme parses")
-    })
+    if let Some(theme) = *THEME.read().expect("the theme") {
+        return theme;
+    }
+    use_theme(serde_json::from_str(tracelean_editor::theme::SHIPPED).expect("the shipped theme parses"));
+    theme()
 }
 
 fn truecolour(hex: &str, bold: bool) -> String {

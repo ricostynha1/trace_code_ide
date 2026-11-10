@@ -12,7 +12,7 @@ structure. Moving a file changes nothing.
 | `@implements` | code | this realises the clause |
 | `@tests` | a test | this exercises the clause |
 | `@drt` | a differential comparison's entry | compared by generated cases |
-| `@proves` | a theorem stated about the clause's model, for every input | earns `P` once Lean accepts it (REQ-STRENGTH) |
+| `@proves` | a theorem stated about the clause's model, for every input | earns `P` once Lean accepts it and the model is pinned (REQ-STRENGTH) |
 | `@pins` | a theorem stating exactly the model's generated obligation | the model is pinned |
 
 A `@proves` theorem earns nothing if it never applies the model, applies it

@@ -41,3 +41,13 @@ the per-model obligation it also generated held `True` placeholders.
 Clauses whose theorems are refused lose `P` until restated. A model that is a
 type earns no `P`; its clause is judged. Strength moves from 277 clause plans to
 one obligation per model function (183), shown on each of its clauses.
+
+## Amendment: P only when pinned (2026-10-26)
+
+An accepted theorem shows the model has a property, not that the property
+leaves one answer. `P` is now given only when Lean accepted a theorem about the
+clause's model **and** that model is pinned (REQ-STRENGTH.proved_only_when_pinned).
+A proof record names the hashes of the model, its specification, its theorems
+and its pinning theorem as inputs, so a change to any of them withdraws `P`
+(REQ-STRENGTH.proof_rests_on_the_specification). With 2 of 182 models pinned,
+almost every `P` is withdrawn; the cards say which obligation is owed.

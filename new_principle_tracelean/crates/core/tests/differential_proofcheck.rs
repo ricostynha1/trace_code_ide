@@ -138,3 +138,21 @@ fn model_and_implementation_agree_on_the_plan_of_each_model() {
     ]);
     harness::agree("REQ-STRENGTH.strength_per_model", &strukt(&[("links", list(link, 8))]), 75, 2_000);
 }
+
+fn strength() -> Schema {
+    let mut variants: BTreeMap<String, Option<Box<Schema>>> = BTreeMap::new();
+    variants.insert("pinned".into(), Some(Box::new(strukt(&[("theoremName", name(&["p1"]))]))));
+    variants.insert("attempted".into(), Some(Box::new(strukt(&[("theoremName", name(&["p1"]))]))));
+    variants.insert("open".into(), None);
+    variants.insert("nondeterministic".into(), Some(Box::new(strukt(&[("reason", text(&["io"]))]))));
+    Schema::Enum { variants }
+}
+
+/// @drt REQ-STRENGTH.proved_only_when_pinned
+/// @tests REQ-STRENGTH.proved_only_when_pinned
+#[test]
+#[ignore = "builds a Lean package and a Rust crate; run with --ignored"]
+fn model_and_implementation_agree_on_when_a_clause_is_proved() {
+    let schema = strukt(&[("accepted", Schema::Bool), ("strength", strength())]);
+    harness::agree("REQ-STRENGTH.proved_only_when_pinned", &schema, 76, 1_000);
+}

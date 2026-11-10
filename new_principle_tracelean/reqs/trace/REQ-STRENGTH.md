@@ -22,6 +22,8 @@ clauses:
   attempted_distinguished: The system shall distinguish an obligation stated but not accepted from one never attempted and from one discharged.
   nondeterministic_declared: Where a model cannot be pinned, the system shall let it be declared as such with a reason, and shall then exclude it rather than report it as open forever.
   qualifies_proof: The system shall present the proved mark together with its strength, in the way the tested mark is presented together with its coverage.
+  proved_only_when_pinned: The system shall give a clause the proved mark only when Lean accepted a theorem about the clause's model and the model is pinned.
+  proof_rests_on_the_specification: When the model, its specification, a theorem about it or its pinning theorem changes, the system shall withdraw the proved mark until it is earned again.
   verdict_kept: When the model, an accepted theorem about it or the pinning theorem changes, the system shall return the model to attempted.
 ---
 
@@ -70,3 +72,12 @@ differential tests could miss and no room for a wrong model that the judged
 clauses would not show: every behaviour of the model is one of its clauses. Any
 change to the model or to one of those theorems re-opens the question.
 Discharging it is the author's part; until then the model is open, never fine.
+
+So `P` means more than "a theorem was accepted". A clause holds `P` only when
+its model is **pinned**: the accepted theorems about it, taken together, leave
+no other function. An accepted theorem about a model that is still open or
+attempted is shown, with its verdict, but earns nothing; the clause reads
+"not pinned" with the obligation it owes. A model declared nondeterministic
+cannot be pinned, so its clauses do not hold `P`. Any change to the model, its
+specification, its theorems or its pin withdraws the mark until `--proofs`
+checks it again.

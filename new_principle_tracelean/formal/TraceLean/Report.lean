@@ -11,6 +11,8 @@ structure CardFacts where
   structural : Bool
   roles : List String
   refused : List String
+  accepted : Bool
+  pinned : Bool
   deriving Repr, DecidableEq, Inhabited, ToJson, FromJson
 
 inductive Missing where
@@ -23,6 +25,7 @@ inductive Missing where
   | notApplicable
   | noTheorem
   | allRefused (reasons : List String)
+  | notPinned
   | notChecked
   deriving Repr, DecidableEq, Inhabited, ToJson, FromJson
 
@@ -46,6 +49,7 @@ def missingFor (facts : CardFacts) : Mark → Missing
     if facts.structural then .notApplicable
     else if !has facts "models" then .noModel
     else if !has facts "proves" then .noTheorem
+    else if facts.accepted then (if facts.pinned then .notChecked else .notPinned)
     else if facts.refused.isEmpty then .notChecked
     else .allRefused facts.refused
 
@@ -72,14 +76,18 @@ theorem the_reason_is_the_first_missing_step (facts : CardFacts) (r : Reason) (h
     (r.mark = .tested → facts.structural = false → has facts "models" = true →
       has facts "implements" = true → has facts "drt" = false → r.missing = .unbound) ∧
     (r.mark = .proved → facts.structural = false → has facts "models" = true → has facts "proves" = true →
-      facts.refused ≠ [] → r.missing = .allRefused facts.refused) := by
+      facts.accepted = false → facts.refused ≠ [] → r.missing = .allRefused facts.refused) ∧
+    (r.mark = .proved → facts.structural = false → has facts "models" = true → has facts "proves" = true →
+      facts.accepted = true → facts.pinned = false → r.missing = .notPinned) := by
   unfold reasons at hr
   obtain ⟨m, _, rfl⟩ := List.mem_map.mp hr
-  refine ⟨fun hm hs hmod => ?_, fun hm hs hmod himp hdrt => ?_, fun hm hs hmod hpr hre => ?_⟩
+  refine ⟨fun hm hs hmod => ?_, fun hm hs hmod himp hdrt => ?_, fun hm hs hmod hpr hacc hre => ?_,
+    fun hm hs hmod hpr hacc hpin => ?_⟩
   · rcases hm with hm | hm <;> (simp only at hm; subst hm; simp [missingFor, hs, hmod])
   · simp only at hm; subst hm; simp [missingFor, hs, hmod, himp, hdrt]
   · simp only at hm; subst hm
     have : facts.refused.isEmpty = false := by cases h : facts.refused <;> simp_all
-    simp [missingFor, hs, hmod, hpr, this]
+    simp [missingFor, hs, hmod, hpr, hacc, this]
+  · simp only at hm; subst hm; simp [missingFor, hs, hmod, hpr, hacc, hpin]
 
 end TraceLean.Report

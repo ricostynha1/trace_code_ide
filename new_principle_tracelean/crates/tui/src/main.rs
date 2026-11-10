@@ -7,12 +7,12 @@ use tracelean_editor as editor;
 
 use std::io::{BufRead, Write};
 
-use crossterm::event::{Event as TermEvent, KeyCode, KeyEvent, KeyModifiers};
+use crossterm::event::{Event as TermEvent, KeyCode, KeyEvent, KeyModifiers, MouseButton, MouseEvent, MouseEventKind};
 use crossterm::{execute, terminal};
 
 use tracelean_core::surface::keymap::{self, Keymap};
 use tracelean_core::surface::screen::{Rect, EXPLORER};
-use tracelean_core::surface::view::Buffer;
+use tracelean_core::surface::view::{plain_text, Buffer};
 
 const KEYMAP: &str = include_str!("../../../assets/keymap.json");
 
@@ -167,6 +167,96 @@ fn paint(editor: &editor::Editor, region: Rect, asking: Option<&str>) -> String 
     out
 }
 
+/// Where in a buffer a cell of it is: the offset of the character drawn at `row`, `column`,
+/// or of the end of that row when the row is shorter. Nothing below the last row.
+///
+/// @implements REQ-LOOK.pointer_reaches_actions
+fn offset_at(text: &str, row: usize, column: usize) -> Option<usize> {
+    let mut start = 0;
+    for (index, line) in text.split('\n').enumerate() {
+        let length = line.chars().count();
+        if index == row {
+            return Some(start + column.min(length));
+        }
+        start += length + 1;
+    }
+    None
+}
+
+/// The offset in a bar's buffer of the cell at `column`, the bar being its rows joined by two spaces.
+fn offset_in_bar(buffer: &Buffer, column: usize) -> Option<usize> {
+    let (mut drawn, mut start) = (0, 0);
+    for line in plain_text(buffer.clone()) {
+        let length = line.chars().count();
+        if column >= drawn && column < drawn + length {
+            return Some(start + column - drawn);
+        }
+        drawn += length + 2;
+        start += length + 1;
+    }
+    None
+}
+
+/// What a pointer event does: a click puts the cursor there, a right-click also lists what
+/// can be done there, the wheel scrolls the pane under it, and a click on a bar acts on its entry.
+///
+/// @implements REQ-LOOK.pointer_reaches_actions
+fn pointed(editor: &mut editor::Editor, region: Rect, mouse: MouseEvent) {
+    let (x, y) = (mouse.column as usize, mouse.row as usize);
+    let pressed = match mouse.kind {
+        MouseEventKind::Down(button) => Some(button),
+        MouseEventKind::ScrollUp | MouseEventKind::ScrollDown => None,
+        _ => return,
+    };
+    if y < BARS {
+        let Some(MouseButton::Left) = pressed else { return };
+        let station = y == 0;
+        let buffer = if station {
+            tracelean_core::surface::produce::menu_row(
+                "stations".into(),
+                tracelean_core::surface::screen::station_entries(),
+                region.width,
+            )
+        } else {
+            editor.strip()
+        };
+        if let Some(offset) = offset_in_bar(&buffer, x) {
+            if let Some(action) = tracelean_core::surface::view::actions_at(buffer, offset).first() {
+                if station {
+                    editor.act_here(action);
+                } else {
+                    editor.act_in_bar(false, action, offset);
+                }
+            }
+        }
+        return;
+    }
+    let (x, y) = (x as u64, (y - BARS) as u64);
+    let Some(placed) = editor.laid_out(region).into_iter().find(|placed| {
+        let at = placed.at;
+        x >= at.left && x < at.left + at.width && y >= at.top && y < at.top + at.height
+    }) else {
+        return;
+    };
+    let Some(button) = pressed else {
+        let lines = if mouse.kind == MouseEventKind::ScrollUp { -3 } else { 3 };
+        return editor.scroll(&placed.pane, lines);
+    };
+    let rows = placed.at.height as usize;
+    let shown = tracelean_core::surface::produce::window(placed.buffer, placed.top, rows);
+    let (row, column) = ((y - placed.at.top) as usize, (x - placed.at.left) as usize);
+    let Some(offset) = offset_at(&shown.text, row, column) else { return };
+    match button {
+        MouseButton::Left => editor.place(&placed.pane, offset),
+        MouseButton::Right => {
+            editor.place(&placed.pane, offset);
+            editor.mode = editor.keymap.root.clone();
+            editor.act_here("screen.offers");
+        }
+        MouseButton::Middle => {}
+    }
+}
+
 /// @implements REQ-MYTH.actions_reachable
 fn name_of(key: KeyEvent) -> Option<String> {
     match key.code {
@@ -274,10 +364,11 @@ fn interactive(root: std::path::PathBuf, fresh: bool) {
     };
     let mut stdout = std::io::stdout();
     let _ = terminal::enable_raw_mode();
-    let _ = execute!(stdout, terminal::EnterAlternateScreen);
+    let _ = execute!(stdout, terminal::EnterAlternateScreen, crossterm::event::EnableMouseCapture);
     let mut asking: Option<Asking> = None;
 
     while editor.running {
+        editor.hand_off(tracelean_core::launch::start, tracelean_core::launch::ask);
         let region = region();
         editor.region = region;
         editor.follow_cursor(region.height as usize);
@@ -293,6 +384,15 @@ fn interactive(root: std::path::PathBuf, fresh: bool) {
                 break Ok(TermEvent::FocusGained);
             }
         };
+        if let Ok(TermEvent::Mouse(mouse)) = event {
+            if asking.is_none() {
+                pointed(&mut editor, region, mouse);
+            }
+            continue;
+        }
+        if plain_text(editor.status.clone()).join(" ").starts_with("setting saved") {
+            draw::use_theme(editor::theme::load(&editor.root));
+        }
         let Ok(TermEvent::Key(key)) = event else { continue };
         if key.modifiers.contains(KeyModifiers::CONTROL) && key.code == KeyCode::Char('c') {
             break;
@@ -332,13 +432,24 @@ fn interactive(root: std::path::PathBuf, fresh: bool) {
     }
 
     editor.remember();
-    let _ = execute!(stdout, terminal::EnableLineWrap, terminal::LeaveAlternateScreen);
+    let _ = execute!(stdout, crossterm::event::DisableMouseCapture, terminal::EnableLineWrap, terminal::LeaveAlternateScreen);
     let _ = terminal::disable_raw_mode();
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// @tests REQ-LOOK.pointer_reaches_actions
+    #[test]
+    fn a_cell_names_the_character_drawn_there_or_the_end_of_its_row() {
+        let text = "ab\n\ncdef";
+        assert_eq!(offset_at(text, 0, 1), Some(1));
+        assert_eq!(offset_at(text, 0, 9), Some(2));
+        assert_eq!(offset_at(text, 1, 4), Some(3));
+        assert_eq!(offset_at(text, 2, 2), Some(6));
+        assert_eq!(offset_at(text, 3, 0), None);
+    }
 
     /// @tests REQ-MYTH.actions_reachable
     #[test]
@@ -361,5 +472,42 @@ mod tests {
         }
         assert_eq!(named(KeyCode::Char('a')).as_deref(), Some("a"));
         assert_eq!(named(KeyCode::F(5)), None);
+    }
+
+    /// @tests REQ-MYTH.actions_reachable
+    #[test]
+    fn every_chord_is_named_as_the_keymap_names_it() {
+        let (none, shift, ctrl, alt) = (KeyModifiers::NONE, KeyModifiers::SHIFT, KeyModifiers::CONTROL, KeyModifiers::ALT);
+        let chord = |code, modifiers| chord_of(KeyEvent::new(code, modifiers));
+        let cases = [
+            (KeyCode::Char('_'), ctrl, "C-/"),
+            (KeyCode::Char('7'), ctrl, "C-/"),
+            (KeyCode::Up, alt, "A-Up"),
+            (KeyCode::Down, alt | shift, "A-S-Down"),
+            (KeyCode::BackTab, shift, "S-Tab"),
+            (KeyCode::Left, alt, "A-Left"),
+            (KeyCode::Right, alt, "A-Right"),
+            (KeyCode::Right, shift, "S-Right"),
+            (KeyCode::Home, shift | ctrl, "S-C-Home"),
+            (KeyCode::Left, ctrl, "C-Left"),
+            (KeyCode::Right, ctrl, "C-Right"),
+            (KeyCode::Backspace, ctrl, "C-Backspace"),
+            (KeyCode::Delete, ctrl, "C-Delete"),
+            (KeyCode::Char('s'), ctrl, "C-s"),
+            (KeyCode::Char('F'), ctrl, "C-S-f"),
+            (KeyCode::Char('f'), ctrl | shift, "C-S-f"),
+            (KeyCode::F(2), none, "F2"),
+            (KeyCode::F(3), shift, "S-F3"),
+            (KeyCode::Home, none, "Home"),
+            (KeyCode::End, none, "End"),
+            (KeyCode::PageUp, none, "PageUp"),
+            (KeyCode::PageDown, none, "PageDown"),
+            (KeyCode::Delete, none, "Delete"),
+        ];
+        for (code, modifiers, name) in cases {
+            assert_eq!(chord(code, modifiers).as_deref(), Some(name), "{code:?} with {modifiers:?}");
+        }
+        assert_eq!(chord(KeyCode::Char('a'), none), None);
+        assert_eq!(chord(KeyCode::Enter, none), None);
     }
 }

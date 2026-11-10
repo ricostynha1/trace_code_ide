@@ -39,7 +39,6 @@ The icons on the left are **stations**, always there:
 | 🕸 | the design: the requirements as their refinement graph, opening on the roots. Click ▸ to unfold one level; with the cursor on it, the bar (or `Space g a`) unfolds everything under it; **[ expand all ]** and **[ fold all ]** at the top do the whole graph; **[ open only ]** (`Space g u`) hides every requirement with nothing left to do and nothing open under it |
 | 🔍 | the findings: what the checker found, each message saying what to create (`Space w t f`) |
 | ⚙ | the definitions: every theme colour with its value; `Space f e` on a row (or a click) changes it and it is saved and shown at once (`Space w t c`) |
-| ∴ | the proof: the goals Lean reports at the cursor of a Lean file, following the cursor and the edits (`Space w t g`) |
 | 🌳 | the undo tree: every state the project has been in, each branch in its own column; `#0` is the tree as it was opened. Click a node to go there, rest on it to see the change it made; **All / File / Saved** at the top show everything, only the open file's changes, or only where you saved (`Space h f`) |
 
 ## Finding your way between requirements and code
@@ -146,7 +145,7 @@ The editor is modal, like Vim: `i` to type, `Escape` to stop. Outside typing,
 
 | Keys | Does |
 |---|---|
-| `Space f` | files: `o` open, `s` save, `n` new, `r` rename, `d` delete, `g` definition, `u` references |
+| `Space f` | files: `o` open, `s` save, `n` new, `r` rename, `d` delete, `g` definition, `u` references, `v` open in VS Code at the cursor |
 | `Space t` | trace: `o` open requirement, `n` new requirement, `a` approve draft, `c` check tree, `f` findings, `r` coverage, `s` stale |
 | `Space h` | history: `u` undo, `r` redo, `t` tree, `b` branch |
 | `Space c` | context for an agent: `o` open it for the requirement here, `t` include/leave out a part, `y` copy |

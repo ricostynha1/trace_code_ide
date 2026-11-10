@@ -26,6 +26,8 @@ fn model_and_implementation_agree_on_why_a_mark_is_not_held() {
         ("structural", Schema::Bool),
         ("roles", Schema::List { inner: Box::new(Schema::Enum { variants: roles }), max_len: Some(5) }),
         ("refused", Schema::List { inner: Box::new(name(&["t: silent", "u: vacuous"])), max_len: Some(2) }),
+        ("accepted", Schema::Bool),
+        ("pinned", Schema::Bool),
     ]);
     harness::agree("REQ-REPORT.why_not_held", &strukt(&[("facts", facts)]), 91, 3_000);
 }

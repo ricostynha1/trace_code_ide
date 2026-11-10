@@ -3,6 +3,30 @@ use crate::trace::annotation::Role;
 use crate::trace::index::Index;
 use crate::trace::record::{Detail, Evidence, Key};
 
+/// @implements REQ-STRENGTH.proof_rests_on_the_specification
+pub fn specification_hash(index: &Index, req_id: &str, clause: Option<&str>) -> Option<String> {
+    let model = index
+        .links
+        .iter()
+        .find(|l| l.role == Role::Models && l.req_id == req_id && l.clause.as_deref() == clause)?;
+    let siblings: Vec<(&str, Option<&str>)> = index
+        .links
+        .iter()
+        .filter(|l| l.role == Role::Models && l.anchor.file == model.anchor.file && l.anchor.kind == model.anchor.kind)
+        .map(|l| (l.req_id.as_str(), l.clause.as_deref()))
+        .collect();
+    let mut found: Vec<String> = index
+        .links
+        .iter()
+        .filter(|l| matches!(l.role, Role::Models | Role::Specifies | Role::Proves | Role::Pins))
+        .filter(|l| siblings.contains(&(l.req_id.as_str(), l.clause.as_deref())))
+        .map(|l| format!("{}:{}", l.role.as_str(), l.anchor.body_hash))
+        .collect();
+    found.sort();
+    found.dedup();
+    Some(super::hash::text(&found.join("+")))
+}
+
 fn anchor_hash(index: &Index, req_id: &str, clause: Option<&str>, role: Role) -> Option<String> {
     let mut found: Vec<&str> = index
         .links
@@ -177,6 +201,10 @@ pub fn proof_record(
             ("requirement".to_string(), requirement_hash(index, req_id, clause)?),
             ("toolchain".to_string(), toolchain.to_string()),
             ("rules".to_string(), crate::trace::proofcheck::rules_hash()),
+            (
+                "specification".to_string(),
+                specification_hash(index, req_id, clause).ok_or(Unearned::NoInput { name: "specification" })?,
+            ),
         ],
     })
 }
@@ -246,6 +274,7 @@ pub fn current_inputs(index: &Index, record: &Evidence) -> Vec<(String, String)>
                 "requirement" => index.requirements.get(req).and_then(|r| r.clause_hash(clause)),
                 "toolchain" => Some(was.clone()),
                 "rules" => Some(crate::trace::proofcheck::rules_hash()),
+                "specification" => specification_hash(index, req, clause),
                 _ => None,
             };
             now.map(|hash| (name.clone(), hash))

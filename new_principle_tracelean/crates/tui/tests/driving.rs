@@ -618,3 +618,32 @@ fn ctrl_p_opens_a_file_by_a_few_letters_and_selects() {
     let seen = shown(&terminal.press("\r"));
     assert!(seen.contains("to_kelvin") && !seen.contains("to_fahrenheit"), "nothing was replaced:\n{seen}");
 }
+
+/// @tests REQ-DRIVE.screen_answers_for_the_frontend
+#[test]
+fn a_question_takes_a_correction_switches_its_scope_and_answers() {
+    let mut terminal = open();
+    terminal.press("\u{10}");
+    terminal.press("zzzq");
+    let seen = shown(&terminal.press("\r"));
+    assert!(seen.contains("no file matches"), "an open nothing matches said nothing:\n{seen}");
+    terminal.press("\u{10}");
+    terminal.press("celsx");
+    let seen = shown(&terminal.press("\u{7f}"));
+    assert!(seen.contains("open: cels   →"), "Backspace took nothing back:\n{seen}");
+    terminal.press("\r");
+    terminal.press("\u{6}");
+    terminal.press("degrees");
+    let seen = shown(&terminal.press("\t"));
+    assert!(seen.contains("find in every file (Tab switches): degrees"), "Tab did not switch:\n{seen}");
+    let seen = shown(&terminal.press("\r"));
+    assert!(seen.contains("celsius.rs"), "finding in every file listed nothing:\n{seen}");
+    terminal.press("\u{10}");
+    terminal.press("cels");
+    terminal.press("\r");
+    terminal.press("\u{6}");
+    terminal.press("describe");
+    let seen = shown(&terminal.press("\r"));
+    assert!(!seen.contains("find in"), "Enter left the question up:\n{seen}");
+}
+

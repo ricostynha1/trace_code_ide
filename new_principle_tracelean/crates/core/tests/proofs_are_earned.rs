@@ -118,8 +118,8 @@ theorem same_pinned_too_weakly : ∀ g : Nat → Nat, g = same → g = same := f
 end Fix
 "#;
 
-fn fixture() -> PathBuf {
-    let dir = harness::scratch("proof-fixture");
+fn fixture(name: &str) -> PathBuf {
+    let dir = harness::scratch(&format!("proof-fixture-{name}"));
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(dir.join("formal/Fix")).unwrap();
     let toolchain = harness::project_root().join("formal/lean-toolchain");
@@ -158,7 +158,7 @@ fn refused(refusal: Refusal) -> Verdict {
 #[test]
 #[ignore = "builds a Lean package"]
 fn each_way_of_proving_nothing_is_refused_by_name() {
-    let root = fixture();
+    let root = fixture("refused");
     let (theorems, pins) = verdicts(&root);
     let expect = |name: &str, verdict: Verdict| {
         assert_eq!(theorems.get(name), Some(&verdict), "{name}: {theorems:#?}");
@@ -245,4 +245,39 @@ fn a_refused_theorem_is_a_finding_naming_it_its_clause_and_why() {
         assert_eq!((finding.file.as_str(), finding.line), ("formal/Fix/Planted.lean", 7));
         assert!(finding.message.contains(name) && finding.message.contains("REQ-F.a") && finding.message.contains(&why), "{}", finding.message);
     }
+}
+
+/// @tests REQ-STRENGTH.proved_only_when_pinned
+/// @tests REQ-STRENGTH.proof_rests_on_the_specification
+#[test]
+#[ignore = "builds a Lean package"]
+fn only_a_pinned_model_earns_its_clause_p_and_a_changed_theorem_takes_it_back() {
+    use tracelean_core::evidence::Bond;
+    use tracelean_core::trace::earn::still_standing;
+    let root = fixture("pinned");
+    std::fs::create_dir_all(root.join("reqs")).unwrap();
+    std::fs::write(
+        root.join("reqs/REQ-F.md"),
+        "---\nid: REQ-F\ntitle: Fixture\nclauses:\n  a: The system shall double.\n  b: The system shall box.\n  c: The system shall ask.\n  d: The system shall be the same.\n---\nbody",
+    )
+    .unwrap();
+    let index = build(&root);
+    let report = proofs::check(&root, &index).expect("the fixture builds and Lean runs");
+    proofs::earn_all(&root, &index, &report, &proofs::toolchain());
+    let held: Vec<String> = store::read_all(&root)
+        .iter()
+        .filter(|r| r.key.bond == Bond::ModelProof)
+        .map(|r| format!("{}.{}", r.key.req_id, r.key.clause.clone().unwrap_or_default()))
+        .collect();
+    assert!(held.contains(&"REQ-F.a".to_string()), "double is pinned, so REQ-F.a is proved: {held:?}");
+    assert!(!held.contains(&"REQ-F.c".to_string()), "ask has accepted theorems but no pin: {held:?}");
+    assert!(!held.contains(&"REQ-F.d".to_string()), "same's pin is refused: {held:?}");
+
+    let planted = root.join("formal/Fix/Planted.lean");
+    let text = std::fs::read_to_string(&planted).unwrap();
+    std::fs::write(&planted, text.replace("  unfold double\n  omega\n\n/-- @proves REQ-F.a -/\ntheorem double_respects", "  simp only [double]\n  omega\n\n/-- @proves REQ-F.a -/\ntheorem double_respects")).unwrap();
+    let records: Vec<_> = store::read_all(&root).into_iter().filter(|r| r.key.bond == Bond::ModelProof).collect();
+    let (valid, stale) = still_standing(&build(&root), records);
+    assert!(valid.is_empty() && stale.len() == 1, "the proof of REQ-F.a rests on its theorems: {valid:?}");
+    let _ = std::fs::remove_dir_all(&root);
 }

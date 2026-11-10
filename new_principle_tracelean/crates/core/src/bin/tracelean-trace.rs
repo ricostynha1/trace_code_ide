@@ -53,41 +53,13 @@ fn main() {
     }
 
     if let Some(out_dir) = value_after(&args, "--report") {
-        let files = tracelean_core::observe::workspace::snapshot(&root).files;
-        let lock = trace::lockfile::read(&root).unwrap_or_default();
-        let proofs = tracelean_core::drt::proofs::load(&root);
-        let states = trace::diff::states(&lock, &index.requirements, &proofs);
         let base = value_after(&args, "--diff");
-        let changes = base
-            .as_deref()
-            .map(|b| tracelean_core::observe::revision::changes_since(&root, b, states.clone()))
-            .transpose()
+        let written = tracelean_core::observe::report::write(&root, &index, &PathBuf::from(out_dir), base.as_deref())
             .unwrap_or_else(|why| {
                 eprintln!("{why}");
                 std::process::exit(2)
-            })
-            .unwrap_or_default();
-        let policy = trace::checker::Policy::default();
-        let mut findings = trace::checker::check(&index, &policy);
-        findings.extend(trace::checker::refused(&proofs, &policy));
-        let strengths = trace::proofcheck::strengths(&index, &proofs, &files);
-        let shared = tracelean_core::surface::report::Shared {
-            index: &index,
-            lock: &lock,
-            proofs: &proofs,
-            strengths: &strengths,
-            findings: &findings,
-            files: &files,
-            changes: &changes,
-            base: base.as_deref(),
-        };
-        let page = tracelean_core::surface::report::page(&shared, &states);
-        let out_dir = PathBuf::from(out_dir);
-        std::fs::create_dir_all(&out_dir).and_then(|_| std::fs::write(out_dir.join("index.html"), page)).unwrap_or_else(|why| {
-            eprintln!("cannot write the report: {why}");
-            std::process::exit(2)
-        });
-        println!("{}", out_dir.join("index.html").display());
+            });
+        println!("{}", written.page.display());
         return;
     }
 
@@ -384,7 +356,7 @@ fn main() {
             println!("cached: no Rust source changed since it was measured ({} files; --again re-measures)", held.files.len());
             return;
         }
-        match lines_run::measure(&root, &files) {
+        match lines_run::measure(&root, &files, std::env::args().any(|a| a == "--ignored")) {
             Ok((mut coverage, tests)) => {
                 coverage.sources = sources;
                 for (path, (_, lines)) in &coverage.files {

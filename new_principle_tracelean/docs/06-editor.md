@@ -166,8 +166,7 @@ may hold `*` (any run of characters) and `?` (any one), within a line and in any
 case (`REQ-NAV.find_by_glob`); `F3` goes on to the next match of the last text.
 
 The stations on the left are Project, Trace, Sandbox, Design, History,
-Findings and Definitions. The goals pane is not a station: it opens beside a
-Lean file.
+Findings and Definitions.
 
 **Definitions** lists every colour of the theme with its value now, read from the
 JSON that sets it, and says where the keys and the languages live. `Space f e`
@@ -175,18 +174,13 @@ JSON that sets it, and says where the keys and the languages live. `Space f e`
 `.tracelean/theme.json` at once; the window repaints without a restart, and a
 value that is not a colour is refused (`REQ-LOOK.setting_edited_in_place`).
 
-**The goals pane** shows the goals Lean reports at the cursor of a Lean file, beside the
-file, following the cursor and the edits, as the infoview does in VS Code. It
-asks Lean's own server (`lake env lean --server`, in the nearest folder with a
-`lean-toolchain`) and never waits for it: the answer is picked up by the next
-poll, so a slow elaboration costs a stale panel and not a frozen key. Opening a Lean
-file opens the goals pane beside it, closing either closes the other, and there
-is no other way to open it (`REQ-LSP.goals_open_with_the_file`,
-`goals_close_with_the_file`). When the server cannot be started the pane says
-why. This is the one process the editor starts apart from the
-differential runners, and the architecture test allows exactly that module
-(`crates/core/src/lean_server.rs`): it is Lean's toolchain, never an agent
-(`REQ-LSP.proof_state_shown`).
+**Lean's goals** at the cursor are read in VS Code's infoview: `Space f v` hands
+the file to VS Code at the cursor's line and column (`REQ-HANDOFF.file_to_vscode`),
+and writing the report from the editor opens its page in the default browser
+(`REQ-HANDOFF.report_to_browser`). What to start is decided in
+`crates/core/src/surface/handoff.rs`; `crates/core/src/launch.rs` starts it with no
+input and does not wait (`started_not_driven`). Apart from these and `git`, the
+only processes the editor starts are the differential runners.
 
 ## Still open
 

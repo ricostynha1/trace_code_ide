@@ -67,10 +67,7 @@ fn what_a_tool_did_arrives_as_ordinary_commands() {
 fn nothing_writes_towards_the_tool() {
     let mut found = Vec::new();
     for (file, text) in library_sources() {
-        if file.contains("/drt/") {
-            continue;
-        }
-        if file.ends_with("src/lean_server.rs") {
+        if file.contains("/drt/") || file.ends_with("src/launch.rs") {
             continue;
         }
         for (line_no, line) in text.lines().enumerate() {

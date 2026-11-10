@@ -133,6 +133,12 @@ def standing (held : Option (String × List String)) (keyNow : String) (pinsNow 
       | t :: _ => .attempted t
       | [] => .«open»
 
+/-- @models REQ-STRENGTH.proved_only_when_pinned -/
+def earnsProof (accepted : Bool) (strength : Strength) : Bool :=
+  match strength with
+  | .pinned _ => accepted
+  | _ => false
+
 inductive Heard where
   | facts (thm : String) (model : String) (facts : ProofFacts)
   | obligation (model : String) (statement : String)
@@ -654,5 +660,10 @@ theorem every_planned_clause_is_modelled_by_its_plan (links : List CheckLink) (p
   obtain ⟨e, he, ec, em⟩ := grouped
   obtain ⟨l, hl, hr, hk, hs⟩ := modelOf_models links e he
   exact ⟨l, hl, hr, hk.trans ec, hs.trans (em.trans e1)⟩
+
+/-- @proves REQ-STRENGTH.proved_only_when_pinned -/
+theorem a_clause_is_proved_only_when_its_model_is_pinned (accepted : Bool) (strength : Strength) :
+    earnsProof accepted strength = true ↔ accepted = true ∧ ∃ t, strength = .pinned t := by
+  cases strength <;> simp [earnsProof]
 
 end TraceLean.Proofcheck

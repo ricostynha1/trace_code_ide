@@ -135,7 +135,7 @@ fn actions_resolved_elsewhere(tree: &Tree, actions: &[String]) -> Vec<Violation>
         for (line_no, line) in library(text) {
             for action in actions {
                 let aims_a_prompt = path == "editor/src/lib.rs"
-                    && ["file.rename", "file.copy_path", "trace.new_requirement"].contains(&action.as_str());
+                    && ["file.rename", "file.copy_path", "file.open_in_vscode", "trace.new_requirement"].contains(&action.as_str());
                 if !aims_a_prompt && line.contains(&format!("\"{action}\" =>")) {
                     found.push((
                         path.clone(),

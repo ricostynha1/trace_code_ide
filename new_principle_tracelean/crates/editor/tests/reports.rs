@@ -194,3 +194,78 @@ fn escape_goes_back_one_mode_and_typing_needs_a_file() {
     assert!(said(&editor).contains("nothing here to type into"), "{}", said(&editor));
     let _ = std::fs::remove_dir_all(&root);
 }
+
+/// @tests REQ-OBS.visible_while_running
+/// @tests REQ-OBS.effects_become_commands
+#[test]
+fn what_changed_on_disk_is_observed_listed_and_rejected_or_accepted() {
+    let root = project("observe", &[("src/a.rs", "a\n"), ("src/gone.rs", "g\n")]);
+    let mut editor = opened(&root);
+    let watch = |editor: &mut Editor, watch: Watch| editor.perform(Intent::Observe { watch });
+    watch(&mut editor, Watch::Start);
+    assert!(said(&editor).contains("nothing to observe"), "{}", said(&editor));
+    assert!(record(&mut editor, "observed").contains("the working tree matches the editor"));
+
+    std::fs::write(root.join("src/a.rs"), "a changed\n").unwrap();
+    std::fs::write(root.join("src/b.rs"), "b\n").unwrap();
+    std::fs::remove_file(root.join("src/gone.rs")).unwrap();
+    watch(&mut editor, Watch::Start);
+    assert!(said(&editor).contains("5 changes in the working tree"), "{}", said(&editor));
+    let listed = record(&mut editor, "observed");
+    for wanted in ["changed", "created", "deleted", "src/a.rs", "src/b.rs", "src/gone.rs"] {
+        assert!(listed.contains(wanted), "no `{wanted}` in\n{listed}");
+    }
+    watch(&mut editor, Watch::Reject);
+    assert!(said(&editor).contains("5 changes were left out"), "{}", said(&editor));
+    watch(&mut editor, Watch::Reject);
+    assert!(said(&editor).contains("nothing has been observed"), "{}", said(&editor));
+    let _ = std::fs::remove_dir_all(&root);
+}
+
+/// @tests REQ-LOCK.evidence_preserved
+#[test]
+fn the_plain_reports_name_their_empty_state() {
+    let root = project("empty", &[("src/a.rs", "a\n")]);
+    let mut editor = opened(&root);
+    assert!(record(&mut editor, "evidence").contains("no lock file is committed"));
+    assert!(record(&mut editor, "drt bindings").contains("no clause is bound"));
+    assert!(record(&mut editor, "drt run").contains("cargo test -p tracelean-core -- --ignored"));
+    assert!(record(&mut editor, "drt shrink").contains("differential_shrink"));
+    assert!(record(&mut editor, "drt coverage").contains("--ignored"));
+    assert!(record(&mut editor, "drt judge").contains("a judgement is a person's"));
+
+    std::fs::write(root.join(".tracelean"), "a file where the folder should be").unwrap();
+    assert!(record(&mut editor, "lock").contains("could not write"));
+    let _ = std::fs::remove_dir_all(&root);
+}
+
+/// @tests REQ-LOOK.setting_edited_in_place
+#[test]
+fn a_setting_is_asked_for_with_its_value_and_saved_on_enter() {
+    let root = project("setting", &[("src/a.rs", "a\n")]);
+    let mut editor = opened(&root);
+    editor.perform(Intent::Display { what: BufferKind::Record { title: "edit ui.accent".into() } });
+    assert!(said(&editor).contains("New value for ui.accent"), "{}", said(&editor));
+    for _ in 0..7 {
+        editor.key("Backspace");
+    }
+    for key in ["#", "1", "2", "3", "4", "5", "6", "Enter"] {
+        editor.key(key);
+    }
+    assert_eq!(tracelean_editor::theme::load(&root)["ui"]["accent"], "#123456", "{}", said(&editor));
+    editor.set_setting("nodot", "#000000");
+    assert!(said(&editor).contains("not a setting"), "{}", said(&editor));
+    let _ = std::fs::remove_dir_all(&root);
+}
+
+/// @tests REQ-SHOW.requirement_opened
+#[test]
+fn a_requirement_file_traces_each_clause_and_what_claims_it() {
+    let root = project("reqtrace", &[("reqs/REQ-A.md", REQ), ("src/a.rs", "/// @implements REQ-A.one\nfn a() {}\n")]);
+    let mut editor = opened(&root);
+    assert!(record(&mut editor, "trace").contains("(no file open)"));
+    editor.perform(Intent::Display { what: BufferKind::File { path: "reqs/REQ-A.md".into() } });
+    let traced = record(&mut editor, "trace");
+    assert!(traced.contains("REQ-A.one") && traced.contains("First.") && traced.contains("src/a.rs"), "{traced}");
+    let _ = std::fs::remove_dir_all(&root);
+}
