@@ -54,6 +54,9 @@ pub struct Editor {
     /// @implements REQ-SHOW.menu_from_keymap
     pub menu: Option<Buffer>,
     pub top: usize,
+    /// Where the cursor was, and in which buffer, when the wheel last moved the view:
+    /// until the cursor moves from there, the view is not pulled back to it.
+    scrolled: Option<(String, usize)>,
     parked: BTreeMap<String, (usize, usize)>,
     places: BTreeMap<String, (usize, usize)>,
     back: Vec<(String, usize)>,
@@ -342,6 +345,7 @@ impl Editor {
             status: make::record_buffer("status".into(), vec![]),
             menu: None,
             top: 0,
+            scrolled: None,
             parked: BTreeMap::new(),
             places: BTreeMap::new(),
             back: Vec::new(),
@@ -862,6 +866,10 @@ impl Editor {
         if height == 0 {
             return;
         }
+        if self.scrolled.as_ref().is_some_and(|(buffer, at)| *buffer == self.buffer().id && *at == self.offset) {
+            return;
+        }
+        self.scrolled = None;
         let (line, _) = self.line_and_column();
         if line < self.top {
             self.top = line;
@@ -1375,12 +1383,17 @@ impl Editor {
         self.offset = at;
     }
 
+    /// Moves the view of the pane under the wheel and leaves the cursor where it is, so
+    /// nothing that depends on the cursor changes while the wheel turns. The view stays
+    /// where the wheel left it until the cursor next moves.
+    ///
+    /// @implements REQ-LOOK.wheel_moves_the_view_only
     pub fn scroll(&mut self, pane: &str, lines: i64) {
         self.focus_pane(pane);
         let count = self.buffer().text.split('\n').count();
-        self.step_lines(lines);
         let top = self.top as i64 + lines;
         self.top = top.clamp(0, count.saturating_sub(1) as i64) as usize;
+        self.scrolled = Some((self.buffer().id, self.offset));
     }
 
     pub fn symbols(&self, query: &str) -> Vec<(String, String)> {

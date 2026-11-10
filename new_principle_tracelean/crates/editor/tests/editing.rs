@@ -306,6 +306,7 @@ fn a_setting_is_written_to_the_override_and_a_bad_value_is_refused() {
 }
 
 /// @tests REQ-ACT.one_path
+/// @tests REQ-LOOK.wheel_moves_the_view_only
 #[test]
 fn scrolling_many_lines_at_once_lands_where_asked() {
     let root = project();
@@ -313,14 +314,21 @@ fn scrolling_many_lines_at_once_lands_where_asked() {
     std::fs::write(root.join("src/long.rs"), &long).unwrap();
     let mut editor = Editor::open(root.clone(), keymap());
     editor.perform(Intent::Display { what: BufferKind::File { path: "src/long.rs".into() } });
+    let cursor = editor.line_and_column();
     editor.scroll("document", 20);
-    assert_eq!(editor.line_and_column().0, 20);
+    assert_eq!(editor.top, 20);
     editor.scroll("document", -5);
-    assert_eq!(editor.line_and_column().0, 15);
+    assert_eq!(editor.top, 15);
     editor.scroll("document", 1000);
-    assert_eq!(editor.line_and_column().0, 50, "past the last line stops on it");
+    assert_eq!(editor.top, 50, "past the last line stops on it");
+    assert_eq!(editor.line_and_column(), cursor, "the wheel moved the cursor");
+    editor.follow_cursor(10);
+    assert_eq!(editor.top, 50, "the view went back to a cursor that had not moved");
+    editor.step_line(true);
+    editor.follow_cursor(10);
+    assert_eq!(editor.top, 1, "the cursor moved and the view did not come to it");
     editor.scroll("document", -1000);
-    assert_eq!(editor.line_and_column().0, 0);
+    assert_eq!(editor.top, 0);
     let _ = std::fs::remove_dir_all(&root);
 }
 

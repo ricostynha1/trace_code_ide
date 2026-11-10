@@ -473,6 +473,8 @@ bottom:
   operations on record: clauses carried, cases, seed and how long ago.
 - **Scrolling.** Wheel ticks are added up and sent as one scroll per frame;
   only the panes are redrawn while the wheel turns, the rest once it stops.
+  The wheel moves the view only: the cursor stays where it was, so the bottom
+  bar does not change, and the view returns to the cursor when you next move it.
 - **Tabs** carry a **×**; middle-click closes too.
 
 The terminal takes the mouse too: click places the cursor (or acts on a

@@ -1095,11 +1095,13 @@ async function show(invoke: Invoke, into: HTMLElement, status: HTMLElement, pane
     const box = into.children[panes.indexOf(focused)];
     if (box instanceof HTMLElement) {
       place(box, at[0], at[1]);
-      const chosen = (await invoke("selection", {})) as [number, number] | null;
+      const [chosen, named, pair] = (await Promise.all([
+        invoke("selection", {}),
+        invoke("occurrences", {}),
+        invoke("brackets", {}),
+      ])) as [[number, number] | null, [number, number[]] | null, [number, number] | null];
       if (Array.isArray(chosen)) mark(box, chosen[0], chosen[1] - chosen[0], "selection");
-      const named = (await invoke("occurrences", {})) as [number, number[]] | null;
       if (Array.isArray(named)) for (const start of named[1]) mark(box, start, named[0], "occurrence");
-      const pair = (await invoke("brackets", {})) as [number, number] | null;
       if (Array.isArray(pair)) for (const offset of pair) mark(box, offset, 1, "bracket");
     }
   }
