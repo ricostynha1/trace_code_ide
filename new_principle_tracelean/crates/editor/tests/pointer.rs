@@ -1178,6 +1178,7 @@ fn a_search_lists_every_line_that_holds_the_text() {
 /// @tests REQ-LOOK.accessible_structure
 /// @tests REQ-LOOK.overview_drawn
 /// @tests REQ-LOOK.scroll_is_one_draw_per_frame
+/// @tests REQ-LOOK.press_outside_closes_menu
 /// @tests REQ-FIGURE.graph_filtered
 /// @tests REQ-FIGURE.treemap_areas
 /// @tests REQ-FIGURE.agent_steps_listed

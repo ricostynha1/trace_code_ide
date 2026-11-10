@@ -258,6 +258,18 @@ try {
     JSON.stringify(await calls()));
   check("the menu closes afterwards", !(await evaluate(`!!document.getElementById("context")`)), "still open");
 
+  // @tests REQ-LOOK.press_outside_closes_menu
+  await reset();
+  await mouse(row.x, row.y, "right");
+  await sleep(150);
+  const dropped = await evaluate(`!!document.getElementById("context")`);
+  await evaluate(`document.querySelectorAll(".pane").forEach((pane) => pane.addEventListener("click", (event) => event.stopPropagation(), { once: true }))`);
+  const beside = await charAt(1, 3);
+  await mouse(beside.x, beside.y);
+  await sleep(150);
+  check("a press outside an open menu closes it, even where the click is kept",
+    dropped && !(await evaluate(`!!document.getElementById("context")`)), dropped ? "still open" : "the menu never opened");
+
   await reset();
   await cdp.send("Input.dispatchKeyEvent", { type: "keyDown", key: "s", code: "KeyS", modifiers: 2, windowsVirtualKeyCode: 83 });
   await sleep(250);

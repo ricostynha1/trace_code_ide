@@ -1385,6 +1385,18 @@ export async function start() {
   });
 
   document.addEventListener("click", () => closeContext());
+  // A press anywhere outside an open menu closes it, as Escape does. Capturing, so that a
+  // pane or a panel that keeps its clicks to itself cannot leave the menu standing.
+  // @implements REQ-LOOK.press_outside_closes_menu
+  document.addEventListener(
+    "mousedown",
+    (event) => {
+      const menu = document.getElementById("context");
+      const on = event.target instanceof Element ? event.target : null;
+      if (menu && !(on && (menu.contains(on) || on.closest(".menubar-item")))) closeContext();
+    },
+    true,
+  );
 
   // @implements REQ-LOOK.pointer_reaches_actions
   document.addEventListener("contextmenu", (event) => {
