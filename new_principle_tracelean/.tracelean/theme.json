@@ -1,5 +1,9 @@
 {
+  "base": "dark",
   "chips": {
     "drt": "#56b6c4"
+  },
+  "layout": {
+    "keyBar": "shown"
   }
 }

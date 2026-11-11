@@ -556,9 +556,12 @@
     "REQ-LOOK": {
       "clauses": [
         "accessible_structure",
+        "app_has_a_logo",
         "contrast_sufficient",
         "focus_visible",
         "journeys_replay",
+        "key_bar_toggled",
+        "markdown_drawn",
         "menu_bar_lists_leader",
         "overview_drawn",
         "pointer_reaches_actions",
@@ -568,12 +571,15 @@
         "row_fits",
         "scroll_is_one_draw_per_frame",
         "setting_edited_in_place",
+        "settings_declared",
+        "settings_grouped_and_searchable",
         "stations_have_icons",
+        "tab_drag_splits",
         "theme_switched",
         "wheel_moves_the_view_only",
         "zoom_steps"
       ],
-      "content_hash": "3414463cf0382aa9",
+      "content_hash": "4c60470f4a57be71",
       "file": "reqs/surface/REQ-LOOK.md",
       "refines": [
         "REQ-VIEW",
@@ -692,7 +698,7 @@
         "waiting_shown_with_history",
         "workspace_is_a_copy"
       ],
-      "content_hash": "4553adb2caa410c1",
+      "content_hash": "afa57cdaff059eef",
       "file": "reqs/agent/REQ-OBS.md",
       "refines": [
         "ARCH-NO-DRIVING",
@@ -761,11 +767,12 @@
         "id_is_identity",
         "id_unique",
         "malformed_reported",
+        "markdown_document",
         "narrowings_nest",
         "refines_dag",
         "refines_resolves"
       ],
-      "content_hash": "d322d9d3cfecdfa8",
+      "content_hash": "d8f7379d60abe909",
       "file": "reqs/trace/REQ-REQDOC.md",
       "refines": [
         "ARCH-SELFHOST",
@@ -953,7 +960,7 @@
         "boiling",
         "every_sample"
       ],
-      "content_hash": "34bb4cf7d97eda03",
+      "content_hash": "e3a351756c32eb76",
       "file": "demo/reqs/REQ-TABLE.md",
       "refines": [
         "REQ-THERMO"
@@ -967,7 +974,7 @@
         "to_celsius",
         "to_fahrenheit"
       ],
-      "content_hash": "32e16ea621872a6a",
+      "content_hash": "d955696b46c8fd68",
       "file": "demo/reqs/REQ-THERMO.md",
       "refines": [],
       "decomposition": "complete"
@@ -992,6 +999,7 @@
     "REQ-UNDO": {
       "clauses": [
         "current_branch_first",
+        "file_view_has_a_target",
         "filtered_view",
         "hover_shows_change",
         "jump_equivalence",
@@ -1003,7 +1011,7 @@
         "tree_is_shown",
         "whole_by_default"
       ],
-      "content_hash": "a52119032b67158a",
+      "content_hash": "217c55b42e3279c1",
       "file": "reqs/history/REQ-UNDO.md",
       "refines": [
         "REQ-CMD",
@@ -1018,6 +1026,8 @@
         "everything_is_a_buffer",
         "frontend_adds_nothing",
         "frontend_is_checkable",
+        "markdown_formatted_by_default",
+        "markdown_mentions_act",
         "one_representation",
         "presentation_may_be_symbolic",
         "rendering_is_total",
@@ -1026,7 +1036,7 @@
         "structure_over_text",
         "text_is_the_content"
       ],
-      "content_hash": "4510f011a89560b3",
+      "content_hash": "b000ed439861b70e",
       "file": "reqs/surface/REQ-VIEW.md",
       "refines": [
         "ARCH-CORE-SHELL",
@@ -1102,7 +1112,7 @@
       "clause": "action_to_intent",
       "file": "crates/core/src/surface/act.rs",
       "anchor": "crates/core/src/surface/act.rs::dispatch",
-      "body_hash": "314de8de15d82b78",
+      "body_hash": "fdb97e32ea467fbd",
       "link_hash": "a44e238bdd253940",
       "qualifier": null
     },
@@ -1122,7 +1132,7 @@
       "clause": "dispatch_is_pure",
       "file": "crates/core/src/surface/act.rs",
       "anchor": "crates/core/src/surface/act.rs::dispatch",
-      "body_hash": "314de8de15d82b78",
+      "body_hash": "fdb97e32ea467fbd",
       "link_hash": "993f8b829c3cf11f",
       "qualifier": null
     },
@@ -1132,7 +1142,7 @@
       "clause": "edits_are_commands",
       "file": "crates/core/src/surface/act.rs",
       "anchor": "crates/core/src/surface/act.rs::dispatch",
-      "body_hash": "314de8de15d82b78",
+      "body_hash": "fdb97e32ea467fbd",
       "link_hash": "a1da268e8d4508a2",
       "qualifier": null
     },
@@ -1162,7 +1172,7 @@
       "clause": "focus_is_carried",
       "file": "crates/core/src/surface/act.rs",
       "anchor": "crates/core/src/surface/act.rs::dispatch",
-      "body_hash": "314de8de15d82b78",
+      "body_hash": "fdb97e32ea467fbd",
       "link_hash": "67d080eb318b03a5",
       "qualifier": null
     },
@@ -1172,7 +1182,7 @@
       "clause": "missing_target_is_refused",
       "file": "crates/core/src/surface/act.rs",
       "anchor": "crates/core/src/surface/act.rs::dispatch",
-      "body_hash": "314de8de15d82b78",
+      "body_hash": "fdb97e32ea467fbd",
       "link_hash": "aed4f39f65aae04b",
       "qualifier": null
     },
@@ -1182,7 +1192,7 @@
       "clause": "one_path",
       "file": "crates/core/src/surface/act.rs",
       "anchor": "crates/core/src/surface/act.rs::dispatch",
-      "body_hash": "314de8de15d82b78",
+      "body_hash": "fdb97e32ea467fbd",
       "link_hash": "f64e22402333a72b",
       "qualifier": null
     },
@@ -1192,7 +1202,7 @@
       "clause": "unknown_is_refused",
       "file": "crates/core/src/surface/act.rs",
       "anchor": "crates/core/src/surface/act.rs::dispatch",
-      "body_hash": "314de8de15d82b78",
+      "body_hash": "fdb97e32ea467fbd",
       "link_hash": "d3addbba70a38a6d",
       "qualifier": null
     },
@@ -4812,7 +4822,7 @@
       "clause": "requirement_opened",
       "file": "crates/core/src/surface/requirement_view.rs",
       "anchor": "crates/core/src/surface/requirement_view.rs::requirement_view",
-      "body_hash": "c7a7baf0af37a448",
+      "body_hash": "a47ba3db7daa9554",
       "link_hash": "c2afcddb379a9bf1",
       "qualifier": null
     },
@@ -4872,7 +4882,7 @@
       "clause": "sandbox_session_shown",
       "file": "crates/core/src/surface/sandbox_view.rs",
       "anchor": "crates/core/src/surface/sandbox_view.rs::sandbox_view",
-      "body_hash": "fbc55b274e9687b0",
+      "body_hash": "83b6129fab9b2c4f",
       "link_hash": "1b35d1a66775f174",
       "qualifier": null
     },
@@ -6072,7 +6082,7 @@
       "clause": "named_findings",
       "file": "crates/core/src/trace/requirement.rs",
       "anchor": "crates/core/src/trace/requirement.rs::FrontmatterKind",
-      "body_hash": "63be949686434920",
+      "body_hash": "4873e74d642eaff2",
       "link_hash": "d06ebeb32a146029",
       "qualifier": null
     },
@@ -6132,7 +6142,7 @@
       "clause": "no_model_call",
       "file": "crates/editor/src/lib.rs",
       "anchor": "crates/editor/src/lib.rs::Editor",
-      "body_hash": "39302bd17a175135",
+      "body_hash": "9a64f3d499a251d1",
       "link_hash": "5ac20c184925b114",
       "qualifier": null
     },
@@ -6162,7 +6172,7 @@
       "clause": "no_model_call",
       "file": "crates/editor/src/lib.rs",
       "anchor": "crates/editor/src/lib.rs::Editor::sandbox",
-      "body_hash": "1d6e387ac49c1712",
+      "body_hash": "590a1c5f04a4ed6c",
       "link_hash": "1c8312fd73516b9b",
       "qualifier": null
     },
@@ -6212,7 +6222,7 @@
       "clause": "action_to_intent",
       "file": "crates/core/src/surface/act.rs",
       "anchor": "crates/core/src/surface/act.rs::dispatch",
-      "body_hash": "314de8de15d82b78",
+      "body_hash": "fdb97e32ea467fbd",
       "link_hash": "307b3f1e79bb86cc",
       "qualifier": null
     },
@@ -6232,7 +6242,7 @@
       "clause": "dispatch_is_pure",
       "file": "crates/core/src/surface/act.rs",
       "anchor": "crates/core/src/surface/act.rs::dispatch",
-      "body_hash": "314de8de15d82b78",
+      "body_hash": "fdb97e32ea467fbd",
       "link_hash": "848f6d01fa47c7a1",
       "qualifier": null
     },
@@ -6242,7 +6252,7 @@
       "clause": "edits_are_commands",
       "file": "crates/core/src/surface/act.rs",
       "anchor": "crates/core/src/surface/act.rs::dispatch",
-      "body_hash": "314de8de15d82b78",
+      "body_hash": "fdb97e32ea467fbd",
       "link_hash": "2b349208a48219be",
       "qualifier": null
     },
@@ -6252,7 +6262,7 @@
       "clause": "edits_are_commands",
       "file": "crates/editor/src/lib.rs",
       "anchor": "crates/editor/src/lib.rs::Editor::accept",
-      "body_hash": "0ef69ae92da4c099",
+      "body_hash": "fd62b51d58cefc32",
       "link_hash": "fb9cbd01ca1bee72",
       "qualifier": null
     },
@@ -6262,7 +6272,7 @@
       "clause": "edits_are_commands",
       "file": "crates/editor/src/lib.rs",
       "anchor": "crates/editor/src/lib.rs::Editor::accept_file",
-      "body_hash": "094e1d37c5d0ea36",
+      "body_hash": "c0b169f902b3afeb",
       "link_hash": "20481556e8be131b",
       "qualifier": null
     },
@@ -6322,7 +6332,7 @@
       "clause": "everything_is_offered",
       "file": "crates/core/src/surface/offer.rs",
       "anchor": "crates/core/src/surface/offer.rs::offers",
-      "body_hash": "c08185bb3a69f3f1",
+      "body_hash": "52682ca8ecee2e75",
       "link_hash": "b68a5fd339626536",
       "qualifier": null
     },
@@ -6342,7 +6352,7 @@
       "clause": "focus_is_carried",
       "file": "crates/core/src/surface/act.rs",
       "anchor": "crates/core/src/surface/act.rs::dispatch",
-      "body_hash": "314de8de15d82b78",
+      "body_hash": "fdb97e32ea467fbd",
       "link_hash": "bd006af3ee2e2367",
       "qualifier": null
     },
@@ -6362,7 +6372,7 @@
       "clause": "missing_target_is_refused",
       "file": "crates/core/src/surface/act.rs",
       "anchor": "crates/core/src/surface/act.rs::dispatch",
-      "body_hash": "314de8de15d82b78",
+      "body_hash": "fdb97e32ea467fbd",
       "link_hash": "023a773ff31b87dd",
       "qualifier": null
     },
@@ -6372,7 +6382,7 @@
       "clause": "one_path",
       "file": "crates/core/src/surface/act.rs",
       "anchor": "crates/core/src/surface/act.rs::dispatch",
-      "body_hash": "314de8de15d82b78",
+      "body_hash": "fdb97e32ea467fbd",
       "link_hash": "0253b342bd52813d",
       "qualifier": null
     },
@@ -6432,7 +6442,7 @@
       "clause": "unknown_is_refused",
       "file": "crates/core/src/surface/act.rs",
       "anchor": "crates/core/src/surface/act.rs::dispatch",
-      "body_hash": "314de8de15d82b78",
+      "body_hash": "fdb97e32ea467fbd",
       "link_hash": "025891c70740734f",
       "qualifier": null
     },
@@ -7092,7 +7102,7 @@
       "clause": "price_is_per_model",
       "file": "crates/core/src/observe/watch.rs",
       "anchor": "crates/core/src/observe/watch.rs::table_of",
-      "body_hash": "772351f96973e686",
+      "body_hash": "6530c56b500d9ab8",
       "link_hash": "779bf01d1271a2ee",
       "qualifier": null
     },
@@ -8852,7 +8862,7 @@
       "clause": "sections_unfold",
       "file": "crates/core/src/surface/tutorial.rs",
       "anchor": "crates/core/src/surface/tutorial.rs::unfold",
-      "body_hash": "afeb1ba04bf7673c",
+      "body_hash": "ac6b8805898d5c07",
       "link_hash": "57fbd2364c05dd92",
       "qualifier": null
     },
@@ -9362,7 +9372,7 @@
       "clause": "requirement_summary",
       "file": "crates/core/src/surface/requirement_view.rs",
       "anchor": "crates/core/src/surface/requirement_view.rs::requirement_view",
-      "body_hash": "c7a7baf0af37a448",
+      "body_hash": "a47ba3db7daa9554",
       "link_hash": "0844d922ad771cb3",
       "qualifier": null
     },
@@ -9549,6 +9559,16 @@
     {
       "role": "implements",
       "req": "REQ-LOOK",
+      "clause": "app_has_a_logo",
+      "file": "web/src/app.ts",
+      "anchor": "web/src/app.ts::logo",
+      "body_hash": "77c2bae6435127f9",
+      "link_hash": "b985c0b661eac9ae",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-LOOK",
       "clause": "contrast_sufficient",
       "file": "crates/core/src/surface/contrast.rs",
       "anchor": "crates/core/src/surface/contrast.rs::Pair",
@@ -9569,10 +9589,30 @@
     {
       "role": "implements",
       "req": "REQ-LOOK",
+      "clause": "markdown_drawn",
+      "file": "web/src/markdown.ts",
+      "anchor": "web/src/markdown.ts::document_",
+      "body_hash": "d642709bd3a5eb19",
+      "link_hash": "3728702bf26c8ee1",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-LOOK",
+      "clause": "markdown_drawn",
+      "file": "web/src/markdown.ts",
+      "anchor": "web/src/markdown.ts::el",
+      "body_hash": "87fe50e85f87db27",
+      "link_hash": "5d70e6ebe149f7c4",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-LOOK",
       "clause": "menu_bar_lists_leader",
       "file": "crates/editor/src/lib.rs",
       "anchor": "crates/editor/src/lib.rs::Editor::leader",
-      "body_hash": "e2520a649c04cbfa",
+      "body_hash": "d1a3fe896757e6b8",
       "link_hash": "e56fb67dfce5d7cc",
       "qualifier": null
     },
@@ -9711,6 +9751,16 @@
       "req": "REQ-LOOK",
       "clause": "setting_edited_in_place",
       "file": "crates/core/src/surface/setting.rs",
+      "anchor": "crates/core/src/surface/setting.rs::Settings::takes",
+      "body_hash": "9831da3c1733cd9f",
+      "link_hash": "c13ed30838c7a7f7",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-LOOK",
+      "clause": "setting_edited_in_place",
+      "file": "crates/core/src/surface/setting.rs",
       "anchor": "crates/core/src/surface/setting.rs::is_colour",
       "body_hash": "fb789a33b7a52705",
       "link_hash": "e0ce24965d4f160d",
@@ -9719,11 +9769,71 @@
     {
       "role": "implements",
       "req": "REQ-LOOK",
-      "clause": "setting_edited_in_place",
+      "clause": "settings_declared",
       "file": "crates/core/src/surface/setting.rs",
-      "anchor": "crates/core/src/surface/setting.rs::takes",
-      "body_hash": "e09e3cba06bd61e8",
-      "link_hash": "07e92db521f9e0ba",
+      "anchor": "crates/core/src/surface/setting.rs::KINDS",
+      "body_hash": "c35ccbe527211628",
+      "link_hash": "25b0c70bd988b3dd",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-LOOK",
+      "clause": "settings_declared",
+      "file": "crates/core/src/surface/setting.rs",
+      "anchor": "crates/core/src/surface/setting.rs::Rule",
+      "body_hash": "19836a436b2e25e9",
+      "link_hash": "de4a8cfba0396e22",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-LOOK",
+      "clause": "settings_declared",
+      "file": "crates/core/src/surface/setting.rs",
+      "anchor": "crates/core/src/surface/setting.rs::Rule::accepts",
+      "body_hash": "6c81b6827850f8da",
+      "link_hash": "7ae29b2e5e3a1e99",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-LOOK",
+      "clause": "settings_declared",
+      "file": "crates/core/src/surface/setting.rs",
+      "anchor": "crates/core/src/surface/setting.rs::load",
+      "body_hash": "ae698eff86a3b304",
+      "link_hash": "8cbd8af24fb7d9d4",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-LOOK",
+      "clause": "settings_declared",
+      "file": "crates/editor/src/lib.rs",
+      "anchor": "crates/editor/src/lib.rs::Editor::setting_rule",
+      "body_hash": "7f5a546281af95e9",
+      "link_hash": "5b55b2b9a6f4a0eb",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-LOOK",
+      "clause": "settings_grouped_and_searchable",
+      "file": "crates/editor/src/lib.rs",
+      "anchor": "crates/editor/src/lib.rs::Editor::filter_settings",
+      "body_hash": "361a5c2fd1be2dc1",
+      "link_hash": "71571435ff429b87",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-LOOK",
+      "clause": "settings_grouped_and_searchable",
+      "file": "web/src/app.ts",
+      "anchor": "web/src/app.ts::settingsSearch",
+      "body_hash": "413f627be7c216e9",
+      "link_hash": "647d25cee09a3db9",
       "qualifier": null
     },
     {
@@ -9734,6 +9844,16 @@
       "anchor": "web/src/app.ts::stationIcon",
       "body_hash": "a8f7d440fe14847f",
       "link_hash": "347b3831cbed9565",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-LOOK",
+      "clause": "tab_drag_splits",
+      "file": "web/src/app.ts",
+      "anchor": "web/src/app.ts::dragTab",
+      "body_hash": "796f8b4ca67f1385",
+      "link_hash": "7170bff07df243ae",
       "qualifier": null
     },
     {
@@ -10112,7 +10232,7 @@
       "clause": "actions_defined",
       "file": "crates/core/src/surface/keymap.rs",
       "anchor": "crates/core/src/surface/keymap.rs::ACTIONS",
-      "body_hash": "f9879e23899139d7",
+      "body_hash": "ec9e51009666a116",
       "link_hash": "66bc084cf5b91b88",
       "qualifier": null
     },
@@ -10482,7 +10602,7 @@
       "clause": "accepted_is_marked",
       "file": "crates/editor/src/lib.rs",
       "anchor": "crates/editor/src/lib.rs::Editor::accept",
-      "body_hash": "0ef69ae92da4c099",
+      "body_hash": "fd62b51d58cefc32",
       "link_hash": "856ba316e26b5780",
       "qualifier": null
     },
@@ -10492,7 +10612,7 @@
       "clause": "accepted_is_marked",
       "file": "crates/editor/src/lib.rs",
       "anchor": "crates/editor/src/lib.rs::Editor::accept_file",
-      "body_hash": "094e1d37c5d0ea36",
+      "body_hash": "c0b169f902b3afeb",
       "link_hash": "ff908dc99a807cf9",
       "qualifier": null
     },
@@ -10512,7 +10632,17 @@
       "clause": "mirrored_live",
       "file": "crates/editor/src/lib.rs",
       "anchor": "crates/editor/src/lib.rs::Editor::tick",
-      "body_hash": "aac7002e9622e5aa",
+      "body_hash": "efeed3633fc8ff54",
+      "link_hash": "5fbb67348d6f678f",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-OBS",
+      "clause": "mirrored_live",
+      "file": "crates/editor/src/lib.rs",
+      "anchor": "crates/editor/src/lib.rs::Editor::tick",
+      "body_hash": "efeed3633fc8ff54",
       "link_hash": "5fbb67348d6f678f",
       "qualifier": null
     },
@@ -10562,7 +10692,7 @@
       "clause": "visible_while_running",
       "file": "crates/editor/src/lib.rs",
       "anchor": "crates/editor/src/lib.rs::Editor::tree_rows",
-      "body_hash": "24c607b31fe8c7c1",
+      "body_hash": "389c0445540db747",
       "link_hash": "426b19ba991f2595",
       "qualifier": null
     },
@@ -10912,7 +11042,7 @@
       "clause": "clause_unique",
       "file": "crates/core/src/trace/requirement.rs",
       "anchor": "crates/core/src/trace/requirement.rs::FrontmatterKind",
-      "body_hash": "63be949686434920",
+      "body_hash": "4873e74d642eaff2",
       "link_hash": "7251f89ec028d4e5",
       "qualifier": null
     },
@@ -10932,7 +11062,7 @@
       "clause": "clause_unique",
       "file": "crates/core/src/trace/requirement.rs",
       "anchor": "crates/core/src/trace/requirement.rs::parse_markdown",
-      "body_hash": "924f7b9e968a037e",
+      "body_hash": "db4dd13a1f921894",
       "link_hash": "39b837be4f144628",
       "qualifier": null
     },
@@ -11012,7 +11142,7 @@
       "clause": "id_is_identity",
       "file": "crates/core/src/trace/requirement.rs",
       "anchor": "crates/core/src/trace/requirement.rs::parse_markdown",
-      "body_hash": "924f7b9e968a037e",
+      "body_hash": "db4dd13a1f921894",
       "link_hash": "efecfddff6fa9e4c",
       "qualifier": null
     },
@@ -11042,7 +11172,7 @@
       "clause": "malformed_reported",
       "file": "crates/core/src/trace/requirement.rs",
       "anchor": "crates/core/src/trace/requirement.rs::FrontmatterKind",
-      "body_hash": "63be949686434920",
+      "body_hash": "4873e74d642eaff2",
       "link_hash": "2ddcb43eb1364b43",
       "qualifier": null
     },
@@ -11072,8 +11202,18 @@
       "clause": "malformed_reported",
       "file": "crates/core/src/trace/requirement.rs",
       "anchor": "crates/core/src/trace/requirement.rs::parse_markdown",
-      "body_hash": "924f7b9e968a037e",
+      "body_hash": "db4dd13a1f921894",
       "link_hash": "0667c7ed2676400c",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-REQDOC",
+      "clause": "markdown_document",
+      "file": "crates/core/src/trace/requirement.rs",
+      "anchor": "crates/core/src/trace/requirement.rs::parse_prose",
+      "body_hash": "508d1a0b1c3896ca",
+      "link_hash": "4fcb0762282e18b2",
       "qualifier": null
     },
     {
@@ -11092,7 +11232,7 @@
       "clause": "narrowings_nest",
       "file": "crates/core/src/trace/requirement.rs",
       "anchor": "crates/core/src/trace/requirement.rs::parse_markdown",
-      "body_hash": "924f7b9e968a037e",
+      "body_hash": "db4dd13a1f921894",
       "link_hash": "b38bd879de336e9c",
       "qualifier": null
     },
@@ -11612,7 +11752,7 @@
       "clause": "screen_is_a_value",
       "file": "crates/editor/src/lib.rs",
       "anchor": "crates/editor/src/lib.rs::Editor",
-      "body_hash": "39302bd17a175135",
+      "body_hash": "9a64f3d499a251d1",
       "link_hash": "db3d01c8f8161b40",
       "qualifier": null
     },
@@ -11822,7 +11962,7 @@
       "clause": "core_produces",
       "file": "web/src/app.ts",
       "anchor": "web/src/app.ts::draw",
-      "body_hash": "f91f44a1f4bb0dfd",
+      "body_hash": "8b7e5e5ac45a48eb",
       "link_hash": "a5b8e014305fc374",
       "qualifier": null
     },
@@ -11852,7 +11992,7 @@
       "clause": "files_refreshed",
       "file": "crates/editor/src/lib.rs",
       "anchor": "crates/editor/src/lib.rs::Editor::watch",
-      "body_hash": "347812deea3b4a2d",
+      "body_hash": "fac2a617d9b85ab6",
       "link_hash": "b93b6348567b3f8b",
       "qualifier": null
     },
@@ -11942,7 +12082,7 @@
       "clause": "menu_from_keymap",
       "file": "crates/editor/src/lib.rs",
       "anchor": "crates/editor/src/lib.rs::Editor",
-      "body_hash": "39302bd17a175135",
+      "body_hash": "9a64f3d499a251d1",
       "link_hash": "de0b79b73c58d1c6",
       "qualifier": null
     },
@@ -12042,7 +12182,7 @@
       "clause": "producer_is_pure",
       "file": "crates/core/src/surface/sandbox_view.rs",
       "anchor": "crates/core/src/surface/sandbox_view.rs::sandbox_view",
-      "body_hash": "fbc55b274e9687b0",
+      "body_hash": "83b6129fab9b2c4f",
       "link_hash": "62330699fa994de0",
       "qualifier": null
     },
@@ -12132,8 +12272,18 @@
       "clause": "requirement_opened",
       "file": "crates/core/src/surface/requirement_view.rs",
       "anchor": "crates/core/src/surface/requirement_view.rs::requirement_view",
-      "body_hash": "c7a7baf0af37a448",
+      "body_hash": "a47ba3db7daa9554",
       "link_hash": "23988b976a100f73",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-SHOW",
+      "clause": "review_from_change",
+      "file": "crates/core/src/surface/produce.rs",
+      "anchor": "crates/core/src/surface/produce.rs::diff_in_place",
+      "body_hash": "d926a0442a8c3022",
+      "link_hash": "713a4382e7dfcfbf",
       "qualifier": null
     },
     {
@@ -12154,6 +12304,16 @@
       "anchor": "crates/core/src/surface/produce.rs::review_buffer",
       "body_hash": "e6e898adf246d972",
       "link_hash": "fea91e0d9724b89b",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-SHOW",
+      "clause": "review_from_change",
+      "file": "crates/core/src/surface/produce.rs",
+      "anchor": "crates/core/src/surface/produce.rs::review_in_place",
+      "body_hash": "f8370672eff93419",
+      "link_hash": "72e1611ea2de1e82",
       "qualifier": null
     },
     {
@@ -12192,7 +12352,7 @@
       "clause": "sandbox_session_shown",
       "file": "crates/core/src/surface/sandbox_view.rs",
       "anchor": "crates/core/src/surface/sandbox_view.rs::sandbox_view",
-      "body_hash": "fbc55b274e9687b0",
+      "body_hash": "83b6129fab9b2c4f",
       "link_hash": "b8adcd8b5faff410",
       "qualifier": null
     },
@@ -13072,7 +13232,7 @@
       "clause": "absent_is_fine",
       "file": "crates/core/src/observe/transcript.rs",
       "anchor": "crates/core/src/observe/transcript.rs::read",
-      "body_hash": "48be5fb8bdefd9d1",
+      "body_hash": "488e1fed54ac1571",
       "link_hash": "29f537213ed3aeeb",
       "qualifier": null
     },
@@ -13102,7 +13262,7 @@
       "clause": "no_interpretation",
       "file": "crates/core/src/observe/transcript.rs",
       "anchor": "crates/core/src/observe/transcript.rs::read",
-      "body_hash": "48be5fb8bdefd9d1",
+      "body_hash": "488e1fed54ac1571",
       "link_hash": "57729b1db78b5b88",
       "qualifier": null
     },
@@ -13112,7 +13272,7 @@
       "clause": "partial_line_held",
       "file": "crates/core/src/observe/transcript.rs",
       "anchor": "crates/core/src/observe/transcript.rs::Read",
-      "body_hash": "628fb341073d2bd1",
+      "body_hash": "948fb3c4b61968ed",
       "link_hash": "e0b5698507cd3e5c",
       "qualifier": null
     },
@@ -13142,7 +13302,7 @@
       "clause": "read_only",
       "file": "crates/core/src/observe/transcript.rs",
       "anchor": "crates/core/src/observe/transcript.rs::read",
-      "body_hash": "48be5fb8bdefd9d1",
+      "body_hash": "488e1fed54ac1571",
       "link_hash": "6b43c5ba6d9e6fa1",
       "qualifier": null
     },
@@ -13192,7 +13352,7 @@
       "clause": "unknown_preserved",
       "file": "crates/core/src/observe/transcript.rs",
       "anchor": "crates/core/src/observe/transcript.rs::Read",
-      "body_hash": "628fb341073d2bd1",
+      "body_hash": "948fb3c4b61968ed",
       "link_hash": "c8cd12082f4f88b7",
       "qualifier": null
     },
@@ -13204,6 +13364,16 @@
       "anchor": "crates/core/src/surface/history_view.rs::current_first",
       "body_hash": "c95b11026972a67e",
       "link_hash": "5f89ea254b81d2b2",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-UNDO",
+      "clause": "file_view_has_a_target",
+      "file": "crates/editor/src/lib.rs",
+      "anchor": "crates/editor/src/lib.rs::Editor::history_buffer",
+      "body_hash": "ac5d44e22905c7e2",
+      "link_hash": "8e206447ccb4c185",
       "qualifier": null
     },
     {
@@ -13372,7 +13542,7 @@
       "clause": "whole_by_default",
       "file": "crates/editor/src/lib.rs",
       "anchor": "crates/editor/src/lib.rs::Editor::history_buffer",
-      "body_hash": "83a017903f9294fb",
+      "body_hash": "ac5d44e22905c7e2",
       "link_hash": "2ca78bfcec555635",
       "qualifier": null
     },
@@ -13599,6 +13769,76 @@
     {
       "role": "implements",
       "req": "REQ-VIEW",
+      "clause": "markdown_formatted_by_default",
+      "file": "crates/core/src/surface/view.rs",
+      "anchor": "crates/core/src/surface/view.rs::MARKDOWN_RECORDS",
+      "body_hash": "612b07d983df962c",
+      "link_hash": "9a19b4dbc6f600e1",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-VIEW",
+      "clause": "markdown_formatted_by_default",
+      "file": "crates/core/src/surface/view.rs",
+      "anchor": "crates/core/src/surface/view.rs::is_markdown",
+      "body_hash": "f9902a9019321724",
+      "link_hash": "37911e18a707dec7",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-VIEW",
+      "clause": "markdown_formatted_by_default",
+      "file": "crates/editor/src/lib.rs",
+      "anchor": "crates/editor/src/lib.rs::Editor::watch",
+      "body_hash": "fac2a617d9b85ab6",
+      "link_hash": "2fcb31866d365461",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-VIEW",
+      "clause": "markdown_formatted_by_default",
+      "file": "web/src/markdown.ts",
+      "anchor": "web/src/markdown.ts::activate",
+      "body_hash": "68592c93e10629a8",
+      "link_hash": "6656eed8442b7b74",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-VIEW",
+      "clause": "markdown_mentions_act",
+      "file": "crates/core/src/surface/links.rs",
+      "anchor": "crates/core/src/surface/links.rs::linked",
+      "body_hash": "3e6ef27eb263e1cd",
+      "link_hash": "56d256d81754035a",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-VIEW",
+      "clause": "markdown_mentions_act",
+      "file": "crates/core/src/surface/links.rs",
+      "anchor": "crates/core/src/surface/links.rs::spans",
+      "body_hash": "93aaaabba8d34fee",
+      "link_hash": "99564d4e3dda46ac",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-VIEW",
+      "clause": "markdown_mentions_act",
+      "file": "crates/editor/src/lib.rs",
+      "anchor": "crates/editor/src/lib.rs::file_view",
+      "body_hash": "ca6199ce808dff2e",
+      "link_hash": "039776848a89b5d5",
+      "qualifier": null
+    },
+    {
+      "role": "implements",
+      "req": "REQ-VIEW",
       "clause": "one_representation",
       "file": "crates/core/src/surface/view.rs",
       "anchor": "crates/core/src/surface/view.rs::Buffer",
@@ -13632,7 +13872,7 @@
       "clause": "one_representation",
       "file": "web/src/app.ts",
       "anchor": "web/src/app.ts::draw",
-      "body_hash": "f91f44a1f4bb0dfd",
+      "body_hash": "8b7e5e5ac45a48eb",
       "link_hash": "8b24978ebdc73c63",
       "qualifier": null
     },
@@ -15652,7 +15892,7 @@
       "clause": "clause_unique",
       "file": "formal/TraceLean/Requirement.lean",
       "anchor": "formal/TraceLean/Requirement.lean::TraceLean.Requirement::parseLines",
-      "body_hash": "cad3550825a70c07",
+      "body_hash": "7fb963e1650b761d",
       "link_hash": "b4b15a9f47566b9e",
       "qualifier": null
     },
@@ -15662,7 +15902,7 @@
       "clause": "clauseless_uniform",
       "file": "formal/TraceLean/Requirement.lean",
       "anchor": "formal/TraceLean/Requirement.lean::TraceLean.Requirement::parseLines",
-      "body_hash": "cad3550825a70c07",
+      "body_hash": "7fb963e1650b761d",
       "link_hash": "2ee010cf6736da20",
       "qualifier": null
     },
@@ -15672,7 +15912,7 @@
       "clause": "decomposition_claimed",
       "file": "formal/TraceLean/Requirement.lean",
       "anchor": "formal/TraceLean/Requirement.lean::TraceLean.Requirement::parseLines",
-      "body_hash": "cad3550825a70c07",
+      "body_hash": "7fb963e1650b761d",
       "link_hash": "415f3c875863fc6e",
       "qualifier": null
     },
@@ -15682,7 +15922,7 @@
       "clause": "id_is_identity",
       "file": "formal/TraceLean/Requirement.lean",
       "anchor": "formal/TraceLean/Requirement.lean::TraceLean.Requirement::parseLines",
-      "body_hash": "cad3550825a70c07",
+      "body_hash": "7fb963e1650b761d",
       "link_hash": "08509ce66b84cbbe",
       "qualifier": null
     },
@@ -15702,7 +15942,7 @@
       "clause": "malformed_reported",
       "file": "formal/TraceLean/Requirement.lean",
       "anchor": "formal/TraceLean/Requirement.lean::TraceLean.Requirement::parseLines",
-      "body_hash": "cad3550825a70c07",
+      "body_hash": "7fb963e1650b761d",
       "link_hash": "7ab9ad19cfdab652",
       "qualifier": null
     },
@@ -15712,7 +15952,7 @@
       "clause": "narrowings_nest",
       "file": "formal/TraceLean/Requirement.lean",
       "anchor": "formal/TraceLean/Requirement.lean::TraceLean.Requirement::parseLines",
-      "body_hash": "cad3550825a70c07",
+      "body_hash": "7fb963e1650b761d",
       "link_hash": "1e09095c86731ad6",
       "qualifier": null
     },
@@ -16272,7 +16512,7 @@
       "clause": "requirement_opened",
       "file": "formal/TraceLean/RequirementView.lean",
       "anchor": "formal/TraceLean/RequirementView.lean::TraceLean.RequirementView::requirementView",
-      "body_hash": "24238bce88ec348d",
+      "body_hash": "9de8fbba231dc2ea",
       "link_hash": "6cfca4316b773547",
       "qualifier": null
     },
@@ -18842,7 +19082,7 @@
       "clause": "clause_unique",
       "file": "formal/TraceLean/Requirement.lean",
       "anchor": "formal/TraceLean/Requirement.lean::TraceLean.Requirement::a_repeated_clause_or_narrowing_is_reported",
-      "body_hash": "cb4bd762c72cc5cb",
+      "body_hash": "2dacb87f6607da4b",
       "link_hash": "eade89862d54fc14",
       "qualifier": null
     },
@@ -18852,7 +19092,7 @@
       "clause": "clauseless_uniform",
       "file": "formal/TraceLean/Requirement.lean",
       "anchor": "formal/TraceLean/Requirement.lean::TraceLean.Requirement::a_clauseless_requirement_is_one_clause",
-      "body_hash": "29acd6af997d738e",
+      "body_hash": "70fd60594f0d3a61",
       "link_hash": "09c06e649b4d0707",
       "qualifier": null
     },
@@ -18862,7 +19102,7 @@
       "clause": "decomposition_claimed",
       "file": "formal/TraceLean/Requirement.lean",
       "anchor": "formal/TraceLean/Requirement.lean::TraceLean.Requirement::completeness_is_only_ever_claimed",
-      "body_hash": "05c1db9a9e26f19e",
+      "body_hash": "009e132edb5953ed",
       "link_hash": "d76121d98e58f6ce",
       "qualifier": null
     },
@@ -18872,7 +19112,7 @@
       "clause": "id_is_identity",
       "file": "formal/TraceLean/Requirement.lean",
       "anchor": "formal/TraceLean/Requirement.lean::TraceLean.Requirement::a_requirement_is_its_declared_id",
-      "body_hash": "8ccc4c8a7100b278",
+      "body_hash": "c5dacdef55d9f41e",
       "link_hash": "c14d7b96d9caafbf",
       "qualifier": null
     },
@@ -18892,7 +19132,7 @@
       "clause": "malformed_reported",
       "file": "formal/TraceLean/Requirement.lean",
       "anchor": "formal/TraceLean/Requirement.lean::TraceLean.Requirement::a_malformed_document_is_reported",
-      "body_hash": "87b2c9d36e5afbc3",
+      "body_hash": "3d06aca28f9c2bf3",
       "link_hash": "dade3d8ad53071a9",
       "qualifier": null
     },
@@ -18902,7 +19142,7 @@
       "clause": "narrowings_nest",
       "file": "formal/TraceLean/Requirement.lean",
       "anchor": "formal/TraceLean/Requirement.lean::TraceLean.Requirement::a_narrowing_belongs_to_its_clause",
-      "body_hash": "b01f1c29448c6a98",
+      "body_hash": "dad84f95ac952c62",
       "link_hash": "76e4109d4ed264a4",
       "qualifier": null
     },
@@ -20732,7 +20972,7 @@
       "clause": "no_convention",
       "file": "crates/core/tests/architecture.rs",
       "anchor": "crates/core/tests/architecture.rs::moving_a_file_does_not_change_what_it_claims",
-      "body_hash": "952d3176938caf15",
+      "body_hash": "fc67804ce552fc0c",
       "link_hash": "7278835b8efa4c40",
       "qualifier": "structural"
     },
@@ -20742,7 +20982,7 @@
       "clause": "action_to_intent",
       "file": "crates/core/src/surface/act.rs",
       "anchor": "crates/core/src/surface/act.rs::tests::every_action_the_keymap_names_resolves_to_something_done",
-      "body_hash": "4ab53318b5386dac",
+      "body_hash": "e08327d5008557d3",
       "link_hash": "7bddb7360c6a68fb",
       "qualifier": null
     },
@@ -21301,9 +21541,9 @@
       "req": "REQ-ANNOT",
       "clause": "qualifiers",
       "file": "crates/core/src/trace/index.rs",
-      "anchor": "crates/core/src/trace/index.rs::tests::a_malformed_requirement_and_an_unclosed_fence_are_reported_by_the_scan",
-      "body_hash": "39fd42c4a4ee75d6",
-      "link_hash": "8b39673c56c8b1fa",
+      "anchor": "crates/core/src/trace/index.rs::tests::a_malformed_requirement_is_reported_by_the_scan",
+      "body_hash": "5dbc87fe7b8e8acb",
+      "link_hash": "4819c9783f81bc86",
       "qualifier": null
     },
     {
@@ -21502,7 +21742,7 @@
       "clause": "exactly_once",
       "file": "crates/core/src/trace/checker.rs",
       "anchor": "crates/core/src/trace/checker.rs::tests::a_broken_refinement_a_missing_name_and_a_silent_qualifier_are_each_reported",
-      "body_hash": "7ca843bd028abbeb",
+      "body_hash": "28045321eddc8287",
       "link_hash": "dfb64be848fcdc3e",
       "qualifier": null
     },
@@ -21622,7 +21862,7 @@
       "clause": "qualifier_soundness",
       "file": "crates/core/src/trace/checker.rs",
       "anchor": "crates/core/src/trace/checker.rs::tests::a_broken_refinement_a_missing_name_and_a_silent_qualifier_are_each_reported",
-      "body_hash": "7ca843bd028abbeb",
+      "body_hash": "28045321eddc8287",
       "link_hash": "367b4c3d3d718605",
       "qualifier": null
     },
@@ -21722,7 +21962,7 @@
       "clause": "structural_rejects",
       "file": "crates/core/tests/architecture.rs",
       "anchor": "crates/core/tests/architecture.rs::the_no_convention_comparison_is_sensitive_to_what_is_claimed",
-      "body_hash": "372daa4060c6db66",
+      "body_hash": "4fa13d3d6eb0ff35",
       "link_hash": "24488be783ffe8ef",
       "qualifier": null
     },
@@ -22230,6 +22470,16 @@
       "role": "tests",
       "req": "REQ-COST",
       "clause": "cost_from_usage",
+      "file": "crates/core/src/observe/transcript.rs",
+      "anchor": "crates/core/src/observe/transcript.rs::tests::a_reply_written_as_several_records_is_counted_once",
+      "body_hash": "fbdd21f62c241bf1",
+      "link_hash": "4b8ccfcd6d4ad06a",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-COST",
+      "clause": "cost_from_usage",
       "file": "crates/core/tests/differential_station.rs",
       "anchor": "crates/core/tests/differential_station.rs::generation_reaches_unpriced_models_and_every_kind_of_token",
       "body_hash": "e9d0b793f320ad6f",
@@ -22322,7 +22572,7 @@
       "clause": "base_from_history",
       "file": "crates/core/tests/command_line.rs",
       "anchor": "crates/core/tests/command_line.rs::the_difference_and_the_report_are_taken_against_a_revision",
-      "body_hash": "ca348b3dde94add0",
+      "body_hash": "9c6dc757fb269dd0",
       "link_hash": "64b5b0520e7142bc",
       "qualifier": null
     },
@@ -22332,7 +22582,7 @@
       "clause": "base_from_history",
       "file": "crates/core/tests/evidence_diff.rs",
       "anchor": "crates/core/tests/evidence_diff.rs::a_revision_is_compared_without_being_checked_out",
-      "body_hash": "cff050aec834fab3",
+      "body_hash": "047d9d5235fd4087",
       "link_hash": "17abd18dcd402668",
       "qualifier": null
     },
@@ -22362,7 +22612,7 @@
       "clause": "losses_first",
       "file": "crates/core/tests/evidence_diff.rs",
       "anchor": "crates/core/tests/evidence_diff.rs::a_revision_is_compared_without_being_checked_out",
-      "body_hash": "cff050aec834fab3",
+      "body_hash": "047d9d5235fd4087",
       "link_hash": "294e1236a5863201",
       "qualifier": null
     },
@@ -22392,7 +22642,7 @@
       "clause": "text_shown",
       "file": "crates/core/tests/command_line.rs",
       "anchor": "crates/core/tests/command_line.rs::the_difference_and_the_report_are_taken_against_a_revision",
-      "body_hash": "ca348b3dde94add0",
+      "body_hash": "9c6dc757fb269dd0",
       "link_hash": "a857edad1c576108",
       "qualifier": null
     },
@@ -22412,7 +22662,7 @@
       "clause": "text_shown",
       "file": "crates/core/tests/evidence_diff.rs",
       "anchor": "crates/core/tests/evidence_diff.rs::a_revision_is_compared_without_being_checked_out",
-      "body_hash": "cff050aec834fab3",
+      "body_hash": "047d9d5235fd4087",
       "link_hash": "2492ce5878bedb14",
       "qualifier": null
     },
@@ -22892,7 +23142,7 @@
       "clause": "case_count_stated",
       "file": "crates/core/src/trace/earn.rs",
       "anchor": "crates/core/src/trace/earn.rs::tests::halves_stamped_against_other_inputs_do_not_compose",
-      "body_hash": "f814e15e92f919d8",
+      "body_hash": "8d673d6664c80a93",
       "link_hash": "530914be0dad3a4b",
       "qualifier": null
     },
@@ -23812,7 +24062,7 @@
       "clause": "law_coverage",
       "file": "crates/core/tests/differential_requirement.rs",
       "anchor": "crates/core/tests/differential_requirement.rs::generation_reaches_requirements_and_every_fault",
-      "body_hash": "4b4ed08dbcc53846",
+      "body_hash": "1d4a82481c2e43a7",
       "link_hash": "5f827a16bc2f6bcd",
       "qualifier": null
     },
@@ -25591,6 +25841,16 @@
       "req": "REQ-GUIDE",
       "clause": "sections_unfold",
       "file": "crates/core/src/surface/tutorial.rs",
+      "anchor": "crates/core/src/surface/tutorial.rs::tests::a_fold_inside_a_fold_is_a_row_only_while_the_one_around_it_is_open",
+      "body_hash": "ae7f291359c5329a",
+      "link_hash": "5729141a89049ffc",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-GUIDE",
+      "clause": "sections_unfold",
+      "file": "crates/core/src/surface/tutorial.rs",
       "anchor": "crates/core/src/surface/tutorial.rs::tests::a_folded_section_is_one_row_and_an_unfolded_one_shows_its_lines",
       "body_hash": "2ed1c379b92b03dd",
       "link_hash": "89ff713ea084cb4e",
@@ -25602,7 +25862,7 @@
       "clause": "sections_unfold",
       "file": "crates/core/src/surface/tutorial.rs",
       "anchor": "crates/core/src/surface/tutorial.rs::tests::the_shipped_tutorial_folds_and_every_fold_closes",
-      "body_hash": "f409923d276db571",
+      "body_hash": "743ea3f5d366584a",
       "link_hash": "d443477629da910b",
       "qualifier": null
     },
@@ -25612,7 +25872,7 @@
       "clause": "sections_unfold",
       "file": "crates/editor/tests/figures.rs",
       "anchor": "crates/editor/tests/figures.rs::a_folded_tutorial_section_unfolds_and_folds_again",
-      "body_hash": "0494820ed42c2511",
+      "body_hash": "9ec9633b20631c7d",
       "link_hash": "178a709dfd1a6940",
       "qualifier": null
     },
@@ -25622,7 +25882,7 @@
       "clause": "tutorial_in_the_editor",
       "file": "crates/editor/tests/figures.rs",
       "anchor": "crates/editor/tests/figures.rs::a_folded_tutorial_section_unfolds_and_folds_again",
-      "body_hash": "0494820ed42c2511",
+      "body_hash": "9ec9633b20631c7d",
       "link_hash": "4a373f5ffd2fa7db",
       "qualifier": null
     },
@@ -26032,7 +26292,7 @@
       "clause": "judgement_shown",
       "file": "crates/core/src/surface/requirement_view.rs",
       "anchor": "crates/core/src/surface/requirement_view.rs::tests::a_judgement_shows_its_verdict_and_who_delegated_it",
-      "body_hash": "44069758ce36c5b6",
+      "body_hash": "4fa91e01233238b3",
       "link_hash": "c03e70d20fb8d940",
       "qualifier": null
     },
@@ -26142,7 +26402,7 @@
       "clause": "prompt_exported",
       "file": "crates/editor/tests/pointer.rs",
       "anchor": "crates/editor/tests/pointer.rs::a_modelled_clause_opens_its_judge_prompt_to_copy",
-      "body_hash": "5777227497f6c7c4",
+      "body_hash": "ae2f80af6d68e988",
       "link_hash": "0bf1ceaea6ea6c19",
       "qualifier": null
     },
@@ -26182,7 +26442,7 @@
       "clause": "structural_judged",
       "file": "crates/core/src/trace/material.rs",
       "anchor": "crates/core/src/trace/material.rs::tests::a_structural_clause_is_judged_against_its_test",
-      "body_hash": "fe476888da6961d9",
+      "body_hash": "b16d091644400f40",
       "link_hash": "76993336ff923130",
       "qualifier": null
     },
@@ -26599,6 +26859,26 @@
     {
       "role": "tests",
       "req": "REQ-LOOK",
+      "clause": "app_has_a_logo",
+      "file": "crates/editor/tests/figures.rs",
+      "anchor": "crates/editor/tests/figures.rs::the_logo_is_shipped_as_a_stand_alone_image",
+      "body_hash": "829cc2a1eada972b",
+      "link_hash": "11c7aa8979cc63a3",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-LOOK",
+      "clause": "app_has_a_logo",
+      "file": "crates/editor/tests/pointer.rs",
+      "anchor": "crates/editor/tests/pointer.rs::the_page_in_a_browser_passes_its_checks",
+      "body_hash": "49d448f6651a4505",
+      "link_hash": "30088139de46d152",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-LOOK",
       "clause": "contrast_sufficient",
       "file": "crates/core/src/surface/contrast.rs",
       "anchor": "crates/core/src/surface/contrast.rs::tests::an_unreadable_pair_an_unknown_colour_and_a_stale_waiver_are_found",
@@ -26679,11 +26959,51 @@
     {
       "role": "tests",
       "req": "REQ-LOOK",
+      "clause": "key_bar_toggled",
+      "file": "crates/editor/tests/figures.rs",
+      "anchor": "crates/editor/tests/figures.rs::the_bar_of_keys_is_switched_off_and_on_by_a_setting_without_opening_the_settings",
+      "body_hash": "508f64cbe6901e66",
+      "link_hash": "06747087712a3e67",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-LOOK",
+      "clause": "key_bar_toggled",
+      "file": "crates/editor/tests/pointer.rs",
+      "anchor": "crates/editor/tests/pointer.rs::the_page_in_a_browser_passes_its_checks",
+      "body_hash": "49d448f6651a4505",
+      "link_hash": "827c8d3877a3eb6c",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-LOOK",
+      "clause": "markdown_drawn",
+      "file": "crates/editor/tests/pointer.rs",
+      "anchor": "crates/editor/tests/pointer.rs::the_page_in_a_browser_passes_its_checks",
+      "body_hash": "49d448f6651a4505",
+      "link_hash": "13a890dd27021ec2",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-LOOK",
       "clause": "menu_bar_lists_leader",
       "file": "crates/editor/tests/figures.rs",
       "anchor": "crates/editor/tests/figures.rs::the_menu_bar_has_a_group_per_leader_entry_and_only_real_actions",
-      "body_hash": "5af5e2685f1579b0",
+      "body_hash": "708fffd8f34db4ac",
       "link_hash": "ec30d2320535b7d5",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-LOOK",
+      "clause": "menu_bar_lists_leader",
+      "file": "crates/editor/tests/menu_entries.rs",
+      "anchor": "crates/editor/tests/menu_entries.rs::every_menu_entry_launched_from_a_rs_file_does_something",
+      "body_hash": "b1f6617391accdd3",
+      "link_hash": "446b89c171f79a83",
       "qualifier": null
     },
     {
@@ -26832,7 +27152,7 @@
       "clause": "setting_edited_in_place",
       "file": "crates/core/src/surface/setting.rs",
       "anchor": "crates/core/src/surface/setting.rs::tests::a_layout_setting_takes_only_its_own_choices",
-      "body_hash": "ce6ff3f503496c03",
+      "body_hash": "f3a6cfc4e672067c",
       "link_hash": "b54850ad2dcd0e3c",
       "qualifier": null
     },
@@ -26862,8 +27182,18 @@
       "clause": "setting_edited_in_place",
       "file": "crates/editor/tests/editing.rs",
       "anchor": "crates/editor/tests/editing.rs::a_setting_is_written_to_the_override_and_a_bad_value_is_refused",
-      "body_hash": "bee4bb64adad364f",
+      "body_hash": "7972afcede6d56de",
       "link_hash": "7942ca67f4bf59dc",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-LOOK",
+      "clause": "setting_edited_in_place",
+      "file": "crates/editor/tests/pointer.rs",
+      "anchor": "crates/editor/tests/pointer.rs::the_page_in_a_browser_passes_its_checks",
+      "body_hash": "49d448f6651a4505",
+      "link_hash": "8a6aaee962b9fca4",
       "qualifier": null
     },
     {
@@ -26879,11 +27209,91 @@
     {
       "role": "tests",
       "req": "REQ-LOOK",
+      "clause": "settings_declared",
+      "file": "crates/core/tests/shipped_settings.rs",
+      "anchor": "crates/core/tests/shipped_settings.rs::a_grammar_that_does_not_hold_together_is_refused_when_it_is_read",
+      "body_hash": "e32e7cab2a6434f7",
+      "link_hash": "44f6b874e270ed64",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-LOOK",
+      "clause": "settings_declared",
+      "file": "crates/core/tests/shipped_settings.rs",
+      "anchor": "crates/core/tests/shipped_settings.rs::every_setting_a_shipped_theme_holds_is_declared_and_holds_a_value_its_rule_accepts_and_every_rule_is_used",
+      "body_hash": "37fa4e07e71a9a2d",
+      "link_hash": "0ba73088044bd075",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-LOOK",
+      "clause": "settings_declared",
+      "file": "crates/core/tests/shipped_settings.rs",
+      "anchor": "crates/core/tests/shipped_settings.rs::the_shipped_grammar_holds_together_and_every_kind_it_names_is_implemented_and_used",
+      "body_hash": "d3fe89c10edede21",
+      "link_hash": "f70221e56cd28b04",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-LOOK",
+      "clause": "settings_declared",
+      "file": "crates/core/tests/shipped_settings.rs",
+      "anchor": "crates/core/tests/shipped_settings.rs::the_zoom_the_grammar_declares_is_the_zoom_the_code_steps",
+      "body_hash": "3446bb4aee2496ea",
+      "link_hash": "651b39492a870c3f",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-LOOK",
+      "clause": "settings_declared",
+      "file": "crates/editor/tests/pointer.rs",
+      "anchor": "crates/editor/tests/pointer.rs::the_page_in_a_browser_passes_its_checks",
+      "body_hash": "49d448f6651a4505",
+      "link_hash": "1ba3d8318b1282f6",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-LOOK",
+      "clause": "settings_grouped_and_searchable",
+      "file": "crates/editor/tests/figures.rs",
+      "anchor": "crates/editor/tests/figures.rs::settings_are_grouped_under_their_section_and_narrowed_by_a_search",
+      "body_hash": "c0d4830974943a7e",
+      "link_hash": "7cae118a91f24621",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-LOOK",
+      "clause": "settings_grouped_and_searchable",
+      "file": "crates/editor/tests/pointer.rs",
+      "anchor": "crates/editor/tests/pointer.rs::the_page_in_a_browser_passes_its_checks",
+      "body_hash": "49d448f6651a4505",
+      "link_hash": "1003884249721de7",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-LOOK",
       "clause": "stations_have_icons",
       "file": "crates/editor/tests/pointer.rs",
       "anchor": "crates/editor/tests/pointer.rs::the_page_in_a_browser_passes_its_checks",
       "body_hash": "49d448f6651a4505",
       "link_hash": "de20b401a2863011",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-LOOK",
+      "clause": "tab_drag_splits",
+      "file": "crates/editor/tests/pointer.rs",
+      "anchor": "crates/editor/tests/pointer.rs::the_page_in_a_browser_passes_its_checks",
+      "body_hash": "49d448f6651a4505",
+      "link_hash": "0ed2beb823f083b0",
       "qualifier": null
     },
     {
@@ -26912,7 +27322,7 @@
       "clause": "zoom_steps",
       "file": "crates/core/src/surface/setting.rs",
       "anchor": "crates/core/src/surface/setting.rs::tests::zoom_steps_by_ten_and_stops_at_its_ends",
-      "body_hash": "e61e6ca9362250d1",
+      "body_hash": "8900d2c7cd1e6cda",
       "link_hash": "1d80879538d46032",
       "qualifier": null
     },
@@ -28182,7 +28592,7 @@
       "clause": "accepted_is_a_node",
       "file": "crates/editor/tests/sandbox.rs",
       "anchor": "crates/editor/tests/sandbox.rs::undo_goes_back_across_what_the_agent_did_resets_the_copy_and_accepting_marks_the_point",
-      "body_hash": "204bd1f9277f7f54",
+      "body_hash": "913ee11dc1e891b8",
       "link_hash": "9f952d7aaa898639",
       "qualifier": null
     },
@@ -28192,7 +28602,7 @@
       "clause": "accepted_is_marked",
       "file": "crates/editor/tests/sandbox.rs",
       "anchor": "crates/editor/tests/sandbox.rs::undo_goes_back_across_what_the_agent_did_resets_the_copy_and_accepting_marks_the_point",
-      "body_hash": "204bd1f9277f7f54",
+      "body_hash": "913ee11dc1e891b8",
       "link_hash": "11e2a39a6f8ce3b9",
       "qualifier": null
     },
@@ -28202,7 +28612,7 @@
       "clause": "any_state_reachable",
       "file": "crates/editor/tests/sandbox.rs",
       "anchor": "crates/editor/tests/sandbox.rs::undo_goes_back_across_what_the_agent_did_resets_the_copy_and_accepting_marks_the_point",
-      "body_hash": "204bd1f9277f7f54",
+      "body_hash": "913ee11dc1e891b8",
       "link_hash": "6285db5f262da6de",
       "qualifier": null
     },
@@ -28212,7 +28622,7 @@
       "clause": "copy_follows_the_history",
       "file": "crates/editor/tests/sandbox.rs",
       "anchor": "crates/editor/tests/sandbox.rs::undo_goes_back_across_what_the_agent_did_resets_the_copy_and_accepting_marks_the_point",
-      "body_hash": "204bd1f9277f7f54",
+      "body_hash": "913ee11dc1e891b8",
       "link_hash": "a9c0d04856e98a0d",
       "qualifier": null
     },
@@ -28242,7 +28652,7 @@
       "clause": "effects_become_commands",
       "file": "crates/editor/tests/sandbox.rs",
       "anchor": "crates/editor/tests/sandbox.rs::what_the_agent_does_enters_the_editor_and_the_history_at_once_and_the_project_only_when_accepted",
-      "body_hash": "b8119099b9308749",
+      "body_hash": "171bdf4c74e47cc9",
       "link_hash": "db371d12c882e990",
       "qualifier": null
     },
@@ -28251,8 +28661,18 @@
       "req": "REQ-OBS",
       "clause": "mirrored_live",
       "file": "crates/editor/tests/sandbox.rs",
+      "anchor": "crates/editor/tests/sandbox.rs::each_file_the_agent_changes_is_its_own_node_of_the_history",
+      "body_hash": "5435885e3c29b6d9",
+      "link_hash": "cb8132493ca24b3a",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-OBS",
+      "clause": "mirrored_live",
+      "file": "crates/editor/tests/sandbox.rs",
       "anchor": "crates/editor/tests/sandbox.rs::what_the_agent_does_enters_the_editor_and_the_history_at_once_and_the_project_only_when_accepted",
-      "body_hash": "b8119099b9308749",
+      "body_hash": "171bdf4c74e47cc9",
       "link_hash": "2e31aff82a030cf4",
       "qualifier": null
     },
@@ -28322,7 +28742,7 @@
       "clause": "undoable",
       "file": "crates/editor/tests/sandbox.rs",
       "anchor": "crates/editor/tests/sandbox.rs::undo_goes_back_across_what_the_agent_did_resets_the_copy_and_accepting_marks_the_point",
-      "body_hash": "204bd1f9277f7f54",
+      "body_hash": "913ee11dc1e891b8",
       "link_hash": "d6d5914009800494",
       "qualifier": null
     },
@@ -28362,7 +28782,7 @@
       "clause": "visible_while_running",
       "file": "crates/editor/tests/sandbox.rs",
       "anchor": "crates/editor/tests/sandbox.rs::what_the_agent_does_enters_the_editor_and_the_history_at_once_and_the_project_only_when_accepted",
-      "body_hash": "b8119099b9308749",
+      "body_hash": "171bdf4c74e47cc9",
       "link_hash": "38d179661dfe7af9",
       "qualifier": null
     },
@@ -28372,7 +28792,7 @@
       "clause": "waiting_shown_with_history",
       "file": "crates/editor/tests/sandbox.rs",
       "anchor": "crates/editor/tests/sandbox.rs::what_the_agent_does_enters_the_editor_and_the_history_at_once_and_the_project_only_when_accepted",
-      "body_hash": "b8119099b9308749",
+      "body_hash": "171bdf4c74e47cc9",
       "link_hash": "933b4138ee869f66",
       "qualifier": null
     },
@@ -28652,7 +29072,7 @@
       "clause": "card_per_clause",
       "file": "crates/core/tests/report.rs",
       "anchor": "crates/core/tests/report.rs::every_clause_gets_a_card_with_its_evidence_findings_and_changes",
-      "body_hash": "e5f4e6b6bdc7bbf3",
+      "body_hash": "f6d746be441352a3",
       "link_hash": "1c634918f576741a",
       "qualifier": null
     },
@@ -28662,7 +29082,7 @@
       "clause": "changes_marked",
       "file": "crates/core/tests/command_line.rs",
       "anchor": "crates/core/tests/command_line.rs::the_difference_and_the_report_are_taken_against_a_revision",
-      "body_hash": "ca348b3dde94add0",
+      "body_hash": "9c6dc757fb269dd0",
       "link_hash": "347b186e58c72904",
       "qualifier": null
     },
@@ -28672,7 +29092,7 @@
       "clause": "changes_marked",
       "file": "crates/core/tests/report.rs",
       "anchor": "crates/core/tests/report.rs::every_clause_gets_a_card_with_its_evidence_findings_and_changes",
-      "body_hash": "e5f4e6b6bdc7bbf3",
+      "body_hash": "f6d746be441352a3",
       "link_hash": "b81d314ea5094812",
       "qualifier": null
     },
@@ -28682,7 +29102,7 @@
       "clause": "evidence_on_card",
       "file": "crates/core/tests/report.rs",
       "anchor": "crates/core/tests/report.rs::every_clause_gets_a_card_with_its_evidence_findings_and_changes",
-      "body_hash": "e5f4e6b6bdc7bbf3",
+      "body_hash": "f6d746be441352a3",
       "link_hash": "29f23b26444ee45e",
       "qualifier": null
     },
@@ -28692,7 +29112,7 @@
       "clause": "findings_on_card",
       "file": "crates/core/tests/report.rs",
       "anchor": "crates/core/tests/report.rs::every_clause_gets_a_card_with_its_evidence_findings_and_changes",
-      "body_hash": "e5f4e6b6bdc7bbf3",
+      "body_hash": "f6d746be441352a3",
       "link_hash": "5b7d43e5fe9a2aef",
       "qualifier": null
     },
@@ -28702,7 +29122,7 @@
       "clause": "static_page",
       "file": "crates/core/tests/command_line.rs",
       "anchor": "crates/core/tests/command_line.rs::the_difference_and_the_report_are_taken_against_a_revision",
-      "body_hash": "ca348b3dde94add0",
+      "body_hash": "9c6dc757fb269dd0",
       "link_hash": "162c24f507dd81b6",
       "qualifier": null
     },
@@ -28712,7 +29132,7 @@
       "clause": "static_page",
       "file": "crates/core/tests/report.rs",
       "anchor": "crates/core/tests/report.rs::every_clause_gets_a_card_with_its_evidence_findings_and_changes",
-      "body_hash": "e5f4e6b6bdc7bbf3",
+      "body_hash": "f6d746be441352a3",
       "link_hash": "37755cae457e7e9c",
       "qualifier": null
     },
@@ -28752,7 +29172,7 @@
       "clause": "clause_addressable",
       "file": "crates/core/src/trace/earn.rs",
       "anchor": "crates/core/src/trace/earn.rs::tests::rewording_one_clause_reopens_its_judgement_and_no_sibling_s",
-      "body_hash": "886a838e8d313723",
+      "body_hash": "0055181ca0242743",
       "link_hash": "05031bcf389d9894",
       "qualifier": null
     },
@@ -28772,7 +29192,7 @@
       "clause": "clause_addressable",
       "file": "crates/core/src/trace/requirement.rs",
       "anchor": "crates/core/src/trace/requirement.rs::tests::a_clause_hash_moves_with_that_clause_only",
-      "body_hash": "8013e72ce5737e3d",
+      "body_hash": "a64f07f806bf307b",
       "link_hash": "c716b51f8e29839f",
       "qualifier": null
     },
@@ -28792,7 +29212,7 @@
       "clause": "clause_unique",
       "file": "crates/core/src/trace/requirement.rs",
       "anchor": "crates/core/src/trace/requirement.rs::tests::a_clause_or_narrowing_given_twice_is_reported",
-      "body_hash": "28c60785aabdd6fe",
+      "body_hash": "3faef026834d5e8c",
       "link_hash": "45795b39c7c0f026",
       "qualifier": null
     },
@@ -28812,7 +29232,7 @@
       "clause": "clauseless_uniform",
       "file": "crates/core/src/trace/requirement.rs",
       "anchor": "crates/core/src/trace/requirement.rs::tests::a_clauseless_requirement_has_one_implicit_clause",
-      "body_hash": "66fd0218b1382637",
+      "body_hash": "4625e2220566757d",
       "link_hash": "e8eed58ee6174a9b",
       "qualifier": null
     },
@@ -28832,7 +29252,7 @@
       "clause": "decomposition_claimed",
       "file": "crates/core/src/trace/requirement.rs",
       "anchor": "crates/core/src/trace/requirement.rs::tests::decomposition_defaults_to_open",
-      "body_hash": "6f5242fb386aa36d",
+      "body_hash": "1af851113f5c358d",
       "link_hash": "0afdacf359471540",
       "qualifier": null
     },
@@ -28882,7 +29302,7 @@
       "clause": "id_unique",
       "file": "crates/core/tests/properties.rs",
       "anchor": "crates/core/tests/properties.rs::a_repeated_requirement_identifier_is_reported",
-      "body_hash": "1844c7b511900776",
+      "body_hash": "899924164c9c9293",
       "link_hash": "9cbb8a0987ca1790",
       "qualifier": null
     },
@@ -28891,9 +29311,9 @@
       "req": "REQ-REQDOC",
       "clause": "malformed_reported",
       "file": "crates/core/src/trace/index.rs",
-      "anchor": "crates/core/src/trace/index.rs::tests::a_malformed_requirement_and_an_unclosed_fence_are_reported_by_the_scan",
-      "body_hash": "39fd42c4a4ee75d6",
-      "link_hash": "d5f244d23f612144",
+      "anchor": "crates/core/src/trace/index.rs::tests::a_malformed_requirement_is_reported_by_the_scan",
+      "body_hash": "5dbc87fe7b8e8acb",
+      "link_hash": "30881304933df558",
       "qualifier": null
     },
     {
@@ -28902,7 +29322,7 @@
       "clause": "malformed_reported",
       "file": "crates/core/src/trace/requirement.rs",
       "anchor": "crates/core/src/trace/requirement.rs::tests::a_block_without_text_is_reported_where_it_starts",
-      "body_hash": "a18100e42cdc98f9",
+      "body_hash": "594e68f10b007c37",
       "link_hash": "56a7a41f0ffccec0",
       "qualifier": null
     },
@@ -28911,8 +29331,18 @@
       "req": "REQ-REQDOC",
       "clause": "malformed_reported",
       "file": "crates/core/src/trace/requirement.rs",
+      "anchor": "crates/core/src/trace/requirement.rs::tests::a_clause_without_text_is_reported_and_other_markdown_is_not_a_requirement",
+      "body_hash": "acf4aac5edc760d6",
+      "link_hash": "6e2876443f4b2084",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-REQDOC",
+      "clause": "malformed_reported",
+      "file": "crates/core/src/trace/requirement.rs",
       "anchor": "crates/core/src/trace/requirement.rs::tests::a_key_an_annotation_cannot_name_is_reported",
-      "body_hash": "af9848c8a0ceb802",
+      "body_hash": "beeaae813487666f",
       "link_hash": "9c3a0edb5afb0083",
       "qualifier": null
     },
@@ -28921,18 +29351,8 @@
       "req": "REQ-REQDOC",
       "clause": "malformed_reported",
       "file": "crates/core/src/trace/requirement.rs",
-      "anchor": "crates/core/src/trace/requirement.rs::tests::an_unclosed_fence_and_an_unknown_key_are_reported",
-      "body_hash": "7306760a7979d0e3",
-      "link_hash": "789be4e649bd75d6",
-      "qualifier": null
-    },
-    {
-      "role": "tests",
-      "req": "REQ-REQDOC",
-      "clause": "malformed_reported",
-      "file": "crates/core/src/trace/requirement.rs",
       "anchor": "crates/core/src/trace/requirement.rs::tests::malformed_frontmatter_is_reported_not_skipped",
-      "body_hash": "046a45c38cc19472",
+      "body_hash": "4b082721a8099b0c",
       "link_hash": "2d511764165730fb",
       "qualifier": null
     },
@@ -28951,9 +29371,9 @@
       "req": "REQ-REQDOC",
       "clause": "narrowings_nest",
       "file": "crates/core/src/surface/requirement_view.rs",
-      "anchor": "crates/core/src/surface/requirement_view.rs::tests::narrowings_are_indented_under_their_clause",
-      "body_hash": "1419352d4d4cf1ea",
-      "link_hash": "a42cbb78d83b9d1a",
+      "anchor": "crates/core/src/surface/requirement_view.rs::tests::narrowings_are_listed_under_their_clause",
+      "body_hash": "84d866f7be895d9f",
+      "link_hash": "7cea57555a129090",
       "qualifier": null
     },
     {
@@ -28972,7 +29392,7 @@
       "clause": "narrowings_nest",
       "file": "crates/core/src/trace/requirement.rs",
       "anchor": "crates/core/src/trace/requirement.rs::tests::a_block_without_text_is_reported_where_it_starts",
-      "body_hash": "a18100e42cdc98f9",
+      "body_hash": "594e68f10b007c37",
       "link_hash": "61e0472239562142",
       "qualifier": null
     },
@@ -28992,7 +29412,7 @@
       "clause": "narrowings_nest",
       "file": "crates/editor/tests/pointer.rs",
       "anchor": "crates/editor/tests/pointer.rs::a_requirement_shows_narrowings_under_their_clause",
-      "body_hash": "046a590fc63fdfa1",
+      "body_hash": "fd94af38c4a32741",
       "link_hash": "f958a2e7de7eab02",
       "qualifier": null
     },
@@ -29002,7 +29422,7 @@
       "clause": "refines_dag",
       "file": "crates/core/src/trace/requirement.rs",
       "anchor": "crates/core/src/trace/requirement.rs::tests::a_cycle_is_found",
-      "body_hash": "3c444d3bb81856f8",
+      "body_hash": "eb08263a830da6d2",
       "link_hash": "8ecd1102c5f20dcf",
       "qualifier": null
     },
@@ -29032,7 +29452,7 @@
       "clause": "refines_resolves",
       "file": "crates/core/src/trace/requirement.rs",
       "anchor": "crates/core/src/trace/requirement.rs::tests::dangling_parents_are_listed_and_are_not_cycles",
-      "body_hash": "6b7b88a847509f9f",
+      "body_hash": "1d329ca465f47f83",
       "link_hash": "ee3d95c9071bc444",
       "qualifier": null
     },
@@ -29142,7 +29562,7 @@
       "clause": "exempt_leaves_denominator",
       "file": "crates/core/src/trace/checker.rs",
       "anchor": "crates/core/src/trace/checker.rs::tests::an_exemption_leaves_the_denominator_and_must_be_justified",
-      "body_hash": "859764f20c6fd77d",
+      "body_hash": "1a802fc8c64e5bbb",
       "link_hash": "9b37221f7dedd436",
       "qualifier": null
     },
@@ -29182,7 +29602,7 @@
       "clause": "never_complete_when_open",
       "file": "crates/core/src/trace/checker.rs",
       "anchor": "crates/core/src/trace/checker.rs::tests::an_open_decomposition_is_never_exact",
-      "body_hash": "3316dda07b53a3de",
+      "body_hash": "3de0c176b67ee26d",
       "link_hash": "a30b616824fa07e6",
       "qualifier": null
     },
@@ -29972,7 +30392,7 @@
       "clause": "claims_beside_code",
       "file": "crates/core/src/surface/chips.rs",
       "anchor": "crates/core/src/surface/chips.rs::tests::a_clause_is_marked_with_the_claims_on_it",
-      "body_hash": "abf421094f246742",
+      "body_hash": "20df69154f4c4f88",
       "link_hash": "b73d204ee7095411",
       "qualifier": null
     },
@@ -30032,7 +30452,7 @@
       "clause": "files_refreshed",
       "file": "crates/editor/tests/sandbox.rs",
       "anchor": "crates/editor/tests/sandbox.rs::what_the_agent_does_enters_the_editor_and_the_history_at_once_and_the_project_only_when_accepted",
-      "body_hash": "b8119099b9308749",
+      "body_hash": "171bdf4c74e47cc9",
       "link_hash": "c273e29c1f7ebf2a",
       "qualifier": null
     },
@@ -30372,7 +30792,7 @@
       "clause": "requirement_opened",
       "file": "crates/core/src/surface/requirement_view.rs",
       "anchor": "crates/core/src/surface/requirement_view.rs::tests::a_requirement_shows_its_clauses_and_links_to_what_claims_them",
-      "body_hash": "1fd2add02ee0d622",
+      "body_hash": "ff9fd882dd57e7db",
       "link_hash": "0225f80afe554648",
       "qualifier": null
     },
@@ -30392,7 +30812,7 @@
       "clause": "requirement_opened",
       "file": "crates/editor/tests/pointer.rs",
       "anchor": "crates/editor/tests/pointer.rs::a_requirement_opens_and_its_claims_open_the_code",
-      "body_hash": "1164e399d77ab098",
+      "body_hash": "b5d02ce289d0e605",
       "link_hash": "bcfbc5b7da0f9be3",
       "qualifier": null
     },
@@ -30424,6 +30844,16 @@
       "anchor": "crates/core/src/surface/produce.rs::tests::an_unchanged_file_reviews_as_no_change",
       "body_hash": "9a934009bc6ba0bd",
       "link_hash": "d4eba455e4d45e1e",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-SHOW",
+      "clause": "review_from_change",
+      "file": "crates/core/src/surface/produce.rs",
+      "anchor": "crates/core/src/surface/produce.rs::tests::scattered_edits_are_each_shown_where_they_are",
+      "body_hash": "5e7360f71820bd68",
+      "link_hash": "44900b52e5aa2050",
       "qualifier": null
     },
     {
@@ -30732,7 +31162,7 @@
       "clause": "no_silent_revalidation",
       "file": "crates/core/src/trace/earn.rs",
       "anchor": "crates/core/src/trace/earn.rs::tests::halves_stamped_against_other_inputs_do_not_compose",
-      "body_hash": "f814e15e92f919d8",
+      "body_hash": "8d673d6664c80a93",
       "link_hash": "d243aa582051ca88",
       "qualifier": null
     },
@@ -30762,7 +31192,7 @@
       "clause": "requirement_reopens_all",
       "file": "crates/core/src/trace/earn.rs",
       "anchor": "crates/core/src/trace/earn.rs::tests::rewording_a_requirement_reopens_its_tests_and_proofs",
-      "body_hash": "0c13883d99158851",
+      "body_hash": "0bf201c38bf3eb3c",
       "link_hash": "9ac0f0f60465bb91",
       "qualifier": null
     },
@@ -30772,7 +31202,7 @@
       "clause": "requirement_reopens_all",
       "file": "crates/core/src/trace/earn.rs",
       "anchor": "crates/core/src/trace/earn.rs::tests::rewording_one_clause_reopens_its_judgement_and_no_sibling_s",
-      "body_hash": "886a838e8d313723",
+      "body_hash": "0055181ca0242743",
       "link_hash": "be5d47913c8b3237",
       "qualifier": null
     },
@@ -30782,7 +31212,7 @@
       "clause": "requirement_reopens_all",
       "file": "crates/core/src/trace/requirement.rs",
       "anchor": "crates/core/src/trace/requirement.rs::tests::a_clause_hash_moves_with_that_clause_only",
-      "body_hash": "8013e72ce5737e3d",
+      "body_hash": "a64f07f806bf307b",
       "link_hash": "56d68e3d9ffbcb7c",
       "qualifier": null
     },
@@ -31132,7 +31562,7 @@
       "clause": "proof_rests_on_the_specification",
       "file": "crates/core/tests/proofs_are_earned.rs",
       "anchor": "crates/core/tests/proofs_are_earned.rs::only_a_pinned_model_earns_its_clause_p_and_a_changed_theorem_takes_it_back",
-      "body_hash": "734aabe96ffd33ec",
+      "body_hash": "a482c39bfe4354fe",
       "link_hash": "ef1c2464f73ba8ce",
       "qualifier": null
     },
@@ -31202,7 +31632,7 @@
       "clause": "proved_only_when_pinned",
       "file": "crates/core/tests/proofs_are_earned.rs",
       "anchor": "crates/core/tests/proofs_are_earned.rs::only_a_pinned_model_earns_its_clause_p_and_a_changed_theorem_takes_it_back",
-      "body_hash": "734aabe96ffd33ec",
+      "body_hash": "a482c39bfe4354fe",
       "link_hash": "5481f9e0f6e280cf",
       "qualifier": null
     },
@@ -31499,6 +31929,16 @@
     {
       "role": "tests",
       "req": "REQ-UNDO",
+      "clause": "file_view_has_a_target",
+      "file": "crates/editor/tests/sandbox.rs",
+      "anchor": "crates/editor/tests/sandbox.rs::the_history_remembers_its_file_and_a_listed_file_can_be_chosen",
+      "body_hash": "61a97429918a8561",
+      "link_hash": "926ce965a5ad392d",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-UNDO",
       "clause": "filtered_view",
       "file": "crates/core/src/surface/history_view.rs",
       "anchor": "crates/core/src/surface/history_view.rs::tests::a_filter_keeps_its_nodes_under_their_nearest_kept_ancestor",
@@ -31741,8 +32181,18 @@
       "req": "REQ-UNDO",
       "clause": "whole_by_default",
       "file": "crates/editor/tests/sandbox.rs",
+      "anchor": "crates/editor/tests/sandbox.rs::each_file_the_agent_changes_is_its_own_node_of_the_history",
+      "body_hash": "5435885e3c29b6d9",
+      "link_hash": "3d9b298ccdad7a86",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-UNDO",
+      "clause": "whole_by_default",
+      "file": "crates/editor/tests/sandbox.rs",
       "anchor": "crates/editor/tests/sandbox.rs::undo_goes_back_across_what_the_agent_did_resets_the_copy_and_accepting_marks_the_point",
-      "body_hash": "204bd1f9277f7f54",
+      "body_hash": "913ee11dc1e891b8",
       "link_hash": "27608282a6f9f42f",
       "qualifier": null
     },
@@ -31914,6 +32364,86 @@
       "anchor": "crates/tui/tests/conformance.rs::the_terminal_frontend_draws_every_buffer_it_is_given",
       "body_hash": "bcab98a3513d193e",
       "link_hash": "cbff33d72555ff7b",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-VIEW",
+      "clause": "markdown_formatted_by_default",
+      "file": "crates/core/src/surface/view.rs",
+      "anchor": "crates/core/src/surface/view.rs::markdown_rule::markdown_files_and_the_whole_markdown_records_are_markdown_and_nothing_else_is",
+      "body_hash": "4f179b9d03107c1e",
+      "link_hash": "1fa5ca827e95f312",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-VIEW",
+      "clause": "markdown_formatted_by_default",
+      "file": "crates/editor/tests/figures.rs",
+      "anchor": "crates/editor/tests/figures.rs::every_record_the_editor_makes_from_markdown_is_one_the_core_calls_markdown",
+      "body_hash": "8e7be61e8e1b3f9a",
+      "link_hash": "8d6b13f98d985415",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-VIEW",
+      "clause": "markdown_formatted_by_default",
+      "file": "crates/editor/tests/figures.rs",
+      "anchor": "crates/editor/tests/figures.rs::the_text_of_a_markdown_buffer_is_one_command_away_and_back_and_other_buffers_refuse_it",
+      "body_hash": "a6adb581d91c8e0e",
+      "link_hash": "7e9331cf493a9c30",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-VIEW",
+      "clause": "markdown_formatted_by_default",
+      "file": "crates/editor/tests/pointer.rs",
+      "anchor": "crates/editor/tests/pointer.rs::the_page_in_a_browser_passes_its_checks",
+      "body_hash": "49d448f6651a4505",
+      "link_hash": "934e24385c8a9250",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-VIEW",
+      "clause": "markdown_mentions_act",
+      "file": "crates/core/src/surface/links.rs",
+      "anchor": "crates/core/src/surface/links.rs::tests::a_code_span_naming_a_project_file_opens_it_and_other_code_does_not",
+      "body_hash": "1ee2ebdf167b6123",
+      "link_hash": "e8f0ca831475c4f6",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-VIEW",
+      "clause": "markdown_mentions_act",
+      "file": "crates/core/src/surface/links.rs",
+      "anchor": "crates/core/src/surface/links.rs::tests::a_link_to_another_requirement_by_its_own_name_opens_that_requirement",
+      "body_hash": "0da4a8c405a5ebaa",
+      "link_hash": "94bbd9c913739cd3",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-VIEW",
+      "clause": "markdown_mentions_act",
+      "file": "crates/core/src/surface/links.rs",
+      "anchor": "crates/core/src/surface/links.rs::tests::a_mention_replaces_the_highlight_it_lies_over_and_leaves_a_well_formed_buffer",
+      "body_hash": "14dd39ce7e922b0f",
+      "link_hash": "5d84efc367b94b4e",
+      "qualifier": null
+    },
+    {
+      "role": "tests",
+      "req": "REQ-VIEW",
+      "clause": "markdown_mentions_act",
+      "file": "crates/editor/tests/figures.rs",
+      "anchor": "crates/editor/tests/figures.rs::a_file_a_requirement_mentions_opens_from_its_markdown_and_a_click_there_opens_it",
+      "body_hash": "71fef87abb71ca87",
+      "link_hash": "491ba687e19ed691",
       "qualifier": null
     },
     {
@@ -33138,34 +33668,6 @@
     },
     {
       "key": {
-        "reqId": "ARCH-SELFHOST",
-        "clause": "no_convention",
-        "bond": "requirementModel"
-      },
-      "level": "L2",
-      "detail": {
-        "judge": {
-          "verdict": "agrees",
-          "judgedBy": "claude-review",
-          "delegatedBy": "ricostynha",
-          "promptVersion": "1",
-          "note": "Moving and renaming every file leaves the link and the requirement identity unchanged, and the requirement is found by its declared id."
-        }
-      },
-      "linkHash": "7278835b8efa4c40",
-      "inputs": [
-        [
-          "requirement",
-          "44aae3b332ce6157"
-        ],
-        [
-          "model",
-          "952d3176938caf15"
-        ]
-      ]
-    },
-    {
-      "key": {
         "reqId": "REQ-ACT",
         "clause": "action_to_intent",
         "bond": "requirementModel"
@@ -33210,7 +33712,7 @@
       "inputs": [
         [
           "implementation",
-          "08f6b323f2b1b27d+314de8de15d82b78+b800d4e779e4f212+d58ed6a8bf877a2b"
+          "08f6b323f2b1b27d+b800d4e779e4f212+d58ed6a8bf877a2b+fdb97e32ea467fbd"
         ],
         [
           "model",
@@ -33268,7 +33770,7 @@
       "inputs": [
         [
           "implementation",
-          "314de8de15d82b78"
+          "fdb97e32ea467fbd"
         ],
         [
           "model",
@@ -33326,7 +33828,7 @@
       "inputs": [
         [
           "implementation",
-          "094e1d37c5d0ea36+0ef69ae92da4c099+314de8de15d82b78+5eb0c3e8abe417bd+c52f7146bb505c39+f0bb0530e1d1994f+fd7e8532f0f2fcbc"
+          "5eb0c3e8abe417bd+c0b169f902b3afeb+c52f7146bb505c39+f0bb0530e1d1994f+fd62b51d58cefc32+fd7e8532f0f2fcbc+fdb97e32ea467fbd"
         ],
         [
           "model",
@@ -33363,36 +33865,6 @@
         [
           "model",
           "e582bb091cef893d"
-        ]
-      ]
-    },
-    {
-      "key": {
-        "reqId": "REQ-ACT",
-        "clause": "everything_is_offered",
-        "bond": "modelImpl"
-      },
-      "level": "L3",
-      "detail": {
-        "drt": {
-          "seed": 402,
-          "cases": 1500,
-          "op": "REQ-ACT.everything_is_offered"
-        }
-      },
-      "linkHash": "8f8c8224c76c617c",
-      "inputs": [
-        [
-          "implementation",
-          "8bef1d3af783a496+c08185bb3a69f3f1+c19fbb227a2aa364"
-        ],
-        [
-          "model",
-          "e582bb091cef893d"
-        ],
-        [
-          "requirement",
-          "2c7908b611779590"
         ]
       ]
     },
@@ -33442,7 +33914,7 @@
       "inputs": [
         [
           "implementation",
-          "2c31155911d38353+314de8de15d82b78"
+          "2c31155911d38353+fdb97e32ea467fbd"
         ],
         [
           "model",
@@ -33500,7 +33972,7 @@
       "inputs": [
         [
           "implementation",
-          "314de8de15d82b78"
+          "fdb97e32ea467fbd"
         ],
         [
           "model",
@@ -33558,7 +34030,7 @@
       "inputs": [
         [
           "implementation",
-          "085e49548b450f02+314de8de15d82b78+4b9dc77791161952+d321371ace8bc556"
+          "085e49548b450f02+4b9dc77791161952+d321371ace8bc556+fdb97e32ea467fbd"
         ],
         [
           "model",
@@ -33616,7 +34088,7 @@
       "inputs": [
         [
           "implementation",
-          "0408c11f8f2edb60+314de8de15d82b78+e97d177bdd02cd31"
+          "0408c11f8f2edb60+e97d177bdd02cd31+fdb97e32ea467fbd"
         ],
         [
           "model",
@@ -35814,7 +36286,7 @@
       "inputs": [
         [
           "implementation",
-          "5e9260c3ef9971fe+772351f96973e686+ed014f66f4315d45"
+          "5e9260c3ef9971fe+6530c56b500d9ab8+ed014f66f4315d45"
         ],
         [
           "model",
@@ -40716,7 +41188,7 @@
       "inputs": [
         [
           "implementation",
-          "7f6e2d0f3302538b+c7a7baf0af37a448"
+          "7f6e2d0f3302538b+a47ba3db7daa9554"
         ],
         [
           "model",
@@ -41350,7 +41822,7 @@
       "inputs": [
         [
           "implementation",
-          "e09e3cba06bd61e8+fb789a33b7a52705"
+          "9831da3c1733cd9f+fb789a33b7a52705"
         ],
         [
           "model",
@@ -42248,7 +42720,7 @@
       "inputs": [
         [
           "implementation",
-          "2bf6d6b7b990cea5+3f40b5440f1ddcd2+f9879e23899139d7"
+          "2bf6d6b7b990cea5+3f40b5440f1ddcd2+ec9e51009666a116"
         ],
         [
           "model",
@@ -43976,34 +44448,6 @@
       "key": {
         "reqId": "REQ-REQDOC",
         "clause": "clause_unique",
-        "bond": "requirementModel"
-      },
-      "level": "L2",
-      "detail": {
-        "judge": {
-          "verdict": "agrees",
-          "judgedBy": "claude-review",
-          "delegatedBy": "ricostynha",
-          "promptVersion": "1",
-          "note": "The frontmatter reader reports a key or narrowing given twice among its problems."
-        }
-      },
-      "linkHash": "b4b15a9f47566b9e",
-      "inputs": [
-        [
-          "requirement",
-          "59704d9a0e3ee2d4"
-        ],
-        [
-          "model",
-          "cad3550825a70c07"
-        ]
-      ]
-    },
-    {
-      "key": {
-        "reqId": "REQ-REQDOC",
-        "clause": "clause_unique",
         "bond": "modelImpl"
       },
       "level": "L3",
@@ -44018,43 +44462,15 @@
       "inputs": [
         [
           "implementation",
-          "053735024f99f744+63be949686434920+924f7b9e968a037e"
+          "053735024f99f744+4873e74d642eaff2+db4dd13a1f921894"
         ],
         [
           "model",
-          "cad3550825a70c07"
+          "7fb963e1650b761d"
         ],
         [
           "requirement",
           "59704d9a0e3ee2d4"
-        ]
-      ]
-    },
-    {
-      "key": {
-        "reqId": "REQ-REQDOC",
-        "clause": "clauseless_uniform",
-        "bond": "requirementModel"
-      },
-      "level": "L2",
-      "detail": {
-        "judge": {
-          "verdict": "agrees",
-          "judgedBy": "claude-review",
-          "delegatedBy": "ricostynha",
-          "promptVersion": "1",
-          "note": "A requirement with no clauses is addressable as the one implicit clause none."
-        }
-      },
-      "linkHash": "2ee010cf6736da20",
-      "inputs": [
-        [
-          "requirement",
-          "f4898fbabe41e52f"
-        ],
-        [
-          "model",
-          "cad3550825a70c07"
         ]
       ]
     },
@@ -44080,39 +44496,11 @@
         ],
         [
           "model",
-          "cad3550825a70c07"
+          "7fb963e1650b761d"
         ],
         [
           "requirement",
           "f4898fbabe41e52f"
-        ]
-      ]
-    },
-    {
-      "key": {
-        "reqId": "REQ-REQDOC",
-        "clause": "decomposition_claimed",
-        "bond": "requirementModel"
-      },
-      "level": "L2",
-      "detail": {
-        "judge": {
-          "verdict": "agrees",
-          "judgedBy": "claude-review",
-          "delegatedBy": "ricostynha",
-          "promptVersion": "1",
-          "note": "decompositionOf gives open unless complete is declared, and the figure over open is inexact."
-        }
-      },
-      "linkHash": "415f3c875863fc6e",
-      "inputs": [
-        [
-          "requirement",
-          "2c3f8a96e4086902"
-        ],
-        [
-          "model",
-          "cad3550825a70c07"
         ]
       ]
     },
@@ -44138,39 +44526,11 @@
         ],
         [
           "model",
-          "cad3550825a70c07"
+          "7fb963e1650b761d"
         ],
         [
           "requirement",
           "2c3f8a96e4086902"
-        ]
-      ]
-    },
-    {
-      "key": {
-        "reqId": "REQ-REQDOC",
-        "clause": "id_is_identity",
-        "bond": "requirementModel"
-      },
-      "level": "L2",
-      "detail": {
-        "judge": {
-          "verdict": "agrees",
-          "judgedBy": "claude-review",
-          "delegatedBy": "ricostynha",
-          "promptVersion": "1",
-          "note": "The identity is the declared id from the frontmatter; nothing reads the filename."
-        }
-      },
-      "linkHash": "08509ce66b84cbbe",
-      "inputs": [
-        [
-          "requirement",
-          "7970897cee82a794"
-        ],
-        [
-          "model",
-          "cad3550825a70c07"
         ]
       ]
     },
@@ -44192,11 +44552,11 @@
       "inputs": [
         [
           "implementation",
-          "053735024f99f744+924f7b9e968a037e+d2819e479e8229b3+e8af451290160611"
+          "053735024f99f744+d2819e479e8229b3+db4dd13a1f921894+e8af451290160611"
         ],
         [
           "model",
-          "cad3550825a70c07"
+          "7fb963e1650b761d"
         ],
         [
           "requirement",
@@ -44266,34 +44626,6 @@
       "key": {
         "reqId": "REQ-REQDOC",
         "clause": "malformed_reported",
-        "bond": "requirementModel"
-      },
-      "level": "L2",
-      "detail": {
-        "judge": {
-          "verdict": "agrees",
-          "judgedBy": "claude-review",
-          "delegatedBy": "ricostynha",
-          "promptVersion": "1",
-          "note": "An unclosed fence, an empty id and unknown keys are reported as problems, never skipped."
-        }
-      },
-      "linkHash": "7ab9ad19cfdab652",
-      "inputs": [
-        [
-          "requirement",
-          "20ee4de961e6c101"
-        ],
-        [
-          "model",
-          "cad3550825a70c07"
-        ]
-      ]
-    },
-    {
-      "key": {
-        "reqId": "REQ-REQDOC",
-        "clause": "malformed_reported",
         "bond": "modelImpl"
       },
       "level": "L3",
@@ -44308,43 +44640,15 @@
       "inputs": [
         [
           "implementation",
-          "053735024f99f744+63be949686434920+924f7b9e968a037e+fcf5008ad1e58234"
+          "053735024f99f744+4873e74d642eaff2+db4dd13a1f921894+fcf5008ad1e58234"
         ],
         [
           "model",
-          "cad3550825a70c07"
+          "7fb963e1650b761d"
         ],
         [
           "requirement",
           "20ee4de961e6c101"
-        ]
-      ]
-    },
-    {
-      "key": {
-        "reqId": "REQ-REQDOC",
-        "clause": "narrowings_nest",
-        "bond": "requirementModel"
-      },
-      "level": "L2",
-      "detail": {
-        "judge": {
-          "verdict": "agrees",
-          "judgedBy": "claude-review",
-          "delegatedBy": "ricostynha",
-          "promptVersion": "1",
-          "note": "Narrowings are read beside their clause and only clause keys are addressable."
-        }
-      },
-      "linkHash": "1e09095c86731ad6",
-      "inputs": [
-        [
-          "requirement",
-          "0dc95066dcdec80f"
-        ],
-        [
-          "model",
-          "cad3550825a70c07"
         ]
       ]
     },
@@ -44366,11 +44670,11 @@
       "inputs": [
         [
           "implementation",
-          "053735024f99f744+924f7b9e968a037e"
+          "053735024f99f744+db4dd13a1f921894"
         ],
         [
           "model",
-          "cad3550825a70c07"
+          "7fb963e1650b761d"
         ],
         [
           "requirement",
@@ -45990,7 +46294,7 @@
       "inputs": [
         [
           "implementation",
-          "1ca96acd04f1c6d8+39302bd17a175135+d04b064eff46abd8+f6b045588164b437"
+          "1ca96acd04f1c6d8+9a64f3d499a251d1+d04b064eff46abd8+f6b045588164b437"
         ],
         [
           "model",
@@ -47208,7 +47512,7 @@
       "inputs": [
         [
           "implementation",
-          "39302bd17a175135+3ee59ad610e968c9"
+          "3ee59ad610e968c9+9a64f3d499a251d1"
         ],
         [
           "model",
@@ -47324,7 +47628,7 @@
       "inputs": [
         [
           "implementation",
-          "14b231e70c2eb262+1e348090f50356c4+3ee59ad610e968c9+aeeeda4cdc9b8670+d2a332a9dd7d677a+e6e898adf246d972+fadb3d30f7428b90+fbc55b274e9687b0"
+          "14b231e70c2eb262+1e348090f50356c4+3ee59ad610e968c9+83b6129fab9b2c4f+aeeeda4cdc9b8670+d2a332a9dd7d677a+e6e898adf246d972+fadb3d30f7428b90"
         ],
         [
           "model",
@@ -47572,34 +47876,6 @@
       "key": {
         "reqId": "REQ-SHOW",
         "clause": "requirement_opened",
-        "bond": "requirementModel"
-      },
-      "level": "L2",
-      "detail": {
-        "judge": {
-          "verdict": "agrees",
-          "judgedBy": "claude-review",
-          "delegatedBy": "ricostynha",
-          "promptVersion": "1",
-          "note": "requirementView shows each clause with its marks and claims, each claim a link to its file and line."
-        }
-      },
-      "linkHash": "6cfca4316b773547",
-      "inputs": [
-        [
-          "requirement",
-          "194263b5b27f56c7"
-        ],
-        [
-          "model",
-          "24238bce88ec348d"
-        ]
-      ]
-    },
-    {
-      "key": {
-        "reqId": "REQ-SHOW",
-        "clause": "requirement_opened",
         "bond": "modelImpl"
       },
       "level": "L3",
@@ -47614,11 +47890,11 @@
       "inputs": [
         [
           "implementation",
-          "5fb3cd61976fbbec+c7a7baf0af37a448"
+          "5fb3cd61976fbbec+a47ba3db7daa9554"
         ],
         [
           "model",
-          "24238bce88ec348d"
+          "9de8fbba231dc2ea"
         ],
         [
           "requirement",
@@ -47672,7 +47948,7 @@
       "inputs": [
         [
           "implementation",
-          "c1dc3d65d3cf56ce+e6e898adf246d972"
+          "c1dc3d65d3cf56ce+d926a0442a8c3022+e6e898adf246d972+f8370672eff93419"
         ],
         [
           "model",
@@ -47767,36 +48043,6 @@
         [
           "model",
           "cebf0149688306d8"
-        ]
-      ]
-    },
-    {
-      "key": {
-        "reqId": "REQ-SHOW",
-        "clause": "sandbox_session_shown",
-        "bond": "modelImpl"
-      },
-      "level": "L3",
-      "detail": {
-        "drt": {
-          "seed": 406,
-          "cases": 2000,
-          "op": "REQ-SHOW.sandbox_session_shown"
-        }
-      },
-      "linkHash": "1b35d1a66775f174",
-      "inputs": [
-        [
-          "implementation",
-          "fbc55b274e9687b0+fc8b2a0549abcd11"
-        ],
-        [
-          "model",
-          "cebf0149688306d8"
-        ],
-        [
-          "requirement",
-          "bfc1b733d58320d7"
         ]
       ]
     },
@@ -49546,7 +49792,7 @@
       "inputs": [
         [
           "implementation",
-          "48be5fb8bdefd9d1+6fd20aab59dbbd30+f615e9c6f6b3bfdf"
+          "488e1fed54ac1571+6fd20aab59dbbd30+f615e9c6f6b3bfdf"
         ],
         [
           "model",
@@ -49632,7 +49878,7 @@
       "inputs": [
         [
           "implementation",
-          "16f8390d6004a5f4+628fb341073d2bd1"
+          "16f8390d6004a5f4+948fb3c4b61968ed"
         ],
         [
           "model",
@@ -49776,7 +50022,7 @@
       "inputs": [
         [
           "implementation",
-          "628fb341073d2bd1"
+          "948fb3c4b61968ed"
         ],
         [
           "model",
@@ -50616,7 +50862,7 @@
       "inputs": [
         [
           "implementation",
-          "085e49548b450f02+4e51ed5c840c7596+cbd18457dec9045d+f91f44a1f4bb0dfd"
+          "085e49548b450f02+4e51ed5c840c7596+8b7e5e5ac45a48eb+cbd18457dec9045d"
         ],
         [
           "model",
