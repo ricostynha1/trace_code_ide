@@ -124,6 +124,80 @@ pub fn diff_lines(before: Vec<String>, after: Vec<String>) -> Vec<DiffLine> {
     out
 }
 
+/// Largest middle (rows × columns) the interleaved diff computes exactly; beyond it the
+/// whole middle is shown as one removed block then one added block.
+const DIFF_CELLS: usize = 4_000_000;
+
+/// The same change as `diff_lines`, but with every changed place shown where it is: unchanged
+/// lines stay between the hunks, each hunk lists what it removed then what it added.
+///
+/// @implements REQ-SHOW.review_from_change
+pub fn diff_in_place(before: Vec<String>, after: Vec<String>) -> Vec<DiffLine> {
+    let front = common_prefix(&before, &after);
+    let rest_b = &before[front..];
+    let rest_a = &after[front..];
+    let back = rest_b.iter().rev().zip(rest_a.iter().rev()).take_while(|(x, y)| x == y).count();
+    let mid_b = &rest_b[..rest_b.len() - back];
+    let mid_a = &rest_a[..rest_a.len() - back];
+
+    let mut out: Vec<DiffLine> = before.iter().take(front).map(|l| marked(" ", Role::Plain, l)).collect();
+    let (n, m) = (mid_b.len(), mid_a.len());
+    if n.saturating_mul(m) > DIFF_CELLS {
+        out.extend(mid_b.iter().map(|l| marked("-", Role::Removed, l)));
+        out.extend(mid_a.iter().map(|l| marked("+", Role::Added, l)));
+    } else {
+        // longest common subsequence of the middle, from the ends
+        let mut keep = vec![vec![0u32; m + 1]; n + 1];
+        for i in (0..n).rev() {
+            for j in (0..m).rev() {
+                keep[i][j] = if mid_b[i] == mid_a[j] {
+                    keep[i + 1][j + 1] + 1
+                } else {
+                    keep[i + 1][j].max(keep[i][j + 1])
+                };
+            }
+        }
+        let (mut i, mut j) = (0, 0);
+        let (mut gone, mut came): (Vec<&String>, Vec<&String>) = (Vec::new(), Vec::new());
+        let flush = |out: &mut Vec<DiffLine>, gone: &mut Vec<&String>, came: &mut Vec<&String>| {
+            out.extend(gone.drain(..).map(|l| marked("-", Role::Removed, l)));
+            out.extend(came.drain(..).map(|l| marked("+", Role::Added, l)));
+        };
+        while i < n || j < m {
+            if i < n && j < m && mid_b[i] == mid_a[j] {
+                flush(&mut out, &mut gone, &mut came);
+                out.push(marked(" ", Role::Plain, &mid_b[i]));
+                i += 1;
+                j += 1;
+            } else if j >= m || (i < n && keep[i + 1][j] >= keep[i][j + 1]) {
+                gone.push(&mid_b[i]);
+                i += 1;
+            } else {
+                came.push(&mid_a[j]);
+                j += 1;
+            }
+        }
+        flush(&mut out, &mut gone, &mut came);
+    }
+    out.extend(rest_b[rest_b.len() - back..].iter().map(|l| marked(" ", Role::Plain, l)));
+    out
+}
+
+/// A change shown in place: the whole file, each changed line red or green where it is.
+///
+/// @implements REQ-SHOW.review_from_change
+pub fn review_in_place(target: String, before: String, after: String) -> Buffer {
+    let lines = diff_in_place(split_lines(&before), split_lines(&after));
+    let text: String = lines.iter().map(|line| line.text.clone()).collect::<Vec<_>>().join("\n");
+    let size = text.chars().count();
+    Buffer {
+        id: format!("review:{target}"),
+        kind: BufferKind::Review { target },
+        text,
+        spans: tidy(size, line_spans(&lines)),
+    }
+}
+
 fn line_spans(lines: &[DiffLine]) -> Vec<Span> {
     let mut out = Vec::new();
     let mut at = 0usize;
@@ -916,5 +990,18 @@ mod tests {
         assert_eq!(faults(buffer.clone()), vec![]);
         assert_eq!(buffer.spans[0].stop, 4);
         assert_eq!(buffer.text.len(), 6);
+    }
+
+    /// @tests REQ-SHOW.review_from_change
+    #[test]
+    fn scattered_edits_are_each_shown_where_they_are() {
+        let lines = |t: &str| t.split(' ').map(String::from).collect::<Vec<_>>();
+        let shown: Vec<String> =
+            diff_in_place(lines("a b c d e f g"), lines("a B c d e F g")).into_iter().map(|d| d.text).collect();
+        assert_eq!(shown, vec![" a", "-b", "+B", " c", " d", " e", "-f", "+F", " g"]);
+        let none: Vec<String> = diff_in_place(lines("x y"), lines("x y")).into_iter().map(|d| d.text).collect();
+        assert_eq!(none, vec![" x", " y"]);
+        let made: Vec<String> = diff_in_place(vec![], lines("p q")).into_iter().map(|d| d.text).collect();
+        assert_eq!(made, vec!["+p", "+q"]);
     }
 }

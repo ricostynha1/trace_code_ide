@@ -1,0 +1,51 @@
+[
+  {
+    "model": "claude-opus-4-20250514",
+    "input": 15000000,
+    "cached": 1500000,
+    "cacheWrite": 18750000,
+    "output": 75000000
+  },
+  {
+    "model": "claude-sonnet-4-5-20250929",
+    "input": 3000000,
+    "cached": 300000,
+    "cacheWrite": 3750000,
+    "output": 15000000
+  },
+  {
+    "model": "claude-haiku-4-5-20251001",
+    "input": 800000,
+    "cached": 80000,
+    "cacheWrite": 1000000,
+    "output": 4000000
+  },
+  {
+    "model": "claude-haiku-5-5",
+    "input": 100000,
+    "cached": 10000,
+    "cacheWrite": 125000,
+    "output": 500000
+  },
+  {
+    "model": "claude-sonnet-5-5",
+    "input": 2000000,
+    "cached": 100000,
+    "cacheWrite": 2500000,
+    "output": 10000000
+  },
+  {
+    "model": "claude-opus-5-5",
+    "input": 4000000,
+    "cached": 200000,
+    "cacheWrite": 5000000,
+    "output": 20000000
+  },
+  {
+    "model": "claude-fable-5-2",
+    "input": 8000000,
+    "cached": 800000,
+    "cacheWrite": 10000000,
+    "output": 40000000
+  }
+]

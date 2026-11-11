@@ -208,7 +208,7 @@ fn what_the_agent_does_enters_the_editor_and_the_history_at_once_and_the_project
     assert!(row.contains('+'), "the made file is not marked: {row}");
 
     let shown = history(&mut editor);
-    assert_eq!(shown.lines().filter(|l| l.contains('#')).count(), before + 1, "what arrived together is not one node:\n{shown}");
+    assert_eq!(shown.lines().filter(|l| l.contains('#')).count(), before + 2, "each file is not its own node:\n{shown}");
     assert!(shown.contains("agent: "), "the node is not named as the agent's:\n{shown}");
     assert!(shown.contains("not accepted yet — 2 files"), "{shown}");
     let held = editor.view(BufferKind::Record { title: "history".into() });
@@ -216,7 +216,7 @@ fn what_the_agent_does_enters_the_editor_and_the_history_at_once_and_the_project
     assert_eq!(actions_at(held, at), vec!["observe.diff".to_string()]);
 
     assert!(!editor.tick(), "the same change was taken in twice");
-    assert_eq!(history(&mut editor).lines().filter(|l| l.contains('#')).count(), before + 1);
+    assert_eq!(history(&mut editor).lines().filter(|l| l.contains('#')).count(), before + 2);
 
     act(&mut editor, "sandbox.end");
     let _ = std::fs::remove_dir_all(&root);
@@ -237,7 +237,6 @@ fn undo_goes_back_across_what_the_agent_did_resets_the_copy_and_accepting_marks_
     std::fs::write(work(&editor).join("src/a.rs"), "fn a() { 1 }\n").unwrap();
     assert!(editor.tick());
     std::fs::write(work(&editor).join("src/a.rs"), "fn a() { 1 + mess }\n").unwrap();
-    std::fs::write(work(&editor).join("src/c.rs"), "fn c() {}\n").unwrap();
     assert!(editor.tick());
     let two = history(&mut editor);
     assert_eq!(two.matches("agent: ").count(), 2, "each arrival is not its own node:\n{two}");
@@ -309,5 +308,23 @@ fn the_history_draws_the_branch_being_worked_on_first() {
     let rows: Vec<&str> = shown.lines().filter(|l| l.contains('#')).collect();
     assert!(rows.len() >= 4, "three branches were not kept:\n{shown}");
     assert!(rows[1].starts_with('●'), "the branch being worked on is not first and leftmost:\n{shown}");
+    let _ = std::fs::remove_dir_all(&root);
+}
+
+/// @tests REQ-OBS.mirrored_live
+/// @tests REQ-UNDO.whole_by_default
+#[test]
+fn each_file_the_agent_changes_is_its_own_node_of_the_history() {
+    let root = project("perfile");
+    let mut editor = Editor::open(root.clone(), keymap());
+    act(&mut editor, "sandbox.new");
+    std::fs::write(work(&editor).join("src/a.rs"), "fn a() { 1 }\n").unwrap();
+    std::fs::write(work(&editor).join("src/b.rs"), "fn b() { 2 }\n").unwrap();
+    assert!(editor.tick());
+    act(&mut editor, "screen.station.history");
+    let text = plain_text(editor.buffer()).join("\n");
+    let line_of = |name: &str| text.lines().find(|l| l.contains(name)).unwrap_or_else(|| panic!("{name} missing:\n{text}")).to_string();
+    let (a, b) = (line_of("src/a.rs"), line_of("src/b.rs"));
+    assert!(a != b && !a.contains("src/b.rs") && !b.contains("src/a.rs"), "one node holds both files:\n{text}");
     let _ = std::fs::remove_dir_all(&root);
 }

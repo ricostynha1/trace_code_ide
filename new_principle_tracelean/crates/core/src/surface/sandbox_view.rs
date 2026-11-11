@@ -33,6 +33,8 @@ pub struct SandboxView {
     pub pending: Vec<Pending>,
     pub said: Vec<Event>,
     pub spend: Spend,
+    #[serde(default)]
+    pub tokens: String,
     pub width: usize,
 }
 
@@ -143,9 +145,12 @@ fn role_of(kind: &str) -> Role {
     }
 }
 
-fn cost_lines(out: &mut Lines, estimate: &str) {
-    out.line(&[("Agent cost (price table's unit)", role_of("cost"), &[])]);
+fn cost_lines(out: &mut Lines, estimate: &str, tokens: &str) {
+    out.line(&[("Agent cost (USD)", role_of("cost"), &[])]);
     out.wrapped("  ", estimate, Role::Plain, &[]);
+    if !tokens.is_empty() {
+        out.wrapped("  ", tokens, Role::Entry, &[]);
+    }
 }
 
 /// @implements REQ-SHOW.sandbox_session_shown
@@ -166,7 +171,7 @@ pub fn sandbox_view(view: SandboxView) -> Buffer {
         out.line(&[("[ New sandbox ]", Role::Entry, &["sandbox.new"])]);
         if let Some(cost) = sandbox_events(Vec::new(), view.said, view.spend).last() {
             out.blank();
-            cost_lines(&mut out, &cost.text);
+            cost_lines(&mut out, &cost.text, &view.tokens);
         }
         return out.finish("sandbox");
     };
@@ -218,18 +223,18 @@ pub fn sandbox_view(view: SandboxView) -> Buffer {
     }
     out.blank();
 
-    out.line(&[("Conversation, newest first", Role::Heading, &[])]);
     let rows = sandbox_events(Vec::new(), view.said, view.spend);
-    if rows.len() <= 1 {
+    let (cost, said) = rows.split_last().map(|(c, s)| (Some(c), s)).unwrap_or((None, &[]));
+    if let Some(cost) = cost {
+        cost_lines(&mut out, &cost.text, &view.tokens);
+        out.blank();
+    }
+    out.line(&[("Conversation, newest first", Role::Heading, &[])]);
+    if said.is_empty() {
         out.wrapped("  ", "Nothing yet. It appears here as the agent works.", Role::Plain, &[]);
     }
-    let (cost, said) = rows.split_last().map(|(c, s)| (Some(c), s)).unwrap_or((None, &[]));
     for event in said.iter().rev() {
         out.wrapped("", &format!("{}: {}", event.kind, event.text), role_of(&event.kind), &[]);
-    }
-    if let Some(cost) = cost {
-        out.blank();
-        cost_lines(&mut out, &cost.text);
     }
     out.finish("sandbox")
 }
@@ -252,6 +257,7 @@ mod tests {
                 Event { kind: "agent".into(), text: "second".into() },
             ],
             spend: Spend::default(),
+            tokens: String::new(),
             width: 40,
         }
     }

@@ -1,5 +1,6 @@
 import { drawOverview, showing, type Design, type Node as DesignNode } from "./overview.ts";
 import { classOf, pieces, shown } from "./render.ts";
+import { markdown } from "./markdown.ts";
 import type { Buffer, Pane } from "./view.ts";
 
 const LINE = 21;
@@ -37,6 +38,8 @@ export function draw(into: HTMLElement, buffer: Buffer, act: (action: string, at
     const length = line.reduce((sum, piece) => sum + Array.from(piece.text).length, 0);
     row.dataset.start = String(start);
     row.dataset.length = String(length);
+    const first = line[0]?.role;
+    if (first === "added" || first === "removed") row.classList.add(`line-${first}`);
     start += length + 1;
     if (line.length === 0) {
       row.appendChild(document.createTextNode(""));
@@ -332,6 +335,44 @@ export function explainMarks(box: HTMLElement, marks: Record<string, string> | n
   }
 }
 
+/** Markdown files shown as source (the others are shown formatted). */
+const sourced = new Set<string>();
+
+const SAID_LABEL: Record<string, string> = {
+  you: "You",
+  agent: "Agent",
+  thinking: "Thinking",
+  tool: "Tool",
+  result: "Result",
+  failed: "Failed",
+};
+
+/** The agent's conversation, newest first, markdown formatted. */
+function drawConversation(said: { kind: string; text: string }[]): HTMLElement {
+  const box = document.createElement("div");
+  box.className = "conversation";
+  for (const event of [...said].reverse()) {
+    const quiet = event.kind === "thinking" || event.kind === "tool" || event.kind === "result";
+    const turn = document.createElement(quiet ? "details" : "div");
+    turn.className = `turn turn-${event.kind}`;
+    const label = document.createElement(quiet ? "summary" : "div");
+    label.className = "turn-label";
+    label.textContent = SAID_LABEL[event.kind] ?? event.kind;
+    if (quiet) label.textContent += ` · ${event.text.split("\n")[0].slice(0, 80)}`;
+    turn.appendChild(label);
+    if (event.kind === "tool" || event.kind === "result") {
+      const pre = document.createElement("pre");
+      pre.className = "md-pre";
+      pre.textContent = event.text;
+      turn.appendChild(pre);
+    } else {
+      turn.appendChild(markdown(event.text));
+    }
+    box.appendChild(turn);
+  }
+  return box;
+}
+
 function drawPane(into: HTMLElement, pane: Pane) {
   const box = document.createElement("div");
   const kind = Object.keys(pane.buffer.kind)[0] ?? "file";
@@ -342,15 +383,58 @@ function drawPane(into: HTMLElement, pane: Pane) {
   box.style.top = `${pane.at.top * LINE}px`;
   box.style.width = `${pane.at.width}ch`;
   box.style.height = `${pane.at.height * LINE}px`;
-  draw(box, pane.buffer, (action, at) => run("act", { pane: pane.pane, action, offset: at }));
-  if (kind === "file") {
+  const act = (action: string, at: number) => run("act", { pane: pane.pane, action, offset: at });
+  const path = "file" in pane.buffer.kind ? pane.buffer.kind.file.path : "";
+  const formatted = typeof pane.markdown === "string" && !sourced.has(path);
+  if (formatted) {
+    box.classList.add("rich", "md-preview");
+    const switcher = document.createElement("button");
+    switcher.className = "md-switch";
+    switcher.textContent = "Edit source";
+    switcher.title = "Show the file's text, to edit it (double-click the page does the same)";
+    const toSource = () => {
+      sourced.add(path);
+      if (ctx) void show(ctx.invoke, ctx.into, ctx.status);
+    };
+    switcher.addEventListener("click", (event) => {
+      event.stopPropagation();
+      toSource();
+    });
+    box.addEventListener("dblclick", toSource);
+    box.appendChild(switcher);
+    box.appendChild(markdown(pane.markdown as string));
+  } else if (pane.said) {
+    box.classList.add("rich");
+    const marker = "Conversation, newest first";
+    const at = pane.buffer.text.indexOf(marker);
+    const cut = at < 0 ? pane.buffer.text.length : Array.from(pane.buffer.text.slice(0, at)).length;
+    const head = {
+      ...pane.buffer,
+      text: Array.from(pane.buffer.text).slice(0, cut).join("").replace(/\n+$/, ""),
+      spans: pane.buffer.spans.filter((span) => span.start < cut).map((span) => ({ ...span, stop: Math.min(span.stop, cut) })),
+    };
+    const top = document.createElement("div");
+    top.className = "sandbox-head";
+    draw(top, head, act);
+    box.appendChild(top);
+    const title = document.createElement("div");
+    title.className = "turn-heading role-heading";
+    title.textContent = marker;
+    box.appendChild(title);
+    box.appendChild(drawConversation(pane.said));
+  } else {
+    draw(box, pane.buffer, act);
+  }
+  if (formatted && "file" in pane.buffer.kind) {
+    // nothing else is drawn over a formatted page
+  } else if (kind === "file") {
     Array.from(box.children).forEach((row, index) => {
       if (row instanceof HTMLElement) row.dataset.number = String((pane.top ?? 0) + index + 1);
     });
     drawChips(box, pane);
     drawCoverage(box, pane);
   }
-  drawScrollbar(box, pane);
+  if (!box.classList.contains("rich")) drawScrollbar(box, pane);
   if (kind === "directory") explainMarks(box);
 
   for (const node of box.querySelectorAll<HTMLElement>('button[data-action="history.jump"]')) {
@@ -364,6 +448,7 @@ function drawPane(into: HTMLElement, pane: Pane) {
     void adoptSelection().then(() => ctx && show(ctx.invoke, ctx.into, ctx.status));
   });
   box.addEventListener("click", (event) => {
+    if (box.classList.contains("rich")) return;
     const selection = window.getSelection();
     if (dragged || (selection && !selection.isCollapsed)) {
       dragged = false;
@@ -391,6 +476,7 @@ function drawPane(into: HTMLElement, pane: Pane) {
   box.addEventListener(
     "wheel",
     (event) => {
+      if (box.classList.contains("rich")) return;
       if (event.shiftKey || Math.abs(event.deltaX) > Math.abs(event.deltaY)) return;
       event.preventDefault();
       wheeling += event.deltaY;
@@ -463,6 +549,79 @@ export function stationIcon(action: string): SVGElement | null {
   return icon;
 }
 
+type Drop = "right" | "down" | "here";
+
+/** Where a dragged tab would land over a pane: the bottom part opens below, the right half beside. */
+export function dropZone(x: number, y: number): Drop {
+  if (y > 0.72) return "down";
+  if (x > 0.5) return "right";
+  return "here";
+}
+
+/**
+ * Dragging a tab onto a pane: the right half opens it beside, the bottom opens it below,
+ * the rest shows it in that pane. Shows the landing area while the pointer is held.
+ *
+ * @implements REQ-LOOK.tab_drag_splits
+ */
+function dragTab(item: HTMLElement, event: MouseEvent, station: boolean, piece: { actions: string[]; at: number }) {
+  if (event.button !== 0 || (event.target instanceof Element && event.target.closest(".close"))) return;
+  const [x0, y0] = [event.clientX, event.clientY];
+  let dragging = false;
+  let hint: HTMLElement | null = null;
+  const target = (e: MouseEvent) => {
+    const under = document.elementsFromPoint(e.clientX, e.clientY).find((n) => n.classList.contains("pane")) as HTMLElement | undefined;
+    if (!under) return null;
+    const box = under.getBoundingClientRect();
+    return { under, box, zone: dropZone((e.clientX - box.left) / box.width, (e.clientY - box.top) / box.height) };
+  };
+  const move = (e: MouseEvent) => {
+    if (!dragging && Math.hypot(e.clientX - x0, e.clientY - y0) < 6) return;
+    dragging = true;
+    document.body.classList.add("tab-dragging");
+    const at = target(e);
+    if (!at) {
+      hint?.remove();
+      hint = null;
+      return;
+    }
+    hint ??= Object.assign(document.createElement("div"), { className: "drop-hint" });
+    if (!hint.isConnected) document.body.appendChild(hint);
+    const { box, zone } = at;
+    const [left, top, width, height] =
+      zone === "right" ? [box.left + box.width / 2, box.top, box.width / 2, box.height]
+      : zone === "down" ? [box.left, box.top + box.height * 0.72, box.width, box.height * 0.28]
+      : [box.left, box.top, box.width, box.height];
+    Object.assign(hint.style, { left: `${left}px`, top: `${top}px`, width: `${width}px`, height: `${height}px` });
+    hint.dataset.zone = zone;
+  };
+  const up = (e: MouseEvent) => {
+    document.removeEventListener("mousemove", move);
+    document.removeEventListener("mouseup", up);
+    document.body.classList.remove("tab-dragging");
+    hint?.remove();
+    if (!dragging) return;
+    // the click that follows a drag must not also show the tab
+    item.addEventListener("click", (c) => c.stopImmediatePropagation(), { capture: true, once: true });
+    const at = target(e);
+    if (!at || !ctx) return;
+    const invoke = ctx.invoke;
+    void (async () => {
+      if (!at.under.classList.contains("focused")) {
+        await invoke("place", { pane: at.under.dataset.pane, offset: 0 });
+      }
+      if (at.zone !== "here") {
+        await invoke("act_here", { action: at.zone === "right" ? "screen.split.across" : "screen.split.down" });
+        await invoke("act_here", { action: at.zone === "right" ? "screen.focus.right" : "screen.focus.down" });
+      }
+      await invoke("act_in_bar", { station, action: piece.actions[0], offset: piece.at });
+      if (ctx) await show(ctx.invoke, ctx.into, ctx.status);
+    })();
+  };
+  document.addEventListener("mousemove", move);
+  document.addEventListener("mouseup", up);
+}
+
 function drawBar(
   into: HTMLElement | null,
   buffer: Buffer,
@@ -493,6 +652,7 @@ function drawBar(
         item.title = presented.name.trim();
         item.addEventListener("click", () => act(station, piece.actions[0], piece.at));
         if (!station && piece.actions[0].split(" ")[0] === "screen.show") {
+          item.addEventListener("mousedown", (event) => dragTab(item, event, station, piece));
           const close = () =>
             void (ctx?.invoke("act_in_bar", { station, action: "screen.show", offset: piece.at }) ?? Promise.resolve())
               .then(() => run("chord", { chord: "C-w" }));

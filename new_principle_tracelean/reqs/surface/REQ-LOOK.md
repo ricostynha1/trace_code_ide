@@ -21,6 +21,8 @@ clauses:
   accessible_structure: The system shall give assistive technology what the page shows — each region a landmark with a name, each control with a name — as the browser's own accessibility tree reports it.
   journeys_replay: When a person's task is written once as keys, text typed and what must or must not be visible after them, the system shall replay it with the same outcome in every frontend, each driven as a person drives it.
   contrast_sufficient: The system shall give every pair of colours the theme declares as drawn together a contrast ratio, by WCAG's relative luminance and computed from the theme itself, of at least the minimum the pair declares — 4.5 for text, 3 for marks that are not text — unless the pair carries the theme's reason for keeping it below, and shall report a reason on a pair that meets its minimum.
+  markdown_drawn: The window shall draw a markdown file, and what the agent says in the sandbox panel, as formatted text — headings, emphasis, lists, tables, quotes and code blocks — built only from the text, never from markup inside it, while the buffer's own text stays what is edited and the file can be shown as its source and edited there.
+  tab_drag_splits: When a tab is dragged and released over a pane, the window shall show the tab beside that pane's buffer when it is released over the right half, below it when released over its bottom part, and in that pane otherwise, and show the area it will take while the tab is held.
   stations_have_icons: The window shall draw each station of the station bar as a button holding a drawn icon of that station, named by the station's own name for assistive technology, and a station that has no icon shall keep its name as words.
 ---
 

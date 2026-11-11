@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use crate::observe::cost::Price;
-use crate::observe::transcript::{self, Read};
+use crate::observe::transcript::{self, Read, Usage};
 
 pub const TRANSCRIPT: &str = ".tracelean/agent/transcript.jsonl";
 
@@ -43,8 +43,50 @@ pub fn claude_transcript(root: &Path, since: std::time::SystemTime) -> String {
     }
 }
 
+const DEFAULT_PRICES: &str = include_str!("../../../../assets/prices.json");
+
+/// The project's price file, then the shipped table for models it does not list.
 /// @implements REQ-COST.price_is_per_model
 pub fn table_of(root: &Path) -> Vec<Price> {
     let text = std::fs::read_to_string(root.join(PRICES)).unwrap_or_default();
-    serde_json::from_str(&text).unwrap_or_default()
+    let mut table: Vec<Price> = serde_json::from_str(&text).unwrap_or_default();
+    let shipped: Vec<Price> = serde_json::from_str(DEFAULT_PRICES).unwrap_or_default();
+    for price in shipped {
+        if !table.iter().any(|held| held.model == price.model) {
+            table.push(price);
+        }
+    }
+    table
+}
+
+/// A model the table does not list is priced as the newest listed model of the same
+/// family (fable, opus, sonnet, haiku); a family with none stays unlisted, so it is named as
+/// unpriced rather than counted as free.
+pub fn priced_as(table: &[Price], usage: Vec<Usage>) -> Vec<Usage> {
+    usage
+        .into_iter()
+        .map(|mut one| {
+            if !table.iter().any(|price| price.model == one.model) {
+                if let Some(family) = ["fable", "opus", "sonnet", "haiku"].iter().find(|f| one.model.contains(**f)) {
+                    if let Some(price) = table.iter().rev().find(|price| price.model.contains(family)) {
+                        one.model = price.model.clone();
+                    }
+                }
+            }
+            one
+        })
+        .collect()
+}
+
+/// "12.3k in · 40.1k cached · 2.0k out" over all usage, so a cost of 0 is never unexplained.
+pub fn tokens_line(usage: &[Usage]) -> String {
+    let sum = |f: fn(&Usage) -> u64| usage.iter().map(f).sum::<u64>();
+    let k = |n: u64| if n >= 1000 { format!("{:.1}k", n as f64 / 1000.0) } else { n.to_string() };
+    format!(
+        "tokens: {} in · {} cached read · {} cached written · {} out",
+        k(sum(|u| u.input)),
+        k(sum(|u| u.cached)),
+        k(sum(|u| u.cache_write)),
+        k(sum(|u| u.output))
+    )
 }

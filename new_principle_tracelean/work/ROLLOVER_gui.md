@@ -164,3 +164,22 @@ What is still missing after it: `work/handover.md`.
 Tests added: `crates/editor/tests/sandbox.rs` (4: live mirroring into editor and history with the project untouched; undo across agent nodes resets the copy and accept marks the point; reject is a node; current branch first); `history_view.rs`, `quick.rs`, `sandbox.rs` unit tests; `web/test/pointer.mjs` (report button, tree-mark title, F5, swapped shortcuts); `crates/tui/tests/driving.rs` `ctrl_p_finds_a_command_by_a_few_letters_and_runs_it`.
 
 Docs: `user_manual.md` (§7.1 keys, §7.4 overview, §9, §14.4, §17.1), `assets/tutorial.md`, `docs/USING.md`.
+
+---
+
+# Slice 6 (2026-11-11, uncommitted on `gui-usability`)
+
+Goal: the five items of `work/handover.md` (markdown, cost, tab-drag split, history per file, in-place diff).
+
+## Done
+- **Cost**: usage counted once per reply (`transcript.rs` `once_per_message`, by `message.id`); shipped `assets/prices.json` merged under the project's (`watch.rs` `table_of`); unlisted model priced as newest of its family (`priced_as`; `claude-fable-*` stays "unpriced", named); token totals line (`tokens_line`); cost block now ABOVE the conversation (`sandbox_view.rs`). Add real prices for new models to `.tracelean/prices.json` (units: micro-USD per Mtok).
+- **Markdown**: `web/src/markdown.ts` (DOM only, no innerHTML). `.md` panes drawn formatted with "Edit source" button / double-click (`sourced` set in `app.ts`); sandbox conversation drawn as turns (`drawConversation`). Desktop `Pane` gained `markdown` and `said`; `Editor::conversation()`. Stub in `crates/editor/examples/look.rs` updated. Terminal untouched.
+- **Tab drag**: `dragTab`/`dropZone` in `app.ts`; right half = split across, bottom 28% = split down, else show in pane. `.drop-hint` CSS.
+- **History per file**: `tick` pushes one `Batch` per file; `mark_files_accepted` marks all agent nodes of accepted files. File filter now works for agent nodes.
+- **Diff in place**: `produce.rs` `diff_in_place`/`review_in_place` (LCS, interleaved hunks; NOT in the Lean model, `diff_lines` unchanged); editor `produce` uses it; `.line-added/.line-removed` full-width tint in CSS.
+- Clauses: `REQ-LOOK.markdown_drawn`, `REQ-LOOK.tab_drag_splits`, `REQ-OBS.mirrored_live` extended.
+
+## Next
+- Untested visually in the real app: tab drag, sandbox conversation, review colours (only README preview screenshotted). Run `cargo tauri dev`-style app and try.
+- Model `diff_in_place` in `Produce.lean` (Unmodeled); re-earn evidence (`--stale`).
+- Dragging from the file tree (not only tabs) not done.

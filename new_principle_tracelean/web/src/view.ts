@@ -62,6 +62,8 @@ export interface Pane {
   lines?: number;
   chips?: [number, string, string][];
   coverage?: [number, number, string][];
+  markdown?: string | null;
+  said?: { kind: string; text: string }[] | null;
 }
 
 export type Breach =

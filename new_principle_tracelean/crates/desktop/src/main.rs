@@ -32,6 +32,15 @@ struct Pane {
     lines: usize,
     chips: Vec<(usize, char, String)>,
     coverage: Vec<(usize, u64, String)>,
+    /// A markdown file's whole text, for the formatted preview.
+    markdown: Option<String>,
+    /// The agent's conversation, for the sandbox panel (the buffer then holds all lines).
+    said: Option<Vec<tracelean_core::observe::transcript::Event>>,
+}
+
+fn is_markdown(path: &str) -> bool {
+    let lower = path.to_lowercase();
+    lower.ends_with(".md") || lower.ends_with(".markdown")
 }
 
 #[tauri::command]
@@ -43,16 +52,28 @@ fn shown(held: State<'_, Held>, width: u64, height: u64) -> Vec<Pane> {
     editor
         .laid_out(region)
         .into_iter()
-        .map(|placed| Pane {
+        .map(|placed| {
+            use tracelean_core::surface::view::BufferKind;
+            let markdown = match &placed.buffer.kind {
+                BufferKind::File { path } if is_markdown(path) => {
+                    Some(editor.workspace().files.get(path).cloned().unwrap_or_default())
+                }
+                _ => None,
+            };
+            let sandbox = placed.buffer.id == "record:sandbox";
+            let said = sandbox.then(|| editor.conversation()).filter(|said| !said.is_empty());
+            Pane {
+            markdown,
             lines: placed.buffer.text.split('\n').count(),
             chips: editor.chips_shown(&placed.buffer, placed.top, placed.at.height as usize),
             coverage: editor.coverage_shown(&placed.buffer, placed.top, placed.at.height as usize),
-            buffer: window(placed.buffer, placed.top, placed.at.height as usize),
+            buffer: if said.is_some() { placed.buffer } else { window(placed.buffer, placed.top, placed.at.height as usize) },
+            said,
             pane: placed.pane,
             at: placed.at,
             focused: placed.focused,
             top: placed.top,
-        })
+        }})
         .collect()
 }
 

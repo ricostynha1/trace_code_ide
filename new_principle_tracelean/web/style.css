@@ -1471,3 +1471,51 @@ body.stations-hidden #stations {
 .ov-copy + .ov-close {
   margin-left: 0;
 }
+
+/* Formatted markdown (files and the agent's conversation) */
+.pane.rich { overflow-y: auto; white-space: normal; padding: 0 0 2em; }
+.pane.md-preview { padding: 0.5em 1.4em 2em; font-family: var(--fonts-chrome); font-size: calc(var(--fonts-chromeSize) + 1px); line-height: 1.6; }
+.md-switch { position: sticky; top: 0; float: right; z-index: 2; font: inherit; font-size: 0.8em; padding: 0.15em 0.7em; border: 1px solid var(--ui-border); border-radius: 4px; background: var(--ui-sidebar); color: var(--ui-sidebarText); cursor: pointer; }
+.md > :first-child { margin-top: 0; }
+.md-h { line-height: 1.25; margin: 1.2em 0 0.45em; font-weight: 650; }
+h1.md-h { font-size: 1.6em; border-bottom: 1px solid var(--ui-border); padding-bottom: 0.25em; }
+h2.md-h { font-size: 1.3em; border-bottom: 1px solid var(--ui-border); padding-bottom: 0.2em; }
+h3.md-h { font-size: 1.12em; }
+h4.md-h, h5.md-h, h6.md-h { font-size: 1em; opacity: 0.85; }
+.md-p { margin: 0.55em 0; white-space: normal; overflow-wrap: anywhere; }
+.md-list { margin: 0.4em 0; padding-left: 1.6em; }
+.md-list li { margin: 0.2em 0; overflow-wrap: anywhere; }
+.md-list .md-list { margin: 0.1em 0; }
+.md-task.done { opacity: 0.6; }
+.md code.md-code { font-family: var(--fonts-code); font-size: 0.92em; padding: 0.08em 0.35em; border-radius: 3px; background: color-mix(in srgb, currentColor 12%, transparent); }
+.md-pre { position: relative; margin: 0.6em 0; padding: 0.7em 0.9em; overflow-x: auto; white-space: pre; border-radius: 5px; background: color-mix(in srgb, currentColor 9%, transparent); border: 1px solid var(--ui-border); font-family: var(--fonts-code); font-size: 0.9em; line-height: 1.45; }
+.md-pre[data-lang]::before { content: attr(data-lang); position: absolute; top: 0.15em; right: 0.6em; font-size: 0.75em; opacity: 0.55; }
+.md-quote { margin: 0.6em 0; padding: 0.1em 0.9em; border-left: 3px solid var(--ui-border); opacity: 0.9; }
+.md-hr { border: 0; border-top: 1px solid var(--ui-border); margin: 1em 0; }
+.md-link { text-decoration: underline; text-underline-offset: 2px; color: var(--ui-accent, #4f8cff); cursor: default; }
+.md-table-wrap { overflow-x: auto; margin: 0.6em 0; }
+.md-table { border-collapse: collapse; }
+.md-table th, .md-table td { border: 1px solid var(--ui-border); padding: 0.25em 0.7em; text-align: left; vertical-align: top; }
+.md-table th { background: color-mix(in srgb, currentColor 8%, transparent); }
+.sandbox-head .line { white-space: pre-wrap; font-family: var(--fonts-chrome); font-size: var(--fonts-panelSize); height: auto; }
+.turn-heading { margin: 0.8em 0 0.4em; font-family: var(--fonts-chrome); font-size: var(--fonts-panelSize); }
+.conversation { font-family: var(--fonts-chrome); font-size: var(--fonts-panelSize); line-height: 1.5; padding-right: 0.8em; }
+.turn { margin: 0.5em 0; padding: 0.4em 0.7em; border-radius: 6px; border: 1px solid var(--ui-border); }
+.turn-label { font-size: 0.78em; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.7; margin-bottom: 0.2em; }
+details.turn > summary { cursor: pointer; text-transform: none; letter-spacing: 0; opacity: 0.75; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.turn-you { background: color-mix(in srgb, var(--ui-accent, #4f8cff) 14%, transparent); }
+.turn-agent { background: color-mix(in srgb, currentColor 5%, transparent); }
+.turn-failed { border-color: #d55; }
+.conversation .md-pre { font-size: 0.85em; max-height: 18em; overflow: auto; }
+
+/* Dragging a tab onto a pane */
+body.tab-dragging { cursor: grabbing; user-select: none; }
+.drop-hint { position: fixed; z-index: 50; pointer-events: none; border: 2px solid var(--ui-accent, #4f8cff); background: color-mix(in srgb, var(--ui-accent, #4f8cff) 22%, transparent); border-radius: 4px; transition: left 80ms, top 80ms, width 80ms, height 80ms; }
+.drop-hint[data-zone="here"] { opacity: 0.45; }
+
+/* A change shown in place: whole lines red or green */
+.line.line-added, .line.line-removed { display: block; }
+.line.line-added { background: color-mix(in srgb, var(--roles-added) 20%, transparent); box-shadow: inset 3px 0 0 var(--roles-added); }
+.line.line-removed { background: color-mix(in srgb, var(--roles-removed) 20%, transparent); box-shadow: inset 3px 0 0 var(--roles-removed); }
+.line.line-added > *, .line.line-removed > * { background: transparent; }
+.line.line-removed > * { text-decoration: line-through; text-decoration-thickness: 1px; text-decoration-color: color-mix(in srgb, var(--roles-removed) 60%, transparent); }

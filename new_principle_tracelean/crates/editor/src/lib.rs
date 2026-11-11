@@ -2511,12 +2511,12 @@ impl Editor {
                 Some(agent) if self.session.is_none() && self.pending.iter().any(|c| touched(c) == target) => {
                     let before = self.workspace().files.get(&target).cloned().unwrap_or_default();
                     let after = agent.files.get(&target).cloned().unwrap_or_default();
-                    make::review_buffer(target, before, after)
+                    make::review_in_place(target, before, after)
                 }
                 _ => {
                     let before = self.saved.files.get(&target).cloned().unwrap_or_default();
                     let after = self.workspace().files.get(&target).cloned().unwrap_or_default();
-                    make::review_buffer(target, before, after)
+                    make::review_in_place(target, before, after)
                 }
             },
             BufferKind::Menu { title } if title == "opened" => self.strip(),
@@ -2842,6 +2842,19 @@ impl Editor {
             .collect()
     }
 
+    /// What the agent in the live sandbox has said, oldest first (empty with no sandbox);
+    /// the window draws it as formatted text beside the panel's plain lines.
+    pub fn conversation(&self) -> Vec<Event> {
+        use tracelean_core::observe::{claude, watch, workcopy as session};
+        let Some(live) = &self.session else { return Vec::new() };
+        let text = watch::claude_transcript(&self.root, session::began(live));
+        if text.is_empty() {
+            watch::transcript_of(&self.root).events
+        } else {
+            claude::events(&text)
+        }
+    }
+
     /// @implements ARCH-NO-DRIVING.no_model_call
     fn sandbox(&self) -> Buffer {
         use tracelean_core::observe::{claude, cost, transcript, watch, workcopy as session};
@@ -2852,6 +2865,7 @@ impl Editor {
                 pending: Vec::new(),
                 said: Vec::new(),
                 spend: cost::Spend::default(),
+                tokens: String::new(),
                 width: self.side_width(),
             });
         };
@@ -2862,7 +2876,9 @@ impl Editor {
         } else {
             (claude::events(&text), transcript::read(text).usage)
         };
-        let spend = cost::spend_of(watch::table_of(&self.root), usage);
+        let table = watch::table_of(&self.root);
+        let tokens = watch::tokens_line(&usage);
+        let spend = cost::spend_of(table.clone(), watch::priced_as(&table, usage));
         let mut pending: Vec<Pending> = Vec::new();
         for command in &self.pending {
             let path = touched(command);
@@ -2902,6 +2918,7 @@ impl Editor {
             pending,
             said,
             spend,
+            tokens,
             width: self.side_width(),
         })
     }
@@ -2978,10 +2995,27 @@ impl Editor {
         }
         let moved = !incoming.is_empty();
         if moved {
-            let files: BTreeSet<String> = incoming.iter().map(touched).collect();
-            match self.push(Command::Batch { commands: incoming }) {
-                Ok(id) => {
-                    self.agent_nodes.insert(id.0);
+            // @implements REQ-OBS.mirrored_live
+            // one history node per file, so the history can be read and filtered by file
+            let mut per_file: BTreeMap<String, Vec<Command>> = BTreeMap::new();
+            for command in incoming {
+                per_file.entry(touched(&command)).or_default().push(command);
+            }
+            let files: BTreeSet<String> = per_file.keys().cloned().collect();
+            let mut refused = None;
+            for (_, commands) in per_file {
+                match self.push(Command::Batch { commands }) {
+                    Ok(id) => {
+                        self.agent_nodes.insert(id.0);
+                    }
+                    Err(refusal) => {
+                        refused = Some(refusal);
+                        break;
+                    }
+                }
+            }
+            match refused {
+                None => {
                     self.agent_paths.extend(files.iter().cloned());
                     self.recount_waiting();
                     self.forget_index();
@@ -3000,7 +3034,7 @@ impl Editor {
                         ),
                     );
                 }
-                Err(refusal) => self.say("could not take in the agent's change", &format!("{refusal:?}")),
+                Some(refusal) => self.say("could not take in the agent's change", &format!("{refusal:?}")),
             }
         }
         if !self.screen.opened.iter().any(|b| b.id == "record:sandbox") {
@@ -3062,6 +3096,22 @@ impl Editor {
 
     /// Marks where the workspace is as accepted: what the agent changed up to here is in
     /// the project.
+    /// Every agent node of these files is accepted with them.
+    fn mark_files_accepted(&mut self, paths: &BTreeSet<String>) {
+        let nodes: Vec<u64> = self
+            .agent_nodes
+            .iter()
+            .copied()
+            .filter(|id| {
+                self.tree
+                    .node(tracelean_core::history::tree::NodeId(*id))
+                    .and_then(|node| file_of(&node.command))
+                    .is_some_and(|file| paths.contains(&file))
+            })
+            .collect();
+        self.accepted_at.extend(nodes);
+    }
+
     fn mark_accepted(&mut self) {
         if let Some(here) = self.tree.current() {
             self.accepted_at.insert(here.0);
@@ -4270,6 +4320,7 @@ impl Editor {
             self.agent_paths.clear();
             self.pending.clear();
             self.mark_accepted();
+            self.mark_files_accepted(&paths);
             self.forget_index();
             self.say("accepted", &format!("{} files are in the project; the point is marked in the history", paths.len()));
             self.refresh_views();
@@ -4316,6 +4367,7 @@ impl Editor {
             };
             self.agent_paths.remove(path);
             self.recount_waiting();
+            self.mark_files_accepted(&BTreeSet::from([path.to_string()]));
             if self.pending.is_empty() {
                 self.mark_accepted();
             }
@@ -4432,6 +4484,8 @@ impl Editor {
                     if !self.pending.is_empty() {
                         self.mark_accepted();
                     }
+                    let waiting: BTreeSet<String> = self.pending.iter().map(touched).collect();
+                    self.mark_files_accepted(&waiting);
                     self.agent_paths.clear();
                     self.pending.clear();
                 }

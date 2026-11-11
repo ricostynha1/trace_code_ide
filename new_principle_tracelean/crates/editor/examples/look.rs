@@ -44,10 +44,23 @@ fn answer(editor: &mut Editor, command: &str, args: &Value) -> Value {
                 .into_iter()
                 .map(|placed| {
                     let height = placed.at.height as usize;
+                    use tracelean_core::surface::view::BufferKind;
+                    let markdown = match &placed.buffer.kind {
+                        BufferKind::File { path } if path.to_lowercase().ends_with(".md") => {
+                            Some(editor.workspace().files.get(path).cloned().unwrap_or_default())
+                        }
+                        _ => None,
+                    };
+                    let said = (placed.buffer.id == "record:sandbox")
+                        .then(|| editor.conversation())
+                        .filter(|said| !said.is_empty());
+                    let whole = said.is_some();
                     json!({
+                        "markdown": markdown,
+                        "said": said,
                         "chips": editor.chips_shown(&placed.buffer, placed.top, height),
                         "coverage": editor.coverage_shown(&placed.buffer, placed.top, height),
-                        "buffer": window(placed.buffer, placed.top, height),
+                        "buffer": if whole { placed.buffer } else { window(placed.buffer, placed.top, height) },
                         "pane": placed.pane,
                         "at": placed.at,
                         "focused": placed.focused,

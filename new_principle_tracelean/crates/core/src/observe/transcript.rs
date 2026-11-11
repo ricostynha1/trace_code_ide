@@ -24,6 +24,8 @@ pub struct Read {
     /// @implements REQ-TRANSCRIPT.partial_line_held
     pub held: String,
     pub usage: Vec<Usage>,
+    #[serde(skip)]
+    usage_ids: Vec<Option<String>>,
 }
 
 fn nat_field(value: &serde_json::Value, key: &str) -> u64 {
@@ -83,6 +85,12 @@ pub fn read(text: String) -> Read {
                 };
                 let counted = match usage_in(&value) {
                     Some(usage) => {
+                        let id = value
+                            .get("message")
+                            .and_then(|m| m.get("id"))
+                            .and_then(|v| v.as_str())
+                            .map(String::from);
+                        out.usage_ids.push(id);
                         out.usage.push(usage);
                         true
                     }
@@ -97,7 +105,21 @@ pub fn read(text: String) -> Read {
         }
     }
 
+    out.usage = once_per_message(out.usage_ids.drain(..).zip(out.usage.drain(..)).collect());
     out
+}
+
+/// Claude Code writes one record per content block of a reply, each repeating the
+/// reply's usage. Count a reply once (its last record); records without an id all count.
+fn once_per_message(rows: Vec<(Option<String>, Usage)>) -> Vec<Usage> {
+    let mut out: Vec<(Option<String>, Usage)> = Vec::new();
+    for (id, usage) in rows {
+        match id.as_ref().and_then(|id| out.iter().position(|(seen, _)| seen.as_ref() == Some(id))) {
+            Some(at) => out[at].1 = usage,
+            None => out.push((id, usage)),
+        }
+    }
+    out.into_iter().map(|(_, usage)| usage).collect()
 }
 
 /// @implements REQ-TRANSCRIPT.partial_line_held
@@ -183,5 +205,19 @@ mod tests {
         let second = read(format!("{}y\",\"text\":\"two\"}}\n", first.held));
         assert_eq!(second.events, vec![Event { kind: "say".into(), text: "two".into() }]);
         assert!(second.held.is_empty());
+    }
+
+    /// @tests REQ-COST.cost_from_usage
+    #[test]
+    fn a_reply_written_as_several_records_is_counted_once() {
+        let record = |block: &str, out: u64| {
+            format!(
+                r#"{{"type":"assistant","message":{{"id":"msg_1","model":"m","content":[{block}],"usage":{{"input_tokens":5,"output_tokens":{out}}}}}}}"#
+            )
+        };
+        let text = [record(r#"{"type":"text","text":"a"}"#, 7), record(r#"{"type":"tool_use","name":"X","input":{}}"#, 9), String::new()].join("\n");
+        let read = read(text);
+        assert_eq!(read.usage.len(), 1);
+        assert_eq!(read.usage[0].output, 9, "the reply's last record is the one kept");
     }
 }
