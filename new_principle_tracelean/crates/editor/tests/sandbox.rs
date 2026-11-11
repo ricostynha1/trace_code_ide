@@ -323,8 +323,43 @@ fn each_file_the_agent_changes_is_its_own_node_of_the_history() {
     assert!(editor.tick());
     act(&mut editor, "screen.station.history");
     let text = plain_text(editor.buffer()).join("\n");
-    let line_of = |name: &str| text.lines().find(|l| l.contains(name)).unwrap_or_else(|| panic!("{name} missing:\n{text}")).to_string();
+    let line_of = |name: &str| text.lines().find(|l| l.contains('#') && l.contains(name)).unwrap_or_else(|| panic!("{name} missing:\n{text}")).to_string();
     let (a, b) = (line_of("src/a.rs"), line_of("src/b.rs"));
     assert!(a != b && !a.contains("src/b.rs") && !b.contains("src/a.rs"), "one node holds both files:\n{text}");
+    let _ = std::fs::remove_dir_all(&root);
+}
+
+/// @tests REQ-UNDO.file_view_has_a_target
+#[test]
+fn the_history_remembers_its_file_and_a_listed_file_can_be_chosen() {
+    let root = project("target");
+    let mut editor = Editor::open(root.clone(), keymap());
+    act(&mut editor, "sandbox.new");
+    std::fs::write(work(&editor).join("src/a.rs"), "fn a() { 1 }\n").unwrap();
+    std::fs::write(work(&editor).join("src/b.rs"), "fn b() { 2 }\n").unwrap();
+    assert!(editor.tick());
+    editor.perform(Intent::Display { what: BufferKind::File { path: "src/a.rs".into() } });
+    act(&mut editor, "screen.station.history");
+    let at = |editor: &Editor, needle: &str| {
+        let b = editor.screen.opened.iter().find(|b| b.id == "record:history").expect("history").clone();
+        let at = b.text.find(needle).map(|i| b.text[..i].chars().count());
+        (b.clone(), at, b.text)
+    };
+    let (_, _, text) = at(&editor, "File view");
+    assert!(text.lines().nth(1).unwrap().contains("File view of src/a.rs"), "{text}");
+    // the history station now holds the document pane, yet the file is remembered
+    let pane_of = |editor: &mut Editor| editor.laid_out(tracelean_core::surface::screen::Rect { left: 0, top: 0, width: 160, height: 40 }).into_iter().find(|p| p.buffer.id == "record:history").unwrap().pane;
+    let pane = pane_of(&mut editor);
+    let (_, file_label, _) = at(&editor, "File");
+    editor.choose(&pane, file_label.unwrap(), "history.filter", None, None);
+    let (_, _, text) = at(&editor, "File view");
+    let nodes: Vec<&str> = text.lines().filter(|l| l.contains('#') && l.contains("src/")).collect();
+    assert!(nodes.iter().all(|l| l.contains("src/a.rs")) && !nodes.is_empty(), "File view not limited:\n{text}");
+    // choose b.rs from the list
+    let (_, found, _) = at(&editor, "src/b.rs");
+    let pane = pane_of(&mut editor);
+    editor.choose(&pane, found.expect("b.rs is listed"), "history.filter", None, None);
+    let (_, _, text) = at(&editor, "File view");
+    assert!(text.lines().nth(1).unwrap().contains("File view of src/b.rs"), "{text}");
     let _ = std::fs::remove_dir_all(&root);
 }

@@ -82,6 +82,10 @@ pub struct Editor {
     pub open_only: bool,
     typed: Vec<String>,
     pub history_filter: tracelean_core::surface::history_view::Filter,
+    /// The file the history's File view is about: the one chosen, else the last one shown in the document pane.
+    history_file: std::cell::RefCell<Option<String>>,
+    history_file_chosen: std::cell::Cell<bool>,
+    history_seen_doc: std::cell::RefCell<Option<String>>,
     saved_at: BTreeSet<u64>,
     accepted_at: BTreeSet<u64>,
     agent_nodes: BTreeSet<u64>,
@@ -373,6 +377,9 @@ impl Editor {
             tutorial_open: BTreeSet::new(),
             open_only: false,
             history_filter: tracelean_core::surface::history_view::Filter::All,
+            history_file: std::cell::RefCell::new(None),
+            history_file_chosen: std::cell::Cell::new(false),
+            history_seen_doc: std::cell::RefCell::new(None),
             typed: Vec::new(),
             saved_at: BTreeSet::new(),
             accepted_at: BTreeSet::new(),
@@ -1184,6 +1191,11 @@ impl Editor {
                 }
             }
         }
+        if self.pick_history_file(action, &focus.under) {
+            self.mode = self.keymap.root.clone();
+            self.menu = None;
+            return;
+        }
         let intent = dispatch(action.to_string(), focus, self.workspace(), self.pending.clone());
         let approving = action == "trace.approve" && matches!(intent, Intent::Edit { .. });
         self.perform(intent);
@@ -1513,6 +1525,10 @@ impl Editor {
 
     pub fn act_here(&mut self, action: &str) {
         self.offering = None;
+        let under = self.focus().under;
+        if self.pick_history_file(action, &under) {
+            return;
+        }
         let intent = dispatch(action.to_string(), self.focus(), self.workspace(), self.pending.clone());
         self.perform(intent);
         self.mode = self.keymap.root.clone();
@@ -3847,14 +3863,28 @@ impl Editor {
     }
 
     fn history_buffer(&self) -> Buffer {
-        let file = self.document_place().map(|(path, _)| path);
+        // @implements REQ-UNDO.file_view_has_a_target
+        // the file chosen in the history, else the one last shown in the document pane (it is
+        // remembered, so opening the history does not lose it)
+        if let Some((path, _)) = self.document_place() {
+            // opening another file in the document pane makes it the target again
+            if self.history_seen_doc.borrow().as_deref() != Some(path.as_str()) {
+                *self.history_seen_doc.borrow_mut() = Some(path.clone());
+                self.history_file_chosen.set(false);
+            }
+            if !self.history_file_chosen.get() {
+                *self.history_file.borrow_mut() = Some(path);
+            }
+        }
+        let file = self.history_file.borrow().clone();
         // @implements REQ-UNDO.whole_by_default
-        // with no file in the document pane there is no file to filter by: show the whole tree
+        // with no file ever shown there is no file to filter by: show the whole tree
         let filter = match (self.history_filter, &file) {
             (tracelean_core::surface::history_view::Filter::File, None) => tracelean_core::surface::history_view::Filter::All,
             (filter, _) => filter,
         };
         let shown = tracelean_core::surface::history_view::history_view(&self.points(), filter, file.as_deref());
+        let shown = self.with_targets(shown, file.as_deref());
         let mut waiting: Vec<(String, String)> = Vec::new();
         if self.session.is_some() {
             for command in &self.pending {
@@ -3871,6 +3901,75 @@ impl Editor {
             }
         }
         tracelean_core::surface::history_view::with_waiting(shown, &waiting)
+    }
+
+    /// Files the history changed, newest change first.
+    fn history_files(&self) -> Vec<String> {
+        let mut ids = self.tree.ids();
+        ids.sort_by_key(|id| std::cmp::Reverse(id.0));
+        let mut out: Vec<String> = Vec::new();
+        for id in ids {
+            if let Some(file) = self.tree.node(id).and_then(|n| file_of(&n.command)) {
+                if !out.contains(&file) {
+                    out.push(file);
+                }
+            }
+        }
+        out
+    }
+
+    /// A line under the filters that says which file the File view is about and lists the
+    /// files the history changed, each choosing itself.
+    fn with_targets(&self, shown: Buffer, target: Option<&str>) -> Buffer {
+        use tracelean_core::surface::view::{Role, Span};
+        let (head, rest) = match shown.text.split_once('\n') {
+            Some((head, rest)) => (head.to_string(), Some(rest.to_string())),
+            None => (shown.text.clone(), None),
+        };
+        let mut line = match target {
+            Some(file) => format!("File view of {file}. Change file: "),
+            None => "File view: no file yet. Pick one: ".to_string(),
+        };
+        let mut spans: Vec<Span> = Vec::new();
+        let base = head.chars().count() + 1;
+        let mut at = base + line.chars().count();
+        let files = self.history_files();
+        if files.is_empty() {
+            line.push_str("(no file changed yet)");
+        }
+        for file in files.iter().take(8) {
+            let length = file.chars().count();
+            let role = if Some(file.as_str()) == target { Role::Heading } else { Role::Path };
+            spans.push(Span { start: at, stop: at + length, role, actions: vec!["history.filter".to_string()] });
+            line.push_str(file);
+            line.push_str("  ");
+            at += length + 2;
+        }
+        let line = line.trim_end().to_string();
+        let shift = line.chars().count() + 1;
+        let mut moved: Vec<Span> = shown.spans.iter().filter(|s| s.start < base).cloned().collect();
+        moved.extend(spans);
+        moved.extend(shown.spans.iter().filter(|s| s.start >= base).map(|s| Span { start: s.start + shift, stop: s.stop + shift, ..s.clone() }));
+        let mut text = format!("{head}\n{line}");
+        if let Some(rest) = rest {
+            text.push('\n');
+            text.push_str(&rest);
+        }
+        Buffer { text, spans: moved, ..shown }
+    }
+
+    /// Choosing a file name in the history's file line sets the file its File view is about.
+    fn pick_history_file(&mut self, action: &str, under: &Option<String>) -> bool {
+        let Some(name) = under.as_deref().filter(|_| action == "history.filter") else { return false };
+        let name = name.trim();
+        if !self.history_files().iter().any(|f| f == name) {
+            return false;
+        }
+        *self.history_file.borrow_mut() = Some(name.to_string());
+        self.history_file_chosen.set(true);
+        self.history_filter = tracelean_core::surface::history_view::Filter::File;
+        self.refresh_views();
+        true
     }
 
     pub fn history_preview_at(&self, pane: &str, at: usize) -> Option<Buffer> {
