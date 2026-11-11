@@ -11,6 +11,28 @@ pub enum BufferKind {
     Record { title: String },
 }
 
+/// The records whose whole text is markdown: a frontend draws them formatted by default and
+/// offers the text itself as one switch away. Spans over the text that name actions (the
+/// tutorial's fold rows) keep acting in the formatted view.
+///
+/// @implements REQ-VIEW.markdown_formatted_by_default
+pub const MARKDOWN_RECORDS: &[&str] = &["overview", "modules", "tutorial"];
+
+/// Whether a buffer is markdown a frontend may draw formatted: a markdown file, or one of
+/// the records above. The one rule for every buffer, instead of each frontend's own.
+///
+/// @implements REQ-VIEW.markdown_formatted_by_default
+pub fn is_markdown(kind: &BufferKind) -> bool {
+    match kind {
+        BufferKind::File { path } => {
+            let lower = path.to_lowercase();
+            lower.ends_with(".md") || lower.ends_with(".markdown")
+        }
+        BufferKind::Record { title } => MARKDOWN_RECORDS.contains(&title.as_str()) || title.starts_with("requirement "),
+        _ => false,
+    }
+}
+
 /// @implements REQ-VIEW.structure_over_text
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -426,5 +448,26 @@ mod tests {
             presented_conformance(buffer, mislabelled, offered)[0],
             Breach::LineDiffers { .. }
         ));
+    }
+}
+
+#[cfg(test)]
+mod markdown_rule {
+    use super::*;
+
+    /// @tests REQ-VIEW.markdown_formatted_by_default
+    #[test]
+    fn markdown_files_and_the_whole_markdown_records_are_markdown_and_nothing_else_is() {
+        let file = |p: &str| BufferKind::File { path: p.into() };
+        let record = |t: &str| BufferKind::Record { title: t.into() };
+        assert!(is_markdown(&file("README.md")) && is_markdown(&file("a/B.MARKDOWN")));
+        assert!(!is_markdown(&file("src/main.rs")));
+        for title in MARKDOWN_RECORDS {
+            assert!(is_markdown(&record(title)), "{title}");
+        }
+        assert!(is_markdown(&record("requirement REQ-A")));
+        assert!(!is_markdown(&record("keys")) && !is_markdown(&record("definitions")));
+        assert!(!is_markdown(&BufferKind::Menu { title: "overview".into() }));
+        assert!(!is_markdown(&BufferKind::Directory { path: "x.md".into() }));
     }
 }

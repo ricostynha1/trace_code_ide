@@ -204,7 +204,7 @@ mod tests {
     }
 
     const FILES: &[(&str, &str)] = &[
-        ("reqs/a.md", "---\nid: REQ-A\nclauses:\n  one: First.\n---\nbody"),
+        ("reqs/a.md", "# REQ-A: REQ-A\n\n- status: draft\n\nbody\n\n## Clauses\n\n- **one**: First.\n"),
         ("src/i.rs", "// @implements REQ-A.one\npub fn f() {}\n"),
     ];
 

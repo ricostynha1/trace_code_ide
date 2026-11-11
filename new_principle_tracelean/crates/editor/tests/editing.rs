@@ -301,7 +301,9 @@ fn a_setting_is_written_to_the_override_and_a_bad_value_is_refused() {
     assert!(text_of_status(&editor).contains("not a colour"), "{}", text_of_status(&editor));
 
     editor.perform(Intent::Display { what: BufferKind::Record { title: "definitions".into() } });
-    assert!(text(&editor).contains("ui.accent  #ff0000"), "{}", text(&editor));
+    let listed = text(&editor);
+    let ui = listed.lines().position(|l| l == "ui").expect("a group for ui");
+    assert!(listed.lines().skip(ui).any(|l| l == "  accent  #ff0000"), "{listed}");
     let _ = std::fs::remove_dir_all(&root);
 }
 

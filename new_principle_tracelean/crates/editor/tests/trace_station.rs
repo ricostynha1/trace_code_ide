@@ -23,7 +23,7 @@ fn project(files: &[(&str, &str)]) -> PathBuf {
 }
 
 const TREE: &[(&str, &str)] = &[
-    ("reqs/a.md", "---\nid: REQ-A\ntitle: A\nclauses:\n  one: It is.\n  two: It is too.\n---\n"),
+    ("reqs/a.md", "# REQ-A: A\n\n- status: draft\n\n## Clauses\n\n- **one**: It is.\n- **two**: It is too.\n"),
     ("src/one.rs", "/// @implements REQ-A.one\npub fn one() {}\n"),
     ("src/two.rs", "/// @implements REQ-A.two\npub fn two() {}\n"),
 ];

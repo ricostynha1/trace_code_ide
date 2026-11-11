@@ -142,6 +142,94 @@ Experiments 1–3 are the ones an agent can do cheaply and that change the produ
 - Where does the pinning obligation live if a clause takes the spec-only route (section 6)?
 - How are grades shown without implying an order where there is none (bounded-exhaustive versus SMT-unbounded are not strictly comparable)?
 
+## 11. Recommended infrastructure, one target language at a time
+
+Each stack below assumes the product targets **only** that language. The Lean side is the same in all three and is not repeated: requirements with clauses, one Lean model per clause, judged, proved and pinned. What differs is how the implementation is bound to the model. Layers are ordered: build a layer only when the one before it works. Tool facts are from memory; check versions and capabilities before committing to one.
+
+### 11.1 C only (embedded)
+
+The strongest case for going beyond DRT, and the richest tool set.
+
+| Layer | Tool | Role | Grade earned |
+|---|---|---|---|
+| 0. Build | clang (host) + the project's cross compiler; QEMU for the target | two builds of every unit: host for speed, target for word size, endianness, promotion | none |
+| 1. Reading checks | compiler warnings as errors; a MISRA/CERT checker (cppcheck or a commercial one) | cheap, structural; no claim about behaviour | structural |
+| 2. DRT, hardened | generated C runner; ASan + UBSan; llvm-cov with branch and MC/DC | code = model on generated inputs; a sanitizer report is a divergence | tested |
+| 3. Bounded exhaustive | **CBMC** | harness: nondeterministic input, assert output = reference; also memory safety, overflow, UB within the bound | exhaustive to bound *k* |
+| 4. No runtime errors | **Frama-C Eva** | abstract interpretation over the whole program: no out-of-bounds, no overflow, no invalid pointer, unbounded | absence of runtime errors |
+| 5. Functional proof | **Frama-C WP** with ACSL contracts; **E-ACSL** to execute the contract | unbounded proof that code meets the contract; the contract itself tested against the Lean model | proved by SMT |
+| 6. Compiler trust (optional) | CompCert, or target-run DRT (layer 2 on the board/QEMU) | closes source → binary | stated assumption |
+
+What TraceLean has to build:
+
+1. **A C runner** speaking the existing conformance protocol. The real work is the input schema: pointers with lengths, out-parameters, structs with padding, global state reset between cases.
+2. **A reference in C for each model**, generated where the model is first-order over integers and bounded arrays, hand-written and itself DRT'd against Lean otherwise. Layers 3 and 5 compare against it; without it they prove "meets a contract", not "meets the requirement" (section 5).
+3. **Step-function convention** for stateful code: `state × input → state × output`, generated input sequences, state compared after every step. Interrupts and timing declared out of scope per clause, visibly.
+4. **Harness generation** for CBMC from the same binding DRT uses, so one binding yields a test and a bounded proof.
+5. **Records** carrying compiler and flags, target, sanitizer set, CBMC unwinding bound, Frama-C version and plugin, and how the contract was tied to the model.
+
+Order to build: 1 → 2 → 3 (reuses the runner) → 4 (independent of the model, gives value alone) → 5 only for the clauses that justify writing invariants. Layers 2–4 are what an agent can produce without a human in the loop.
+
+Certification angle: layers 2 and 3 are back-to-back testing against a model with structural coverage; layers 4 and 5 are formal-methods supplements. That maps onto ISO 26262 and DO-178C/DO-333 vocabulary, which is a selling point here and nowhere else.
+
+### 11.2 Rust only
+
+The language does half the work (no UB in safe code), so the stack is shorter and DRT is already stronger than in C.
+
+| Layer | Tool | Role | Grade earned |
+|---|---|---|---|
+| 0. Build | cargo; `cargo-llvm-cov` | already in place in this repo | none |
+| 1. Reading checks | clippy; `#![forbid(unsafe_code)]` where possible | structural | structural |
+| 2. DRT | the existing Rust runner; **Miri** over the same cases for crates with `unsafe` | code = model on generated inputs; Miri reports UB in unsafe code | tested |
+| 3. Bounded exhaustive | **Kani** | proof harness: `kani::any()` input, assert output = model's; concrete counterexample on failure, replayable as a test | exhaustive to bound *k* |
+| 4. Functional proof | **Verus** (SMT, specs in Rust) *or* **Aeneas** (translate to Lean, prove against the model there) | unbounded | proved by SMT / proved in Lean |
+
+What TraceLean has to build:
+
+1. **Kani harness generation** from the existing binding. As in C, the model must be callable from Rust: a generated Rust reference for first-order models, DRT'd against Lean.
+2. **Counterexample import**: a Kani counterexample becomes a pinned DRT case, so it is replayed forever.
+3. **A second proof kind** for Aeneas: a Lean theorem `translated_fn = model`, checked by the existing proof honesty rules, recorded with the Aeneas/Charon version.
+4. **Records** carrying the Kani version and unwinding bounds.
+
+Choice at layer 4: prefer **Aeneas** when the function is pure and the model is pinned, because the result is a kernel-checked Lean theorem about the model itself and no contract ↔ model link is needed. Prefer **Verus** for code with heavy mutation, collections or concurrency that Aeneas does not translate. Most projects stop at layer 3.
+
+Order to build: 3 first (cheap, agent-drivable, immediate value), then 4 with Aeneas as a pilot on a few functions.
+
+### 11.3 Python only
+
+No mature verifier for general Python, so the stack is DRT plus whatever tightens the input space. Being honest about that is part of the product.
+
+| Layer | Tool | Role | Grade earned |
+|---|---|---|---|
+| 0. Run | pinned interpreter version and locked dependencies (uv or pip-tools) | the interpreter and libraries are part of what is tested | none |
+| 1. Reading checks | a type checker in strict mode (pyright or mypy); ruff | narrows what inputs can be; structural | structural |
+| 2. DRT | a generated Python runner; `coverage.py` with branch coverage | code = model on generated inputs; an exception is an answer | tested |
+| 3. Symbolic search (optional) | **CrossHair** (SMT-backed search for contract counterexamples) | finds inputs DRT's generator misses; not a proof | still tested; found cases become pinned cases |
+| 4. Semantics in Lean (watch) | **Strata**'s Python front end | would allow SMT or Lean proof on the code's semantics | not available as a product route today |
+
+What TraceLean has to build:
+
+1. **A Python runner** for the conformance protocol. Decisions: arbitrary-precision `int` against fixed-width models (state the range in the schema), `None`, `float` (compare how?), dict ordering, exceptions mapped to error answers.
+2. **Isolation per case** for stateful modules: fresh interpreter or explicit reset, since module globals persist.
+3. **Stronger generation**, because testing is all there is: class coverage floors, boundary values from the type hints, and import of CrossHair counterexamples as pinned cases.
+4. **Records** carrying interpreter version and the dependency lock hash; a dependency upgrade makes them stale.
+
+The claim for Python is therefore weaker than for C or Rust: specification proved strong in Lean, implementation tested with measured branch and class coverage. Do not offer a proved grade for Python until a route like Strata is real.
+
+### 11.4 Side by side
+
+| | C | Rust | Python |
+|---|---|---|---|
+| DRT strength alone | weak (UB, memory, target) | good | good for pure code, weak for dynamic features |
+| Bounded exhaustive | CBMC | Kani | none |
+| Unbounded, SMT | Frama-C WP | Verus | none mature |
+| Proved in Lean | none practical | Aeneas | Strata, later |
+| No-runtime-error analysis | Frama-C Eva | the type system; Miri for unsafe | type checker only |
+| Biggest thing to build | input schema for pointers and state; C reference for models | Kani harness generation | runner semantics (ints, exceptions, isolation) |
+| Where to stop by default | layer 4 | layer 3 | layer 2 |
+
+Common to all three: the runner, a reference generated from the Lean model, harness generation from one binding, and graded records. Build those once, parameterised by language; they are the product. The verifiers are plug-ins behind the bond.
+
 ## Sources
 
 - Strata: https://github.com/strata-org/Strata (README read 2026-11-11)

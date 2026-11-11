@@ -1,0 +1,19 @@
+{
+  "settings": [
+    { "name": "layout.menuBar", "kind": "choice", "choices": ["shown", "hidden"], "default": "shown",
+      "description": "The bar of menus at the top." },
+    { "name": "layout.keyBar", "kind": "choice", "choices": ["shown", "hidden"], "default": "shown",
+      "description": "The bar at the bottom that lists the keys that work where the cursor is." },
+    { "name": "layout.stations", "kind": "choice", "choices": ["hidden", "left", "top"], "default": "left",
+      "description": "Where the icons that open the views are drawn: down the left, along the top, or not at all." },
+    { "name": "layout.zoom", "kind": "percent", "min": 60, "max": 200, "step": 10, "default": "100",
+      "description": "The size of everything, in percent." },
+    { "name": "fonts.*", "kind": "text",
+      "description": "A font family list or a size, as CSS writes it." },
+    { "name": "ui.*", "kind": "colour", "description": "A colour of the window: bars, panes, menus." },
+    { "name": "roles.*", "kind": "colour", "description": "The colour of what a span of text is: a path, a heading, a mark." },
+    { "name": "chips.*", "kind": "colour", "description": "The colour of the chip a claim shows in the gutter." },
+    { "name": "modes.*", "kind": "colour", "description": "The colour of the mode badge on the status line." },
+    { "name": "syntax.*", "kind": "colour", "description": "The colour of a kind of token in code." }
+  ]
+}

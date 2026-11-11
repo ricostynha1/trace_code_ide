@@ -113,7 +113,7 @@ def evidenceLine (out : Lines) (clauses : List ClauseShown) : Lines :=
   let pieces := counted.enum.bind fun (pair : Nat × (TraceLean.Annotation.Role × String)) =>
     (if pair.1 > 0 then [(" ", Role.plain, ([] : List String))] else []) ++
       [(pair.2.2, Role.claim pair.2.1, [])]
-  line out (("evidence   ", Role.plain, []) :: pieces)
+  line out (("- evidence ", Role.plain, []) :: pieces)
 
 def claimLine (out : Lines) (claim : Claim) : Lines :=
   let role :=
@@ -124,7 +124,7 @@ def claimLine (out : Lines) (claim : Claim) : Lines :=
     match claim.symbol with
     | some s => [("  " ++ s, Role.token .function, ([] : List String))]
     | none => []
-  line out ([("  ", Role.plain, []), (padRight claim.role 10, role, []), (" ", Role.plain, []),
+  line out ([("- ", Role.plain, []), (padRight claim.role 10, role, []), (" ", Role.plain, []),
              (claim.path ++ ":" ++ toString claim.line, Role.path, ["file.open"])] ++ symbol)
 
 def noLines : String := "no line a test could run"
@@ -154,7 +154,7 @@ def marksLine (out : Lines) (clauses : List ClauseShown) : Lines :=
   let said := counts.map fun (c : String × Nat × Role) =>
     if modelled.length == 0 then (c.1 ++ "·", Role.plain, ([] : List String))
     else (c.1 ++ toString c.2.1 ++ "/" ++ toString modelled.length, c.2.2, ([] : List String))
-  line out (("marks      ", Role.plain, []) :: said.intersperse (" ", Role.plain, []))
+  line out (("- marks ", Role.plain, []) :: said.intersperse (" ", Role.plain, []))
 
 def coveredLine (lead name : String) (claimed : Bool) (out : Lines) : Option Covered → Lines
   | none => if claimed then line out [(lead, Role.plain, []), (notMeasured, Role.removed, [])] else out
@@ -167,14 +167,14 @@ def pinsLines (out : Lines) : Option (String × String) → Lines
   | none => out
   | some (state, said) =>
     let role := if state == "pinned" then Role.added else Role.removed
-    wrapped (line out [("  ", Role.plain, []), (state, role, [])]) "    " said Role.plain []
+    wrapped (line out [("- strength ", Role.plain, []), (state, role, [])]) "- " said Role.plain []
 
 def judgedLines (out : Lines) : Option Judged → Lines
   | none => out
   | some judged =>
     let said := judgedText judged
-    if judged.verdict == "agrees" then line out [("  judged      ", Role.plain, []), (said, Role.plain, [])]
-    else wrapped out "  " said Role.removed []
+    if judged.verdict == "agrees" then line out [("- judged ", Role.plain, []), (said, Role.plain, [])]
+    else wrapped out "- " said Role.removed []
 
 def markPiecesOf (m : Marks) : List (Mark × Bool × Char) → List (String × Role × List String)
   | [] => []
@@ -187,45 +187,45 @@ def markPieces (m : Marks) : List (String × Role × List String) := markPiecesO
 
 def clauseLines (id : String) (out : Lines) (clause : ClauseShown) : Lines :=
   let key := clause.key.getD "(the whole requirement)"
-  let out := line (blank out) (markPieces clause.marks ++ [("  ", Role.plain, []), (key, Role.heading, [])])
-  let out := wrapped out "  " clause.text Role.plain []
+  let out := line (blank out) (("### ", Role.plain, []) :: (markPieces clause.marks ++ [("  ", Role.plain, []), (key, Role.heading, [])]))
+  let out := wrapped out "" clause.text Role.plain []
   let out := clause.narrowings.foldl (fun (o : Lines) (pair : String × String) =>
-    wrapped o "    " (pair.1 ++ ": " ++ pair.2) Role.plain []) out
+    wrapped o "- " (pair.1 ++ ": " ++ pair.2) Role.plain []) out
   let out :=
     match clause.key with
-    | some k => line out [("  for agent   ", Role.plain, []), (id ++ "." ++ k, Role.requirement, ["trace.context"])]
+    | some k => line out [("- for agent ", Role.plain, []), (id ++ "." ++ k, Role.requirement, ["trace.context"])]
     | none => out
-  let out := if clause.claims.isEmpty then line out [("  nothing claims it yet", Role.removed, [])] else out
+  let out := if clause.claims.isEmpty then line out [("- nothing claims it yet", Role.removed, [])] else out
   let name :=
     match clause.key with
     | some k => id ++ "." ++ k
     | none => id
-  let out := pinsLines (coveredLine "  covered     " name (implemented clause) out clause.lines) clause.pins
+  let out := pinsLines (coveredLine "- covered " name (implemented clause) out clause.lines) clause.pins
   let out :=
     if clause.claims.any (·.role == "models") then
-      line out [("  judge       ", Role.plain, []), (name, Role.requirement, ["trace.judge"])]
+      line out [("- judge ", Role.plain, []), (name, Role.requirement, ["trace.judge"])]
     else out
   clause.claims.foldl claimLine (judgedLines out clause.judged)
 
 /-- @models REQ-SHOW.requirement_opened -/
 def requirementView (view : Shown) : Buffer :=
-  let out := line (start view.width) [(view.id, Role.requirement, [])]
+  let out := line (start view.width) [("# ", Role.plain, []), (view.id, Role.requirement, [])]
   let out := wrapped out "" view.title Role.heading []
-  let out := line out [(view.file, Role.path, ["file.open"])]
-  let status := "status " ++ view.status
+  let out := line out [("- file ", Role.plain, []), (view.file, Role.path, ["file.open"])]
+  let status := "- status " ++ view.status
   let out :=
     if view.status == "draft" then
       line out [(status, Role.plain, []), ("  ", Role.plain, []), ("[ Approve ]", Role.added, ["trace.approve"])]
     else line out [(status, Role.plain, [])]
-  let out := namesLine (namesLine out "refines    " view.refines) "refined by " view.refinedBy
+  let out := namesLine (namesLine out "- refines " view.refines) "- refined by " view.refinedBy
   let out :=
     if view.body.isEmpty then out
     else
       blank ((view.body.splitOn "\n").foldl (fun (o : Lines) (paragraph : String) =>
         wrapped o "" paragraph Role.plain []) (blank out))
-  let out := line out [("for agent  ", Role.plain, []), (view.id, Role.requirement, ["trace.context"]),
+  let out := line out [("- for agent ", Role.plain, []), (view.id, Role.requirement, ["trace.context"]),
                        ("  context to copy", Role.plain, [])]
-  let out := coveredLine "covered    " view.id (view.clauses.any implemented)
+  let out := coveredLine "- covered " view.id (view.clauses.any implemented)
     (marksLine (evidenceLine out view.clauses) view.clauses) view.lines
   finish (view.clauses.foldl (clauseLines view.id) out) ("requirement " ++ view.id)
 
@@ -380,7 +380,7 @@ theorem clause_heading_says (id : String) (o : Lines) (c : ClauseShown) :
     refine says_grows ?_ (by first | exact line_grows _ _ | exact lgrows_refl _)
     refine says_grows ?_ (foldl_lgrows _ (fun o x => wrapped_grows _ _ _ _ _) _ _)
     refine says_grows ?_ (wrapped_grows _ _ _ _ _)
-    exact line_says _ _ _ _ _ hq hc
+    exact line_says _ _ _ _ _ (List.mem_cons_of_mem _ hq) hc
 
 theorem claim_says (o : Lines) (c : Claim) :
     Says (claimLine o c) Role.path ["file.open"] (c.path ++ ":" ++ toString c.line) :=

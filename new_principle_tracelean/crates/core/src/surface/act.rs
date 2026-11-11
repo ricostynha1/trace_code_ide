@@ -39,6 +39,11 @@ pub enum Watch {
     OpenInVscode { path: String },
     PickProject,
     SwitchTheme,
+    ToggleKeyBar,
+    ToggleRaw,
+    ZoomIn,
+    ZoomOut,
+    ZoomReset,
     Refresh,
     TutorialToggle { title: String },
     AcceptFile { path: String, command: Command },
@@ -97,16 +102,16 @@ fn node_number(named: &str) -> Option<u64> {
 
 pub fn requirement_template(id: &str) -> String {
     format!(
-        "---\nid: {id}\ntitle: What this requirement is about\nstatus: draft\nclauses:\n  first: The system shall ...\n---\n\n# {id}\n\nWhy this requirement exists.\n"
+        "# {id}: What this requirement is about\n\n- status: draft\n\nWhy this requirement exists.\n\n## Clauses\n\n- **first**: The system shall ...\n"
     )
 }
 
 fn approve(focus: &Focus, w: &Workspace) -> Intent {
-    const DRAFT: &str = "\nstatus: draft\n";
+    const DRAFT: &str = "\n- status: draft\n";
     let found = focus_path(focus).or_else(|| focus.under.clone()).and_then(|path| {
         let text = w.files.get(&path)?;
         let at = text.find(DRAFT)?;
-        Some((path.clone(), text[..at].len() + "\nstatus: ".len()))
+        Some((path.clone(), text[..at].len() + "\n- status: ".len()))
     });
     match found {
         None => needs("trace.approve", "a draft requirement"),
@@ -306,6 +311,11 @@ pub fn dispatch(action: String, focus: Focus, w: Workspace, waiting: Vec<Command
         },
         "project.pick" => Intent::Observe { watch: Watch::PickProject },
         "look.theme" => Intent::Observe { watch: Watch::SwitchTheme },
+        "look.keybar" => Intent::Observe { watch: Watch::ToggleKeyBar },
+        "look.raw" => Intent::Observe { watch: Watch::ToggleRaw },
+        "look.zoom_in" => Intent::Observe { watch: Watch::ZoomIn },
+        "look.zoom_out" => Intent::Observe { watch: Watch::ZoomOut },
+        "look.zoom_reset" => Intent::Observe { watch: Watch::ZoomReset },
         "help.tutorial" => Intent::Display { what: BufferKind::Record { title: "tutorial".into() } },
         "file.open_in_vscode" => match focus_path(&focus) {
             None => needs("file.open_in_vscode", "a file"),
@@ -409,7 +419,7 @@ mod tests {
     fn every_action_the_keymap_names_resolves_to_something_done() {
         let mut workspace = Workspace::default();
         workspace.files.insert("a.rs".to_string(), "fn main() {}".to_string());
-        workspace.files.insert("reqs/R.md".to_string(), "---\nstatus: draft\n---\n".to_string());
+        workspace.files.insert("reqs/R.md".to_string(), "# REQ-R: A requirement\n\n- status: draft\n".to_string());
         let cursors = [
             in_file(Some("src/lib.rs")),
             in_file(Some("project")),

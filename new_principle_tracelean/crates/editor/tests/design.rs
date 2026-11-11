@@ -27,9 +27,9 @@ fn project(files: &[(&str, &str)]) -> PathBuf {
 }
 
 const TREE: &[(&str, &str)] = &[
-    ("reqs/arch.md", "---\nid: ARCH-X\ntitle: Root\nclauses:\n  r: It is.\n---\n"),
-    ("reqs/a.md", "---\nid: REQ-A\ntitle: Middle\nrefines: [ARCH-X]\nclauses:\n  a: It is.\n---\n"),
-    ("reqs/b.md", "---\nid: REQ-B\ntitle: Leaf\nrefines: [REQ-A]\nclauses:\n  b: It is.\n---\n"),
+    ("reqs/arch.md", "# ARCH-X: Root\n\n- status: draft\n\n## Clauses\n\n- **r**: It is.\n"),
+    ("reqs/a.md", "# REQ-A: Middle\n\n- status: draft\n- refines: ARCH-X\n\n## Clauses\n\n- **a**: It is.\n"),
+    ("reqs/b.md", "# REQ-B: Leaf\n\n- status: draft\n- refines: REQ-A\n\n## Clauses\n\n- **b**: It is.\n"),
 ];
 
 fn here(editor: &mut Editor, action: &str, target: Option<&str>) {

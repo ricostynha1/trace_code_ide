@@ -34,13 +34,10 @@ struct Pane {
     coverage: Vec<(usize, u64, String)>,
     /// A markdown file's whole text, for the formatted preview.
     markdown: Option<String>,
+    /// Whether the person asked for this markdown buffer as its text.
+    raw: bool,
     /// The agent's conversation, for the sandbox panel (the buffer then holds all lines).
     said: Option<Vec<tracelean_core::observe::transcript::Event>>,
-}
-
-fn is_markdown(path: &str) -> bool {
-    let lower = path.to_lowercase();
-    lower.ends_with(".md") || lower.ends_with(".markdown")
 }
 
 #[tauri::command]
@@ -55,19 +52,21 @@ fn shown(held: State<'_, Held>, width: u64, height: u64) -> Vec<Pane> {
         .map(|placed| {
             use tracelean_core::surface::view::BufferKind;
             let markdown = match &placed.buffer.kind {
-                BufferKind::File { path } if is_markdown(path) => {
-                    Some(editor.workspace().files.get(path).cloned().unwrap_or_default())
-                }
-                _ => None,
+                _ if !tracelean_core::surface::view::is_markdown(&placed.buffer.kind) => None,
+                BufferKind::File { path } => Some(editor.workspace().files.get(path).cloned().unwrap_or_default()),
+                _ => Some(placed.buffer.text.clone()),
             };
+            let raw = editor.raw.contains(&placed.buffer.id);
+            let whole = markdown.is_some() && (matches!(&placed.buffer.kind, BufferKind::Record { .. }) || !raw);
             let sandbox = placed.buffer.id == "record:sandbox";
             let said = sandbox.then(|| editor.conversation()).filter(|said| !said.is_empty());
             Pane {
             markdown,
+            raw,
             lines: placed.buffer.text.split('\n').count(),
-            chips: editor.chips_shown(&placed.buffer, placed.top, placed.at.height as usize),
+            chips: if whole { editor.chips_shown(&placed.buffer, 0, usize::MAX / 2) } else { editor.chips_shown(&placed.buffer, placed.top, placed.at.height as usize) },
             coverage: editor.coverage_shown(&placed.buffer, placed.top, placed.at.height as usize),
-            buffer: if said.is_some() { placed.buffer } else { window(placed.buffer, placed.top, placed.at.height as usize) },
+            buffer: if said.is_some() || whole { placed.buffer } else { window(placed.buffer, placed.top, placed.at.height as usize) },
             said,
             pane: placed.pane,
             at: placed.at,
@@ -122,6 +121,8 @@ mutating! {
     paste(text: String) => |e| e.paste(&text);
     grab(pane: String, amount: i64) => |e| e.grab(&pane, amount);
     zoom(steps: i64) => |e| e.zoom(steps);
+    set_setting(name: String, value: String) => |e| e.set_setting(&name, &value);
+    filter_settings(query: String) => |e| e.filter_settings(&query);
 }
 
 query! {
@@ -148,6 +149,7 @@ query! {
     modules() -> Vec<tracelean_core::surface::figures::Module> => |e| e.modules();
     agent_steps() -> Vec<tracelean_core::surface::figures::Step> => |e| e.agent_steps();
     overview_markdown() -> String => |e| e.overview_markdown();
+    setting_rule(name: String) -> Option<tracelean_core::surface::setting::Rule> => |e| e.setting_rule(&name);
     leader() -> Vec<(String, Vec<(String, String, String)>)> => |e| e.leader();
     tree_marks() -> Vec<(String, String)> => |e| e.tree_marks();
 }
@@ -214,7 +216,7 @@ fn main() {
             chord, scroll, paste, act_here, tick, take_clipboard, find, described, cut, quick, search,
             requirement_text, over_lines, brackets, mode, select, selection, replace,
             problems, palette, selected, symbols, occurrences, offers_here, history_preview, leader, zoom, overview, card, impact, runs,
-            modules, agent_steps, overview_markdown, tree_marks
+            modules, agent_steps, overview_markdown, tree_marks, set_setting, filter_settings, setting_rule
         ])
         .run(tauri::generate_context!())
         .expect("the window opens");

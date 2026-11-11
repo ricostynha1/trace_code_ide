@@ -7,7 +7,7 @@ fn project(name: &str) -> PathBuf {
     std::fs::create_dir_all(dir.join("reqs")).unwrap();
     std::fs::write(
         dir.join("reqs/REQ-T.md"),
-        "---\nid: REQ-T\ntitle: T\nstatus: approved\ndecomposition: open\nclauses:\n  c: A thing shall hold.\n---\n\n# T\n",
+        "# REQ-T: T\n\n- status: approved\n- decomposition: open\n\n## Clauses\n\n- **c**: A thing shall hold.\n",
     )
     .unwrap();
     dir

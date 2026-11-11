@@ -568,7 +568,7 @@ fn a_draft_requirement_is_approved_from_its_view() {
     std::fs::create_dir_all(root.join("reqs")).unwrap();
     std::fs::write(
         root.join("reqs/REQ-D.md"),
-        "---\nid: REQ-D\ntitle: Drafted\nstatus: draft\nclauses:\n  one: It shall.\n---\n\n# REQ-D\n",
+        "# REQ-D: Drafted\n\n- status: draft\n\n## Clauses\n\n- **one**: It shall.\n",
     )
     .unwrap();
     let mut editor = Editor::open(root.clone(), keymap());
@@ -580,10 +580,10 @@ fn a_draft_requirement_is_approved_from_its_view() {
     let at = shown.find("[ Approve ]").unwrap_or_else(|| panic!("no Approve button:\n{shown}"));
     editor.choose(DOCUMENT, shown[..at].chars().count() + 2, "trace.approve", None, None);
     let text = editor.workspace().files.get("reqs/REQ-D.md").cloned().unwrap();
-    assert!(text.contains("\nstatus: approved\n"), "{text}");
+    assert!(text.contains("\n- status: approved\n"), "{text}");
     editor.chord("C-z");
     let text = editor.workspace().files.get("reqs/REQ-D.md").cloned().unwrap();
-    assert!(text.contains("\nstatus: draft\n"), "{text}");
+    assert!(text.contains("\n- status: draft\n"), "{text}");
     let _ = std::fs::remove_dir_all(&root);
 }
 
@@ -862,7 +862,7 @@ fn a_requirement_opens_and_its_claims_open_the_code() {
     std::fs::create_dir_all(root.join("reqs")).unwrap();
     std::fs::write(
         root.join("reqs/REQ-X.md"),
-        "---\nid: REQ-X\ntitle: Something holds\nstatus: approved\nclauses:\n  holds: It shall hold.\n  other: Nobody does this.\n---\n\n# REQ-X\n",
+        "# REQ-X: Something holds\n\n- status: approved\n\n## Clauses\n\n- **holds**: It shall hold.\n- **other**: Nobody does this.\n",
     )
     .unwrap();
     std::fs::write(root.join("src/x.rs"), "fn a() {}\n\n/// @implements REQ-X.holds\nfn holds() {}\n").unwrap();
@@ -892,7 +892,7 @@ fn a_requirement_shows_narrowings_under_their_clause() {
     std::fs::create_dir_all(root.join("reqs")).unwrap();
     std::fs::write(
         root.join("reqs/REQ-X.md"),
-        "---\nid: REQ-X\ntitle: Something holds\nstatus: approved\nclauses:\n  holds:\n    text: It shall hold.\n    empty: With nothing, it holds.\n  other: Nobody does this.\n---\n\n# REQ-X\n",
+        "# REQ-X: Something holds\n\n- status: approved\n\n## Clauses\n\n- **holds**: It shall hold.\n  - empty: With nothing, it holds.\n- **other**: Nobody does this.\n",
     )
     .unwrap();
     let mut editor = Editor::open(root.clone(), keymap());
@@ -901,7 +901,7 @@ fn a_requirement_shows_narrowings_under_their_clause() {
         what: BufferKind::Record { title: "requirement REQ-X".into() },
     });
     let shown = shown_in(&editor, DOCUMENT);
-    assert!(shown.contains("  It shall hold.\n    empty: With nothing, it holds.\n"), "{shown}");
+    assert!(shown.contains("It shall hold.\n- empty: With nothing, it holds.\n"), "{shown}");
     assert!(shown.contains("implements 0/2"), "a narrowing was counted as a clause:\n{shown}");
     let _ = std::fs::remove_dir_all(&root);
 }
@@ -914,7 +914,7 @@ fn a_modelled_clause_opens_its_judge_prompt_to_copy() {
     std::fs::create_dir_all(root.join("formal")).unwrap();
     std::fs::write(
         root.join("reqs/REQ-X.md"),
-        "---\nid: REQ-X\ntitle: Something holds\nstatus: approved\nclauses:\n  holds: It shall hold.\n---\n\n# REQ-X\n",
+        "# REQ-X: Something holds\n\n- status: approved\n\n## Clauses\n\n- **holds**: It shall hold.\n",
     )
     .unwrap();
     std::fs::write(root.join("formal/X.lean"), "/-- @models REQ-X.holds -/\ndef holds : Nat := 1\n").unwrap();
@@ -978,7 +978,7 @@ fn a_new_requirement_is_made_from_the_panel() {
     assert!(new.asks.is_some());
     editor.choose(side, 0, "trace.new_requirement", None, Some("REQ-NEW".into()));
     let written = editor.workspace().files.get("reqs/REQ-NEW.md").cloned().expect("the document was made");
-    assert!(written.starts_with("---\nid: REQ-NEW\n"), "{written}");
+    assert!(written.starts_with("# REQ-NEW:"), "{written}");
     editor.chord("C-s");
     let index = tracelean_core::trace::index::build(&root);
     assert!(index.requirements.contains_key("REQ-NEW"), "the template is not a requirement the index reads");
@@ -1188,6 +1188,14 @@ fn a_search_lists_every_line_that_holds_the_text() {
 /// @tests REQ-LOOK.stations_have_icons
 /// @tests REQ-FIGURE.report_from_overview
 /// @tests REQ-SHOW.tree_marks_explained
+/// @tests REQ-LOOK.markdown_drawn
+/// @tests REQ-LOOK.tab_drag_splits
+/// @tests REQ-LOOK.setting_edited_in_place
+/// @tests REQ-LOOK.key_bar_toggled
+/// @tests REQ-LOOK.settings_declared
+/// @tests REQ-LOOK.app_has_a_logo
+/// @tests REQ-VIEW.markdown_formatted_by_default
+/// @tests REQ-LOOK.settings_grouped_and_searchable
 /// @structural REQ-LOOK.accessible_structure reason="a claim about the accessibility tree a browser builds from the page; no value either side computes"
 #[test]
 #[ignore = "builds the page and runs it in Chrome with node; run with --ignored"]

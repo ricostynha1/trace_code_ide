@@ -63,6 +63,7 @@ export interface Pane {
   chips?: [number, string, string][];
   coverage?: [number, number, string][];
   markdown?: string | null;
+  raw?: boolean;
   said?: { kind: string; text: string }[] | null;
 }
 

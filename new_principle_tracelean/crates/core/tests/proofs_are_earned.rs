@@ -271,7 +271,7 @@ fn only_a_pinned_model_earns_its_clause_p_and_a_changed_theorem_takes_it_back() 
     std::fs::create_dir_all(root.join("reqs")).unwrap();
     std::fs::write(
         root.join("reqs/REQ-F.md"),
-        "---\nid: REQ-F\ntitle: Fixture\nclauses:\n  a: The system shall double.\n  b: The system shall box.\n  c: The system shall ask.\n  d: The system shall be the same.\n---\nbody",
+        "# REQ-F: Fixture\n\n- status: draft\n\nbody\n\n## Clauses\n\n- **a**: The system shall double.\n- **b**: The system shall box.\n- **c**: The system shall ask.\n- **d**: The system shall be the same.\n",
     )
     .unwrap();
     let index = build(&root);

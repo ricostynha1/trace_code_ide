@@ -149,7 +149,7 @@ fn marks_line(out: &mut Lines, clauses: &[ClauseShown]) {
             of => (format!("{letter}{held}/{of}"), Role::Claim { role }),
         })
         .collect();
-    let mut pieces: Vec<(&str, Role, &[&str])> = vec![("marks      ", Role::Plain, &[])];
+    let mut pieces: Vec<(&str, Role, &[&str])> = vec![("- marks ", Role::Plain, &[])];
     for (n, (text, role)) in said.iter().enumerate() {
         if n > 0 {
             pieces.push((" ", Role::Plain, &[]));
@@ -182,16 +182,16 @@ pub fn link_text(path: &str, line: u32) -> String {
 /// @drt REQ-SHOW.requirement_opened
 pub fn requirement_view(view: RequirementShown) -> Buffer {
     let mut out = Lines::new(view.width);
-    out.line(&[(&view.id, Role::Requirement, &[])]);
+    out.line(&[("# ", Role::Plain, &[]), (&view.id, Role::Requirement, &[])]);
     out.wrapped("", &view.title, Role::Heading, &[]);
-    out.line(&[(&view.file, Role::Path, &["file.open"])]);
-    let status = format!("status {}", view.status);
+    out.line(&[("- file ", Role::Plain, &[]), (&view.file, Role::Path, &["file.open"])]);
+    let status = format!("- status {}", view.status);
     if view.status == "draft" {
         out.line(&[(&status, Role::Plain, &[]), ("  ", Role::Plain, &[]), ("[ Approve ]", Role::Added, &["trace.approve"])]);
     } else {
         out.line(&[(&status, Role::Plain, &[])]);
     }
-    for (word, names) in [("refines    ", &view.refines), ("refined by ", &view.refined_by)] {
+    for (word, names) in [("- refines ", &view.refines), ("- refined by ", &view.refined_by)] {
         if names.is_empty() {
             continue;
         }
@@ -231,8 +231,8 @@ pub fn requirement_view(view: RequirementShown) -> Buffer {
         (R::Pins, format!("strong {pinned}/{total}")),
         (R::Drt, format!("drt {}/{total}", reaching(R::Drt))),
     ];
-    out.line(&[("for agent  ", Role::Plain, &[]), (&view.id, Role::Requirement, &["trace.context"]), ("  context to copy", Role::Plain, &[])]);
-    let mut pieces: Vec<(&str, Role, &[&str])> = vec![("evidence   ", Role::Plain, &[])];
+    out.line(&[("- for agent ", Role::Plain, &[]), (&view.id, Role::Requirement, &["trace.context"]), ("  context to copy", Role::Plain, &[])]);
+    let mut pieces: Vec<(&str, Role, &[&str])> = vec![("- evidence ", Role::Plain, &[])];
     for (n, (role, said)) in counts.iter().enumerate() {
         if n > 0 {
             pieces.push((" ", Role::Plain, &[]));
@@ -242,9 +242,9 @@ pub fn requirement_view(view: RequirementShown) -> Buffer {
     out.line(&pieces);
     marks_line(&mut out, &view.clauses);
     match view.lines {
-        Some(lines) => covered_line(&mut out, "covered    ", &view.id, lines),
+        Some(lines) => covered_line(&mut out, "- covered ", &view.id, lines),
         None if view.clauses.iter().any(implemented) => out.line(&[
-            ("covered    ", Role::Plain, &[]),
+            ("- covered ", Role::Plain, &[]),
             (NOT_MEASURED, Role::Removed, &[]),
         ]),
         None => {}
@@ -262,17 +262,18 @@ pub fn requirement_view(view: RequirementShown) -> Buffer {
             .collect();
         row.push(("  ", Role::Plain, &[]));
         row.push((&key, Role::Heading, &[]));
+        row.insert(0, ("### ", Role::Plain, &[]));
         out.line(&row);
-        out.wrapped("  ", &clause.text, Role::Plain, &[]);
+        out.wrapped("", &clause.text, Role::Plain, &[]);
         for (key, text) in &clause.narrowings {
-            out.wrapped("    ", &format!("{key}: {text}"), Role::Plain, &[]);
+            out.wrapped("- ", &format!("{key}: {text}"), Role::Plain, &[]);
         }
         if let Some(key) = &clause.key {
             let name = format!("{}.{key}", view.id);
-            out.line(&[("  for agent   ", Role::Plain, &[]), (&name, Role::Requirement, &["trace.context"])]);
+            out.line(&[("- for agent ", Role::Plain, &[]), (&name, Role::Requirement, &["trace.context"])]);
         }
         if clause.claims.is_empty() {
-            out.line(&[("  nothing claims it yet", Role::Removed, &[])]);
+            out.line(&[("- nothing claims it yet", Role::Removed, &[])]);
         }
         match clause.lines {
             Some(lines) => {
@@ -280,29 +281,29 @@ pub fn requirement_view(view: RequirementShown) -> Buffer {
                     Some(key) => format!("{}.{key}", view.id),
                     None => view.id.clone(),
                 };
-                covered_line(&mut out, "  covered     ", &name, lines);
+                covered_line(&mut out, "- covered ", &name, lines);
             }
-            None if implemented(clause) => out.line(&[("  covered     ", Role::Plain, &[]), (NOT_MEASURED, Role::Removed, &[])]),
+            None if implemented(clause) => out.line(&[("- covered ", Role::Plain, &[]), (NOT_MEASURED, Role::Removed, &[])]),
             None => {}
         }
         if let Some((state, said)) = &clause.pins {
             let role = if state == "pinned" { Role::Added } else { Role::Removed };
-            out.line(&[("  ", Role::Plain, &[]), (state.as_str(), role, &[])]);
-            out.wrapped("    ", said, Role::Plain, &[]);
+            out.line(&[("- strength ", Role::Plain, &[]), (state.as_str(), role, &[])]);
+            out.wrapped("- ", said, Role::Plain, &[]);
         }
         if clause.claims.iter().any(|c| c.role == "models") {
             let name = match &clause.key {
                 Some(key) => format!("{}.{key}", view.id),
                 None => view.id.clone(),
             };
-            out.line(&[("  judge       ", Role::Plain, &[]), (&name, Role::Requirement, &["trace.judge"])]);
+            out.line(&[("- judge ", Role::Plain, &[]), (&name, Role::Requirement, &["trace.judge"])]);
         }
         if let Some(judged) = &clause.judged {
             let said = judged_text(judged.clone());
             if judged.verdict == "agrees" {
-                out.line(&[("  judged      ", Role::Plain, &[]), (&said, Role::Plain, &[])]);
+                out.line(&[("- judged ", Role::Plain, &[]), (&said, Role::Plain, &[])]);
             } else {
-                out.wrapped("  ", &said, Role::Removed, &[]);
+                out.wrapped("- ", &said, Role::Removed, &[]);
             }
         }
         for claim in &clause.claims {
@@ -314,7 +315,7 @@ pub fn requirement_view(view: RequirementShown) -> Buffer {
             let link = link_text(&claim.path, claim.line);
             let symbol = claim.symbol.as_deref().map(|s| format!("  {s}"));
             let mut pieces: Vec<(&str, Role, &[&str])> =
-                vec![("  ", Role::Plain, &[]), (&kind, role, &[]), (" ", Role::Plain, &[]), (&link, Role::Path, &["file.open"])];
+                vec![("- ", Role::Plain, &[]), (&kind, role, &[]), (" ", Role::Plain, &[]), (&link, Role::Path, &["file.open"])];
             if let Some(symbol) = &symbol {
                 pieces.push((symbol, Role::Token { kind: crate::surface::view::TokenKind::Function }, &[]));
             }
@@ -414,17 +415,17 @@ mod tests {
         assert_eq!(actions_at(shown.clone(), offset_of(&shown, "ARCH-A")), vec!["trace.requirement".to_string()]);
         assert!(shown.text.contains("nothing claims it yet"));
         assert!(shown.text.contains("The prose of the document."), "the body is not shown: {}", shown.text);
-        assert!(shown.text.contains("  pinned\n    X.holds_pinned"), "{}", shown.text);
+        assert!(shown.text.contains("- strength pinned\n- X.holds_pinned"), "{}", shown.text);
         assert!(shown.text.contains("drt 1/2"), "a derived test counts: {}", shown.text);
         assert!(shown.text.contains("strong 1/2 drt 1/2"), "a pinned clause counts: {}", shown.text);
         let mut unmeasured = view();
         unmeasured.lines = None;
         unmeasured.clauses[0].lines = None;
         let said = requirement_view(unmeasured).text;
-        assert!(said.contains(&format!("covered    {NOT_MEASURED}")), "{said}");
-        assert!(said.contains(&format!("  covered     {NOT_MEASURED}")), "{said}");
-        assert!(shown.text.contains("covered     REQ-X.holds  3/4 lines run (75%), by 2 tests"), "{}", shown.text);
-        assert!(shown.text.contains("covered    REQ-X  3/8 lines run (37%), by 2 tests"), "{}", shown.text);
+        assert!(said.contains(&format!("- covered {NOT_MEASURED}")), "{said}");
+        assert!(said.contains(&format!("- covered {NOT_MEASURED}")), "{said}");
+        assert!(shown.text.contains("- covered REQ-X.holds  3/4 lines run (75%), by 2 tests"), "{}", shown.text);
+        assert!(shown.text.contains("- covered REQ-X  3/8 lines run (37%), by 2 tests"), "{}", shown.text);
         let opens = |needle: &str| actions_at(shown.clone(), offset_of(&shown, needle));
         assert_eq!(opens("REQ-X.holds  3/4"), vec!["trace.coverage".to_string()]);
         assert_eq!(opens("REQ-X  3/8"), vec!["trace.coverage".to_string()]);
@@ -434,10 +435,10 @@ mod tests {
 
     /// @tests REQ-REQDOC.narrowings_nest
     #[test]
-    fn narrowings_are_indented_under_their_clause() {
+    fn narrowings_are_listed_under_their_clause() {
         let shown = requirement_view(view());
         assert!(
-            shown.text.contains("  It shall hold.\n    empty: With nothing, it holds.\n"),
+            shown.text.contains("It shall hold.\n- empty: With nothing, it holds.\n"),
             "{}",
             shown.text
         );
@@ -449,7 +450,7 @@ mod tests {
     fn a_judgement_shows_its_verdict_and_who_delegated_it() {
         let shown = requirement_view(view());
         assert!(
-            shown.text.contains("judged      agrees by claude-review — L2 (delegated by ana)"),
+            shown.text.contains("- judged agrees by claude-review — L2 (delegated by ana)"),
             "{}",
             shown.text
         );

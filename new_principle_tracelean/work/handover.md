@@ -1,80 +1,60 @@
-# HANDOVER — what is still missing (after slice 5)
+# HANDOVER — read this alone; it assumes zero context
 
-*Written 2026-11-11 (end of session). Repo: `new_principle_tracelean/`. Branch: `gui-usability`.*
+*Written 2026-11-11. Repo `new_principle_tracelean/`, branch `gui-usability`, remote `origin` (github ricostynha1/trace_code_ide). No pull request exists yet.*
 
-Read this file alone to continue. What slice 5 built, with paths, is in `work/ROLLOVER_gui.md` ("Slice 5"). The discussion on proof routes and target languages is in `work/tracelean_formal_ideas.md`.
+TraceLean = a code editor (Rust core + editor + TUI + Tauri desktop + web frontend in `web/`) whose subject is *requirements → Lean models → code*, with every link a written annotation and every strength earned by a run. Method pages: `skills/00-the-method.md`… (`skills/03-requirements.md` is the requirement format). The app's own requirements are in `reqs/**`; a small example project is `demo/`.
 
-## Goal
-Finish and land the GUI-usability work, then decide the formal-verification direction.
+## What exists now (all committed)
 
-## State
+- Menus: File / Design / Trace / History / Agent / Window / Help, no command twice (`Editor::leader()` in `crates/editor/src/lib.rs`). Stations are a left icon rail.
+- **Every action is a command** (palette `Ctrl+P`): key bar toggle, zoom, raw/formatted (`look.raw`, `Space w r`).
+- **Settings are a grammar**: `assets/settings.json` (strict, like `assets/keymap.json`); loader `crates/core/src/surface/setting.rs`; groups by the text before the first dot, fuzzy search, edited in place in the GUI.
+- **Markdown buffers are drawn formatted by default**, raw via the command only (no button anywhere, by the user's wish; double-click on a formatted page also toggles). Clickable parts: fold rows, file mentions, requirement links, buttons; theme colours; claim chips (I/T/M/D/P) at the end of each clause line of a formatted requirement.
+- **Requirements are pure markdown**: `# REQ-X: Title`, `- status:` / `- decomposition:` / `- refines:` bullets, prose, then `## Clauses` with `- **key**: text` and `  - narrowing: text` under it. The old `---` YAML-header format is **removed** (parser, fixtures, docs). Parser: `parse_prose` in `crates/core/src/trace/requirement.rs`. Clause lines are found by `surface::chips::clause_lines`; anything that scans a requirement file for clauses must use it.
+- Requirement views and the tutorial are markdown too (`crates/core/src/surface/requirement_view.rs`, `assets/tutorial.md` with nested `+++ … +++` folds, folded at start, demo-driven walkthrough with a simulated sandbox agent).
+- Logo (`assets/logo.svg`, shown in the menu bar).
+- Lean model of the requirement parser was **rewritten for the new format** (`formal/TraceLean/Requirement.lean`; old one kept nowhere in the repo — git history). Six REQ-REQDOC clauses re-proved; Rust↔Lean differential agrees on 2000 inputs (`crates/core/tests/differential_requirement.rs`, ignored test).
+- Last fix: pane dividers sat inside buffers because formatted-markdown panes changed their own font, and panes are placed in `ch` (`.pane.md-preview > .md` in `web/style.css` now carries the look).
 
-- Slice 5 is committed and pushed on `gui-usability` (2026-11-11): one source commit, then `.tracelean/` as the evidence commit.
-- `demo/README.md`, `demo/src/blank.rs`, `demo/.tracelean/theme.json` are the user's own trial edits, left uncommitted: do not commit or revert them without asking.
-- `tracelean-trace .` ends `blocking: false`. Findings: Unbound 2, Unmodeled 58, Untested 1 (`REQ-THERMO.to_fahrenheit`).
-- Evidence was re-earned and locked after the last source change. `tracelean-trace . --proofs`: 295 of 295 theorems accepted, 2 of 183 models pinned, so Proved is 2 of 416 clauses.
-- Tests: editor, terminal and impacted core suites pass after the last change (live mirroring). The whole-workspace run was done BEFORE live mirroring (1007 passed; the failures then were fixed, except `fixpoint`). It has not been rerun since.
-- Outside the repo: `~/.config/tracelean/agent.json` was created with `{"claudeConfig": "~/.claude-feup"}` so sandboxes use that Claude configuration.
+## State of the evidence (be honest: the project is NOT closed)
 
-## Missing, in order
+`tracelean-trace .` → `blocking: false`, findings: **Unbound 2, Unmodeled 68, Untested 2**.
+`tracelean-trace . --proofs` → 295/295 theorems accepted, but only **2 of 183 models are pinned**, so *Proved* holds for ~2 of ~416 clauses. Coverage is incomplete, most clauses have no Lean model, and `--stale` lists **17 judgements, 3 documents, 2 differential tests** that need action. Nothing about "100% coverage / all proved" is true yet; do not claim it.
 
-1. **Open a pull request** to `main` when the user asks; none exists for this branch yet as far as this session knows.
-2. **Whole suite once more**: `cargo test --workspace --no-fail-fast -- --include-ignored`. Expect only `fixpoint` to fail. It rewrites `.tracelean/`, so run step 9 after it if anything changed.
-3. **The user has not tried any of slice 5 in the real window.** `node web/build.mjs && cargo run -p tracelean-desktop -- demo`, then check:
-   - `Ctrl+P` finds commands by words and by letters; `Ctrl+O` / `Ctrl+Shift+P` opens a file; `F5` and **↻ Files** refresh.
-   - **HTML report** in the overview writes the page and the browser opens.
-   - Tooltips on the file-tree marks.
-   - Undo tree: current branch first; whole tree by default.
-   - Sandbox: `Space a n`, run `sh …/enter.sh`, start `claude`. It must use `~/.claude-feup` and list the `tracelean` skill. Change files in the shell: they appear in the editor, the file tree (`+`) and the undo tree (`agent: …`) without accepting. `Ctrl+Z` goes back and the copy follows. Accept marks `✓ accepted`.
-   - Still unconfirmed from slice 4: smooth scrolling, menus closing on a click outside.
-4. **Judgements, a person's** (`tracelean-trace . --stale` lists 11): 9 judgements and 2 documents in review (`docs/02-scope.md`, `docs/06-editor.md`). Read with care:
-   - `REQ-OBS.no_instruction_channel`: going back in the history now writes into the sandbox copy (`Editor::copy_follows`).
-   - `REQ-STRENGTH.proved_only_when_pinned`: text changed (waiver for `@nondeterministic`, withdrawal of held proofs).
-   - `REQ-OBS.effects_become_commands`, `REQ-OBS.visible_while_running`: reworded for live mirroring.
-5. **Live mirroring, loose ends:**
-   - `accepted_at`, `agent_nodes`, `agent_paths` are in memory only: `✓ accepted` and `agent:` labels are lost when the editor closes. Persist them with the history (see `crates/core/src/history/persistence.rs`, `REQ-PERSIST`).
-   - Ending a sandbox leaves unaccepted agent changes as unsaved edits. Decide with the user whether that is wanted, or whether ending should ask.
-   - A file the person edits (unsaved) and the agent also changes: the agent's content replaces it as a node (undo brings the person's back). No merge. Not tested.
-   - The five new REQ-OBS clauses and `REQ-UNDO.current_branch_first`, `whole_by_default` have no Lean model (`Unmodeled`). Candidates that are pure: `history_view::current_first`, `quick::commands`, `explorer::meanings`, `proofcheck::proofs_standing`.
-6. **Terminal twin gaps:** tooltips on tree marks and `F5` are window-only (`Space f R` works in both).
-7. **Pin more models.** `tracelean-trace . --pins` lists what each of the 181 open models owes; `tracelean-trace . --strength <model>` prints the obligation. This is what raises Proved from 2.
-8. **Not built from the plan** (`work/plan_gui_usability.md` §3): §3.8 layer-rule check (allowed module dependencies as an `ARCH-*` clause, violations as findings); §3.9 accept/reject per hunk beside the clause card; §3.10 CI badge per mark; §3.3 sortable matrix with stale cells; §3.5 minimap / inline lens / unclaimed-code highlight; §3.6 live run panel with counter-examples. Screenshots of slices 3–5 were never taken (`layout.stations` must be `left` or `top` to show the station bar).
-9. **Earn and lock after any source change**, in this order:
-   ```bash
-   cargo run -q -p tracelean-core --bin tracelean-trace -- . --proofs     # Lean verdicts; withdraws unpinned proofs
-   cargo run -q -p tracelean-core --bin tracelean-trace -- . --coverage   # slow; any .rs change re-runs it
-   bash tools/differential-all.sh                                         # sets TRACELEAN_DRT_LINES=1; skips current ops
-   cargo run -q -p tracelean-core --bin tracelean-trace -- . --lock
-   cargo run -q -p tracelean-core --bin tracelean-trace -- . --stale      # should list only judgements and documents
-   ```
-10. **Formal direction** (not started; see `work/tracelean_formal_ideas.md`): first experiments are a C runner with CBMC/Frama-C beside DRT, and a Kani pilot for Rust.
+## What is missing, in order
 
-## Key paths
+1. **Real-window check.** The user has only partly looked at the GUI. Run `node web/build.mjs && cargo run -p tracelean-desktop -- demo` and confirm: formatted requirement shows chips and clickable files; dividers sit on pane edges (with markdown panes beside code); no raw/formatted button; `look.raw` works from the palette; settings edit in place; tutorial folds; menu reachability; the sandbox flow (`Space a n`, agent edits/creates/deletes show in explorer + undo tree).
+2. **Judgements need a person** (`tracelean-trace . --stale`; each prints a `--judge REQ-X.clause --verdict agrees|drift|unmodelable --by <who>` line). Never write a verdict for the user. Includes the six REQ-REQDOC clauses whose model was just rewritten.
+3. **Differential tests stale:** `REQ-ACT.everything_is_offered` and one more (`--stale`): `bash tools/differential-all.sh` after the last source change (it was run before the final CSS/JS edits only; no Rust change since, so it may already be current — check `--stale`).
+4. **Lean models for the newer clauses** (all `Unmodeled`): settings grammar (`REQ-LOOK.settings_declared`, `setting_edited_in_place`), key bar toggle, logo, markdown formatted-by-default / mentions act / requirement links, `REQ-REQDOC.markdown_document`, the five REQ-OBS live-mirroring clauses, `REQ-UNDO.current_branch_first`, `whole_by_default`. Pure candidates: `history_view::current_first`, `quick::commands`, `explorer::meanings`, `proofcheck::proofs_standing`. Mirror pattern: Rust list ↔ `assets/keymap.json` ↔ `formal/TraceLean/Act.lean` with both-ways tests.
+5. **Pin models** (this is what raises Proved): `tracelean-trace . --pins` lists what each open model owes; `--strength <model>` prints the obligation; a `@pins` theorem is a person-reviewed statement.
+6. **Unbound 2 / Untested 2**: run `tracelean-trace .` and read the findings; fix by writing the comparison/test, never by exempting.
+7. **Small loose ends:** Overview / Search / Open-file buttons are not commands yet (the user's rule: every action must be a command); Tauri window icons should be generated from `assets/logo.svg`; sandbox panel keys `Space w t s` described in the tutorial but not verified live; live-mirroring state (`accepted_at`, `agent_nodes`, `agent_paths` in `Editor`) is in memory only — persist with the history (`crates/core/src/history/persistence.rs`); ending a sandbox leaves unaccepted agent changes as unsaved edits (ask the user what is wanted); agent+person editing the same file is not merged and not tested.
+8. **Not built from `work/plan_gui_usability.md` §3:** layer-rule check, per-hunk accept/reject, CI badge per mark, sortable matrix, minimap/inline lens, live run panel.
+9. **Formal direction** (not started): `work/tracelean_formal_ideas.md` — CBMC/Frama-C beside DRT, Kani pilot.
+10. Open a PR to `main` only when the user asks.
 
-`crates/editor/src/lib.rs` (`tick`, `recount_waiting`, `copy_follows`, `accept`, `take_back`, `persist`, `points`, `lock_held`, `palette`, `tree_rows`) · `crates/core/src/trace/proofcheck.rs` (`earns_proof`, `proofs_standing`) · `crates/core/src/drt/proofs.rs` (`held`, `standing_lock`, `run_lean`) · `crates/core/src/surface/{history_view.rs,quick.rs,explorer.rs,act.rs,keymap.rs}` · `crates/core/src/observe/{sandbox.rs,workcopy.rs,watch.rs}` · `formal/TraceLean/{Act.lean,HistoryView.lean,Proofcheck.lean}` · `web/src/{app.ts,overview.ts}` · `web/test/pointer.mjs` · `crates/editor/tests/sandbox.rs` · `crates/tui/src/main.rs` · `tests/journeys.json` · `reqs/agent/{REQ-OBS.md,REQ-SBX.md}` · `reqs/history/REQ-UNDO.md` · `reqs/trace/REQ-STRENGTH.md`
+## Earn and lock after any source change (in this order)
+
+```bash
+cargo run -q -p tracelean-core --bin tracelean-trace -- . --proofs     # Lean verdicts
+cargo run -q -p tracelean-core --bin tracelean-trace -- . --coverage   # slow; any .rs change re-runs it
+bash tools/differential-all.sh                                         # sets TRACELEAN_DRT_LINES=1
+cargo run -q -p tracelean-core --bin tracelean-trace -- . --lock
+cargo run -q -p tracelean-core --bin tracelean-trace -- . --stale      # should list only judgements and documents
+```
+Do not edit source while coverage/differential runs. Commit `.tracelean/` as its own evidence commit.
 
 ## Gotchas
 
-- User rule: while working run only new + impacted tests; full suite once at the end with `--no-fail-fast`. Be terse. The user wants requirements, tests, annotations and docs delegated to a cheaper subagent (Sonnet) where possible; feature code and verification stay with the main session.
-- A plain `cargo test` does NOT re-earn a differential record: Rust-bound operations need the line half, recorded only with `TRACELEAN_DRT_LINES=1` (`tools/differential-all.sh` sets it). `tracelean-trace . --drt` only covers the auto-compared clauses (2 here).
-- Do not edit source while a coverage or differential run is in flight: the records come out stale again.
-- The full suite and the differential script rewrite files under `.tracelean/`; commit them as their own evidence commit.
-- The checker does not scan `.mjs`. `@tests` links for browser checks live on `the_page_in_a_browser_passes_its_checks` in `crates/editor/tests/pointer.rs`, which runs `web/build.mjs`, `pointer.mjs`, `journeys.mjs`, `overview.mjs`.
-- Only declared shells may touch the filesystem (`crates/core/tests/architecture.rs` `SHELLS`). The editor crate is not one: read evidence through `tracelean_core::trace::store` (`read_all`, `read_all_aged`).
-- A new station = `station_entries` + `station_kind` (+ `DOCUMENT_RECORDS` if it belongs in the document pane) in `crates/core/src/surface/screen.rs`, the same three in `formal/TraceLean/Screen.lean`, the action in `crates/core/src/surface/keymap.rs`, a key in `assets/keymap.json` (Station mode, keys kept sorted), a title match in the editor's `view`, a view name in `crates/editor/src/bin/tracelean-view.rs`, and an icon in `STATION_ICONS`.
-- A new action (not a station) = 4 places: `act.rs` match, `keymap.rs` action list, `Act.lean` match + action list; plus a key in `assets/keymap.json`.
-- A new Tauri command must also be answered by `crates/editor/examples/look.rs` and tolerated as missing by the stub in `web/test/pointer.mjs`.
-- Known failure unrelated to GUI: `fixpoint` (needs `cargo build --release` in `tools/stage0-trace`).
-- Tutorial and manual: sections unfold with a click or `Space m`; `.` opens the "what can be done here" menu, it does not unfold.
-- Zoom is the webview's native zoom, set inside the `theme` Tauri command; do not use CSS `zoom`.
-- `web/test/look.mjs` copies the tree without `.tracelean/`, so marks and runs show empty in its screenshots.
-- A lock keeps every record it held; a proof record stands only while its model is pinned or `@nondeterministic`. Read the lock through `drt::proofs::held` / `standing_lock` (core) or `Editor::lock_held` (editor), never `lockfile::read` directly, or P shows for unpinned models again.
-- `history_graph` (Rust) and `stepOf` (Lean) must push the first child in the same order; `differential_history_view` compares them.
-- Adding a case to `dispatchNamed` in `Act.lean` can exhaust heartbeats in `a_missing_target_is_refused_by_name` (it reports as "tactic 'split' failed"); the theorem now runs under `set_option maxHeartbeats 1600000`.
-- A terminal sends the same byte for `Ctrl+P` and `Ctrl+Shift+P`: keep open-file on `Ctrl+O`; `tests/journeys.json` is replayed by both frontends.
-- The sandbox mounts the skill at `<config>/skills/tracelean`: do not put a symlink there (it would dangle inside the sandbox, whose home is hidden).
-- `web/test/pointer.mjs`: the stub's explorer listing ends with a `+` mark (span 19..20) for the tooltip check.
-- With a sandbox live, `agent_tree` is "the copy as last looked at", not "what waits": `tick` diffs the copy against it, so anything the editor writes into the copy (`copy_follows`, `take_back`) must also be written into `agent_tree`, or it comes back as an agent change on the next tick.
-- Without a sandbox (`observe.start` on the working tree) the old flow stands: `pending` holds observed commands and accept pushes them. `accept`, `accept_file`, `reject`, `reject_file` and the review buffer branch on `self.session`.
-- `accepted_at`, `agent_nodes` and `agent_paths` live in memory only; they are not persisted with the history.
-- The sandbox panel reads the agent's conversation from the same Claude configuration the sandbox uses (`watch::claude_home(root)`); tests set `TRACELEAN_CLAUDE_CONFIG_DIR`, since `~/.config/tracelean/agent.json` on this machine outranks `CLAUDE_CONFIG_DIR`.
+- User rules: run only new + impacted tests while working, the full suite once at the end (`cargo test --workspace --no-fail-fast`); terse answers; do not write evidence marks or verdicts; no exemptions to silence findings.
+- Uncommitted on purpose (the user's own trial edits): `demo/README.md`, `demo/src/blank.rs`, `demo/.tracelean/theme.json`, `demo/letssee.txt`. Do not commit or revert without asking. (`demo/reqs/*` were converted to the new format and are committed.)
+- Known unrelated failure: `fixpoint` (needs `cargo build --release` in `tools/stage0-trace`).
+- Checks in a browser: `web/test/pointer.mjs` (build with `node web/build.mjs`), run also by `crates/editor/tests/pointer.rs`. The checker does not scan `.mjs`.
+- Panes are placed in `ch`: never set `font-size`/`font-family` on `.pane` itself.
+- Editing a requirement file's format affects: `parse_prose`, `chips::clause_lines`, `requirement_view.rs`, `act.rs` (`requirement_template`, `approve` expects `\n- status: draft\n`), editor `go_to_definition`, and the Lean `Requirement.lean` + DRT generator. Change them together.
+- Lean 4.12 (`formal/lean-toolchain`). `lake build` from `formal/`. In proofs, never `exact h` on a state built from string-op `if`s (whnf timeouts): state abstract lemmas over the flag (see `nested_fence'`).
+- A new action = `act.rs` match + `keymap.rs` list + `Act.lean` match/list + a key in `assets/keymap.json`. A new Tauri command must also be answered by `crates/editor/examples/look.rs` and the stub in `web/test/pointer.mjs`.
+- Only declared shells touch the filesystem (`crates/core/tests/architecture.rs` `SHELLS`).
+- Zoom is webview-native (set in the `theme` Tauri command); no CSS `zoom`.
+- Slice history and key paths from earlier work: `work/ROLLOVER_gui.md`.

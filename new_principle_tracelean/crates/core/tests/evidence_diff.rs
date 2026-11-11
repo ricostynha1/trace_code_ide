@@ -32,14 +32,14 @@ fn a_revision_is_compared_without_being_checked_out() {
     let dir = harness::scratch("evidence-diff");
     std::fs::create_dir_all(dir.join("reqs")).unwrap();
     std::fs::create_dir_all(dir.join("src")).unwrap();
-    std::fs::write(dir.join("reqs/a.md"), "---\nid: REQ-A\nclauses:\n  one: The system shall do one.\n  two: The system shall do two.\n---\nbody").unwrap();
+    std::fs::write(dir.join("reqs/a.md"), "# REQ-A: REQ-A\n\n- status: draft\n\nbody\n\n## Clauses\n\n- **one**: The system shall do one.\n- **two**: The system shall do two.\n").unwrap();
     std::fs::write(dir.join("src/i.rs"), "// @implements REQ-A.one\npub fn f() {}\n// @implements REQ-A.two\npub fn g() {}\n").unwrap();
     git(&dir, &["init", "-q"]);
     lock(&dir);
     git(&dir, &["add", "-A"]);
     git(&dir, &["commit", "-q", "-m", "base"]);
 
-    std::fs::write(dir.join("reqs/a.md"), "---\nid: REQ-A\nclauses:\n  one: The system shall do one, twice.\n  two: The system shall do two.\n---\nbody").unwrap();
+    std::fs::write(dir.join("reqs/a.md"), "# REQ-A: REQ-A\n\n- status: draft\n\nbody\n\n## Clauses\n\n- **one**: The system shall do one, twice.\n- **two**: The system shall do two.\n").unwrap();
     std::fs::write(dir.join("src/i.rs"), "// @implements REQ-A.one\npub fn f() {}\npub fn g() {}\n").unwrap();
     lock(&dir);
 

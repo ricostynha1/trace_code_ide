@@ -1,35 +1,35 @@
 # Requirements
 
 ```markdown
----
-id: REQ-CONVERT
-title: Converting between temperature scales
-refines: [ARCH-CORE-SHELL]
-status: approved
-decomposition: complete
-clauses:
-  scales_round_trip: Converting a temperature to the other scale and back shall give what went in.
----
+# REQ-CONVERT: Converting between temperature scales
 
-# Converting between temperature scales
+- status: approved
+- decomposition: complete
+- refines: ARCH-CORE-SHELL
 
 Why these clauses; the failure each prevents; what is not claimed.
+
+## Clauses
+
+- **scales_round_trip**: Converting a temperature to the other scale and back shall give what went in.
 ```
 
-- **`id`** is the identity, never the path.
+A requirement is an ordinary markdown document: the first line is
+`# ID: title`, the bullets right under it say what it is, the prose is yours,
+and the clauses are the list under `## Clauses`.
+
+- **The `ID`** is the identity, never the path.
 - **`refines`** builds a graph; cycles and unknown ids are reported.
 - **`decomposition`**: `complete` (clauses exhaust it) or `open` (coverage is
   provisional — it can only fall; usual for architecture).
-- **Narrowings**: a clause may be a block — `text:` is the clause, every other
-  key fixes which answer it allows (the empty case, an order). Annotations
-  name only the clause; narrowings are judged and hashed with it and do not
-  count as clauses.
+- **Narrowings**: a clause may carry nested bullets, each `key: text`, that
+  fix which answer it allows (the empty case, an order). Annotations name only
+  the clause; narrowings are judged and hashed with it and do not count as
+  clauses.
 
-  ```yaml
-  clauses:
-    min_not_mean:
-      text: The aggregate shall be the minimum of its parts' levels.
-      empty: With no parts, the aggregate shall be L1.
+  ```markdown
+  - **min_not_mean**: The aggregate shall be the minimum of its parts' levels.
+    - empty: With no parts, the aggregate shall be L1.
   ```
 
 ## A good clause

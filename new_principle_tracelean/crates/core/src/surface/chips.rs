@@ -62,27 +62,33 @@ pub fn clause_chips_owned(text: String, id: String, claims: Vec<(Option<String>,
     clause_chips(&text, &id, &claims)
 }
 
+/// The line and key of each clause of a requirement document: `- **key**: text` under `## Clauses`.
 pub fn clause_lines(text: &str) -> Vec<(usize, String)> {
     let mut out = Vec::new();
-    let mut fences = 0;
+    let mut in_clauses = false;
+    let mut fenced = false;
     for (line, row) in text.lines().enumerate() {
-        if row.trim() == "---" {
-            fences += 1;
-            if fences == 2 {
-                break;
-            }
+        if row.trim_start().starts_with("```") || row.trim_start().starts_with("~~~") {
+            fenced = !fenced;
+        }
+        if fenced {
             continue;
         }
-        let Some((key, _)) = row
-            .strip_prefix("  ")
-            .filter(|r| !r.starts_with([' ', '\t']))
-            .and_then(|r| r.split_once(':'))
-        else {
+        if row.trim() == "## Clauses" {
+            in_clauses = true;
             continue;
-        };
-        let key = key.trim();
-        if !key.is_empty() && !key.contains(' ') {
-            out.push((line, key.to_string()));
+        }
+        if in_clauses && row.starts_with("## ") {
+            in_clauses = false;
+        }
+        if !in_clauses {
+            continue;
+        }
+        if let Some((key, _)) = row.strip_prefix("- **").and_then(|r| r.split_once("**:")) {
+            let key = key.trim();
+            if !key.is_empty() && !key.contains(' ') {
+                out.push((line, key.to_string()));
+            }
         }
     }
     out
@@ -95,7 +101,7 @@ mod tests {
     /// @tests REQ-SHOW.claims_beside_code
     #[test]
     fn a_clause_is_marked_with_the_claims_on_it() {
-        let text = "---\nid: REQ-A\nclauses:\n  one: It does.\n  two: It also does.\n---\n  three: not a clause\n";
+        let text = "# REQ-A: REQ-A\n\n- status: draft\n\n  three: not a clause\n\n## Clauses\n\n- **one**: It does.\n- **two**: It also does.\n";
         let claims = vec![
             (Some("one".to_string()), Role::Tests),
             (Some("one".to_string()), Role::Implements),
@@ -105,8 +111,8 @@ mod tests {
         assert_eq!(
             got,
             vec![
-                Chip { line: 3, letter: 'I', requirement: "REQ-A.one".into() },
-                Chip { line: 3, letter: 'T', requirement: "REQ-A.one".into() },
+                Chip { line: 8, letter: 'I', requirement: "REQ-A.one".into() },
+                Chip { line: 8, letter: 'T', requirement: "REQ-A.one".into() },
             ]
         );
     }

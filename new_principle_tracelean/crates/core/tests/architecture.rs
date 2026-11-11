@@ -627,7 +627,7 @@ fn the_no_convention_comparison_is_sensitive_to_what_is_claimed() {
 
     let base = std::env::temp_dir().join(format!("tracelean-no-convention-neg-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&base);
-    let requirement = "---\nid: REQ-M\nclauses:\n  one: A thing shall happen.\n---\n\n# M\n";
+    let requirement = "# REQ-M: REQ-M\n\n- status: draft\n\n## Clauses\n\n- **one**: A thing shall happen.\n";
     for (dir, body) in [("one", "pub fn f() {}\n"), ("two", "pub fn f() { 1; }\n")] {
         std::fs::create_dir_all(base.join(dir)).unwrap();
         std::fs::write(base.join(dir).join("REQ-M.md"), requirement).unwrap();
@@ -647,7 +647,7 @@ fn moving_a_file_does_not_change_what_it_claims() {
     let base = std::env::temp_dir().join(format!("tracelean-no-convention-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&base);
 
-    let requirement = "---\nid: REQ-M\nclauses:\n  one: A thing shall happen.\n---\n\n# M\n";
+    let requirement = "# REQ-M: REQ-M\n\n- status: draft\n\n## Clauses\n\n- **one**: A thing shall happen.\n";
     let source = "/// @implements REQ-M.one\npub fn f() {}\n";
 
     let here = base.join("here");

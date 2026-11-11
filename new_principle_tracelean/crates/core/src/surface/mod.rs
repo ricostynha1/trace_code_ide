@@ -15,6 +15,7 @@ pub mod findings_view;
 pub mod highlight;
 pub mod history_view;
 pub mod keymap;
+pub mod links;
 pub mod lsp;
 pub mod offer;
 pub mod produce;

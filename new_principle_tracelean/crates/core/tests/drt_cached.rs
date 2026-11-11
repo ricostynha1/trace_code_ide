@@ -4,7 +4,7 @@ use std::process::Command;
 const TREE: &[(&str, &str)] = &[
     (
         "reqs/a.md",
-        "---\nid: REQ-A\ntitle: Doubling\nstatus: approved\ndecomposition: complete\nclauses:\n  doubles: Doubling shall give twice what went in.\n---\n",
+        "# REQ-A: Doubling\n\n- status: approved\n- decomposition: complete\n\n## Clauses\n\n- **doubles**: Doubling shall give twice what went in.\n",
     ),
     ("specs/M.lean", "namespace M\n\n/-- @models REQ-A.doubles -/\ndef double (n : Int) : Int := 2 * n\n\nend M\n"),
     ("src/double.rs", "/// @implements REQ-A.doubles\npub fn double(n: i64) -> i64 {\n    2 * n\n}\n"),

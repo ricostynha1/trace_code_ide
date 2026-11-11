@@ -468,7 +468,7 @@ mod tests {
         }
     }
 
-    const REQ: &str = "---\nid: REQ-A\ndecomposition: complete\nclauses:\n  one: First.\n---\nbody";
+    const REQ: &str = "# REQ-A: REQ-A\n\n- status: draft\n- decomposition: complete\n\nbody\n\n## Clauses\n\n- **one**: First.\n";
 
     /// @tests REQ-CHECK.qualifier_soundness
     #[test]
@@ -492,7 +492,7 @@ mod tests {
     #[test]
     fn a_broken_refinement_a_missing_name_and_a_silent_qualifier_are_each_reported() {
         let req = |id: &str, refines: &str| {
-            format!("---\nid: {id}\nrefines: [{refines}]\ndecomposition: complete\nclauses:\n  one: First.\n---\nbody")
+            format!("# {id}: {id}\n\n- status: draft\n- decomposition: complete\n- refines: {refines}\n\nbody\n\n## Clauses\n\n- **one**: First.\n")
         };
         let (_d, index) = tree(&[
             ("reqs/a.md", &req("REQ-A", "REQ-B")),
@@ -586,7 +586,7 @@ mod tests {
     #[test]
     fn an_exemption_leaves_the_denominator_and_must_be_justified() {
         let (_d, index) = tree(&[
-            ("reqs/a.md", "---\nid: REQ-A\nclauses:\n  one: First.\n  two: Second.\n---\nb"),
+            ("reqs/a.md", "# REQ-A: REQ-A\n\n- status: draft\n\nb\n\n## Clauses\n\n- **one**: First.\n- **two**: Second.\n"),
             (
                 "src/i.rs",
                 "// @implements REQ-A.two\n// @exempt REQ-A.two reason=\"platform\" by=ana\npub fn f() {}\n",
@@ -611,7 +611,7 @@ mod tests {
     /// @tests REQ-ROLLUP.never_complete_when_open
     #[test]
     fn an_open_decomposition_is_never_exact() {
-        let (_d, index) = tree(&[("reqs/a.md", "---\nid: REQ-A\nclauses:\n  one: First.\n---\nb")]);
+        let (_d, index) = tree(&[("reqs/a.md", "# REQ-A: REQ-A\n\n- status: draft\n\nb\n\n## Clauses\n\n- **one**: First.\n")]);
         assert!(!is_exact(&index, "REQ-A"));
         let (_d2, complete) = tree(&[("reqs/a.md", REQ)]);
         assert!(is_exact(&complete, "REQ-A"));

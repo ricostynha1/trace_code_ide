@@ -306,7 +306,7 @@ mod tests {
     }
 
     const FILES: &[(&str, &str)] = &[
-        ("reqs/a.md", "---\nid: REQ-A\nclauses:\n  one: First.\n---\nbody"),
+        ("reqs/a.md", "# REQ-A: REQ-A\n\n- status: draft\n\nbody\n\n## Clauses\n\n- **one**: First.\n"),
         (
             "src/i.rs",
             "// @models REQ-A.one\npub fn m() {}\n\n// @implements REQ-A.one\npub fn f() {}\n\n// @drt REQ-A.one\npub fn d() {}\n\n// @proves REQ-A.one\npub fn p() {}\n",
@@ -337,7 +337,7 @@ mod tests {
         let old = drt_stamp(&before, &clauses);
         let _ = std::fs::remove_dir_all(&dir);
         let (dir, after) = tree(&[
-            ("reqs/a.md", "---\nid: REQ-A\nclauses:\n  one: First.\n---\nbody"),
+            ("reqs/a.md", "# REQ-A: REQ-A\n\n- status: draft\n\nbody\n\n## Clauses\n\n- **one**: First.\n"),
             (
                 "src/i.rs",
                 "// @models REQ-A.one\npub fn m() {}\n\n// @implements REQ-A.one\npub fn f() { changed() }\n\n// @drt REQ-A.one\npub fn d() {}\n",
@@ -357,7 +357,7 @@ mod tests {
     #[test]
     fn a_clause_nothing_implements_earns_no_differential_record() {
         let (dir, index) = tree(&[
-            ("reqs/a.md", "---\nid: REQ-A\nclauses:\n  one: First.\n---\nbody"),
+            ("reqs/a.md", "# REQ-A: REQ-A\n\n- status: draft\n\nbody\n\n## Clauses\n\n- **one**: First.\n"),
             ("src/i.rs", "// @models REQ-A.one\npub fn m() {}\n\n// @drt REQ-A.one\npub fn d() {}\n"),
         ]);
         assert_eq!(
@@ -370,7 +370,7 @@ mod tests {
     #[test]
     fn a_judgement_does_not_go_stale_against_the_tree_it_was_made_on() {
         let (dir, index) = tree(&[
-            ("reqs/a.md", "---\nid: REQ-A\nclauses:\n  one: First.\n---\nbody"),
+            ("reqs/a.md", "# REQ-A: REQ-A\n\n- status: draft\n\nbody\n\n## Clauses\n\n- **one**: First.\n"),
             (
                 "src/i.rs",
                 "// @models REQ-A.one\npub fn m() {}\n\n// @models REQ-A.one\npub fn n() {}\n\n// @implements REQ-A.one\npub fn f() {}\n",
@@ -408,7 +408,7 @@ mod tests {
     #[test]
     fn a_judgement_goes_stale_when_a_model_it_was_about_changes() {
         let (dir, index) = tree(&[
-            ("reqs/a.md", "---\nid: REQ-A\nclauses:\n  one: First.\n---\nbody"),
+            ("reqs/a.md", "# REQ-A: REQ-A\n\n- status: draft\n\nbody\n\n## Clauses\n\n- **one**: First.\n"),
             (
                 "src/i.rs",
                 "// @models REQ-A.one\npub fn m() {}\n\n// @models REQ-A.one\npub fn n() {}\n\n// @implements REQ-A.one\npub fn f() {}\n",
@@ -455,7 +455,7 @@ mod tests {
         let proof = proof_record(&index, "REQ-A", Some("one"), "a_theorem", "4.12.0").unwrap();
         let (valid, _) = still_standing(&index, vec![drt.clone(), proof.clone()]);
         assert_eq!(valid.len(), 2);
-        std::fs::write(dir.join("reqs/a.md"), "---\nid: REQ-A\nclauses:\n  one: First, reworded.\n---\nbody").unwrap();
+        std::fs::write(dir.join("reqs/a.md"), "# REQ-A: REQ-A\n\n- status: draft\n\nbody\n\n## Clauses\n\n- **one**: First, reworded.\n").unwrap();
         let (valid, stale) = still_standing(&build(&dir), vec![drt, proof]);
         assert!(valid.is_empty(), "a record survived its requirement being reworded");
         assert_eq!(stale.len(), 2);
@@ -466,7 +466,7 @@ mod tests {
     /// @tests REQ-REQDOC.clause_addressable
     #[test]
     fn rewording_one_clause_reopens_its_judgement_and_no_sibling_s() {
-        let doc = "---\nid: REQ-A\nclauses:\n  a: First.\n  b: Second.\n---\nbody";
+        let doc = "# REQ-A: REQ-A\n\n- status: draft\n\nbody\n\n## Clauses\n\n- **a**: First.\n- **b**: Second.\n";
         let (dir, index) = tree(&[
             ("reqs/a.md", doc),
             (

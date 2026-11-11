@@ -729,7 +729,7 @@ fn a_repeated_requirement_identifier_is_reported() {
     let dir = std::env::temp_dir().join("tracelean-duplicate-requirement");
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(dir.join("nested")).unwrap();
-    let document = "---\nid: REQ-SAME\ntitle: One\n---\n\n# One\n";
+    let document = "# REQ-SAME: One\n\n- status: draft\n";
     std::fs::write(dir.join("a.md"), document).unwrap();
     std::fs::write(dir.join("nested/b.md"), document).unwrap();
 

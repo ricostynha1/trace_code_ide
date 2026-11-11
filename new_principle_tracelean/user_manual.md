@@ -744,33 +744,33 @@ the status line says why.
 `reqs/REQ-NAME.md`:
 
 ```markdown
----
-id: REQ-NAME
-title: What it is about
-status: draft
-clauses:
-  key: The system shall …
----
+# REQ-NAME: What it is about
 
-# What it is about
+- status: draft
 
 Why the clauses are what they are.
+
+## Clauses
+
+- **key**: The system shall …
 ```
 
 When it is right, approve it with `Space t a`. Then annotate the code that
 implements it with `@implements REQ-NAME.key`; the chips and the requirement
 panel update at once.
 
-### 12.2 The frontmatter
+### 12.2 The parts of a requirement
 
-| Field | Meaning |
+A requirement is a plain markdown document. Nothing in it is hidden in a header.
+
+| Part | Meaning |
 |---|---|
-| `id` | The identity. Annotations use it; the file may move or be renamed freely. |
-| `title` | A short name. |
-| `status` | `draft` or `approved`. |
-| `refines` | The requirements this one refines, e.g. `[REQ-THERMO]`. Cycles and unknown ids are findings. |
-| `decomposition` | `complete` if you claim the clauses exhaust the requirement; `open` otherwise. An open requirement is never shown as finished. |
-| `clauses` | `key: sentence`, one promise each. |
+| `# ID: title` | The first line. The ID is the identity: annotations use it, and the file may move or be renamed freely. The title is a short name. |
+| `- status:` | `draft` or `approved`. |
+| `- refines:` | The requirements this one refines, e.g. `REQ-THERMO, ARCH-X`. Cycles and unknown ids are findings. |
+| `- decomposition:` | `complete` if you claim the clauses exhaust the requirement; `open` otherwise. An open requirement is never shown as finished. |
+| prose | Anything between those bullets and `## Clauses`: why the clauses are what they are. |
+| `## Clauses` | A list, `- **key**: sentence`, one promise each. |
 
 ### 12.3 Good clauses
 
@@ -793,11 +793,9 @@ code comments.
 A clause can carry narrowings, more specific cases that are judged and hashed
 with the clause but are not clauses themselves:
 
-```yaml
-clauses:
-  min_not_mean:
-    text: The aggregate shall be the minimum of its parts' levels.
-    empty: With no parts, the aggregate shall be L1.
+```markdown
+- **min_not_mean**: The aggregate shall be the minimum of its parts' levels.
+  - empty: With no parts, the aggregate shall be L1.
 ```
 
 ### 12.5 Changing and deleting

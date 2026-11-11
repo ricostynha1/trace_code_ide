@@ -46,6 +46,11 @@
         "parent": "Leader",
         "bindings": [
           ["c", { "dispatch": { "action": "look.theme", "description": "switch theme: dark or light" } }],
+          ["r", { "dispatch": { "action": "look.raw", "description": "markdown: show the raw text, or formatted" } }],
+          ["m", { "dispatch": { "action": "look.keybar", "description": "show or hide the bar of keys at the bottom" } }],
+          ["Z", { "dispatch": { "action": "look.zoom_in", "description": "bigger text" } }],
+          ["z", { "dispatch": { "action": "look.zoom_out", "description": "smaller text" } }],
+          ["0", { "dispatch": { "action": "look.zoom_reset", "description": "text back to 100%" } }],
           ["h", { "dispatch": { "action": "screen.focus.left", "description": "focus left" } }],
           ["j", { "dispatch": { "action": "screen.focus.down", "description": "focus down" } }],
           ["k", { "dispatch": { "action": "screen.focus.up", "description": "focus up" } }],

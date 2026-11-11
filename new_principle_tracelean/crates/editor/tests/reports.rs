@@ -37,7 +37,7 @@ fn said(editor: &Editor) -> String {
     plain_text(editor.status.clone()).join("\n")
 }
 
-const REQ: &str = "---\nid: REQ-A\ntitle: A\nclauses:\n  one: First.\n---\nbody\n";
+const REQ: &str = "# REQ-A: A\n\n- status: draft\n\nbody\n\n## Clauses\n\n- **one**: First.\n";
 
 /// @tests REQ-DOCLINK.review_is_not_error
 #[test]

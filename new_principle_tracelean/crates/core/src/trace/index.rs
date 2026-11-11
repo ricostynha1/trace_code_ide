@@ -245,18 +245,16 @@ mod tests {
     /// @tests REQ-ANNOT.qualifiers
     /// @tests REQ-REQDOC.malformed_reported
     #[test]
-    fn a_malformed_requirement_and_an_unclosed_fence_are_reported_by_the_scan() {
+    fn a_malformed_requirement_is_reported_by_the_scan() {
         let root = std::env::temp_dir().join(format!("tracelean-index-problems-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&root);
         std::fs::create_dir_all(root.join("reqs")).unwrap();
-        std::fs::write(root.join("reqs/x.md"), "---\nid: REQ-X\nthis line has no colon\n---\nbody").unwrap();
-        std::fs::write(root.join("notes.md"), "---\nid: REQ-Y\nnever closed\n").unwrap();
-        let index = build(&root);
+        std::fs::write(root.join("reqs/x.md"), "# REQ-X: REQ-X\n\n## Clauses\n\n- not a clause\n").unwrap();
+                let index = build(&root);
         let _ = std::fs::remove_dir_all(&root);
         assert!(index.requirements.contains_key("REQ-X"), "a broken line hid the requirement");
         let at: Vec<(&str, u32)> = index.problems.iter().map(|p| (p.file.as_str(), p.line)).collect();
-        assert!(at.contains(&("reqs/x.md", 3)), "{at:?}");
-        assert!(at.contains(&("notes.md", 1)), "{at:?}");
+        assert!(at.contains(&("reqs/x.md", 5)), "{at:?}");
         assert!(index.problems.iter().all(|p| !p.imprecise));
     }
 

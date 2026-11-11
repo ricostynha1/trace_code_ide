@@ -302,12 +302,12 @@ button.item {
   width: 6px;
   height: 100%;
   cursor: col-resize;
-  transition: background 0.15s;
   z-index: 4;
 }
 
 .divider:hover,
-.divider:active {
+.divider:active,
+.divider.held {
   background: var(--ui-accent);
 }
 
@@ -315,6 +315,16 @@ body.dragging,
 body.dragging * {
   cursor: col-resize !important;
   user-select: none !important;
+}
+
+/* The panes are redrawn at every step of a drag; lines rebuilt under a still pointer would
+   switch :hover on and off. While dragging nothing reacts to the pointer but the divider. */
+body.dragging .pane .line,
+body.dragging .pane .line * {
+  pointer-events: none !important;
+}
+body.dragging .line:hover:not(.active) {
+  background: none;
 }
 
 .line {
@@ -336,6 +346,18 @@ body.dragging * {
   display: flex;
   gap: 1px;
   user-select: none;
+}
+
+.chips-inline {
+  display: inline-flex;
+  gap: 2px;
+  margin-left: 0.8ch;
+  vertical-align: baseline;
+  user-select: none;
+}
+
+.chips-inline .chip {
+  margin-top: 0;
 }
 
 .chip {
@@ -1474,8 +1496,9 @@ body.stations-hidden #stations {
 
 /* Formatted markdown (files and the agent's conversation) */
 .pane.rich { overflow-y: auto; white-space: normal; padding: 0 0 2em; }
-.pane.md-preview { padding: 0.5em 1.4em 2em; font-family: var(--fonts-chrome); font-size: calc(var(--fonts-chromeSize) + 1px); line-height: 1.6; }
-.md-switch { position: sticky; top: 0; float: right; z-index: 2; font: inherit; font-size: 0.8em; padding: 0.15em 0.7em; border: 1px solid var(--ui-border); border-radius: 4px; background: var(--ui-sidebar); color: var(--ui-sidebarText); cursor: pointer; }
+/* The pane is placed and sized in `ch`, so its own font must stay the grid's: the page inside carries the look. */
+.pane.md-preview { padding: 0; }
+.pane.md-preview > .md { padding: 0.5em 1.4em 2em; font-family: var(--fonts-chrome); font-size: calc(var(--fonts-chromeSize) + 1px); line-height: 1.6; }
 .md > :first-child { margin-top: 0; }
 .md-h { line-height: 1.25; margin: 1.2em 0 0.45em; font-weight: 650; }
 h1.md-h { font-size: 1.6em; border-bottom: 1px solid var(--ui-border); padding-bottom: 0.25em; }
@@ -1519,3 +1542,73 @@ body.tab-dragging { cursor: grabbing; user-select: none; }
 .line.line-removed { background: color-mix(in srgb, var(--roles-removed) 20%, transparent); box-shadow: inset 3px 0 0 var(--roles-removed); }
 .line.line-added > *, .line.line-removed > * { background: transparent; }
 .line.line-removed > * { text-decoration: line-through; text-decoration-thickness: 1px; text-decoration-color: color-mix(in srgb, var(--roles-removed) 60%, transparent); }
+
+/* ── the settings: a search box on top, and the value edited where it stands ── */
+.settings-search {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  width: calc(100% - 16px);
+  margin: 4px 8px;
+  padding: 4px 8px;
+  border: 1px solid var(--ui-contextMenuBorder);
+  border-radius: 4px;
+  background: var(--ui-document);
+  color: var(--ui-documentText);
+  font: inherit;
+}
+.setting-input {
+  width: 16ch;
+  padding: 0 4px;
+  border: 1px solid var(--ui-focus);
+  border-radius: 3px;
+  background: var(--ui-document);
+  color: var(--ui-documentText);
+  font: inherit;
+}
+
+/* The bar of keys at the bottom can be switched off (layout.keyBar). */
+body.keybar-hidden #menu:not(.mode) {
+  display: none;
+}
+
+
+.menubar-logo { flex: none; display: inline-flex; align-items: center; margin: 0 6px 0 2px; }
+.menubar-logo .logo { width: 20px; height: 20px; display: block; }
+
+/* Formatted markdown keeps the colours the text had as source: the theme's, by what a thing is. */
+.md-h { color: var(--syntax-heading, var(--roles-heading)); }
+.md strong { color: var(--syntax-bold, inherit); }
+.md em { color: var(--syntax-italic, inherit); }
+.md code.md-code { color: var(--syntax-string, inherit); }
+.md-pre { color: var(--syntax-constant, inherit); }
+.md-link { color: var(--syntax-link, var(--ui-accent)); }
+.md-list li::marker { color: var(--roles-path, var(--ui-accent)); }
+.md-quote { border-left-color: var(--roles-requirement, var(--ui-border)); }
+.md-table th { color: var(--syntax-heading, inherit); }
+.md-hr { border-top-color: var(--roles-path, var(--ui-border)); }
+.md .md-action { font: inherit; background: none; border: 0; padding: 0; cursor: pointer; text-align: left; }
+.md button.md-action { color: var(--roles-requirement); text-decoration: underline; text-underline-offset: 2px; }
+.md button.md-action.role-path { color: var(--roles-path); }
+.md button.md-action.role-added, .md button.md-action.role-added:hover { color: var(--roles-added); }
+.md-disclosure { cursor: pointer; font-weight: 600; margin: 0.35em 0; padding: 0.2em 0.5em; border-radius: 4px; color: var(--roles-path, var(--ui-accent)); user-select: none; }
+.md-disclosure:hover { background: color-mix(in srgb, currentColor 10%, transparent); }
+.md-disclosure.md-depth-0 { font-size: 1.15em; margin-top: 0.8em; border-bottom: 1px solid var(--ui-border); color: var(--syntax-heading, var(--roles-heading)); }
+.md-disclosure.md-depth-1 { margin-left: 1.2em; }
+.md-disclosure.md-depth-2 { margin-left: 2.4em; }
+.md .role-added { color: var(--roles-added); }
+.md .role-removed { color: var(--roles-removed); }
+.md .role-heading { color: var(--roles-heading); }
+.md .role-requirement { color: var(--roles-requirement); }
+.md .role-path { color: var(--roles-path); }
+.md .role-entry { color: var(--roles-entry); }
+.md .role-mark-markAnnotated, .md .role-mark { font-family: var(--fonts-code); }
+/* The claim words keep the chips they have as text: implements, tests, models, proves, drt. */
+.md .role-claim { display: inline-block; padding: 0 0.45em; margin-right: 0.2em; border-radius: 3px; font-size: 0.82em; line-height: 1.5; color: var(--ui-document); font-family: var(--fonts-code); }
+
+.md-front { margin: 0.6em 0 1em; padding: 0.5em 0.8em; border: 1px solid var(--ui-border); border-radius: 6px; background: color-mix(in srgb, currentColor 5%, transparent); }
+.md-front-table, .md-front-clauses { width: 100%; margin: 0.2em 0; }
+.md-front-table th { width: 9em; font-weight: 500; opacity: 0.7; background: none; color: inherit; }
+.md-front-clauses th { width: 1%; white-space: nowrap; background: none; }
+.md-front th, .md-front td { border: 0; border-bottom: 1px solid color-mix(in srgb, currentColor 12%, transparent); }
+.md .claim-pins { background: var(--chips-proves); }

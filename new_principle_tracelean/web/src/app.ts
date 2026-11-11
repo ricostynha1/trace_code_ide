@@ -1,6 +1,6 @@
 import { drawOverview, showing, type Design, type Node as DesignNode } from "./overview.ts";
 import { classOf, pieces, shown } from "./render.ts";
-import { markdown } from "./markdown.ts";
+import { activate, document_ as markdownDocument, markdown } from "./markdown.ts";
 import type { Buffer, Pane } from "./view.ts";
 
 const LINE = 21;
@@ -174,6 +174,31 @@ function drawChips(box: HTMLElement, pane: Pane) {
   }
 }
 
+/** On a formatted page the claims sit at the end of the clause they are about, as the letters beside its text do. */
+export function drawFormattedChips(box: HTMLElement, pane: Pane) {
+  for (const [line, letter, requirement] of pane.chips ?? []) {
+    const blocks = Array.from(box.querySelectorAll<HTMLElement>(`[data-line="${line}"]`));
+    const row = blocks[blocks.length - 1];
+    if (!row) continue;
+    let holder = row.querySelector(":scope > .chips-inline");
+    if (!holder) {
+      holder = document.createElement("span");
+      holder.className = "chips-inline";
+      row.appendChild(holder);
+    }
+    const chip = document.createElement("button");
+    chip.className = `chip chip-${CLAIMED[letter] ?? "other"}`;
+    chip.textContent = letter;
+    chip.title = `${CLAIMED[letter] ?? letter} ${requirement}`;
+    cardOn(chip, requirement);
+    chip.addEventListener("click", (event) => {
+      event.stopPropagation();
+      void run("choose", { pane: pane.pane, offset: 0, action: "trace.requirement", target: requirement, answer: null });
+    });
+    holder.appendChild(chip);
+  }
+}
+
 function drawCoverage(box: HTMLElement, pane: Pane) {
   for (const [line, hits, said] of pane.coverage ?? []) {
     const row = box.children[line - (pane.top ?? 0)];
@@ -271,7 +296,12 @@ function syncPanes(into: HTMLElement, panes: Pane[]) {
     const fresh = into.lastElementChild;
     if (!fresh) return;
     drawnFrom.set(fresh, value);
-    if (held && held !== fresh) into.replaceChild(fresh, held);
+    if (held && held !== fresh) {
+      // Redrawn after a click (a fold, a switch): stay where the page was, not at its top.
+      const scrolled = held instanceof HTMLElement && held.dataset.buffer === (fresh as HTMLElement).dataset.buffer ? held.scrollTop : 0;
+      into.replaceChild(fresh, held);
+      if (scrolled) fresh.scrollTop = scrolled;
+    }
   });
   while (into.children.length > panes.length) into.lastElementChild?.remove();
 }
@@ -336,7 +366,6 @@ export function explainMarks(box: HTMLElement, marks: Record<string, string> | n
 }
 
 /** Markdown files shown as source (the others are shown formatted). */
-const sourced = new Set<string>();
 
 const SAID_LABEL: Record<string, string> = {
   you: "You",
@@ -373,6 +402,129 @@ function drawConversation(said: { kind: string; text: string }[]): HTMLElement {
   return box;
 }
 
+let keyBar = "shown";
+interface SettingRule {
+  name: string;
+  kind: string;
+  choices: string[];
+  min: number | null;
+  max: number | null;
+  step: number | null;
+  default: string | null;
+  description: string;
+}
+
+const EDIT = "definitions.edit ";
+let settingsQuery = "";
+let searching = 0 as ReturnType<typeof setTimeout> | 0;
+
+/**
+ * The search box above the settings: the list is narrowed as the words are typed, by the
+ * same matching the command search uses.
+ *
+ * @implements REQ-LOOK.settings_grouped_and_searchable
+ */
+function settingsSearch(): HTMLElement {
+  const input = document.createElement("input");
+  input.className = "settings-search";
+  input.placeholder = "Search settings: words or letters";
+  input.value = settingsQuery;
+  input.setAttribute("aria-label", "Search settings");
+  input.addEventListener("keydown", (event) => event.stopPropagation());
+  input.addEventListener("click", (event) => event.stopPropagation());
+  input.addEventListener("input", () => {
+    settingsQuery = input.value;
+    if (searching) clearTimeout(searching);
+    searching = setTimeout(async () => {
+      if (!ctx) return;
+      await ctx.invoke("filter_settings", { query: settingsQuery });
+      await show(ctx.invoke, ctx.into, ctx.status);
+      const fresh = document.querySelector<HTMLInputElement>(".settings-search");
+      fresh?.focus();
+      fresh?.setSelectionRange(fresh.value.length, fresh.value.length);
+    }, 120);
+  });
+  return input;
+}
+
+/**
+ * Change a setting where it stands: the line turns into a box holding the value, Enter
+ * keeps it, Escape leaves it. Returns false when the row cannot be read, so the caller
+ * falls back to asking at the bottom.
+ */
+export function editInPlace(box: HTMLElement, name: string, at: number): boolean {
+  const button = box.querySelector<HTMLElement>(`button[data-at="${at}"]`);
+  const row = button?.closest<HTMLElement>(".line");
+  if (!button || !row) return false;
+  // The buffer declares the line as two spans, the key and the value, both editing the
+  // setting: the value is read from its span, not parsed out of the line.
+  const spans = Array.from(row.querySelectorAll<HTMLElement>(`button[data-action="${EDIT}${name}"]`));
+  const key = spans[0]?.textContent ?? "";
+  const value = spans.length > 1 ? (spans[spans.length - 1].textContent ?? "") : "";
+  const input = document.createElement("input");
+  input.className = "setting-input";
+  input.value = value;
+  input.setAttribute("aria-label", `New value for ${name}`);
+  row.textContent = "";
+  row.append(document.createTextNode(`  ${key}  `), input);
+  let over = false;
+  const leave = () => {
+    if (over) return;
+    over = true;
+    if (ctx) void show(ctx.invoke, ctx.into, ctx.status);
+  };
+  const keep = (chosen: string) => {
+    over = true;
+    void run("set_setting", { name, value: chosen.trim() });
+  };
+  input.addEventListener("keydown", (event) => {
+    event.stopPropagation();
+    if (event.key === "Escape") leave();
+    if (event.key === "Enter") keep(input.value);
+  });
+  input.addEventListener("click", (event) => event.stopPropagation());
+  input.addEventListener("blur", leave);
+  input.focus();
+  input.select();
+  // The grammar of the settings says what this one holds; the widget follows it. A choice
+  // is a list to pick from, a percentage a number within its range; anything else stays text.
+  void (async () => {
+    let rule: SettingRule | null = null;
+    try {
+      rule = (await ctx?.invoke("setting_rule", { name })) as SettingRule | null;
+    } catch {
+      return;
+    }
+    if (!rule || !input.isConnected) return;
+    if (rule.kind === "choice") {
+      const pick = document.createElement("select");
+      pick.className = "setting-input";
+      pick.setAttribute("aria-label", input.getAttribute("aria-label") ?? "");
+      for (const choice of rule.choices) {
+        const option = document.createElement("option");
+        option.value = option.textContent = choice;
+        option.selected = choice === value;
+        pick.appendChild(option);
+      }
+      pick.addEventListener("keydown", (event) => {
+        event.stopPropagation();
+        if (event.key === "Escape") leave();
+      });
+      pick.addEventListener("change", () => keep(pick.value));
+      pick.addEventListener("click", (event) => event.stopPropagation());
+      pick.addEventListener("blur", leave);
+      input.replaceWith(pick);
+      pick.focus();
+    } else if (rule.kind === "percent") {
+      input.type = "number";
+      if (rule.min != null) input.min = String(rule.min);
+      if (rule.max != null) input.max = String(rule.max);
+      if (rule.step != null) input.step = String(rule.step);
+    }
+  })();
+  return true;
+}
+
 function drawPane(into: HTMLElement, pane: Pane) {
   const box = document.createElement("div");
   const kind = Object.keys(pane.buffer.kind)[0] ?? "file";
@@ -383,26 +535,30 @@ function drawPane(into: HTMLElement, pane: Pane) {
   box.style.top = `${pane.at.top * LINE}px`;
   box.style.width = `${pane.at.width}ch`;
   box.style.height = `${pane.at.height * LINE}px`;
-  const act = (action: string, at: number) => run("act", { pane: pane.pane, action, offset: at });
-  const path = "file" in pane.buffer.kind ? pane.buffer.kind.file.path : "";
-  const formatted = typeof pane.markdown === "string" && !sourced.has(path);
+  const act = (action: string, at: number) => {
+    if (action.startsWith(EDIT) && editInPlace(box, action.slice(EDIT.length), at)) return;
+    return run("act", { pane: pane.pane, action, offset: at });
+  };
+  // Any buffer the core says is markdown is drawn formatted, and its text is one switch away.
+  const isFile = "file" in pane.buffer.kind;
+  const isMarkdown = typeof pane.markdown === "string";
+  const formatted = isMarkdown && !pane.raw;
+  // Raw or formatted is a command like any other (look.raw, Space w r); a double-click asks for it too.
+  const switchTo = (_raw: boolean) => void run("act", { pane: pane.pane, action: "look.raw", offset: 0 });
   if (formatted) {
     box.classList.add("rich", "md-preview");
-    const switcher = document.createElement("button");
-    switcher.className = "md-switch";
-    switcher.textContent = "Edit source";
-    switcher.title = "Show the file's text, to edit it (double-click the page does the same)";
-    const toSource = () => {
-      sourced.add(path);
-      if (ctx) void show(ctx.invoke, ctx.into, ctx.status);
-    };
-    switcher.addEventListener("click", (event) => {
-      event.stopPropagation();
-      toSource();
-    });
-    box.addEventListener("dblclick", toSource);
-    box.appendChild(switcher);
-    box.appendChild(markdown(pane.markdown as string));
+    box.addEventListener("dblclick", () => switchTo(true));
+    const page = markdownDocument(pane.markdown as string);
+    // The spans of a buffer that is all markdown say where it acts; a file's windowed buffer has none.
+    if (pane.buffer.text === pane.markdown) activate(
+        page,
+        pane.buffer.text,
+        pane.buffer.spans,
+        act,
+        // A file keeps its own look; only what acts is made to act. Records are coloured by their spans.
+        isFile ? () => "" : (role) => classOf(role as Parameters<typeof classOf>[0]),
+      );
+    box.appendChild(page);
   } else if (pane.said) {
     box.classList.add("rich");
     const marker = "Conversation, newest first";
@@ -424,9 +580,10 @@ function drawPane(into: HTMLElement, pane: Pane) {
     box.appendChild(drawConversation(pane.said));
   } else {
     draw(box, pane.buffer, act);
+    if (pane.buffer.id === "record:definitions") box.prepend(settingsSearch());
   }
   if (formatted && "file" in pane.buffer.kind) {
-    // nothing else is drawn over a formatted page
+    drawFormattedChips(box, pane);
   } else if (kind === "file") {
     Array.from(box.children).forEach((row, index) => {
       if (row instanceof HTMLElement) row.dataset.number = String((pane.top ?? 0) + index + 1);
@@ -492,10 +649,15 @@ function drawPane(into: HTMLElement, pane: Pane) {
 
   const handle = document.createElement("div");
   handle.className = "divider";
+  // The pane is redrawn on every step of a drag, so the held divider is a new element each
+  // time: it is marked, not left to :hover/:active, or its colour would flash.
+  if (heldDivider === pane.pane) handle.classList.add("held");
   handle.addEventListener("click", (event) => event.stopPropagation());
   handle.addEventListener("mousedown", (event) => {
     event.preventDefault();
     event.stopPropagation();
+    heldDivider = pane.pane;
+    handle.classList.add("held");
     let from = event.clientX;
     const character = box.getBoundingClientRect().width / Math.max(1, pane.at.width);
     let sending = false;
@@ -510,6 +672,8 @@ function drawPane(into: HTMLElement, pane: Pane) {
       document.removeEventListener("mousemove", follow);
       document.removeEventListener("mouseup", release);
       document.body.classList.remove("dragging");
+      heldDivider = null;
+      document.querySelector(".divider.held")?.classList.remove("held");
     };
     document.body.classList.add("dragging");
     document.addEventListener("mousemove", follow);
@@ -695,6 +859,8 @@ interface Offer {
   asks: string | null;
   keys: string | null;
 }
+
+let heldDivider: string | null = null;
 
 const GROUPS: Record<string, string> = {
   here: "Here",
@@ -930,6 +1096,27 @@ function openLeader(x: number, y: number) {
   settle(menu, x, y);
 }
 
+/**
+ * The mark of the app: a requirement, a model and code joined by a trace, and a check that
+ * only a run earns. Drawn in the theme's accent, so it follows the theme.
+ *
+ * @implements REQ-LOOK.app_has_a_logo
+ */
+export function logo(): SVGElement {
+  const mark = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  mark.setAttribute("viewBox", "0 0 64 64");
+  mark.setAttribute("class", "logo");
+  mark.setAttribute("role", "img");
+  mark.setAttribute("aria-label", "TraceLean");
+  mark.innerHTML =
+    '<rect width="64" height="64" rx="14" fill="var(--ui-accent, #61afef)"/>' +
+    '<path d="M14 20 L32 34 L50 44" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>' +
+    '<circle cx="14" cy="20" r="6" fill="var(--ui-accent, #61afef)" stroke="#fff" stroke-width="4"/>' +
+    '<circle cx="32" cy="34" r="6" fill="#fff"/><circle cx="50" cy="44" r="6" fill="#fff"/>' +
+    '<path d="M42 22 L48 28 L58 16" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>';
+  return mark;
+}
+
 async function drawMenubar(invoke: Invoke) {
   const bar = document.getElementById("menubar");
   if (!bar) return;
@@ -940,6 +1127,11 @@ async function drawMenubar(invoke: Invoke) {
   }
   if (!Array.isArray(leader)) leader = [];
   bar.textContent = "";
+  const brand = document.createElement("span");
+  brand.className = "menubar-logo";
+  brand.title = "TraceLean";
+  brand.append(logo());
+  bar.appendChild(brand);
   for (const group of leader) {
     const item = document.createElement("button");
     item.className = "menubar-item";
@@ -977,12 +1169,14 @@ async function drawMenubar(invoke: Invoke) {
   bar.append(
     tool("Overview", "The design as figures: marks, the requirement graph, where work is left", "overview", () => void openOverview()),
     spacer,
-    tool("A−", "Smaller text (Ctrl -)", "zoom", () => void run("zoom", { steps: -1 })),
-    tool("A+", "Bigger text (Ctrl +)", "zoom", () => void run("zoom", { steps: 1 })),
+    tool("A−", "Smaller text (Ctrl -)", "zoom", () => void run("act_here", { action: "look.zoom_out" })),
+    tool("A+", "Bigger text (Ctrl +)", "zoom", () => void run("act_here", { action: "look.zoom_in" })),
     tool("Search commands", "Search every command by a few words or letters (Ctrl+P)", "search", () => openPalette()),
     tool("Open file", "Open a file by name (Ctrl+O or Ctrl+Shift+P)", "open", () => openQuick()),
     tool("↻ Files", "Refresh: reload the files from the disk and the sandbox (F5, Space f R)", "refresh", () => void run("act_here", { action: "file.refresh" })),
     tool("Theme", "Switch theme: dark or light (Space w c)", "theme", () => void run("act_here", { action: "look.theme" })),
+    tool("Keys", "Show or hide the bar at the bottom that lists the keys (saved as layout.keyBar)", "keys", () =>
+      void run("act_here", { action: "look.keybar" })),
     tool("?", "Every key (F1)", "help", () => void run("chord", { chord: "F1" })),
   );
 }
@@ -1396,6 +1590,8 @@ async function paint(invoke: Invoke) {
   const root = document.documentElement.style;
   const layout = (theme.layout ?? {}) as Record<string, unknown>;
   document.body.classList.toggle("menubar-hidden", layout.menuBar === "hidden");
+  keyBar = layout.keyBar === "hidden" ? "hidden" : "shown";
+  document.body.classList.toggle("keybar-hidden", keyBar === "hidden");
   document.body.classList.toggle("stations-top", layout.stations === "top");
   document.body.classList.toggle("stations-hidden", layout.stations === "hidden");
   root.colorScheme = theme.base === "light" ? "light" : "dark";

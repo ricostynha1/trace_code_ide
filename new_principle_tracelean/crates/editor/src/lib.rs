@@ -93,6 +93,12 @@ pub struct Editor {
     pub last_find: Option<String>,
     offering: Option<(String, usize, Vec<tracelean_core::surface::offer::Offer>)>,
     asking: Option<Asking>,
+    /// What the Definitions view is narrowed to: words or letters, as in the command search.
+    pub settings_filter: String,
+    /// The markdown buffers shown as their text, not formatted.
+    pub raw: BTreeSet<String>,
+    /// What each setting may hold, read from `assets/settings.json`.
+    pub settings: tracelean_core::surface::setting::Settings,
     index_cache: std::cell::RefCell<Option<std::sync::Arc<tracelean_core::trace::index::Index>>>,
     problems: std::cell::Cell<Option<usize>>,
     problems_stale: std::cell::Cell<bool>,
@@ -388,6 +394,9 @@ impl Editor {
             last_find: None,
             offering: None,
             asking: None,
+            settings_filter: String::new(),
+            raw: BTreeSet::new(),
+            settings: tracelean_core::surface::setting::shipped(),
             index_cache: std::cell::RefCell::new(None),
             problems: std::cell::Cell::new(None),
             problems_stale: std::cell::Cell::new(true),
@@ -515,7 +524,8 @@ impl Editor {
     fn tree_rows(&self) -> Vec<explorer::Row> {
         let mut files: BTreeSet<String> = self.workspace().files.keys().cloned().collect();
         for command in &self.pending {
-            if matches!(command, Command::CreateFile { .. }) {
+            // A file the agent deleted stays in the tree, marked ✗, until that is accepted.
+            if matches!(command, Command::CreateFile { .. } | Command::DeleteFile { .. }) {
                 files.insert(touched(command));
             }
         }
@@ -670,7 +680,12 @@ impl Editor {
         }
         let requirement = matches!(&buffer.kind, BufferKind::Record { title } if title.starts_with("requirement "));
         if requirement && actions_at(buffer.clone(), self.offset).iter().any(|a| a == "trace.approve") {
-            focus.under = tracelean_core::surface::view::plain_text(buffer).get(2).cloned();
+            // The requirement's file is the first thing in the view that opens a file.
+            focus.under = buffer
+                .spans
+                .iter()
+                .find(|span| span.actions.iter().any(|a| a == "file.open"))
+                .map(|span| buffer.text.chars().skip(span.start).take(span.stop - span.start).collect());
         }
         focus
     }
@@ -918,16 +933,6 @@ impl Editor {
         };
     }
 
-    fn step_lines(&mut self, delta: i64) {
-        let lines: Vec<String> = tracelean_core::surface::view::plain_text(self.buffer());
-        let (line, column) = self.line_and_column();
-        let last = lines.len().saturating_sub(1) as i64;
-        let target = (line as i64 + delta).clamp(0, last) as usize;
-        let width = lines.get(target).map_or(0, |l| l.chars().count());
-        let at: usize = lines.iter().take(target).map(|before| before.chars().count() + 1).sum();
-        self.offset = at + column.min(width);
-    }
-
     pub fn step_line(&mut self, down: bool) {
         let lines: Vec<String> =
             tracelean_core::surface::view::plain_text(self.buffer());
@@ -991,9 +996,9 @@ impl Editor {
         match self.push(command) {
             Ok(_) => {
                 let text = self.workspace().files.get(&path).cloned().unwrap_or_default();
-                let marks = marks_in(&path, &text);
                 let saved = self.saved.files.get(&path) == Some(&text);
-                self.replace_buffer(make::file_buffer(path, text, marks));
+                let shown = file_view(&path, &text, &self.workspace());
+                self.replace_buffer(shown);
                 if saved != was_saved {
                     self.refresh_views();
                 }
@@ -1030,7 +1035,7 @@ impl Editor {
                 BufferKind::Directory { path } => self.listing_of(path),
                 BufferKind::Record { title } if title == "history" => self.history_buffer(),
                 BufferKind::File { path } => match workspace.files.get(path) {
-                    Some(text) => make::file_buffer(path.clone(), text.clone(), marks_in(path, text)),
+                    Some(text) => file_view(path, text, &workspace),
                     None => held.clone(),
                 },
                 _ => held.clone(),
@@ -1502,10 +1507,90 @@ impl Editor {
                 Binding::Dispatch { action, description } => loose.push((keys, description, action)),
             }
         }
-        if !loose.is_empty() {
-            groups.push(("project".to_string(), loose));
+        groups.push(("project".to_string(), loose));
+        // The stations that open a view are the first thing each group should offer.
+        let station = |action: &str, said: &str| -> Option<(String, String, String)> {
+            let keys = self.keymap.mode("Station")?.bindings.iter().find_map(|(key, binding)| match binding {
+                Binding::Dispatch { action: found, .. } if found == action => Some(format!("{leader_key} w t {key}")),
+                _ => None,
+            })?;
+            Some((keys, said.to_string(), action.to_string()))
+        };
+        let take = |groups: &mut Vec<(String, Vec<(String, String, String)>)>, action: &str| {
+            groups.iter_mut().find_map(|(_, entries)| {
+                let at = entries.iter().position(|(_, _, found)| found == action)?;
+                Some(entries.remove(at))
+            })
+        };
+        let mut file = Vec::new();
+        file.extend(take(&mut groups, "project.pick").map(|(k, _, a)| (k, "Open project".to_string(), a)));
+        file.extend(take(&mut groups, "file.open").map(|(k, _, a)| (k, "Open file".to_string(), a)));
+        let mut help = Vec::new();
+        help.extend(take(&mut groups, "help.tutorial"));
+        help.extend(take(&mut groups, "help.more"));
+        let mut design = Vec::new();
+        design.extend(station("screen.station.design", "Open the design graph"));
+        let mut trace = Vec::new();
+        trace.extend(station("screen.station.trace", "Open the trace of this file"));
+        let mut agent = Vec::new();
+        agent.extend(take(&mut groups, "sandbox.new"));
+        agent.extend(take(&mut groups, "observe.diff"));
+        agent.extend(station("screen.station.sandbox", "Watch the sandboxed agent"));
+        let mut history = Vec::new();
+        history.extend(take(&mut groups, "history.tree"));
+        history.extend(take(&mut groups, "history.undo"));
+        history.extend(take(&mut groups, "history.redo"));
+        let put = |name: &str, mut first: Vec<(String, String, String)>, groups: &mut Vec<(String, Vec<(String, String, String)>)>| {
+            for (n, entries) in groups.iter_mut() {
+                if n == name {
+                    first.append(entries);
+                }
+            }
+            first
+        };
+        let mut shown = Vec::new();
+        let order: [(&str, &str, Vec<(String, String, String)>); 6] = [
+            ("file", "File", file),
+            ("the design graph", "Design", design),
+            ("trace", "Trace", trace),
+            ("history", "History", history),
+            ("agent", "Agent", agent),
+            ("help", "Help", help),
+        ];
+        let mut rest: Vec<(String, Vec<(String, String, String)>)> = Vec::new();
+        for (old, new, first) in order {
+            let all = put(old, first, &mut groups);
+            groups.retain(|(n, _)| n != old);
+            shown.push((new.to_string(), all));
         }
-        groups
+        // "context for an agent" belongs with the agent; the rest follow by importance.
+        let context = groups.iter().position(|(n, _)| n == "context for an agent").map(|at| groups.remove(at));
+        if let Some((_, entries)) = context {
+            if let Some((_, agent)) = shown.iter_mut().find(|(n, _)| n == "Agent") {
+                agent.extend(entries);
+            }
+        }
+        for (name, entries) in groups {
+            // The stations are windows too: they join the Window group.
+            let name = if name == "panes and stations" || name == "stations" { "Window".to_string() } else { name };
+            match rest.iter_mut().find(|(n, _)| *n == name && name == "Window") {
+                Some((_, held)) => held.extend(entries),
+                None => rest.push((name, entries)),
+            }
+        }
+        // Window, then the rest (differential testing), with Help last.
+        let help = shown.pop();
+        shown.extend(rest.into_iter().filter(|(_, entries)| !entries.is_empty()));
+        shown.extend(help);
+        // One place for each command: the first group to offer it keeps it, and the project
+        // station is "Open project", which File already offers.
+        let mut seen = std::collections::BTreeSet::new();
+        seen.insert("screen.station.project".to_string());
+        for (_, entries) in shown.iter_mut() {
+            entries.retain(|(_, _, action)| seen.insert(action.clone()));
+        }
+        shown.retain(|(_, entries)| !entries.is_empty());
+        shown
     }
 
     /// Every command, found by a few words of what it does or by a few letters in order:
@@ -1687,8 +1772,8 @@ impl Editor {
             if let Some(file) = self.index().requirements.get(&id).map(|r| r.file.clone()) {
                 let text = self.workspace().files.get(&file).cloned().unwrap_or_default();
                 let line = clause
-                    .and_then(|c| text.lines().position(|l| l.trim_start().starts_with(&format!("{c}:"))))
-                    .map_or(1, |n| n + 1);
+                    .and_then(|c| tracelean_core::surface::chips::clause_lines(&text).into_iter().find(|(_, key)| *key == c))
+                    .map_or(1, |(n, _)| n + 1);
                 let link = requirement_view::link_text(&file, line as u32);
                 self.perform(Intent::Display { what: BufferKind::File { path: link } });
                 self.say("definition", &format!("{name}: {file}:{line}"));
@@ -2519,8 +2604,7 @@ impl Editor {
         match what {
             BufferKind::File { path } => {
                 let text = self.workspace().files.get(&path).cloned().unwrap_or_default();
-                let marks = marks_in(&path, &text);
-                make::file_buffer(path, text, marks)
+                file_view(&path, &text, &self.workspace())
             }
             BufferKind::Directory { path } => self.listing_of(&path),
             BufferKind::Review { target } => match &self.agent_tree {
@@ -2767,9 +2851,17 @@ impl Editor {
                 .filter(|other| other.refines.iter().any(|parent| parent == id))
                 .map(|other| other.id.clone())
                 .collect(),
-            body: if requirement.clauses.is_empty() { String::new() } else { requirement.body.clone() },
+            // The page already says the title; the prose is what follows the document's own heading.
+            body: if requirement.clauses.is_empty() {
+                String::new()
+            } else {
+                let heading = format!("# {}", requirement.title);
+                let body = requirement.body.trim_start();
+                body.strip_prefix(&heading).unwrap_or(body).trim_matches('\n').to_string()
+            },
             clauses,
-            width: self.pane_width(tracelean_core::surface::screen::DOCUMENT),
+            // The text is markdown, which flows by itself: nothing is broken at a pane's width.
+            width: 100_000,
             lines: self.clause_lines(&index, id, None),
         })
     }
@@ -3265,7 +3357,7 @@ impl Editor {
         use tracelean_core::surface::view::{Role, Span};
         let theme = theme::load(&self.root);
         let mut lines = vec![
-            format!("Definitions — Space f e (or a click) changes the setting under the cursor; it is saved to {} at once", theme::OVERRIDE),
+            format!("Definitions — click a value to change it where it stands (Space f e in the terminal); it is saved to {} at once. Type in the search box to narrow the list.", theme::OVERRIDE),
             "keys       assets/keymap.json: every binding is data; invalid ones are reported at load".to_string(),
             "languages  assets/languages/: the grammar and the declaring words of each language".to_string(),
         ];
@@ -3276,23 +3368,58 @@ impl Editor {
         lines.push(format!("{switch}  now {} — dark and light ship; colours set here survive the switch", theme::base(&self.root)));
         lines.push(String::new());
         at = lines.iter().map(|line| line.chars().count() + 1).sum();
+        // Every setting as `section.key` with its value, narrowed by the filter the way the
+        // commands are, then grouped under the part before the first dot.
+        let mut all: Vec<(String, String)> = Vec::new();
         if let serde_json::Value::Object(sections) = &theme {
             for (section, entries) in sections {
                 let serde_json::Value::Object(entries) = entries else { continue };
                 for (key, value) in entries {
-                    let Some(colour) = value.as_str() else { continue };
-                    let name = format!("{section}.{key}");
-                    let line = format!("{name}  {colour}");
-                    spans.push(Span {
-                        start: at,
-                        stop: at + name.chars().count(),
-                        role: Role::Path,
-                        actions: vec![format!("definitions.edit {name}")],
-                    });
-                    at += line.chars().count() + 1;
-                    lines.push(line);
+                    if let Some(value) = value.as_str() {
+                        let name = format!("{section}.{key}");
+                        all.push((name.clone(), format!("{name} {value}")));
+                    }
                 }
             }
+        }
+        let total = all.len();
+        let kept: std::collections::BTreeSet<String> =
+            tracelean_core::surface::quick::commands(all.clone(), &self.settings_filter, usize::MAX)
+                .into_iter()
+                .map(|(name, _)| name)
+                .collect();
+        if !self.settings_filter.trim().is_empty() {
+            lines.push(format!("Showing {} of {total} settings matching `{}`", kept.len(), self.settings_filter.trim()));
+            at = lines.iter().map(|line| line.chars().count() + 1).sum();
+        }
+        let mut group = String::new();
+        for (name, said) in &all {
+            if !kept.contains(name) {
+                continue;
+            }
+            let (section, key) = name.split_once('.').unwrap_or(("", name.as_str()));
+            if section != group {
+                group = section.to_string();
+                let heading = group.to_string();
+                spans.push(Span { start: at, stop: at + heading.chars().count(), role: Role::Heading, actions: vec![] });
+                at += heading.chars().count() + 1;
+                lines.push(heading);
+            }
+            let value = said.strip_prefix(name.as_str()).unwrap_or("").trim();
+            let line = format!("  {key}  {value}");
+            // The line is `  key  value`: both are spans of the buffer, and both edit the
+            // setting, so a frontend reads the value from its span and parses nothing.
+            let edit = format!("definitions.edit {name}");
+            let key_end = at + 2 + key.chars().count();
+            spans.push(Span { start: at + 2, stop: key_end, role: Role::Path, actions: vec![edit.clone()] });
+            spans.push(Span {
+                start: key_end + 2,
+                stop: key_end + 2 + value.chars().count(),
+                role: Role::Entry,
+                actions: vec![edit],
+            });
+            at += line.chars().count() + 1;
+            lines.push(line);
         }
         Buffer {
             id: "record:definitions".into(),
@@ -3358,7 +3485,10 @@ impl Editor {
             then: Then::SetSetting,
             action: String::new(),
             target: Some(name.to_string()),
-            question: format!("New value for {name} (#rrggbb)"),
+            question: format!(
+                "New value for {name} ({})",
+                self.settings.rule(name).map_or_else(|| "a value".to_string(), |rule| rule.wanted())
+            ),
             pane,
             at,
             answer: current,
@@ -3611,22 +3741,42 @@ impl Editor {
         (self.nodes(), self.problems())
     }
 
+    /// Narrow the Definitions view to the settings that match, as the command search does.
+    ///
+    /// @implements REQ-LOOK.settings_grouped_and_searchable
+    pub fn filter_settings(&mut self, query: &str) {
+        self.settings_filter = query.to_string();
+        if self.screen.opened.iter().any(|b| b.id == "record:definitions") {
+            self.show(self.definitions_buffer());
+        }
+    }
+
+    /// What the grammar says of a setting: its kind and what it may hold, so a frontend draws
+    /// the right widget without knowing any kind itself.
+    ///
+    /// @implements REQ-LOOK.settings_declared
+    pub fn setting_rule(&self, name: &str) -> Option<tracelean_core::surface::setting::Rule> {
+        self.settings.rule(name).cloned()
+    }
+
     pub fn set_setting(&mut self, name: &str, value: &str) {
         let Some((section, key)) = name.split_once('.') else {
             return self.say("not a setting", name);
         };
-        if !tracelean_core::surface::setting::takes(name.to_string(), value.to_string()) {
-            let wanted = match tracelean_core::surface::setting::choices(name) {
-                Some(allowed) => format!("one of {}", allowed.join(", ")),
-                None if name == "layout.zoom" => "a percentage from 60 to 200, in tens".to_string(),
-                None => "a colour like #1e90ff".to_string(),
-            };
-            return self.say("refused", &format!("`{value}` is not {wanted}; nothing changed"));
+        let Some(rule) = self.settings.rule(name) else {
+            return self.say("not a setting", &format!("{name} is not declared in the settings grammar"));
+        };
+        if !rule.accepts(value) {
+            return self.say("refused", &format!("`{value}` is not {}; nothing changed", rule.wanted()));
         }
         let written = theme::write_setting(&self.root, section, key, value);
         match written {
             Ok(()) => {
-                self.show(self.definitions_buffer());
+                // The list is redrawn where it is open; a setting changed from a button
+                // (the key bar's) must not open it.
+                if self.screen.opened.iter().any(|b| b.id == "record:definitions") {
+                    self.show(self.definitions_buffer());
+                }
                 self.say("setting saved", &format!("{name} = {value}"));
             }
             Err(error) => self.say("could not save", &error.to_string()),
@@ -4160,6 +4310,26 @@ impl Editor {
                 }
                 self.say(if opened { "unfolded" } else { "folded" }, &title);
             }
+            // @implements REQ-VIEW.markdown_formatted_by_default
+            Watch::ToggleRaw => {
+                let held = self.buffer();
+                if !tracelean_core::surface::view::is_markdown(&held.kind) {
+                    return self.say("nothing happened", "this buffer is not markdown, so there is no formatted view to switch");
+                }
+                if self.raw.remove(&held.id) {
+                    self.say("formatted", "the markdown is drawn formatted");
+                } else {
+                    self.raw.insert(held.id);
+                    self.say("raw", "the markdown is shown as its text");
+                }
+            }
+            Watch::ToggleKeyBar => {
+                let now = theme::load(&self.root)["layout"]["keyBar"].as_str().unwrap_or("shown").to_string();
+                self.set_setting("layout.keyBar", if now == "hidden" { "shown" } else { "hidden" });
+            }
+            Watch::ZoomIn => self.zoom(1),
+            Watch::ZoomOut => self.zoom(-1),
+            Watch::ZoomReset => self.zoom(0),
             Watch::SwitchTheme => match theme::switch_base(&self.root) {
                 Ok(base) => self.say("setting saved", &format!("theme = {base}")),
                 Err(error) => self.say("could not save", &error),
@@ -4761,6 +4931,19 @@ fn flatten(node: &tracelean_core::trace::rollup::RollUp, depth: usize, out: &mut
     for child in &node.children {
         flatten(child, depth + 1, out);
     }
+}
+
+/// A file as a buffer: its text with what it is as spans, and for a markdown file what it
+/// mentions that can be opened.
+///
+/// @implements REQ-VIEW.markdown_mentions_act
+fn file_view(path: &str, text: &str, workspace: &Workspace) -> Buffer {
+    let shown = make::file_buffer(path.to_string(), text.to_string(), marks_in(path, text));
+    if !tracelean_core::surface::view::is_markdown(&shown.kind) {
+        return shown;
+    }
+    let files: BTreeSet<String> = workspace.files.keys().cloned().collect();
+    tracelean_core::surface::links::linked(shown, path, &files)
 }
 
 fn marks_in(path: &str, text: &str) -> Vec<make::Mark> {

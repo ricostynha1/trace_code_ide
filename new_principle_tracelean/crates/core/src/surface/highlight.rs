@@ -119,32 +119,32 @@ pub fn markdown(text: &str) -> Vec<Mark> {
     let chars: Vec<char> = text.chars().collect();
     let mut marks = Vec::new();
     let mut start = 0usize;
-    let mut in_front = false;
     let mut fence = false;
-    for (n, line) in text.split('\n').enumerate() {
+    for line in text.split('\n') {
         let line_chars: Vec<char> = line.chars().collect();
         let stop = start + line_chars.len();
         let trimmed = line.trim();
-        if trimmed == "---" && (n == 0 || in_front) {
-            in_front = n == 0;
-        } else if trimmed.starts_with("```") {
+        if trimmed.starts_with("```") {
             fence = !fence;
             marks.push(Mark { start, stop, role: Role::Token { kind: TokenKind::String } });
         } else if fence {
             if stop > start {
                 marks.push(Mark { start, stop, role: Role::Token { kind: TokenKind::String } });
             }
-        } else if trimmed.starts_with('#') && !in_front {
+        } else if trimmed.starts_with('#') {
             marks.push(Mark { start, stop, role: Role::Token { kind: TokenKind::Heading } });
         } else {
             let mut from = start;
-            if in_front {
-                if let Some(colon) = line_chars.iter().position(|c| *c == ':') {
-                    let key_start = start + line_chars.iter().take_while(|c| c.is_whitespace()).count();
-                    if key_start < start + colon {
-                        marks.push(Mark { start: key_start, stop: start + colon, role: Role::Token { kind: TokenKind::Property } });
+            // `- key: value`, the bullets under a requirement's heading.
+            if let Some(rest) = line.strip_prefix("- ") {
+                if let Some(colon) = rest.find(':') {
+                    let key = &rest[..colon];
+                    if !key.is_empty() && key.chars().all(|c| c.is_ascii_lowercase()) {
+                        let key_start = start + 2;
+                        let key_stop = key_start + key.chars().count();
+                        marks.push(Mark { start: key_start, stop: key_stop, role: Role::Token { kind: TokenKind::Property } });
+                        from = key_stop;
                     }
-                    from = start + colon;
                 }
             }
             let mut at = from;
@@ -334,15 +334,15 @@ mod tests {
 
     #[test]
     fn markdown_marks_headings_keys_code_and_requirements() {
-        let text = "---\nid: REQ-X\nrefines: [REQ-VIEW]\n---\n\n# Title\n\nSee `x` and ARCH-NO-DRIVING.";
+        let text = "# REQ-X: REQ-X\n\n- status: draft\n- refines: REQ-VIEW\n\nSee `x` and ARCH-NO-DRIVING.\n";
         let chars: Vec<char> = text.chars().collect();
         let marks = markdown(text);
         let said = |role: Role| -> Vec<String> {
             marks.iter().filter(|m| m.role == role).map(|m| chars[m.start..m.stop].iter().collect()).collect()
         };
-        assert_eq!(said(Role::Token { kind: TokenKind::Property }), vec!["id", "refines"]);
-        assert_eq!(said(Role::Requirement), vec!["REQ-X", "REQ-VIEW", "ARCH-NO-DRIVING"]);
-        assert_eq!(said(Role::Token { kind: TokenKind::Heading }), vec!["# Title"]);
+        assert_eq!(said(Role::Token { kind: TokenKind::Property }), vec!["status", "refines"]);
+        assert_eq!(said(Role::Requirement), vec!["REQ-VIEW", "ARCH-NO-DRIVING"]);
+        assert_eq!(said(Role::Token { kind: TokenKind::Heading }), vec!["# REQ-X: REQ-X"]);
         assert_eq!(said(Role::Token { kind: TokenKind::String }), vec!["`x`"]);
         assert!(marks.windows(2).all(|w| w[0].stop <= w[1].start));
     }

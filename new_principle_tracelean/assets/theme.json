@@ -104,7 +104,8 @@
   },
   "layout": {
     "menuBar": "shown",
-    "stations": "hidden",
+    "keyBar": "shown",
+    "stations": "left",
     "zoom": "100"
   },
   "contrast": [

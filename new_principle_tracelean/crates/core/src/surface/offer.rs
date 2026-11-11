@@ -248,6 +248,9 @@ pub fn offers(buffer: &Buffer, offset: usize, keymap: &Keymap) -> Vec<Offer> {
         BufferKind::Menu { .. } => {}
     }
 
+    if crate::surface::view::is_markdown(&buffer.kind) {
+        out.push(offer(keymap, "panes", "Show the text, or formatted".into(), "look.raw", None, None));
+    }
     out.push(offer(keymap, "panes", "Split right".into(), "screen.split.across", None, None));
     out.push(offer(keymap, "panes", "Split down".into(), "screen.split.down", None, None));
     out.push(offer(keymap, "panes", "Close this buffer".into(), "screen.close", None, None));

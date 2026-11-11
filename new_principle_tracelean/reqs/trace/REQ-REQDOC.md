@@ -1,23 +1,8 @@
----
-id: REQ-REQDOC
-title: Requirement documents and the refinement graph
-refines: [ARCH-SELFHOST, ARCH-HONEST]
-status: approved
-decomposition: complete
-clauses:
-  id_is_identity: The system shall identify a requirement by its declared identifier, never by its filename or directory.
-  id_unique: If two documents declare the same identifier, then the system shall report it.
-  clause_addressable: The system shall decompose a requirement into clauses and attach links and evidence to a clause, so that the requirement text a clause's evidence rests on is that clause alone, its key, its text and its narrowings, and never its sibling clauses or the prose.
-  clauseless_uniform: Where a requirement declares no clauses, the system shall address it as a single implicit clause.
-  refines_dag: The system shall require refinement to form a directed acyclic graph, and if there is a cycle, then the system shall report it.
-  refines_resolves: If a requirement refines an identifier that does not exist, then the system shall report it.
-  decomposition_claimed: The system shall treat a decomposition as unclaimed unless its completeness is claimed, and shall render a percentage over an unclaimed decomposition as a bound.
-  malformed_reported: If a document's frontmatter cannot be parsed, whether by a fence never closed, a key the format does not have, a clause block without text or a key an annotation could not name, then the system shall report it and never silently skip it.
-  narrowings_nest: Where a clause is written as a block, the system shall take its `text` as the clause and every other key as a narrowing fixing which answer the clause allows, part of its clause and never a clause a link can name.
-  clause_unique: If a clause key is declared twice in one document, or a narrowing is given twice in one clause, then the system shall report it.
----
+# REQ-REQDOC: Requirement documents and the refinement graph
 
-# Requirement documents and the refinement graph
+- status: approved
+- decomposition: complete
+- refines: ARCH-SELFHOST, ARCH-HONEST
 
 Any markdown carrying an identifier is a requirement, so nothing breaks when a
 document moves. The decomposition sets the denominator of every percentage, and
@@ -32,3 +17,17 @@ evidence
 ([ADR-0016](../../docs/decisions/ADR-0016-narrowings-and-clause-hashes.md)),
 and clauses are written in EARS
 ([ADR-0017](../../docs/decisions/ADR-0017-clauses-in-ears.md)).
+
+## Clauses
+
+- **markdown_document**: The system shall read a requirement written as plain markdown, whose first line is `# ID: title`, whose bullets under it give its status, decomposition and refinements, and whose clauses are the list under `## Clauses` with narrowings as nested bullets, and shall give it the same identity, clauses and hashes as the same requirement written with a header.
+- **id_is_identity**: The system shall identify a requirement by its declared identifier, never by its filename or directory.
+- **id_unique**: If two documents declare the same identifier, then the system shall report it.
+- **clause_addressable**: The system shall decompose a requirement into clauses and attach links and evidence to a clause, so that the requirement text a clause's evidence rests on is that clause alone, its key, its text and its narrowings, and never its sibling clauses or the prose.
+- **clauseless_uniform**: Where a requirement declares no clauses, the system shall address it as a single implicit clause.
+- **refines_dag**: The system shall require refinement to form a directed acyclic graph, and if there is a cycle, then the system shall report it.
+- **refines_resolves**: If a requirement refines an identifier that does not exist, then the system shall report it.
+- **decomposition_claimed**: The system shall treat a decomposition as unclaimed unless its completeness is claimed, and shall render a percentage over an unclaimed decomposition as a bound.
+- **malformed_reported**: If a document's frontmatter cannot be parsed, whether by a fence never closed, a key the format does not have, a clause block without text or a key an annotation could not name, then the system shall report it and never silently skip it.
+- **narrowings_nest**: Where a clause is written as a block, the system shall take its `text` as the clause and every other key as a narrowing fixing which answer the clause allows, part of its clause and never a clause a link can name.
+- **clause_unique**: If a clause key is declared twice in one document, or a narrowing is given twice in one clause, then the system shall report it.

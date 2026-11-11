@@ -157,7 +157,7 @@ fn a_judgement_needs_a_clause_a_model_a_verdict_and_a_name() {
 #[test]
 fn the_difference_and_the_report_are_taken_against_a_revision() {
     let dir = committed("diff");
-    edit(&dir.join("reqs/REQ-THERMO.md"), "to_celsius:", "to_celsius: Rounded,");
+    edit(&dir.join("reqs/REQ-THERMO.md"), "**to_celsius**:", "**to_celsius**: Rounded,");
     let text = trace(&dir, &["--diff", "HEAD"]);
     assert_eq!(text.code, 0, "{}", text.err);
     assert!(text.out.contains("REQ-THERMO.to_celsius") && text.out.contains("Rounded,"), "{}", text.out);

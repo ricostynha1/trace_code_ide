@@ -32,7 +32,7 @@ fn project(files: &[(&str, &str)]) -> PathBuf {
     dir
 }
 
-const REQ_A: (&str, &str) = ("reqs/a.md", "---\nid: REQ-A\ntitle: Middle\nclauses:\n  a: It is so.\n---\n");
+const REQ_A: (&str, &str) = ("reqs/a.md", "# REQ-A: Middle\n\n- status: draft\n\n## Clauses\n\n- **a**: It is so.\n");
 
 fn text(editor: &Editor) -> String {
     plain_text(editor.buffer()).join("\n")
@@ -58,7 +58,7 @@ fn a_folded_tutorial_section_unfolds_and_folds_again() {
     let mut editor = Editor::open(root.clone(), keymap());
     editor.act_here("help.tutorial");
     let before = text(&editor);
-    assert!(before.contains("TraceLean in five minutes"), "the tutorial was not shown");
+    assert!(before.contains("TraceLean on the demo project"), "the tutorial was not shown");
 
     editor.offset = row_with(&editor, '▸').expect("the tutorial has a folded section");
     editor.act_here("help.more");
@@ -105,7 +105,16 @@ fn the_menu_bar_has_a_group_per_leader_entry_and_only_real_actions() {
         .collect();
     assert!(!entered.is_empty());
     for name in &entered {
-        assert!(groups.iter().any(|(group, _)| group == name), "no group for the leader entry `{name}`");
+        let shown = match name.as_str() {
+            "panes and stations" => "Window",
+            "the design graph" => "Design",
+            "context for an agent" => "Agent",
+            other => other,
+        };
+        assert!(
+            groups.iter().any(|(group, _)| group.eq_ignore_ascii_case(shown)),
+            "no group for the leader entry `{name}`"
+        );
     }
     let known = keymap::actions();
     let mut count = 0;
@@ -116,6 +125,18 @@ fn the_menu_bar_has_a_group_per_leader_entry_and_only_real_actions() {
         }
     }
     assert!(count > 0, "the groups hold no entries");
+    let mut offered = std::collections::BTreeMap::new();
+    for (group, entries) in &groups {
+        for (_, said, action) in entries {
+            if let Some(first) = offered.insert(action.clone(), group.clone()) {
+                panic!("`{action}` ({said}) is offered in both `{first}` and `{group}`");
+            }
+        }
+    }
+    assert!(
+        !groups.iter().any(|(g, e)| g == "Window" && e.iter().any(|(_, _, a)| a == "screen.station.project")),
+        "Window repeats Open project"
+    );
     let _ = std::fs::remove_dir_all(&root);
 }
 
@@ -306,5 +327,124 @@ fn an_agents_waiting_changes_are_listed_per_file_with_the_clauses_each_claims() 
     let markdown = editor.overview_markdown();
     assert!(markdown.contains("## The agent's waiting changes"), "{markdown}");
     assert!(markdown.contains("src/a.rs | +2 −1 | REQ-A.a (A---)"), "{markdown}");
+    let _ = std::fs::remove_dir_all(&root);
+}
+
+/// @tests REQ-LOOK.settings_grouped_and_searchable
+#[test]
+fn settings_are_grouped_under_their_section_and_narrowed_by_a_search() {
+    let root = project(&[REQ_A, (".tracelean/theme.json", r##"{"base":"dark","key":{"amen":"#111111","amen2":"#222222"},"other":{"one":"#333333"}}"##)]);
+    let mut editor = Editor::open(root.clone(), keymap());
+    editor.act_here("screen.station.definitions");
+    let all = text(&editor);
+    let lines: Vec<&str> = all.lines().collect();
+    let at = lines.iter().position(|l| *l == "key").expect("a heading for the key group");
+    assert_eq!(lines.iter().filter(|l| **l == "key").count(), 1, "the group is listed once");
+    assert!(lines[at + 1].starts_with("  amen ") && lines[at + 2].starts_with("  amen2 "), "{lines:?}");
+
+    // each line declares its key and its value as spans that edit the setting
+    let buffer = editor.buffer();
+    let words: Vec<String> = buffer
+        .spans
+        .iter()
+        .filter(|span| span.actions == vec!["definitions.edit key.amen2".to_string()])
+        .map(|span| buffer.text.chars().skip(span.start).take(span.stop - span.start).collect())
+        .collect();
+    assert_eq!(words, ["amen2", "#222222"], "{words:?}");
+
+    editor.filter_settings("amen2");
+    let narrowed = text(&editor);
+    assert!(narrowed.contains("amen2") && !narrowed.contains("one  #"), "{narrowed}");
+    assert!(narrowed.contains("Showing 1 of"), "{narrowed}");
+    editor.filter_settings("");
+    assert!(text(&editor).contains("one  #333333"));
+    let _ = std::fs::remove_dir_all(&root);
+}
+
+/// @tests REQ-LOOK.key_bar_toggled
+#[test]
+fn the_bar_of_keys_is_switched_off_and_on_by_a_setting_without_opening_the_settings() {
+    let root = project(&[REQ_A]);
+    let mut editor = Editor::open(root.clone(), keymap());
+    editor.set_setting("layout.keyBar", "hidden");
+    let written = std::fs::read_to_string(root.join(".tracelean/theme.json")).expect("the override file");
+    assert!(written.contains("\"keyBar\"") && written.contains("hidden"), "{written}");
+    assert!(!editor.screen.opened.iter().any(|b| b.id == "record:definitions"), "the settings were opened");
+    editor.set_setting("layout.keyBar", "sideways");
+    let after = std::fs::read_to_string(root.join(".tracelean/theme.json")).unwrap();
+    assert!(after.contains("hidden") && !after.contains("sideways"), "{after}");
+    let _ = std::fs::remove_dir_all(&root);
+}
+
+/// @tests REQ-VIEW.markdown_formatted_by_default
+#[test]
+fn every_record_the_editor_makes_from_markdown_is_one_the_core_calls_markdown() {
+    use tracelean_core::surface::view::{is_markdown, BufferKind};
+    let root = project(&[REQ_A]);
+    let mut editor = Editor::open(root.clone(), keymap());
+    for title in ["overview", "modules", "tutorial"] {
+        let buffer = editor.view(BufferKind::Record { title: title.into() });
+        assert!(is_markdown(&buffer.kind), "`{title}` is markdown text and the core does not say so");
+        assert!(buffer.text.contains('#') || buffer.text.contains('|') || buffer.text.contains("No Rust"), "{title}: {}", buffer.text);
+    }
+    let _ = std::fs::remove_dir_all(&root);
+}
+
+/// @tests REQ-LOOK.app_has_a_logo
+#[test]
+fn the_logo_is_shipped_as_a_stand_alone_image() {
+    let svg = std::fs::read_to_string(std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../assets/logo.svg"))
+        .expect("the project ships its logo");
+    assert!(svg.starts_with("<svg") && svg.contains("TraceLean") && svg.contains("</svg>"), "{svg}");
+}
+
+/// @tests REQ-VIEW.markdown_formatted_by_default
+#[test]
+fn the_text_of_a_markdown_buffer_is_one_command_away_and_back_and_other_buffers_refuse_it() {
+    let root = project(&[REQ_A, ("src/a.rs", "fn a() {}\n")]);
+    let mut editor = Editor::open(root.clone(), keymap());
+    editor.perform(tracelean_core::surface::act::Intent::Display {
+        what: tracelean_core::surface::view::BufferKind::File { path: "reqs/a.md".into() },
+    });
+    let id = editor.buffer().id;
+    editor.act_here("look.raw");
+    assert!(editor.raw.contains(&id), "the markdown file was not shown raw");
+    editor.act_here("look.raw");
+    assert!(!editor.raw.contains(&id), "the second command did not bring the formatting back");
+    editor.perform(tracelean_core::surface::act::Intent::Display {
+        what: tracelean_core::surface::view::BufferKind::File { path: "src/a.rs".into() },
+    });
+    editor.act_here("look.raw");
+    assert!(editor.raw.is_empty(), "a source file was marked raw");
+    assert!(
+        editor.palette("raw").iter().any(|(action, _)| action == "look.raw"),
+        "the command is not found by the command search"
+    );
+    let _ = std::fs::remove_dir_all(&root);
+}
+
+/// @tests REQ-VIEW.markdown_mentions_act
+#[test]
+fn a_file_a_requirement_mentions_opens_from_its_markdown_and_a_click_there_opens_it() {
+    let root = project(&[
+        ("reqs/REQ-M.md", "# REQ-M: M\n\n- status: draft\n\nDone in `src/a.rs`, not in `src/zzz.rs`.\n\n## Clauses\n\n- **one**: It shall.\n"),
+        ("src/a.rs", "fn a() {}\n"),
+    ]);
+    let mut editor = Editor::open(root.clone(), keymap());
+    editor.perform(tracelean_core::surface::act::Intent::Display {
+        what: tracelean_core::surface::view::BufferKind::File { path: "reqs/REQ-M.md".into() },
+    });
+    let buffer = editor.buffer();
+    let found: Vec<String> = buffer
+        .spans
+        .iter()
+        .filter(|s| s.actions == vec!["file.open".to_string()])
+        .map(|s| buffer.text.chars().skip(s.start).take(s.stop - s.start).collect())
+        .collect();
+    assert_eq!(found, ["src/a.rs"], "{found:?}");
+    let at = buffer.text[..buffer.text.find("src/a.rs").unwrap()].chars().count();
+    let pane = editor.laid_out(editor.region).into_iter().find(|p| p.buffer.id == buffer.id).expect("the file is shown").pane;
+    editor.choose(&pane, at + 2, "file.open", None, None);
+    assert_eq!(editor.buffer().id, "file:src/a.rs", "a click on the mention did not open the file");
     let _ = std::fs::remove_dir_all(&root);
 }

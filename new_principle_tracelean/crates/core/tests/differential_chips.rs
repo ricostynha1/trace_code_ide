@@ -8,7 +8,7 @@ use tracelean_core::drt::schema::Schema;
 
 fn document() -> Schema {
     name(&[
-        "---\nid: REQ-A\nclauses:\n  one: It does.\n  two: It also does.\n---\n  three: not a clause\n",
+        "# REQ-A: REQ-A\n\n- status: draft\n\n  three: not a clause\n\n## Clauses\n\n- **one**: It does.\n- **two**: It also does.\n",
         "---\nclauses:\n  one:\n    text: deeper\n  two words: no\n\tone: tab\n---",
         "---\r\n  one: x\r\n  two: y\r\n---\r\n",
         "  one: before any fence\n---\n  two: inside\n",

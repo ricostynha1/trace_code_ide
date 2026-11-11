@@ -41,6 +41,11 @@ inductive Watch where
   | openInVscode (path : String)
   | pickProject
   | switchTheme
+  | toggleKeyBar
+  | toggleRaw
+  | zoomIn
+  | zoomOut
+  | zoomReset
   | refresh
   | tutorialToggle (title : String)
   | acceptFile (path : String) (command : Command)
@@ -119,7 +124,7 @@ def nodeNumber (named : String) : Option Nat :=
   else none
 
 def requirementTemplate (id : String) : String :=
-  "---\nid: " ++ id ++ "\ntitle: What this requirement is about\nstatus: draft\nclauses:\n  first: The system shall ...\n---\n\n# " ++ id ++ "\n\nWhy this requirement exists.\n"
+  "# " ++ id ++ ": What this requirement is about\n\n- status: draft\n\nWhy this requirement exists.\n\n## Clauses\n\n- **first**: The system shall ...\n"
 
 private def findChars (pattern : List Char) : List Char → Nat → Option Nat
   | [], pos => if pattern.isEmpty then some pos else none
@@ -134,10 +139,10 @@ private def approveUnder (focus : Focus) (w : Workspace) : Intent :=
     match Workspace.get (Workspace.canon w) path with
     | none => refuse
     | some text =>
-      match findChars "\nstatus: draft\n".toList text.toList 0 with
+      match findChars "\n- status: draft\n".toList text.toList 0 with
       | none => refuse
       | some pos =>
-        let offset := (String.mk (text.toList.take pos)).utf8ByteSize + "\nstatus: ".utf8ByteSize
+        let offset := (String.mk (text.toList.take pos)).utf8ByteSize + "\n- status: ".utf8ByteSize
         Intent.edit (Command.batch
           [Command.delete path offset "draft", Command.insert path offset "approved"])
 
@@ -279,6 +284,11 @@ def dispatchNamed (action : String) (focus : Focus) (w : Workspace) (waiting : L
     | some path => Intent.observe (Watch.copyPath path)
   | "project.pick" => Intent.observe Watch.pickProject
   | "look.theme" => Intent.observe Watch.switchTheme
+  | "look.keybar" => Intent.observe Watch.toggleKeyBar
+  | "look.raw" => Intent.observe Watch.toggleRaw
+  | "look.zoom_in" => Intent.observe Watch.zoomIn
+  | "look.zoom_out" => Intent.observe Watch.zoomOut
+  | "look.zoom_reset" => Intent.observe Watch.zoomReset
   | "help.tutorial" => Intent.display (BufferKind.record "tutorial")
   | "file.open_in_vscode" =>
     match focusPath focus with
@@ -397,6 +407,11 @@ def namedActions : List String :=
    "file.open_in_vscode",
    "project.pick",
    "look.theme",
+   "look.keybar",
+   "look.raw",
+   "look.zoom_in",
+   "look.zoom_out",
+   "look.zoom_reset",
    "file.refresh",
    "help.tutorial",
    "help.more",

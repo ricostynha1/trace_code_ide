@@ -24,8 +24,8 @@ fn project(files: &[(&str, &str)]) -> PathBuf {
 }
 
 const TREE: &[(&str, &str)] = &[
-    ("reqs/a.md", "---\nid: REQ-A\ntitle: The thing\ndecomposition: complete\nclauses:\n  one: It does the thing.\n---\n"),
-    ("reqs/b.md", "---\nid: REQ-B\ntitle: A finer thing\nrefines: [REQ-A]\nclauses:\n  two: It does it finely.\n---\n"),
+    ("reqs/a.md", "# REQ-A: The thing\n\n- status: draft\n- decomposition: complete\n\n## Clauses\n\n- **one**: It does the thing.\n"),
+    ("reqs/b.md", "# REQ-B: A finer thing\n\n- status: draft\n- refines: REQ-A\n\n## Clauses\n\n- **two**: It does it finely.\n"),
     ("src/i.rs", "/// @implements REQ-A.one\npub fn thing() -> u8 {\n    1\n}\n"),
     ("tests/t.rs", "/// @tests REQ-A.one\n#[test]\nfn it_does() { assert_eq!(thing(), 1); }\n\n/// @tests REQ-B.two\n#[test]\nfn it_does_finely() { assert!(thing() > 0); }\n"),
     ("tests/plain.rs", "#[test]\nfn unannotated() { thing(); }\n"),
@@ -40,7 +40,7 @@ fn a_requirement_name_is_defined_at_its_clause() {
     editor.chord("F12");
     assert!(matches!(editor.buffer().kind, tracelean_core::surface::view::BufferKind::File { ref path } if path == "reqs/a.md"));
     let said = plain_text(editor.status.clone()).join("\n");
-    assert!(said.contains("reqs/a.md:6"), "{said}");
+    assert!(said.contains("reqs/a.md:8"), "{said}");
     let _ = std::fs::remove_dir_all(&root);
 }
 

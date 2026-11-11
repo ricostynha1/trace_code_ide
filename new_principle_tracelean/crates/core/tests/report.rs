@@ -45,7 +45,7 @@ fn every_clause_gets_a_card_with_its_evidence_findings_and_changes() {
     std::fs::create_dir_all(dir.join("formal")).unwrap();
     std::fs::write(
         dir.join("reqs/a.md"),
-        "---\nid: REQ-A\ntitle: A fixture\nclauses:\n  one: The system shall <double> a number.\n  two: The system shall do two.\n---\nbody",
+        "# REQ-A: A fixture\n\n- status: draft\n\nbody\n\n## Clauses\n\n- **one**: The system shall <double> a number.\n- **two**: The system shall do two.\n",
     )
     .unwrap();
     std::fs::write(dir.join("formal/M.lean"), "/-- @models REQ-A.one -/\ndef double (n : Nat) : Nat := n + n\n").unwrap();

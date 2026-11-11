@@ -1,21 +1,8 @@
----
-id: REQ-DIFF
-title: What a change did to the evidence
-refines: [ARCH-HONEST, REQ-EVID, REQ-LOCK]
-status: approved
-decomposition: open
-clauses:
-  per_clause: The system shall report the difference between two states of a project clause by clause, naming each clause that was added or removed.
-  text_shown: When a clause's text changed, the system shall show its text before and after.
-  marks_moved: The system shall report each mark a clause gained and each mark it lost.
-  links_moved: The system shall report each annotation of a clause that was added or removed, and each whose annotated body changed, by role and symbol.
-  assumptions_moved: The system shall report each axiom an accepted proof of the clause newly rests on and each it no longer rests on.
-  unchanged_omitted: The system shall omit a clause none of whose text, marks, annotations or assumptions changed.
-  losses_first: The system shall list a clause that was removed or lost a mark before any other change.
-  base_from_history: The system shall read the earlier state from a named revision of version control, without checking it out.
----
+# REQ-DIFF: What a change did to the evidence
 
-# What a change did to the evidence
+- status: approved
+- decomposition: open
+- refines: ARCH-HONEST, REQ-EVID, REQ-LOCK
 
 A reviewer of a change made by an agent does not want the code diff first; it
 wants to know which promises the change touched and what happened to the
@@ -37,3 +24,14 @@ needs no second checkout.
 ```
 tracelean-trace . --diff main
 ```
+
+## Clauses
+
+- **per_clause**: The system shall report the difference between two states of a project clause by clause, naming each clause that was added or removed.
+- **text_shown**: When a clause's text changed, the system shall show its text before and after.
+- **marks_moved**: The system shall report each mark a clause gained and each mark it lost.
+- **links_moved**: The system shall report each annotation of a clause that was added or removed, and each whose annotated body changed, by role and symbol.
+- **assumptions_moved**: The system shall report each axiom an accepted proof of the clause newly rests on and each it no longer rests on.
+- **unchanged_omitted**: The system shall omit a clause none of whose text, marks, annotations or assumptions changed.
+- **losses_first**: The system shall list a clause that was removed or lost a mark before any other change.
+- **base_from_history**: The system shall read the earlier state from a named revision of version control, without checking it out.

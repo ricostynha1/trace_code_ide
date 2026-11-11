@@ -178,7 +178,7 @@ mod tests {
         ));
         let _ = std::fs::remove_dir_all(&dir);
         for (name, content) in [
-            ("reqs/a.md", "---\nid: REQ-A\nclauses:\n  one: It shall do the thing.\n---\nbody"),
+            ("reqs/a.md", "# REQ-A: REQ-A\n\n- status: draft\n\nbody\n\n## Clauses\n\n- **one**: It shall do the thing.\n"),
             ("src/m.rs", "// @models REQ-A.one\npub fn m() {}\n"),
         ] {
             let path = dir.join(name);
@@ -228,7 +228,7 @@ mod tests {
             std::fs::create_dir_all(path.parent().unwrap()).unwrap();
             std::fs::write(path, content).unwrap();
         };
-        write("reqs/a.md", "---\nid: REQ-A\nclauses:\n  shape: The tree shall have a shape.\n---\nbody");
+        write("reqs/a.md", "# REQ-A: REQ-A\n\n- status: draft\n\nbody\n\n## Clauses\n\n- **shape**: The tree shall have a shape.\n");
         let test = "/// @tests REQ-A.shape\n/// @structural REQ-A.shape reason=\"a shape\"\n#[test]\nfn shaped() {}\n";
         write("tests/a.rs", test);
         let index = build(&dir);

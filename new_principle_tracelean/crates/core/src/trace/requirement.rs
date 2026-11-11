@@ -111,11 +111,7 @@ impl Requirement {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum FrontmatterKind {
-    IndentedWithoutKey,
     NotAKeyValue,
-    EmptyId,
-    UnclosedFrontmatter,
-    UnknownKey,
     DuplicateClause,
     DuplicateNarrowing,
     MissingText,
@@ -147,275 +143,222 @@ pub enum ParseOutcome {
 /// @implements REQ-REQDOC.narrowings_nest
 /// @implements REQ-REQDOC.clause_unique
 pub fn parse_markdown(file: &str, content: &str) -> ParseOutcome {
+    parse_prose(file, content).unwrap_or(ParseOutcome::NotARequirement(Vec::new()))
+}
+
+/// A requirement written as plain markdown:
+///
+/// ```text
+/// # REQ-X: The title
+///
+/// - status: approved
+/// - refines: REQ-A, REQ-B
+///
+/// Prose, as much as is wanted.
+///
+/// ## Clauses
+///
+/// - **holds**: The system shall hold.
+///   - empty: With nothing, it still holds.
+/// ```
+///
+/// The first line names it, the bullets under it say what it is, and the clauses are a list.
+/// `None` when the text is not written this way.
+///
+/// @implements REQ-REQDOC.markdown_document
+fn parse_prose(file: &str, content: &str) -> Option<ParseOutcome> {
+    let lines: Vec<&str> = content.lines().collect();
+    let first = lines.iter().position(|l| !l.trim().is_empty())?;
+    let heading = lines[first].strip_prefix("# ")?;
+    let (id, title) = match heading.split_once(':') {
+        Some((id, title)) => (id.trim(), title.trim()),
+        None => (heading.trim(), ""),
+    };
+    let named = !id.is_empty()
+        && !id.contains(char::is_whitespace)
+        && id.contains('-')
+        && id.chars().next().is_some_and(|c| c.is_ascii_uppercase())
+        && id.chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_');
+    if !named {
+        return None;
+    }
     let mut problems = Vec::new();
+    let at = |index: usize| index as u32 + 1;
 
-    let (frontmatter, body) = match split_frontmatter(content) {
-        Fence::Absent => return ParseOutcome::NotARequirement(problems),
-        Fence::Unclosed => {
-            problems.push(FrontmatterProblem {
-                file: file.to_string(),
-                line: 1,
-                kind: FrontmatterKind::UnclosedFrontmatter,
-                message: "the frontmatter's `---` is never closed".into(),
-            });
-            return ParseOutcome::NotARequirement(problems);
+    // The bullets straight under the heading that name a key of the requirement.
+    let mut scalars: BTreeMap<String, String> = BTreeMap::new();
+    let mut lists: BTreeMap<String, Vec<String>> = BTreeMap::new();
+    let mut next = first + 1;
+    let mut after_meta = next;
+    while next < lines.len() {
+        let line = lines[next].trim_end();
+        if line.trim().is_empty() {
+            next += 1;
+            continue;
         }
-        Fence::Split(frontmatter, body) => (frontmatter, body),
-    };
-    let fields = parse_frontmatter(frontmatter, file, &mut problems);
+        let Some((key, value)) = line.strip_prefix("- ").and_then(|b| b.split_once(':')) else { break };
+        let key = key.trim().to_ascii_lowercase();
+        if !KEYS.contains(&key.as_str()) || key == "clauses" || key == "id" || key == "title" {
+            break;
+        }
+        let value = value.trim();
+        if key == "refines" {
+            let items = value
+                .trim_start_matches('[')
+                .trim_end_matches(']')
+                .split(',')
+                .map(|item| item.trim().trim_matches(['`', '"', '\'']).to_string())
+                .filter(|item| !item.is_empty())
+                .collect();
+            lists.insert(key, items);
+        } else {
+            scalars.insert(key, value.to_string());
+        }
+        next += 1;
+        after_meta = next;
+    }
 
-    let is_requirement = fields.scalars.get("id").is_some_and(|id| !id.is_empty());
-    for (line, key) in &fields.unknown {
-        if is_requirement || KEYS.contains(&key.to_ascii_lowercase().as_str()) {
+    // The prose, and the clauses list under `## Clauses`.
+    let mut prose: Vec<&str> = Vec::new();
+    let mut clauses: BTreeMap<String, String> = BTreeMap::new();
+    let mut narrowings: BTreeMap<String, BTreeMap<String, String>> = BTreeMap::new();
+    let mut in_clauses = false;
+    let mut last: Option<String> = None;
+    let mut started: BTreeMap<String, u32> = BTreeMap::new();
+    let mut fenced = false;
+    for (index, raw) in lines.iter().enumerate().skip(after_meta) {
+        let line = raw.trim_end();
+        if line.trim_start().starts_with("```") || line.trim_start().starts_with("~~~") {
+            fenced = !fenced;
+        }
+        if !fenced && line.trim() == "## Clauses" {
+            in_clauses = true;
+            continue;
+        }
+        if !fenced && in_clauses && line.starts_with("## ") {
+            in_clauses = false;
+        }
+        if !in_clauses {
+            prose.push(raw);
+            continue;
+        }
+        if line.trim().is_empty() {
+            continue;
+        }
+        let indent = line.len() - line.trim_start().len();
+        let item = line.trim_start().strip_prefix("- ");
+        match (indent, item) {
+            (0, Some(entry)) => {
+                let named = entry.strip_prefix("**").and_then(|e| e.split_once("**:"));
+                let Some((key, text)) = named else {
+                    problems.push(FrontmatterProblem {
+                        file: file.to_string(),
+                        line: at(index),
+                        kind: FrontmatterKind::NotAKeyValue,
+                        message: format!("`{}` is not a `- **key**: text` clause", line.trim()),
+                    });
+                    continue;
+                };
+                let key = key.trim().to_string();
+                if !valid_key(&key) {
+                    problems.push(FrontmatterProblem {
+                        file: file.to_string(),
+                        line: at(index),
+                        kind: FrontmatterKind::InvalidKey,
+                        message: format!("`{key}` is not a valid clause key"),
+                    });
+                }
+                if clauses.contains_key(&key) {
+                    problems.push(FrontmatterProblem {
+                        file: file.to_string(),
+                        line: at(index),
+                        kind: FrontmatterKind::DuplicateClause,
+                        message: format!("the clause `{key}` is declared twice"),
+                    });
+                }
+                started.entry(key.clone()).or_insert(at(index));
+                clauses.insert(key.clone(), text.trim().to_string());
+                last = Some(key);
+            }
+            (_, Some(entry)) => {
+                let Some(clause) = last.clone() else { continue };
+                let Some((key, text)) = entry.split_once(':') else {
+                    problems.push(FrontmatterProblem {
+                        file: file.to_string(),
+                        line: at(index),
+                        kind: FrontmatterKind::NotAKeyValue,
+                        message: format!("`{}` is not a `key: text` narrowing", entry.trim()),
+                    });
+                    continue;
+                };
+                let (key, text) = (key.trim(), text.trim());
+                if !valid_key(key) {
+                    problems.push(FrontmatterProblem {
+                        file: file.to_string(),
+                        line: at(index),
+                        kind: FrontmatterKind::InvalidKey,
+                        message: format!("`{key}` is not a valid narrowing key"),
+                    });
+                }
+                let held = narrowings.entry(clause.clone()).or_default();
+                if held.contains_key(key) {
+                    problems.push(FrontmatterProblem {
+                        file: file.to_string(),
+                        line: at(index),
+                        kind: FrontmatterKind::DuplicateNarrowing,
+                        message: format!("`{clause}.{key}` is given twice"),
+                    });
+                }
+                held.insert(key.to_string(), text.to_string());
+            }
+            (_, None) => {
+                // A line that goes on with the clause above it.
+                if let Some(text) = last.as_ref().and_then(|k| clauses.get_mut(k)) {
+                    text.push(' ');
+                    text.push_str(line.trim());
+                }
+            }
+        }
+    }
+    for (key, text) in &clauses {
+        if text.is_empty() {
             problems.push(FrontmatterProblem {
                 file: file.to_string(),
-                line: *line,
-                kind: FrontmatterKind::UnknownKey,
-                message: format!("`{key}` is not a requirement frontmatter key"),
+                line: started.get(key).copied().unwrap_or(at(first)),
+                kind: FrontmatterKind::MissingText,
+                message: format!("the clause `{key}` has no text"),
             });
         }
     }
 
-    let Some(id) = fields.scalars.get("id").cloned() else {
-        return ParseOutcome::NotARequirement(problems);
-    };
-    if id.is_empty() {
-        problems.push(FrontmatterProblem {
-            file: file.to_string(),
-            line: 1,
-            kind: FrontmatterKind::EmptyId,
-            message: "`id:` is present but empty".into(),
-        });
-        return ParseOutcome::NotARequirement(problems);
-    }
-
-    let title = fields
-        .scalars
-        .get("title")
-        .cloned()
-        .or_else(|| first_heading(body))
-        .unwrap_or_else(|| id.clone());
-    let clauses = fields.maps.get("clauses").cloned().unwrap_or_default();
+    let title = if title.is_empty() { id.to_string() } else { title.to_string() };
     let narrowings: BTreeMap<String, BTreeMap<String, String>> =
-        fields.narrowings.into_iter().filter(|(_, n)| !n.is_empty()).collect();
+        narrowings.into_iter().filter(|(_, n)| !n.is_empty()).collect();
     let mut whole = clauses.clone();
     for (clause, entries) in &narrowings {
         for (key, text) in entries {
             whole.insert(format!("{clause}.{key}"), text.clone());
         }
     }
-    let content_hash = super::hash::requirement(&whole, body);
-
-    ParseOutcome::Requirement(
+    // The document as a whole keeps its title heading and its prose, as it always has.
+    let prose = prose.join("\n");
+    let body = format!("# {title}\n\n{}\n", prose.trim_matches('\n'));
+    let content_hash = super::hash::requirement(&whole, &body);
+    Some(ParseOutcome::Requirement(
         Box::new(Requirement {
-            id,
+            id: id.to_string(),
             title,
             file: file.to_string(),
-            refines: fields.lists.get("refines").cloned().unwrap_or_default(),
-            decomposition: fields
-                .scalars
-                .get("decomposition")
-                .map(|s| Decomposition::parse(s))
-                .unwrap_or_default(),
+            refines: lists.get("refines").cloned().unwrap_or_default(),
+            decomposition: scalars.get("decomposition").map(|s| Decomposition::parse(s)).unwrap_or_default(),
             clauses,
             narrowings,
-            status: fields.scalars.get("status").map(|s| Status::parse(s)).unwrap_or_default(),
-            body: body.to_string(),
+            status: scalars.get("status").map(|s| Status::parse(s)).unwrap_or_default(),
+            body,
             content_hash,
         }),
         problems,
-    )
-}
-
-enum Fence<'a> {
-    Absent,
-    Unclosed,
-    Split(&'a str, &'a str),
-}
-
-fn split_frontmatter(content: &str) -> Fence<'_> {
-    let Some(rest) = content.strip_prefix("---\n").or_else(|| content.strip_prefix("---\r\n")) else {
-        return Fence::Absent;
-    };
-    let mut offset = 0usize;
-    for line in rest.split_inclusive('\n') {
-        if line.trim_end_matches(['\r', '\n']).trim_end() == "---" {
-            return Fence::Split(&rest[..offset], &rest[offset + line.len()..]);
-        }
-        offset += line.len();
-    }
-    Fence::Unclosed
-}
-
-#[derive(Default)]
-struct Fields {
-    scalars: BTreeMap<String, String>,
-    lists: BTreeMap<String, Vec<String>>,
-    maps: BTreeMap<String, BTreeMap<String, String>>,
-    narrowings: BTreeMap<String, BTreeMap<String, String>>,
-    unknown: Vec<(u32, String)>,
-}
-
-struct Block {
-    clause: String,
-    indent: usize,
-    line: u32,
-    has_text: bool,
-}
-
-fn problem(problems: &mut Vec<FrontmatterProblem>, file: &str, line: u32, kind: FrontmatterKind, message: String) {
-    problems.push(FrontmatterProblem { file: file.to_string(), line, kind, message });
-}
-
-fn close_block(fields: &Fields, block: &mut Option<Block>, file: &str, problems: &mut Vec<FrontmatterProblem>) {
-    let Some(open) = block.take() else { return };
-    let text = fields.maps.get("clauses").and_then(|m| m.get(&open.clause));
-    if !matches!(text, Some(t) if !t.is_empty()) {
-        problem(
-            problems,
-            file,
-            open.line,
-            FrontmatterKind::MissingText,
-            format!("the clause `{}` is a block without `text:`", open.clause),
-        );
-    }
-}
-
-fn read_narrowing(
-    fields: &mut Fields,
-    open: &mut Block,
-    line_no: u32,
-    line: &str,
-    file: &str,
-    problems: &mut Vec<FrontmatterProblem>,
-) {
-    let Some((key, value)) = line.split_once(':') else {
-        problem(problems, file, line_no, FrontmatterKind::NotAKeyValue, format!("`{line}` is not a `key: value` entry"));
-        return;
-    };
-    let (key, value) = (key.trim(), value.trim());
-    if !valid_key(key) {
-        problem(problems, file, line_no, FrontmatterKind::InvalidKey, format!("`{key}` is not a valid narrowing key"));
-    }
-    if key == "text" {
-        if open.has_text {
-            problem(problems, file, line_no, FrontmatterKind::DuplicateNarrowing, format!("`{}` has two `text:` lines", open.clause));
-        }
-        open.has_text = true;
-        fields.maps.entry("clauses".into()).or_default().insert(open.clause.clone(), value.to_string());
-        return;
-    }
-    let entries = fields.narrowings.entry(open.clause.clone()).or_default();
-    if entries.contains_key(key) {
-        problem(problems, file, line_no, FrontmatterKind::DuplicateNarrowing, format!("`{}.{key}` is given twice", open.clause));
-    }
-    entries.insert(key.to_string(), value.to_string());
-}
-
-#[allow(clippy::too_many_arguments)]
-fn read_entry(
-    fields: &mut Fields,
-    block: &mut Option<Block>,
-    map_key: &str,
-    indent: usize,
-    line_no: u32,
-    line: &str,
-    file: &str,
-    problems: &mut Vec<FrontmatterProblem>,
-) {
-    let Some((key, value)) = line.split_once(':') else {
-        problem(problems, file, line_no, FrontmatterKind::NotAKeyValue, format!("`{line}` is not a `key: value` entry"));
-        return;
-    };
-    let (key, value) = (key.trim(), value.trim());
-    if map_key != "clauses" {
-        fields.maps.entry(map_key.to_string()).or_default().insert(key.to_string(), value.to_string());
-        return;
-    }
-    if !valid_key(key) {
-        problem(problems, file, line_no, FrontmatterKind::InvalidKey, format!("`{key}` is not a valid clause key"));
-    }
-    let clauses = fields.maps.entry("clauses".into()).or_default();
-    if clauses.contains_key(key) {
-        problem(problems, file, line_no, FrontmatterKind::DuplicateClause, format!("the clause `{key}` is declared twice"));
-    }
-    clauses.insert(key.to_string(), value.to_string());
-    fields.narrowings.remove(key);
-    if value.is_empty() {
-        *block = Some(Block { clause: key.to_string(), indent, line: line_no, has_text: false });
-    }
-}
-
-fn parse_frontmatter(text: &str, file: &str, problems: &mut Vec<FrontmatterProblem>) -> Fields {
-    let mut fields = Fields::default();
-    let mut current_map: Option<String> = None;
-    let mut block: Option<Block> = None;
-
-    for (index, raw) in text.lines().enumerate() {
-        let line_no = index as u32 + 2;
-        let line = raw.trim_end();
-        if line.trim().is_empty() || line.trim_start().starts_with('#') {
-            continue;
-        }
-
-        let indent = line.len() - line.trim_start_matches([' ', '\t']).len();
-        if indent > 0 {
-            let Some(map_key) = current_map.clone() else {
-                problem(problems, file, line_no, FrontmatterKind::IndentedWithoutKey, "indented entry without a key above it".into());
-                continue;
-            };
-            if let Some(open) = block.as_mut() {
-                if indent > open.indent {
-                    read_narrowing(&mut fields, open, line_no, line.trim(), file, problems);
-                    continue;
-                }
-            }
-            close_block(&fields, &mut block, file, problems);
-            read_entry(&mut fields, &mut block, &map_key, indent, line_no, line.trim(), file, problems);
-            continue;
-        }
-
-        close_block(&fields, &mut block, file, problems);
-        current_map = None;
-        let Some((key, value)) = line.split_once(':') else {
-            problems.push(FrontmatterProblem {
-                file: file.to_string(),
-                line: line_no,
-                kind: FrontmatterKind::NotAKeyValue,
-                message: format!("`{line}` is not a `key: value` entry"),
-            });
-            continue;
-        };
-        let key = key.trim().to_string();
-        let value = value.trim();
-        if !KEYS.contains(&key.as_str()) {
-            fields.unknown.push((line_no, key.clone()));
-        }
-
-        if value.is_empty() {
-            current_map = Some(key);
-            continue;
-        }
-        if let Some(inner) = value.strip_prefix('[').and_then(|v| v.strip_suffix(']')) {
-            let items = inner
-                .split(',')
-                .map(|item| item.trim().trim_matches(['"', '\'']).to_string())
-                .filter(|item| !item.is_empty())
-                .collect();
-            fields.lists.insert(key, items);
-            continue;
-        }
-        fields.scalars.insert(key, value.trim_matches(['"', '\'']).to_string());
-    }
-    close_block(&fields, &mut block, file, problems);
-
-    fields
-}
-
-fn first_heading(body: &str) -> Option<String> {
-    body.lines()
-        .find(|line| line.starts_with("# "))
-        .map(|line| line[2..].trim().to_string())
+    ))
 }
 
 /// @implements REQ-REQDOC.id_unique
@@ -530,7 +473,7 @@ fn dangling_in(requirements: &BTreeMap<String, Vec<String>>) -> BTreeSet<(String
 mod tests {
     use super::*;
 
-    const DOC: &str = "---\nid: REQ-EVID\ntitle: Evidence algebra\nrefines: [ARCH-HONEST, ARCH-CORE-SHELL]\nstatus: approved\ndecomposition: complete\nclauses:\n  ladder: Levels are ordered.\n  weakest_link: The minimum over bonds.\n---\n\n# Evidence algebra\n\nProse.\n";
+    const DOC: &str = "# REQ-EVID: Evidence algebra\n\n- status: approved\n- decomposition: complete\n- refines: ARCH-HONEST, ARCH-CORE-SHELL\n\nProse.\n\n## Clauses\n\n- **ladder**: Levels are ordered.\n- **weakest_link**: The minimum over bonds.\n";
 
     fn parse(content: &str) -> Requirement {
         match parse_markdown("reqs/x.md", content) {
@@ -558,7 +501,7 @@ mod tests {
     /// @tests REQ-REQDOC.decomposition_claimed
     #[test]
     fn decomposition_defaults_to_open() {
-        let req = parse("---\nid: REQ-X\n---\nbody");
+        let req = parse("# REQ-X: X\n\nbody\n");
         assert_eq!(req.decomposition, Decomposition::Open);
         assert_eq!(req.status, Status::Draft);
     }
@@ -578,18 +521,18 @@ mod tests {
     /// @tests REQ-REQDOC.clauseless_uniform
     #[test]
     fn a_clauseless_requirement_has_one_implicit_clause() {
-        let req = parse("---\nid: REQ-X\n---\nbody");
+        let req = parse("# REQ-X: X\n\nbody\n");
         assert_eq!(req.clause_keys(), vec![None]);
     }
 
     /// @tests REQ-REQDOC.malformed_reported
     #[test]
     fn malformed_frontmatter_is_reported_not_skipped() {
-        match parse_markdown("reqs/x.md", "---\nid: REQ-X\nthis line has no colon\n---\nbody") {
+        match parse_markdown("reqs/x.md", "# REQ-X: X\n\n## Clauses\n\n- not a clause\n") {
             ParseOutcome::Requirement(req, problems) => {
                 assert_eq!(req.id, "REQ-X");
                 assert_eq!(problems.len(), 1);
-                assert_eq!(problems[0].line, 3);
+                assert_eq!(problems[0].line, 5);
             }
             ParseOutcome::NotARequirement(_) => panic!("a malformed line must not hide the document"),
         }
@@ -612,7 +555,7 @@ mod tests {
         }
     }
 
-    const BLOCK: &str = "---\nid: REQ-R\nclauses:\n  weakest_link: The minimum over bonds.\n  min_not_mean:\n    text: The minimum of its parts.\n    empty: With no parts, L1.\n    order: Ascending id.\n---\nProse.\n";
+    const BLOCK: &str = "# REQ-R: R\n\nProse.\n\n## Clauses\n\n- **weakest_link**: The minimum over bonds.\n- **min_not_mean**: The minimum of its parts.\n  - empty: With no parts, L1.\n  - order: Ascending id.\n";
 
     /// @tests REQ-REQDOC.narrowings_nest
     #[test]
@@ -637,44 +580,42 @@ mod tests {
     /// @tests REQ-REQDOC.malformed_reported
     #[test]
     fn a_block_without_text_is_reported_where_it_starts() {
-        let doc = "---\nid: REQ-R\nclauses:\n  one:\n    empty: With none, L1.\n  two: Fine.\n---\n";
-        assert_eq!(kinds(doc), vec![(4, FrontmatterKind::MissingText)]);
-        let doc = "---\nid: REQ-R\nclauses:\n  one:\n---\n";
-        assert_eq!(kinds(doc), vec![(4, FrontmatterKind::MissingText)]);
+        let doc = "# REQ-R: R\n\n## Clauses\n\n- **one**:\n  - empty: With none, L1.\n- **two**: Fine.\n";
+        assert_eq!(kinds(doc), vec![(5, FrontmatterKind::MissingText)]);
+        let doc = "# REQ-R: R\n\n## Clauses\n\n- **one**:\n";
+        assert_eq!(kinds(doc), vec![(5, FrontmatterKind::MissingText)]);
     }
 
     /// @tests REQ-REQDOC.clause_unique
     #[test]
     fn a_clause_or_narrowing_given_twice_is_reported() {
-        let doc = "---\nid: REQ-R\nclauses:\n  one: First.\n  one: Again.\n---\n";
-        assert_eq!(kinds(doc), vec![(5, FrontmatterKind::DuplicateClause)]);
-        let doc = "---\nid: REQ-R\nclauses:\n  one:\n    text: T.\n    empty: A.\n    empty: B.\n    text: U.\n---\n";
+        let doc = "# REQ-R: T\n\n## Clauses\n\n- **one**: First.\n- **one**: Again.\n";
+        assert_eq!(kinds(doc), vec![(6, FrontmatterKind::DuplicateClause)]);
+        let doc = "# REQ-R: T\n\n## Clauses\n\n- **one**: T.\n  - empty: A.\n  - empty: B.\n";
         assert_eq!(
             kinds(doc),
-            vec![(7, FrontmatterKind::DuplicateNarrowing), (8, FrontmatterKind::DuplicateNarrowing)]
+            vec![(7, FrontmatterKind::DuplicateNarrowing)]
         );
     }
 
     /// @tests REQ-REQDOC.malformed_reported
     #[test]
-    fn an_unclosed_fence_and_an_unknown_key_are_reported() {
+    fn a_clause_without_text_is_reported_and_other_markdown_is_not_a_requirement() {
         assert_eq!(
-            kinds("---\nid: REQ-X\nclauses:\n  one: t\n"),
-            vec![(1, FrontmatterKind::UnclosedFrontmatter)]
+            kinds("# REQ-X: T\n\n## Clauses\n\n- **one**:\n"),
+            vec![(5, FrontmatterKind::MissingText)]
         );
-        assert_eq!(kinds("---\niD: REQ-X\n---\n"), vec![(2, FrontmatterKind::UnknownKey)]);
-        assert_eq!(kinds("---\nid: REQ-X\nclauess:\n---\n"), vec![(3, FrontmatterKind::UnknownKey)]);
+        assert_eq!(kinds("# Notes\n\nSome prose.\n"), vec![]);
         assert_eq!(kinds("---\nadr: 3\ntitle: A decision\n---\n"), vec![]);
-        assert_eq!(kinds("# Notes\n---\n"), vec![]);
     }
 
     /// @tests REQ-REQDOC.malformed_reported
     #[test]
     fn a_key_an_annotation_cannot_name_is_reported() {
-        let doc = "---\nid: REQ-R\nclauses:\n  weakest-link: T.\n  one:\n    text: T.\n    two words: N.\n---\n";
+        let doc = "# REQ-R: T\n\n## Clauses\n\n- **weakest-link**: T.\n- **one**: T.\n  - two words: N.\n";
         assert_eq!(
             kinds(doc),
-            vec![(4, FrontmatterKind::InvalidKey), (7, FrontmatterKind::InvalidKey)]
+            vec![(5, FrontmatterKind::InvalidKey), (7, FrontmatterKind::InvalidKey)]
         );
     }
 
@@ -694,7 +635,7 @@ mod tests {
         assert_eq!(hash(&a, "weakest_link"), hash(&prose, "weakest_link"));
         assert_ne!(a.content_hash, prose.content_hash, "a document about it is reviewed against the prose");
         assert_eq!(a.clause_hash(Some("absent")), None);
-        let bare = parse("---\nid: REQ-X\n---\nbody");
+        let bare = parse("# REQ-X: X\n\nbody\n");
         assert_eq!(bare.clause_hash(None), Some(bare.content_hash.clone()));
     }
 
@@ -703,7 +644,7 @@ mod tests {
             .iter()
             .map(|(id, parents)| {
                 let doc = format!(
-                    "---\nid: {id}\nrefines: [{}]\n---\nbody",
+                    "# {id}: T\n\n- refines: {}\n\nbody\n",
                     parents.join(", ")
                 );
                 (id.to_string(), parse(&doc))
@@ -714,31 +655,31 @@ mod tests {
     /// @tests REQ-REQDOC.refines_dag
     #[test]
     fn a_cycle_is_found() {
-        let g = graph(&[("A", &["B"]), ("B", &["C"]), ("C", &["A"])]);
+        let g = graph(&[("REQ-A", &["REQ-B"]), ("REQ-B", &["REQ-C"]), ("REQ-C", &["REQ-A"])]);
         let cycle = refinement_cycle(&g).expect("a cycle");
         assert!(cycle.len() >= 3, "{cycle:?}");
     }
 
     #[test]
     fn a_diamond_is_not_a_cycle() {
-        let g = graph(&[("A", &["B", "C"]), ("B", &["D"]), ("C", &["D"]), ("D", &[])]);
+        let g = graph(&[("REQ-A", &["REQ-B", "REQ-C"]), ("REQ-B", &["REQ-D"]), ("REQ-C", &["REQ-D"]), ("REQ-D", &[])]);
         assert_eq!(refinement_cycle(&g), None);
     }
 
     #[test]
     fn a_self_refinement_is_a_cycle() {
-        let g = graph(&[("A", &["A"])]);
+        let g = graph(&[("REQ-A", &["REQ-A"])]);
         assert!(refinement_cycle(&g).is_some());
     }
 
     /// @tests REQ-REQDOC.refines_resolves
     #[test]
     fn dangling_parents_are_listed_and_are_not_cycles() {
-        let g = graph(&[("A", &["MISSING"])]);
+        let g = graph(&[("REQ-A", &["REQ-MISSING"])]);
         assert_eq!(refinement_cycle(&g), None);
         assert_eq!(
             dangling_refines(&g).into_iter().collect::<Vec<_>>(),
-            vec![("A".to_string(), "MISSING".to_string())]
+            vec![("REQ-A".to_string(), "REQ-MISSING".to_string())]
         );
     }
 }

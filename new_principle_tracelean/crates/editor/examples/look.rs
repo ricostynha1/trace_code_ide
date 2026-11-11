@@ -77,6 +77,15 @@ fn answer(editor: &mut Editor, command: &str, args: &Value) -> Value {
             said(editor)
         }
         "menu" => json!(editor.menu),
+        "setting_rule" => json!(editor.setting_rule(&text(args, "name"))),
+        "set_setting" => {
+            editor.set_setting(&text(args, "name"), &text(args, "value"));
+            said(editor)
+        }
+        "filter_settings" => {
+            editor.filter_settings(&text(args, "query"));
+            said(editor)
+        }
         "press" => {
             editor.key(&text(args, "key"));
             said(editor)

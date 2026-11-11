@@ -16,11 +16,7 @@ inductive Status where
   deriving Repr, DecidableEq, Inhabited, ToJson, FromJson
 
 inductive FrontmatterKind where
-  | indentedWithoutKey
   | notAKeyValue
-  | emptyId
-  | unclosedFrontmatter
-  | unknownKey
   | duplicateClause
   | duplicateNarrowing
   | missingText
@@ -40,16 +36,8 @@ structure Parsed where
   problems : List (Nat × FrontmatterKind) := []
   deriving Repr, DecidableEq, Inhabited, ToJson, FromJson
 
-def trimQuotes (s : String) : String :=
-  let isQuote (c : Char) := c == '"' || c == '\''
-  let chars := s.toList.dropWhile isQuote
-  String.mk (chars.reverse.dropWhile isQuote).reverse
-
-def splitOnFirst (s : String) (sep : Char) : Option (String × String) :=
-  let chars := s.toList
-  match chars.findIdx? (· == sep) with
-  | none => none
-  | some i => some (String.mk (chars.take i), String.mk (chars.drop (i + 1)))
+/-! A requirement is plain markdown: `# ID: title`, then `- key: value` bullets, prose, and
+a `## Clauses` list of `- **key**: text` with `- key: text` narrowings under each. -/
 
 def trimEnd (s : String) : String :=
   String.mk (s.toList.reverse.dropWhile Char.isWhitespace).reverse
@@ -64,51 +52,6 @@ def insertSorted (entries : List (String × String)) (key value : String) :
 def lookup? (entries : List (String × String)) (key : String) : Option String :=
   (entries.find? (·.1 == key)).map (·.2)
 
-def splitFrontmatter (lines : List String) : Option (List String × List String) :=
-  match lines with
-  | [] => none
-  | first :: rest =>
-    if first != "---" || rest.isEmpty then none
-    else
-      match rest.findIdx? (fun line => trimEnd line == "---") with
-      | none => none
-      | some i => some (rest.take i, rest.drop (i + 1))
-
-def fenceUnclosed (lines : List String) : Bool :=
-  match lines with
-  | [] => false
-  | first :: rest => first == "---" && !rest.isEmpty && (splitFrontmatter lines).isNone
-
-def knownKeys : List String := ["id", "title", "refines", "status", "decomposition", "clauses"]
-
-def validKey (key : String) : Bool :=
-  !key.isEmpty && key.all (fun c => c.isAlphanum || c == '_')
-
-def indentOf (line : String) : Nat :=
-  (line.toList.takeWhile (fun c => c == ' ' || c == '\t')).length
-
-structure Block where
-  clause : String
-  indent : Nat
-  line : Nat
-  hasText : Bool := false
-  deriving Inhabited
-
-structure Fields where
-  scalars : List (String × String) := []
-  lists : List (String × List String) := []
-  maps : List (String × List (String × String)) := []
-  narrowings : List (String × List (String × String)) := []
-  unknown : List (Nat × String) := []
-  problems : List (Nat × FrontmatterKind) := []
-  current : Option String := none
-  block : Option Block := none
-  deriving Inhabited
-
-def listInsert (entries : List (String × List String)) (key : String)
-    (value : List String) : List (String × List String) :=
-  (entries.filter (·.1 != key)) ++ [(key, value)]
-
 def mapEntry (entries : List (String × List (String × String))) (key : String) :
     List (String × String) :=
   ((entries.find? (·.1 == key)).map (·.2)).getD []
@@ -117,133 +60,201 @@ def mapInsert (entries : List (String × List (String × String))) (key : String
     (inner : List (String × String)) : List (String × List (String × String)) :=
   (entries.filter (·.1 != key)) ++ [(key, inner)]
 
-def problem (fields : Fields) (lineNo : Nat) (kind : FrontmatterKind) : Fields :=
-  { fields with problems := fields.problems ++ [(lineNo, kind)] }
+def validKey (key : String) : Bool :=
+  !key.isEmpty && key.all (fun c => c.isAlphanum || c == '_')
 
-def narrowingsOf (fields : Fields) (clause : String) : List (String × String) :=
-  ((fields.narrowings.find? (·.1 == clause)).map (·.2)).getD []
+/-- The first occurrence of `sep` in a list of characters, and what lies either side of it. -/
+def splitOnceL (sep : List Char) : List Char → Option (List Char × List Char)
+  | [] => none
+  | c :: rest =>
+    if sep.isPrefixOf (c :: rest) then some ([], (c :: rest).drop sep.length)
+    else (splitOnceL sep rest).map (fun p => (c :: p.1, p.2))
 
-def closeBlock (fields : Fields) : Fields :=
-  match fields.block with
-  | none => fields
+def splitOnce (s sep : String) : Option (String × String) :=
+  (splitOnceL sep.toList s.toList).map (fun p => (String.mk p.1, String.mk p.2))
+
+def stripPrefix (s p : String) : Option String :=
+  if s.startsWith p then some (s.drop p.length) else none
+
+def isIdQuote (c : Char) : Bool := c == '`' || c == '"' || c == '\''
+
+def trimQuotes (s : String) : String :=
+  String.mk ((s.toList.dropWhile isIdQuote).reverse.dropWhile isIdQuote).reverse
+
+/-- Is this heading text the name of a requirement? -/
+def named (id : String) : Bool :=
+  !id.isEmpty && !(id.toList.any Char.isWhitespace) && id.contains '-' &&
+    (match id.toList with | c :: _ => c.isUpper | [] => false) &&
+    id.all (fun c => c.isAlphanum || c == '-' || c == '_')
+
+structure Meta where
+  refines : List String := []
+  status : Option String := none
+  decomposition : Option String := none
+  deriving Inhabited
+
+def refinesOf (value : String) : List String :=
+  let inner := ((value.toList.dropWhile (· == '[')).reverse.dropWhile (· == ']')).reverse
+  ((String.mk inner).splitOn ",").map (fun item => trimQuotes item.trim) |>.filter (fun i => !i.isEmpty)
+
+def metaEntry (line : String) : Option (String × String) :=
+  match stripPrefix line "- " with
+  | none => none
   | some b =>
-    let cleared := { fields with block := none }
-    let text := (lookup? (mapEntry fields.maps "clauses") b.clause).getD ""
-    if text.isEmpty then problem cleared b.line .missingText else cleared
+    match splitOnce b ":" with
+    | none => none
+    | some (key, value) =>
+      let key := key.trim.toLower
+      if key == "refines" || key == "status" || key == "decomposition" then some (key, value.trim)
+      else none
 
-private def setText (fields : Fields) (b : Block) (lineNo : Nat) (value : String) : Fields :=
-  let noted := if b.hasText then problem fields lineNo .duplicateNarrowing else fields
-  let entries := insertSorted (mapEntry noted.maps "clauses") b.clause value
-  { noted with
-    maps := mapInsert noted.maps "clauses" entries
-    block := some { b with hasText := true } }
+def addMeta (m : Meta) (key value : String) : Meta :=
+  if key == "refines" then { m with refines := refinesOf value }
+  else if key == "status" then { m with status := some value }
+  else { m with decomposition := some value }
 
-private def addNarrowing (fields : Fields) (b : Block) (lineNo : Nat) (key value : String) :
-    Fields :=
-  let existing := narrowingsOf fields b.clause
-  let noted := if existing.any (·.1 == key) then problem fields lineNo .duplicateNarrowing else fields
-  { noted with narrowings := mapInsert noted.narrowings b.clause (insertSorted existing key value) }
-
-private def readNarrowing (fields : Fields) (b : Block) (lineNo : Nat) (line : String) : Fields :=
-  match splitOnFirst line.trim ':' with
-  | none => problem fields lineNo .notAKeyValue
-  | some (rawKey, rawValue) =>
-    let key := rawKey.trim
-    let value := rawValue.trim
-    let checked := if validKey key then fields else problem fields lineNo .invalidKey
-    if key == "text" then setText checked b lineNo value
-    else addNarrowing checked b lineNo key value
-
-private def readClause (fields : Fields) (lineNo indent : Nat) (key value : String) : Fields :=
-  let checked := if validKey key then fields else problem fields lineNo .invalidKey
-  let existing := mapEntry checked.maps "clauses"
-  let noted := if existing.any (·.1 == key) then problem checked lineNo .duplicateClause else checked
-  let opened : Option Block :=
-    if value.isEmpty then some { clause := key, indent := indent, line := lineNo } else none
-  { noted with
-    maps := mapInsert noted.maps "clauses" (insertSorted existing key value)
-    narrowings := noted.narrowings.filter (·.1 != key)
-    block := opened }
-
-private def readEntry (fields : Fields) (mapKey : String) (lineNo : Nat) (line : String) :
-    Fields :=
-  match splitOnFirst line.trim ':' with
-  | none => problem fields lineNo .notAKeyValue
-  | some (k, v) =>
-    if mapKey == "clauses" then readClause fields lineNo (indentOf line) k.trim v.trim
+/-- The bullets straight under the heading, and the lines from where they end. -/
+def readMeta : List String → Meta → List String → Meta × List String
+  | [], m, rest => (m, rest)
+  | l :: ls, m, rest =>
+    if l.trim.isEmpty then readMeta ls m rest
     else
-      { fields with
-        maps := mapInsert fields.maps mapKey (insertSorted (mapEntry fields.maps mapKey) k.trim v.trim) }
+      match metaEntry (trimEnd l) with
+      | none => (m, rest)
+      | some (k, v) => readMeta ls (addMeta m k v) ls
 
-private def readNested (fields : Fields) (mapKey : String) (lineNo : Nat) (line : String) :
-    Fields :=
-  match fields.block with
-  | some b =>
-    if indentOf line > b.indent then readNarrowing fields b lineNo line
-    else readEntry (closeBlock fields) mapKey lineNo line
-  | none => readEntry fields mapKey lineNo line
+structure St where
+  problems : List (Nat × FrontmatterKind) := []
+  clauses : List (String × String) := []
+  narrowings : List (String × List (String × String)) := []
+  started : List (String × Nat) := []
+  last : Option String := none
+  inClauses : Bool := false
+  fenced : Bool := false
 
-private def readIndented (fields : Fields) (lineNo : Nat) (line : String) : Fields :=
-  match fields.current with
-  | none => problem fields lineNo .indentedWithoutKey
-  | some mapKey => readNested fields mapKey lineNo line
+def addProblem (s : St) (n : Nat) (k : FrontmatterKind) : St :=
+  { s with problems := s.problems ++ [(n, k)] }
 
-private def noteUnknown (fields : Fields) (lineNo : Nat) (key : String) : Fields :=
-  if knownKeys.contains key then fields
-  else { fields with unknown := fields.unknown ++ [(lineNo, key)] }
+def flag (c : Bool) (s : St) (n : Nat) (k : FrontmatterKind) : St :=
+  if c then addProblem s n k else s
 
-private def readKeyValue (fields : Fields) (lineNo : Nat) (line : String) : Fields :=
-  let cleared := { closeBlock fields with current := none }
-  match splitOnFirst line ':' with
-  | none => { cleared with problems := cleared.problems ++ [(lineNo, .notAKeyValue)] }
-  | some (rawKey, rawValue) =>
-    let key := rawKey.trim
-    let value := rawValue.trim
-    let cleared := noteUnknown cleared lineNo key
-    match value.isEmpty with
-    | true => { cleared with current := some key }
-    | false =>
-      match value.startsWith "[" && value.endsWith "]" with
-      | true =>
-        let inner := (value.drop 1).dropRight 1
-        let items := (inner.splitOn ",").map (fun item => trimQuotes item.trim)
-        { cleared with lists := listInsert cleared.lists key (items.filter (!·.isEmpty)) }
-      | false =>
-        { cleared with scalars := insertSorted cleared.scalars key (trimQuotes value) }
+def record (s : St) (n : Nat) (key text : String) : St :=
+  { s with
+    started := if (s.started.find? (·.1 == key)).isSome then s.started else s.started ++ [(key, n)]
+    clauses := insertSorted s.clauses key text.trim
+    last := some key }
 
-def readLine (fields : Fields) (lineNo : Nat) (raw : String) : Fields :=
+def readClause (s : St) (n : Nat) (entry : String) : St :=
+  match (stripPrefix entry "**").bind (fun e => splitOnce e "**:") with
+  | none => addProblem s n .notAKeyValue
+  | some (k, t) =>
+    let key := k.trim
+    record (flag (lookup? s.clauses key).isSome (flag (!validKey key) s n .invalidKey) n .duplicateClause)
+      n key t
+
+def narrow (s : St) (clause key text : String) : St :=
+  { s with narrowings := mapInsert s.narrowings clause (insertSorted (mapEntry s.narrowings clause) key text.trim) }
+
+def readNarrowing (s : St) (n : Nat) (entry : String) : St :=
+  match s.last with
+  | none => s
+  | some clause =>
+    match splitOnce entry ":" with
+    | none => addProblem s n .notAKeyValue
+    | some (k, t) =>
+      let key := k.trim
+      narrow (flag (lookup? (mapEntry s.narrowings clause) key).isSome (flag (!validKey key) s n .invalidKey) n .duplicateNarrowing)
+        clause key t
+
+def continueClause (s : St) (text : String) : St :=
+  match s.last with
+  | none => s
+  | some k =>
+    { s with clauses := s.clauses.map (fun c => if c.1 == k then (k, c.2 ++ " " ++ text) else c) }
+
+def stepLine (s : St) (n : Nat) (line : String) : St :=
+  if line.trim.isEmpty then s
+  else
+    let flush := line.length == (trimStart line).length
+    match stripPrefix (trimStart line) "- " with
+    | some entry => if flush then readClause s n entry else readNarrowing s n entry
+    | none => continueClause s line.trim
+
+def fence (s : St) (b : Bool) : St := { s with fenced := b }
+
+def setFenced (s : St) (raw : String) : St :=
   let line := trimEnd raw
-  match line.trim.isEmpty || (trimStart line).startsWith "#" with
-  | true => fields
-  | false =>
-    match line.startsWith " " || line.startsWith "\t" with
-    | true => readIndented fields lineNo line
-    | false => readKeyValue fields lineNo line
+  fence s (if (trimStart line).startsWith "```" || (trimStart line).startsWith "~~~"
+    then !s.fenced else s.fenced)
 
-def readFrontmatter (lines : List String) : Fields :=
-  closeBlock ((lines.enum).foldl (fun fields pair => readLine fields (pair.1 + 2) pair.2) {})
+def enter (s : St) (b : Bool) : St := { s with inClauses := b }
 
-def unknownProblems (fields : Fields) (inRequirement : Bool) : List (Nat × FrontmatterKind) :=
-  (fields.unknown.filter (fun u => inRequirement || knownKeys.contains u.2.toLower)).map
-    (fun u => (u.1, FrontmatterKind.unknownKey))
+def setSection (s : St) (raw : String) : St :=
+  let line := trimEnd raw
+  if !s.fenced && line.trim == "## Clauses" then enter s true
+  else if !s.fenced && s.inClauses && line.startsWith "## " then enter s false
+  else s
 
-def sortedNarrowings (fields : Fields) : List (String × List (String × String)) :=
-  (fields.narrowings.filter (fun n => !n.2.isEmpty)).mergeSort (fun a b => a.1 ≤ b.1)
+def step (s : St) (n : Nat) (raw : String) : St :=
+  let s := setFenced s raw
+  let t := setSection s raw
+  if !s.fenced && (trimEnd raw).trim == "## Clauses" then t
+  else if !t.inClauses then t
+  else stepLine t n (trimEnd raw)
 
-def firstHeading (body : List String) : Option String :=
-  (body.find? (·.startsWith "# ")).map (fun line => (line.drop 2).trim)
+def enumFrom : Nat → List String → List (Nat × String)
+  | _, [] => []
+  | n, l :: ls => (n, l) :: enumFrom (n + 1) ls
 
-private def decompositionOf (fields : Fields) : Decomposition :=
-  match lookup? fields.scalars "decomposition" with
+def decompositionOf : Option String → Decomposition
   | some d => if d.trim.toLower == "complete" then .complete else .«open»
   | none => .«open»
 
-private def statusOf (fields : Fields) : Status :=
-  match lookup? fields.scalars "status" with
+def statusOf : Option String → Status
   | some raw =>
     let s := raw.trim.toLower
     if s == "approved" then .approved else if s == "linked" then .linked else .draft
   | none => .draft
+
+def sortedNarrowings (narrowings : List (String × List (String × String))) :
+    List (String × List (String × String)) :=
+  (narrowings.filter (fun n => !n.2.isEmpty)).mergeSort (fun a b => a.1 ≤ b.1)
+
+def missingText (s : St) (firstLine : Nat) : List (Nat × FrontmatterKind) :=
+  (s.clauses.filter (fun c => c.2.isEmpty)).map
+    (fun c => (((s.started.find? (·.1 == c.1)).map (·.2)).getD firstLine, .missingText))
+
+def headingParts (heading : String) : String × String :=
+  match splitOnce heading ":" with
+  | some (i, t) => (i.trim, t.trim)
+  | none => (heading.trim, "")
+
+/-- The heading: the line number of the first line, the id and the title, then the lines after it. -/
+def header (lines : List String) : Option (Nat × String × String × List String) :=
+  match lines.dropWhile (fun l => l.trim.isEmpty) with
+  | [] => none
+  | h :: rest =>
+    (stripPrefix h "# ").bind fun heading =>
+      if named (headingParts heading).1 then
+        some ((lines.length - rest.length), (headingParts heading).1, (headingParts heading).2, rest)
+      else none
+
+def runClauses (start : Nat) (body : List String) : St :=
+  (enumFrom start body).foldl (fun s p => step s p.1 p.2) {}
+
+def finish (at1 : Nat) (id title : String) (m : Meta) (s : St) : Parsed :=
+  { isRequirement := true
+    id := id
+    title := if title.isEmpty then id else title
+    refines := m.refines
+    decomposition := decompositionOf m.decomposition
+    status := statusOf m.status
+    clauses := s.clauses
+    narrowings := sortedNarrowings s.narrowings
+    addressable := if s.clauses.isEmpty then [none] else s.clauses.map (fun c => some c.1)
+    problems := s.problems ++ missingText s at1 }
+
+def split (lines : List String) : List String := (String.intercalate "\n" lines).splitOn "\n"
 
 /-- @models REQ-REQDOC.id_is_identity
 @models REQ-REQDOC.clauseless_uniform
@@ -252,29 +263,11 @@ private def statusOf (fields : Fields) : Status :=
 @models REQ-REQDOC.narrowings_nest
 @models REQ-REQDOC.clause_unique -/
 def parseLines (lines : List String) : Parsed :=
-  let lines := (String.intercalate "\n" lines).splitOn "\n"
-  match splitFrontmatter lines with
-  | none => if fenceUnclosed lines then { problems := [(1, .unclosedFrontmatter)] } else {}
-  | some (frontmatter, body) =>
-    let fields := readFrontmatter frontmatter
-    match lookup? fields.scalars "id" with
-    | none => { problems := fields.problems ++ unknownProblems fields false }
-    | some id =>
-      if id.isEmpty then
-        { problems := fields.problems ++ unknownProblems fields false ++ [(1, .emptyId)] }
-      else
-        let clauses := mapEntry fields.maps "clauses"
-        { isRequirement := true
-          id := id
-          title := (lookup? fields.scalars "title").getD ((firstHeading body).getD id)
-          refines := (((fields.lists.find? (·.1 == "refines")).map (·.2)).getD [])
-          decomposition := decompositionOf fields
-          status := statusOf fields
-          clauses := clauses
-          narrowings := sortedNarrowings fields
-          addressable :=
-            if clauses.isEmpty then [none] else clauses.map (fun c => some c.1)
-          problems := fields.problems ++ unknownProblems fields true }
+  match header (split lines) with
+  | none => {}
+  | some (at1, id, title, rest) =>
+    let (m, body) := readMeta rest {} rest
+    finish at1 id title m (runClauses ((split lines).length - body.length + 1) body)
 
 /-- @models REQ-REQDOC.id_unique -/
 def duplicateIds (declared : List (String × String)) : List (String × String) :=
@@ -290,212 +283,57 @@ theorem one_declaration_is_not_a_duplicate (id file : String) :
     duplicateIds [(id, file)] = [] := by
   simp [duplicateIds]
 
-def Grows (f g : Fields) : Prop := ∃ e, g.problems = f.problems ++ e
 
-theorem grows_refl (f : Fields) : Grows f f := ⟨[], by simp⟩
+theorem header_named (lines : List String) (a : Nat) (id title : String) (rest : List String)
+    (h : header lines = some (a, id, title, rest)) : named id = true := by
+  unfold header at h
+  split at h
+  · cases h
+  · simp only [Option.bind_eq_some] at h
+    obtain ⟨heading, _, h⟩ := h
+    split at h
+    · rename_i hn
+      simp only [Option.some.injEq, Prod.mk.injEq] at h
+      rw [← h.2.1]
+      exact hn
+    · cases h
 
-theorem grows_trans {f g h : Fields} (a : Grows f g) (b : Grows g h) : Grows f h := by
-  obtain ⟨e1, h1⟩ := a
-  obtain ⟨e2, h2⟩ := b
-  exact ⟨e1 ++ e2, by rw [h2, h1, List.append_assoc]⟩
+theorem named_not_empty (id : String) (h : named id = true) : id ≠ "" := by
+  intro e
+  subst e
+  simp [named] at h
 
-theorem grows_problem (f : Fields) (n : Nat) (k : FrontmatterKind) : Grows f (problem f n k) :=
-  ⟨[(n, k)], rfl⟩
+theorem parse_some (lines : List String) (a : Nat) (id title : String) (rest : List String)
+    (h : header (split lines) = some (a, id, title, rest)) :
+    parseLines lines = finish a id title (readMeta rest {} rest).1
+      (runClauses ((split lines).length - (readMeta rest {} rest).2.length + 1) (readMeta rest {} rest).2) := by
+  unfold parseLines
+  rw [h]
 
-theorem grows_closeBlock (f : Fields) : Grows f (closeBlock f) := by
-  unfold closeBlock Grows
-  split
-  · exact ⟨[], by simp⟩
-  · dsimp only
-    split <;> simp [problem]
-
-
-theorem grows_setText (f : Fields) (b : Block) (n : Nat) (v : String) : Grows f (setText f b n v) := by
-  unfold setText Grows
-  dsimp only
-  split <;> simp [problem]
-
-
-theorem grows_addNarrowing (f : Fields) (b : Block) (n : Nat) (k v : String) :
-    Grows f (addNarrowing f b n k v) := by
-  unfold addNarrowing Grows
-  dsimp only
-  split <;> simp [problem]
-
-
-theorem grows_ite_problem (c : Bool) (f : Fields) (n : Nat) (k : FrontmatterKind) :
-    Grows f (if c = true then f else problem f n k) := by
-  split
-  · exact grows_refl _
-  · exact grows_problem _ _ _
-
-theorem grows_readNarrowing (f : Fields) (b : Block) (n : Nat) (line : String) :
-    Grows f (readNarrowing f b n line) := by
-  unfold readNarrowing
-  split
-  · exact grows_problem _ _ _
-  · dsimp only
-    split
-    · exact grows_trans (grows_ite_problem _ _ _ _) (grows_setText _ _ _ _)
-    · exact grows_trans (grows_ite_problem _ _ _ _) (grows_addNarrowing _ _ _ _ _)
-
-theorem grows_readClause (f : Fields) (n i : Nat) (k v : String) :
-    Grows f (readClause f n i k v) := by
-  unfold readClause Grows
-  dsimp only
-  split <;> split <;> simp [problem]
-
-
-theorem grows_readEntry (f : Fields) (m : String) (n : Nat) (line : String) :
-    Grows f (readEntry f m n line) := by
-  unfold readEntry
-  split
-  · exact grows_problem _ _ _
-  · split
-    · exact grows_readClause _ _ _ _ _
-    · exact ⟨[], by simp⟩
-
-theorem grows_readLine (f : Fields) (n : Nat) (raw : String) : Grows f (readLine f n raw) := by
-  unfold readLine
-  dsimp only
-  split
-  · exact grows_refl _
-  · split
-    · unfold readIndented
-      split
-      · exact grows_problem _ _ _
-      · unfold readNested
-        split
-        · split
-          · exact grows_readNarrowing _ _ _ _
-          · exact grows_trans (grows_closeBlock _) (grows_readEntry _ _ _ _)
-        · exact grows_readEntry _ _ _ _
-    · unfold readKeyValue
-      dsimp only
-      have g0 : Grows f { closeBlock f with current := none } := by
-        obtain ⟨e, he⟩ := grows_closeBlock f
-        exact ⟨e, he⟩
-      split
-      · exact grows_trans g0 ⟨_, rfl⟩
-      · have g1 : ∀ (g : Fields) (n : Nat) (k : String), Grows g (noteUnknown g n k) := by
-          intro g n k
-          unfold noteUnknown
-          split
-          · exact grows_refl _
-          · exact ⟨[], by simp⟩
-        rename_i rawKey rawValue _
-        obtain ⟨e, he⟩ := grows_trans g0 (g1 { closeBlock f with current := none } n rawKey.trim)
-        split
-        · exact ⟨e, he⟩
-        · split
-          · exact ⟨e, he⟩
-          · exact ⟨e, he⟩
-
-theorem grows_fold (xs : List (Nat × String)) : ∀ f : Fields,
-    Grows f (xs.foldl (fun fields pair => readLine fields (pair.1 + 2) pair.2) f) := by
-  induction xs with
-  | nil => intro f; exact grows_refl f
-  | cons x rest ih =>
-    intro f
-    exact grows_trans (grows_readLine _ _ _) (ih _)
-
-def resplit (lines : List String) : List String := (String.intercalate "\n" lines).splitOn "\n"
-
-theorem parse_unsplit (lines : List String) (hs : splitFrontmatter (resplit lines) = none) :
-    parseLines lines =
-      if fenceUnclosed (resplit lines) then { problems := [(1, .unclosedFrontmatter)] } else {} := by
-  simp only [resplit] at hs
-  simp only [parseLines, hs, resplit]
-
-theorem parse_split (lines : List String) (fm body : List String)
-    (hs : splitFrontmatter (resplit lines) = some (fm, body)) :
-    parseLines lines =
-      match lookup? (readFrontmatter fm).scalars "id" with
-      | none => { problems := (readFrontmatter fm).problems ++ unknownProblems (readFrontmatter fm) false }
-      | some id =>
-        if id.isEmpty then
-          { problems := (readFrontmatter fm).problems ++ unknownProblems (readFrontmatter fm) false ++
-              [(1, .emptyId)] }
-        else
-          let fields := readFrontmatter fm
-          let clauses := mapEntry fields.maps "clauses"
-          { isRequirement := true
-            id := id
-            title := (lookup? fields.scalars "title").getD ((firstHeading body).getD id)
-            refines := (((fields.lists.find? (·.1 == "refines")).map (·.2)).getD [])
-            decomposition := decompositionOf fields
-            status := statusOf fields
-            clauses := clauses
-            narrowings := sortedNarrowings fields
-            addressable :=
-              if clauses.isEmpty then [none] else clauses.map (fun c => some c.1)
-            problems := fields.problems ++ unknownProblems fields true } := by
-  simp only [resplit] at hs
-  simp only [parseLines, hs]
+theorem parse_none (lines : List String) (h : header (split lines) = none) :
+    parseLines lines = {} := by
+  unfold parseLines
+  rw [h]
 
 theorem parse_requirement (lines : List String) (h : (parseLines lines).isRequirement = true) :
-    ∃ fm body id, splitFrontmatter (resplit lines) = some (fm, body) ∧
-      lookup? (readFrontmatter fm).scalars "id" = some id ∧ id.isEmpty = false ∧
-      (parseLines lines).id = id ∧
-      (parseLines lines).decomposition = decompositionOf (readFrontmatter fm) ∧
-      (parseLines lines).clauses = mapEntry (readFrontmatter fm).maps "clauses" ∧
-      (parseLines lines).narrowings = sortedNarrowings (readFrontmatter fm) ∧
-      (parseLines lines).addressable =
-        (if (mapEntry (readFrontmatter fm).maps "clauses").isEmpty then [none]
-          else (mapEntry (readFrontmatter fm).maps "clauses").map (fun c => some c.1)) ∧
-      (parseLines lines).problems = (readFrontmatter fm).problems ++
-        unknownProblems (readFrontmatter fm) true := by
-  cases hs : splitFrontmatter (resplit lines) with
-  | none =>
-    rw [parse_unsplit lines hs] at h
-    split at h <;> simp at h
-  | some pair =>
-    obtain ⟨fm, body⟩ := pair
-    rw [parse_split lines fm body hs] at h ⊢
-    refine ⟨fm, body, ?_⟩
-    cases hid : lookup? (readFrontmatter fm).scalars "id" with
-    | none =>
-      rw [hid] at h
-      simp at h
-    | some id =>
-      rw [hid] at h
-      simp only [hid]
-      cases he : id.isEmpty
-      · simp [he]
-      · simp [he] at h
-
-theorem parse_not_requirement (lines : List String) (h : (parseLines lines).isRequirement = false) :
-    (parseLines lines).decomposition = .«open» ∧ (parseLines lines).clauses = [] ∧
-      (parseLines lines).narrowings = [] ∧ (parseLines lines).addressable = [] := by
-  cases hs : splitFrontmatter (resplit lines) with
-  | none =>
-    rw [parse_unsplit lines hs]
-    split <;> simp
-  | some pair =>
-    obtain ⟨fm, body⟩ := pair
-    rw [parse_split lines fm body hs] at h ⊢
-    cases hid : lookup? (readFrontmatter fm).scalars "id" with
-    | none => simp
-    | some id =>
-      rw [hid] at h
-      simp only [hid]
-      cases he : id.isEmpty
-      · simp [he] at h
-      · simp
+    ∃ a id title rest, header (split lines) = some (a, id, title, rest) ∧
+      parseLines lines = finish a id title (readMeta rest {} rest).1
+        (runClauses ((split lines).length - (readMeta rest {} rest).2.length + 1) (readMeta rest {} rest).2) := by
+  cases hh : header (split lines) with
+  | none => rw [parse_none lines hh] at h; simp at h
+  | some t =>
+    obtain ⟨a, id, title, rest⟩ := t
+    exact ⟨a, id, title, rest, rfl, parse_some lines a id title rest hh⟩
 
 /-- @proves REQ-REQDOC.id_is_identity -/
 theorem a_requirement_is_its_declared_id (lines : List String)
     (h : (parseLines lines).isRequirement = true) :
-    ∃ fm body, splitFrontmatter (resplit lines) = some (fm, body) ∧
-      lookup? (readFrontmatter fm).scalars "id" = some (parseLines lines).id ∧
-      (parseLines lines).id ≠ "" := by
-  obtain ⟨fm, body, id, hs, hid, he, hpid, _⟩ := parse_requirement lines h
-  refine ⟨fm, body, hs, by rw [hpid, hid], ?_⟩
-  rw [hpid]
-  intro e
-  rw [e] at he
-  simp [String.isEmpty] at he
-  exact he rfl
+    ∃ a title rest, header (split lines) = some (a, (parseLines lines).id, title, rest) ∧
+      named (parseLines lines).id = true ∧ (parseLines lines).id ≠ "" := by
+  obtain ⟨a, id, title, rest, hh, hp⟩ := parse_requirement lines h
+  have hid : (parseLines lines).id = id := by rw [hp]; rfl
+  rw [hid]
+  exact ⟨a, title, rest, hh, header_named _ _ _ _ _ hh, named_not_empty _ (header_named _ _ _ _ _ hh)⟩
 
 /-- @proves REQ-REQDOC.clauseless_uniform -/
 theorem a_clauseless_requirement_is_one_clause (lines : List String)
@@ -503,14 +341,16 @@ theorem a_clauseless_requirement_is_one_clause (lines : List String)
     ((parseLines lines).clauses = [] → (parseLines lines).addressable = [none]) ∧
     ((parseLines lines).clauses ≠ [] →
       (parseLines lines).addressable = (parseLines lines).clauses.map (fun c => some c.1)) := by
-  obtain ⟨fm, body, id, _, _, _, _, _, hc, _, ha, _⟩ := parse_requirement lines h
-  rw [ha, hc]
+  obtain ⟨a, id, title, rest, _, hp⟩ := parse_requirement lines h
+  rw [hp]
   constructor
   · intro e
+    simp only [finish] at e ⊢
     simp [e]
   · intro e
-    have : (mapEntry (readFrontmatter fm).maps "clauses").isEmpty = false := by
-      cases hm : mapEntry (readFrontmatter fm).maps "clauses"
+    simp only [finish] at e ⊢
+    have : (runClauses ((split lines).length - (readMeta rest {} rest).2.length + 1) (readMeta rest {} rest).2).clauses.isEmpty = false := by
+      cases hm : (runClauses ((split lines).length - (readMeta rest {} rest).2.length + 1) (readMeta rest {} rest).2).clauses
       · exact absurd hm e
       · rfl
     simp [this]
@@ -518,514 +358,325 @@ theorem a_clauseless_requirement_is_one_clause (lines : List String)
 /-- @proves REQ-REQDOC.decomposition_claimed -/
 theorem completeness_is_only_ever_claimed (lines : List String) :
     (parseLines lines).decomposition = .complete →
-      ∃ fm body d, splitFrontmatter (resplit lines) = some (fm, body) ∧
-        lookup? (readFrontmatter fm).scalars "decomposition" = some d ∧
-        d.trim.toLower = "complete" := by
+      ∃ a id title rest d, header (split lines) = some (a, id, title, rest) ∧
+        (readMeta rest {} rest).1.decomposition = some d ∧ d.trim.toLower = "complete" := by
   intro hc
   cases hr : (parseLines lines).isRequirement
-  · rw [(parse_not_requirement lines hr).1] at hc
-    cases hc
-  · obtain ⟨fm, body, id, hs, _, _, _, hd, _⟩ := parse_requirement lines hr
-    rw [hd] at hc
+  · cases hh : header (split lines) with
+    | none => rw [parse_none lines hh] at hc; cases hc
+    | some t =>
+      obtain ⟨a, id, title, rest⟩ := t
+      have := parse_some lines a id title rest hh
+      rw [this] at hr; simp [finish] at hr
+  · obtain ⟨a, id, title, rest, hh, hp⟩ := parse_requirement lines hr
+    rw [hp] at hc
+    simp only [finish] at hc
     unfold decompositionOf at hc
     split at hc
-    · rename_i d hd'
+    · rename_i d hd
       split at hc
       · rename_i ht
-        exact ⟨fm, body, d, hs, hd', by simpa using ht⟩
+        exact ⟨a, id, title, rest, d, hh, hd, by simpa using ht⟩
       · cases hc
     · cases hc
 
-/-- @proves REQ-REQDOC.malformed_reported -/
-theorem a_malformed_document_is_reported (lines fm body : List String) :
-    (splitFrontmatter (resplit lines) = none → fenceUnclosed (resplit lines) = true →
-      (1, FrontmatterKind.unclosedFrontmatter) ∈ (parseLines lines).problems) ∧
-    (splitFrontmatter (resplit lines) = some (fm, body) →
-      ∀ x ∈ (readFrontmatter fm).problems, x ∈ (parseLines lines).problems) ∧
-    ((parseLines lines).isRequirement = true → splitFrontmatter (resplit lines) = some (fm, body) →
-      ∀ u ∈ (readFrontmatter fm).unknown, (u.1, FrontmatterKind.unknownKey) ∈ (parseLines lines).problems) ∧
-    (∀ (f : Fields) (b : Block), f.block = some b →
-      (lookup? (mapEntry f.maps "clauses") b.clause).getD "" = "" →
-      (b.line, FrontmatterKind.missingText) ∈ (closeBlock f).problems) ∧
-    (∀ (f : Fields) (n : Nat) (raw : String), Grows f (readLine f n raw)) := by
-  refine ⟨?_, ?_, ?_, ?_, grows_readLine⟩
-  · intro hs hu
-    rw [parse_unsplit lines hs, if_pos hu]
-    simp
-  · intro hs x hx
-    rw [parse_split lines fm body hs]
-    cases lookup? (readFrontmatter fm).scalars "id" with
-    | none => exact List.mem_append_left _ hx
-    | some id =>
-      dsimp only
-      split
-      · exact List.mem_append_left _ (List.mem_append_left _ hx)
-      · exact List.mem_append_left _ hx
-  · intro hr hs u hu
-    obtain ⟨fm', body', _, hs', _, _, _, _, _, _, _, hp⟩ := parse_requirement lines hr
-    rw [hs] at hs'
-    cases hs'
-    rw [hp]
-    apply List.mem_append_right
-    simp only [unknownProblems, List.mem_map, List.mem_filter, Bool.true_or, and_true]
-    exact ⟨u, hu, rfl⟩
-  · intro f b hb ht
-    unfold closeBlock
-    rw [hb]
-    dsimp only
-    rw [ht]
-    have he : "".isEmpty = true := rfl
-    rw [if_pos he]
-    simp [problem]
 
-theorem a_repeated_clause_or_narrowing_is_reported_on_its_line (f : Fields) (n : Nat) (raw k v : String)
-    (hblank : ((trimEnd raw).trim.isEmpty || (trimStart (trimEnd raw)).startsWith "#") = false)
-    (hind : ((trimEnd raw).startsWith " " || (trimEnd raw).startsWith "\t") = true)
-    (hcur : f.current = some "clauses")
-    (hsplit : splitOnFirst (trimEnd raw).trim ':' = some (k, v)) :
-    ((∀ b, f.block = some b → ¬ indentOf (trimEnd raw) > b.indent) →
-      (mapEntry f.maps "clauses").any (·.1 == k.trim) = true →
-      (n, FrontmatterKind.duplicateClause) ∈ (readLine f n raw).problems) ∧
-    (∀ b, f.block = some b → indentOf (trimEnd raw) > b.indent → k.trim ≠ "text" →
-      (narrowingsOf f b.clause).any (·.1 == k.trim) = true →
-      (n, FrontmatterKind.duplicateNarrowing) ∈ (readLine f n raw).problems) ∧
-    (∀ b, f.block = some b → indentOf (trimEnd raw) > b.indent → k.trim = "text" →
-      b.hasText = true →
-      (n, FrontmatterKind.duplicateNarrowing) ∈ (readLine f n raw).problems) := by
-  have base : readLine f n raw = readIndented f n (trimEnd raw) := by
-    unfold readLine
-    simp only [hblank, hind]
-  rw [base]
-  unfold readIndented
-  rw [hcur]
-  dsimp only
-  refine ⟨?_, ?_, ?_⟩
-  · intro shallow dup
-    have hentry : ∀ g : Fields, g.maps = f.maps →
-        (n, FrontmatterKind.duplicateClause) ∈ (readEntry g "clauses" n (trimEnd raw)).problems := by
-      intro g hg
-      unfold readEntry
-      rw [hsplit]
-      simp only [beq_self_eq_true, if_true]
-      unfold readClause
-      dsimp only
-      split <;> simp [problem, hg, dup]
-    unfold readNested
-    cases hb : f.block with
-    | none => exact hentry f rfl
-    | some b =>
-      simp only [shallow b hb, if_false]
-      apply hentry
-      unfold closeBlock
-      rw [hb]
-      dsimp only
-      split <;> rfl
-  · intro b hb deep notText dup
-    unfold readNested
-    rw [hb]
-    simp only [deep, if_true]
-    unfold readNarrowing
-    rw [hsplit]
-    dsimp only
-    have hnt : (k.trim == "text") = false := by simpa using notText
-    simp only [hnt, Bool.false_eq_true, if_false]
-    unfold addNarrowing
-    dsimp only
-    split
-    · rename_i hv
-      have hd : ((narrowingsOf f b.clause).any fun x => x.fst == k.trim) = true := dup
-      simp only [narrowingsOf] at hd ⊢
-      simp [hd, problem]
-    · have hd : ((narrowingsOf f b.clause).any fun x => x.fst == k.trim) = true := dup
-      simp only [narrowingsOf, problem] at hd ⊢
-      simp [hd]
-  · intro b hb deep isText had
-    unfold readNested
-    rw [hb]
-    simp only [deep, if_true]
-    unfold readNarrowing
-    rw [hsplit]
-    dsimp only
-    simp only [isText, beq_self_eq_true, if_true]
-    unfold setText
-    dsimp only
-    simp [had, problem]
+/-! The clause reader only ever adds problems, and only ever declares a narrowing under a clause. -/
 
-theorem problem_prefix (f : Fields) (n : Nat) (k : FrontmatterKind) :
-    f.problems <+: (problem f n k).problems := List.prefix_append _ _
+def Keeps (s t : St) : Prop := ∀ x ∈ s.problems, x ∈ t.problems
 
-theorem closeBlock_prefix (f : Fields) : f.problems <+: (closeBlock f).problems := by
-  unfold closeBlock
+theorem keeps_refl (s : St) : Keeps s s := fun _ h => h
+
+theorem keeps_trans {a b c : St} (h : Keeps a b) (g : Keeps b c) : Keeps a c := fun x hx => g x (h x hx)
+
+theorem keeps_addProblem (s : St) (n : Nat) (k : FrontmatterKind) : Keeps s (addProblem s n k) := by
+  intro x hx
+  simp [addProblem, hx]
+
+theorem keeps_flag (c : Bool) (s : St) (n : Nat) (k : FrontmatterKind) : Keeps s (flag c s n k) := by
+  unfold flag
   split
-  · exact List.prefix_refl _
-  · dsimp only
-    split
-    · exact problem_prefix _ _ _
-    · exact List.prefix_refl _
+  · exact keeps_addProblem _ _ _
+  · exact keeps_refl _
 
-theorem setText_prefix (f : Fields) (b : Block) (n : Nat) (v : String) :
-    f.problems <+: (setText f b n v).problems := by
-  unfold setText
-  dsimp only
+theorem keeps_record (s : St) (n : Nat) (key text : String) : Keeps s (record s n key text) :=
+  fun _ h => h
+
+theorem keeps_narrow (s : St) (c k t : String) : Keeps s (narrow s c k t) := fun _ h => h
+
+theorem keeps_enter (s : St) (b : Bool) : Keeps s (enter s b) := fun _ h => h
+
+theorem keeps_readClause (s : St) (n : Nat) (entry : String) : Keeps s (readClause s n entry) := by
+  unfold readClause
   split
-  · exact problem_prefix _ _ _
-  · exact List.prefix_refl _
+  · exact keeps_addProblem _ _ _
+  · exact keeps_trans (keeps_flag _ _ _ _) (keeps_trans (keeps_flag _ _ _ _) (keeps_record _ _ _ _))
 
-theorem addNarrowing_prefix (f : Fields) (b : Block) (n : Nat) (k v : String) :
-    f.problems <+: (addNarrowing f b n k v).problems := by
-  unfold addNarrowing
-  dsimp only
-  split
-  · exact problem_prefix _ _ _
-  · exact List.prefix_refl _
-
-theorem checked_prefix (f : Fields) (n : Nat) (c : Bool) :
-    f.problems <+: (if c then f else problem f n .invalidKey).problems := by
-  split
-  · exact List.prefix_refl _
-  · exact problem_prefix _ _ _
-
-theorem readNarrowing_prefix (f : Fields) (b : Block) (n : Nat) (line : String) :
-    f.problems <+: (readNarrowing f b n line).problems := by
+theorem keeps_readNarrowing (s : St) (n : Nat) (entry : String) : Keeps s (readNarrowing s n entry) := by
   unfold readNarrowing
   split
-  · exact problem_prefix _ _ _
+  · exact keeps_refl _
+  · split
+    · exact keeps_addProblem _ _ _
+    · exact keeps_trans (keeps_flag _ _ _ _) (keeps_trans (keeps_flag _ _ _ _) (keeps_narrow _ _ _ _))
+
+theorem keeps_continueClause (s : St) (t : String) : Keeps s (continueClause s t) := by
+  unfold continueClause
+  split
+  · exact keeps_refl _
+  · exact fun _ h => h
+
+theorem keeps_stepLine (s : St) (n : Nat) (line : String) : Keeps s (stepLine s n line) := by
+  unfold stepLine
+  split
+  · exact keeps_refl _
   · dsimp only
     split
-    · exact (checked_prefix f n _).trans (setText_prefix _ _ _ _)
-    · exact (checked_prefix f n _).trans (addNarrowing_prefix _ _ _ _ _)
+    · split
+      · exact keeps_readClause _ _ _
+      · exact keeps_readNarrowing _ _ _
+    · exact keeps_continueClause _ _
 
-theorem readClause_prefix (f : Fields) (n i : Nat) (k v : String) :
-    f.problems <+: (readClause f n i k v).problems := by
-  unfold readClause
-  dsimp only
-  refine (checked_prefix f n (validKey k)).trans ?_
-  generalize (if validKey k = true then f else problem f n .invalidKey) = g
-  split
-  · exact problem_prefix _ _ _
-  · exact List.prefix_refl _
+theorem keeps_fence (s : St) (b : Bool) : Keeps s (fence s b) := fun _ h => h
 
-theorem readEntry_prefix (f : Fields) (key : String) (n : Nat) (line : String) :
-    f.problems <+: (readEntry f key n line).problems := by
-  unfold readEntry
-  split
-  · exact problem_prefix _ _ _
-  · split
-    · exact readClause_prefix _ _ _ _ _
-    · exact List.prefix_refl _
+theorem keeps_setFenced (s : St) (raw : String) : Keeps s (setFenced s raw) := keeps_fence _ _
 
-theorem readLine_prefix (f : Fields) (n : Nat) (raw : String) :
-    f.problems <+: (readLine f n raw).problems := by
-  unfold readLine
+theorem keeps_setSection (s : St) (raw : String) : Keeps s (setSection s raw) := by
+  unfold setSection
   dsimp only
   split
-  · exact List.prefix_refl _
+  · exact keeps_enter _ _
   · split
-    · unfold readIndented
-      split
-      · exact problem_prefix _ _ _
-      · unfold readNested
-        split
-        · split
-          · exact readNarrowing_prefix _ _ _ _
-          · exact (closeBlock_prefix f).trans (readEntry_prefix _ _ _ _)
-        · exact readEntry_prefix _ _ _ _
-    · unfold readKeyValue
-      have hc : f.problems <+: ({ closeBlock f with current := none } : Fields).problems :=
-        closeBlock_prefix f
-      split
-      · exact hc.trans (List.prefix_append _ _)
-      · dsimp only
-        have hu : ∀ g : Fields, ∀ k, g.problems <+: (noteUnknown g n k).problems := by
-          intro g k
-          unfold noteUnknown
-          split <;> exact List.prefix_refl _
-        split
-        · exact hc.trans (hu _ _)
-        · split
-          · exact hc.trans (hu _ _)
-          · exact hc.trans (hu _ _)
+    · exact keeps_enter _ _
+    · exact keeps_refl _
 
-theorem fold_prefix (pairs : List (Nat × String)) (f : Fields) :
-    f.problems <+: (pairs.foldl (fun fields pair => readLine fields (pair.1 + 2) pair.2) f).problems := by
-  induction pairs generalizing f with
-  | nil => exact List.prefix_refl _
-  | cons pair rest ih => exact (readLine_prefix f _ _).trans (ih _)
-
-def stateBefore (pre : List String) : Fields :=
-  (pre.enum).foldl (fun fields pair => readLine fields (pair.1 + 2) pair.2) {}
-
-theorem a_line_problem_reaches_the_frontmatter (pre post : List String) (raw : String)
-    (p : Nat × FrontmatterKind) (h : p ∈ (readLine (stateBefore pre) (pre.length + 2) raw).problems) :
-    p ∈ (readFrontmatter (pre ++ raw :: post)).problems := by
-  unfold readFrontmatter
-  rw [List.enum_append, List.foldl_append]
-  simp only [List.enumFrom_cons, List.foldl_cons]
-  unfold stateBefore at h
-  exact List.IsPrefix.subset (closeBlock_prefix _) (List.IsPrefix.subset (fold_prefix _ _) h)
-
-theorem a_frontmatter_problem_reaches_the_parse (lines front body : List String)
-    (hs : splitFrontmatter ((String.intercalate "\n" lines).splitOn "\n") = some (front, body))
-    (p : Nat × FrontmatterKind) (h : p ∈ (readFrontmatter front).problems) :
-    p ∈ (parseLines lines).problems := by
-  unfold parseLines
-  simp only [hs]
+theorem keeps_step (s : St) (n : Nat) (raw : String) : Keeps s (step s n raw) := by
+  unfold step
+  dsimp only
+  have h1 := keeps_setFenced s raw
+  have h2 := keeps_setSection (setFenced s raw) raw
   split
-  · exact List.mem_append_left _ h
+  · exact keeps_trans h1 h2
   · split
-    · exact List.mem_append_left _ (List.mem_append_left _ h)
-    · exact List.mem_append_left _ h
+    · exact keeps_trans h1 h2
+    · exact keeps_trans h1 (keeps_trans h2 (keeps_stepLine _ _ _))
+
+theorem keeps_fold (xs : List (Nat × String)) : ∀ s : St,
+    Keeps s (xs.foldl (fun s p => step s p.1 p.2) s) := by
+  induction xs with
+  | nil => intro s; exact keeps_refl _
+  | cons p rest ih => intro s; exact keeps_trans (keeps_step s p.1 p.2) (ih _)
+
+
+theorem mem_flag_true (s : St) (n : Nat) (k : FrontmatterKind) : (n, k) ∈ (flag true s n k).problems := by
+  simp [flag, addProblem]
+
+theorem mem_flag_keep (c : Bool) (s : St) (n : Nat) (k : FrontmatterKind) (x : Nat × FrontmatterKind)
+    (h : x ∈ s.problems) : x ∈ (flag c s n k).problems := keeps_flag c s n k x h
+
+/-- @proves REQ-REQDOC.malformed_reported -/
+theorem a_malformed_document_is_reported (lines : List String)
+    (h : (parseLines lines).isRequirement = true) :
+    (∀ (s : St) (n : Nat) (e : String),
+      (stripPrefix e "**").bind (fun e => splitOnce e "**:") = none →
+        (n, FrontmatterKind.notAKeyValue) ∈ (readClause s n e).problems) ∧
+    (∀ (xs : List (Nat × String)) (s : St), Keeps s (xs.foldl (fun s p => step s p.1 p.2) s)) ∧
+    (∀ a id title rest, header (split lines) = some (a, id, title, rest) →
+      ∀ x ∈ (runClauses ((split lines).length - (readMeta rest {} rest).2.length + 1)
+              (readMeta rest {} rest).2).problems, x ∈ (parseLines lines).problems) ∧
+    (∀ c ∈ (parseLines lines).clauses, c.2.isEmpty = true →
+      ∃ n, (n, FrontmatterKind.missingText) ∈ (parseLines lines).problems) := by
+  obtain ⟨a, id, title, rest, hh, hp⟩ := parse_requirement lines h
+  refine ⟨?_, keeps_fold, ?_, ?_⟩
+  · intro s n e he
+    unfold readClause
+    rw [he]
+    simp [addProblem]
+  · intro a' id' title' rest' hh' x hx
+    rw [hh] at hh'
+    cases hh'
+    rw [hp]
+    simp [finish, hx]
+  · intro c hc he
+    rw [hp] at hc ⊢
+    simp only [finish, missingText] at hc ⊢
+    refine ⟨(((runClauses ((split lines).length - (readMeta rest {} rest).2.length + 1)
+              (readMeta rest {} rest).2).started.find? (·.1 == c.1)).map (·.2)).getD a, ?_⟩
+    apply List.mem_append_right
+    exact List.mem_map.2 ⟨c, List.mem_filter.2 ⟨hc, he⟩, rfl⟩
 
 /-- @proves REQ-REQDOC.clause_unique -/
-theorem a_repeated_clause_or_narrowing_is_reported (lines front body pre post : List String)
-    (raw k v : String)
-    (hs : splitFrontmatter ((String.intercalate "\n" lines).splitOn "\n") = some (front, body))
-    (hf : front = pre ++ raw :: post)
-    (hblank : ((trimEnd raw).trim.isEmpty || (trimStart (trimEnd raw)).startsWith "#") = false)
-    (hind : ((trimEnd raw).startsWith " " || (trimEnd raw).startsWith "\t") = true)
-    (hcur : (stateBefore pre).current = some "clauses")
-    (hsplit : splitOnFirst (trimEnd raw).trim ':' = some (k, v)) :
-    ((∀ b, (stateBefore pre).block = some b → ¬ indentOf (trimEnd raw) > b.indent) →
-      (mapEntry (stateBefore pre).maps "clauses").any (·.1 == k.trim) = true →
-      (pre.length + 2, FrontmatterKind.duplicateClause) ∈ (parseLines lines).problems) ∧
-    (∀ b, (stateBefore pre).block = some b → indentOf (trimEnd raw) > b.indent → k.trim ≠ "text" →
-      (narrowingsOf (stateBefore pre) b.clause).any (·.1 == k.trim) = true →
-      (pre.length + 2, FrontmatterKind.duplicateNarrowing) ∈ (parseLines lines).problems) ∧
-    (∀ b, (stateBefore pre).block = some b → indentOf (trimEnd raw) > b.indent → k.trim = "text" →
-      b.hasText = true →
-      (pre.length + 2, FrontmatterKind.duplicateNarrowing) ∈ (parseLines lines).problems) := by
-  have line := a_repeated_clause_or_narrowing_is_reported_on_its_line (stateBefore pre)
-    (pre.length + 2) raw k v hblank hind hcur hsplit
-  have lift : ∀ q, q ∈ (readLine (stateBefore pre) (pre.length + 2) raw).problems →
-      q ∈ (parseLines lines).problems := fun q hq =>
-    a_frontmatter_problem_reaches_the_parse lines front body hs q
-      (hf ▸ a_line_problem_reaches_the_frontmatter pre post raw q hq)
-  exact ⟨fun a b => lift _ (line.1 a b), fun b h1 h2 h3 h4 => lift _ (line.2.1 b h1 h2 h3 h4),
-    fun b h1 h2 h3 h4 => lift _ (line.2.2 b h1 h2 h3 h4)⟩
+theorem a_repeated_clause_or_narrowing_is_reported (lines : List String)
+    (h : (parseLines lines).isRequirement = true) :
+    (∀ a id title rest, header (split lines) = some (a, id, title, rest) →
+      ∀ x ∈ (runClauses ((split lines).length - (readMeta rest {} rest).2.length + 1)
+              (readMeta rest {} rest).2).problems, x ∈ (parseLines lines).problems) ∧
+    (∀ (s : St) (n : Nat) (e k t : String),
+      (stripPrefix e "**").bind (fun e => splitOnce e "**:") = some (k, t) →
+      (lookup? s.clauses k.trim).isSome = true →
+        (n, FrontmatterKind.duplicateClause) ∈ (readClause s n e).problems) ∧
+    (∀ (s : St) (n : Nat) (e clause k t : String),
+      s.last = some clause → splitOnce e ":" = some (k, t) →
+      (lookup? (mapEntry s.narrowings clause) k.trim).isSome = true →
+        (n, FrontmatterKind.duplicateNarrowing) ∈ (readNarrowing s n e).problems) := by
+  obtain ⟨a, id, title, rest, hh, hp⟩ := parse_requirement lines h
+  refine ⟨?_, ?_, ?_⟩
+  · intro a' id' title' rest' hh' x hx
+    rw [hh] at hh'
+    cases hh'
+    rw [hp]
+    simp [finish, hx]
+  · intro s n e k t hs hc
+    unfold readClause
+    rw [hs]
+    simp only [record]
+    simp [flag, addProblem, hc]
+  · intro s n e clause k t hl hs hc
+    unfold readNarrowing
+    rw [hl]
+    simp only [hs, narrow]
+    simp [flag, addProblem, hc]
 
-def clauseKeys (f : Fields) : List String := (mapEntry f.maps "clauses").map (·.1)
 
-def Nested (f : Fields) : Prop :=
-  (∀ x ∈ f.narrowings, x.1 ∈ clauseKeys f) ∧ (∀ b, f.block = some b → b.clause ∈ clauseKeys f)
+/-! A narrowing is only ever filed under a clause that has been declared. -/
 
-theorem find_filter_other {β : Type} (m : List (String × β)) (k k' : String) (h : k ≠ k') :
-    (m.filter (·.1 != k)).find? (·.1 == k') = m.find? (·.1 == k') := by
-  induction m with
-  | nil => rfl
-  | cons x rest ih =>
-    by_cases hx : x.1 = k
-    · have h1 : (x.1 != k) = false := by simp [hx]
-      have h2 : (x.1 == k') = false := by
-        simp only [beq_eq_false_iff_ne, ne_eq]
-        rw [hx]
-        exact h
-      simp [List.filter_cons, h1, List.find?_cons, h2, ih]
-    · have h1 : (x.1 != k) = true := by simp [hx]
-      simp only [List.filter_cons, h1, if_true, List.find?_cons]
-      split <;> simp_all
+def keys (xs : List (String × String)) : List String := xs.map (·.1)
 
-theorem mapEntry_insert_same (m : List (String × List (String × String))) (k : String)
-    (inner : List (String × String)) : mapEntry (mapInsert m k inner) k = inner := by
-  have hn : (m.filter (·.1 != k)).find? (·.1 == k) = none := by
-    rw [List.find?_eq_none]
-    intro x hx
-    simp only [List.mem_filter, bne_iff_ne, ne_eq] at hx
-    simpa using hx.2
-  simp [mapEntry, mapInsert, List.find?_append, hn]
+def Nested (s : St) : Prop :=
+  (∀ x ∈ s.narrowings, x.1 ∈ keys s.clauses) ∧ (∀ k, s.last = some k → k ∈ keys s.clauses)
 
-theorem mapEntry_insert_other (m : List (String × List (String × String))) (k k' : String)
-    (inner : List (String × String)) (h : k ≠ k') :
-    mapEntry (mapInsert m k inner) k' = mapEntry m k' := by
-  have h2 : ((k, inner).1 == k') = false := by simpa using h
-  unfold mapEntry mapInsert
-  rw [List.find?_append, find_filter_other m k k' h]
-  cases m.find? (·.1 == k') with
-  | none => simp [List.find?, h2]
-  | some x => rfl
-
-theorem keys_insertSorted (e : List (String × String)) (k v x : String) :
-    x ∈ (insertSorted e k v).map (·.1) ↔ x = k ∨ x ∈ e.map (·.1) := by
-  simp only [insertSorted, List.mem_map, List.mem_mergeSort, List.mem_append, List.mem_filter,
-    List.mem_singleton, bne_iff_ne, ne_eq]
+theorem mem_keys_insertSorted (e : List (String × String)) (k v x : String) :
+    x ∈ keys (insertSorted e k v) ↔ x = k ∨ x ∈ keys e := by
+  unfold insertSorted keys
+  simp only [List.mem_map, List.mem_mergeSort, List.mem_append, List.mem_filter, List.mem_singleton]
   constructor
-  · intro ⟨y, hy, hyx⟩
-    rcases hy with hy | hy
-    · exact Or.inr ⟨y, hy.1, hyx⟩
-    · subst hy
-      exact Or.inl hyx.symm
-  · intro h
-    rcases h with h | ⟨y, hy, hyx⟩
-    · exact ⟨(k, v), Or.inr rfl, h.symm⟩
-    · by_cases hk : y.1 = k
-      · exact ⟨(k, v), Or.inr rfl, hk ▸ hyx⟩
-      · exact ⟨y, Or.inl ⟨hy, hk⟩, hyx⟩
+  · rintro ⟨c, hc | hc, rfl⟩
+    · by_cases h : c.1 = k
+      · exact Or.inl h
+      · exact Or.inr ⟨c, hc.1, rfl⟩
+    · subst hc; exact Or.inl rfl
+  · rintro (rfl | ⟨c, hc, rfl⟩)
+    · exact ⟨(x, v), Or.inr rfl, rfl⟩
+    · by_cases h : c.1 = k
+      · exact ⟨(k, v), Or.inr rfl, h.symm⟩
+      · exact ⟨c, Or.inl ⟨hc, by simpa using h⟩, rfl⟩
 
-theorem nested_closeBlock (f : Fields) (h : Nested f) : Nested (closeBlock f) := by
-  unfold closeBlock
+theorem nested_empty : Nested {} := ⟨fun x hx => by simp at hx, fun k hk => by simp at hk⟩
+
+theorem flag_clauses (c : Bool) (s : St) (n : Nat) (k : FrontmatterKind) :
+    (flag c s n k).clauses = s.clauses := by
+  unfold flag; split <;> rfl
+
+theorem nested_flag (c : Bool) (s : St) (n : Nat) (k : FrontmatterKind) (h : Nested s) :
+    Nested (flag c s n k) := by
+  unfold flag; split
+  · exact h
+  · exact h
+
+theorem nested_addProblem (s : St) (n : Nat) (k : FrontmatterKind) (h : Nested s) :
+    Nested (addProblem s n k) := h
+
+theorem nested_record (s : St) (n : Nat) (key text : String) (h : Nested s) :
+    Nested (record s n key text) := by
+  refine ⟨fun x hx => ?_, fun k hk => ?_⟩
+  · have := h.1 x hx
+    exact (mem_keys_insertSorted _ _ _ _).2 (Or.inr this)
+  · simp only [record, Option.some.injEq] at hk
+    subst hk
+    exact (mem_keys_insertSorted _ _ _ _).2 (Or.inl rfl)
+
+theorem nested_narrow (s : St) (clause key text : String) (h : Nested s)
+    (hc : clause ∈ keys s.clauses) : Nested (narrow s clause key text) := by
+  refine ⟨fun x hx => ?_, h.2⟩
+  simp only [narrow, mapInsert, List.mem_append, List.mem_filter, List.mem_singleton] at hx
+  rcases hx with hx | rfl
+  · exact h.1 x hx.1
+  · exact hc
+
+theorem nested_readClause (s : St) (n : Nat) (entry : String) (h : Nested s) :
+    Nested (readClause s n entry) := by
+  unfold readClause
   split
   · exact h
-  · dsimp only
-    split
-    · exact ⟨h.1, fun b hb => by simp [problem] at hb⟩
-    · exact ⟨h.1, fun b hb => by simp at hb⟩
+  · exact nested_record _ _ _ _ (nested_flag _ _ _ _ (nested_flag _ _ _ _ h))
 
-theorem nested_setText (f : Fields) (b : Block) (n : Nat) (v : String) (h : Nested f)
-    (hb : b.clause ∈ clauseKeys f) : Nested (setText f b n v) := by
-  have grow : ∀ x, x ∈ clauseKeys f → x ∈ clauseKeys (setText f b n v) := by
-    intro x hx
-    unfold setText
-    dsimp only
-    simp only [clauseKeys, mapEntry_insert_same]
-    rw [keys_insertSorted]
-    right
-    split <;> exact hx
-  refine ⟨fun x hx => grow _ (h.1 x ?_), fun b' hb' => ?_⟩
-  · unfold setText at hx
-    dsimp only at hx
-    split at hx <;> exact hx
-  · unfold setText at hb'
-    dsimp only at hb'
-    simp only [Option.some.injEq] at hb'
-    subst hb'
-    exact grow _ hb
-
-theorem nested_addNarrowing (f : Fields) (b : Block) (n : Nat) (k v : String) (h : Nested f)
-    (hb : b.clause ∈ clauseKeys f) : Nested (addNarrowing f b n k v) := by
-  have same : clauseKeys (addNarrowing f b n k v) = clauseKeys f := by
-    unfold addNarrowing
-    dsimp only
-    split <;> rfl
-  have blk : (addNarrowing f b n k v).block = f.block := by
-    unfold addNarrowing
-    dsimp only
-    split <;> rfl
-  rw [Nested, same, blk]
-  refine ⟨fun x hx => ?_, h.2⟩
-  unfold addNarrowing at hx
-  dsimp only at hx
-  have hx' : x ∈ mapInsert f.narrowings b.clause (insertSorted (narrowingsOf f b.clause) k v) := by
-    split at hx <;> exact hx
-  simp only [mapInsert, List.mem_append, List.mem_filter, List.mem_singleton] at hx'
-  rcases hx' with hx' | hx'
-  · exact h.1 x hx'.1
-  · rw [hx']
-    exact hb
-
-theorem nested_readNarrowing (f : Fields) (b : Block) (n : Nat) (line : String) (h : Nested f)
-    (hb : b.clause ∈ clauseKeys f) : Nested (readNarrowing f b n line) := by
+theorem nested_readNarrowing (s : St) (n : Nat) (entry : String) (h : Nested s) :
+    Nested (readNarrowing s n entry) := by
   unfold readNarrowing
   split
   · exact h
-  · dsimp only
-    have hc : ∀ c : Bool, Nested (if c = true then f else problem f n .invalidKey) ∧
-        b.clause ∈ clauseKeys (if c = true then f else problem f n .invalidKey) := by
-      intro c
-      split
-      · exact ⟨h, hb⟩
-      · exact ⟨h, hb⟩
+  · rename_i clause hl
     split
-    · exact nested_setText _ _ _ _ (hc _).1 (hc _).2
-    · exact nested_addNarrowing _ _ _ _ _ (hc _).1 (hc _).2
+    · exact h
+    · exact nested_narrow _ _ _ _ (nested_flag _ _ _ _ (nested_flag _ _ _ _ h))
+        (by rw [flag_clauses, flag_clauses]; exact h.2 clause hl)
 
-theorem nested_readClause (f : Fields) (n i : Nat) (k v : String) (h : Nested f) :
-    Nested (readClause f n i k v) := by
-  have keys : ∀ x, x ∈ clauseKeys (readClause f n i k v) ↔ x = k ∨ x ∈ clauseKeys f := by
-    intro x
-    unfold readClause
-    dsimp only
-    simp only [clauseKeys, mapEntry_insert_same]
-    rw [keys_insertSorted]
-    have e2 : ∀ c : Bool, mapEntry (if c = true then f else problem f n .invalidKey).maps "clauses" =
-        mapEntry f.maps "clauses" := by
-      intro c
-      split <;> rfl
-    simp only [e2]
-  refine ⟨fun x hx => ?_, fun b hb => ?_⟩
-  · rw [keys]
-    right
-    unfold readClause at hx
-    dsimp only at hx
-    simp only [List.mem_filter] at hx
-    have hx1 := hx.1
-    have : x ∈ f.narrowings := by
-      split at hx1 <;> split at hx1 <;> exact hx1
-    exact h.1 x this
-  · rw [keys]
-    left
-    unfold readClause at hb
-    dsimp only at hb
-    split at hb
-    · simp only [Option.some.injEq] at hb
-      rw [← hb]
-    · simp at hb
-
-theorem nested_readEntry (f : Fields) (m : String) (n : Nat) (line : String) (h : Nested f) :
-    Nested (readEntry f m n line) := by
-  unfold readEntry
+theorem nested_continueClause (s : St) (t : String) (h : Nested s) : Nested (continueClause s t) := by
+  unfold continueClause
   split
   · exact h
-  · split
-    · exact nested_readClause _ _ _ _ _ h
-    · rename_i hm
-      have hne : m ≠ "clauses" := by simpa using hm
-      have same : ∀ inner, clauseKeys { f with maps := mapInsert f.maps m inner } = clauseKeys f := by
-        intro inner
-        simp only [clauseKeys, mapEntry_insert_other _ _ _ _ hne]
-      refine ⟨fun x hx => ?_, fun b hb => ?_⟩
-      · rw [same]
-        exact h.1 x hx
-      · rw [same]
-        exact h.2 b hb
+  · rename_i k _hk
+    have keep : ∀ cs : List (String × String),
+        keys (cs.map (fun c => if c.1 == k then (k, c.2 ++ " " ++ t) else c)) = keys cs := by
+      intro cs
+      induction cs with
+      | nil => rfl
+      | cons c rest ih =>
+        simp only [keys, List.map_cons] at ih ⊢
+        rw [ih]
+        by_cases hc : c.1 == k
+        · simp [hc]; exact ((beq_iff_eq _ _).1 hc).symm
+        · simp [hc]
+    refine ⟨fun x hx => ?_, fun k' hk' => ?_⟩
+    · show x.1 ∈ keys (s.clauses.map _)
+      rw [keep]; exact h.1 x hx
+    · show k' ∈ keys (s.clauses.map _)
+      rw [keep]; exact h.2 k' hk'
 
-theorem nested_readLine (f : Fields) (n : Nat) (raw : String) (h : Nested f) :
-    Nested (readLine f n raw) := by
-  unfold readLine
+theorem nested_stepLine (s : St) (n : Nat) (line : String) (h : Nested s) : Nested (stepLine s n line) := by
+  unfold stepLine
+  split
+  · exact h
+  · dsimp only
+    split
+    · split
+      · exact nested_readClause _ _ _ h
+      · exact nested_readNarrowing _ _ _ h
+    · exact nested_continueClause _ _ h
+
+theorem nested_fence' (s : St) (b : Bool) (h : Nested s) : Nested (fence s b) := h
+
+theorem nested_enter (s : St) (b : Bool) (h : Nested s) : Nested (enter s b) := h
+
+theorem nested_fence (s : St) (raw : String) (h : Nested s) : Nested (setFenced s raw) := by
+  unfold setFenced
+  exact nested_fence' _ _ h
+
+theorem nested_setSection (s : St) (raw : String) (h : Nested s) : Nested (setSection s raw) := by
+  unfold setSection
   dsimp only
   split
-  · exact h
+  · exact nested_enter _ _ h
   · split
-    · unfold readIndented
-      split
-      · exact h
-      · unfold readNested
-        split
-        · rename_i b hb
-          split
-          · exact nested_readNarrowing _ _ _ _ h (h.2 b hb)
-          · exact nested_readEntry _ _ _ _ (nested_closeBlock _ h)
-        · exact nested_readEntry _ _ _ _ h
-    · unfold readKeyValue
-      dsimp only
-      have h0 := nested_closeBlock f h
-      have g1 : ∀ (g : Fields) (n : Nat) (k : String), Nested g → Nested (noteUnknown g n k) := by
-        intro g n k hg
-        unfold noteUnknown
-        split
-        · exact hg
-        · exact hg
-      split
-      · exact h0
-      · rename_i rawKey rawValue _
-        have h1 := g1 { closeBlock f with current := none } n rawKey.trim h0
-        split
-        · exact h1
-        · split
-          · exact h1
-          · exact h1
+    · exact nested_enter _ _ h
+    · exact h
 
-theorem nested_fold (xs : List (Nat × String)) : ∀ f : Fields, Nested f →
-    Nested (xs.foldl (fun fields pair => readLine fields (pair.1 + 2) pair.2) f) := by
+theorem nested_step (s : St) (n : Nat) (raw : String) (h : Nested s) : Nested (step s n raw) := by
+  unfold step
+  dsimp only
+  have h1 : Nested (setFenced s raw) := nested_fence s raw h
+  have h2 : Nested (setSection (setFenced s raw) raw) := nested_setSection _ _ h1
+  split
+  · exact h2
+  · split
+    · exact h2
+    · exact nested_stepLine _ _ _ h2
+
+theorem nested_fold (xs : List (Nat × String)) : ∀ s : St, Nested s →
+    Nested (xs.foldl (fun s p => step s p.1 p.2) s) := by
   induction xs with
-  | nil => intro f h; exact h
-  | cons x _ ih =>
-    intro f h
-    exact ih _ (nested_readLine _ _ _ h)
-
-theorem nested_readFrontmatter (fm : List String) : Nested (readFrontmatter fm) := by
-  unfold readFrontmatter
-  apply nested_closeBlock
-  apply nested_fold
-  exact ⟨fun x hx => by simp at hx, fun b hb => by simp at hb⟩
+  | nil => intro s h; exact h
+  | cons p _rest ih => intro s h; exact ih _ (nested_step s p.1 p.2 h)
 
 /-- @proves REQ-REQDOC.narrowings_nest -/
 theorem a_narrowing_belongs_to_its_clause (lines : List String)
@@ -1033,12 +684,15 @@ theorem a_narrowing_belongs_to_its_clause (lines : List String)
     (∀ x ∈ (parseLines lines).narrowings, x.1 ∈ (parseLines lines).clauses.map (·.1)) ∧
     (∀ y ∈ (parseLines lines).addressable,
       y = none ∨ ∃ k ∈ (parseLines lines).clauses.map (·.1), y = some k) := by
-  obtain ⟨fm, body, id, _, _, _, _, _, hc, hn, ha, _⟩ := parse_requirement lines h
-  rw [hc, hn, ha]
+  obtain ⟨_, _, _, rest, _, hp⟩ := parse_requirement lines h
+  have hn := nested_fold (enumFrom ((split lines).length - (readMeta rest {} rest).2.length + 1)
+    (readMeta rest {} rest).2) {} nested_empty
+  rw [hp]
   refine ⟨fun x hx => ?_, fun y hy => ?_⟩
-  · simp only [sortedNarrowings, List.mem_mergeSort, List.mem_filter] at hx
-    exact (nested_readFrontmatter fm).1 x hx.1
-  · split at hy
+  · simp only [finish, sortedNarrowings, List.mem_mergeSort, List.mem_filter] at hx ⊢
+    exact hn.1 x hx.1
+  · simp only [finish] at hy ⊢
+    split at hy
     · simp only [List.mem_singleton] at hy
       exact Or.inl hy
     · simp only [List.mem_map] at hy

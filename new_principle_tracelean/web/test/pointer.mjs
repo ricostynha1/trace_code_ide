@@ -29,6 +29,7 @@ const BRIDGE = `
     window.__calls.push([command, args]);
     switch (command) {
       case "theme": return ${THEME};
+      case "setting_rule": return { name: args.name, kind: "choice", choices: ["shown", "hidden"], min: null, max: null, step: null, default: "shown", description: "" };
       case "shown": return [
         { pane: "explorer", at: { left: 0, top: 0, width: 30, height: 10 }, buffer: buffers.explorer, focused: false },
         { pane: "document", at: { left: 30, top: 0, width: 60, height: 10 }, buffer: buffers.document, focused: true,
@@ -600,6 +601,114 @@ try {
   check("a burst of wheel turns is added up into fewer scrolls with the same total",
     scrolls.length >= 1 && scrolls.length < turned && scrolls.reduce((sum, a) => sum + a.lines, 0) === turned * 3,
     JSON.stringify({ turned, scrolls }));
+
+  // Tab dragging: the bottom part of a pane opens below, the right half beside, else here.
+  const zones = await evaluate(`(async () => { const m = await import("./app.js");
+    return [m.dropZone(0.2, 0.2), m.dropZone(0.8, 0.2), m.dropZone(0.2, 0.9), m.dropZone(0.8, 0.9)]; })()`);
+  check("a tab dropped low opens below, on the right half beside, elsewhere here",
+    JSON.stringify(zones) === JSON.stringify(["here", "right", "down", "down"]), JSON.stringify(zones));
+
+  // Markdown is drawn as structure, not as the text of its marks.
+  const mdDrawn = await evaluate(`(async () => { try { const m = await import("./markdown.js");
+    const root = m.markdown("# Title\\n\\nsome **bold** and \`code\`\\n\\n- one\\n- two\\n\\n\`\`\`rs\\nfn a() {}\\n\`\`\`");
+    return { h: root.querySelector("h1")?.textContent, strong: root.querySelector("strong")?.textContent,
+      code: root.querySelectorAll("code").length, items: root.querySelectorAll("li").length,
+      raw: root.textContent.includes("**") || root.textContent.includes("# ") }; } catch (e) { return { error: String(e) }; } })()`);
+  check("markdown is drawn as headings, emphasis, code and lists",
+    mdDrawn.h === "Title" && mdDrawn.strong === "bold" && mdDrawn.code === 2 && mdDrawn.items === 2 && !mdDrawn.raw,
+    JSON.stringify(mdDrawn));
+
+  // While a divider is dragged the lines under the pointer do not react to it.
+  const still = await evaluate(`(() => { document.body.classList.add("dragging");
+    const line = document.querySelector(".pane .line"); const none = getComputedStyle(line).pointerEvents === "none";
+    document.body.classList.remove("dragging"); return none; })()`);
+  check("lines ignore the pointer while a divider is dragged, so they cannot flash", still === true);
+
+  // A setting is edited where it stands: its line turns into a box holding the value.
+  const inline = await evaluate(`(async () => { const m = await import("./app.js");
+    const box = document.createElement("div"); box.innerHTML = '<div class="line"><span>  </span><button data-at="5" data-action="definitions.edit fonts.size">size</button><span>  </span><button data-at="11" data-action="definitions.edit fonts.size">120</button></div>';
+    document.body.appendChild(box);
+    const ok = m.editInPlace(box, "fonts.size", 5);
+    const input = box.querySelector("input.setting-input");
+    const found = { ok, value: input && input.value, line: box.querySelector(".line").textContent };
+    await new Promise((r) => setTimeout(r, 80));
+    const select = box.querySelector("select.setting-input");
+    found.options = select ? [...select.options].map((o) => o.value) : null;
+    box.remove(); return found; })()`);
+  check("a setting's value is edited in its own line, not asked for at the bottom",
+    inline.ok === true && inline.value === "120", JSON.stringify(inline));
+  check("a setting the grammar calls a choice is edited with a list of its choices",
+    JSON.stringify(inline.options) === JSON.stringify(["shown", "hidden"]), JSON.stringify(inline));
+
+  // The bar of keys at the bottom hides when layout.keyBar is hidden; the leader's menu stays.
+  const keys = await evaluate(`(() => { const bar = document.getElementById("menu");
+    bar.className = "which-key"; document.body.classList.add("keybar-hidden");
+    const hidden = getComputedStyle(bar).display === "none";
+    bar.className = "mode"; const kept = getComputedStyle(bar).display !== "none";
+    document.body.classList.remove("keybar-hidden"); return { hidden, kept }; })()`);
+  check("the bar of keys can be switched off while the leader's menu stays", keys.hidden === true && keys.kept === true, JSON.stringify(keys));
+
+  // A markdown buffer other than a file is drawn formatted, and its raw text is one switch away.
+  const rec = await evaluate(`(async () => { const m = await import("./app.js");
+    const box = document.createElement("div"); document.body.appendChild(box);
+    m.draw(box, { id: "record:modules", kind: { record: { title: "modules" } }, text: "## Modules\\n\\n| a | b |", spans: [] }, () => {});
+    const raw = box.textContent.includes("## Modules"); box.remove(); return { raw }; })()`);
+  check("draw keeps a buffer's text as it is, for the raw view", rec.raw === true, JSON.stringify(rec));
+
+  // Formatted markdown keeps acting: a span over a row names an action, and the row drawn
+  // from that line does it; words inside a longer line are made clickable where they stand.
+  const acting = await evaluate(`(async () => { try { const m = await import("./markdown.js");
+    const text = "# Guide\\n\\n▸ One\\n\\n▾ Two\\ninside two\\n\\nstatus draft  [ Approve ]";
+    const at = (needle) => Array.from(text.slice(0, text.indexOf(needle))).length;
+    const spans = [
+      { start: at("▸ One"), stop: at("▸ One") + 5, actions: ["help.more"] },
+      { start: at("▾ Two"), stop: at("▾ Two") + 5, actions: ["help.more"] },
+      { start: at("[ Approve ]"), stop: at("[ Approve ]") + 11, actions: ["trace.approve"] } ];
+    const page = m.markdown(text); const heard = [];
+    m.activate(page, text, spans, (a, i) => heard.push([a, i]));
+    document.body.appendChild(page);
+    const rows = [...page.querySelectorAll(".md-action")].map((n) => n.tagName + ":" + n.textContent);
+    const fold = [...page.querySelectorAll("p.md-disclosure")].map((n) => n.textContent);
+    page.querySelectorAll(".md-action").forEach((n) => n.click());
+    page.remove();
+    return { rows, fold, heard: heard.map((h) => h[0]) };
+  } catch (e) { return { error: String(e) }; } })()`);
+  check("a fold row and a button in a markdown line act, and inside a drawn page",
+    JSON.stringify(acting.heard) === JSON.stringify(["help.more", "help.more", "trace.approve"])
+      && acting.rows.includes("BUTTON:[ Approve ]") && acting.fold.length === 2 && acting.fold[1] === "▾ Two",
+    JSON.stringify(acting));
+
+  // The letters that say what claims a clause show on the formatted page, at the end of its item.
+  const claimed = await evaluate(`(async () => { try { const a = await import("./app.js"); const m = await import("./markdown.js");
+    const text = "# REQ-T: T\\n\\n## Clauses\\n\\n- **one**: It shall.\\n- **two**: And so.\\n";
+    const page = m.markdown(text); document.body.appendChild(page);
+    a.drawFormattedChips(page, { pane: 0, chips: [[4, "I", "REQ-T.one"], [4, "T", "REQ-T.one"]] });
+    const items = [...page.querySelectorAll("li")].map((li) => [...li.querySelectorAll(".chip")].map((c) => c.textContent).join(""));
+    page.remove(); return items; } catch (e) { return { error: String(e) }; } })()`);
+  check("a formatted requirement shows the claims on each clause", JSON.stringify(claimed) === JSON.stringify(["IT", ""]), JSON.stringify(claimed));
+
+  // Panes are placed in `ch`: a formatted page must not change the font its pane is measured in.
+  const grid = await evaluate(`(async () => { try { const m = await import("./markdown.js");
+    const plain = document.createElement("div"); plain.className = "pane";
+    const rich = document.createElement("div"); rich.className = "pane rich md-preview";
+    rich.appendChild(m.markdown("# T\\n\\ntext")); document.body.append(plain, rich);
+    const same = getComputedStyle(plain).fontSize === getComputedStyle(rich).fontSize
+      && getComputedStyle(plain).fontFamily === getComputedStyle(rich).fontFamily;
+    plain.remove(); rich.remove(); return same; } catch (e) { return String(e); } })()`);
+  check("a formatted pane is measured in the same font as the others, so dividers meet", grid === true, String(grid));
+
+  const brand = await evaluate(`(() => { const logo = document.querySelector("#menubar .menubar-logo svg.logo");
+    return logo ? { w: logo.getBoundingClientRect().width, label: logo.getAttribute("aria-label") } : null; })()`);
+  check("the logo opens the menu bar", brand !== null && brand.w > 10 && brand.label === "TraceLean", JSON.stringify(brand));
+
+  // A document with a --- header starts with its title, then the header as a card.
+  const doc = await evaluate(`(async () => { try { const m = await import("./markdown.js");
+    const page = m.document_("---\\nid: REQ-T\\ntitle: Converting\\nstatus: approved\\nclauses:\\n  one: It shall.\\n  two: And **so** shall it.\\n---\\n\\nThe body.");
+    return { first: page.firstElementChild && page.firstElementChild.tagName + ":" + page.firstElementChild.textContent,
+      card: !!page.querySelector(".md-front"), rows: page.querySelectorAll(".md-front-clauses tr").length,
+      run: page.textContent.includes("id: REQ-T title:") }; } catch (e) { return { error: String(e) }; } })()`);
+  check("a document's header is a card under its title, not a run of words",
+    doc.first === "H1:Converting" && doc.card === true && doc.rows === 2 && doc.run === false, JSON.stringify(doc));
 
   cdp.close();
 } finally {
