@@ -14,7 +14,7 @@
       "name": "a file opens from a few letters of its name",
       "steps": [
         { "not": "to_fahrenheit" },
-        { "keys": ["C-p"] },
+        { "keys": ["C-o"] },
         { "type": "cels" },
         { "keys": ["Enter"] },
         { "see": "to_fahrenheit" }
@@ -38,7 +38,7 @@
     {
       "name": "the trace station shows what the open file claims",
       "steps": [
-        { "keys": ["C-p"] },
+        { "keys": ["C-o"] },
         { "type": "cels" },
         { "keys": ["Enter"] },
         { "keys": ["Space", "w", "t", "l"] },

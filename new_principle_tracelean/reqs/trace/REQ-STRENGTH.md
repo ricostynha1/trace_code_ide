@@ -22,7 +22,7 @@ clauses:
   attempted_distinguished: The system shall distinguish an obligation stated but not accepted from one never attempted and from one discharged.
   nondeterministic_declared: Where a model cannot be pinned, the system shall let it be declared as such with a reason, and shall then exclude it rather than report it as open forever.
   qualifies_proof: The system shall present the proved mark together with its strength, in the way the tested mark is presented together with its coverage.
-  proved_only_when_pinned: The system shall give a clause the proved mark only when Lean accepted a theorem about the clause's model and the model is pinned.
+  proved_only_when_pinned: The system shall give a clause the proved mark only when Lean accepted a theorem about the clause's model and the model is pinned or is declared one that cannot be pinned, and shall withdraw a proved mark held from before whenever that no longer holds.
   proof_rests_on_the_specification: When the model, its specification, a theorem about it or its pinning theorem changes, the system shall withdraw the proved mark until it is earned again.
   verdict_kept: When the model, an accepted theorem about it or the pinning theorem changes, the system shall return the model to attempted.
 ---

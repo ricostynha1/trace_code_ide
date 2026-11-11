@@ -44,7 +44,7 @@ fn held_runs(index: &Index, held: &[crate::trace::record::Evidence], c: &Candida
 
 pub fn suites_due(root: &Path, index: &Index, files: &BTreeMap<String, String>) -> BTreeMap<String, Vec<String>> {
     let held = crate::trace::earn::merge(
-        crate::trace::lockfile::read(root).map(|l| l.evidence).unwrap_or_default(),
+        crate::drt::proofs::held(root, index),
         crate::trace::store::read_all(root),
     );
     let bindings = bindings(root, index, files).unwrap_or_default();
@@ -377,7 +377,7 @@ fn exercise(c: &Candidate, model: &RunnerSpec, implementation: &RunnerSpec) -> O
 pub fn run_all(root: &Path, index: &Index, files: &BTreeMap<String, String>, again: bool) -> Vec<(Candidate, Outcome)> {
     let found = candidates(root, index, files);
     let held = crate::trace::earn::merge(
-        crate::trace::lockfile::read(root).map(|l| l.evidence).unwrap_or_default(),
+        crate::drt::proofs::held(root, index),
         crate::trace::store::read_all(root),
     );
     let live: Vec<String> = index.links.iter().map(|l| l.link_hash.clone()).collect();

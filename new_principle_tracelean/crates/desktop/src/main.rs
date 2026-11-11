@@ -128,6 +128,7 @@ query! {
     agent_steps() -> Vec<tracelean_core::surface::figures::Step> => |e| e.agent_steps();
     overview_markdown() -> String => |e| e.overview_markdown();
     leader() -> Vec<(String, Vec<(String, String, String)>)> => |e| e.leader();
+    tree_marks() -> Vec<(String, String)> => |e| e.tree_marks();
 }
 
 #[tauri::command]
@@ -192,7 +193,7 @@ fn main() {
             chord, scroll, paste, act_here, tick, take_clipboard, find, described, cut, quick, search,
             requirement_text, over_lines, brackets, mode, select, selection, replace,
             problems, palette, selected, symbols, occurrences, offers_here, history_preview, leader, zoom, overview, card, impact, runs,
-            modules, agent_steps, overview_markdown
+            modules, agent_steps, overview_markdown, tree_marks
         ])
         .run(tauri::generate_context!())
         .expect("the window opens");

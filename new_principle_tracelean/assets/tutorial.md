@@ -69,12 +69,12 @@ There are three modes, and the status line always names the one you are in.
 - Nothing is hidden: a key that does nothing says so on the status line.
 
 Useful chords in any mode: `Ctrl+S` save, `Ctrl+Z` / `Ctrl+Y` undo and redo,
-`Ctrl+P` open a file by name, `Ctrl+Shift+P` search every command,
+`Ctrl+P` search every command, `Ctrl+O` open a file by name, `F5` refresh the files,
 `Ctrl+F` find, `Ctrl+W` close the tab, `F12` go to the definition,
 `Ctrl +` / `Ctrl -` bigger and smaller text, `F1` every key.
 +++
 
-> Try it: `Ctrl+P`, type `readme`, `Enter`. Click into the file, type a
+> Try it: `Ctrl+O`, type `readme`, `Enter`. Click into the file, type a
 > word, undo it with `Ctrl+Z`. Come back with the **tutorial** tab.
 
 ## 2. Why does this code exist?
@@ -88,7 +88,7 @@ Lean models name the clause they serve, in a comment.
 pub fn to_celsius(f: f64) -> f64 { (f - 32.0) * 5.0 / 9.0 }
 ```
 
-> Try it (on the demo): `Ctrl+P`, type `celsius`, `Enter`. A coloured
+> Try it (on the demo): `Ctrl+O`, type `celsius`, `Enter`. A coloured
 > **chip** sits in the gutter beside each annotated line. Point at one for
 > its card; click it to open the requirement.
 

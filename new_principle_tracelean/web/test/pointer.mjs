@@ -11,13 +11,14 @@ const THEME = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "..", "
 
 const BRIDGE = `
 <script>
-  const listing = "src/a.rs\\nsrc/b.rs";
+  const listing = "src/a.rs\\nsrc/b.rs  +";
   const file = "hello world\\nsecond line";
   const buffers = {
     explorer: { id: "dir:.", kind: { directory: { path: "." } }, text: listing,
       spans: [
         { start: 0, stop: 8, role: "path", actions: ["file.open"] },
-        { start: 9, stop: 17, role: "path", actions: ["file.open"] } ] },
+        { start: 9, stop: 17, role: "path", actions: ["file.open"] },
+        { start: 19, stop: 20, role: "added", actions: [] } ] },
     document: { id: "file:x.rs", kind: { file: { path: "x.rs" } }, text: file,
       spans: [ { start: 0, stop: 5, role: { token: { kind: "keyword" } }, actions: [] },
         { start: 19, stop: 23, role: "requirement", actions: ["trace.requirement"] } ] },
@@ -42,6 +43,7 @@ const BRIDGE = `
       case "offers_here": return ["document", 6, [
         { group: "file", label: "Save x.rs", action: "file.save", target: null, asks: null, keys: "Ctrl+S" } ]];
       case "tick": return false;
+      case "tree_marks": return [["+", "+ — made by the agent, not in the project until accepted"]];
       case "take_clipboard": return null;
       case "quick": return ["src/b.rs", "src/a.rs"];
       case "palette": return [["history.tree", "History tree — Space h t"]];
@@ -311,10 +313,10 @@ try {
   check("Ctrl+A and Ctrl+C in a file go to the editor", copying.join() === "C-a,C-c", JSON.stringify(copying));
 
   await reset();
-  await cdp.send("Input.dispatchKeyEvent", { type: "keyDown", key: "p", code: "KeyP", modifiers: 2, windowsVirtualKeyCode: 80 });
+  await cdp.send("Input.dispatchKeyEvent", { type: "keyDown", key: "P", code: "KeyP", modifiers: 10, windowsVirtualKeyCode: 80 });
   await sleep(250);
   const listed = await evaluate(`[...document.querySelectorAll("#context.quick .context-entry")].map(e => e.textContent)`);
-  check("Ctrl+P lists the files the editor matched", listed && listed[0] === "src/b.rs", JSON.stringify(listed));
+  check("Ctrl+Shift+P lists the files the editor matched", listed && listed[0] === "src/b.rs", JSON.stringify(listed));
   await cdp.send("Input.dispatchKeyEvent", { type: "keyDown", key: "Enter", code: "Enter", windowsVirtualKeyCode: 13 });
   await sleep(250);
   const opened = await last("choose");
@@ -322,10 +324,10 @@ try {
     JSON.stringify(await calls()));
 
   await reset();
-  await cdp.send("Input.dispatchKeyEvent", { type: "keyDown", key: "P", code: "KeyP", modifiers: 10, windowsVirtualKeyCode: 80 });
+  await cdp.send("Input.dispatchKeyEvent", { type: "keyDown", key: "p", code: "KeyP", modifiers: 2, windowsVirtualKeyCode: 80 });
   await sleep(250);
   const actions = await evaluate(`[...document.querySelectorAll("#context.quick .context-entry")].map(e => e.textContent)`);
-  check("Ctrl+Shift+P lists actions by what they are called", actions && actions[0] === "History tree — Space h t", JSON.stringify(actions));
+  check("Ctrl+P lists actions by what they are called", actions && actions[0] === "History tree — Space h t", JSON.stringify(actions));
   await cdp.send("Input.dispatchKeyEvent", { type: "keyDown", key: "Enter", code: "Enter", windowsVirtualKeyCode: 13 });
   await sleep(250);
   const done = await last("act_here");
@@ -515,7 +517,8 @@ try {
       { name: "src/high", files: 2, uses: ["src/low"], serves: [] } ];
     const steps = [{ order: 1, kind: "modified", file: "src/a.rs", added: 2, removed: 1, clauses: [["REQ-A.a", "A---"]] },
       { order: 2, kind: "created", file: "src/n.rs", added: 3, removed: 0, clauses: [] }];
-    const handlers = (log) => ({ open() {}, close() {}, act() {}, card() {}, uncard() {}, copy: async () => { log.push("copy"); return true; } });
+    const handlers = (log) => ({ open() {}, close() {}, act() {}, card() {}, uncard() {}, copy: async () => { log.push("copy"); return true; },
+      report: async () => { log.push("report"); return true; } });
     const draw = (extra, log = []) => { const box = document.createElement("div"); document.body.appendChild(box);
       drawOverview(box, design(extra), handlers(log)); return box; };
     const titles = (box) => [...box.querySelectorAll("h2")].map((h) => h.firstChild.textContent);
@@ -525,7 +528,10 @@ try {
       .querySelectorAll("tr");
     const log = []; const clicked = draw({}, log); const button = [...clicked.querySelectorAll("button")].find((b) => b.textContent === "Copy as Markdown");
     button.click(); await new Promise((r) => setTimeout(r, 50));
-    const result = { bare: titles(bare), full: titles(full), rows, steps: [...stepRows].slice(1).map((r) => [...r.cells].map((c) => c.textContent)),
+    const reporting = [...clicked.querySelectorAll("button")].find((b) => b.textContent === "HTML report");
+    reporting?.click(); await new Promise((r) => setTimeout(r, 50));
+    const reported = reporting?.textContent;
+    const result = { reported, bare: titles(bare), full: titles(full), rows, steps: [...stepRows].slice(1).map((r) => [...r.cells].map((c) => c.textContent)),
       log, after: button.textContent };
     for (const box of [bare, full, clicked]) box.remove();
     return result; })()`);
@@ -541,7 +547,20 @@ try {
       ["1", "modified", "src/a.rs", "+2 −1", "REQ-A.a A---"],
       ["2", "created", "src/n.rs", "+3 −0", "claims no clause"]]), JSON.stringify(drawn.steps));
   check("Copy as Markdown asks the editor for the text and says it did",
-    drawn.log.length === 1 && drawn.after === "Copied", JSON.stringify(drawn));
+    drawn.log[0] === "copy" && drawn.after === "Copied", JSON.stringify(drawn));
+  check("HTML report asks the editor to write the report and says it did",
+    drawn.log[1] === "report" && drawn.reported === "Report written", JSON.stringify(drawn));
+
+  const explained = await evaluate(`[...document.querySelectorAll('.pane[data-pane="explorer"] .line > span')]
+    .filter((s) => s.textContent.trim() === "+").map((s) => s.title)`);
+  check("a mark of the file tree says what it means when pointed at",
+    explained && explained.length === 1 && explained[0].startsWith("+ — made by the agent"), JSON.stringify(explained));
+
+  await reset();
+  await cdp.send("Input.dispatchKeyEvent", { type: "keyDown", key: "F5", code: "F5", windowsVirtualKeyCode: 116 });
+  await sleep(250);
+  const refreshed = await last("act_here");
+  check("F5 asks the editor to refresh the files", refreshed && refreshed.action === "file.refresh", JSON.stringify(await calls()));
 
   const marks = await evaluate(`[...document.querySelectorAll(".pane")].map((p) => {
     const s = getComputedStyle(p); return { focused: p.classList.contains("focused"), mark: s.boxShadow + "|" + s.outlineStyle + "|" + s.borderTopColor }; })`);

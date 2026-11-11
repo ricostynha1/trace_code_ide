@@ -312,6 +312,7 @@ fn chord_of(key: KeyEvent) -> Option<String> {
 #[derive(Default)]
 struct Asking {
     opening: bool,
+    commanding: bool,
     everywhere: bool,
     replacing: bool,
     wanted: Option<String>,
@@ -320,6 +321,11 @@ struct Asking {
 
 impl Asking {
     fn row(&self, editor: &editor::Editor) -> String {
+        if self.commanding {
+            let found = editor.palette(&self.text);
+            let best: Vec<&str> = found.iter().take(3).map(|(_, said)| said.as_str()).collect();
+            return format!("do: {}   → {}", self.text, best.join("  |  "));
+        }
         if self.opening {
             let found = editor.quick_open(&self.text);
             let best: Vec<&str> = found.iter().take(5).map(String::as_str).collect();
@@ -336,7 +342,12 @@ impl Asking {
     }
 
     fn answer(self, editor: &mut editor::Editor) {
-        if self.opening {
+        if self.commanding {
+            match editor.palette(&self.text).into_iter().next() {
+                Some((action, _)) => editor.act_here(&action),
+                None => editor.say("no command matches", &self.text),
+            }
+        } else if self.opening {
             match editor.quick_open(&self.text).into_iter().next() {
                 Some(path) => editor.choose(EXPLORER, 0, "file.open", Some(path), None),
                 None => editor.say("no file matches", &self.text),
@@ -417,7 +428,8 @@ fn interactive(root: std::path::PathBuf, fresh: bool) {
                     let everywhere = chord == "C-S-f";
                     asking = Some(Asking { everywhere, ..Asking::default() });
                 }
-                "C-p" => asking = Some(Asking { opening: true, ..Asking::default() }),
+                "C-p" => asking = Some(Asking { commanding: true, ..Asking::default() }),
+                "C-o" => asking = Some(Asking { opening: true, ..Asking::default() }),
                 "C-h" | "C-r" => asking = Some(Asking { replacing: true, ..Asking::default() }),
                 other => editor.chord(other),
             }

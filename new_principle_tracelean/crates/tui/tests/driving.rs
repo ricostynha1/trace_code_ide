@@ -588,11 +588,26 @@ fn dot_lists_what_can_be_done_here() {
     assert!(!shown(&screen).contains("Split right"), "Escape left the list up:\n{}", shown(&screen));
 }
 
-/// @tests REQ-DRIVE.screen_answers_for_the_frontend
+/// @tests REQ-NAV.commands_found_by_letters
 #[test]
-fn ctrl_p_opens_a_file_by_a_few_letters_and_selects() {
+fn ctrl_p_finds_a_command_by_a_few_letters_and_runs_it() {
     let mut terminal = open();
     terminal.press("\u{10}");
+    let seen = shown(&terminal.press("evidence report"));
+    assert!(seen.contains("do: evidence report") && seen.contains("write the evidence report"), "no command was offered:\n{seen}");
+    terminal.press("\u{1b}");
+    terminal.press("\u{10}");
+    let seen = shown(&terminal.press("undotree"));
+    assert!(seen.contains("the undo tree"), "letters in order found nothing:\n{seen}");
+    let seen = shown(&terminal.press("\r"));
+    assert!(seen.contains("#0"), "Enter did not run the command:\n{seen}");
+}
+
+/// @tests REQ-DRIVE.screen_answers_for_the_frontend
+#[test]
+fn ctrl_o_opens_a_file_by_a_few_letters_and_selects() {
+    let mut terminal = open();
+    terminal.press("\u{0f}");
     let screen = terminal.press("cels");
     let seen = shown(&screen);
     assert!(seen.contains("open: cels") && seen.contains("src/celsius.rs"), "no file was offered:\n{seen}");
@@ -623,11 +638,11 @@ fn ctrl_p_opens_a_file_by_a_few_letters_and_selects() {
 #[test]
 fn a_question_takes_a_correction_switches_its_scope_and_answers() {
     let mut terminal = open();
-    terminal.press("\u{10}");
+    terminal.press("\u{0f}");
     terminal.press("zzzq");
     let seen = shown(&terminal.press("\r"));
     assert!(seen.contains("no file matches"), "an open nothing matches said nothing:\n{seen}");
-    terminal.press("\u{10}");
+    terminal.press("\u{0f}");
     terminal.press("celsx");
     let seen = shown(&terminal.press("\u{7f}"));
     assert!(seen.contains("open: cels   →"), "Backspace took nothing back:\n{seen}");
@@ -638,7 +653,7 @@ fn a_question_takes_a_correction_switches_its_scope_and_answers() {
     assert!(seen.contains("find in every file (Tab switches): degrees"), "Tab did not switch:\n{seen}");
     let seen = shown(&terminal.press("\r"));
     assert!(seen.contains("celsius.rs"), "finding in every file listed nothing:\n{seen}");
-    terminal.press("\u{10}");
+    terminal.press("\u{0f}");
     terminal.press("cels");
     terminal.press("\r");
     terminal.press("\u{6}");

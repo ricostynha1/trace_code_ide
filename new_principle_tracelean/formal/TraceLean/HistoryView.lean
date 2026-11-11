@@ -93,7 +93,7 @@ def stepOf (ps : List Point) (node : Option Nat) (col : Nat) (rest : List (Optio
   let first := (kids.head?.map (fun k => (some k, col))).toList
   { row := GraphRow.mk node (String.mk (cellsOf widened col taken glyph)),
     columns := taken.foldl (fun o c => o.set c true) closed,
-    pending := branches ++ first ++ rest }
+    pending := first ++ branches ++ rest }
 
 def graphLoop (ps : List Point) :
     Nat → List (Option Nat × Nat) → List Bool → List Nat → List GraphRow → List GraphRow
@@ -301,9 +301,9 @@ theorem step_pending (ps : List Point) (node : Option Nat) (col : Nat)
   | cons k ks =>
     simp only [List.head?_cons, Option.map_some', Option.toList, List.mem_append, List.mem_map,
       List.mem_singleton] at he
-    rcases he with (⟨⟨k', c⟩, hz, rfl⟩ | rfl) | he
-    · exact Or.inr ⟨k', List.mem_of_mem_drop (List.of_mem_zip hz).1, rfl⟩
+    rcases he with (rfl | ⟨⟨k', c⟩, hz, rfl⟩) | he
     · exact Or.inr ⟨k, List.mem_cons_self _ _, rfl⟩
+    · exact Or.inr ⟨k', List.mem_of_mem_drop (List.of_mem_zip hz).1, rfl⟩
     · exact Or.inl he
 
 theorem loop_invariant (ps : List Point) (fuel : Nat) :

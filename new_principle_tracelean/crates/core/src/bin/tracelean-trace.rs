@@ -68,7 +68,7 @@ fn main() {
             eprintln!("{why}");
             std::process::exit(2)
         });
-        let lock = trace::lockfile::read(&root).unwrap_or_default();
+        let lock = tracelean_core::drt::proofs::standing_lock(&root, &index);
         let after = trace::diff::states(&lock, &index.requirements, &tracelean_core::drt::proofs::load(&root));
         let diffs = trace::diff::diff(before, after);
         let json = args.iter().any(|a| a == "--json");
@@ -198,7 +198,7 @@ fn main() {
                 std::process::exit(1);
             }
         }
-        let held = trace::lockfile::read(&root).map(|l| l.evidence).unwrap_or_default();
+        let held = tracelean_core::drt::proofs::held(&root, &index);
         let collected = trace::lockfile::collected(&index, held, trace::store::read_all(&root));
         if let Err(error) = trace::lockfile::write(&root, &collected.lockfile) {
             eprintln!("cannot write the lock: {error}");
@@ -249,7 +249,7 @@ fn main() {
             }
         }
         let index = trace::index::build(&root);
-        let held = trace::lockfile::read(&root).map(|l| l.evidence).unwrap_or_default();
+        let held = tracelean_core::drt::proofs::held(&root, &index);
         let collected = trace::lockfile::collected(&index, held, trace::store::read_all(&root));
         if let Err(error) = trace::lockfile::write(&root, &collected.lockfile) {
             eprintln!("cannot write the lock: {error}");
@@ -262,7 +262,7 @@ fn main() {
         use trace::record::Staleness;
         let files = tracelean_core::observe::workspace::snapshot(&root).files;
         let mut found = 0;
-        let held = trace::lockfile::read(&root).map(|l| l.evidence).unwrap_or_default();
+        let held = tracelean_core::drt::proofs::held(&root, &index);
         for record in trace::earn::merge(held, trace::store::read_all(&root)) {
             let Some(why) = trace::earn::why_stale(&index, &record) else { continue };
             found += 1;
@@ -440,7 +440,7 @@ fn main() {
     }
 
     if std::env::args().any(|a| a == "--lock") {
-        let held = trace::lockfile::read(&root).map(|l| l.evidence).unwrap_or_default();
+        let held = tracelean_core::drt::proofs::held(&root, &index);
         let earned = trace::store::read_all(&root);
         let collected = trace::lockfile::collected(&index, held, earned);
         let rendered = collected.lockfile;

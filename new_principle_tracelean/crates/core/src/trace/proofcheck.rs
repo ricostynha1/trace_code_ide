@@ -421,7 +421,44 @@ pub fn heard(output: String) -> Vec<Heard> {
 /// @implements REQ-STRENGTH.proved_only_when_pinned
 /// @drt REQ-STRENGTH.proved_only_when_pinned
 pub fn earns_proof(accepted: bool, strength: Strength) -> bool {
-    matches!(strength, Strength::Pinned { .. }) && accepted
+    matches!(strength, Strength::Pinned { .. } | Strength::Nondeterministic { .. }) && accepted
+}
+
+/// The records that still stand: every record of another bond, and a proof record only
+/// while its clause's model is pinned or declared one that cannot be. A lock keeps what
+/// it held, so a proof earned before the model had to be pinned is withdrawn here.
+///
+/// @implements REQ-STRENGTH.proved_only_when_pinned
+/// @implements REQ-STRENGTH.proof_rests_on_the_specification
+pub fn proofs_standing(
+    records: Vec<crate::trace::record::Evidence>,
+    strengths: &BTreeMap<(String, Option<String>), Shown>,
+) -> Vec<crate::trace::record::Evidence> {
+    records
+        .into_iter()
+        .filter(|record| {
+            record.key.bond != crate::evidence::Bond::ModelProof
+                || strengths
+                    .get(&(record.key.req_id.clone(), record.key.clause.clone()))
+                    .is_some_and(|shown| earns_proof(true, shown.strength.clone()))
+        })
+        .collect()
+}
+
+/// How many theorems Lean accepted for each clause: shown beside the strength, since a
+/// theorem counts towards the proved mark only once the model is pinned.
+///
+/// @implements REQ-STRENGTH.qualifies_proof
+pub fn theorems_accepted(report: &ProofReport) -> BTreeMap<(String, Option<String>), (usize, usize)> {
+    let mut out: BTreeMap<(String, Option<String>), (usize, usize)> = BTreeMap::new();
+    for entry in &report.proofs {
+        let held = out.entry((entry.req_id.clone(), entry.clause.clone())).or_default();
+        held.1 += 1;
+        if entry.verdict.is_accepted() {
+            held.0 += 1;
+        }
+    }
+    out
 }
 
 /// @implements REQ-STRENGTH.obligation_generated

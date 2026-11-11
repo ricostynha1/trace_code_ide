@@ -11,7 +11,12 @@ fn keymap() -> Keymap {
 }
 
 fn project(files: &[(&str, &str)]) -> PathBuf {
-    let dir = std::env::temp_dir().join(format!("tracelean-design-{}", std::process::id()));
+    static NEXT: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+    let dir = std::env::temp_dir().join(format!(
+        "tracelean-design-{}-{}",
+        std::process::id(),
+        NEXT.fetch_add(1, std::sync::atomic::Ordering::SeqCst)
+    ));
     let _ = std::fs::remove_dir_all(&dir);
     for (name, content) in files {
         let path = dir.join(name);

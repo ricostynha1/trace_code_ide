@@ -14,7 +14,7 @@ pub struct Written {
 /// @implements REQ-REPORT.changes_marked
 pub fn write(root: &Path, index: &trace::index::Index, out_dir: &Path, base: Option<&str>) -> Result<Written, String> {
     let files = super::workspace::snapshot(root).files;
-    let lock = trace::lockfile::read(root).unwrap_or_default();
+    let lock = crate::drt::proofs::standing_lock(root, index);
     let proofs = crate::drt::proofs::load(root);
     let states = trace::diff::states(&lock, &index.requirements, &proofs);
     let changes = base

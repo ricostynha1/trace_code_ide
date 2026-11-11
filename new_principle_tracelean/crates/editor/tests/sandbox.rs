@@ -132,7 +132,7 @@ fn the_agents_conversation_appears_in_the_panel() {
     let root = project("chat");
     let home = std::env::temp_dir().join(format!("tracelean-claude-home-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&home);
-    std::env::set_var("CLAUDE_CONFIG_DIR", &home);
+    std::env::set_var("TRACELEAN_CLAUDE_CONFIG_DIR", &home);
     let mut editor = Editor::open(root.clone(), keymap());
     act(&mut editor, "sandbox.new");
 
@@ -149,7 +149,7 @@ fn the_agents_conversation_appears_in_the_panel() {
     assert!(shown.contains("you: make it faster"), "{shown}");
     assert!(shown.contains("tool: Read(src/a.rs)"), "{shown}");
     assert!(shown.find("tool: Read").unwrap() < shown.find("you: make it faster").unwrap(), "not newest first");
-    std::env::remove_var("CLAUDE_CONFIG_DIR");
+    std::env::remove_var("TRACELEAN_CLAUDE_CONFIG_DIR");
     let _ = std::fs::remove_dir_all(&home);
     let _ = std::fs::remove_dir_all(&root);
 }
@@ -168,5 +168,146 @@ fn an_unsaved_edit_is_not_an_agents_change() {
     editor.tick();
     assert!(panel(&editor).contains("Changes waiting (0)"), "{}", panel(&editor));
     assert!(std::fs::read_to_string(work(&editor).join("src/a.rs")).unwrap().starts_with("// mine"));
+    let _ = std::fs::remove_dir_all(&root);
+}
+
+fn tree(editor: &mut Editor) -> String {
+    plain_text(editor.view(BufferKind::Directory { path: ".".into() })).join("\n")
+}
+
+fn history(editor: &mut Editor) -> String {
+    plain_text(editor.view(BufferKind::Record { title: "history".into() })).join("\n")
+}
+
+/// @tests REQ-OBS.waiting_shown_with_history
+/// @tests REQ-OBS.visible_while_running
+/// @tests REQ-OBS.mirrored_live
+/// @tests REQ-OBS.effects_become_commands
+/// @tests REQ-SHOW.files_refreshed
+#[test]
+fn what_the_agent_does_enters_the_editor_and_the_history_at_once_and_the_project_only_when_accepted() {
+    let root = project("live");
+    let mut editor = Editor::open(root.clone(), keymap());
+    editor.open_folders.insert("src".into());
+    act(&mut editor, "sandbox.new");
+    let before = history(&mut editor).lines().filter(|l| l.contains('#')).count();
+
+    std::fs::write(work(&editor).join("src/c.rs"), "fn c() {}\n").unwrap();
+    std::fs::write(work(&editor).join("src/a.rs"), "fn a() { 1 }\n").unwrap();
+    act(&mut editor, "file.refresh");
+    let said = plain_text(editor.status.clone()).join(" ");
+    assert!(said.contains("2 changed by the agent are waiting"), "{said}");
+
+    assert_eq!(editor.workspace().files.get("src/a.rs").map(String::as_str), Some("fn a() { 1 }\n"), "not in the editor");
+    assert!(editor.workspace().files.contains_key("src/c.rs"), "the made file is not in the editor");
+    assert_eq!(std::fs::read_to_string(root.join("src/a.rs")).unwrap(), "fn a() {}\n", "the real tree changed early");
+    assert!(!root.join("src/c.rs").exists(), "the real tree changed early");
+
+    let listed = tree(&mut editor);
+    let row = listed.lines().find(|l| l.contains("c.rs")).unwrap_or_else(|| panic!("the made file is not listed:\n{listed}"));
+    assert!(row.contains('+'), "the made file is not marked: {row}");
+
+    let shown = history(&mut editor);
+    assert_eq!(shown.lines().filter(|l| l.contains('#')).count(), before + 1, "what arrived together is not one node:\n{shown}");
+    assert!(shown.contains("agent: "), "the node is not named as the agent's:\n{shown}");
+    assert!(shown.contains("not accepted yet — 2 files"), "{shown}");
+    let held = editor.view(BufferKind::Record { title: "history".into() });
+    let at = held.text[..held.text.rfind("src/c.rs").unwrap()].chars().count();
+    assert_eq!(actions_at(held, at), vec!["observe.diff".to_string()]);
+
+    assert!(!editor.tick(), "the same change was taken in twice");
+    assert_eq!(history(&mut editor).lines().filter(|l| l.contains('#')).count(), before + 1);
+
+    act(&mut editor, "sandbox.end");
+    let _ = std::fs::remove_dir_all(&root);
+}
+
+/// @tests REQ-OBS.accepted_is_a_node
+/// @tests REQ-OBS.accepted_is_marked
+/// @tests REQ-OBS.copy_follows_the_history
+/// @tests REQ-OBS.any_state_reachable
+/// @tests REQ-UNDO.whole_by_default
+/// @tests REQ-OBS.undoable
+#[test]
+fn undo_goes_back_across_what_the_agent_did_resets_the_copy_and_accepting_marks_the_point() {
+    let root = project("history");
+    let mut editor = Editor::open(root.clone(), keymap());
+    act(&mut editor, "sandbox.new");
+
+    std::fs::write(work(&editor).join("src/a.rs"), "fn a() { 1 }\n").unwrap();
+    assert!(editor.tick());
+    std::fs::write(work(&editor).join("src/a.rs"), "fn a() { 1 + mess }\n").unwrap();
+    std::fs::write(work(&editor).join("src/c.rs"), "fn c() {}\n").unwrap();
+    assert!(editor.tick());
+    let two = history(&mut editor);
+    assert_eq!(two.matches("agent: ").count(), 2, "each arrival is not its own node:\n{two}");
+
+    // the agent mixed things up: one undo is the state before its second change
+    act(&mut editor, "history.undo");
+    assert_eq!(editor.workspace().files.get("src/a.rs").map(String::as_str), Some("fn a() { 1 }\n"));
+    assert!(!editor.workspace().files.contains_key("src/c.rs"));
+    assert_eq!(std::fs::read_to_string(work(&editor).join("src/a.rs")).unwrap(), "fn a() { 1 }\n", "the copy did not follow");
+    assert!(!work(&editor).join("src/c.rs").exists(), "the copy kept the file made after this point");
+    assert!(!editor.tick(), "the undone change was taken in again");
+    assert_eq!(editor.workspace().files.get("src/a.rs").map(String::as_str), Some("fn a() { 1 }\n"));
+
+    act(&mut editor, "observe.accept");
+    assert_eq!(std::fs::read_to_string(root.join("src/a.rs")).unwrap(), "fn a() { 1 }\n", "accepting did not reach the project");
+    let marked = history(&mut editor);
+    let row = marked.lines().find(|l| l.contains('●')).unwrap();
+    assert!(row.contains("✓ accepted"), "the accepted point is not marked:\n{marked}");
+    assert!(!marked.contains("not accepted yet"), "{marked}");
+    assert_eq!(marked.matches("agent: ").count(), 2, "a node was dropped:\n{marked}");
+
+    // the state left behind is still one redo away
+    act(&mut editor, "history.redo");
+    assert_eq!(editor.workspace().files.get("src/a.rs").map(String::as_str), Some("fn a() { 1 + mess }\n"));
+    assert_eq!(std::fs::read_to_string(work(&editor).join("src/a.rs")).unwrap(), "fn a() { 1 + mess }\n");
+    assert_eq!(std::fs::read_to_string(root.join("src/a.rs")).unwrap(), "fn a() { 1 }\n", "a redo wrote the project");
+
+    act(&mut editor, "sandbox.end");
+    let _ = std::fs::remove_dir_all(&root);
+}
+
+/// @tests REQ-OBS.rejected_is_a_node
+#[test]
+fn rejecting_adds_a_point_that_sets_the_files_back_and_drops_nothing() {
+    let root = project("takeback");
+    let mut editor = Editor::open(root.clone(), keymap());
+    act(&mut editor, "sandbox.new");
+    std::fs::write(work(&editor).join("src/a.rs"), "fn a() { 1 }\n").unwrap();
+    assert!(editor.tick());
+    let before = history(&mut editor).lines().filter(|l| l.contains('#')).count();
+
+    act(&mut editor, "observe.reject");
+    assert_eq!(editor.workspace().files.get("src/a.rs").map(String::as_str), Some("fn a() {}\n"));
+    assert_eq!(std::fs::read_to_string(work(&editor).join("src/a.rs")).unwrap(), "fn a() {}\n", "the copy kept the change");
+    assert_eq!(history(&mut editor).lines().filter(|l| l.contains('#')).count(), before + 1, "rejecting is not a node");
+    assert!(!editor.tick());
+
+    act(&mut editor, "history.undo");
+    assert_eq!(editor.workspace().files.get("src/a.rs").map(String::as_str), Some("fn a() { 1 }\n"), "the rejected state is lost");
+    act(&mut editor, "sandbox.end");
+    let _ = std::fs::remove_dir_all(&root);
+}
+
+/// @tests REQ-UNDO.current_branch_first
+#[test]
+fn the_history_draws_the_branch_being_worked_on_first() {
+    let root = project("branches");
+    let mut editor = Editor::open(root.clone(), keymap());
+    editor.perform(Intent::Display { what: BufferKind::File { path: "src/a.rs".into() } });
+    for word in ["Maybe", "portugues", "again"] {
+        editor.insert(word);
+        if word != "again" {
+            while editor.workspace().files.get("src/a.rs").map(String::as_str) != Some("fn a() {}\n") {
+                act(&mut editor, "history.undo");
+            }
+        }
+    }
+    let shown = history(&mut editor);
+    let rows: Vec<&str> = shown.lines().filter(|l| l.contains('#')).collect();
+    assert!(rows.len() >= 4, "three branches were not kept:\n{shown}");
+    assert!(rows[1].starts_with('●'), "the branch being worked on is not first and leftmost:\n{shown}");
     let _ = std::fs::remove_dir_all(&root);
 }

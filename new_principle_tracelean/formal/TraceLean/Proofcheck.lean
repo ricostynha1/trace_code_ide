@@ -137,6 +137,7 @@ def standing (held : Option (String × List String)) (keyNow : String) (pinsNow 
 def earnsProof (accepted : Bool) (strength : Strength) : Bool :=
   match strength with
   | .pinned _ => accepted
+  | .nondeterministic _ => accepted
   | _ => false
 
 inductive Heard where
@@ -663,7 +664,8 @@ theorem every_planned_clause_is_modelled_by_its_plan (links : List CheckLink) (p
 
 /-- @proves REQ-STRENGTH.proved_only_when_pinned -/
 theorem a_clause_is_proved_only_when_its_model_is_pinned (accepted : Bool) (strength : Strength) :
-    earnsProof accepted strength = true ↔ accepted = true ∧ ∃ t, strength = .pinned t := by
+    earnsProof accepted strength = true ↔
+      accepted = true ∧ ((∃ t, strength = .pinned t) ∨ ∃ r, strength = .nondeterministic r) := by
   cases strength <;> simp [earnsProof]
 
 end TraceLean.Proofcheck

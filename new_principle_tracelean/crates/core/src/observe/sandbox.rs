@@ -60,6 +60,9 @@ pub fn launch_args(session: &Session, host: &Host) -> Vec<String> {
     if let Some(config) = &host.claude_config {
         push("--bind", config, config);
     }
+    if let Some(at) = skill_home(host) {
+        push("--ro-bind", &skill_path(session), &at);
+    }
     if let Some((tools, _)) = &host.tools {
         push("--ro-bind", tools, tools);
     }
@@ -86,6 +89,9 @@ pub fn launch_args(session: &Session, host: &Host) -> Vec<String> {
     }
     if let Some(skills) = &host.skills {
         push("--setenv", "TRACELEAN_SKILLS", skills);
+    }
+    if let Some(config) = &host.claude_config {
+        push("--setenv", "CLAUDE_CONFIG_DIR", config);
     }
     args.retain(|arg| !arg.is_empty());
     args.extend(["--die-with-parent", "--chdir", &session.root, &host.shell].map(String::from));
@@ -118,6 +124,56 @@ pub fn brief_path(session: &Session) -> String {
         Some(dir) => format!("{dir}/CLAUDE.md"),
         None => format!("{}.CLAUDE.md", session.work),
     }
+}
+
+pub fn skill_path(session: &Session) -> String {
+    match session.work.strip_suffix("/work") {
+        Some(dir) => format!("{dir}/skill"),
+        None => format!("{}.skill", session.work),
+    }
+}
+
+/// Where the agent's own configuration looks for the TraceLean skill: under the Claude
+/// configuration the sandbox was told to use, or under the default one in the home.
+pub fn skill_home(host: &Host) -> Option<String> {
+    host.skills.as_ref()?;
+    match (&host.claude_config, &host.home) {
+        (Some(config), _) => Some(format!("{config}/skills/tracelean")),
+        (None, Some(home)) if host.writable.iter().any(|rel| rel == ".claude") => {
+            Some(format!("{home}/.claude/skills/tracelean"))
+        }
+        _ => None,
+    }
+}
+
+/// The skill an agent finds installed in a sandbox: the same for every task, it names
+/// the method's pages and the three commands, and carries nothing typed into the editor.
+///
+/// @implements REQ-SBX.skill_installed
+pub fn skill(host: &Host) -> String {
+    let pages = host.skills.as_deref().unwrap_or("$TRACELEAN_SKILLS");
+    format!(
+        "---\n\
+         name: tracelean\n\
+         description: Use when working in a repository that uses the TraceLean method — requirements with clauses (REQ-X.clause), Lean models, @implements/@models annotations, differential testing, evidence marks, or the tracelean-trace / tracelean-view commands.\n\
+         ---\n\
+         \n\
+         # Working on a TraceLean project\n\
+         \n\
+         The pages of the method are in `{pages}` (also `$TRACELEAN_SKILLS`). Read\n\
+         `00-the-method.md` first, then only the page the task needs; `README.md` lists them.\n\
+         \n\
+         ```bash\n\
+         tracelean-trace .                         # what the project claims, and what is missing\n\
+         tracelean-trace . --context REQ-X.clause  # everything needed to change that clause (run BEFORE)\n\
+         tracelean-trace . --stale                 # what a change re-opened (run AFTER)\n\
+         tracelean-view . <view>                   # what the person sees in the editor, as text\n\
+         ```\n\
+         \n\
+         Rules: no code without an annotation linking it to a clause; never write an evidence\n\
+         mark, a run earns it; never exempt to silence a finding; run the checker before\n\
+         saying you are done.\n"
+    )
 }
 
 pub fn brief(host: &Host) -> String {
@@ -185,6 +241,34 @@ mod tests {
             skills: None,
             claude_config: None,
         }
+    }
+
+    /// @tests REQ-SBX.agent_configuration_chosen
+    /// @tests REQ-SBX.skill_installed
+    #[test]
+    fn the_named_configuration_is_mounted_with_the_skill_in_it() {
+        let mut with = host();
+        with.claude_config = Some("/home/u/.claude-feup".into());
+        with.skills = Some("/opt/tracelean/skills".into());
+        let joined = launch_args(&session(), &with).join(" ");
+        assert!(joined.contains("--bind /home/u/.claude-feup /home/u/.claude-feup"), "{joined}");
+        assert!(joined.contains("--setenv CLAUDE_CONFIG_DIR /home/u/.claude-feup"), "{joined}");
+        assert!(
+            joined.contains("--ro-bind /home/u/proj/.tracelean/sessions/s1/skill /home/u/.claude-feup/skills/tracelean"),
+            "{joined}"
+        );
+        let bound = joined.find("--bind /home/u/.claude-feup ").unwrap();
+        let skill_at = joined.find("/skills/tracelean").unwrap();
+        assert!(bound < skill_at, "the skill is mounted before the configuration it sits in: {joined}");
+        assert!(skill(&with).starts_with("---\nname: tracelean\n"), "{}", skill(&with));
+        assert!(skill(&with).contains("/opt/tracelean/skills"));
+
+        let mut plain = host();
+        plain.skills = Some("/opt/tracelean/skills".into());
+        let joined = launch_args(&session(), &plain).join(" ");
+        assert!(joined.contains("/skill /home/u/.claude/skills/tracelean"), "{joined}");
+        assert!(!joined.contains("CLAUDE_CONFIG_DIR"), "{joined}");
+        assert!(!launch_args(&session(), &host()).join(" ").contains("skills/tracelean"));
     }
 
     #[test]

@@ -154,6 +154,7 @@ fn answer(editor: &mut Editor, command: &str, args: &Value) -> Value {
         }
         "theme" => tracelean_editor::theme::load(&editor.root),
         "leader" => json!(editor.leader()),
+        "tree_marks" => json!(editor.tree_marks()),
         "overview" => json!(editor.overview()),
         "card" => json!(editor.card(&text(args, "name"))),
         "impact" => json!(editor.impact()),

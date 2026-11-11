@@ -83,6 +83,9 @@ pub struct Editor {
     typed: Vec<String>,
     pub history_filter: tracelean_core::surface::history_view::Filter,
     saved_at: BTreeSet<u64>,
+    accepted_at: BTreeSet<u64>,
+    agent_nodes: BTreeSet<u64>,
+    agent_paths: BTreeSet<String>,
     pub last_find: Option<String>,
     offering: Option<(String, usize, Vec<tracelean_core::surface::offer::Offer>)>,
     asking: Option<Asking>,
@@ -193,8 +196,9 @@ const CHORDS: &[(&str, &str)] = &[
     ("Ctrl+Z / Ctrl+Y", "undo / redo, a word at a time"),
     ("Ctrl+W", "close the tab"),
     ("Ctrl+Tab", "next tab of the pane"),
-    ("Ctrl+P", "open a file by a few letters; name:42 or :42 for a line"),
-    ("Ctrl+Shift+P", "do anything, by a few words of its name"),
+    ("Ctrl+P", "do anything, by a few words or letters of its name"),
+    ("Ctrl+O (Ctrl+Shift+P in the window)", "open a file by a few letters; name:42 or :42 for a line"),
+    ("F5", "refresh: reload the files from the disk and the sandbox (the window only)"),
     ("Ctrl+Shift+O", "go to a name this file declares (the window only)"),
     ("Ctrl+F / F3", "find in the buffer / again"),
     ("Ctrl+Shift+F", "find in every file"),
@@ -368,9 +372,12 @@ impl Editor {
             design_open: BTreeSet::new(),
             tutorial_open: BTreeSet::new(),
             open_only: false,
-            history_filter: tracelean_core::surface::history_view::Filter::File,
+            history_filter: tracelean_core::surface::history_view::Filter::All,
             typed: Vec::new(),
             saved_at: BTreeSet::new(),
+            accepted_at: BTreeSet::new(),
+            agent_nodes: BTreeSet::new(),
+            agent_paths: BTreeSet::new(),
             last_find: None,
             offering: None,
             asking: None,
@@ -494,9 +501,26 @@ impl Editor {
         self.listing_of(".")
     }
 
+    /// The files the tree lists: the editor's own, and those a sandboxed agent made that
+    /// are still waiting, so that what the agent is doing shows where files are looked for.
+    ///
+    /// @implements REQ-OBS.visible_while_running
     fn tree_rows(&self) -> Vec<explorer::Row> {
-        let files: Vec<String> = self.workspace().files.keys().cloned().collect();
+        let mut files: BTreeSet<String> = self.workspace().files.keys().cloned().collect();
+        for command in &self.pending {
+            if matches!(command, Command::CreateFile { .. }) {
+                files.insert(touched(command));
+            }
+        }
+        let files: Vec<String> = files.into_iter().collect();
         explorer::rows(&files, &self.open_folders)
+    }
+
+    /// What each mark of the file tree means, for a pointer resting on it.
+    ///
+    /// @implements REQ-SHOW.tree_marks_explained
+    pub fn tree_marks(&self) -> Vec<(String, String)> {
+        explorer::meanings()
     }
 
     fn is_tree(&self, buffer: &Buffer) -> bool {
@@ -1472,19 +1496,19 @@ impl Editor {
         groups
     }
 
+    /// Every command, found by a few words of what it does or by a few letters in order:
+    /// those holding every word first, then the nearest by letters.
+    ///
+    /// @implements REQ-NAV.commands_found_by_letters
     pub fn palette(&self, query: &str) -> Vec<(String, String)> {
-        let words: Vec<String> = query.split_whitespace().map(str::to_lowercase).collect();
-        tracelean_core::surface::offer::described(&self.keymap)
+        let all: Vec<(String, String)> = tracelean_core::surface::offer::described(&self.keymap)
             .into_iter()
             .map(|(action, said)| {
                 let group = action.split('.').next().unwrap_or_default().to_string();
                 (action, format!("{group}: {said}"))
             })
-            .filter(|(_, said)| {
-                let haystack = said.to_lowercase();
-                words.iter().all(|word| haystack.contains(word.as_str()))
-            })
-            .collect()
+            .collect();
+        tracelean_core::surface::quick::commands(all, query, 24)
     }
 
     pub fn act_here(&mut self, action: &str) {
@@ -1679,6 +1703,19 @@ impl Editor {
                 self.say("definitions", &format!("{} places declare {name}", many.len()));
             }
         }
+    }
+
+    /// The lock, without the proofs that no longer stand: a proved mark is shown only
+    /// while the clause's model is pinned.
+    ///
+    /// @implements REQ-STRENGTH.proved_only_when_pinned
+    fn lock_held(&self) -> Option<tracelean_core::trace::lockfile::Lockfile> {
+        let mut lock = tracelean_core::trace::lockfile::read(&self.root)?;
+        if lock.evidence.iter().any(|record| record.key.bond == tracelean_core::evidence::Bond::ModelProof) {
+            let files = self.workspace().files;
+            lock.evidence = tracelean_core::drt::proofs::standing_in(&self.root, &self.index(), &files, lock.evidence);
+        }
+        Some(lock)
     }
 
     fn index(&self) -> std::sync::Arc<tracelean_core::trace::index::Index> {
@@ -2357,6 +2394,13 @@ impl Editor {
             }
             Intent::Display { what: BufferKind::File { path } }
                 if !self.workspace().files.contains_key(&path)
+                    && self.pending.iter().any(|c| matches!(c, Command::CreateFile { .. }) && touched(c) == path) =>
+            {
+                self.say("waiting", &format!("{path} was made by the agent and is not in the project yet: accept or reject it"));
+                self.perform(Intent::Display { what: BufferKind::Review { target: path } });
+            }
+            Intent::Display { what: BufferKind::File { path } }
+                if !self.workspace().files.contains_key(&path)
                     && requirement_view::split_link(&path).1.is_some() =>
             {
                 let (file, line) = requirement_view::split_link(&path);
@@ -2464,7 +2508,7 @@ impl Editor {
             }
             BufferKind::Directory { path } => self.listing_of(&path),
             BufferKind::Review { target } => match &self.agent_tree {
-                Some(agent) if self.pending.iter().any(|c| touched(c) == target) => {
+                Some(agent) if self.session.is_none() && self.pending.iter().any(|c| touched(c) == target) => {
                     let before = self.workspace().files.get(&target).cloned().unwrap_or_default();
                     let after = agent.files.get(&target).cloned().unwrap_or_default();
                     make::review_buffer(target, before, after)
@@ -2640,20 +2684,29 @@ impl Editor {
                 vec![Event { kind: "unknown".into(), text: format!("no requirement is called {id}") }],
             );
         };
-        let records: Vec<tracelean_core::trace::record::Evidence> = tracelean_core::trace::lockfile::read(&self.root)
+        let records: Vec<tracelean_core::trace::record::Evidence> = self.lock_held()
             .map(|l| l.evidence)
             .unwrap_or_default();
         let held = marks_of(&index, &records);
-        let strengths = tracelean_core::trace::proofcheck::strengths(
-            &index,
-            &tracelean_core::drt::proofs::load(&self.root),
-            &self.workspace().files,
-        );
+        let report = tracelean_core::drt::proofs::load(&self.root);
+        let strengths = tracelean_core::trace::proofcheck::strengths(&index, &report, &self.workspace().files);
+        let theorems = tracelean_core::trace::proofcheck::theorems_accepted(&report);
         let clauses = requirement
             .clause_keys()
             .into_iter()
             .map(|clause| {
-                let pins = strengths.get(&(id.to_string(), clause.clone())).map(tracelean_core::trace::proofcheck::described);
+                let pins = strengths.get(&(id.to_string(), clause.clone())).map(|shown| {
+                    let (state, said) = tracelean_core::trace::proofcheck::described(shown);
+                    let proved = tracelean_core::trace::proofcheck::earns_proof(true, shown.strength.clone());
+                    let count = match theorems.get(&(id.to_string(), clause.clone())) {
+                        Some((accepted, all)) if proved => format!(" — {accepted} of {all} theorems accepted"),
+                        Some((accepted, all)) => {
+                            format!(" — {accepted} of {all} theorems accepted; none makes the clause proved until the model is pinned")
+                        }
+                        None => String::new(),
+                    };
+                    (state, format!("{said}{count}"))
+                });
                 let mut claims: Vec<Claim> = index
                     .links
                     .iter()
@@ -2760,7 +2813,7 @@ impl Editor {
 
     fn nodes(&self) -> Vec<make::Node> {
         let index = self.index();
-        let lock = tracelean_core::trace::lockfile::read(&self.root);
+        let lock = self.lock_held();
         let held = marks_of(&index, lock.as_ref().map(|l| &l.evidence[..]).unwrap_or(&[]));
         index
             .requirements
@@ -2824,8 +2877,8 @@ impl Editor {
             let lines = |files: Option<&String>| -> Vec<String> {
                 files.map(|t| t.lines().map(String::from).collect()).unwrap_or_default()
             };
-            let before = lines(self.workspace().files.get(&path));
-            let after = lines(self.agent_tree.as_ref().and_then(|t| t.files.get(&path)));
+            let before = lines(self.saved.files.get(&path));
+            let after = lines(self.workspace().files.get(&path));
             let diff = make::diff_lines(before, after);
             use tracelean_core::surface::view::Role;
             let count = |role: Role| diff.iter().filter(|d| d.role == role).count();
@@ -2910,18 +2963,44 @@ impl Editor {
         }
         let Some(live) = self.session.clone() else { return recounted };
         let agent = tracelean_core::observe::workspace::snapshot(std::path::Path::new(&live.work));
-        let base = tracelean_core::observe::workcopy::base(&live);
-        let pending = tracelean_core::observe::mirror::changed_since(base, self.workspace(), agent.clone());
-        let moved = pending != self.pending;
-        self.pending = pending;
-        self.agent_tree = Some(agent);
+        // @implements REQ-OBS.mirrored_live
+        // what the copy held when it was last looked at: its start, then each state seen since
+        let seen = match &self.agent_tree {
+            Some(seen) => Some(
+                seen.files.iter().map(|(path, text)| (path.clone(), tracelean_core::trace::hash::text(text))).collect(),
+            ),
+            None => tracelean_core::observe::workcopy::base(&live),
+        };
+        let known = seen.is_some();
+        let incoming = tracelean_core::observe::mirror::changed_since(seen, self.workspace(), agent.clone());
+        if known {
+            self.agent_tree = Some(agent);
+        }
+        let moved = !incoming.is_empty();
         if moved {
-            self.refresh_views();
-            let files: BTreeSet<String> = self.pending.iter().map(touched).collect();
-            match files.len() {
-                0 => self.say("sandbox", "nothing is waiting"),
-                1 => self.say("sandbox", "1 file changed by the agent is waiting — the sandbox panel lists it"),
-                n => self.say("sandbox", &format!("{n} files changed by the agent are waiting — the sandbox panel lists them")),
+            let files: BTreeSet<String> = incoming.iter().map(touched).collect();
+            match self.push(Command::Batch { commands: incoming }) {
+                Ok(id) => {
+                    self.agent_nodes.insert(id.0);
+                    self.agent_paths.extend(files.iter().cloned());
+                    self.recount_waiting();
+                    self.forget_index();
+                    self.refresh_views();
+                    let waiting: BTreeSet<String> = self.pending.iter().map(touched).collect();
+                    self.say(
+                        "agent",
+                        &format!(
+                            "{} changed by the agent {} in the history (Ctrl+Z goes back); {} not yet accepted into the project",
+                            match files.len() {
+                                1 => "1 file".to_string(),
+                                n => format!("{n} files"),
+                            },
+                            if files.len() == 1 { "is" } else { "are" },
+                            waiting.len()
+                        ),
+                    );
+                }
+                Err(refusal) => self.say("could not take in the agent's change", &format!("{refusal:?}")),
             }
         }
         if !self.screen.opened.iter().any(|b| b.id == "record:sandbox") {
@@ -2935,6 +3014,57 @@ impl Editor {
                 true
             }
             _ => moved || recounted,
+        }
+    }
+
+    /// What a sandboxed agent changed that the project does not hold yet: the difference
+    /// between the project as saved and the editor, on the paths the agent touched.
+    ///
+    /// @implements REQ-OBS.visible_while_running
+    fn recount_waiting(&mut self) {
+        let now = self.workspace();
+        let paths = &self.agent_paths;
+        self.pending = tracelean_core::observe::mirror::mutations(self.saved.clone(), now)
+            .into_iter()
+            .filter(|command| paths.contains(&touched(command)))
+            .collect();
+    }
+
+    /// After the workspace moved to another point of the history while a sandbox is live:
+    /// the copy is set to that point on every path the move changed, so the agent goes on
+    /// from the state the person went back to.
+    ///
+    /// @implements REQ-OBS.copy_follows_the_history
+    fn copy_follows(&mut self, before: &Workspace) {
+        let Some(live) = self.session.clone() else { return };
+        let now = self.workspace();
+        let paths: BTreeSet<&String> = before.files.keys().chain(now.files.keys()).collect();
+        let work = std::path::PathBuf::from(&live.work);
+        for path in paths {
+            if before.files.get(path) == now.files.get(path) {
+                continue;
+            }
+            let text = now.files.get(path);
+            if let Err(error) = tracelean_core::observe::workcopy::put(&work, path, text.map(String::as_str)) {
+                self.say("could not set the sandbox to this point", &error.to_string());
+                return;
+            }
+            if let Some(agent) = self.agent_tree.as_mut() {
+                match text {
+                    Some(text) => agent.files.insert(path.clone(), text.clone()),
+                    None => agent.files.remove(path),
+                };
+            }
+        }
+        self.recount_waiting();
+        self.reproduce_sandbox();
+    }
+
+    /// Marks where the workspace is as accepted: what the agent changed up to here is in
+    /// the project.
+    fn mark_accepted(&mut self) {
+        if let Some(here) = self.tree.current() {
+            self.accepted_at.insert(here.0);
         }
     }
 
@@ -2991,9 +3121,14 @@ impl Editor {
                 let _ = tracelean_core::observe::workcopy::write_launcher(&made, &host);
                 self.session = Some(made);
                 self.pending.clear();
+                self.agent_paths.clear();
                 self.agent_tree = None;
                 self.perform(Intent::Display { what: BufferKind::Record { title: "sandbox".into() } });
-                self.say("sandbox ready", "copy the command, run it in your terminal, then start your agent");
+                let config = host.claude_config.as_deref().unwrap_or("the default (~/.claude)");
+                self.say(
+                    "sandbox ready",
+                    &format!("copy the command, run it in your terminal, then start your agent — it uses the Claude configuration {config}"),
+                );
             }
             Err(error) => self.say("could not make a sandbox", &error.to_string()),
         }
@@ -3018,9 +3153,15 @@ impl Editor {
             self.say("no sandbox", "there is nothing to end");
             return;
         };
+        let left = self.pending.iter().map(touched).collect::<BTreeSet<String>>().len();
         self.pending.clear();
+        self.agent_paths.clear();
         self.agent_tree = None;
         match tracelean_core::observe::workcopy::destroy(&live) {
+            Ok(()) if left > 0 => self.say(
+                "sandbox ended",
+                &format!("its copy is gone; {left} files the agent changed are in the editor, not saved: Ctrl+S keeps them, Ctrl+Z goes back"),
+            ),
             Ok(()) => self.say("sandbox ended", "its copy is gone; what you accepted stays"),
             Err(error) => self.say("could not remove the sandbox", &error.to_string()),
         }
@@ -3229,7 +3370,7 @@ impl Editor {
             return Vec::new();
         }
         let index = self.index();
-        let lock = tracelean_core::trace::lockfile::read(&self.root);
+        let lock = self.lock_held();
         let held = marks_of(&index, lock.as_ref().map(|l| &l.evidence[..]).unwrap_or(&[]));
         let claims: Vec<(String, String, Option<String>)> =
             index.links.iter().map(|link| (link.anchor.file.clone(), link.req_id.clone(), link.clause.clone())).collect();
@@ -3241,8 +3382,13 @@ impl Editor {
             .into_iter()
             .enumerate()
             .map(|(at, (path, kind))| {
-                let before = lines(current.files.get(&path));
-                let after = lines(self.agent_tree.as_ref().and_then(|t| t.files.get(&path)));
+                let (before, after) = match self.session {
+                    Some(_) => (lines(self.saved.files.get(&path)), lines(current.files.get(&path))),
+                    None => (
+                        lines(current.files.get(&path)),
+                        lines(self.agent_tree.as_ref().and_then(|t| t.files.get(&path))),
+                    ),
+                };
                 let diff = make::diff_lines(before, after);
                 let count = |role: Role| diff.iter().filter(|d| d.role == role).count();
                 let clauses = impact_of(&[path.clone()], claims.clone(), &held)
@@ -3313,7 +3459,7 @@ impl Editor {
         let (id, clause) = tracelean_core::drt::config::split_op(name);
         let index = self.index();
         let requirement = index.requirements.get(id)?;
-        let lock = tracelean_core::trace::lockfile::read(&self.root);
+        let lock = self.lock_held();
         let held = marks_of(&index, lock.as_ref().map(|l| &l.evidence[..]).unwrap_or(&[]));
         let wanted = clause.filter(|c| requirement.clauses.contains_key(*c));
         let letters = |marks: Marks| {
@@ -3351,7 +3497,7 @@ impl Editor {
             return Vec::new();
         }
         let index = self.index();
-        let lock = tracelean_core::trace::lockfile::read(&self.root);
+        let lock = self.lock_held();
         let held = marks_of(&index, lock.as_ref().map(|l| &l.evidence[..]).unwrap_or(&[]));
         impact_of(
             &unsaved,
@@ -3452,7 +3598,7 @@ impl Editor {
 
     fn evidence(&self) -> Vec<Event> {
         let index = self.index();
-        let lock = tracelean_core::trace::lockfile::read(&self.root);
+        let lock = self.lock_held();
         let records: Vec<tracelean_core::trace::record::Evidence> =
             lock.as_ref().map(|l| l.evidence.clone()).unwrap_or_default();
         let held = marks_of(&index, &records);
@@ -3489,7 +3635,7 @@ impl Editor {
     fn lock(&self) -> Vec<Event> {
         use tracelean_core::trace::lockfile;
         let index = tracelean_core::trace::index::build(&self.root);
-        let held = lockfile::read(&self.root).map(|l| l.evidence).unwrap_or_default();
+        let held = self.lock_held().map(|l| l.evidence).unwrap_or_default();
         let earned = tracelean_core::trace::store::read_all(&self.root);
         let collected = lockfile::collected(&index, held, earned);
         let rendered = &collected.lockfile;
@@ -3521,7 +3667,7 @@ impl Editor {
     fn rollup(&self) -> Vec<Event> {
         use tracelean_core::trace::rollup;
         let index = self.index();
-        let lock = tracelean_core::trace::lockfile::read(&self.root);
+        let lock = self.lock_held();
         let held = marks_of(&index, lock.as_ref().map(|l| &l.evidence[..]).unwrap_or(&[]));
         let floor = Marks { tested: true, ..Marks::NONE };
 
@@ -3622,7 +3768,8 @@ impl Editor {
 
     fn points(&self) -> Vec<tracelean_core::surface::history_view::Point> {
         let here = self.tree.current();
-        self.tree
+        let points = self
+            .tree
             .ids()
             .iter()
             .map(|id| {
@@ -3631,17 +3778,49 @@ impl Editor {
                     node: id.0,
                     parent: node.parent.map(|p| p.0),
                     here: Some(*id) == here,
-                    said: tracelean_core::history::command::describe(&node.command),
+                    said: format!(
+                        "{}{}{}",
+                        if self.agent_nodes.contains(&id.0) { "agent: " } else { "" },
+                        tracelean_core::history::command::describe(&node.command),
+                        match (self.accepted_at.contains(&id.0), self.saved_at.contains(&id.0)) {
+                            (true, _) => "  ✓ accepted",
+                            (false, true) => "  ✓ saved",
+                            (false, false) => "",
+                        }
+                    ),
                     file: file_of(&node.command),
-                    saved: self.saved_at.contains(&id.0),
+                    saved: self.saved_at.contains(&id.0) || self.accepted_at.contains(&id.0),
                 }
             })
-            .collect()
+            .collect();
+        tracelean_core::surface::history_view::current_first(points)
     }
 
     fn history_buffer(&self) -> Buffer {
         let file = self.document_place().map(|(path, _)| path);
-        tracelean_core::surface::history_view::history_view(&self.points(), self.history_filter, file.as_deref())
+        // @implements REQ-UNDO.whole_by_default
+        // with no file in the document pane there is no file to filter by: show the whole tree
+        let filter = match (self.history_filter, &file) {
+            (tracelean_core::surface::history_view::Filter::File, None) => tracelean_core::surface::history_view::Filter::All,
+            (filter, _) => filter,
+        };
+        let shown = tracelean_core::surface::history_view::history_view(&self.points(), filter, file.as_deref());
+        let mut waiting: Vec<(String, String)> = Vec::new();
+        if self.session.is_some() {
+            for command in &self.pending {
+                let path = touched(command);
+                if waiting.iter().any(|(_, had)| *had == path) {
+                    continue;
+                }
+                let kind = match command {
+                    Command::CreateFile { .. } => "created",
+                    Command::DeleteFile { .. } => "deleted",
+                    _ => "modified",
+                };
+                waiting.push((kind.to_string(), path));
+            }
+        }
+        tracelean_core::surface::history_view::with_waiting(shown, &waiting)
     }
 
     pub fn history_preview_at(&self, pane: &str, at: usize) -> Option<Buffer> {
@@ -3701,6 +3880,12 @@ impl Editor {
     }
 
     fn travel(&mut self, move_: Move) {
+        let was = self.workspace();
+        self.travel_in_history(move_);
+        self.copy_follows(&was);
+    }
+
+    fn travel_in_history(&mut self, move_: Move) {
         let before = self.tree.current();
         self.anchor = None;
         let command = |tree: &Tree, id: Option<tracelean_core::history::tree::NodeId>| {
@@ -3830,6 +4015,24 @@ impl Editor {
                 Ok(base) => self.say("setting saved", &format!("theme = {base}")),
                 Err(error) => self.say("could not save", &error),
             },
+            // @implements REQ-SHOW.files_refreshed
+            Watch::Refresh => {
+                let before = self.workspace().files.len() + self.pending.len();
+                let disk = self.follow_disk();
+                let agent = self.tick();
+                self.forget_index();
+                self.refresh_views();
+                self.reproduce_sandbox();
+                let files = self.workspace().files.len();
+                let waiting: BTreeSet<String> = self.pending.iter().map(touched).collect();
+                let said = match (self.session.is_some(), waiting.len()) {
+                    (true, 0) => format!("{files} files; nothing from the agent is waiting"),
+                    (true, n) => format!("{files} files; {n} changed by the agent are waiting"),
+                    (false, _) => format!("{files} files, as they are on the disk"),
+                };
+                let moved = disk || agent || before != files + self.pending.len();
+                self.say(if moved { "refreshed" } else { "nothing new" }, &said);
+            }
             Watch::PickProject => {
                 let start = std::path::absolute(&self.root).unwrap_or(self.root.clone()).display().to_string();
                 let desktop = std::env::var("XDG_CURRENT_DESKTOP").unwrap_or_default();
@@ -3923,7 +4126,7 @@ impl Editor {
             return file_trace_view("(no file open)", &[], width);
         };
         let index = self.index();
-        let records: Vec<tracelean_core::trace::record::Evidence> = tracelean_core::trace::lockfile::read(&self.root)
+        let records: Vec<tracelean_core::trace::record::Evidence> = self.lock_held()
             .map(|l| l.evidence)
             .unwrap_or_default();
         let held = marks_of(&index, &records);
@@ -4040,8 +4243,39 @@ impl Editor {
         self.perform(Intent::Display { what: BufferKind::Record { title: "observed".into() } });
     }
 
+    /// With a sandbox, what the agent did is already in the history: accepting writes it to
+    /// the project and marks the point. Without one, accepting takes the observed change in.
+    ///
     /// @implements REQ-ACT.edits_are_commands
+    /// @implements REQ-OBS.accepted_is_marked
     fn accept(&mut self, command: Command) {
+        if self.session.is_some() {
+            let paths: BTreeSet<String> = self.pending.iter().map(touched).collect();
+            if paths.is_empty() {
+                self.say("nothing to accept", "the project already holds what the agent changed");
+                return;
+            }
+            let root = self.root.clone();
+            let workspace = self.workspace();
+            for path in &paths {
+                if let Err(error) = self.write_one(&root, path) {
+                    self.say("could not write the accepted changes", &error.to_string());
+                    return;
+                }
+                match workspace.files.get(path) {
+                    Some(text) => self.saved.files.insert(path.clone(), text.clone()),
+                    None => self.saved.files.remove(path),
+                };
+            }
+            self.agent_paths.clear();
+            self.pending.clear();
+            self.mark_accepted();
+            self.forget_index();
+            self.say("accepted", &format!("{} files are in the project; the point is marked in the history", paths.len()));
+            self.refresh_views();
+            self.reproduce_sandbox();
+            return;
+        }
         let taken = match command {
             Command::Batch { commands } => commands,
             other => vec![other],
@@ -4058,22 +4292,39 @@ impl Editor {
                 return;
             }
         }
-        if self.session.is_some() {
-            let workspace = self.workspace();
-            if let Err(error) = tracelean_core::observe::workcopy::sync(&self.root, &workspace) {
-                self.say("could not write the accepted changes", &error.to_string());
-                return;
-            }
-        }
         self.saved = self.workspace();
         self.forget_index();
         self.say("accepted", &format!("{count} changes are in the history and the project; Ctrl+Z undoes them"));
         self.refresh_views();
-        self.reproduce_sandbox();
     }
 
     /// @implements REQ-ACT.edits_are_commands
+    /// @implements REQ-OBS.accepted_is_marked
     fn accept_file(&mut self, path: &str, command: Command) {
+        if self.session.is_some() {
+            if !self.pending.iter().any(|c| touched(c) == path) {
+                self.say("nothing to accept", &format!("{path} has no change waiting"));
+                return;
+            }
+            if let Err(error) = self.write_one(&self.root.clone(), path) {
+                self.say("could not write the accepted change", &error.to_string());
+                return;
+            }
+            match self.workspace().files.get(path) {
+                Some(text) => self.saved.files.insert(path.to_string(), text.clone()),
+                None => self.saved.files.remove(path),
+            };
+            self.agent_paths.remove(path);
+            self.recount_waiting();
+            if self.pending.is_empty() {
+                self.mark_accepted();
+            }
+            self.forget_index();
+            self.say("accepted", &format!("{path} is in the project"));
+            self.refresh_views();
+            self.reproduce_sandbox();
+            return;
+        }
         let taken = match command {
             Command::Batch { commands } => commands,
             other => vec![other],
@@ -4089,40 +4340,55 @@ impl Editor {
                 return;
             }
         }
-        if self.session.is_some() {
-            if let Err(error) = self.write_one(&self.root.clone(), path) {
-                self.say("could not write the accepted change", &error.to_string());
-                return;
-            }
-            let workspace = self.workspace();
-            if let Some(text) = workspace.files.get(path) {
-                self.saved.files.insert(path.to_string(), text.clone());
-            } else {
-                self.saved.files.remove(path);
-            }
-        }
         self.forget_index();
-        self.say("accepted", &format!("{path} is in the history and the project; Ctrl+Z undoes it"));
+        self.say("accepted", &format!("{path} is in the history; Ctrl+Z undoes it"));
         self.refresh_views();
-        self.reproduce_sandbox();
+    }
+
+    /// Takes back what the agent changed on `paths`: a new point of the history that sets
+    /// them as the project holds them (nothing is dropped from the tree), and the copy set
+    /// the same.
+    ///
+    /// @implements REQ-OBS.rejected_is_a_node
+    fn take_back(&mut self, paths: &BTreeSet<String>) -> bool {
+        let was = self.workspace();
+        let back: Vec<Command> = tracelean_core::observe::mirror::mutations(was.clone(), self.saved.clone())
+            .into_iter()
+            .filter(|command| paths.contains(&touched(command)))
+            .collect();
+        if back.is_empty() {
+            return false;
+        }
+        if let Err(refusal) = self.push(Command::Batch { commands: back }) {
+            self.say("refused", &format!("{refusal:?}"));
+            return false;
+        }
+        for path in paths {
+            self.agent_paths.remove(path);
+        }
+        self.copy_follows(&was);
+        self.forget_index();
+        self.refresh_views();
+        true
     }
 
     fn reject_file(&mut self, path: &str) {
+        if self.session.is_some() {
+            let only: BTreeSet<String> = std::iter::once(path.to_string()).collect();
+            match self.take_back(&only) {
+                true => self.say("rejected", &format!("{path} is as the project holds it again, in the editor and in the sandbox")),
+                false => self.say("nothing to reject", &format!("{path} has no change waiting")),
+            }
+            self.reproduce_sandbox();
+            return;
+        }
         let before = self.pending.len();
         self.pending.retain(|c| touched(c) != path);
         if self.pending.len() == before {
             self.say("nothing to reject", &format!("{path} has no change waiting"));
             return;
         }
-        if let Some(live) = self.session.clone() {
-            if let Err(error) = self.write_one(std::path::Path::new(&live.work), path) {
-                self.say("could not reset the file in the sandbox", &error.to_string());
-                return;
-            }
-            let _ = self.tick();
-        }
-        self.say("rejected", &format!("{path} was taken back out of the sandbox"));
-        self.reproduce_sandbox();
+        self.say("rejected", &format!("{path} was left out; the working tree still holds it"));
     }
 
     fn write_one(&self, dir: &Path, path: &str) -> std::io::Result<()> {
@@ -4136,19 +4402,18 @@ impl Editor {
             return;
         }
         let count = self.pending.len();
-        self.pending.clear();
-        if let Some(live) = &self.session {
-            let workspace = self.workspace();
-            let work = std::path::PathBuf::from(&live.work);
-            if let Err(error) = tracelean_core::observe::workcopy::sync(&work, &workspace) {
-                self.say("could not reset the sandbox", &error.to_string());
-                return;
+        if self.session.is_some() {
+            let paths: BTreeSet<String> = self.pending.iter().map(touched).collect();
+            if self.take_back(&paths) {
+                self.say(
+                    "rejected",
+                    &format!("{} files are as the project holds them again, in the editor and in the sandbox; Ctrl+Z brings them back", paths.len()),
+                );
             }
-            self.agent_tree = Some(workspace);
-            self.say("rejected", &format!("{count} changes were taken back out of the sandbox"));
             self.reproduce_sandbox();
             return;
         }
+        self.pending.clear();
         self.say(
             "rejected",
             &format!("{count} changes were left out; the working tree still holds them"),
@@ -4162,6 +4427,13 @@ impl Editor {
                 self.saved = workspace;
                 if let Some(here) = self.tree.current() {
                     self.saved_at.insert(here.0);
+                }
+                if self.session.is_some() {
+                    if !self.pending.is_empty() {
+                        self.mark_accepted();
+                    }
+                    self.agent_paths.clear();
+                    self.pending.clear();
                 }
                 self.forget_index();
                 self.refresh_views();

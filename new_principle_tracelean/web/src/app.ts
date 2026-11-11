@@ -301,6 +301,37 @@ async function pumpWheel() {
   }, 140);
 }
 
+let treeMarks: Record<string, string> | null = null;
+
+/** The meaning of each mark of the file tree, asked of the editor once. */
+async function loadTreeMarks(invoke: Invoke) {
+  try {
+    const said = (await invoke("tree_marks", {})) as [string, string][] | null;
+    treeMarks = Array.isArray(said) ? Object.fromEntries(said) : {};
+  } catch {
+    treeMarks = {};
+  }
+}
+
+// @implements REQ-SHOW.tree_marks_explained
+export function explainMarks(box: HTMLElement, marks: Record<string, string> | null = treeMarks) {
+  if (!marks) return;
+  for (const span of box.querySelectorAll<HTMLElement>(".line > span")) {
+    const text = (span.textContent ?? "").trim();
+    if (Array.from(text).length === 1 && marks[text]) {
+      span.title = marks[text];
+      span.classList.add("explained");
+    }
+  }
+  for (const row of box.querySelectorAll<HTMLElement>(".line")) {
+    const name = row.querySelector<HTMLElement>("button.actionable");
+    const lead = row.firstChild;
+    if (!name || !lead || lead === name || !(lead instanceof HTMLElement)) continue;
+    const arrow = (lead.textContent ?? "").trim();
+    if (marks[arrow] && !lead.title) lead.title = marks[arrow];
+  }
+}
+
 function drawPane(into: HTMLElement, pane: Pane) {
   const box = document.createElement("div");
   const kind = Object.keys(pane.buffer.kind)[0] ?? "file";
@@ -320,6 +351,7 @@ function drawPane(into: HTMLElement, pane: Pane) {
     drawCoverage(box, pane);
   }
   drawScrollbar(box, pane);
+  if (kind === "directory") explainMarks(box);
 
   for (const node of box.querySelectorAll<HTMLElement>('button[data-action="history.jump"]')) {
     node.addEventListener("mouseenter", (event) => void showChange(pane.pane, Number(node.dataset.at), event.clientX, event.clientY));
@@ -667,6 +699,14 @@ async function openOverview(force = false) {
       hideCard();
       void run("act_here", { action }).then(() => closeOverview());
     },
+    report: async () => {
+      try {
+        await run("act_here", { action: "trace.report" });
+        return true;
+      } catch {
+        return false;
+      }
+    },
     card: (anchor, name) => void showCard(anchor, name),
     uncard: hideCard,
   });
@@ -779,8 +819,9 @@ async function drawMenubar(invoke: Invoke) {
     spacer,
     tool("A−", "Smaller text (Ctrl -)", "zoom", () => void run("zoom", { steps: -1 })),
     tool("A+", "Bigger text (Ctrl +)", "zoom", () => void run("zoom", { steps: 1 })),
-    tool("Search commands", "Search every command (Ctrl+Shift+P)", "search", () => openPalette()),
-    tool("Open file", "Open a file by name (Ctrl+P)", "open", () => openQuick()),
+    tool("Search commands", "Search every command by a few words or letters (Ctrl+P)", "search", () => openPalette()),
+    tool("Open file", "Open a file by name (Ctrl+O or Ctrl+Shift+P)", "open", () => openQuick()),
+    tool("↻ Files", "Refresh: reload the files from the disk and the sandbox (F5, Space f R)", "refresh", () => void run("act_here", { action: "file.refresh" })),
     tool("Theme", "Switch theme: dark or light (Space w c)", "theme", () => void run("act_here", { action: "look.theme" })),
     tool("?", "Every key (F1)", "help", () => void run("chord", { chord: "F1" })),
   );
@@ -960,7 +1001,7 @@ function openQuick() {
 }
 
 function openPalette() {
-  openChooser("Do something — type a few words of it", async (query) => {
+  openChooser("Do something — type a few words or letters of it", async (query) => {
     const found = ((await ctx?.invoke("palette", { query })) as [string, string][] | null) ?? [];
     return found.map(([action, said]) => ({ label: said, pick: () => run("act_here", { action }) }));
   });
@@ -1226,6 +1267,7 @@ export async function start() {
     hover = {};
   }
   await paint(invoke);
+  await loadTreeMarks(invoke);
   await drawMenubar(invoke);
   await show(invoke, into, status);
   poll();
@@ -1330,12 +1372,17 @@ export async function start() {
     }
     if (chord === "C-p") {
       event.preventDefault();
+      openPalette();
+      return;
+    }
+    if (chord === "C-S-p" || chord === "C-o") {
+      event.preventDefault();
       openQuick();
       return;
     }
-    if (chord === "C-S-p") {
+    if (chord === "F5") {
       event.preventDefault();
-      openPalette();
+      await run("act_here", { action: "file.refresh" });
       return;
     }
     if (chord === "C-S-o") {

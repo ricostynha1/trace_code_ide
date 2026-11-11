@@ -13,6 +13,8 @@ clauses:
     at_root: The system shall treat a name a person also gives a source directory — build, dist, venv — as regenerable only at the project root, so src/build/mod.rs is mirrored.
   real_tree_untouched: While the workspace is live, the system shall not write the real tree.
   capability_reported: If a containment mechanism is unavailable, then the system shall report it as a named state, and shall not silently fall back to no containment.
+  agent_configuration_chosen: Where a Claude configuration directory is named for sandboxes, by the environment, by the project or by the person, in that order, the system shall start the sandbox with that directory writable and set as the agent's configuration, and otherwise with the one the editor was started with.
+  skill_installed: The system shall make the TraceLean skill available in the agent's configuration inside every sandbox, written before the tool starts and the same for every task.
   escape_is_not_silent: If a write lands outside the workspace, then the system shall report it.
 ---
 

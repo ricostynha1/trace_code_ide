@@ -66,6 +66,28 @@ fn on_current_branch(points: &[Point], node: Option<u64>) -> bool {
     false
 }
 
+/// The points in the order that draws the branch the workspace is on first: the nodes
+/// from the start to where the workspace is, then every other node, latest first. The
+/// tree draws a node's first listed child in its own column and before its siblings, so
+/// the current branch stays in the leftmost column and at the top, and below the
+/// workspace's position the branch a redo would follow comes first.
+///
+/// @implements REQ-UNDO.current_branch_first
+pub fn current_first(points: Vec<Point>) -> Vec<Point> {
+    let on_branch: Vec<bool> = points.iter().map(|p| on_current_branch(&points, Some(p.node))).collect();
+    let (mut first, mut rest): (Vec<Point>, Vec<Point>) = (Vec::new(), Vec::new());
+    for (point, on) in points.into_iter().zip(on_branch) {
+        if on {
+            first.push(point);
+        } else {
+            rest.push(point);
+        }
+    }
+    rest.sort_by(|a, b| b.node.cmp(&a.node));
+    first.extend(rest);
+    first
+}
+
 fn free_column(open: &[bool], taken: &[usize], from: usize) -> usize {
     let mut c = from;
     while open.get(c).copied().unwrap_or(false) || taken.contains(&c) {
@@ -119,11 +141,11 @@ pub fn history_graph(points: Vec<Point>) -> Vec<GraphRow> {
         for c in &taken {
             open[*c] = true;
         }
-        if let Some(first) = kids.first() {
-            pending.push((Some(*first), col));
-        }
         for (kid, c) in kids.iter().skip(1).zip(&taken).rev() {
             pending.push((Some(*kid), *c));
+        }
+        if let Some(first) = kids.first() {
+            pending.push((Some(*first), col));
         }
     }
     out
@@ -213,6 +235,39 @@ pub fn history_view(points: &[Point], filter: Filter, file: Option<&str>) -> Buf
     }
 }
 
+/// The history with, under it, what a sandboxed agent changed and nobody accepted yet:
+/// those changes are not in the tree until they are accepted, and each row opens its diff.
+///
+/// @implements REQ-OBS.waiting_shown_with_history
+pub fn with_waiting(shown: Buffer, waiting: &[(String, String)]) -> Buffer {
+    if waiting.is_empty() {
+        return shown;
+    }
+    let mut text = shown.text;
+    let mut spans = shown.spans;
+    let head = format!(
+        "\n\nnot accepted yet — {} changed by the agent, in the history above and not in the project (Space a a accepts, Space a x rejects)",
+        if waiting.len() == 1 { "1 file".to_string() } else { format!("{} files", waiting.len()) }
+    );
+    let at = text.chars().count() + 2;
+    spans.push(Span { start: at, stop: at + "not accepted yet".len(), role: Role::Heading, actions: Vec::new() });
+    text.push_str(&head);
+    for (kind, path) in waiting {
+        let lead = format!("\n  {kind:<9}");
+        text.push_str(&lead);
+        let from = text.chars().count();
+        text.push_str(path);
+        spans.push(Span {
+            start: from,
+            stop: from + path.chars().count(),
+            role: Role::Path,
+            actions: vec!["observe.diff".to_string()],
+        });
+    }
+    let size = text.chars().count();
+    Buffer { id: shown.id, kind: shown.kind, text, spans: tidy(size, spans) }
+}
+
 /// @drt REQ-UNDO.tree_is_shown
 pub fn history_view_owned(points: Vec<Point>, filter: Filter, file: Option<String>) -> Buffer {
     history_view(&points, filter, file.as_deref())
@@ -278,6 +333,29 @@ pub fn change_view(node: u64, said: &str, changed: &[(String, String, String)]) 
 
 #[cfg(test)]
 mod tests {
+    /// @tests REQ-UNDO.current_branch_first
+    #[test]
+    fn the_branch_the_workspace_is_on_is_drawn_first_and_leftmost() {
+        // three edits made one after another from the start, each undone but the last
+        let points = vec![point(0, None, false), point(1, None, false), point(2, None, true)];
+        let drawn = history_graph(current_first(points));
+        assert_eq!(drawn[0].node, None);
+        assert_eq!(drawn[1].node, Some(2), "the current branch is not first: {drawn:?}");
+        assert!(drawn[1].cells.starts_with('●'), "the current branch left the first column: {drawn:?}");
+        assert_eq!(drawn.iter().map(|r| r.node).collect::<Vec<_>>(), vec![None, Some(2), Some(1), Some(0)]);
+    }
+
+    /// @tests REQ-UNDO.current_branch_first
+    #[test]
+    fn below_the_position_the_latest_branch_comes_first_and_no_node_is_lost() {
+        // 0 -> {1 -> 3, 2}; the workspace went back to 0
+        let points = vec![point(0, None, true), point(1, Some(0), false), point(2, Some(0), false), point(3, Some(1), false)];
+        let ordered = current_first(points.clone());
+        assert_eq!(ordered.len(), points.len());
+        let drawn: Vec<Option<u64>> = history_graph(ordered).iter().map(|r| r.node).collect();
+        assert_eq!(drawn, vec![None, Some(0), Some(2), Some(1), Some(3)]);
+    }
+
     use super::*;
     use crate::surface::view::{actions_at, faults};
 
@@ -324,7 +402,7 @@ mod tests {
         let shown = history_view(&[point(0, None, false), point(1, Some(0), false), point(2, None, true)], Filter::All, None);
         assert_eq!(
             tree_of(&shown),
-            "○─╮ #0  the tree as it was opened\n│ ● #3  change 2\n○   #1  change 0\n○   #2  change 1"
+            "○─╮ #0  the tree as it was opened\n○ │ #1  change 0\n○ │ #2  change 1\n  ● #3  change 2"
         );
         assert!(faults(shown).is_empty());
     }

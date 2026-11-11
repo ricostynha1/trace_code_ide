@@ -13,6 +13,7 @@ use tracelean_core::trace::store;
 /// @tests REQ-EVID.record_reproducible
 /// @tests REQ-STALE.inputs_identified
 /// @tests REQ-STRENGTH.kernel_decides
+/// @tests REQ-STRENGTH.proved_only_when_pinned
 #[test]
 #[ignore = "builds the Lean models"]
 fn every_theorem_lean_accepts_earns_its_clause_a_record() {
@@ -21,7 +22,19 @@ fn every_theorem_lean_accepts_earns_its_clause_a_record() {
     let report = proofs::check(&root, &index).expect("the models build and Lean runs");
     proofs::save(&root, &report).expect("the verdicts are kept");
     let (written, removed) = proofs::earn_all(&root, &index, &report, &proofs::toolchain());
-    assert!(written > 50, "only {written} proof records written");
+    let files = tracelean_core::observe::workspace::snapshot(&root).files;
+    let strengths = proofcheck::strengths(&index, &report, &files);
+    let owed: std::collections::BTreeSet<(String, Option<String>)> = report
+        .proofs
+        .iter()
+        .filter(|p| p.verdict.is_accepted())
+        .map(|p| (p.req_id.clone(), p.clause.clone()))
+        .filter(|key| strengths.get(key).is_some_and(|s| proofcheck::earns_proof(true, s.strength.clone())))
+        .collect();
+    assert!(!owed.is_empty(), "no model is pinned, so nothing can be said to be earned");
+    assert_eq!(written, owed.len(), "a record for each clause with an accepted theorem and a pinned model, and no other");
+    let accepted = report.proofs.iter().filter(|p| p.verdict.is_accepted()).count();
+    assert!(accepted > 50, "only {accepted} theorems accepted");
     println!("{written} proof records written, {removed} withdrawn");
     for entry in report.proofs.iter().filter(|p| !p.verdict.is_accepted()) {
         println!("  refused {}::{} {:?}", entry.req_id, entry.theorem, entry.verdict);

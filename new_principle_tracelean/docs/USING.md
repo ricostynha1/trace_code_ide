@@ -134,8 +134,8 @@ the cursor is, keys first** — click an entry or type its keys. Right-click
 anything to see the same for the place you pointed at. **F1** lists every key.
 
 The usual editor keys work: `Ctrl+S` save, `Ctrl+Z`/`Ctrl+Y` undo/redo,
-`Ctrl+F` find (`F3` next), `Ctrl+H` replace, `Ctrl+P` open a file by name,
-`Ctrl+Shift+P` any action by name, `Ctrl+Shift+F` search all files, `F12` or
+`Ctrl+F` find (`F3` next), `Ctrl+H` replace, `Ctrl+O` open a file by name,
+`Ctrl+P` any action by a few words or letters, `F5` refresh the files, `Ctrl+Shift+F` search all files, `F12` or
 Ctrl+click go to definition, `Alt+Left` back, `Ctrl+W` close tab, `Ctrl+/`
 comment. Definitions and uses are found by reading the files, with no language
 server; a project reopens with the tabs it had ([REQ-NAV](../reqs/surface/REQ-NAV.md)).

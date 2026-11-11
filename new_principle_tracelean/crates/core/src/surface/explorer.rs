@@ -163,6 +163,29 @@ pub fn tree_buffer(
     }
 }
 
+/// What each mark the tree draws beside a name means: a letter for each kind of claim a
+/// file makes, and a sign for what waits to be saved or accepted.
+///
+/// @implements REQ-SHOW.tree_marks_explained
+pub fn meanings() -> Vec<(String, String)> {
+    [
+        ("M", "M — models: a formal model here states a clause"),
+        ("I", "I — implements: code here is claimed to do what a clause says"),
+        ("T", "T — tests: a test here checks a clause"),
+        ("D", "D — drt: code here is compared with its model by differential testing"),
+        ("P", "P — proves: a theorem here is about a clause's model (the clause is proved only once that model is pinned)"),
+        ("●", "● — changed by the agent, waiting to be accepted or rejected"),
+        ("+", "+ — made by the agent, not in the project until accepted"),
+        ("✗", "✗ — deleted by the agent, still in the project until accepted"),
+        ("✎", "✎ — edited here and not saved"),
+        ("▸", "▸ — a folder, closed: click to open"),
+        ("▾", "▾ — a folder, open: click to close"),
+    ]
+    .iter()
+    .map(|(mark, said)| (mark.to_string(), said.to_string()))
+    .collect()
+}
+
 pub fn path_at<'a>(rows: &'a [Row], text: &str, offset: usize) -> Option<&'a Row> {
     let line = text.chars().take(offset).filter(|c| *c == '\n').count();
     line.checked_sub(1).and_then(|row| rows.get(row))

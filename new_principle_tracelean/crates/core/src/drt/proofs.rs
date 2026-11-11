@@ -38,6 +38,33 @@ pub fn load(root: &Path) -> ProofReport {
     std::fs::read_to_string(path(root)).ok().and_then(|text| serde_json::from_str(&text).ok()).unwrap_or_default()
 }
 
+/// The evidence the lock holds, without the proofs that no longer stand.
+///
+/// @implements REQ-STRENGTH.proved_only_when_pinned
+pub fn held(root: &Path, index: &Index) -> Vec<crate::trace::record::Evidence> {
+    standing_lock(root, index).evidence
+}
+
+/// The lock as written, without the proofs that no longer stand.
+pub fn standing_lock(root: &Path, index: &Index) -> crate::trace::lockfile::Lockfile {
+    let mut lock = crate::trace::lockfile::read(root).unwrap_or_default();
+    if lock.evidence.iter().any(|record| record.key.bond == Bond::ModelProof) {
+        let files = crate::observe::workspace::snapshot(root).files;
+        lock.evidence = standing_in(root, index, &files, lock.evidence);
+    }
+    lock
+}
+
+/// `records` without the proofs that no longer stand, judged against `files`.
+pub fn standing_in(
+    root: &Path,
+    index: &Index,
+    files: &BTreeMap<String, String>,
+    records: Vec<crate::trace::record::Evidence>,
+) -> Vec<crate::trace::record::Evidence> {
+    proofcheck::proofs_standing(records, &proofcheck::strengths(index, &load(root), files))
+}
+
 pub fn save(root: &Path, report: &ProofReport) -> std::io::Result<()> {
     if let Some(parent) = path(root).parent() {
         std::fs::create_dir_all(parent)?;
@@ -56,7 +83,13 @@ pub fn toolchain() -> String {
 }
 
 fn run_lean(package: Option<&Path>, text: String) -> Result<String, String> {
-    let scratch = std::env::temp_dir().join(format!("tracelean-proofs-{}", std::process::id()));
+    // one directory per run: two checks in one process must not share, or delete, a file
+    static NEXT: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+    let scratch = std::env::temp_dir().join(format!(
+        "tracelean-proofs-{}-{}",
+        std::process::id(),
+        NEXT.fetch_add(1, std::sync::atomic::Ordering::SeqCst)
+    ));
     std::fs::create_dir_all(&scratch).map_err(|e| format!("cannot write the check: {e}"))?;
     let file = scratch.join("Check.lean");
     std::fs::write(&file, text).map_err(|e| format!("cannot write the check: {e}"))?;

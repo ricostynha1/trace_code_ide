@@ -1441,8 +1441,16 @@ body.stations-hidden #stations {
   vertical-align: middle;
 }
 
-.ov-copy {
+.ov-report {
   margin-left: auto;
+}
+
+.ov-report + .ov-copy {
+  margin-left: 0;
+}
+
+.explained {
+  cursor: help;
 }
 
 .ov-chip {

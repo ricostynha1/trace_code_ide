@@ -154,6 +154,7 @@
           ["n", { "dispatch": { "action": "file.new", "description": "new file" } }],
           ["o", { "dispatch": { "action": "file.open", "description": "open" } }],
           ["r", { "dispatch": { "action": "file.rename", "description": "rename" } }],
+          ["R", { "dispatch": { "action": "file.refresh", "description": "refresh: reload the files from the disk and the sandbox" } }],
           ["s", { "dispatch": { "action": "file.save", "description": "save" } }],
           ["u", { "dispatch": { "action": "file.references", "description": "where this name is used" } }],
           ["v", { "dispatch": { "action": "file.open_in_vscode", "description": "open in VS Code at the cursor" } }]

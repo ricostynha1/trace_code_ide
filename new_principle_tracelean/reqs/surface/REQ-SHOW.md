@@ -23,6 +23,8 @@ clauses:
   references_are_links: When a comment of a file names a requirement, the system shall mark the name as a requirement that opens the requirement it names.
   recent_reopens: The system shall list on the page a project opens on the folders opened before, each as a path that opens that folder as the project.
   claims_beside_code: The system shall mark beside its line each declaration a file's annotations claim, with the role of each claim, from the text as it is being edited, and each mark shall open the requirement it claims.
+  tree_marks_explained: When the pointer rests on a mark the file tree draws beside a name, the system shall say what that mark means.
+  files_refreshed: When asked to refresh, the system shall take in what changed on the disk and in the sandbox and draw the file tree from it, and shall say how many files there are and how many changed by the agent are waiting.
   findings_lead_somewhere: The system shall show each finding with its place as a link that opens the file at that line, and each requirement its message names as a link that opens that requirement.
   producers_are_total: The system shall have a producer for every buffer kind, and a producer shall answer for every state it is given rather than fail on some.
   producer_is_pure: The system shall make a producer a function of the state it is given that reads nothing else.

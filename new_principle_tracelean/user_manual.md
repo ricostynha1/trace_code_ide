@@ -366,8 +366,9 @@ These work in both frontends unless marked.
 | `Ctrl+Z` / `Ctrl+Y` | undo / redo, a word at a time |
 | `Ctrl+W` | close the tab |
 | `Ctrl+Tab` | next tab of the pane |
-| `Ctrl+P` | open a file by a few letters; `name:42` or `:42` jumps to a line |
-| `Ctrl+Shift+P` | do anything, by a few words of its name (window only) |
+| `Ctrl+P` | do anything: search every command by a few words, or by a few letters in order (`rfrsh` finds *refresh*) |
+| `Ctrl+O` (`Ctrl+Shift+P` in the window) | open a file by a few letters; `name:42` or `:42` jumps to a line |
+| `F5` (window), `Space f R` | refresh: reload the files from the disk and the sandbox |
 | `Ctrl+Shift+O` | go to a name this file declares (window only) |
 | `Ctrl+F`, `F3` | find in the buffer, then find again (`Shift+F3` goes backwards) |
 | `Ctrl+Shift+F` | find in every file |
@@ -394,7 +395,7 @@ These work in both frontends unless marked.
 
 ### 7.3 The prompt row (terminal)
 
-`Ctrl+F`, `Ctrl+Shift+F`, `Ctrl+P` and `Ctrl+R` open a one-line prompt at the
+`Ctrl+F`, `Ctrl+Shift+F`, `Ctrl+P`, `Ctrl+O` and `Ctrl+R` open a one-line prompt at the
 bottom:
 
 - type the text, `Backspace` to correct it, `Enter` to accept, `Escape` to
@@ -427,6 +428,9 @@ bottom:
   requirements as a graph (roots on top; hover lights a node's links; click
   opens it) and a matrix of requirement × mark, most work left first.
   `Escape` closes it.
+- **HTML report** (top of the overview). Writes the evidence report, a card per
+  clause, as a page and opens it in the browser: the same as `Space t p`
+  ([16.2](#162-the-report-a-card-per-clause)).
 - **Copy as Markdown** (top of the overview). Puts the whole overview on the
   clipboard as Markdown, for a pull request or a note; the button says
   `Copied`, or `Could not copy`. The same text is the **Overview** station
@@ -498,7 +502,7 @@ computed from the same keymap that dispatches them.
 
 | Task | How |
 |---|---|
-| Open a file | Arrow onto it in the explorer, `Space f o` (or click; or `Ctrl+P` and a few letters) |
+| Open a file | Arrow onto it in the explorer, `Space f o` (or click; or `Ctrl+O` and a few letters) |
 | Type | `i`, type, `Escape` |
 | Save | `Ctrl+S` or `Space f s` |
 | New file | `Space f n`, then type its path |
@@ -526,7 +530,15 @@ the branch you left is kept, not lost.
 
 - `Ctrl+Z` / `Ctrl+Y` (or `Space h u` / `Space h r`) step back and forward.
 - `Space h t` (or the 🌳 station) shows the tree. Each branch is drawn in its
-  own column; `#0` is the project as it was opened.
+  own column; `#0` is the project as it was opened. The branch you are on is
+  drawn first, in the first column; branches you left come after it, the
+  latest first.
+- The whole tree is shown until you choose a filter.
+- What a sandboxed agent changes becomes a node at once, named `agent: …`.
+  Files it changed that the project does not hold yet are listed under the
+  tree as *not accepted yet*; a click on one opens its diff. Saved points are
+  marked `✓ saved` and accepted points `✓ accepted`
+  ([17.1](#171-the-sandbox)).
 - In the tree, put the cursor on a node and press `Space h j` (or click it) to
   go there. Resting on a node shows the change it made.
 - `Space h b` switches between branches.
@@ -1041,7 +1053,14 @@ theorem to_fahrenheit_pinned :
 | **nondeterministic** | declared with `@nondeterministic reason="…"`; excluded |
 
 Only a **pinned** model gives its clauses **P**: a property that also holds of
-the function that always returns 0 does not prove the clause.
+the function that always returns 0 does not prove the clause. Pinned means the
+accepted theorems, taken together, leave one function only: for the same input,
+two outputs that both satisfy them are equal. A model declared
+`@nondeterministic` (a random choice, say) cannot be pinned and is waived: its
+clauses get **P** from an accepted theorem alone. A proof record earned before
+its model had to be pinned is withdrawn, also from a lock written earlier. The
+requirement page still says, beside each clause's strength, how many theorems
+Lean accepted for it.
 
 `tracelean-trace . --pins` lists every model's strength, and
 `tracelean-trace . --strength toCelsius` (a model's name or a clause, matched
@@ -1187,15 +1206,35 @@ editor gives it a safe place and the right context, and shows you what it did.
    starts a shell under `bwrap`: the copy appears at the project's own path,
    your real tree and home stay read-only, and only the tool directories an
    agent needs (`.claude`, `.cargo`, `.elan`, …) are writable.
+   The agent uses the Claude configuration directory named, in this order, by
+   `TRACELEAN_CLAUDE_CONFIG_DIR`, by `.tracelean/agent.json` in the project, by
+   `~/.config/tracelean/agent.json` (each `{"claudeConfig": "~/.claude-work"}`),
+   or else the `CLAUDE_CONFIG_DIR` the editor was started with; the sandbox
+   sets `CLAUDE_CONFIG_DIR` to it and installs the `tracelean` skill there.
 3. Start your agent (for example `claude`) in that shell. `tracelean-trace` is
    on its `PATH`, and `TRACELEAN_SKILLS` points at the methodology pages the
    agent should read. A `CLAUDE.md` in the project (see `demo/CLAUDE.md`) tells
    it to run `tracelean-trace . --context REQ-X.clause` before changing
    anything and `tracelean-trace .` when done.
-4. Watch (`Space a s`): its changes appear in the sandbox panel as they happen.
-5. Review (`Space a d`) the diff file by file. Accept or reject each file
-   (`Space a f` / `Space a r`) or the whole change (`Space a a` / `Space a x`).
-6. End the sandbox (`Space a e`).
+4. Watch (`Space a s`). What the agent changes enters the editor and the undo
+   tree as it happens: one node, named `agent: …`, for what arrived together.
+   The real project is not written. A file the agent made is listed in the
+   file tree with a `+`. `F5` (or `Space f R`, or **↻ Files** in the menu bar)
+   refreshes at once. Point at any mark of the file tree (`M I T D P`, `●`,
+   `+`, `✗`, `✎`) to read what it means.
+5. Review (`Space a d`) the diff file by file: it compares the project with
+   what the editor now holds.
+6. **Accept** (`Space a a`, or `Space a f` for one file, or just `Ctrl+S`)
+   writes the changes to the project and marks the point in the undo tree as
+   `✓ accepted`, the way a save is marked `✓ saved`.
+7. **Reject** (`Space a x`, or `Space a r` for one file) adds a node that sets
+   those files back as the project holds them. Nothing is dropped from the
+   tree: `Ctrl+Z` brings the rejected state back.
+8. If the agent mixes things up, go back: `Ctrl+Z`, or click any node of the
+   undo tree. The sandbox copy is set to that point too, so the agent goes on
+   from the state you chose. Every state on the way stays one jump away.
+9. End the sandbox (`Space a e`). What was not accepted stays in the editor as
+   unsaved changes.
 
 Writes outside the copy, and protected paths, are reported as violations, not
 silently allowed.

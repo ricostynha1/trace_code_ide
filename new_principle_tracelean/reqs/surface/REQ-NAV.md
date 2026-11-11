@@ -9,6 +9,7 @@ clauses:
   definitions_found: When going to a name's definition, the system shall offer every line of the workspace declaring it, by path then line, and shall also look for a dotted name by its last part.
   uses_found: When finding a name's uses, the system shall list every line holding it as a whole word, and when searching, every line holding the text in any case, by path then line, at most the number asked.
   quick_open: When quick open is given letters, the system shall list the files whose paths hold the letters in order, best first — letters in the file's own name before letters in its folders, letters together before letters apart, then the shorter name, then the shorter path — and given no letters, every file, shortest first.
+  commands_found_by_letters: When the command search is given a query, the system shall list first the commands whose words hold every word of it and then those holding its letters in order, nearest first, and with no query every command.
   find_by_glob: When finding, the system shall take `*` as any run of characters and `?` as any one, within a line and with the letters a to z in either case, and a text with neither as itself, and shall never give an empty match.
   find_lists_lines: When listing matches, the system shall give every line of the buffer that holds one, by line number, with the line itself.
   name_is_asked_for: When an action needs a name nobody pointed at, the system shall ask for it on the status line, take the keys typed as the answer, perform the action on Enter and nothing on Escape.

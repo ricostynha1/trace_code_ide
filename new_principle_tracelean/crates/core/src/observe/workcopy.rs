@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
 use crate::history::command::Workspace;
-use crate::observe::sandbox::{brief, brief_path, launcher, launcher_path, Host, Session, HOME_READABLE, HOME_WRITABLE};
+use crate::observe::sandbox::{brief, brief_path, launcher, launcher_path, skill, skill_path, Host, Session, HOME_READABLE, HOME_WRITABLE};
 use crate::observe::workspace::{snapshot, write_into};
 
 pub fn sessions_dir(root: &Path) -> PathBuf {
@@ -87,6 +87,9 @@ fn copy_tree(from: &Path, to: &Path) -> std::io::Result<()> {
 
 pub fn write_launcher(session: &Session, host: &Host) -> std::io::Result<()> {
     std::fs::write(brief_path(session), brief(host))?;
+    let skill_dir = PathBuf::from(skill_path(session));
+    std::fs::create_dir_all(&skill_dir)?;
+    std::fs::write(skill_dir.join("SKILL.md"), skill(host))?;
     std::fs::write(launcher_path(session), launcher(session, host))
 }
 
@@ -143,6 +146,31 @@ pub fn put(dir: &Path, path: &str, text: Option<&str>) -> std::io::Result<()> {
     }
 }
 
+/// The Claude configuration directory a sandboxed agent uses, from the first that names
+/// one: `TRACELEAN_CLAUDE_CONFIG_DIR`, the project's `.tracelean/agent.json`, the
+/// person's `~/.config/tracelean/agent.json` (each `{"claudeConfig": "~/.claude-x"}`),
+/// then the `CLAUDE_CONFIG_DIR` the editor was started with.
+///
+/// @implements REQ-SBX.agent_configuration_chosen
+pub fn claude_config_named(root: &Path, home: Option<&str>) -> Option<String> {
+    let expand = |dir: String| match (dir.strip_prefix("~/"), home) {
+        (Some(rest), Some(home)) => format!("{home}/{rest}"),
+        _ => dir,
+    };
+    let from_file = |path: PathBuf| {
+        let text = std::fs::read_to_string(path).ok()?;
+        let value: serde_json::Value = serde_json::from_str(&text).ok()?;
+        value.get("claudeConfig")?.as_str().map(str::to_string)
+    };
+    std::env::var("TRACELEAN_CLAUDE_CONFIG_DIR")
+        .ok()
+        .filter(|dir| !dir.is_empty())
+        .or_else(|| from_file(root.join(".tracelean").join("agent.json")))
+        .or_else(|| home.and_then(|home| from_file(Path::new(home).join(".config/tracelean/agent.json"))))
+        .or_else(|| std::env::var("CLAUDE_CONFIG_DIR").ok())
+        .map(expand)
+}
+
 pub fn host(root: &Path) -> Host {
     let home = std::env::var("HOME").ok();
     let present = |list: &[&str]| -> Vec<String> {
@@ -155,6 +183,7 @@ pub fn host(root: &Path) -> Host {
             None => Vec::new(),
         }
     };
+    let claude_config = claude_config_named(root, home.as_deref());
     Host {
         writable: present(HOME_WRITABLE),
         readable: present(HOME_READABLE),
@@ -175,8 +204,7 @@ pub fn host(root: &Path) -> Host {
             .filter(|dir| dir.join("README.md").is_file())
             .and_then(|dir| dir.canonicalize().ok())
             .map(|dir| dir.display().to_string()),
-        claude_config: std::env::var("CLAUDE_CONFIG_DIR")
-            .ok()
+        claude_config: claude_config
             .filter(|dir| Path::new(dir).is_dir())
             .and_then(|dir| Path::new(&dir).canonicalize().ok())
             .map(|dir| dir.display().to_string()),

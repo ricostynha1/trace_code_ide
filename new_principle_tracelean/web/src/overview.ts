@@ -67,6 +67,8 @@ export interface Handlers {
   act: (action: string) => void;
   /** Puts the overview, as Markdown, on the clipboard; resolves to whether it did. */
   copy?: () => Promise<boolean>;
+  /** Writes the HTML report and opens it in the browser; resolves to whether it was asked. */
+  report?: () => Promise<boolean>;
   card: (anchor: Element, name: string) => void;
   uncard: () => void;
 }
@@ -605,7 +607,17 @@ export function drawOverview(into: HTMLElement, design: Design, on: Handlers) {
       setTimeout(() => (copy.textContent = "Copy as Markdown"), 1500);
     });
   });
-  head.append(el("h1", "", "Overview"), el("span", "ov-hint", "point at a requirement for its card · click to open it · the same as text: Space w t o"), copy, shut);
+  // @implements REQ-FIGURE.report_from_overview
+  const report = el("button", "ov-pick ov-report", "HTML report");
+  report.title = "Write the evidence report, a card per clause, as a page and open it in the browser (Space t p)";
+  report.addEventListener("click", () => {
+    report.textContent = "Writing…";
+    void (on.report?.() ?? Promise.resolve(false)).then((did) => {
+      report.textContent = did ? "Report written" : "Could not write";
+      setTimeout(() => (report.textContent = "HTML report"), 1500);
+    });
+  });
+  head.append(el("h1", "", "Overview"), el("span", "ov-hint", "point at a requirement for its card · click to open it · the same as text: Space w t o"), report, copy, shut);
   into.appendChild(head);
   if (!nodes.length) {
     into.appendChild(el("p", "ov-empty", "No requirements here yet. Create one under reqs/ (File › new), then annotate code with @implements."));

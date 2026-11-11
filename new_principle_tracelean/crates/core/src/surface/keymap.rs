@@ -86,6 +86,7 @@ pub const ACTIONS: &[&str] = &[
     "file.open",
     "file.open_in_vscode",
     "file.references",
+    "file.refresh",
     "file.rename",
     "file.save",
     "history.branch",

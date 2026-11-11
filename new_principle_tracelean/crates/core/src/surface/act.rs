@@ -39,6 +39,7 @@ pub enum Watch {
     OpenInVscode { path: String },
     PickProject,
     SwitchTheme,
+    Refresh,
     TutorialToggle { title: String },
     AcceptFile { path: String, command: Command },
     RejectFile { path: String },
@@ -296,6 +297,7 @@ pub fn dispatch(action: String, focus: Focus, w: Workspace, waiting: Vec<Command
             None => needs("trace.judge", "a clause"),
             Some(clause) => report(&format!("judge {clause}")),
         },
+        "file.refresh" => Intent::Observe { watch: Watch::Refresh },
         "file.copy" => Intent::Observe { watch: Watch::CopyAll },
         "file.copy_line" => Intent::Observe { watch: Watch::CopyLine },
         "file.copy_path" => match focus_path(&focus) {

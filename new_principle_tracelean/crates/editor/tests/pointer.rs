@@ -176,6 +176,7 @@ fn the_history_of_this_file_follows_the_file_opened() {
         editor.place(DOCUMENT, 0);
         editor.key(typed);
     }
+    editor.history_filter = tracelean_core::surface::history_view::Filter::File;
     editor.perform(tracelean_core::surface::act::Intent::Display { what: BufferKind::Record { title: "history".into() } });
     let history = |editor: &Editor| {
         let shown = editor.laid_out(editor.region).into_iter().find(|p| p.buffer.id == "record:history").expect("shown");
@@ -1185,6 +1186,8 @@ fn a_search_lists_every_line_that_holds_the_text() {
 /// @tests REQ-FIGURE.exported_as_markdown
 /// @tests REQ-MODULES.drawn_in_overview
 /// @tests REQ-LOOK.stations_have_icons
+/// @tests REQ-FIGURE.report_from_overview
+/// @tests REQ-SHOW.tree_marks_explained
 /// @structural REQ-LOOK.accessible_structure reason="a claim about the accessibility tree a browser builds from the page; no value either side computes"
 #[test]
 #[ignore = "builds the page and runs it in Chrome with node; run with --ignored"]

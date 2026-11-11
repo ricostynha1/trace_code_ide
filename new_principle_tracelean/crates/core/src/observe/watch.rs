@@ -13,16 +13,19 @@ pub fn transcript_of(root: &Path) -> Read {
     transcript::read(std::fs::read_to_string(root.join(TRANSCRIPT)).unwrap_or_default())
 }
 
-fn claude_home() -> Option<std::path::PathBuf> {
-    std::env::var_os("CLAUDE_CONFIG_DIR")
+/// Where the agent of this project's sandbox keeps its conversations: the configuration
+/// the sandbox was started with, so the panel reads what that agent wrote.
+fn claude_home(root: &Path) -> Option<std::path::PathBuf> {
+    let home = std::env::var("HOME").ok();
+    crate::observe::workcopy::claude_config_named(root, home.as_deref())
         .map(std::path::PathBuf::from)
-        .or_else(|| std::env::var_os("HOME").map(|home| Path::new(&home).join(".claude")))
+        .or_else(|| home.map(|home| Path::new(&home).join(".claude")))
 }
 
 /// @implements REQ-TRANSCRIPT.read_only
 /// @implements REQ-TRANSCRIPT.absent_is_fine
 pub fn claude_transcript(root: &Path, since: std::time::SystemTime) -> String {
-    let Some(home) = claude_home() else { return String::new() };
+    let Some(home) = claude_home(root) else { return String::new() };
     let canonical = root.canonicalize().unwrap_or_else(|_| root.to_path_buf());
     let slug = crate::observe::sandbox::claude_slug(&canonical.to_string_lossy());
     let Ok(entries) = std::fs::read_dir(home.join("projects").join(slug)) else {

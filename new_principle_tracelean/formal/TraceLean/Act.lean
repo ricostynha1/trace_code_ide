@@ -41,6 +41,7 @@ inductive Watch where
   | openInVscode (path : String)
   | pickProject
   | switchTheme
+  | refresh
   | tutorialToggle (title : String)
   | acceptFile (path : String) (command : Command)
   | rejectFile (path : String)
@@ -269,6 +270,7 @@ def dispatchNamed (action : String) (focus : Focus) (w : Workspace) (waiting : L
     match focus.under with
     | none => Intent.refuse (Blocked.needsTarget "trace.judge" "a clause")
     | some clause => report ("judge " ++ clause)
+  | "file.refresh" => Intent.observe Watch.refresh
   | "file.copy" => Intent.observe Watch.copyAll
   | "file.copy_line" => Intent.observe Watch.copyLine
   | "file.copy_path" =>
@@ -395,6 +397,7 @@ def namedActions : List String :=
    "file.open_in_vscode",
    "project.pick",
    "look.theme",
+   "file.refresh",
    "help.tutorial",
    "help.more",
    "file.definition",
@@ -460,6 +463,7 @@ def fileActions : List String := ["file.rename", "file.delete", "file.copy_path"
 def mutatingActions : List String :=
   ["file.new", "file.rename", "file.delete", "trace.approve", "trace.new_requirement"]
 
+set_option maxHeartbeats 1600000 in
 /-- @proves REQ-ACT.missing_target_is_refused -/
 theorem a_missing_target_is_refused_by_name (a : String) (f : Focus) (w : Workspace)
     (ws : List Command) (noTarget : actionTarget a = none) :

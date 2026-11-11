@@ -12,6 +12,8 @@ clauses:
   reachable: The system shall keep every node ever created reachable.
   tree_is_shown: The system shall show the history with every node named, the node the workspace is at marked, and each node a way to jump to it.
   tree_is_drawn: The system shall draw the history as a tree, each node once, under the node it was made after, a node's first child continuing its column and every later child opening a column of its own joined to it.
+  current_branch_first: The system shall draw the branch the workspace is on before every other branch and in the first column, and below the position of the workspace the most recently made branch first.
+  whole_by_default: The system shall show the history whole until a filter is chosen, and whole again when only one file's nodes are asked for and no file is being shown.
   filtered_view: The system shall show the history whole, or only the nodes touching one file, or only those at which the work was saved, each shown node under its nearest shown ancestor and the one nearest the workspace's position marked.
   hover_shows_change: When a node is pointed at, the system shall show the change it made, as the lines it added and removed, without moving the workspace.
 ---
